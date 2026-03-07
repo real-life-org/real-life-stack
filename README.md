@@ -142,12 +142,15 @@ Das Projekt wird von einem Team mit langjähriger Erfahrung in Open-Source-Commu
 ```text
 real-life-stack/
 ├── packages/
+│   ├── data-interface/    # @real-life-stack/data-interface - TypeScript-Typen
+│   ├── mock-connector/    # @real-life-stack/mock-connector - In-Memory-Implementierung
 │   └── toolkit/           # @real-life-stack/toolkit - UI-Komponenten
 ├── apps/
 │   ├── landing/           # Landing Page
 │   ├── reference/         # Reference App (React 19)
 │   └── prototype/         # UI-Prototyp (experimentell)
 └── docs/                  # Dokumentation
+    ├── spec/              # Architektur-Spezifikation
     ├── modules/           # Modul-Spezifikationen
     ├── concepts/          # Konzept-Dokumente
     └── funding/           # Förderantrag
@@ -168,6 +171,38 @@ pnpm dev:landing
 # Toolkit bauen
 pnpm build:toolkit
 ```
+
+## DataInterface & Connectoren
+
+UI-Module arbeiten gegen das **DataInterface** — ein TypeScript-Interface, das Daten, Gruppen, Identitaet und Reaktivitaet abstrahiert. Connectoren implementieren dieses Interface fuer verschiedene Backends.
+
+### @real-life-stack/data-interface
+
+Reine TypeScript-Typen (keine Runtime-Abhaengigkeiten):
+
+```typescript
+import type { DataInterface, Item, Group, User, Observable } from "@real-life-stack/data-interface"
+```
+
+### @real-life-stack/mock-connector
+
+In-Memory-Implementierung mit Demo-Daten fuer Entwicklung ohne Backend:
+
+```typescript
+import { MockConnector } from "@real-life-stack/mock-connector"
+
+const connector = new MockConnector()
+await connector.init()
+
+const tasks = await connector.getItems({ type: "task" })  // 5 Demo-Tasks
+const groups = await connector.getGroups()                  // 3 Demo-Gruppen
+
+// Reaktiv beobachten
+const obs = connector.observe({ type: "task" })
+obs.subscribe((tasks) => { /* Live-Updates */ })
+```
+
+Architektur-Details: [docs/spec/architektur2.md](docs/spec/architektur2.md)
 
 ## @real-life-stack/toolkit
 
