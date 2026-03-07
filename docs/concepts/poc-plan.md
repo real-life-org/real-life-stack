@@ -2,14 +2,14 @@
 
 > Vollständiger Implementierungsplan mit Architektur-Stack
 
-**Stand:** 11. Februar 2026
+**Stand:** 14. Februar 2026
 **Team:** Anton, Sebastian, Mathias, Eli
 **Duration:** 5-6 Wochen
 **Goal:** Funktionierender POC mit Kanban + Kalender, den das Team selbst nutzt
 
 ---
 
-### Aktueller Fortschritt (2026-02-11)
+### Aktueller Fortschritt (2026-02-14)
 
 | Week | Thema im Plan | Status | Anmerkung |
 |------|--------------|--------|-----------|
@@ -28,6 +28,7 @@
 | **Week 5+** | AutomergeReplicationAdapter | ✅ DONE | CRDT Spaces + verschlüsselter Transport, 16 Tests |
 | **Week 5+** | Relay Deployment | ✅ DONE | Live unter `wss://relay.utopia-lab.org` |
 | **Week 5++** | DiscoveryAdapter (7. Adapter) | ✅ DONE | Interface + HttpDiscoveryAdapter, Demo-App Refactoring |
+| **Week 5+++** | Offline-First + Reactive Identity | ✅ DONE | OfflineFirstDiscoveryAdapter, watchIdentity(), localStorage eliminiert, +19 Tests |
 | **Week 6** | Spaces UI in Demo App | ⏳ NÄCHSTER SCHRITT | AutomergeReplicationAdapter testbar machen |
 | **Week 7** | RLS Integration (UI) | ⏳ AUSSTEHEND | |
 | **Week 8** | Polish & Dogfooding | ⏳ AUSSTEHEND | |
@@ -48,8 +49,13 @@
 - Phase 3 aufgeteilt: Foundations (Week 5) + AutomergeReplicationAdapter (Week 5+, ✅ DONE)
 - Relay Deployment vorgezogen — live unter `wss://relay.utopia-lab.org` + `https://profiles.utopia-lab.org`
 - DiscoveryAdapter als 7. Adapter formalisiert (Interface + HttpDiscoveryAdapter, Demo-App refactored)
+- Offline-First Discovery Layer (OfflineFirstDiscoveryAdapter, DiscoverySyncStore, Dirty-Flags)
+- localStorage für Identity eliminiert — Evolu ist Single Source of Truth
+- Reactive Identity (watchIdentity() in ReactiveStorageAdapter, useProfile Hook)
+- PublicProfile Offline-Fallback mit Amber-Banner
+- Profile-Upload Fix (Dirty-Flag-basiert statt unconditional bei Mount)
 
-**Gesamt: 190 Tests passing** (156 wot-core + 19 wot-profiles + 15 wot-relay, siehe `web-of-trust/docs/CURRENT_IMPLEMENTATION.md` für Details)
+**Gesamt: 209 Tests passing** (175 wot-core + 19 wot-profiles + 15 wot-relay, siehe `web-of-trust/docs/CURRENT_IMPLEMENTATION.md` für Details)
 
 ---
 

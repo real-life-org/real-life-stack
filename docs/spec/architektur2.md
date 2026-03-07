@@ -75,10 +75,22 @@ Die zentrale API, die von den Hooks konsumiert und von Connectoren implementiert
 
 ```typescript
 interface DataInterface {
-  // Gruppen
+  // Lifecycle
+  init(): Promise<void>       // Setup: Connections öffnen, CRDT laden, Sync starten
+  dispose(): Promise<void>    // Cleanup: Connections schließen, Subscriptions aufräumen
+
+  // Gruppen — lesen & wechseln
   getGroups(): Promise<Group[]>
   getCurrentGroup(): Group | null
   setCurrentGroup(id: string): void
+
+  // Gruppen — verwalten (Feature-gesteuert)
+  createGroup(name: string, data?: Record<string, unknown>): Promise<Group>
+  updateGroup(id: string, updates: Partial<Group>): Promise<Group>
+  deleteGroup(id: string): Promise<void>
+  getMembers(groupId: string): Promise<User[]>
+  inviteMember(groupId: string, userId: string): Promise<void>
+  removeMember(groupId: string, userId: string): Promise<void>
 
   // Items — einmalig laden
   getItems(filter?: ItemFilter): Promise<Item[]>
@@ -141,8 +153,16 @@ interface RelatedItemsOptions {
 interface Group {
   id: string
   name: string
-  // Weitere Felder Connector-spezifisch (z.B. members, admins bei WoT)
+  data?: Record<string, unknown>  // Beschreibung, Bild, Zugangsmodell, Module, ...
 }
+
+// Bekannte Felder in group.data:
+// description?: string              — Beschreibung der Gruppe
+// imageUrl?: string                 — Gruppenbild
+// memberCount?: number              — Anzahl Mitglieder
+// access?: "open" | "invite-member" | "invite-admin" | "closed"
+// modules?: string[]                — Aktivierte Module (z.B. ["kanban", "calendar", "map"])
+// roles?: string[]                  — Verfügbare Rollen (z.B. ["admin", "member", "viewer"])
 
 interface ItemFilter {
   type?: string
@@ -297,6 +317,8 @@ Jeder Connector implementiert `observe()` — **wie** er das intern macht, ist s
 
 Die Observable-API ist für alle Backends gleich — nur der Mechanismus dahinter unterscheidet sich. Ein REST-Server ohne WebSocket funktioniert trotzdem, pollt aber statt zu pushen.
 
+**Hinweis für Connector-Implementierungen:** CRDT-basierte Connectors (z.B. Automerge) feuern Events auf Dokument-Ebene, während `observe()` auf Query-Ebene arbeitet. Der Connector muss intern filtern und sollte Subscriber nur benachrichtigen, wenn sich das Query-Ergebnis tatsächlich geändert hat (z.B. via Shallow Comparison). Das vermeidet unnötige Re-Renders.
+
 ### 4. Connector
 
 Ein Connector implementiert die Daten-Schnittstelle für ein spezifisches Backend. Es ist die Verantwortung des Connectors, die Schnittstelle korrekt zu bedienen — einschließlich ID-Vergabe, Pagination, und die Implementierung der Observables. Jeder Connector ist eigenständig und bringt alles mit:
@@ -364,7 +386,7 @@ const item: Item = {
     tags: ["garten", "gemeinschaft"]
   },
   relations: [
-    { predicate: "assignedTo", target: "did:key:z6Mk..." }
+    { predicate: "assignedTo", target: "global:did:key:z6Mk..." }
   ]
 }
 ```
@@ -421,18 +443,47 @@ Items können Beziehungen zu anderen Items und Usern haben. Relations folgen dem
 ```typescript
 interface Relation {
   predicate: string                 // Was für eine Beziehung? ("childOf", "assignedTo", ...)
-  target: string                    // Wohin? (Item-ID, User-ID, externe URI)
+  target: string                    // Wohin? Scope-Prefix + ID (siehe unten)
   meta?: Record<string, unknown>    // Optionale Metadaten (z.B. { role: "reviewer" })
 }
 ```
 
-Das Item selbst ist das Subject — zusammen mit `predicate` und `target` ergibt sich ein vollständiges RDF-Tripel:
+Das Item selbst ist das Subject — zusammen mit `predicate` und `target` ergibt sich ein vollständiges RDF-Tripel.
+
+### Scope-Prefixes
+
+Jede Referenz in `target` trägt einen Scope-Prefix, der klar macht, **wo** das Ziel lebt:
+
+| Prefix | Bedeutung | Beispiel |
+| ------ | --------- | ------- |
+| `global:` | User-ID (DID oder Server-ID) — immer auflösbar | `global:did:key:z6Mk...` |
+| `space:{id}/` | Item in einem bestimmten Space/Gruppe | `space:garten/item:plan3` |
+| `item:` | Item im selben Space (Kurzform) | `item:task-100` |
+
+**Regeln:**
+
+- `item:` ohne Space-Prefix = selber Space wie das Subject-Item (häufigster Fall)
+- `space:{id}/item:` = explizite Cross-Space-Referenz
+- `global:` = User-IDs, immer connector-übergreifend auflösbar
+
+**Beispiele:**
 
 ```
-item:task-123  →  assignedTo  →  did:key:z6Mk...
-item:task-123  →  childOf     →  item:task-100
-item:post-abc  →  commentOn   →  item:post-xyz   (umgekehrt: Kommentar zeigt auf Post)
+item:task-123  →  assignedTo  →  global:did:key:z6Mk...          (User, global)
+item:task-123  →  childOf     →  item:task-100                    (Item, selber Space)
+item:task-123  →  references  →  space:wiki/item:doc-42           (Item, anderer Space)
+item:post-abc  →  commentOn   →  item:post-xyz                    (Item, selber Space)
 ```
+
+### Warum Scope-Prefixes?
+
+Cross-Space-Kooperation ist ein Kernziel von RLS. Menschen arbeiten in verschiedenen Kontexten (Garten-Projekt, Nachbarschaftshilfe, Transition-Town) und brauchen Verbindungen zwischen diesen Welten:
+
+- Ein Task im Garten-Projekt referenziert ein Dokument im Wiki-Space
+- Eine Veranstaltung in der Transition-Town verweist auf einen Ort im Karten-Space
+- Eine Attestation referenziert eine Person global per DID
+
+Ohne Scope-Prefixes wären solche Querverbindungen nicht darstellbar. Die Prefixes machen explizit, was zusammengehört und was Grenzen überschreitet — der Connector kann bei fehlenden Zugriffsrechten einen "dangling reference"-Hinweis anzeigen statt stillschweigend zu ignorieren.
 
 ### Einbetten vs. eigenes Item
 
@@ -516,7 +567,7 @@ Die Item-Struktur ist so gestaltet, dass sie mit minimalem Aufwand als JSON-LD e
 {
   id: "task-123", type: "task",
   data: { title: "Build Pipeline", status: "doing" },
-  relations: [{ predicate: "childOf", target: "task-100" }]
+  relations: [{ predicate: "childOf", target: "item:task-100" }]
 }
 
 // Als JSON-LD Export:
@@ -797,6 +848,54 @@ Gruppen sind der zentrale Kontext, in dem Items geteilt werden. Eine Gruppe ist 
 └─────────────────────────────────────────┘
 ```
 
+### Gruppen-Konfiguration
+
+Gruppen tragen ihre Einstellungen im `data`-Feld:
+
+```typescript
+{
+  id: "garten-123",
+  name: "Gemeinschaftsgarten",
+  data: {
+    description: "Gemeinsam gärtnern im Stadtteil",
+    imageUrl: "https://...",
+    memberCount: 12,
+    access: "invite-member",
+    modules: ["kanban", "calendar", "map"],
+    roles: ["admin", "member"]
+  }
+}
+```
+
+**Zugangsmodelle:**
+
+| `access` | Wer kann beitreten? |
+| -------- | ------------------- |
+| `open` | Jeder, der will |
+| `invite-member` | Einladung durch jedes Mitglied |
+| `invite-admin` | Nur Admin kann einladen |
+| `closed` | Geschlossen, keine neuen Mitglieder |
+
+**Aktivierte Module:** Das `modules`-Array bestimmt, welche UI-Module in der Gruppe verfügbar sind. Der Lesekreis hat nur `["feed"]`, der Gemeinschaftsgarten hat `["kanban", "calendar", "map"]`. Die UI blendet nicht-aktivierte Module aus.
+
+Welche dieser Einstellungen ein Connector unterstützt, wird über das Feature-Item gesteuert:
+
+```typescript
+// Feature-Item des Connectors
+{
+  type: "feature",
+  data: {
+    groups: {
+      create: true,
+      delete: true,
+      accessModes: ["open", "invite-member", "invite-admin"],
+      moduleSelection: true,
+      roles: true
+    }
+  }
+}
+```
+
 ### Gruppen-Wechsel
 
 Ein Nutzer kann Mitglied mehrerer Gruppen sein und zwischen ihnen wechseln:
@@ -839,21 +938,43 @@ Für einfache Apps ohne Gruppen-Wechsel gibt es einen impliziten Default-Kontext
 
 ### User
 
-Ein User ist eine Identität mit Profil:
+Ein User ist eine Identität — nicht mehr:
 
 ```typescript
 interface User {
   id: string              // Connector-spezifisch (DID oder Server-ID)
-  profile: UserProfile
-}
-
-interface UserProfile {
-  displayName: string
-  avatarUrl?: string
+  displayName?: string    // Convenience: gecacht aus dem öffentlichen Profil-Item
+  avatarUrl?: string      // Convenience: gecacht aus dem öffentlichen Profil-Item
 }
 ```
 
-**Hinweis:** Ein User ist kein Item. Die Identität ist fundamental anders als Inhalte.
+`displayName` und `avatarUrl` sind **Read-Caches** aus dem Profil-Item, keine eigene Datenquelle. Man ändert den Namen über das Profil-Item, nicht über den User.
+
+**Hinweis:** Ein User ist kein Item. Die Identität ist fundamental anders als Inhalte. Profile hingegen sind Items (siehe unten).
+
+### Profil
+
+Ein Profil ist ein generisches Item (`type: "profile"`), das öffentliche oder private Daten über einen User enthält. Es gibt zwei Stufen:
+
+```typescript
+// Öffentliches Profil — jeder sieht es
+{
+  type: "profile",
+  createdBy: "did:key:z6Mk...",
+  data: { displayName: "Anton", bio: "Gärtner", avatarUrl: "..." },
+  visibility: "public"
+}
+
+// Privates Profil — nur für Kontakte (Auto-Gruppe)
+{
+  type: "profile",
+  createdBy: "did:key:z6Mk...",
+  data: { phone: "+49...", address: "...", skills: ["garten"] },
+  visibility: "contacts"
+}
+```
+
+Der Connector befüllt `User.displayName` und `User.avatarUrl` aus dem öffentlichen Profil-Item und hält sie gecacht, damit die UI sofort einen Namen hat, ohne für jedes `createdBy` einen separaten Profil-Lookup zu machen.
 
 ### Identitätsmodelle
 
@@ -977,6 +1098,7 @@ Diese Aspekte werden in der Implementierung geklärt:
 3. **Feature-Katalog** – Welcher Feature-Baum ist verbindlich? Ein initialer Katalog muss definiert werden, sobald die ersten Connectoren implementiert werden.
 4. **Typisierung** – Wie wird TypeScript-Typsicherheit für `item.data` und den Feature-Baum hergestellt? (z.B. über typisierte Item-Varianten oder eine generische Registry)
 5. **Prädikat-Katalog erweitern** – Der initiale Katalog deckt Kanban und Feed ab. Weitere Prädikate werden ergänzt, sobald neue Module entstehen.
+6. ~~**Group-Interface erweitern?**~~ → Entschieden, siehe unten.
 
 ### Entschiedene Fragen
 
@@ -984,12 +1106,15 @@ Diese Aspekte werden in der Implementierung geklärt:
 - **title in data vs. top-level** → `title` lebt in `data`, nicht als Pflichtfeld. Nicht jeder Item-Typ hat einen Titel. Module nutzen Fallbacks. *(Entschieden: 5. März 2026)*
 - **Item-Typ** → `type` ist Pflichtfeld auf Item-Ebene. Bestimmt Rendering (wie dargestellt), während Daten-Felder das Modul-Routing bestimmen (wo dargestellt). *(Entschieden: 5. März 2026)*
 - **Relations** → RDF-kompatibles Tripel-Modell, eingebettet am Item als `relations[]`. Abfrage via `getRelatedItems()` und `include`-Direktive. *(Entschieden: 5. März 2026)*
+- **Relations-Scope** → Scope-Prefixes für Relation-Targets: `item:` (selber Space), `space:{id}/item:` (Cross-Space), `global:` (User-IDs). Cross-Space-Referenzen sind ein Kernziel — Menschen kooperieren über Kontextgrenzen hinweg. Connector zeigt bei fehlenden Zugriffsrechten einen Hinweis statt stillschweigend zu ignorieren. *(Entschieden: 7. März 2026)*
 - **Schema-Versionierung** → Optionale Felder `schema` und `schemaVersion` am Item. *(Entschieden: 5. März 2026)*
 - **Kein separater Data Layer** → Der Connector ist vollständig verantwortlich für Caching, Optimistic Updates und Reaktivität. Die Hooks sind dünn — sie übersetzen nur Observable → React State und Mutations → `Promise<Item>`. Server-Connectors können intern TanStack Query nutzen. Bei Local-First ist Caching/Optimistic Update unnötig, da Writes instant sind. *(Entschieden: 6. März 2026)*
 - **Mutations-Vertrag** → `createItem()` und `updateItem()` geben `Promise<Item>` zurück — ein vollständiges Item mit ID und allen Feldern, sofort nutzbar. Der Connector garantiert die Zustände. *(Entschieden: 6. März 2026)*
-- **User-Profil ist ein Item** → Ein Nutzerprofil ist ein generisches Item (z.B. `type: "profile"`), keine eigene Entität. *(Entschieden: 6. März 2026)*
+- **User vs. Profil** → User = Identität (nur ID, mit gecachtem displayName/avatarUrl aus dem Profil-Item). Profil = Item (`type: "profile"`) mit zwei Sichtbarkeitsstufen: öffentlich (jeder) und privat (nur Kontakte). User ist kein Item, Profil ist ein Item. *(Entschieden: 7. März 2026)*
 - **Auth-Abstraktion** → Connector liefert nur Daten (`getAuthMethods()` → Strings), Frontend besitzt die Auth-UI-Komponenten in einer Registry. `AuthState` als Observable. Plattformbetreiber kann Auth-Methoden über Connector-Konfiguration einschränken. *(Entschieden: 6. März 2026)*
 - **FeatureInterface gestrichen** → Kein separates Interface. Feature-Erkennung über ein generisches Item (`type: "feature"`) mit verschachteltem Objektbaum in `data`. Truthy = unterstützt, falsy = nicht unterstützt. Alles läuft über das DataInterface. *(Entschieden: 6. März 2026)*
+- **Lifecycle** → `init()` und `dispose()` im DataInterface. App ruft `init()` beim Start, `dispose()` beim Unmount. Connector nutzt `init()` für Setup (Connections, CRDT laden, Sync starten) und `dispose()` für Cleanup. *(Entschieden: 7. März 2026)*
+- **Group-Interface** → `Group` bekommt ein `data`-Feld (analog zu Item) für Beschreibung, Bild, Zugangsmodell, aktivierte Module, Rollen. Management-Methoden (`createGroup`, `updateGroup`, `deleteGroup`, `getMembers`, `inviteMember`, `removeMember`) im DataInterface. Feature-Item steuert, welche Gruppen-Funktionen der Connector unterstützt. Das Interface ist bewusst additiv erweiterbar — zukünftige Funktionen (Einladungs-Annahme, demokratische Abstimmungen, neue Zugangsmodelle) können als neue Methoden und `data`-Felder hinzugefügt werden, ohne bestehenden Code zu brechen. *(Entschieden: 7. März 2026, mit Sebastian)*
 
 ---
 
