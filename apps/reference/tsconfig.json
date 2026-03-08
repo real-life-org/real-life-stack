@@ -19,6 +19,9 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
+      "@real-life-stack/data-interface": ["../../packages/data-interface/src"],
+      "@real-life-stack/local-connector": ["../../packages/local-connector/src"],
+      "@real-life-stack/mock-connector": ["../../packages/mock-connector/src"],
       "@real-life-stack/toolkit": ["../../packages/toolkit/src"],
       "@/*": ["../../packages/toolkit/src/*"]
     }

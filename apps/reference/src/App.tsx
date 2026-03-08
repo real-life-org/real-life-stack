@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Routes, Route } from "react-router-dom"
 import {
   Newspaper,
@@ -11,6 +11,7 @@ import {
   MapPin,
   Sun,
   Moon,
+  Columns3,
 } from "lucide-react"
 
 import {
@@ -28,132 +29,100 @@ import {
   PostCard,
   StatCard,
   ActionCard,
+  KanbanBoard,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   Button,
-  Avatar,
-  AvatarFallback,
+  ConnectorProvider,
+  useItems,
+  useUpdateItem,
+  useMembers,
+  useGroups,
+  useCurrentUser,
+  useCreateItem,
   type Workspace,
   type UserData,
   type Module,
   type Post,
 } from "@real-life-stack/toolkit"
-
-// Base path for assets (configured via Vite)
-const basePath = import.meta.env.BASE_URL
-
-// Demo data
-const workspaces: Workspace[] = [
-  { id: "1", name: "Dank", avatar: `${basePath}dank-logo.svg` },
-  { id: "2", name: "Maluhia", avatar: `${basePath}maluhia-logo.png` },
-  { id: "3", name: "Utopia", avatar: `${basePath}utopia-logo.svg` },
-]
-
-const user: UserData = {
-  id: "1",
-  name: "Max Mustermann",
-  email: "max@example.com",
-  avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-}
+import type { Item, User } from "@real-life-stack/data-interface"
+import { MockConnector, demoItems, demoGroups, demoUsers, demoGroupMembers } from "@real-life-stack/mock-connector"
+import { LocalConnector } from "@real-life-stack/local-connector"
+import type { DataInterface } from "@real-life-stack/data-interface"
 
 const modules: Module[] = [
   { id: "feed", label: "Feed", icon: Newspaper },
+  { id: "kanban", label: "Kanban", icon: Columns3 },
   { id: "map", label: "Karte", icon: Map },
   { id: "calendar", label: "Kalender", icon: Calendar },
 ]
 
-const demoPosts: Post[] = [
-  {
-    id: "1",
-    author: {
-      name: "Anna Schmidt",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-    },
-    content:
-      "Wer hat Lust auf einen gemeinsamen Spaziergang im Park am Samstag? Treffpunkt wäre 14 Uhr am Eingang. Hunde sind natürlich willkommen!",
-    timestamp: "vor 2 Stunden",
-    likes: 5,
-    comments: 3,
-    type: "text",
-  },
-  {
-    id: "2",
-    author: {
-      name: "Dank Community",
-      avatar: `${basePath}dank-logo.svg`,
-    },
-    content:
-      "Nächstes Treffen: Dienstag 19 Uhr im Gemeinschaftshaus. Thema: Planung der Frühjahrs-Pflanzaktion. Alle sind herzlich eingeladen!",
-    timestamp: "vor 5 Stunden",
-    likes: 12,
-    comments: 8,
-    type: "event",
-  },
-  {
-    id: "3",
-    author: {
-      name: "Thomas Müller",
-      avatar: "https://randomuser.me/api/portraits/men/67.jpg",
-    },
-    content:
-      "Suche jemanden der mir beim Umzug nächste Woche helfen kann. Biete Pizza und Getränke als Dankeschön!",
-    timestamp: "gestern",
-    likes: 3,
-    comments: 7,
-    type: "request",
-  },
-  {
-    id: "4",
-    author: {
-      name: "Lisa Weber",
-      avatar: "https://randomuser.me/api/portraits/women/28.jpg",
-    },
-    content:
-      "Hat jemand Erfahrung mit Urban Gardening? Ich möchte meinen Balkon begrünen und suche Tipps für Anfänger.",
-    timestamp: "gestern",
-    likes: 8,
-    comments: 12,
-    type: "text",
-  },
-  {
-    id: "5",
-    author: {
-      name: "Maluhia Hawaii",
-      avatar: `${basePath}maluhia-logo.png`,
-    },
-    content:
-      "Aloha! Wir organisieren einen Strand-Cleanup am Wochenende. Wer möchte mitmachen und unsere Küste sauber halten?",
-    timestamp: "vor 3 Stunden",
-    likes: 18,
-    comments: 6,
-    type: "event",
-  },
-]
-
-// Calendar data for demo
-const calendarDays = Array.from({ length: 35 }, (_, i) => {
-  const dayNum = i - 3 // Start from previous month
-  const isCurrentMonth = dayNum >= 1 && dayNum <= 31
-  const hasEvent = [5, 12, 15, 22, 28].includes(dayNum)
-  const isToday = dayNum === 15
+// Helper: resolve user info from members list
+function resolveAuthor(userId: string, members: User[]) {
+  const member = members.find((m) => m.id === userId)
   return {
-    number: isCurrentMonth ? dayNum : dayNum <= 0 ? 31 + dayNum : dayNum - 31,
-    isCurrentMonth,
-    hasEvent: isCurrentMonth && hasEvent,
-    isToday: isCurrentMonth && isToday,
+    name: member?.displayName ?? userId,
+    avatar: member?.avatarUrl,
   }
-})
+}
+
+// Helper: relative time string from Date
+function timeAgo(date: Date): string {
+  const now = Date.now()
+  const diff = now - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 60) return `vor ${minutes} Min.`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `vor ${hours} Stunden`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return "gestern"
+  return `vor ${days} Tagen`
+}
+
+// Helper: map Item to Post for PostCard
+function itemToPost(item: Item, members: User[]): Post {
+  return {
+    id: item.id,
+    author: resolveAuthor(item.createdBy, members),
+    content: String(item.data.content ?? item.data.description ?? ""),
+    timestamp: timeAgo(item.createdAt),
+    likes: 0,
+    comments: 0,
+    type: "text",
+  }
+}
 
 function FeedView() {
+  const { data: posts } = useItems({ type: "post" })
+  const { data: events } = useItems({ type: "event" })
+  const { data: members } = useMembers("group-1")
+  const { mutate: createItem } = useCreateItem()
+
+  const mappedPosts = useMemo(
+    () =>
+      [...posts]
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .map((item) => itemToPost(item, members)),
+    [posts, members]
+  )
+
+  const handlePost = (content: string) => {
+    createItem({
+      type: "post",
+      createdBy: "user-1",
+      data: { title: "Neuer Post", content, tags: [] },
+    })
+  }
+
   return (
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <StatCard icon={Users} value={24} label="Mitglieder" color="blue" />
-        <StatCard icon={Calendar} value={3} label="Events" color="green" />
-        <StatCard icon={MessageCircle} value={47} label="Posts" color="orange" />
+        <StatCard icon={Users} value={members.length} label="Mitglieder" color="blue" />
+        <StatCard icon={Calendar} value={events.length} label="Events" color="green" />
+        <StatCard icon={MessageCircle} value={posts.length} label="Posts" color="orange" />
       </div>
 
       {/* Quick Actions */}
@@ -177,12 +146,12 @@ function FeedView() {
       {/* Post Widget */}
       <SimplePostWidget
         placeholder="Was gibt's Neues in der Nachbarschaft?"
-        onSubmit={(content: string) => console.log("Post:", content)}
+        onSubmit={handlePost}
       />
 
       {/* Posts Feed */}
       <div className="space-y-4">
-        {demoPosts.map((post) => (
+        {mappedPosts.map((post: Post) => (
           <PostCard
             key={post.id}
             post={post}
@@ -197,6 +166,8 @@ function FeedView() {
 }
 
 function MapView() {
+  const { data: places } = useItems({ type: "place" })
+
   return (
     <div className="space-y-4">
       <Card>
@@ -222,25 +193,23 @@ function MapView() {
                 ))}
               </div>
 
-              {/* Location markers */}
-              <div className="absolute top-1/4 left-1/3 animate-pulse">
-                <div className="relative">
-                  <MapPin className="h-8 w-8 text-primary drop-shadow-lg" />
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 bg-primary/20 rounded-full blur-sm" />
-                </div>
-              </div>
-              <div className="absolute top-1/2 left-2/3">
-                <div className="relative">
-                  <MapPin className="h-6 w-6 text-secondary drop-shadow-lg" />
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-1 bg-secondary/20 rounded-full blur-sm" />
-                </div>
-              </div>
-              <div className="absolute top-2/3 left-1/4">
-                <div className="relative">
-                  <MapPin className="h-6 w-6 text-accent drop-shadow-lg" />
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-1 bg-accent/20 rounded-full blur-sm" />
-                </div>
-              </div>
+              {/* Location markers from connector */}
+              {places.map((place, i) => {
+                const positions = [
+                  { top: "25%", left: "33%" },
+                  { top: "50%", left: "66%" },
+                  { top: "66%", left: "25%" },
+                ]
+                const pos = positions[i % positions.length]
+                const colors = ["text-primary", "text-secondary", "text-accent"]
+                return (
+                  <div key={place.id} className="absolute" style={{ top: pos.top, left: pos.left }}>
+                    <div className="relative">
+                      <MapPin className={`h-7 w-7 ${colors[i % colors.length]} drop-shadow-lg`} />
+                    </div>
+                  </div>
+                )
+              })}
             </div>
 
             {/* Center content */}
@@ -251,7 +220,7 @@ function MapView() {
                   Interaktive Karte
                 </p>
                 <p className="text-muted-foreground text-sm text-center mt-1">
-                  Entdecke Events und Mitglieder in deiner Nähe
+                  {places.length} Orte in deiner Nähe
                 </p>
               </div>
             </div>
@@ -259,31 +228,24 @@ function MapView() {
         </CardContent>
       </Card>
 
-      {/* Nearby locations */}
+      {/* Nearby locations from connector */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">In der Nähe</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {[
-            { name: "Gemeinschaftsgarten", distance: "250m", type: "Ort" },
-            { name: "Café Nachbar", distance: "400m", type: "Treffpunkt" },
-            { name: "Repair Café", distance: "800m", type: "Event" },
-          ].map((place, i) => (
+          {places.map((place) => (
             <div
-              key={i}
+              key={place.id}
               className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
             >
               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <MapPin className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground">{place.name}</p>
-                <p className="text-xs text-muted-foreground">{place.type}</p>
+                <p className="font-medium text-foreground">{String(place.data.title)}</p>
+                <p className="text-xs text-muted-foreground">{String(place.data.address ?? "")}</p>
               </div>
-              <span className="text-sm text-muted-foreground">
-                {place.distance}
-              </span>
             </div>
           ))}
         </CardContent>
@@ -293,35 +255,44 @@ function MapView() {
 }
 
 function CalendarView() {
+  const { data: events } = useItems({ type: "event" })
   const weekdays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
-  const upcomingEvents = [
-    {
-      title: "Pflanzaktion",
-      date: "Di, 15. Jan",
-      time: "19:00",
-      attendees: 8,
-    },
-    {
-      title: "Nachbarschaftstreffen",
-      date: "Sa, 22. Jan",
-      time: "14:00",
-      attendees: 15,
-    },
-    {
-      title: "Repair Café",
-      date: "So, 28. Jan",
-      time: "11:00",
-      attendees: 12,
-    },
-  ]
+  // Build calendar grid for current month, marking days that have events
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const today = now.getDate()
+  const firstDay = new Date(year, month, 1).getDay() // 0=Sun
+  const startOffset = firstDay === 0 ? 6 : firstDay - 1 // Mon-based offset
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const daysInPrev = new Date(year, month, 0).getDate()
+
+  const eventDays = new Set(
+    events
+      .filter((e) => e.data.start)
+      .map((e) => new Date(String(e.data.start)).getDate())
+  )
+
+  const calendarDays = Array.from({ length: 42 }, (_, i) => {
+    const dayNum = i - startOffset + 1
+    const isCurrentMonth = dayNum >= 1 && dayNum <= daysInMonth
+    return {
+      number: dayNum < 1 ? daysInPrev + dayNum : dayNum > daysInMonth ? dayNum - daysInMonth : dayNum,
+      isCurrentMonth,
+      hasEvent: isCurrentMonth && eventDays.has(dayNum),
+      isToday: isCurrentMonth && dayNum === today,
+    }
+  })
+
+  const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"]
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Januar 2026</span>
+            <span>{monthNames[month]} {year}</span>
             <div className="flex gap-1">
               <Button variant="ghost" size="sm">
                 &lt;
@@ -370,61 +341,93 @@ function CalendarView() {
         </CardContent>
       </Card>
 
-      {/* Upcoming events */}
+      {/* Upcoming events from connector */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Anstehende Events</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {upcomingEvents.map((event, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary/30 hover:bg-primary/5 transition-all cursor-pointer"
-            >
-              <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex flex-col items-center justify-center text-primary-foreground">
-                <span className="text-xs font-medium">
-                  {event.date.split(",")[0]}
-                </span>
-                <span className="text-lg font-bold leading-none">
-                  {event.date.match(/\d+/)?.[0]}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground">{event.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  {event.time} Uhr
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="flex -space-x-2">
-                  {Array.from({ length: Math.min(3, event.attendees) }).map(
-                    (_, j) => (
-                      <Avatar key={j} className="h-6 w-6 border-2 border-background">
-                        <AvatarFallback className="text-[10px] bg-muted">
-                          {String.fromCharCode(65 + j)}
-                        </AvatarFallback>
-                      </Avatar>
-                    )
-                  )}
+          {events.map((event) => {
+            const start = event.data.start ? new Date(String(event.data.start)) : null
+            const dayNames = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
+            const dayName = start ? dayNames[start.getDay()] : ""
+            const dayNum = start ? start.getDate() : ""
+            const time = start ? `${start.getHours()}:${String(start.getMinutes()).padStart(2, "0")}` : ""
+
+            return (
+              <div
+                key={event.id}
+                className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary/30 hover:bg-primary/5 transition-all cursor-pointer"
+              >
+                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex flex-col items-center justify-center text-primary-foreground">
+                  <span className="text-xs font-medium">{dayName}</span>
+                  <span className="text-lg font-bold leading-none">{dayNum}</span>
                 </div>
-                {event.attendees > 3 && (
-                  <span className="text-xs text-muted-foreground ml-1">
-                    +{event.attendees - 3}
-                  </span>
-                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground">{String(event.data.title)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {time} Uhr
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </CardContent>
       </Card>
     </div>
   )
 }
 
+function KanbanView() {
+  const { data: tasks } = useItems({ type: "task" })
+  const { data: members } = useMembers("group-1")
+  const { mutate: updateItem } = useUpdateItem()
+
+  const handleMoveItem = (itemId: string, newStatus: string) => {
+    const item = tasks.find((t) => t.id === itemId)
+    if (!item) return
+    updateItem(itemId, { data: { ...item.data, status: newStatus } })
+  }
+
+  return (
+    <div className="space-y-4">
+      <KanbanBoard
+        items={tasks}
+        users={members}
+        onMoveItem={handleMoveItem}
+        onItemClick={(item) => console.log("Clicked:", item.id)}
+      />
+    </div>
+  )
+}
+
 function Home() {
-  const [activeWorkspace, setActiveWorkspace] = useState(workspaces[0])
+  const { data: groups } = useGroups()
+  const { data: currentUser } = useCurrentUser()
+
+  const workspaces: Workspace[] = useMemo(
+    () => groups.map((g) => ({ id: g.id, name: g.name })),
+    [groups]
+  )
+
+  const userData: UserData = useMemo(
+    () => ({
+      id: currentUser?.id ?? "",
+      name: currentUser?.displayName ?? "Laden...",
+      email: "",
+      avatar: currentUser?.avatarUrl,
+    }),
+    [currentUser]
+  )
+
+  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null)
   const [activeModule, setActiveModule] = useState("feed")
   const [isDark, setIsDark] = useState(false)
+
+  // Set first workspace as active once loaded
+  if (!activeWorkspace && workspaces.length > 0) {
+    setActiveWorkspace(workspaces[0])
+  }
 
   const handleModuleChange = (moduleId: string) => {
     setActiveModule(moduleId)
@@ -439,12 +442,14 @@ function Home() {
     <AppShell>
       <Navbar>
         <NavbarStart>
-          <WorkspaceSwitcher
-            workspaces={workspaces}
-            activeWorkspace={activeWorkspace}
-            onWorkspaceChange={setActiveWorkspace}
-            onCreateWorkspace={() => console.log("Create workspace")}
-          />
+          {activeWorkspace && (
+            <WorkspaceSwitcher
+              workspaces={workspaces}
+              activeWorkspace={activeWorkspace}
+              onWorkspaceChange={setActiveWorkspace}
+              onCreateWorkspace={() => console.log("Create workspace")}
+            />
+          )}
         </NavbarStart>
         <NavbarCenter>
           <ModuleTabs
@@ -467,7 +472,7 @@ function Home() {
             )}
           </Button>
           <UserMenu
-            user={user}
+            user={userData}
             onProfile={() => console.log("Profile")}
             onSettings={() => console.log("Settings")}
             onLogout={() => console.log("Logout")}
@@ -475,8 +480,9 @@ function Home() {
         </NavbarEnd>
       </Navbar>
 
-      <AppShellMain withBottomNav className="container mx-auto max-w-2xl px-4 py-6">
+      <AppShellMain withBottomNav className={`container mx-auto px-4 py-6 ${activeModule === "kanban" ? "max-w-5xl" : "max-w-2xl"}`}>
         {activeModule === "feed" && <FeedView />}
+        {activeModule === "kanban" && <KanbanView />}
         {activeModule === "map" && <MapView />}
         {activeModule === "calendar" && <CalendarView />}
       </AppShellMain>
@@ -490,10 +496,31 @@ function Home() {
   )
 }
 
+// Connector selection via URL parameter: ?connector=local or ?connector=mock (default)
+function createConnector(): DataInterface {
+  const params = new URLSearchParams(window.location.search)
+  const type = params.get("connector")
+
+  if (type === "local") {
+    return new LocalConnector({
+      items: demoItems,
+      groups: demoGroups,
+      users: demoUsers,
+      groupMembers: demoGroupMembers,
+    })
+  }
+
+  return new MockConnector()
+}
+
+const connector = createConnector()
+
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-    </Routes>
+    <ConnectorProvider connector={connector}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+      </Routes>
+    </ConnectorProvider>
   )
 }

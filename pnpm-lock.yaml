@@ -54,6 +54,15 @@ importers:
 
   apps/reference:
     dependencies:
+      '@real-life-stack/data-interface':
+        specifier: workspace:*
+        version: link:../../packages/data-interface
+      '@real-life-stack/local-connector':
+        specifier: workspace:*
+        version: link:../../packages/local-connector
+      '@real-life-stack/mock-connector':
+        specifier: workspace:*
+        version: link:../../packages/mock-connector
       '@real-life-stack/toolkit':
         specifier: workspace:*
         version: link:../../packages/toolkit
@@ -154,6 +163,19 @@ importers:
         specifier: ~5.7.2
         version: 5.7.3
 
+  packages/local-connector:
+    dependencies:
+      '@real-life-stack/data-interface':
+        specifier: workspace:*
+        version: link:../data-interface
+      idb-keyval:
+        specifier: ^6.2.1
+        version: 6.2.2
+    devDependencies:
+      typescript:
+        specifier: ~5.7.2
+        version: 5.7.3
+
   packages/mock-connector:
     dependencies:
       '@real-life-stack/data-interface':
@@ -190,6 +212,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@real-life-stack/data-interface':
+        specifier: workspace:*
+        version: link:../data-interface
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2066,6 +2091,9 @@ packages:
   http-errors@2.0.1:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
     engines: {node: '>= 0.8'}
+
+  idb-keyval@6.2.2:
+    resolution: {integrity: sha512-yjD9nARJ/jb1g+CvD0tlhUHOrJ9Sy0P8T9MF3YaLlHnSRpwPfpTX0XIvpmw3gAJUmEu3FiICLBDPXVwyEvrleg==}
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
@@ -4665,6 +4693,8 @@ snapshots:
       setprototypeof: 1.2.0
       statuses: 2.0.2
       toidentifier: 1.0.1
+
+  idb-keyval@6.2.2: {}
 
   ieee754@1.2.1: {}
 

@@ -694,7 +694,7 @@ Der Connector liefert ein Item vom Typ `"feature"` mit einem verschachtelten Obj
     },
     kanban: {
       dragDrop: true,
-      customColumns: false
+      customColumns: true
     },
     calendar: {
       recurring: false
@@ -1115,6 +1115,9 @@ Diese Aspekte werden in der Implementierung geklärt:
 - **FeatureInterface gestrichen** → Kein separates Interface. Feature-Erkennung über ein generisches Item (`type: "feature"`) mit verschachteltem Objektbaum in `data`. Truthy = unterstützt, falsy = nicht unterstützt. Alles läuft über das DataInterface. *(Entschieden: 6. März 2026)*
 - **Lifecycle** → `init()` und `dispose()` im DataInterface. App ruft `init()` beim Start, `dispose()` beim Unmount. Connector nutzt `init()` für Setup (Connections, CRDT laden, Sync starten) und `dispose()` für Cleanup. *(Entschieden: 7. März 2026)*
 - **Group-Interface** → `Group` bekommt ein `data`-Feld (analog zu Item) für Beschreibung, Bild, Zugangsmodell, aktivierte Module, Rollen. Management-Methoden (`createGroup`, `updateGroup`, `deleteGroup`, `getMembers`, `inviteMember`, `removeMember`) im DataInterface. Feature-Item steuert, welche Gruppen-Funktionen der Connector unterstützt. Das Interface ist bewusst additiv erweiterbar — zukünftige Funktionen (Einladungs-Annahme, demokratische Abstimmungen, neue Zugangsmodelle) können als neue Methoden und `data`-Felder hinzugefügt werden, ohne bestehenden Code zu brechen. *(Entschieden: 7. März 2026, mit Sebastian)*
+- **Hooks + ConnectorProvider im Toolkit** → Hooks (`useItems`, `useItem`, `useGroups`, `useCurrentUser`, `useCreateItem`, `useUpdateItem`) und der `ConnectorProvider` (React Context) leben im Toolkit-Package — nicht in der App. Jede App übergibt ihren Connector via `<ConnectorProvider connector={...}>`. *(Entschieden: 7. März 2026, mit Sebastian)*
+- **Kanban-Spalten konfigurierbar** → Kanban-Spalten sind nicht hardcoded (Todo/Doing/Done), sondern konfigurierbar. Das Feature-Item meldet `kanban.customColumns: true`. *(Entschieden: 7. März 2026, mit Sebastian)*
+- **BaseConnector** → Abstrakte Klasse mit sinnvollen Default-Implementierungen für alle optionalen Methoden (Groups, Auth, Sources). Ein einfacher Connector erbt von `BaseConnector` und implementiert nur die CRUD-Methoden für Items. Das DataInterface bleibt unverändert — die BaseConnector-Klasse ist eine Convenience, kein Zwang. *(Entschieden: 7. März 2026, mit Sebastian und Ulf)*
 
 ---
 

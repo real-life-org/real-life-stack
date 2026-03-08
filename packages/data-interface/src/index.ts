@@ -1,6 +1,8 @@
 // @real-life-stack/data-interface
 // Zentrale Typdefinitionen für das DataInterface (Connector-Schnittstelle)
 
+export { BaseConnector } from "./base-connector.js"
+
 // --- Core Types ---
 
 export interface Item {

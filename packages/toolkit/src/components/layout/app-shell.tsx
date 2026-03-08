@@ -10,7 +10,7 @@ interface AppShellProps {
 
 export function AppShell({ children, className }: AppShellProps) {
   return (
-    <div className={cn("min-h-screen bg-background", className)}>
+    <div className={cn("h-screen flex flex-col bg-background overflow-hidden", className)}>
       {children}
     </div>
   )
@@ -31,7 +31,7 @@ export function AppShellMain({
   return (
     <main
       className={cn(
-        "flex-1",
+        "flex-1 overflow-y-auto",
         withBottomNav && "pb-20 md:pb-0",
         className
       )}
