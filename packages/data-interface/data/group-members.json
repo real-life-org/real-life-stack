@@ -1,0 +1,5 @@
+{
+  "group-1": ["user-1", "user-2", "user-3"],
+  "group-2": ["user-1", "user-2", "user-3", "user-4"],
+  "group-3": ["user-1", "user-4"]
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "group-1",
+    "name": "Gemeinschaftsgarten",
+    "data": {
+      "description": "Gemeinsam gärtnern im Stadtteil",
+      "access": "invite-member",
+      "modules": ["kanban", "calendar", "map", "feed"],
+      "roles": ["admin", "member"],
+      "memberCount": 12
+    }
+  },
+  {
+    "id": "group-2",
+    "name": "Nachbarschaftshilfe",
+    "data": {
+      "description": "Gegenseitige Unterstützung in der Nachbarschaft",
+      "access": "open",
+      "modules": ["feed", "map"],
+      "roles": ["admin", "member"],
+      "memberCount": 24
+    }
+  },
+  {
+    "id": "group-3",
+    "name": "Transition Town",
+    "data": {
+      "description": "Lokale Initiativen für nachhaltiges Leben",
+      "access": "invite-admin",
+      "modules": ["kanban", "calendar", "feed"],
+      "roles": ["admin", "member", "viewer"],
+      "memberCount": 8
+    }
+  }
+]

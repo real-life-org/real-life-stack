@@ -2,14 +2,19 @@
   "name": "@real-life-stack/data-interface",
   "version": "0.1.0",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/src/index.d.ts",
       "development": "./src/index.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/src/index.js"
+    },
+    "./demo-data": {
+      "types": "./dist/src/demo-data.d.ts",
+      "development": "./src/demo-data.ts",
+      "import": "./dist/src/demo-data.js"
     }
   },
   "files": [

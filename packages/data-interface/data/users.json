@@ -1,0 +1,6 @@
+[
+  { "id": "user-1", "displayName": "Max Mustermann", "avatarUrl": "https://randomuser.me/api/portraits/men/32.jpg" },
+  { "id": "user-2", "displayName": "Anna Schmidt", "avatarUrl": "https://randomuser.me/api/portraits/women/44.jpg" },
+  { "id": "user-3", "displayName": "Thomas Müller", "avatarUrl": "https://randomuser.me/api/portraits/men/67.jpg" },
+  { "id": "user-4", "displayName": "Lisa Weber", "avatarUrl": "https://randomuser.me/api/portraits/women/28.jpg" }
+]
