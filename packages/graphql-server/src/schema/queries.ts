@@ -4,14 +4,7 @@ import { GroupType } from "./types/group.js"
 import { UserType, AuthStateType, AuthMethodType } from "./types/user.js"
 import { SourceType } from "./types/source.js"
 import * as store from "../store.js"
-
-function stripNulls<T extends Record<string, unknown>>(obj: T): { [K in keyof T]: Exclude<T[K], null> } {
-  const result = {} as Record<string, unknown>
-  for (const [k, v] of Object.entries(obj)) {
-    if (v !== null) result[k] = v
-  }
-  return result as { [K in keyof T]: Exclude<T[K], null> }
-}
+import { stripNulls } from "./utils.js"
 
 builder.queryType({
   fields: (t) => ({

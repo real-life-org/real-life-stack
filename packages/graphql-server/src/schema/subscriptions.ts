@@ -3,14 +3,7 @@ import { ItemType, ItemFilterInputType } from "./types/item.js"
 import { AuthStateType } from "./types/user.js"
 import * as store from "../store.js"
 import { subscribe } from "../pubsub.js"
-
-function stripNulls<T extends Record<string, unknown>>(obj: T): { [K in keyof T]: Exclude<T[K], null> } {
-  const result = {} as Record<string, unknown>
-  for (const [k, v] of Object.entries(obj)) {
-    if (v !== null) result[k] = v
-  }
-  return result as { [K in keyof T]: Exclude<T[K], null> }
-}
+import { stripNulls } from "./utils.js"
 
 builder.subscriptionType({
   fields: (t) => ({

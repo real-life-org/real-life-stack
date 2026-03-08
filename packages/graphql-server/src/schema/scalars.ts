@@ -9,11 +9,19 @@ export const DateTimeScalar = new GraphQLScalarType({
     throw new Error("DateTime serialize: expected Date or string")
   },
   parseValue(value: unknown): Date {
-    if (typeof value === "string") return new Date(value)
+    if (typeof value === "string") {
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) throw new Error(`DateTime parseValue: invalid date "${value}"`)
+      return date
+    }
     throw new Error("DateTime parseValue: expected string")
   },
   parseLiteral(ast): Date {
-    if (ast.kind === Kind.STRING) return new Date(ast.value)
+    if (ast.kind === Kind.STRING) {
+      const date = new Date(ast.value)
+      if (Number.isNaN(date.getTime())) throw new Error(`DateTime parseLiteral: invalid date "${ast.value}"`)
+      return date
+    }
     throw new Error("DateTime parseLiteral: expected StringValue")
   },
 })
@@ -46,9 +54,11 @@ function parseLiteralToJS(ast: { kind: string; value?: unknown; fields?: readonl
       )
     case Kind.LIST:
       return (ast.values ?? []).map((v) => parseLiteralToJS(v as Parameters<typeof parseLiteralToJS>[0]))
+    case Kind.ENUM:
+      return ast.value
     case Kind.NULL:
       return null
     default:
-      return null
+      throw new Error(`JSON parseLiteral: unsupported kind "${ast.kind}"`);
   }
 }

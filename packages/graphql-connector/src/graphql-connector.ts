@@ -1,5 +1,5 @@
 import { GraphQLClient } from "graphql-request"
-import { createClient } from "graphql-sse"
+import { createClient, type Client as WsClient } from "graphql-ws"
 import type {
   DataInterface,
   Item,
@@ -51,17 +51,22 @@ function parseItem(raw: Record<string, unknown>): Item {
 
 export class GraphQLConnector implements DataInterface {
   private client: GraphQLClient
-  private sseUrl: string
+  private wsClient: WsClient | null = null
+  private wsUrl: string
   private currentGroup: Group | null = null
   private authStateObservable = createObservable<AuthState>({ status: "loading" })
   private cleanupFns: (() => void)[] = []
 
   constructor(url = "http://localhost:4000/graphql") {
     this.client = new GraphQLClient(url)
-    this.sseUrl = url
+    // Derive WebSocket URL from HTTP URL
+    this.wsUrl = url.replace(/^http/, "ws")
   }
 
   async init(): Promise<void> {
+    // Create WebSocket client for subscriptions (Mercurius uses graphql-ws protocol)
+    this.wsClient = createClient({ url: this.wsUrl })
+
     // Fetch initial auth state
     const { authState } = await this.client.request<{ authState: AuthState }>(AUTH_STATE_QUERY)
     this.authStateObservable.set(authState)
@@ -70,8 +75,8 @@ export class GraphQLConnector implements DataInterface {
     const { currentGroup } = await this.client.request<{ currentGroup: Group | null }>(CURRENT_GROUP_QUERY)
     this.currentGroup = currentGroup
 
-    // Subscribe to auth state changes via SSE
-    this.subscribeSSE<{ authStateChanged: AuthState }>(
+    // Subscribe to auth state changes via WebSocket
+    this.subscribeWs<{ authStateChanged: AuthState }>(
       AUTH_STATE_CHANGED_SUBSCRIPTION,
       {},
       (data) => this.authStateObservable.set(data.authStateChanged),
@@ -82,6 +87,8 @@ export class GraphQLConnector implements DataInterface {
     for (const cleanup of this.cleanupFns) cleanup()
     this.cleanupFns = []
     this.authStateObservable.destroy()
+    await this.wsClient?.dispose()
+    this.wsClient = null
   }
 
   // --- Groups ---
@@ -153,7 +160,7 @@ export class GraphQLConnector implements DataInterface {
 
     // SSE subscription for live updates
     const gqlFilter = filter ? { type: filter.type, hasField: filter.hasField, createdBy: filter.createdBy } : undefined
-    this.subscribeSSE<{ itemsChanged: Record<string, unknown>[] }>(
+    this.subscribeWs<{ itemsChanged: Record<string, unknown>[] }>(
       ITEMS_CHANGED_SUBSCRIPTION,
       { filter: gqlFilter },
       (data) => observable.set(data.itemsChanged.map(parseItem)),
@@ -169,7 +176,7 @@ export class GraphQLConnector implements DataInterface {
     this.getItem(id).then((item) => observable.set(item))
 
     // SSE subscription for live updates
-    this.subscribeSSE<{ itemChanged: Record<string, unknown> | null }>(
+    this.subscribeWs<{ itemChanged: Record<string, unknown> | null }>(
       ITEM_CHANGED_SUBSCRIPTION,
       { id },
       (data) => observable.set(data.itemChanged ? parseItem(data.itemChanged) : null),
@@ -260,27 +267,24 @@ export class GraphQLConnector implements DataInterface {
     // Single source
   }
 
-  // --- SSE Helper ---
+  // --- WebSocket Subscription Helper ---
 
-  private subscribeSSE<T>(query: string, variables: Record<string, unknown>, onData: (data: T) => void): void {
-    const client = createClient({ url: this.sseUrl })
+  private subscribeWs<T>(query: string, variables: Record<string, unknown>, onData: (data: T) => void): void {
+    if (!this.wsClient) return
 
-    let cancelled = false
-    const unsubscribe = client.iterate<T>({ query, variables })
-
-    void (async () => {
-      try {
-        for await (const result of unsubscribe) {
-          if (cancelled) break
+    const cleanup = this.wsClient.subscribe<T>(
+      { query, variables },
+      {
+        next: (result) => {
           if (result.data) onData(result.data)
-        }
-      } catch (err) {
-        if (!cancelled) console.error("SSE subscription error:", err)
-      }
-    })()
+        },
+        error: (err) => {
+          console.error("WebSocket subscription error:", err)
+        },
+        complete: () => {},
+      },
+    )
 
-    this.cleanupFns.push(() => {
-      cancelled = true
-    })
+    this.cleanupFns.push(cleanup)
   }
 }
