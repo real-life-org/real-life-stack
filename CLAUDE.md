@@ -79,6 +79,11 @@ Jeder Connector haengt NUR von `data-interface` + eigenen Libraries ab. Connecto
 - Keine externe RxJS-Dependency. Eigenes Pattern via `createObservable<T>(initial)`.
 - Filter-Keys nutzen `JSON.stringify(filter)` als Map-Key fuer Caching.
 
+### UI-Komponenten und Storybook
+
+- **Alle UI-Komponenten gehoeren ins `toolkit` Package** — NICHT in einzelne Apps. Apps kombinieren nur Toolkit-Komponenten.
+- **Storybook pflegen:** Fuer jede UI-Komponente im Toolkit eine Story anlegen/aktualisieren. Stories dienen als Dokumentation und visuelle Tests.
+
 ### Hooks und ConnectorProvider
 
 - Hooks und `ConnectorProvider` leben im `toolkit` Package, NICHT in einzelnen Apps.
