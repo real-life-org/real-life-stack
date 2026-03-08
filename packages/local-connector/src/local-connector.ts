@@ -1,5 +1,5 @@
 import type {
-  DataInterface,
+  FullConnector,
   Item,
   ItemFilter,
   Group,
@@ -46,7 +46,7 @@ function deserializeItem(item: SerializedItem): Item {
 
 // --- LocalConnector ---
 
-export class LocalConnector implements DataInterface {
+export class LocalConnector implements FullConnector {
   private items: Item[] = []
   private groups: Group[] = []
   private users: User[] = []

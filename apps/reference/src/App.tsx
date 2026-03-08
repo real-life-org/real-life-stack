@@ -405,9 +405,14 @@ function Home() {
   const { data: groups } = useGroups()
   const { data: currentUser } = useCurrentUser()
 
+  const basePath = import.meta.env.BASE_URL
   const workspaces: Workspace[] = useMemo(
-    () => groups.map((g) => ({ id: g.id, name: g.name })),
-    [groups]
+    () => groups.map((g) => ({
+      id: g.id,
+      name: g.name,
+      avatar: g.data?.avatar ? `${basePath}${g.data.avatar}` : undefined,
+    })),
+    [groups, basePath]
   )
 
   const userData: UserData = useMemo(
@@ -513,7 +518,11 @@ function createConnector(): DataInterface {
   return new MockConnector()
 }
 
-const connector = createConnector()
+// Preserve connector across HMR — avoid losing in-memory state
+const connector: DataInterface = import.meta.hot?.data?.connector ?? createConnector()
+if (import.meta.hot) {
+  import.meta.hot.data.connector = connector
+}
 
 export default function App() {
   return (

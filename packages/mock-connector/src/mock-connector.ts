@@ -1,5 +1,5 @@
 import type {
-  DataInterface,
+  FullConnector,
   Item,
   ItemFilter,
   Group,
@@ -13,7 +13,7 @@ import type {
 import { createObservable, matchesFilter } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers } from "@real-life-stack/data-interface/demo-data"
 
-export class MockConnector implements DataInterface {
+export class MockConnector implements FullConnector {
   private items: Item[]
   private groups: Group[]
   private users: User[]

@@ -1,7 +1,7 @@
 import { GraphQLClient } from "graphql-request"
 import { createClient, type Client as WsClient } from "graphql-ws"
 import type {
-  DataInterface,
+  FullConnector,
   Item,
   ItemFilter,
   Group,
@@ -49,7 +49,7 @@ function parseItem(raw: Record<string, unknown>): Item {
   } as Item
 }
 
-export class GraphQLConnector implements DataInterface {
+export class GraphQLConnector implements FullConnector {
   private client: GraphQLClient
   private wsClient: WsClient | null = null
   private wsUrl: string

@@ -13,6 +13,7 @@ export function ConnectorProvider({ connector, children }: ConnectorProviderProp
 
   useEffect(() => {
     let disposed = false
+    setReady(false)
     connector.init().then(() => {
       if (!disposed) setReady(true)
     })

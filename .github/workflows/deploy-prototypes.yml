@@ -40,8 +40,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build toolkit
-        run: pnpm --filter @real-life-stack/toolkit build
+      - name: Build packages (data-interface, connectors, toolkit)
+        run: |
+          pnpm --filter @real-life-stack/data-interface build
+          pnpm --filter @real-life-stack/mock-connector --filter @real-life-stack/local-connector build
+          pnpm --filter @real-life-stack/toolkit build
 
       - name: Build landing page
         run: pnpm --filter landing build

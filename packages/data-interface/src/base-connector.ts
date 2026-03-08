@@ -1,5 +1,5 @@
 import type {
-  DataInterface,
+  FullConnector,
   Item,
   ItemFilter,
   Group,
@@ -60,7 +60,7 @@ const DEFAULT_GROUP: Group = { id: "default", name: "Default" }
  *
  * Alles andere (Groups, Auth, Sources, Observables) hat Default-Verhalten.
  */
-export abstract class BaseConnector implements DataInterface {
+export abstract class BaseConnector implements FullConnector {
   // --- Lifecycle (override bei Bedarf) ---
 
   async init(): Promise<void> {}

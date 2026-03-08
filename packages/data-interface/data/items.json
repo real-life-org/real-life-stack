@@ -156,29 +156,5 @@
       "address": "Nachbarweg 12, 60000 Frankfurt",
       "tags": ["treffpunkt"]
     }
-  },
-  {
-    "id": "feature-mock",
-    "type": "feature",
-    "createdAt": "2026-01-01T00:00:00.000Z",
-    "createdBy": "system",
-    "data": {
-      "groups": {
-        "create": true,
-        "delete": true,
-        "accessModes": ["open", "invite-member", "invite-admin", "closed"],
-        "moduleSelection": true,
-        "roles": true
-      },
-      "items": {
-        "create": true,
-        "update": true,
-        "delete": true,
-        "relations": true
-      },
-      "auth": {
-        "methods": ["mock"]
-      }
-    }
   }
 ]

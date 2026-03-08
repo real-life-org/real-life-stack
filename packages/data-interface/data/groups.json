@@ -1,9 +1,10 @@
 [
   {
     "id": "group-1",
-    "name": "Gemeinschaftsgarten",
+    "name": "Utopia",
     "data": {
-      "description": "Gemeinsam gärtnern im Stadtteil",
+      "description": "Plattform für eine nachhaltige Gesellschaft",
+      "avatar": "utopia-logo.svg",
       "access": "invite-member",
       "modules": ["kanban", "calendar", "map", "feed"],
       "roles": ["admin", "member"],
@@ -12,24 +13,37 @@
   },
   {
     "id": "group-2",
-    "name": "Nachbarschaftshilfe",
+    "name": "IT4Change",
     "data": {
-      "description": "Gegenseitige Unterstützung in der Nachbarschaft",
+      "description": "Technologie für sozialen Wandel",
       "access": "open",
-      "modules": ["feed", "map"],
+      "modules": ["feed", "kanban"],
       "roles": ["admin", "member"],
       "memberCount": 24
     }
   },
   {
     "id": "group-3",
-    "name": "Transition Town",
+    "name": "Maluhia",
     "data": {
-      "description": "Lokale Initiativen für nachhaltiges Leben",
+      "avatar": "maluhia-logo.png",
+      "description": "Community-Projekt auf Hawaii",
       "access": "invite-admin",
       "modules": ["kanban", "calendar", "feed"],
       "roles": ["admin", "member", "viewer"],
       "memberCount": 8
+    }
+  },
+  {
+    "id": "group-4",
+    "name": "DANK",
+    "data": {
+      "avatar": "dank-logo.svg",
+      "description": "Deutsches Allmende Netzwerk für Kooperation",
+      "access": "invite-member",
+      "modules": ["feed", "map", "calendar"],
+      "roles": ["admin", "member"],
+      "memberCount": 15
     }
   }
 ]

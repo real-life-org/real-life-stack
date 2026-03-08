@@ -89,25 +89,12 @@ export interface Source {
   connector: DataInterface
 }
 
-// --- DataInterface ---
+// --- DataInterface (Core — read-only) ---
 
 export interface DataInterface {
   // Lifecycle
   init(): Promise<void>
   dispose(): Promise<void>
-
-  // Gruppen — lesen & wechseln
-  getGroups(): Promise<Group[]>
-  getCurrentGroup(): Group | null
-  setCurrentGroup(id: string): void
-
-  // Gruppen — verwalten (Feature-gesteuert)
-  createGroup(name: string, data?: Record<string, unknown>): Promise<Group>
-  updateGroup(id: string, updates: Partial<Group>): Promise<Group>
-  deleteGroup(id: string): Promise<void>
-  getMembers(groupId: string): Promise<User[]>
-  inviteMember(groupId: string, userId: string): Promise<void>
-  removeMember(groupId: string, userId: string): Promise<void>
 
   // Items — einmalig laden
   getItems(filter?: ItemFilter): Promise<Item[]>
@@ -116,31 +103,73 @@ export interface DataInterface {
   // Items — reaktiv beobachten
   observe(filter: ItemFilter): Observable<Item[]>
   observeItem(id: string): Observable<Item | null>
+}
 
-  // Items — schreiben
+// --- Capability Interfaces ---
+
+export interface ItemWriter {
   createItem(item: Omit<Item, "id" | "createdAt">): Promise<Item>
   updateItem(id: string, updates: Partial<Item>): Promise<Item>
   deleteItem(id: string): Promise<void>
+}
 
-  // Relations
+export interface RelationCapable {
   getRelatedItems(
     itemId: string,
     predicate?: string,
     options?: RelatedItemsOptions
   ): Promise<Item[]>
+}
 
-  // Nutzer
+export interface GroupManager {
+  getGroups(): Promise<Group[]>
+  getCurrentGroup(): Group | null
+  setCurrentGroup(id: string): void
+  createGroup(name: string, data?: Record<string, unknown>): Promise<Group>
+  updateGroup(id: string, updates: Partial<Group>): Promise<Group>
+  deleteGroup(id: string): Promise<void>
+  getMembers(groupId: string): Promise<User[]>
+  inviteMember(groupId: string, userId: string): Promise<void>
+  removeMember(groupId: string, userId: string): Promise<void>
+}
+
+export interface Authenticatable {
   getCurrentUser(): Promise<User | null>
   getUser(id: string): Promise<User | null>
-
-  // Auth
   getAuthState(): Observable<AuthState>
   getAuthMethods(): AuthMethod[]
   authenticate(method: string, credentials: unknown): Promise<User>
   logout(): Promise<void>
+}
 
-  // Quellen (Multi-Source)
+export interface MultiSource {
   getSources(): Source[]
   getActiveSource(): Source
   setActiveSource(sourceId: string): void
+}
+
+// --- Convenience: Full-Featured Connector ---
+
+export type FullConnector = DataInterface & ItemWriter & RelationCapable & GroupManager & Authenticatable & MultiSource
+
+// --- Type Guards ---
+
+export function isWritable(c: DataInterface): c is DataInterface & ItemWriter {
+  return "createItem" in c && "updateItem" in c && "deleteItem" in c
+}
+
+export function hasRelations(c: DataInterface): c is DataInterface & RelationCapable {
+  return "getRelatedItems" in c
+}
+
+export function hasGroups(c: DataInterface): c is DataInterface & GroupManager {
+  return "getGroups" in c && "getMembers" in c
+}
+
+export function isAuthenticatable(c: DataInterface): c is DataInterface & Authenticatable {
+  return "getAuthState" in c && "authenticate" in c
+}
+
+export function hasMultiSource(c: DataInterface): c is DataInterface & MultiSource {
+  return "getSources" in c && "getActiveSource" in c
 }
