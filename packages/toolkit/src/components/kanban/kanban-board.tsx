@@ -323,7 +323,7 @@ export function KanbanBoard({
           NOTE: HTML Drag & Drop API does not work on mobile touch devices.
           For Capacitor/mobile, @dnd-kit or manual touch handling will be needed. */}
       {draggedItemId !== null && (
-        <div className="fixed bottom-20 left-4 right-4 z-40 md:bottom-4 animate-in slide-in-from-bottom-4 fade-in">
+        <div className="fixed bottom-20 left-4 right-4 z-40 animate-in slide-in-from-bottom-4 fade-in md:hidden">
           <div className="flex flex-wrap gap-2 p-2 rounded-xl border bg-background/95 backdrop-blur shadow-lg">
             {columns.filter((col) => col.id !== draggedItemColumnId).map((column) => (
               <div
