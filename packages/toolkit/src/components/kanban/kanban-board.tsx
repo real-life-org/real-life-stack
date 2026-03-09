@@ -370,7 +370,8 @@ export function KanbanBoard({
             <Card
               key={column.id}
               className={cn(
-                "transition-colors",
+                "transition-colors gap-0 pt-2",
+                isCollapsed ? "pb-0 md:pb-2" : "pb-2",
                 isHiddenDesktop && "md:hidden",
                 dragOverColumn === column.id && "border-primary/50 bg-primary/5"
               )}
@@ -378,7 +379,7 @@ export function KanbanBoard({
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, column.id, columnItems.length)}
             >
-              <CardHeader className="pb-3">
+              <CardHeader className={cn("px-3", isCollapsed ? "pb-0 md:pb-1" : "pb-1")}>
                 <CardTitle className="text-sm font-medium flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     {/* Mobile: collapse toggle */}
@@ -417,7 +418,7 @@ export function KanbanBoard({
               </CardHeader>
               {/* Mobile: hide content when collapsed. Desktop: always show (hidden columns aren't in grid). */}
               <CardContent className={cn(
-                "space-y-0 min-h-[100px]",
+                "space-y-0 min-h-[40px] md:min-h-[60px] px-3 pb-1",
                 isCollapsed && "hidden md:block"
               )}>
                 <DropIndicator
