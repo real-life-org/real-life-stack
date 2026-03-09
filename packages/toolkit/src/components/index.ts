@@ -1,21 +1,12 @@
-// UI components
-export * from "./ui/button"
-export * from "./ui/card"
-export * from "./ui/input"
-export * from "./ui/textarea"
-export * from "./ui/avatar"
-export * from "./ui/dialog"
-export * from "./ui/dropdown-menu"
-export * from "./ui/tabs"
-export * from "./ui/separator"
-export * from "./ui/label"
-export * from "./ui/sheet"
-export * from "./ui/tooltip"
-export * from "./ui/skeleton"
-export * from "./ui/sidebar"
+// Primitives (shadcn/ui)
+export * from "./primitives"
 
-// Layout components
+// Layout
 export * from "./layout"
 
-// Content components
-export * from "./content"
+// Feature modules
+export * from "./feed"
+export * from "./kanban"
+export * from "./dashboard"
+export * from "./calendar"
+// export * from "./map"

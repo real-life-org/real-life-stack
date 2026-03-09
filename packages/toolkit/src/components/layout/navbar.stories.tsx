@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import React from 'react'
 import { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from './navbar'
-import { Button } from '../ui/button'
-import { Avatar, AvatarFallback } from '../ui/avatar'
+import { Button } from '../primitives/button'
+import { Avatar, AvatarFallback } from '../primitives/avatar'
 import { ChevronDown, Menu } from 'lucide-react'
 
 const meta: Meta<typeof Navbar> = {

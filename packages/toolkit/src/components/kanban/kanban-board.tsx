@@ -1,7 +1,7 @@
 import { useState, useCallback, type DragEvent } from "react"
 import type { Item, User, Relation } from "@real-life-stack/data-interface"
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
+import { Card, CardContent, CardHeader, CardTitle } from "../primitives/card"
+import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { cn } from "../../lib/utils"
 
 export interface KanbanColumn {

@@ -2,9 +2,9 @@
 
 import { Heart, MessageCircle, Share2, Calendar, HelpCircle } from "lucide-react"
 
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/primitives/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
+import { Button } from "@/components/primitives/button"
 import { cn } from "@/lib/utils"
 
 export type PostType = "text" | "event" | "request"

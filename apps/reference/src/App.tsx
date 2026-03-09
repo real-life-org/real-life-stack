@@ -30,6 +30,7 @@ import {
   StatCard,
   ActionCard,
   KanbanBoard,
+  CalendarView,
   Card,
   CardContent,
   CardHeader,
@@ -254,127 +255,14 @@ function MapView() {
   )
 }
 
-function CalendarView() {
+function CalendarViewWrapper() {
   const { data: events } = useItems({ type: "event" })
-  const weekdays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-
-  // Build calendar grid for current month, marking days that have events
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth()
-  const today = now.getDate()
-  const firstDay = new Date(year, month, 1).getDay() // 0=Sun
-  const startOffset = firstDay === 0 ? 6 : firstDay - 1 // Mon-based offset
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const daysInPrev = new Date(year, month, 0).getDate()
-
-  const eventDays = new Set(
-    events
-      .filter((e) => e.data.start)
-      .map((e) => new Date(String(e.data.start)).getDate())
-  )
-
-  const calendarDays = Array.from({ length: 42 }, (_, i) => {
-    const dayNum = i - startOffset + 1
-    const isCurrentMonth = dayNum >= 1 && dayNum <= daysInMonth
-    return {
-      number: dayNum < 1 ? daysInPrev + dayNum : dayNum > daysInMonth ? dayNum - daysInMonth : dayNum,
-      isCurrentMonth,
-      hasEvent: isCurrentMonth && eventDays.has(dayNum),
-      isToday: isCurrentMonth && dayNum === today,
-    }
-  })
-
-  const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"]
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>{monthNames[month]} {year}</span>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm">
-                &lt;
-              </Button>
-              <Button variant="ghost" size="sm">
-                &gt;
-              </Button>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Weekday headers */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {weekdays.map((day) => (
-              <div
-                key={day}
-                className="text-center text-xs font-medium text-muted-foreground py-2"
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((day, i) => (
-              <button
-                key={i}
-                className={`
-                  aspect-square rounded-lg flex flex-col items-center justify-center text-sm transition-all
-                  ${!day.isCurrentMonth ? "text-muted-foreground/40" : "text-foreground"}
-                  ${day.isToday ? "bg-primary text-primary-foreground font-bold" : ""}
-                  ${day.hasEvent && !day.isToday ? "bg-primary/10 font-medium" : ""}
-                  ${day.isCurrentMonth && !day.isToday ? "hover:bg-muted" : ""}
-                `}
-              >
-                {day.number}
-                {day.hasEvent && (
-                  <div
-                    className={`w-1 h-1 rounded-full mt-0.5 ${day.isToday ? "bg-primary-foreground" : "bg-primary"}`}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Upcoming events from connector */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Anstehende Events</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {events.map((event) => {
-            const start = event.data.start ? new Date(String(event.data.start)) : null
-            const dayNames = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
-            const dayName = start ? dayNames[start.getDay()] : ""
-            const dayNum = start ? start.getDate() : ""
-            const time = start ? `${start.getHours()}:${String(start.getMinutes()).padStart(2, "0")}` : ""
-
-            return (
-              <div
-                key={event.id}
-                className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary/30 hover:bg-primary/5 transition-all cursor-pointer"
-              >
-                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex flex-col items-center justify-center text-primary-foreground">
-                  <span className="text-xs font-medium">{dayName}</span>
-                  <span className="text-lg font-bold leading-none">{dayNum}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground">{String(event.data.title)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {time} Uhr
-                  </p>
-                </div>
-              </div>
-            )
-          })}
-        </CardContent>
-      </Card>
-    </div>
+    <CalendarView
+      events={events}
+      onEventClick={(event) => console.log("Event clicked:", event.id)}
+    />
   )
 }
 
@@ -489,7 +377,7 @@ function Home() {
         {activeModule === "feed" && <FeedView />}
         {activeModule === "kanban" && <KanbanView />}
         {activeModule === "map" && <MapView />}
-        {activeModule === "calendar" && <CalendarView />}
+        {activeModule === "calendar" && <CalendarViewWrapper />}
       </AppShellMain>
 
       <BottomNav

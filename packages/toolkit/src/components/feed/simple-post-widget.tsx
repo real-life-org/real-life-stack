@@ -3,9 +3,9 @@
 import * as React from "react"
 import { ImagePlus, Send } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/primitives/button"
+import { Card, CardContent, CardFooter } from "@/components/primitives/card"
+import { Textarea } from "@/components/primitives/textarea"
 import { cn } from "@/lib/utils"
 
 interface SimplePostWidgetProps {

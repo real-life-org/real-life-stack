@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react"
 
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/primitives/card"
 import { cn } from "@/lib/utils"
 
 type StatColor = "blue" | "green" | "orange" | "purple" | "red"
