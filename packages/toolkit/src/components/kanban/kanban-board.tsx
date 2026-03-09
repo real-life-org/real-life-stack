@@ -3,6 +3,7 @@ import type { Item, User, Relation } from "@real-life-stack/data-interface"
 import { Card, CardContent, CardHeader, CardTitle } from "../primitives/card"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { cn } from "../../lib/utils"
+import { EyeOff, Eye, ChevronDown, ChevronRight } from "lucide-react"
 
 export interface KanbanColumn {
   id: string
@@ -151,6 +152,42 @@ export function KanbanBoard({
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
   const [floatingHoverColumn, setFloatingHoverColumn] = useState<string | null>(null)
+  const [hiddenColumnIds, setHiddenColumnIds] = useState<Set<string>>(new Set())
+  const [collapsedColumnIds, setCollapsedColumnIds] = useState<Set<string>>(new Set())
+  const [hiddenChipHoverColumn, setHiddenChipHoverColumn] = useState<string | null>(null)
+
+  const visibleColumns = useMemo(
+    () => columns.filter((col) => !hiddenColumnIds.has(col.id)),
+    [columns, hiddenColumnIds]
+  )
+  const hiddenColumns = useMemo(
+    () => columns.filter((col) => hiddenColumnIds.has(col.id)),
+    [columns, hiddenColumnIds]
+  )
+
+  const toggleHideColumn = useCallback((columnId: string) => {
+    setHiddenColumnIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(columnId)) {
+        next.delete(columnId)
+      } else {
+        next.add(columnId)
+      }
+      return next
+    })
+  }, [])
+
+  const toggleCollapseColumn = useCallback((columnId: string) => {
+    setCollapsedColumnIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(columnId)) {
+        next.delete(columnId)
+      } else {
+        next.add(columnId)
+      }
+      return next
+    })
+  }, [])
   const handleDragStart = useCallback((e: DragEvent, itemId: string) => {
     e.dataTransfer.setData("text/plain", itemId)
     e.dataTransfer.effectAllowed = "move"
@@ -218,6 +255,7 @@ export function KanbanBoard({
     setDragOverColumn(null)
     setDropTarget(null)
     setFloatingHoverColumn(null)
+    setHiddenChipHoverColumn(null)
   }, [])
 
   const itemsByColumn = useMemo(() => {
@@ -261,19 +299,79 @@ export function KanbanBoard({
     return null
   }, [draggedItemId, itemsByColumn])
 
+  const handleHiddenChipDrop = useCallback(
+    (e: DragEvent, columnId: string) => {
+      e.preventDefault()
+      const itemId = e.dataTransfer.getData("text/plain")
+      const columnItems = itemsByColumn.get(columnId) ?? []
+      setDraggedItemId(null)
+      setDragOverColumn(null)
+      setDropTarget(null)
+      setHiddenChipHoverColumn(null)
+      if (itemId && onMoveItem) {
+        onMoveItem(itemId, columnId, columnItems.length)
+      }
+    },
+    [onMoveItem, itemsByColumn]
+  )
+
   return (
     <>
+      {/* Hidden Columns Bar — Desktop only */}
+      {hiddenColumns.length > 0 && (
+        <div className="hidden md:flex flex-wrap gap-2 mb-3">
+          {hiddenColumns.map((column) => {
+            const columnItems = itemsByColumn.get(column.id) ?? []
+            const isDragging = draggedItemId !== null
+            const isHovered = hiddenChipHoverColumn === column.id
+            return (
+              <button
+                key={column.id}
+                type="button"
+                onClick={() => !isDragging && toggleHideColumn(column.id)}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = "move"
+                }}
+                onDragEnter={() => setHiddenChipHoverColumn(column.id)}
+                onDragLeave={() => setHiddenChipHoverColumn((prev) => prev === column.id ? null : prev)}
+                onDrop={(e) => handleHiddenChipDrop(e, column.id)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors",
+                  isDragging
+                    ? cn(
+                        "border-2 border-dashed",
+                        isHovered
+                          ? "border-solid border-primary bg-primary/15 text-primary"
+                          : "border-primary/30 bg-muted text-muted-foreground"
+                      )
+                    : "bg-muted text-muted-foreground hover:bg-accent cursor-pointer"
+                )}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {column.label}
+                <span className="text-xs opacity-70">({columnItems.length})</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       <div
         className="grid gap-4 grid-cols-1 md:[grid-template-columns:var(--kanban-cols)]"
-        style={{ '--kanban-cols': `repeat(${columns.length}, minmax(0, 1fr))` } as React.CSSProperties}
+        style={{ '--kanban-cols': `repeat(${visibleColumns.length}, minmax(0, 1fr))` } as React.CSSProperties}
       >
+        {/* Desktop: only visible columns. Mobile: all columns (hiddenColumnIds ignored). */}
         {columns.map((column) => {
+          const isHiddenDesktop = hiddenColumnIds.has(column.id)
+          const isCollapsed = collapsedColumnIds.has(column.id)
           const columnItems = itemsByColumn.get(column.id) ?? []
           return (
             <Card
               key={column.id}
               className={cn(
                 "transition-colors",
+                isHiddenDesktop && "md:hidden",
                 dragOverColumn === column.id && "border-primary/50 bg-primary/5"
               )}
               onDragOver={(e) => handleColumnDragOver(e, column.id, columnItems.length)}
@@ -282,13 +380,46 @@ export function KanbanBoard({
             >
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center justify-between">
-                  <span>{column.label}</span>
-                  <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
-                    {columnItems.length}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {/* Mobile: collapse toggle */}
+                    <button
+                      type="button"
+                      onClick={() => toggleCollapseColumn(column.id)}
+                      className="md:hidden p-0.5 rounded hover:bg-muted transition-colors"
+                      aria-label={isCollapsed ? "Spalte ausklappen" : "Spalte einklappen"}
+                    >
+                      {isCollapsed
+                        ? <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      }
+                    </button>
+                    <span>{column.label}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+                      {columnItems.length}
+                    </span>
+                    {/* Desktop: hide button */}
+                    <button
+                      type="button"
+                      onClick={() => toggleHideColumn(column.id)}
+                      disabled={visibleColumns.length <= 1}
+                      className={cn(
+                        "hidden md:inline-flex p-1 rounded hover:bg-muted transition-colors",
+                        visibleColumns.length <= 1 && "opacity-30 cursor-not-allowed"
+                      )}
+                      aria-label={`Spalte "${column.label}" ausblenden`}
+                    >
+                      <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-0 min-h-[100px]">
+              {/* Mobile: hide content when collapsed. Desktop: always show (hidden columns aren't in grid). */}
+              <CardContent className={cn(
+                "space-y-0 min-h-[100px]",
+                isCollapsed && "hidden md:block"
+              )}>
                 <DropIndicator
                   visible={dropTarget?.columnId === column.id && dropTarget.index === 0}
                 />
