@@ -55,9 +55,9 @@ import { LocalConnector } from "@real-life-stack/local-connector"
 
 const modules: Module[] = [
   { id: "feed", label: "Feed", icon: Newspaper },
-  { id: "kanban", label: "Kanban", icon: Columns3 },
   { id: "map", label: "Karte", icon: Map },
   { id: "calendar", label: "Kalender", icon: Calendar },
+  { id: "kanban", label: "Kanban", icon: Columns3 },
 ]
 
 // Helper: resolve user info from members list
@@ -271,10 +271,24 @@ function KanbanView() {
   const { data: members } = useMembers("group-1")
   const { mutate: updateItem } = useUpdateItem()
 
-  const handleMoveItem = (itemId: string, newStatus: string) => {
+  const handleMoveItem = (itemId: string, newStatus: string, position: number) => {
     const item = tasks.find((t) => t.id === itemId)
     if (!item) return
-    updateItem(itemId, { data: { ...item.data, status: newStatus } })
+
+    // Get items in the target column, sorted by position, excluding the dragged item
+    const columnItems = tasks
+      .filter((t) => {
+        const s = (t.data.status as string) ?? "todo"
+        return s === newStatus && t.id !== itemId
+      })
+      .sort((a, b) => ((a.data.position as number) ?? 0) - ((b.data.position as number) ?? 0))
+
+    // Insert at target position and reassign positions
+    columnItems.splice(position, 0, item)
+    for (let i = 0; i < columnItems.length; i++) {
+      const t = columnItems[i]
+      updateItem(t.id, { data: { ...t.data, status: newStatus, position: i } })
+    }
   }
 
   return (

@@ -1,3 +1,4 @@
+import { useState } from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import type { Item, User } from "@real-life-stack/data-interface"
 import { KanbanBoard, defaultColumns } from "./kanban-board"
@@ -66,8 +67,51 @@ export const Default: Story = {
   args: {
     items: tasks,
     users,
-    onMoveItem: (itemId, newStatus) => console.log("Move:", itemId, "→", newStatus),
+    onMoveItem: (itemId, newStatus, position) => console.log("Move:", itemId, "→", newStatus, "at", position),
     onItemClick: (item) => console.log("Clicked:", item.id),
+  },
+}
+
+export const Interactive: Story = {
+  render: () => {
+    const [items, setItems] = useState(tasks)
+
+    const handleMoveItem = (itemId: string, newStatus: string, position: number) => {
+      setItems((prev) => {
+        const item = prev.find((t) => t.id === itemId)
+        if (!item) return prev
+
+        // Get items in target column excluding dragged item
+        const columnItems = prev
+          .filter((t) => (t.data.status as string) === newStatus && t.id !== itemId)
+          .sort((a, b) => ((a.data.position as number) ?? 0) - ((b.data.position as number) ?? 0))
+
+        // Insert at position
+        const movedItem = { ...item, data: { ...item.data, status: newStatus } }
+        columnItems.splice(position, 0, movedItem)
+
+        // Reassign positions
+        const updated = columnItems.map((t, i) => ({
+          ...t,
+          data: { ...t.data, position: i },
+        }))
+
+        // Merge back: keep items from other columns, replace target column
+        const otherItems = prev.filter(
+          (t) => (t.data.status as string) !== newStatus && t.id !== itemId
+        )
+        return [...otherItems, ...updated]
+      })
+    }
+
+    return (
+      <KanbanBoard
+        items={items}
+        users={users}
+        onMoveItem={handleMoveItem}
+        onItemClick={(item) => console.log("Clicked:", item.id)}
+      />
+    )
   },
 }
 

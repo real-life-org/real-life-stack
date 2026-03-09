@@ -19,8 +19,13 @@ export interface KanbanBoardProps {
   items: Item[]
   columns?: KanbanColumn[]
   users?: User[]
-  onMoveItem?: (itemId: string, newStatus: string) => void
+  onMoveItem?: (itemId: string, newStatus: string, position: number) => void
   onItemClick?: (item: Item) => void
+}
+
+interface DropTarget {
+  columnId: string
+  index: number
 }
 
 function getInitials(name: string): string {
@@ -54,11 +59,12 @@ function getTagColor(tag: string): string {
 interface KanbanCardProps {
   item: Item
   users?: User[]
+  isDragged: boolean
   onDragStart: (e: DragEvent, itemId: string) => void
   onClick?: (item: Item) => void
 }
 
-function KanbanCard({ item, users, onDragStart, onClick }: KanbanCardProps) {
+function KanbanCard({ item, users, isDragged, onDragStart, onClick }: KanbanCardProps) {
   const assigneeIds = getAssigneeIds(item)
   const assignees = (users ?? []).filter((u) => assigneeIds.includes(u.id))
   const tags = (item.data.tags as string[]) ?? []
@@ -71,7 +77,8 @@ function KanbanCard({ item, users, onDragStart, onClick }: KanbanCardProps) {
       className={cn(
         "rounded-lg border bg-card p-3 shadow-sm cursor-grab active:cursor-grabbing",
         "hover:border-primary/30 hover:shadow-md transition-all",
-        "select-none"
+        "select-none",
+        isDragged && "opacity-50"
       )}
     >
       <p className="font-medium text-sm text-foreground leading-snug">
@@ -120,6 +127,17 @@ function KanbanCard({ item, users, onDragStart, onClick }: KanbanCardProps) {
   )
 }
 
+function DropIndicator({ visible }: { visible: boolean }) {
+  return (
+    <div
+      className={cn(
+        "h-0.5 rounded-full transition-all mx-1",
+        visible ? "bg-primary scale-x-100 my-1" : "scale-x-0 my-0 h-0"
+      )}
+    />
+  )
+}
+
 export function KanbanBoard({
   items,
   columns = defaultColumns,
@@ -128,32 +146,68 @@ export function KanbanBoard({
   onItemClick,
 }: KanbanBoardProps) {
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
-
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
   const handleDragStart = useCallback((e: DragEvent, itemId: string) => {
     e.dataTransfer.setData("text/plain", itemId)
     e.dataTransfer.effectAllowed = "move"
+    setDraggedItemId(itemId)
   }, [])
 
-  const handleDragOver = useCallback((e: DragEvent, columnId: string) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
-    setDragOverColumn(columnId)
-  }, [])
+  const handleCardDragOver = useCallback(
+    (e: DragEvent, columnId: string, cardIndex: number) => {
+      e.preventDefault()
+      e.stopPropagation()
+      e.dataTransfer.dropEffect = "move"
+      setDragOverColumn(columnId)
 
-  const handleDragLeave = useCallback(() => {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const midY = rect.top + rect.height / 2
+      const index = e.clientY < midY ? cardIndex : cardIndex + 1
+
+      setDropTarget((prev) => {
+        if (prev && prev.columnId === columnId && prev.index === index) return prev
+        return { columnId, index }
+      })
+    },
+    []
+  )
+
+  const handleColumnDragOver = useCallback(
+    (e: DragEvent, columnId: string, itemCount: number) => {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = "move"
+      setDragOverColumn(columnId)
+
+      // Only set drop target to end if we're not over a card
+      if (e.target === e.currentTarget) {
+        setDropTarget({ columnId, index: itemCount })
+      }
+    },
+    []
+  )
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    // Only clear if we're leaving the column entirely (not entering a child)
+    const relatedTarget = e.relatedTarget as Node | null
+    if (relatedTarget && e.currentTarget.contains(relatedTarget)) return
     setDragOverColumn(null)
+    setDropTarget(null)
   }, [])
 
   const handleDrop = useCallback(
-    (e: DragEvent, columnId: string) => {
+    (e: DragEvent, columnId: string, fallbackIndex: number) => {
       e.preventDefault()
       setDragOverColumn(null)
+      const position = dropTarget?.columnId === columnId ? dropTarget.index : fallbackIndex
+      setDropTarget(null)
+      setDraggedItemId(null)
       const itemId = e.dataTransfer.getData("text/plain")
       if (itemId && onMoveItem) {
-        onMoveItem(itemId, columnId)
+        onMoveItem(itemId, columnId, position)
       }
     },
-    [onMoveItem]
+    [onMoveItem, dropTarget]
   )
 
   const itemsByColumn = new Map<string, Item[]>()
@@ -180,9 +234,9 @@ export function KanbanBoard({
               "transition-colors",
               dragOverColumn === column.id && "border-primary/50 bg-primary/5"
             )}
-            onDragOver={(e) => handleDragOver(e, column.id)}
+            onDragOver={(e) => handleColumnDragOver(e, column.id, columnItems.length)}
             onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, column.id)}
+            onDrop={(e) => handleDrop(e, column.id, columnItems.length)}
           >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center justify-between">
@@ -192,15 +246,29 @@ export function KanbanBoard({
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 min-h-[100px]">
-              {columnItems.map((item) => (
-                <KanbanCard
+            <CardContent className="space-y-0 min-h-[100px]">
+              <DropIndicator
+                visible={dropTarget?.columnId === column.id && dropTarget.index === 0}
+              />
+              {columnItems.map((item, idx) => (
+                <div
                   key={item.id}
-                  item={item}
-                  users={users}
-                  onDragStart={handleDragStart}
-                  onClick={onItemClick}
-                />
+                  onDragOver={(e) => handleCardDragOver(e, column.id, idx)}
+                  className="py-1"
+                >
+                  <KanbanCard
+                    item={item}
+                    users={users}
+                    isDragged={draggedItemId === item.id}
+                    onDragStart={handleDragStart}
+                    onClick={onItemClick}
+                  />
+                  <DropIndicator
+                    visible={
+                      dropTarget?.columnId === column.id && dropTarget.index === idx + 1
+                    }
+                  />
+                </div>
               ))}
             </CardContent>
           </Card>
