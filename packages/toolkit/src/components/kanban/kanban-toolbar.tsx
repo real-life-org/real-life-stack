@@ -12,7 +12,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "../primitives/dropdown-menu"
-import { Plus, CheckSquare, User as UserIcon, Users, Search, Tag, Settings } from "lucide-react"
+import { Plus, CheckSquare, User as UserIcon, Users, Search, Tag, Settings, Filter, X } from "lucide-react"
 import { cn } from "../../lib/utils"
 
 export interface KanbanFilter {
@@ -92,6 +92,7 @@ export function KanbanToolbar({
   const [myTasksOnly, setMyTasksOnly] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [multiSelect, setMultiSelect] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   // Derive tags from items if not provided
   const tags = useMemo(() => {
@@ -140,147 +141,237 @@ export function KanbanToolbar({
     onMultiSelectChange?.(next)
   }
 
+  const resetFilters = () => {
+    setSearchText("")
+    setAssignedTo(null)
+    setMyTasksOnly(false)
+    setSelectedTags([])
+  }
+
   const hasActiveFilters = searchText || assignedTo || myTasksOnly || selectedTags.length > 0
 
+  // Count active filters for mobile badge
+  const activeFilterCount =
+    (searchText ? 1 : 0) + (assignedTo ? 1 : 0) + (myTasksOnly ? 1 : 0) + selectedTags.length
+
+  // --- Shared filter elements ---
+
+  const myTasksButton = (iconOnly: boolean) =>
+    currentUserId ? (
+      <Button
+        size="sm"
+        variant={myTasksOnly ? "secondary" : "outline"}
+        onClick={handleMyTasksToggle}
+      >
+        <UserIcon className="h-4 w-4 shrink-0" />
+        {!iconOnly && <span className="ml-1">Meine Tasks</span>}
+      </Button>
+    ) : null
+
+  const userDropdown = (iconOnly: boolean) =>
+    users && users.length > 0 ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant={assignedTo ? "secondary" : "outline"}>
+            <Users className="h-4 w-4 shrink-0" />
+            {!iconOnly && (
+              <span className="ml-1">
+                {assignedTo
+                  ? users.find((u) => u.id === assignedTo)?.displayName ?? "User"
+                  : "User"}
+              </span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuLabel>Zugewiesen an</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {users.map((user) => (
+            <DropdownMenuCheckboxItem
+              key={user.id}
+              checked={assignedTo === user.id}
+              onCheckedChange={() => handleUserToggle(user.id)}
+            >
+              {user.displayName ?? user.id}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null
+
+  const tagsDropdown = (iconOnly: boolean) =>
+    tags.length > 0 ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant={selectedTags.length > 0 ? "secondary" : "outline"}>
+            <Tag className="h-4 w-4 shrink-0" />
+            {!iconOnly && <span className="ml-1">Tags</span>}
+            {selectedTags.length > 0 && (
+              <span className="ml-1 text-xs bg-primary/20 rounded-full px-1.5">
+                {selectedTags.length}
+              </span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Tags filtern</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {tags.map((tag) => (
+            <DropdownMenuCheckboxItem
+              key={tag}
+              checked={selectedTags.includes(tag)}
+              onCheckedChange={() => handleTagToggle(tag)}
+            >
+              {tag}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null
+
+  const settingsButton = onEditColumns ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Settings className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={onEditColumns}>
+          Spalten bearbeiten
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null
+
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      {/* New Task */}
-      {onCreateItem && (
-        <Button size="sm" onClick={onCreateItem}>
-          <Plus className="h-4 w-4 mr-1" />
-          Neuer Task
-        </Button>
-      )}
-
-      {/* Multi-Select Toggle */}
-      {onMultiSelectChange && (
-        <Button
-          size="sm"
-          variant={multiSelect ? "secondary" : "outline"}
-          onClick={handleMultiSelectToggle}
-        >
-          <CheckSquare className="h-4 w-4 mr-1" />
-          Selektion
-        </Button>
-      )}
-
-      {(onCreateItem || onMultiSelectChange) && (
-        <Separator orientation="vertical" className="h-6" />
-      )}
-
-      {/* My Tasks */}
-      {currentUserId && (
-        <Button
-          size="sm"
-          variant={myTasksOnly ? "secondary" : "outline"}
-          onClick={handleMyTasksToggle}
-        >
-          <UserIcon className="h-4 w-4 mr-1" />
-          Meine Tasks
-        </Button>
-      )}
-
-      {/* User Dropdown */}
-      {users && users.length > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" variant={assignedTo ? "secondary" : "outline"}>
-              <Users className="h-4 w-4 mr-1" />
-              {assignedTo
-                ? users.find((u) => u.id === assignedTo)?.displayName ?? "User"
-                : "User"}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel>Zugewiesen an</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {users.map((user) => (
-              <DropdownMenuCheckboxItem
-                key={user.id}
-                checked={assignedTo === user.id}
-                onCheckedChange={() => handleUserToggle(user.id)}
-              >
-                {user.displayName ?? user.id}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-
-      {/* Search */}
-      <div className="relative flex-1 min-w-[150px]">
-        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Suchen..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          className="h-8 pl-7"
-        />
-      </div>
-
-      {/* Tags Dropdown */}
-      {tags.length > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" variant={selectedTags.length > 0 ? "secondary" : "outline"}>
-              <Tag className="h-4 w-4 mr-1" />
-              Tags
-              {selectedTags.length > 0 && (
-                <span className="ml-1 text-xs bg-primary/20 rounded-full px-1.5">
-                  {selectedTags.length}
-                </span>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Tags filtern</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {tags.map((tag) => (
-              <DropdownMenuCheckboxItem
-                key={tag}
-                checked={selectedTags.includes(tag)}
-                onCheckedChange={() => handleTagToggle(tag)}
-              >
-                {tag}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-
-      {/* Right-aligned group: reset + settings */}
-      <div className="ml-auto flex items-center gap-2">
-        {hasActiveFilters && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setSearchText("")
-              setAssignedTo(null)
-              setMyTasksOnly(false)
-              setSelectedTags([])
-            }}
-          >
-            Filter zurücksetzen
+    <div className={cn("flex flex-col gap-2", className)}>
+      {/* === Desktop Layout === */}
+      <div className="hidden md:flex flex-wrap items-center gap-2">
+        {/* New Task */}
+        {onCreateItem && (
+          <Button size="sm" onClick={onCreateItem}>
+            <Plus className="h-4 w-4 mr-1" />
+            Task
           </Button>
         )}
 
-        {onEditColumns && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEditColumns}>
-                Spalten bearbeiten
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Multi-Select Toggle */}
+        {onMultiSelectChange && (
+          <Button
+            size="sm"
+            variant={multiSelect ? "secondary" : "outline"}
+            onClick={handleMultiSelectToggle}
+          >
+            <CheckSquare className="h-4 w-4 mr-1" />
+            Selektion
+          </Button>
         )}
+
+        {(onCreateItem || onMultiSelectChange) && (
+          <Separator orientation="vertical" className="h-6" />
+        )}
+
+        {/* My Tasks */}
+        {myTasksButton(false)}
+
+        {/* Search */}
+        <div className="relative flex-1 min-w-[150px]">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Suchen..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="h-8 pl-7"
+          />
+        </div>
+
+        {/* User Dropdown */}
+        {userDropdown(false)}
+
+        {/* Tags Dropdown */}
+        {tagsDropdown(false)}
+
+        {/* Right-aligned group: reset + settings */}
+        <div className="ml-auto flex items-center gap-2">
+          {hasActiveFilters && (
+            <Button size="sm" variant="outline" onClick={resetFilters}>
+              Filter zurücksetzen
+            </Button>
+          )}
+          {settingsButton}
+        </div>
       </div>
+
+      {/* === Mobile Layout === */}
+      {/* First row: Create + Meine Tasks + spacer + Filter toggle + Settings */}
+      <div className="flex md:hidden items-center gap-2">
+        {onCreateItem && (
+          <Button size="sm" onClick={onCreateItem}>
+            <Plus className="h-4 w-4 mr-1" />
+            Task
+          </Button>
+        )}
+
+        {myTasksButton(false)}
+
+        <div className="flex-1" />
+
+        {/* Filter toggle */}
+        <Button
+          size="sm"
+          variant={filtersOpen ? "secondary" : "outline"}
+          onClick={() => setFiltersOpen(!filtersOpen)}
+          className="relative"
+        >
+          <Filter className="h-4 w-4" />
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+              {activeFilterCount}
+            </span>
+          )}
+        </Button>
+
+        {settingsButton}
+      </div>
+
+      {/* Second row (mobile only, collapsible): search + filter buttons */}
+      {filtersOpen && (
+        <div className="flex md:hidden flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[120px]">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Suchen..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="h-8 pl-7"
+            />
+          </div>
+
+          {userDropdown(true)}
+          {tagsDropdown(true)}
+
+          {/* Multi-Select Toggle */}
+          {onMultiSelectChange && (
+            <Button
+              size="sm"
+              variant={multiSelect ? "secondary" : "outline"}
+              onClick={handleMultiSelectToggle}
+            >
+              <CheckSquare className="h-4 w-4" />
+            </Button>
+          )}
+
+          {hasActiveFilters && (
+            <Button size="sm" variant="outline" onClick={resetFilters}>
+              <X className="h-4 w-4 mr-1" />
+              Zurücksetzen
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
