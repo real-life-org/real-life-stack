@@ -419,7 +419,7 @@ function Home() {
         </NavbarEnd>
       </Navbar>
 
-      <AppShellMain withBottomNav className={`container mx-auto px-4 py-6 ${activeModule === "kanban" ? "max-w-5xl" : "max-w-2xl"}`}>
+      <AppShellMain withBottomNav className={`container mx-auto px-4 pt-6 ${activeModule === "kanban" ? "max-w-5xl" : "max-w-2xl"}`}>
         {activeModule === "feed" && <FeedView />}
         {activeModule === "kanban" && <KanbanView />}
         {activeModule === "map" && <MapView />}
