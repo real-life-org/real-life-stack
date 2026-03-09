@@ -57,10 +57,8 @@ jobs:
           VITE_BASE_PATH: /app/
 
       - name: Build prototype
-        run: |
-          cd apps/prototype
-          npm ci
-          npm run build -- --base="/edge/"
+        working-directory: apps/prototype
+        run: pnpm tsc -b && pnpm vite build --base="/edge/"
 
       - name: Build Storybook
         run: pnpm build:storybook
