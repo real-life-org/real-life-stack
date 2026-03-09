@@ -6,19 +6,28 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "cap sync",
+    "cap:android": "cap open android",
+    "cap:ios": "cap open ios",
+    "build:android": "tsc -b && vite build && cap sync android",
+    "build:ios": "tsc -b && vite build && cap sync ios"
   },
   "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/ios": "^8.2.0",
     "@real-life-stack/data-interface": "workspace:*",
     "@real-life-stack/local-connector": "workspace:*",
     "@real-life-stack/mock-connector": "workspace:*",
     "@real-life-stack/toolkit": "workspace:*",
+    "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.1",
-    "lucide-react": "^0.468.0"
+    "react-router-dom": "^7.1.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.2.0",
     "@tailwindcss/vite": "^4.1.0",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
