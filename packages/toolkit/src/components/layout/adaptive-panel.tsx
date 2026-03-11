@@ -14,9 +14,9 @@ import { X, Maximize2, PanelRight, GripHorizontal } from "lucide-react"
 export type PanelMode = "modal" | "sidebar" | "drawer"
 
 export interface DrawerSnapConfig {
-  /** Lower snap point as fraction of viewport height (default 0.3) — below this minus zone → close */
+  /** Lower snap point as fraction of viewport height (default 0.2) — below this minus zone → close */
   lower?: number
-  /** Upper snap point as fraction of viewport height (default 0.95) — above this plus zone → maximize */
+  /** Upper snap point as fraction of viewport height (default 0.8) — above this → maximize to 100% */
   upper?: number
   /** Size of the snap zone in viewport fraction (default 0.05) */
   zone?: number
@@ -144,8 +144,8 @@ export function AdaptivePanel({
   const [animatingOut, setAnimatingOut] = useState(false)
 
   // Snap config with defaults
-  const snapLower = drawerSnapProp?.lower ?? 0.3
-  const snapUpper = drawerSnapProp?.upper ?? 0.95
+  const snapLower = drawerSnapProp?.lower ?? 0.2
+  const snapUpper = drawerSnapProp?.upper ?? 0.8
   const snapZone = drawerSnapProp?.zone ?? 0.05
 
   // Sidebar resize state
@@ -155,6 +155,7 @@ export function AdaptivePanel({
 
   // Drawer state — drawerY is percent from top (100 = hidden, 0 = full screen)
   const [drawerY, setDrawerY] = useState(100)
+  const drawerYRef = useRef(100) // always-current mirror of drawerY for callbacks
   const [isDragging, setIsDragging] = useState(false)
   const dragRef = useRef<{
     startY: number
@@ -169,6 +170,11 @@ export function AdaptivePanel({
   // Remember last drawer/sidebar sizes for restore after modal round-trip
   const lastDrawerYRef = useRef(100 - drawerInitialHeight * 100)
   const lastSidebarWidthRef = useRef(parsePx(sidebarWidthProp))
+
+  // Keep drawerYRef in sync
+  useEffect(() => {
+    drawerYRef.current = drawerY
+  }, [drawerY])
 
   // Resolve mode on viewport change
   useEffect(() => {
@@ -208,7 +214,7 @@ export function AdaptivePanel({
 
       // Save current sizes before switching away
       if (mode === "drawer") {
-        lastDrawerYRef.current = drawerY
+        lastDrawerYRef.current = drawerYRef.current
       } else if (mode === "sidebar") {
         lastSidebarWidthRef.current = currentSidebarWidth
       }
@@ -218,8 +224,8 @@ export function AdaptivePanel({
 
       // Restore sizes when switching back
       if (targetMode === "drawer") {
-        setDrawerY(100)
         const restoreY = lastDrawerYRef.current
+        setDrawerY(100)
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             setDrawerY(restoreY)
@@ -229,15 +235,22 @@ export function AdaptivePanel({
         setCurrentSidebarWidth(lastSidebarWidthRef.current)
       }
     },
-    [allowedModes, onModeChange, mode, drawerY, currentSidebarWidth]
+    [allowedModes, onModeChange, mode, currentSidebarWidth]
   )
+
+  // Track previous open state to distinguish fresh open vs mode switch
+  const prevOpenRef = useRef(false)
 
   // Open/close animation
   useEffect(() => {
+    const wasOpen = prevOpenRef.current
+    prevOpenRef.current = open
+
     if (open) {
       setVisible(true)
       setAnimatingOut(false)
-      if (mode === "drawer") {
+      // Only animate drawer to initial height on fresh open (not on mode switch)
+      if (mode === "drawer" && !wasOpen) {
         setDrawerY(100)
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
@@ -261,16 +274,16 @@ export function AdaptivePanel({
   // --- Drawer snap logic ---
   // Determines what happens on pointer up based on current position and velocity
   const resolveDrawerRelease = useCallback(
-    (currentY: number, velocity: number): "close" | "snap-lower" | "snap-upper" | "stay" => {
+    (currentY: number, velocity: number): "close" | "snap-lower" | "maximize" | "stay" => {
       const visibleFraction = (100 - currentY) / 100
 
-      // Fast downward swipe → close
+      // Fast downward swipe near bottom → close
       if (velocity > VELOCITY_THRESHOLD && visibleFraction < snapLower + snapZone * 2) {
         return "close"
       }
-      // Fast upward swipe → maximize
+      // Fast upward swipe near top → maximize
       if (velocity < -VELOCITY_THRESHOLD && visibleFraction > snapUpper - snapZone * 2) {
-        return "snap-upper"
+        return "maximize"
       }
 
       // Below lower snap zone → close
@@ -281,9 +294,9 @@ export function AdaptivePanel({
       if (visibleFraction < snapLower + snapZone) {
         return "snap-lower"
       }
-      // Inside upper snap zone → snap to upper
-      if (visibleFraction > snapUpper - snapZone) {
-        return "snap-upper"
+      // Above upper snap threshold → maximize to 100%
+      if (visibleFraction > snapUpper) {
+        return "maximize"
       }
       // Between snap zones → stay where it is
       return "stay"
@@ -325,11 +338,9 @@ export function AdaptivePanel({
       const deltaPercent = (deltaPixels / viewportH) * 100
       let newY = dragRef.current.startDrawerY + deltaPercent
 
-      // Upper bound: rubber-band past max (full screen = 0%)
-      const minY = 100 - snapUpper * 100
-      if (newY < minY) {
-        const overflow = minY - newY
-        newY = minY - overflow * 0.3
+      // Upper bound: rubber-band past full screen (0%)
+      if (newY < 0) {
+        newY = newY * 0.3
       }
       // Lower bound: rubber-band past hidden
       if (newY > 100) {
@@ -342,7 +353,7 @@ export function AdaptivePanel({
         setDrawerY(newY)
       })
     },
-    [mode, snapUpper]
+    [mode]
   )
 
   const handlePointerUp = useCallback(
@@ -363,9 +374,9 @@ export function AdaptivePanel({
           setDrawerY(100 - snapLower * 100)
           lastDrawerYRef.current = 100 - snapLower * 100
           break
-        case "snap-upper":
-          setDrawerY(100 - snapUpper * 100)
-          lastDrawerYRef.current = 100 - snapUpper * 100
+        case "maximize":
+          setDrawerY(0)
+          lastDrawerYRef.current = 0
           break
         case "stay":
           // Keep current position, remember it
@@ -373,7 +384,7 @@ export function AdaptivePanel({
           break
       }
     },
-    [mode, drawerY, resolveDrawerRelease, onClose, snapLower, snapUpper]
+    [mode, drawerY, resolveDrawerRelease, onClose, snapLower]
   )
 
   // --- Sidebar Resize Pointer Events ---
@@ -582,7 +593,14 @@ export function AdaptivePanel({
   // --- DRAWER ---
   const drawerTransition = isDragging
     ? "none"
-    : "transform 300ms cubic-bezier(0.32, 0.72, 0, 1)"
+    : "transform 300ms cubic-bezier(0.32, 0.72, 0, 1), opacity 300ms cubic-bezier(0.32, 0.72, 0, 1)"
+
+  // Fade out when dragged below the lower snap zone
+  const visibleFraction = (100 - drawerY) / 100
+  const fadeStart = snapLower - snapZone
+  const drawerOpacity = visibleFraction < fadeStart
+    ? Math.max(0, visibleFraction / fadeStart)
+    : 1
 
   return (
     <div className="fixed inset-0 z-[60] pointer-events-none">
@@ -605,6 +623,7 @@ export function AdaptivePanel({
         style={{
           height: "100vh",
           transform: `translateY(${drawerY}%)`,
+          opacity: drawerOpacity,
           transition: drawerTransition,
         } as CSSProperties}
       >
