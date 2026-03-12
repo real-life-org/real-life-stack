@@ -247,7 +247,7 @@ export function KanbanToolbar({
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       {/* === Desktop Layout === */}
-      <div className="hidden md:flex flex-wrap items-center gap-2">
+      <div className="hidden @3xl:flex flex-wrap items-center gap-2">
         {/* New Task */}
         {onCreateItem && (
           <Button size="sm" onClick={onCreateItem}>
@@ -306,7 +306,7 @@ export function KanbanToolbar({
 
       {/* === Mobile Layout === */}
       {/* First row: Create + Meine Tasks + spacer + Filter toggle + Settings */}
-      <div className="flex md:hidden items-center gap-2">
+      <div className="flex @3xl:hidden items-center gap-2">
         {onCreateItem && (
           <Button size="sm" onClick={onCreateItem}>
             <Plus className="h-4 w-4 mr-1" />
@@ -338,7 +338,7 @@ export function KanbanToolbar({
 
       {/* Second row (mobile only, collapsible): search + filter buttons */}
       {filtersOpen && (
-        <div className="flex md:hidden flex-wrap items-center gap-2">
+        <div className="flex @3xl:hidden flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[120px]">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input

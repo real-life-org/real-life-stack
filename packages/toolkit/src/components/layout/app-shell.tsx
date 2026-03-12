@@ -31,7 +31,7 @@ export function AppShellMain({
   return (
     <main
       className={cn(
-        "flex-1 overflow-y-auto",
+        "@container flex-1 overflow-y-auto",
         "transition-[padding] duration-300 ease-out [.adaptive-panel-resizing_&]:transition-none",
         withBottomNav && "pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0",
         className

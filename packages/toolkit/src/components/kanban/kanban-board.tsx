@@ -319,7 +319,7 @@ export function KanbanBoard({
     <>
       {/* Hidden Columns Bar — Desktop only */}
       {hiddenColumns.length > 0 && (
-        <div className="hidden md:flex flex-wrap gap-2 mb-3">
+        <div className="hidden @3xl:flex flex-wrap gap-2 mb-3">
           {hiddenColumns.map((column) => {
             const columnItems = itemsByColumn.get(column.id) ?? []
             const isDragging = draggedItemId !== null
@@ -358,7 +358,7 @@ export function KanbanBoard({
       )}
 
       <div
-        className="grid gap-4 grid-cols-1 md:[grid-template-columns:var(--kanban-cols)]"
+        className="grid gap-4 grid-cols-1 @3xl:[grid-template-columns:var(--kanban-cols)]"
         style={{ '--kanban-cols': `repeat(${visibleColumns.length}, minmax(0, 1fr))` } as React.CSSProperties}
       >
         {/* Desktop: only visible columns. Mobile: all columns (hiddenColumnIds ignored). */}
@@ -371,22 +371,22 @@ export function KanbanBoard({
               key={column.id}
               className={cn(
                 "transition-colors gap-0 pt-2",
-                isCollapsed ? "pb-0 md:pb-2" : "pb-2",
-                isHiddenDesktop && "md:hidden",
+                isCollapsed ? "pb-0 @3xl:pb-2" : "pb-2",
+                isHiddenDesktop && "@3xl:hidden",
                 dragOverColumn === column.id && "border-primary/50 bg-primary/5"
               )}
               onDragOver={(e) => handleColumnDragOver(e, column.id, columnItems.length)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, column.id, columnItems.length)}
             >
-              <CardHeader className={cn("px-3", isCollapsed ? "pb-0 md:pb-1" : "pb-1")}>
+              <CardHeader className={cn("px-3", isCollapsed ? "pb-0 @3xl:pb-1" : "pb-1")}>
                 <CardTitle className="text-sm font-medium flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     {/* Mobile: collapse toggle */}
                     <button
                       type="button"
                       onClick={() => toggleCollapseColumn(column.id)}
-                      className="md:hidden p-0.5 rounded hover:bg-muted transition-colors"
+                      className="@3xl:hidden p-0.5 rounded hover:bg-muted transition-colors"
                       aria-label={isCollapsed ? "Spalte ausklappen" : "Spalte einklappen"}
                     >
                       {isCollapsed
@@ -406,7 +406,7 @@ export function KanbanBoard({
                       onClick={() => toggleHideColumn(column.id)}
                       disabled={visibleColumns.length <= 1}
                       className={cn(
-                        "hidden md:inline-flex p-1 rounded hover:bg-muted transition-colors",
+                        "hidden @3xl:inline-flex p-1 rounded hover:bg-muted transition-colors",
                         visibleColumns.length <= 1 && "opacity-30 cursor-not-allowed"
                       )}
                       aria-label={`Spalte "${column.label}" ausblenden`}
@@ -418,8 +418,8 @@ export function KanbanBoard({
               </CardHeader>
               {/* Mobile: hide content when collapsed. Desktop: always show (hidden columns aren't in grid). */}
               <CardContent className={cn(
-                "space-y-0 min-h-[40px] md:min-h-[60px] px-3 pb-1",
-                isCollapsed && "hidden md:block"
+                "space-y-0 min-h-[40px] @3xl:min-h-[60px] px-3 pb-1",
+                isCollapsed && "hidden @3xl:block"
               )}>
                 <DropIndicator
                   visible={dropTarget?.columnId === column.id && dropTarget.index === 0}
@@ -455,7 +455,7 @@ export function KanbanBoard({
           NOTE: HTML Drag & Drop API does not work on mobile touch devices.
           For Capacitor/mobile, @dnd-kit or manual touch handling will be needed. */}
       {draggedItemId !== null && (
-        <div className="fixed bottom-20 left-4 right-4 z-40 animate-in slide-in-from-bottom-4 fade-in md:hidden">
+        <div className="fixed bottom-20 left-4 right-4 z-40 animate-in slide-in-from-bottom-4 fade-in @3xl:hidden">
           <div className="flex flex-wrap gap-2 p-2 rounded-xl border bg-background/95 backdrop-blur shadow-lg">
             {columns.filter((col) => col.id !== draggedItemColumnId).map((column) => (
               <div
