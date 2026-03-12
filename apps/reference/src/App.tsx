@@ -306,6 +306,7 @@ function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string |
     tags: [],
   })
   const [panelState, setPanelState] = useState<KanbanPanelState>({ mode: "closed" })
+  const [panelPinned, setPanelPinned] = useState(false)
 
   const filteredTasks = useMemo(
     () => applyKanbanFilter(tasks, filter, currentUser?.id),
@@ -352,6 +353,11 @@ function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string |
   }, [])
 
   const handleClosePanel = useCallback(() => {
+    if (!panelPinned) setPanelState({ mode: "closed" })
+  }, [panelPinned])
+
+  // Explicit close — always closes, ignoring pinned state (used by X button / drawer drag)
+  const handleForceClosePanel = useCallback(() => {
     setPanelState({ mode: "closed" })
   }, [])
 
@@ -378,8 +384,8 @@ function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string |
     if (data.groupId && previousGroupId && data.groupId !== previousGroupId && hasGroups(connector)) {
       (connector as DataInterface & GroupManager).setCurrentGroup(previousGroupId)
     }
-    setPanelState({ mode: "closed" })
-  }, [createItem, currentUser?.id, tasks.length, activeWorkspaceId, connector])
+    if (!panelPinned) setPanelState({ mode: "closed" })
+  }, [createItem, currentUser?.id, tasks.length, activeWorkspaceId, connector, panelPinned])
 
   const handleTaskEdit = useCallback((data: { title: string; description: string; status: string; tags: string[]; assigneeId: string | null; groupId: string | null }) => {
     if (panelState.mode !== "edit") return
@@ -399,8 +405,8 @@ function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string |
         c.moveItemToGroup(item.id, data.groupId)
       }
     }
-    setPanelState({ mode: "closed" })
-  }, [panelState, updateItem, connector])
+    if (!panelPinned) setPanelState({ mode: "closed" })
+  }, [panelState, updateItem, connector, panelPinned])
 
   return (
     <div className="space-y-4">
@@ -420,10 +426,12 @@ function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string |
       />
       <AdaptivePanel
         open={panelState.mode !== "closed"}
-        onClose={handleClosePanel}
+        onClose={handleForceClosePanel}
         allowedModes={["modal", "sidebar", "drawer"]}
         sidebarWidth="420px"
         sidebarMinWidth="300px"
+        pinned={panelPinned}
+        onPinnedChange={setPanelPinned}
       >
         {panelState.mode === "edit" && (
           <KanbanTaskForm

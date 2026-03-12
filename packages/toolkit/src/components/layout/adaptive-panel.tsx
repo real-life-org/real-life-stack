@@ -9,7 +9,7 @@ import {
   type CSSProperties,
 } from "react"
 import { cn } from "../../lib/utils"
-import { X, Maximize2, PanelRight, GripHorizontal } from "lucide-react"
+import { X, Maximize2, PanelRight, GripHorizontal, Pin, PinOff } from "lucide-react"
 
 export type PanelMode = "modal" | "sidebar" | "drawer"
 
@@ -37,6 +37,9 @@ export interface AdaptivePanelProps {
   drawerInitialHeight?: number
   /** Snap configuration for the drawer */
   drawerSnap?: DrawerSnapConfig
+  /** When pinned, the panel stays open on submit/cancel — only explicit close dismisses it */
+  pinned?: boolean
+  onPinnedChange?: (pinned: boolean) => void
   onModeChange?: (mode: PanelMode) => void
   onSidebarResize?: (width: number) => void
   className?: string
@@ -132,6 +135,8 @@ export function AdaptivePanel({
   modalClassName,
   drawerInitialHeight = 0.55,
   drawerSnap: drawerSnapProp,
+  pinned = false,
+  onPinnedChange,
   onModeChange,
   onSidebarResize,
   className,
@@ -476,26 +481,26 @@ export function AdaptivePanel({
     onSidebarResize?.(defaultWidth)
   }, [sidebarWidthProp, onSidebarResize])
 
-  // Escape key handler
+  // Escape key handler — don't close when pinned
   useEffect(() => {
-    if (!open) return
+    if (!open || pinned) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [open, onClose])
+  }, [open, onClose, pinned])
 
-  // Lock body scroll when modal or drawer is open
+  // Lock body scroll when modal or (unpinned) drawer is open
   useEffect(() => {
-    if (open && (mode === "modal" || mode === "drawer")) {
+    if (open && (mode === "modal" || (mode === "drawer" && !pinned))) {
       const prev = document.body.style.overflow
       document.body.style.overflow = "hidden"
       return () => {
         document.body.style.overflow = prev
       }
     }
-  }, [open, mode])
+  }, [open, mode, pinned])
 
   if (!visible && !open) return null
 
@@ -534,8 +539,8 @@ export function AdaptivePanel({
 
   return (
     <>
-      {/* Backdrop — modal and drawer */}
-      {(mode === "modal" || mode === "drawer") && (
+      {/* Backdrop — modal and unpinned drawer */}
+      {(mode === "modal" || (mode === "drawer" && !pinned)) && (
         <div
           className={cn(
             "fixed inset-0 z-[60] bg-black/50 transition-opacity duration-200",
@@ -607,8 +612,21 @@ export function AdaptivePanel({
                   )}
                 />
               </div>
-              {/* Drawer mode switch */}
+              {/* Drawer pin + mode switch */}
               <div className="absolute top-2 right-3 flex items-center gap-0.5">
+                {onPinnedChange && (
+                  <button
+                    type="button"
+                    onClick={() => onPinnedChange(!pinned)}
+                    className={cn(
+                      "p-1.5 rounded-sm transition-opacity",
+                      pinned ? "opacity-100 text-primary" : "opacity-60 hover:opacity-100"
+                    )}
+                    aria-label={pinned ? "Loslösen" : "Anheften"}
+                  >
+                    {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                  </button>
+                )}
                 <ModeSwitchButton
                   currentMode={mode}
                   allowedModes={allowedModes}
@@ -643,9 +661,22 @@ export function AdaptivePanel({
             </div>
           )}
 
-          {/* Close + mode switch buttons (modal and sidebar) */}
+          {/* Close + pin + mode switch buttons (modal and sidebar) */}
           {mode !== "drawer" && (
             <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5">
+              {onPinnedChange && mode === "sidebar" && (
+                <button
+                  type="button"
+                  onClick={() => onPinnedChange(!pinned)}
+                  className={cn(
+                    "p-1.5 rounded-sm transition-opacity",
+                    pinned ? "opacity-100 text-primary" : "opacity-60 hover:opacity-100"
+                  )}
+                  aria-label={pinned ? "Loslösen" : "Anheften"}
+                >
+                  {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                </button>
+              )}
               <ModeSwitchButton
                 currentMode={mode}
                 allowedModes={allowedModes}

@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react"
+import { useState, useRef, type KeyboardEvent } from "react"
 import type { KanbanColumn } from "./kanban-board"
 import type { User, Group } from "@real-life-stack/data-interface"
 import { defaultColumns } from "./kanban-board"
@@ -82,22 +82,51 @@ export function KanbanTaskForm({
   className,
 }: KanbanTaskFormProps) {
   const isEdit = !!initialData
-  const [title, setTitle] = useState(initialData?.title ?? "")
-  const [description, setDescription] = useState(initialData?.description ?? "")
-  const [status, setStatus] = useState(initialData?.status ?? "todo")
-  const [tags, setTags] = useState<string[]>(initialData?.tags ?? [])
+  const defaultData: KanbanTaskFormData = {
+    title: initialData?.title ?? "",
+    description: initialData?.description ?? "",
+    status: initialData?.status ?? "todo",
+    tags: initialData?.tags ?? [],
+    assigneeId: initialData?.assigneeId ?? null,
+    groupId: initialData?.groupId ?? defaultGroupId ?? null,
+  }
+  // Tracks the last saved state — updated after each submit
+  const lastSavedRef = useRef<KanbanTaskFormData>(defaultData)
+  const [title, setTitle] = useState(defaultData.title)
+  const [description, setDescription] = useState(defaultData.description)
+  const [status, setStatus] = useState(defaultData.status)
+  const [tags, setTags] = useState<string[]>(defaultData.tags)
   const [tagInput, setTagInput] = useState("")
-  const [assigneeId, setAssigneeId] = useState<string | null>(initialData?.assigneeId ?? null)
-  const [groupId, setGroupId] = useState<string | null>(initialData?.groupId ?? defaultGroupId ?? null)
+  const [assigneeId, setAssigneeId] = useState<string | null>(defaultData.assigneeId)
+  const [groupId, setGroupId] = useState<string | null>(defaultData.groupId)
   const [groupOpen, setGroupOpen] = useState(!isEdit)
 
   // Filter out aggregate groups — items must belong to a concrete group
   const selectableGroups = groups.filter((g) => (g.data?.scope as string) !== "aggregate")
 
+  const resetForm = () => {
+    const d = lastSavedRef.current
+    setTitle(d.title)
+    setDescription(d.description)
+    setStatus(d.status)
+    setTags(d.tags)
+    setTagInput("")
+    setAssigneeId(d.assigneeId)
+    setGroupId(d.groupId)
+    setGroupOpen(!isEdit)
+  }
+
   const handleSubmit = () => {
     if (!title.trim()) return
     if (selectableGroups.length > 0 && !groupId) return
-    onSubmit({ title: title.trim(), description: description.trim(), status, tags, assigneeId, groupId })
+    const data: KanbanTaskFormData = { title: title.trim(), description: description.trim(), status, tags, assigneeId, groupId }
+    lastSavedRef.current = data
+    onSubmit(data)
+  }
+
+  const handleCancel = () => {
+    resetForm()
+    onCancel()
   }
 
   const addTag = (tag: string) => {
@@ -322,7 +351,7 @@ export function KanbanTaskForm({
 
       {/* Buttons */}
       <div className="flex gap-2 pt-2">
-        <Button variant="outline" onClick={onCancel} className="flex-1">
+        <Button variant="outline" onClick={handleCancel} className="flex-1">
           Abbrechen
         </Button>
         <Button
