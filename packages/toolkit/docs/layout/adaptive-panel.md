@@ -12,6 +12,8 @@ Die Komponente kuemmert sich ausschliesslich um:
 - Sidebar-Resize per Drag-Handle
 - Manuellen Moduswechsel zwischen Sidebar/Modal bzw. Drawer/Modal
 - Groessen-Wiederherstellung nach Moduswechsel-Roundtrip
+- Pinned-Modus: Panel bleibt offen bis zum expliziten Schliessen
+- Scroll-Management: Inhalt scrollbar, Reset beim Oeffnen
 
 Sie weiss nichts ueber den dargestellten Inhalt — kein Profil, kein Detail-View, keine Business-Logik.
 
@@ -74,6 +76,25 @@ Abgeleitet aus `apps/prototype/src/components/profile/ProfileView.tsx`, die drei
 - **US-26**: Ein Klick auf den Backdrop schliesst das Modal.
 - **US-30**: Die Modal-Groesse ist konfigurierbar via `modalClassName` (z.B. `"max-w-2xl max-h-[80vh]"`).
 
+### Pinned-Modus
+
+- **US-31**: Als Nutzer sehe ich ein Pin-Icon in der Sidebar und im Drawer (neben dem Mode-Switch-Button), mit dem ich das Panel anheften kann.
+- **US-32**: Wenn das Panel angeheftet ist, bleibt es offen — automatisches Schliessen (z.B. nach Speichern/Abbrechen im Consumer) wird unterdrueckt. Nur explizites Schliessen (X-Button, Drawer-Herunterziehen) schliesst das Panel.
+- **US-33**: Im angehefteten Drawer-Modus wird der Backdrop entfernt und die Seite bleibt interaktiv.
+- **US-34**: Im angehefteten Modus wird Escape nicht zum Schliessen verwendet.
+- **US-35**: Das Pin-Icon wird nur angezeigt, wenn `onPinnedChange` uebergeben wird.
+- **US-36**: Im Modal-Modus wird kein Pin-Icon angezeigt (Modals sind immer blockierend).
+
+### Scroll-Verhalten
+
+- **US-37**: Als Nutzer kann ich den Panelinhalt in allen drei Modi vertikal scrollen, wenn er die verfuegbare Hoehe ueberschreitet.
+- **US-38**: Wenn ich ein Panel oeffne (frischer Open, nicht Moduswechsel), wird die Scrollposition auf den Anfang zurueckgesetzt.
+
+### Velocity-Snapping (Drawer)
+
+- **US-39**: Schnelles Wischen nach unten schliesst den Drawer nur, wenn er sich in der unteren Haelfte befindet — versehentliches Schliessen aus der oberen Haelfte wird verhindert.
+- **US-40**: Schnelles Wischen nach oben maximiert den Drawer nur, wenn er sich in der oberen Haelfte befindet.
+
 ---
 
 ## 3. Modi-Definition
@@ -109,7 +130,7 @@ Seitliches Panel, das den Hauptinhalt verdraengt (kein Overlay). Der Content-Ber
 | Content-Verdraengung | Via CSS-Variablen (`--adaptive-panel-margin-right/left`) als `paddingRight/Left` auf `AppShellMain` |
 | Resize-Handle | Vertikaler Griff am inneren Rand (links bei `side="right"`) |
 | Animation | Width-Transition (300ms ease-out), Content-Padding animiert synchron |
-| Header-Buttons | X (Schliessen) + Expand-Icon (wechselt zu Modal, wenn erlaubt) |
+| Header-Buttons | Pin-Icon (wenn `onPinnedChange`) + Expand-Icon (wechselt zu Modal, wenn erlaubt) + X (Schliessen) |
 
 ### `drawer`
 
@@ -127,8 +148,9 @@ Bottom-Sheet mit Drag-Gesten und Snap-Zonen. Kein externer Gesture-Handler — r
 | Fade-Out | Panel wird transparent wenn unter die untere Snap-Zone gezogen |
 | Drag-Handle | Visueller Griff oben, Touch-Area mindestens 44px |
 | Rubber-Band | Elastischer Widerstand ueber 100% (oberhalb des Viewports) |
-| Animation | `transform: translateY()` + `opacity` (300ms, spring-like cubic-bezier) |
-| Header-Buttons | Expand-Icon (wechselt zu Modal, wenn erlaubt) — kein X noetig, Drag-Dismiss genuegt |
+| Animation | `height` + `opacity` (300ms, spring-like cubic-bezier) |
+| Backdrop | Nur wenn nicht pinned — wird entfernt wenn Panel angeheftet ist |
+| Header-Buttons | Pin-Icon (wenn `onPinnedChange`) + Expand-Icon (wechselt zu Modal, wenn erlaubt) — kein X noetig, Drag-Dismiss genuegt |
 
 ---
 
@@ -336,7 +358,7 @@ Framer Motion wird **nicht** verwendet. Gruende:
 | CSS `transition` + `transform` | Alle Slide/Fade-Uebergaenge (GPU-beschleunigt) |
 | Native Pointer Events | Drag-Erkennung im Drawer + Sidebar-Resize |
 | `requestAnimationFrame` | Smooth Drag-Tracking |
-| CSS `transform: translateY()` | Drawer-Position (GPU-beschleunigt, kein Layout-Reflow) |
+| CSS `height` | Drawer-Position (`height: (100-Y)vh`, Bottom-Anchored fuer korrektes Scrolling) |
 | CSS `opacity` | Drawer Fade-Out in der Schliess-Zone |
 | CSS `padding` Transition | Content-Verdraengung durch Sidebar (300ms) |
 
@@ -359,11 +381,14 @@ Inner Content: minWidth auf aktuelle Breite, overflow-hidden auf Container — v
 
 **Drawer:**
 ```
-Oeffnen: translateY(100%) → translateY(target) (300ms, spring-like cubic-bezier)
-Schliessen: translateY(current) → translateY(100%) + opacity 1→0 (300ms)
-Snap: translateY(current) → translateY(target) (300ms, spring-like cubic-bezier)
+Oeffnen: height 0vh → height (target)vh (300ms, spring-like cubic-bezier)
+Schliessen: height (current)vh → height 0vh + opacity 1→0 (300ms)
+Snap: height (current)vh → height (target)vh (300ms, spring-like cubic-bezier)
 Fade-Out: opacity berechnet aus Position relativ zur unteren Snap-Zone
+Scroll-Reset: Beim frischen Oeffnen wird scrollTop auf 0 gesetzt
 ```
+
+**Hinweis zum Drawer-Sizing:** Der Drawer nutzt `height: (100-Y)vh` statt `translateY(Y%)`. Der Grund: bei `translateY` mit `height: 100vh` denkt der Browser, der Container habe die volle Hoehe. Das verhindert korrektes internes Scrolling. Mit dynamischer Hoehe und `bottom: 0` (via `inset-x-0 bottom-0`) waechst der Drawer von unten und der Inhalt scrollt korrekt.
 
 ### Spring-Easing via CSS
 
@@ -406,12 +431,14 @@ Bei Drag-End wird basierend auf Position und Velocity entschieden:
 
 | Bedingung | Aktion |
 |---|---|
-| Schneller Swipe nach unten + nahe unterem Snap | Schliessen |
-| Schneller Swipe nach oben + nahe oberem Snap | Maximieren (100%) |
+| Schneller Swipe nach unten + Panel in unterer Haelfte (< 50%) | Schliessen |
+| Schneller Swipe nach oben + Panel in oberer Haelfte (> 50%) | Maximieren (100%) |
 | Position < lower - zone | Schliessen |
 | Position in unterer Snap-Zone (lower ± zone) | Einrasten auf lower |
 | Position > upper | Maximieren (100%) |
 | Position zwischen den Zonen | Bleiben wo losgelassen |
+
+**Velocity-Guards:** Schnelles Wischen loest nur aus, wenn die aktuelle Position zur Richtung passt. Ein Swipe nach unten aus der oberen Haelfte schliesst den Drawer nicht — er muesste erst in die untere Haelfte gezogen werden. Das verhindert versehentliches Schliessen bei schnellen Korrekturbewegungen.
 
 ### Rubber-Band-Effekt
 
@@ -479,6 +506,14 @@ interface AdaptivePanelProps {
   /** Snap-Konfiguration fuer den Drawer */
   drawerSnap?: DrawerSnapConfig
 
+  /** Wenn true, bleibt das Panel offen — nur explizites Schliessen
+   *  (X-Button, Drawer-Dismiss) schliesst es. Default: false */
+  pinned?: boolean
+
+  /** Callback bei Aenderung des Pinned-Zustands.
+   *  Wenn nicht gesetzt, wird das Pin-Icon nicht angezeigt. */
+  onPinnedChange?: (pinned: boolean) => void
+
   /** Callback bei Moduswechsel */
   onModeChange?: (mode: PanelMode) => void
 
@@ -493,25 +528,59 @@ interface AdaptivePanelProps {
 ### Verwendungsbeispiel
 
 ```tsx
+import { useState } from "react"
 import { AdaptivePanel } from "@real-life-stack/toolkit"
 
 function DetailView({ item, onClose }) {
+  const [pinned, setPinned] = useState(false)
+
+  // Respektiert Pinned-Status: schliesst nur wenn nicht angeheftet
+  const handleClosePanel = () => {
+    if (!pinned) onClose()
+  }
+
+  // Explizites Schliessen: ignoriert Pinned-Status (fuer X-Button / Drawer-Dismiss)
+  const handleForceClose = () => {
+    onClose()
+  }
+
   return (
     <AdaptivePanel
       open={!!item}
-      onClose={onClose}
+      onClose={handleForceClose}
       allowedModes={["modal", "sidebar", "drawer"]}
       sidebarWidth="420px"
       sidebarMinWidth="300px"
       modalClassName="max-w-2xl"
       drawerInitialHeight={0.55}
       drawerSnap={{ lower: 0.25, upper: 0.8, zone: 0.05 }}
+      pinned={pinned}
+      onPinnedChange={setPinned}
       onModeChange={(mode) => console.log("Mode:", mode)}
       onSidebarResize={(width) => console.log("Resized:", width)}
     >
-      <DetailContent item={item} />
+      <DetailContent
+        item={item}
+        onSave={() => handleClosePanel()}  // Schliesst nur wenn nicht pinned
+        onCancel={() => handleClosePanel()}
+      />
     </AdaptivePanel>
   )
+}
+```
+
+**Pinned-Modus — Zusammenspiel mit dem Consumer:**
+
+Das AdaptivePanel selbst kennt keine Business-Logik. Der `pinned`-Zustand beeinflusst:
+- **Drawer**: Kein Backdrop, kein Body-Scroll-Lock, Escape schliesst nicht
+- **Sidebar**: Kein Backdrop (hat ohnehin keinen), Escape schliesst nicht
+- **Modal**: Kein Pin-Icon (Modals sind immer blockierend)
+
+Der Consumer entscheidet, ob er bei Speichern/Abbrechen das Panel schliesst oder offen laesst:
+```tsx
+const handleSave = () => {
+  saveData()
+  if (!panelPinned) closePanel()  // Nur schliessen wenn nicht pinned
 }
 ```
 
@@ -565,3 +634,9 @@ Sheet und Dialog bleiben bestehen — sie sind einfacher und fuer ihre jeweilige
 | 2026-03-11 | Groessen-Wiederherstellung nach Modal-Roundtrip (US-28) |
 | 2026-03-11 | `modalClassName` fuer konfigurierbare Modal-Groesse (US-30) |
 | 2026-03-11 | `drawerInitialHeight` und `DrawerSnapConfig` statt `snapPoints[]` |
+| 2026-03-12 | Drawer-Velocity-Close nur aus unterer Haelfte zulassen (US-39, US-40) |
+| 2026-03-12 | Drawer-Scrolling: height-basiertes Sizing statt translateY fuer korrekte Scrollbarkeit |
+| 2026-03-12 | Scroll-Reset beim Oeffnen (US-38) |
+| 2026-03-12 | Pinned-Modus: `pinned` + `onPinnedChange` Props (US-31–US-36) |
+| 2026-03-12 | Pinned Drawer: Kein Backdrop, kein Body-Scroll-Lock, kein Escape-Close |
+| 2026-03-12 | Storybook-Dokumentation hinzugefuegt |
