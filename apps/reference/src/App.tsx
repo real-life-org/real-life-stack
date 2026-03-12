@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, type DragEvent } from "react"
+import { useState, useMemo, useCallback, useEffect, type DragEvent, lazy, Suspense } from "react"
 import { Routes, Route } from "react-router-dom"
 import {
   Newspaper,
@@ -16,6 +16,7 @@ import {
   LayoutList,
   ChevronDown,
   ChevronRight,
+  Contact,
 } from "lucide-react"
 
 import {
@@ -49,24 +50,37 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
+  GroupDialog,
+  ProfileDialog,
+  ContactList,
+  AddContactDialog,
+  RelayStatusBadge,
   ConnectorProvider,
   useItems,
   useUpdateItem,
   useMembers,
   useGroups,
+  useCreateGroup,
+  useUpdateGroup,
+  useDeleteGroup,
+  useInviteMember,
+  useRemoveMember,
   useCurrentUser,
   useCreateItem,
   useDeleteItem,
   useConnector,
+  useContacts,
+  useRelayStatus,
   type Workspace,
   type UserData,
   type Module,
   type Post,
   type KanbanFilter,
   type ConnectorOption,
+  type GroupDialogMode,
 } from "@real-life-stack/toolkit"
 import type { Item, User, Relation, Group, DataInterface, GroupManager } from "@real-life-stack/data-interface"
-import { hasGroups } from "@real-life-stack/data-interface"
+import { hasGroups, isAuthenticatable, hasContacts, hasMessaging } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
 import { MockConnector } from "@real-life-stack/mock-connector"
 import { LocalConnector } from "@real-life-stack/local-connector"
@@ -76,6 +90,7 @@ const MODULE_ICONS: Record<string, typeof Newspaper> = {
   map: MapIcon,
   calendar: Calendar,
   kanban: Columns3,
+  contacts: Contact,
 }
 
 const MODULE_LABELS: Record<string, string> = {
@@ -83,11 +98,13 @@ const MODULE_LABELS: Record<string, string> = {
   map: "Karte",
   calendar: "Kalender",
   kanban: "Kanban",
+  contacts: "Kontakte",
 }
 
 const CONNECTOR_OPTIONS: ConnectorOption[] = [
   { id: "mock", name: "Mock", description: "In-Memory, kein Speichern" },
   { id: "local", name: "Local", description: "IndexedDB, persistent" },
+  { id: "wot", name: "Web of Trust", description: "E2E-verschlüsselt, Multi-Device" },
 ]
 
 // Helper: resolve user info from members list
@@ -677,10 +694,110 @@ function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string |
   )
 }
 
+function ContactsView() {
+  const { activeContacts, pendingContacts, addContact, removeContact, updateContactName } = useContacts()
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Kontakte</h2>
+          <p className="text-sm text-muted-foreground">
+            {activeContacts.length} verifiziert · {pendingContacts.length} ausstehend
+          </p>
+        </div>
+        <Button onClick={() => setAddDialogOpen(true)} size="sm">
+          <UserPlus className="h-4 w-4 mr-2" />
+          Hinzufügen
+        </Button>
+      </div>
+
+      {pendingContacts.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Ausstehend</h3>
+          <ContactList
+            contacts={pendingContacts}
+            onRemove={removeContact}
+            onEditName={updateContactName}
+          />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {activeContacts.length > 0 && pendingContacts.length > 0 && (
+          <h3 className="text-sm font-medium text-muted-foreground">Verifiziert</h3>
+        )}
+        <ContactList
+          contacts={activeContacts}
+          onRemove={removeContact}
+          onEditName={updateContactName}
+          emptyMessage="Noch keine verifizierten Kontakte"
+        />
+      </div>
+
+      <AddContactDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onAdd={addContact}
+      />
+    </div>
+  )
+}
+
+function RelayStatusBadgeWrapper() {
+  const { state, pendingCount } = useRelayStatus()
+  return <RelayStatusBadge state={state} pendingCount={pendingCount} />
+}
+
 function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: string; onConnectorChange: (id: string) => void }) {
   const connector = useConnector()
   const { data: groups } = useGroups()
+  const createGroup = useCreateGroup()
+  const updateGroup = useUpdateGroup()
+  const deleteGroup = useDeleteGroup()
+  const inviteMember = useInviteMember()
+  const removeMember = useRemoveMember()
   const { data: currentUser } = useCurrentUser()
+
+  // Profile dialog state
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false)
+  const profileData = useMemo(() => {
+    const did = (connector as any).getDid?.() ?? currentUser?.id ?? ""
+    return {
+      did,
+      name: currentUser?.displayName ?? "",
+      bio: "",
+      avatar: currentUser?.avatarUrl,
+    }
+  }, [connector, currentUser])
+
+  const handleSaveProfile = useCallback(async (updates: { name: string; bio: string }) => {
+    if (typeof (connector as any).updateProfile === "function") {
+      await (connector as any).updateProfile(updates)
+    }
+  }, [connector])
+
+  // Group dialog state
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false)
+  const [groupDialogMode, setGroupDialogMode] = useState<GroupDialogMode>({ type: "create" })
+  const openCreateDialog = useCallback(() => {
+    setGroupDialogMode({ type: "create" })
+    setGroupDialogOpen(true)
+  }, [])
+
+  const openEditDialog = useCallback(async (workspace: Workspace) => {
+    const group = groups.find((g) => g.id === workspace.id)
+    if (!group) return
+    let members: User[] = []
+    if (hasGroups(connector)) {
+      try {
+        members = await (connector as DataInterface & GroupManager).getMembers(group.id)
+      } catch { /* ignore */ }
+    }
+    setGroupDialogMode({ type: "edit", group, members })
+    setGroupDialogOpen(true)
+  }, [groups, connector])
 
   const basePath = import.meta.env.BASE_URL
   const workspaces: Workspace[] = useMemo(
@@ -702,45 +819,81 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     [currentUser]
   )
 
-  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null)
-  const [activeModule, setActiveModule] = useState("feed")
+  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(() => {
+    const savedId = localStorage.getItem(STORAGE_KEY_GROUP)
+    if (savedId) {
+      // Will be resolved once workspaces load
+      return { id: savedId, name: "" }
+    }
+    return null
+  })
+  const [activeModule, setActiveModule] = useState(() => {
+    return localStorage.getItem(STORAGE_KEY_MODULE) ?? "feed"
+  })
   const [isDark, setIsDark] = useState(false)
 
-  // Set first workspace as active once loaded and sync with connector
+  // Resolve active workspace once workspaces are loaded
   useEffect(() => {
-    if (!activeWorkspace && workspaces.length > 0) {
-      setActiveWorkspace(workspaces[0])
-      if (hasGroups(connector)) {
-        (connector as DataInterface & GroupManager).setCurrentGroup(workspaces[0].id)
+    if (workspaces.length === 0) return
+    // If we have a saved workspace ID, try to find it in the loaded list
+    if (activeWorkspace) {
+      const found = workspaces.find((w) => w.id === activeWorkspace.id)
+      if (found) {
+        // Update name in case it was a placeholder from localStorage
+        if (found.name !== activeWorkspace.name) {
+          setActiveWorkspace(found)
+        }
+        if (hasGroups(connector)) {
+          (connector as DataInterface & GroupManager).setCurrentGroup(found.id)
+        }
+        return
       }
     }
-  }, [activeWorkspace, workspaces, connector])
+    // Fallback: select first workspace
+    setActiveWorkspace(workspaces[0])
+    localStorage.setItem(STORAGE_KEY_GROUP, workspaces[0].id)
+    if (hasGroups(connector)) {
+      (connector as DataInterface & GroupManager).setCurrentGroup(workspaces[0].id)
+    }
+  }, [workspaces, connector]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derive available modules from active group's data.modules
   const activeGroup = groups.find((g) => g.id === activeWorkspace?.id)
   const groupModuleIds = (activeGroup?.data?.modules as string[] | undefined) ?? ["feed", "kanban", "calendar", "map"]
+  const supportsContacts = hasContacts(connector)
+  const supportsMessaging = hasMessaging(connector)
   const modules: Module[] = useMemo(
-    () => groupModuleIds
-      .filter((id) => MODULE_ICONS[id])
-      .map((id) => ({ id, label: MODULE_LABELS[id] ?? id, icon: MODULE_ICONS[id] })),
-    [groupModuleIds.join(",")]
+    () => {
+      const base = groupModuleIds
+        .filter((id) => MODULE_ICONS[id])
+        .map((id) => ({ id, label: MODULE_LABELS[id] ?? id, icon: MODULE_ICONS[id] }))
+      if (supportsContacts) {
+        base.push({ id: "contacts", label: MODULE_LABELS.contacts, icon: MODULE_ICONS.contacts })
+      }
+      return base
+    },
+    [groupModuleIds.join(","), supportsContacts]
   )
 
   // When switching workspace, update connector scope and reset module if needed
   const handleWorkspaceChange = useCallback((workspace: Workspace) => {
     setActiveWorkspace(workspace)
+    localStorage.setItem(STORAGE_KEY_GROUP, workspace.id)
     if (hasGroups(connector)) {
       (connector as DataInterface & GroupManager).setCurrentGroup(workspace.id)
     }
     const group = groups.find((g) => g.id === workspace.id)
     const mods = (group?.data?.modules as string[] | undefined) ?? ["feed", "kanban", "calendar", "map"]
     if (!mods.includes(activeModule)) {
-      setActiveModule(mods[0] ?? "feed")
+      const newModule = mods[0] ?? "feed"
+      setActiveModule(newModule)
+      localStorage.setItem(STORAGE_KEY_MODULE, newModule)
     }
   }, [connector, groups, activeModule])
 
   const handleModuleChange = (moduleId: string) => {
     setActiveModule(moduleId)
+    localStorage.setItem(STORAGE_KEY_MODULE, moduleId)
   }
 
   const toggleTheme = () => {
@@ -752,13 +905,23 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     <AppShell>
       <Navbar>
         <NavbarStart>
-          {activeWorkspace && (
+          {activeWorkspace ? (
             <WorkspaceSwitcher
               workspaces={workspaces}
               activeWorkspace={activeWorkspace}
               onWorkspaceChange={handleWorkspaceChange}
-              onCreateWorkspace={() => console.log("Create workspace")}
+              onCreateWorkspace={openCreateDialog}
+              onEditWorkspace={openEditDialog}
             />
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openCreateDialog}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Neue Gruppe
+            </Button>
           )}
         </NavbarStart>
         <NavbarCenter>
@@ -769,6 +932,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           />
         </NavbarCenter>
         <NavbarEnd>
+          {supportsMessaging && <RelayStatusBadgeWrapper />}
           <ConnectorSwitcher
             connectors={CONNECTOR_OPTIONS}
             activeConnector={activeConnectorId}
@@ -788,9 +952,11 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           </Button>
           <UserMenu
             user={userData}
-            onProfile={() => console.log("Profile")}
-            onSettings={() => console.log("Settings")}
-            onLogout={() => console.log("Logout")}
+            onProfile={() => setProfileDialogOpen(true)}
+            onLogout={isAuthenticatable(connector) ? async () => {
+              await connector.logout()
+              window.location.reload()
+            } : undefined}
           />
         </NavbarEnd>
       </Navbar>
@@ -801,6 +967,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           {activeModule === "kanban" && <KanbanView activeWorkspaceId={activeWorkspace?.id ?? null} groups={groups} />}
           {activeModule === "map" && <MapView />}
           {activeModule === "calendar" && <CalendarViewWrapper />}
+          {activeModule === "contacts" && <ContactsView />}
         </div>
       </AppShellMain>
 
@@ -808,6 +975,44 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
         items={modules}
         activeItem={activeModule}
         onItemChange={handleModuleChange}
+      />
+      <GroupDialog
+        key={groupDialogMode.type === "edit" ? `edit-${groupDialogMode.group.id}` : "create"}
+        open={groupDialogOpen}
+        onOpenChange={setGroupDialogOpen}
+        mode={groupDialogMode}
+        onCreateGroup={async (name) => {
+          const group = await createGroup(name)
+          handleWorkspaceChange({ id: group.id, name: group.name })
+        }}
+        onUpdateGroup={async (id, updates) => {
+          await updateGroup(id, updates)
+        }}
+        onDeleteGroup={async (id) => {
+          await deleteGroup(id)
+          // If deleted group was active, switch to first remaining
+          if (activeWorkspace?.id === id) {
+            const remaining = workspaces.filter((w) => w.id !== id)
+            if (remaining.length > 0) {
+              handleWorkspaceChange(remaining[0])
+            } else {
+              setActiveWorkspace(null)
+              localStorage.removeItem(STORAGE_KEY_GROUP)
+            }
+          }
+        }}
+        onInviteMember={async (groupId, userId) => {
+          await inviteMember(groupId, userId)
+        }}
+        onRemoveMember={async (groupId, userId) => {
+          await removeMember(groupId, userId)
+        }}
+      />
+      <ProfileDialog
+        open={profileDialogOpen}
+        onOpenChange={setProfileDialogOpen}
+        profile={profileData}
+        onSave={handleSaveProfile}
       />
     </AppShell>
   )
@@ -821,27 +1026,104 @@ const demoData = {
   groupItems: demoGroupItems,
 }
 
-function createConnector(type: string): DataInterface {
-  if (type === "local") {
-    return new LocalConnector(demoData)
+async function createConnector(type: string): Promise<DataInterface> {
+  if (type === "wot") {
+    const { WotConnector } = await import("@real-life-stack/wot-connector")
+    const connector = new WotConnector({
+      relayUrl: "wss://relay.utopia-lab.org",
+      profilesUrl: "https://profiles.utopia-lab.org",
+      vaultUrl: "https://vault.utopia-lab.org",
+    })
+    await connector.init()
+    return connector
   }
-  return new MockConnector()
+  if (type === "local") {
+    const c = new LocalConnector(demoData)
+    await c.init()
+    return c
+  }
+  const c = new MockConnector()
+  await c.init()
+  return c
 }
+
+const STORAGE_KEY_CONNECTOR = "rls-connector"
+const STORAGE_KEY_GROUP = "rls-active-group"
+const STORAGE_KEY_MODULE = "rls-active-module"
 
 function getInitialConnectorId(): string {
   const params = new URLSearchParams(window.location.search)
-  return params.get("connector") ?? "mock"
+  return params.get("connector") ?? localStorage.getItem(STORAGE_KEY_CONNECTOR) ?? "mock"
+}
+
+// Lazy-load the DIDAuthScreen to keep WoT bundle separate
+const LazyDIDAuthScreen = lazy(() =>
+  import("@real-life-stack/wot-connector/components").then((m) => ({
+    default: m.DIDAuthScreen,
+  }))
+)
+
+function AuthGate({ connector, children }: { connector: DataInterface; children: React.ReactNode }) {
+  // Only check auth state once at mount — do NOT subscribe to changes.
+  // The DIDAuthScreen controls when onAuthenticated fires (after seed backup etc.),
+  // so reacting to auth state changes would skip the onboarding wizard.
+  const [authenticated, setAuthenticated] = useState(() => {
+    if (!isAuthenticatable(connector)) return true
+    return connector.getAuthState().current.status === "authenticated"
+  })
+
+  if (authenticated) {
+    return <>{children}</>
+  }
+
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Lade Auth…</div>
+        </div>
+      }
+    >
+      <LazyDIDAuthScreen
+        connector={connector as any}
+        onAuthenticated={() => setAuthenticated(true)}
+      />
+    </Suspense>
+  )
 }
 
 export default function App() {
   const [connectorId, setConnectorId] = useState(getInitialConnectorId)
-  const connector = useMemo(() => createConnector(connectorId), [connectorId])
+  const [connector, setConnector] = useState<DataInterface | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_CONNECTOR, connectorId)
+    setLoading(true)
+    setConnector(null)
+    createConnector(connectorId).then((c) => {
+      setConnector(c)
+      setLoading(false)
+    })
+  }, [connectorId])
+
+  if (loading || !connector) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">
+          Lade {CONNECTOR_OPTIONS.find((o) => o.id === connectorId)?.name ?? connectorId}…
+        </div>
+      </div>
+    )
+  }
 
   return (
     <ConnectorProvider connector={connector} key={connectorId}>
-      <Routes>
-        <Route path="/" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
-      </Routes>
+      <AuthGate connector={connector}>
+        <Routes>
+          <Route path="/" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
+        </Routes>
+      </AuthGate>
     </ConnectorProvider>
   )
 }

@@ -55,6 +55,7 @@ export class GraphQLConnector implements FullConnector {
   private wsUrl: string
   private currentGroup: Group | null = null
   private authStateObservable = createObservable<AuthState>({ status: "loading" })
+  private groupsObs = createObservable<Group[]>([])
   private cleanupFns: (() => void)[] = []
 
   constructor(url = "http://localhost:4000/graphql") {
@@ -95,7 +96,14 @@ export class GraphQLConnector implements FullConnector {
 
   async getGroups(): Promise<Group[]> {
     const { groups } = await this.client.request<{ groups: Group[] }>(GROUPS_QUERY)
+    this.groupsObs.set(groups)
     return groups
+  }
+
+  observeGroups(): Observable<Group[]> {
+    // Initial fetch
+    this.getGroups().catch(() => {})
+    return this.groupsObs
   }
 
   getCurrentGroup(): Group | null {
@@ -111,6 +119,7 @@ export class GraphQLConnector implements FullConnector {
 
   async createGroup(name: string, data?: Record<string, unknown>): Promise<Group> {
     const { createGroup } = await this.client.request<{ createGroup: Group }>(CREATE_GROUP_MUTATION, { name, data })
+    void this.getGroups()
     return createGroup
   }
 
@@ -119,11 +128,13 @@ export class GraphQLConnector implements FullConnector {
       id,
       input: { name: updates.name, data: updates.data },
     })
+    void this.getGroups()
     return updateGroup
   }
 
   async deleteGroup(id: string): Promise<void> {
     await this.client.request(DELETE_GROUP_MUTATION, { id })
+    void this.getGroups()
   }
 
   async getMembers(groupId: string): Promise<User[]> {

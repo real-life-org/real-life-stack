@@ -58,6 +58,7 @@ export class LocalConnector implements FullConnector {
   private nextItemId = 100
 
   private authState = createObservable<AuthState>({ status: "loading" })
+  private groupsObs = createObservable<Group[]>([])
   private itemObservables = new Map<string, ReturnType<typeof createObservable<Item[]>>>()
   private singleItemObservables = new Map<string, ReturnType<typeof createObservable<Item | null>>>()
 
@@ -125,6 +126,7 @@ export class LocalConnector implements FullConnector {
         ? { status: "authenticated", user: this.currentUser }
         : { status: "unauthenticated" }
     )
+    this.groupsObs.set([...this.groups])
 
     // Set up cross-tab sync
     this.channel = new BroadcastChannel("rls-local-connector")
@@ -147,6 +149,10 @@ export class LocalConnector implements FullConnector {
     return this.groups
   }
 
+  observeGroups(): Observable<Group[]> {
+    return this.groupsObs
+  }
+
   getCurrentGroup(): Group | null {
     return this.currentGroup
   }
@@ -163,6 +169,7 @@ export class LocalConnector implements FullConnector {
     const group: Group = { id: `group-${Date.now()}`, name, data }
     this.groups.push(group)
     this.groupMembers[group.id] = this.currentUser ? [this.currentUser.id] : []
+    this.notifyGroupObservers()
     await this.persist()
     this.broadcast({ type: "groups-changed" })
     return group
@@ -172,6 +179,7 @@ export class LocalConnector implements FullConnector {
     const group = this.groups.find((g) => g.id === id)
     if (!group) throw new Error(`Group not found: ${id}`)
     Object.assign(group, updates)
+    this.notifyGroupObservers()
     await this.persist()
     this.broadcast({ type: "groups-changed" })
     return group
@@ -183,6 +191,7 @@ export class LocalConnector implements FullConnector {
     if (this.currentGroup?.id === id) {
       this.currentGroup = this.groups[0] ?? null
     }
+    this.notifyGroupObservers()
     await this.persist()
     this.broadcast({ type: "groups-changed" })
   }
@@ -387,6 +396,7 @@ export class LocalConnector implements FullConnector {
     this.currentGroup = null
     this.nextItemId = 100
     this.notifyObservers()
+    this.notifyGroupObservers()
     this.broadcast({ type: "full-sync" })
   }
 
@@ -427,10 +437,15 @@ export class LocalConnector implements FullConnector {
       this.groups = stored.groups
       this.users = stored.users
       this.groupMembers = stored.groupMembers
+      this.notifyGroupObservers()
     }
   }
 
   // --- Internal: Observable Notification ---
+
+  private notifyGroupObservers(): void {
+    this.groupsObs.set([...this.groups])
+  }
 
   private notifyObservers(): void {
     const scoped = this.getScopedItems()

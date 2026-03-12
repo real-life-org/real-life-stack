@@ -10,6 +10,13 @@ import type {
   AuthMethod,
   RelatedItemsOptions,
   Source,
+  ContactInfo,
+  RelayState,
+  SignedClaim,
+  ClaimDeliveryStatus,
+  VerificationDirection,
+  PublicProfileData,
+  IncomingEvent,
 } from "./index.js"
 
 // --- Shared Helpers for Connector implementations ---
@@ -112,8 +119,14 @@ export abstract class BaseConnector implements FullConnector {
 
   // --- Groups (Default: eine Default-Gruppe) ---
 
+  protected groupsObservable: ReactiveObservable<Group[]> = createObservable<Group[]>([DEFAULT_GROUP])
+
   async getGroups(): Promise<Group[]> {
-    return [DEFAULT_GROUP]
+    return this.groupsObservable.current
+  }
+
+  observeGroups(): Observable<Group[]> {
+    return this.groupsObservable
   }
 
   getCurrentGroup(): Group | null {
@@ -183,4 +196,124 @@ export abstract class BaseConnector implements FullConnector {
   }
 
   setActiveSource(_sourceId: string): void {}
+
+  // --- Contacts (Default: not supported) ---
+
+  async getContacts(): Promise<ContactInfo[]> {
+    return []
+  }
+
+  observeContacts(): Observable<ContactInfo[]> {
+    return createObservable<ContactInfo[]>([])
+  }
+
+  async addContact(_id: string, _name?: string): Promise<ContactInfo> {
+    throw new Error("addContact not supported")
+  }
+
+  async activateContact(_id: string): Promise<void> {
+    throw new Error("activateContact not supported")
+  }
+
+  async updateContactName(_id: string, _name: string): Promise<void> {
+    throw new Error("updateContactName not supported")
+  }
+
+  async removeContact(_id: string): Promise<void> {
+    throw new Error("removeContact not supported")
+  }
+
+  // --- Messaging (Default: disconnected) ---
+
+  getRelayState(): Observable<RelayState> {
+    return createObservable<RelayState>("disconnected")
+  }
+
+  getOutboxPendingCount(): Observable<number> {
+    return createObservable<number>(0)
+  }
+
+  // --- Signed Claims (Default: not supported) ---
+
+  async createClaim(_toId: string, _claim: string, _tags?: string[]): Promise<SignedClaim> {
+    throw new Error("createClaim not supported")
+  }
+
+  async createChallenge(): Promise<{ code: string; nonce: string }> {
+    throw new Error("createChallenge not supported")
+  }
+
+  async prepareResponse(_challengeCode: string): Promise<{ peerId: string; peerName?: string }> {
+    throw new Error("prepareResponse not supported")
+  }
+
+  async confirmAndRespond(_challengeCode: string): Promise<void> {
+    throw new Error("confirmAndRespond not supported")
+  }
+
+  async counterVerify(_targetId: string): Promise<void> {
+    throw new Error("counterVerify not supported")
+  }
+
+  async getClaimsByMe(): Promise<SignedClaim[]> {
+    return []
+  }
+
+  async getClaimsAboutMe(): Promise<SignedClaim[]> {
+    return []
+  }
+
+  observeClaims(): Observable<SignedClaim[]> {
+    return createObservable<SignedClaim[]>([])
+  }
+
+  getVerificationStatus(_contactId: string): VerificationDirection {
+    return "none"
+  }
+
+  async setAccepted(_id: string, _accepted: boolean): Promise<void> {
+    throw new Error("setAccepted not supported")
+  }
+
+  observeDeliveryStatuses(): Observable<Map<string, ClaimDeliveryStatus>> {
+    return createObservable<Map<string, ClaimDeliveryStatus>>(new Map())
+  }
+
+  async retryClaim(_id: string): Promise<void> {
+    throw new Error("retryClaim not supported")
+  }
+
+  // --- Profile (Default: not supported) ---
+
+  async getMyProfile(): Promise<Item | null> {
+    return null
+  }
+
+  observeMyProfile(): Observable<Item | null> {
+    return createObservable<Item | null>(null)
+  }
+
+  async updateMyProfile(_updates: Partial<Record<string, unknown>>): Promise<Item> {
+    throw new Error("updateMyProfile not supported")
+  }
+
+  async setFieldVisibility(_field: string, _isPublic: boolean): Promise<void> {
+    throw new Error("setFieldVisibility not supported")
+  }
+
+  async getPublicProfile(_id: string): Promise<PublicProfileData | null> {
+    return null
+  }
+
+  async syncProfile(): Promise<void> {}
+
+  isSyncPending(): Observable<boolean> {
+    return createObservable<boolean>(false)
+  }
+
+  // --- Event Listener (Default: no-op) ---
+
+  onIncomingEvent(_callback: (event: IncomingEvent) => void): () => void {
+    return () => {}
+  }
 }

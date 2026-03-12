@@ -4,6 +4,12 @@ export * from "./primitives"
 // Layout
 export * from "./layout"
 
+// Auth primitives
+export * from "./auth"
+
+// Contacts
+export * from "./contacts"
+
 // Feature modules
 export * from "./feed"
 export * from "./kanban"

@@ -123,6 +123,7 @@ export interface RelationCapable {
 
 export interface GroupManager {
   getGroups(): Promise<Group[]>
+  observeGroups(): Observable<Group[]>
   getCurrentGroup(): Group | null
   setCurrentGroup(id: string): void
   createGroup(name: string, data?: Record<string, unknown>): Promise<Group>
@@ -148,6 +149,111 @@ export interface MultiSource {
   setActiveSource(sourceId: string): void
 }
 
+// --- Contacts ---
+
+export interface ContactInfo {
+  id: string              // DID bei WoT, User-ID bei GraphQL/REST
+  publicKey?: string      // nur bei Krypto-Connectors
+  name?: string
+  avatar?: string
+  bio?: string
+  status: "pending" | "active"
+  verifiedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ContactManager {
+  getContacts(): Promise<ContactInfo[]>
+  observeContacts(): Observable<ContactInfo[]>
+  addContact(id: string, name?: string): Promise<ContactInfo>
+  activateContact(id: string): Promise<void>
+  updateContactName(id: string, name: string): Promise<void>
+  removeContact(id: string): Promise<void>
+}
+
+// --- Messaging / Relay ---
+
+export type RelayState = "connected" | "connecting" | "disconnected" | "error"
+
+export interface MessagingCapable {
+  getRelayState(): Observable<RelayState>
+  getOutboxPendingCount(): Observable<number>
+}
+
+// --- Signed Claims (Verifications + Attestations) ---
+
+export interface SignedClaim {
+  id: string
+  from: string            // Signer ID (DID bei WoT)
+  to: string              // Subject ID (Empfänger-Prinzip)
+  claim: string           // "physical-meeting" oder frei formuliert
+  tags?: string[]         // ["verification"], ["skill", "kochen"], ["quest"]
+  createdAt: string
+  isAccepted: boolean     // Empfänger-Sichtbarkeit
+}
+
+export type ClaimDeliveryStatus = "sending" | "queued" | "delivered" | "acknowledged" | "failed"
+export type VerificationDirection = "mutual" | "incoming" | "outgoing" | "none"
+
+export interface SignedClaimCapable {
+  // Erstellen (allgemein)
+  createClaim(toId: string, claim: string, tags?: string[]): Promise<SignedClaim>
+
+  // Erstellen (Verification via Challenge-Response)
+  createChallenge(): Promise<{ code: string; nonce: string }>
+  prepareResponse(challengeCode: string): Promise<{ peerId: string; peerName?: string }>
+  confirmAndRespond(challengeCode: string): Promise<void>
+  counterVerify(targetId: string): Promise<void>
+
+  // Lesen
+  getClaimsByMe(): Promise<SignedClaim[]>
+  getClaimsAboutMe(): Promise<SignedClaim[]>
+  observeClaims(): Observable<SignedClaim[]>
+
+  // Verification-Status (Convenience)
+  getVerificationStatus(contactId: string): VerificationDirection
+
+  // Akzeptanz + Delivery
+  setAccepted(id: string, accepted: boolean): Promise<void>
+  observeDeliveryStatuses(): Observable<Map<string, ClaimDeliveryStatus>>
+  retryClaim(id: string): Promise<void>
+}
+
+// --- Profile ---
+
+export interface PublicProfileData {
+  id: string
+  name?: string
+  bio?: string
+  avatar?: string
+  offers?: string[]
+  needs?: string[]
+}
+
+export interface ProfileCapable {
+  getMyProfile(): Promise<Item | null>
+  observeMyProfile(): Observable<Item | null>
+  updateMyProfile(updates: Partial<Record<string, unknown>>): Promise<Item>
+  setFieldVisibility(field: string, isPublic: boolean): Promise<void>
+  getPublicProfile(id: string): Promise<PublicProfileData | null>
+  syncProfile(): Promise<void>
+  isSyncPending(): Observable<boolean>
+}
+
+// --- Incoming Events ---
+
+export interface IncomingEvent {
+  type: "signed-claim" | "space-invite" | "mutual-verification"
+  fromId: string
+  fromName?: string
+  data: Record<string, unknown>
+}
+
+export interface EventListenerCapable {
+  onIncomingEvent(callback: (event: IncomingEvent) => void): () => void
+}
+
 // --- Convenience: Full-Featured Connector ---
 
 export type FullConnector = DataInterface & ItemWriter & RelationCapable & GroupManager & Authenticatable & MultiSource
@@ -163,7 +269,7 @@ export function hasRelations(c: DataInterface): c is DataInterface & RelationCap
 }
 
 export function hasGroups(c: DataInterface): c is DataInterface & GroupManager {
-  return "getGroups" in c && "getMembers" in c
+  return "getGroups" in c && "observeGroups" in c && "getMembers" in c
 }
 
 export function isAuthenticatable(c: DataInterface): c is DataInterface & Authenticatable {
@@ -172,4 +278,24 @@ export function isAuthenticatable(c: DataInterface): c is DataInterface & Authen
 
 export function hasMultiSource(c: DataInterface): c is DataInterface & MultiSource {
   return "getSources" in c && "getActiveSource" in c
+}
+
+export function hasContacts(c: DataInterface): c is DataInterface & ContactManager {
+  return "getContacts" in c && "observeContacts" in c && "addContact" in c
+}
+
+export function hasMessaging(c: DataInterface): c is DataInterface & MessagingCapable {
+  return "getRelayState" in c && "getOutboxPendingCount" in c
+}
+
+export function hasSignedClaims(c: DataInterface): c is DataInterface & SignedClaimCapable {
+  return "createClaim" in c && "observeClaims" in c && "createChallenge" in c
+}
+
+export function hasProfile(c: DataInterface): c is DataInterface & ProfileCapable {
+  return "getMyProfile" in c && "observeMyProfile" in c && "syncProfile" in c
+}
+
+export function hasEventListener(c: DataInterface): c is DataInterface & EventListenerCapable {
+  return "onIncomingEvent" in c
 }

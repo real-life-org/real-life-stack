@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronsUpDown, Plus } from "lucide-react"
+import { ChevronsUpDown, Plus, Settings } from "lucide-react"
 
 import {
   DropdownMenu,
@@ -23,6 +23,7 @@ interface WorkspaceSwitcherProps {
   activeWorkspace: Workspace
   onWorkspaceChange: (workspace: Workspace) => void
   onCreateWorkspace?: () => void
+  onEditWorkspace?: (workspace: Workspace) => void
 }
 
 export function WorkspaceSwitcher({
@@ -30,6 +31,7 @@ export function WorkspaceSwitcher({
   activeWorkspace,
   onWorkspaceChange,
   onCreateWorkspace,
+  onEditWorkspace,
 }: WorkspaceSwitcherProps) {
   const getInitials = (name: string) => {
     return name
@@ -59,7 +61,7 @@ export function WorkspaceSwitcher({
           <DropdownMenuItem
             key={workspace.id}
             onClick={() => onWorkspaceChange(workspace)}
-            className="flex items-center gap-2"
+            className="group/ws flex items-center gap-2"
           >
             <Avatar className="h-5 w-5 rounded-none">
               <AvatarImage src={workspace.avatar} alt={workspace.name} className="rounded-none" />
@@ -67,7 +69,19 @@ export function WorkspaceSwitcher({
                 {getInitials(workspace.name)}
               </AvatarFallback>
             </Avatar>
-            <span>{workspace.name}</span>
+            <span className="flex-1">{workspace.name}</span>
+            {onEditWorkspace && (
+              <button
+                type="button"
+                className="rounded p-0.5 opacity-0 group-hover/ws:opacity-50 hover:opacity-100! hover:bg-accent shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEditWorkspace(workspace)
+                }}
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </button>
+            )}
           </DropdownMenuItem>
         ))}
         {onCreateWorkspace && (

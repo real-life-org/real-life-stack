@@ -22,6 +22,7 @@ export class MockConnector implements FullConnector {
   private currentGroup: Group | null
   private currentUser: User | null
   private authState: ReturnType<typeof createObservable<AuthState>>
+  private groupsObs: ReturnType<typeof createObservable<Group[]>>
   private itemObservables = new Map<string, ReturnType<typeof createObservable<Item[]>>>()
   private singleItemObservables = new Map<string, ReturnType<typeof createObservable<Item | null>>>()
   private nextItemId = 100
@@ -39,6 +40,7 @@ export class MockConnector implements FullConnector {
         ? { status: "authenticated", user: this.currentUser }
         : { status: "unauthenticated" }
     )
+    this.groupsObs = createObservable<Group[]>([...this.groups])
   }
 
   async init(): Promise<void> {
@@ -54,6 +56,10 @@ export class MockConnector implements FullConnector {
 
   async getGroups(): Promise<Group[]> {
     return this.groups
+  }
+
+  observeGroups(): Observable<Group[]> {
+    return this.groupsObs
   }
 
   getCurrentGroup(): Group | null {
@@ -72,6 +78,7 @@ export class MockConnector implements FullConnector {
     const group: Group = { id: `group-${Date.now()}`, name, data }
     this.groups.push(group)
     this.groupMembers[group.id] = this.currentUser ? [this.currentUser.id] : []
+    this.notifyGroupObservers()
     return group
   }
 
@@ -79,6 +86,7 @@ export class MockConnector implements FullConnector {
     const group = this.groups.find((g) => g.id === id)
     if (!group) throw new Error(`Group not found: ${id}`)
     Object.assign(group, updates)
+    this.notifyGroupObservers()
     return group
   }
 
@@ -88,6 +96,7 @@ export class MockConnector implements FullConnector {
     if (this.currentGroup?.id === id) {
       this.currentGroup = this.groups[0] ?? null
     }
+    this.notifyGroupObservers()
   }
 
   async getMembers(groupId: string): Promise<User[]> {
@@ -271,6 +280,10 @@ export class MockConnector implements FullConnector {
   }
 
   // --- Internal ---
+
+  private notifyGroupObservers(): void {
+    this.groupsObs.set([...this.groups])
+  }
 
   private notifyObservers(): void {
     const scoped = this.getScopedItems()

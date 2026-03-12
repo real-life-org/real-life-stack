@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@real-life/wot-core': link:../web-of-trust/packages/wot-core
+
 importers:
 
   .:
@@ -211,6 +214,9 @@ importers:
       '@real-life-stack/toolkit':
         specifier: workspace:*
         version: link:../../packages/toolkit
+      '@real-life-stack/wot-connector':
+        specifier: workspace:*
+        version: link:../../packages/wot-connector
       lucide-react:
         specifier: ^0.468.0
         version: 0.468.0(react@19.2.3)
@@ -251,6 +257,9 @@ importers:
       vite:
         specifier: ^6.0.7
         version: 6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)
+      vite-plugin-wasm:
+        specifier: ^3.5.0
+        version: 3.5.0(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))
 
   packages/data-interface:
     devDependencies:
@@ -418,6 +427,31 @@ importers:
       vite-plugin-dts:
         specifier: ^4.4.0
         version: 4.5.4(@types/node@22.19.15)(rollup@4.55.1)(typescript@5.7.3)(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))
+
+  packages/wot-connector:
+    dependencies:
+      '@real-life-stack/data-interface':
+        specifier: workspace:*
+        version: link:../data-interface
+      '@real-life-stack/toolkit':
+        specifier: workspace:*
+        version: link:../toolkit
+      '@real-life/wot-core':
+        specifier: link:../../../web-of-trust/packages/wot-core
+        version: link:../../../web-of-trust/packages/wot-core
+      react:
+        specifier: ^18 || ^19
+        version: 19.2.3
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.7
+      lucide-react:
+        specifier: ^0.468.0
+        version: 0.468.0(react@19.2.3)
+      typescript:
+        specifier: ~5.7.2
+        version: 5.7.3
 
 packages:
 
@@ -3773,6 +3807,11 @@ packages:
     peerDependenciesMeta:
       vite:
         optional: true
+
+  vite-plugin-wasm@3.5.0:
+    resolution: {integrity: sha512-X5VWgCnqiQEGb+omhlBVsvTfxikKtoOgAzQ95+BZ8gQ+VfMHIjSHr0wyvXFQCa0eKQ0fKyaL0kWcEnYqBac4lQ==}
+    peerDependencies:
+      vite: ^2 || ^3 || ^4 || ^5 || ^6 || ^7
 
   vite@6.4.1:
     resolution: {integrity: sha512-+Oxm7q9hDoLMyJOYfUYBuHQo+dkAloi33apOPP56pzj+vsdJDzr+j1NISE5pyaAuKL4A3UD34qd0lx5+kfKp2g==}
@@ -7429,6 +7468,10 @@ snapshots:
       - '@types/node'
       - rollup
       - supports-color
+
+  vite-plugin-wasm@3.5.0(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)):
+    dependencies:
+      vite: 6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)
 
   vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0):
     dependencies:
