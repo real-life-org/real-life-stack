@@ -11,4 +11,5 @@ export { useGroups, useCurrentGroup, useCreateGroup, useUpdateGroup, useDeleteGr
 export { useAuthState, useCurrentUser } from "./use-auth"
 export { useFeatures, useFeature } from "./use-features"
 export { useContacts } from "./use-contacts"
+export { useClaims, useVerification } from "./use-claims"
 export { useRelayStatus } from "./use-relay-status"

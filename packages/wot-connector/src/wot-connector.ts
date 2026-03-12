@@ -10,6 +10,9 @@ import type {
   Source,
   ContactInfo,
   RelayState,
+  SignedClaim,
+  ClaimDeliveryStatus,
+  VerificationDirection,
 } from "@real-life-stack/data-interface"
 import {
   BaseConnector,
@@ -27,6 +30,7 @@ import {
   GroupKeyService,
   AutomergeReplicationAdapter,
   HttpDiscoveryAdapter,
+  VerificationHelper,
   initPersonalDoc,
   getPersonalDoc,
   resetPersonalDoc,
@@ -41,6 +45,9 @@ import type {
   Subscribable,
   MessagingAdapter,
   PersonalDoc,
+  VerificationDoc,
+  AttestationDoc,
+  AttestationMetadataDoc,
 } from "@real-life/wot-core"
 
 import type { WotConnectorConfig, RlsSpaceDoc, SerializedItem } from "./types.js"
@@ -75,9 +82,14 @@ export class WotConnector extends BaseConnector {
   // Observables (stable references — backing changes on group switch)
   private authStateObs: ReactiveObservable<AuthState>
   private contactsObs: ReactiveObservable<ContactInfo[]>
+  private claimsObs: ReactiveObservable<SignedClaim[]>
+  private deliveryStatusObs: ReactiveObservable<Map<string, ClaimDeliveryStatus>>
   private relayStateObs: ReactiveObservable<RelayState>
   private outboxCountObs: ReactiveObservable<number>
   private groupsCache: Group[] = []
+
+  // Verification challenge state (in-progress challenges)
+  private pendingChallenge: { code: string; nonce: string } | null = null
 
   // Item observables keyed by JSON.stringify(filter)
   private itemObservables = new Map<string, ReactiveObservable<Item[]>>()
@@ -90,6 +102,8 @@ export class WotConnector extends BaseConnector {
     this.discovery = new HttpDiscoveryAdapter(config.profilesUrl)
     this.authStateObs = createObservable<AuthState>({ status: "loading" })
     this.contactsObs = createObservable<ContactInfo[]>([])
+    this.claimsObs = createObservable<SignedClaim[]>([])
+    this.deliveryStatusObs = createObservable<Map<string, ClaimDeliveryStatus>>(new Map())
     this.relayStateObs = createObservable<RelayState>("disconnected")
     this.outboxCountObs = createObservable<number>(0)
   }
@@ -599,14 +613,16 @@ export class WotConnector extends BaseConnector {
       })
     }
 
-    // 7. PersonalDoc changes -> restore spaces + update contacts
+    // 7. PersonalDoc changes -> restore spaces + update contacts + claims
     this.personalDocUnsub = onPersonalDocChange(() => {
       this.replication?.requestSync?.("__all__").catch(() => {})
       this.syncContactsFromPersonalDoc()
+      this.syncClaimsFromPersonalDoc()
     })
 
-    // 8. Load initial contacts from PersonalDoc
+    // 8. Load initial contacts + claims from PersonalDoc
     this.syncContactsFromPersonalDoc()
+    this.syncClaimsFromPersonalDoc()
 
     // 9. Watch spaces for reactive group list
     const spacesSubscribable = this.replication.watchSpaces()
@@ -615,6 +631,11 @@ export class WotConnector extends BaseConnector {
     })
     // Load initial spaces
     this.updateGroupsFromSpaces(spacesSubscribable.getValue())
+
+    // 10. Auto-create personal default group if no spaces exist
+    if (this.groupsCache.length === 0) {
+      await this.createGroup("Mein Bereich")
+    }
   }
 
   private async setAuthAuthenticated(): Promise<void> {
@@ -810,6 +831,210 @@ export class WotConnector extends BaseConnector {
 
   override getOutboxPendingCount(): Observable<number> {
     return this.outboxCountObs
+  }
+
+  // ==================== Signed Claims ====================
+
+  override async createClaim(toId: string, claim: string, tags?: string[]): Promise<SignedClaim> {
+    const did = this.identity.getDid()
+    const id = `urn:uuid:claim-${crypto.randomUUID()}`
+    const now = new Date().toISOString()
+
+    // Sign the claim
+    const claimData = JSON.stringify({ from: did, to: toId, claim, timestamp: now })
+    const signature = await this.identity.sign(claimData)
+
+    // Store as attestation in PersonalDoc
+    changePersonalDoc((doc) => {
+      if (!doc.attestations) doc.attestations = {} as any
+      doc.attestations[id] = {
+        id,
+        attestationId: id,
+        fromDid: did,
+        toDid: toId,
+        claim,
+        tagsJson: tags ? JSON.stringify(tags) : null,
+        context: null,
+        createdAt: now,
+        proofJson: JSON.stringify({ type: "Ed25519Signature2020", proofValue: signature }),
+      } as any
+      if (!doc.attestationMetadata) doc.attestationMetadata = {} as any
+      doc.attestationMetadata[id] = {
+        attestationId: id,
+        accepted: true,
+        acceptedAt: now,
+        deliveryStatus: "queued",
+      } as any
+    })
+
+    return { id, from: did, to: toId, claim, tags, createdAt: now, isAccepted: true }
+  }
+
+  override async createChallenge(): Promise<{ code: string; nonce: string }> {
+    const displayName = getPersonalDoc()?.profile?.name ?? getDefaultDisplayName(this.identity.getDid())
+    const code = await VerificationHelper.createChallenge(this.identity, displayName)
+    // Parse the nonce from the challenge
+    const parsed = JSON.parse(atob(code))
+    const nonce = parsed.nonce
+    this.pendingChallenge = { code, nonce }
+    return { code, nonce }
+  }
+
+  override async prepareResponse(challengeCode: string): Promise<{ peerId: string; peerName?: string }> {
+    const parsed = JSON.parse(atob(challengeCode))
+    return { peerId: parsed.fromDid, peerName: parsed.fromName }
+  }
+
+  override async confirmAndRespond(challengeCode: string): Promise<void> {
+    const did = this.identity.getDid()
+    const displayName = getPersonalDoc()?.profile?.name ?? getDefaultDisplayName(did)
+
+    // Create response (contains both parties' info)
+    const responseCode = await VerificationHelper.respondToChallenge(challengeCode, this.identity, displayName)
+
+    // Parse to get the peer's info
+    const parsed = JSON.parse(atob(challengeCode))
+    const peerDid = parsed.fromDid
+    const nonce = parsed.nonce
+
+    // Create our verification of the peer (from=us, to=peer)
+    const verification = await VerificationHelper.createVerificationFor(this.identity, peerDid, nonce)
+
+    // Store in PersonalDoc
+    changePersonalDoc((doc) => {
+      if (!doc.verifications) doc.verifications = {} as any
+      doc.verifications[verification.id] = {
+        id: verification.id,
+        fromDid: verification.from,
+        toDid: verification.to,
+        timestamp: verification.timestamp,
+        proofJson: JSON.stringify(verification.proof),
+        locationJson: null,
+      } as any
+
+      // Activate the contact
+      if (doc.contacts?.[peerDid]) {
+        doc.contacts[peerDid].status = "active"
+        doc.contacts[peerDid].updatedAt = new Date().toISOString()
+      }
+    })
+  }
+
+  override async counterVerify(targetId: string): Promise<void> {
+    const nonce = crypto.randomUUID()
+    const verification = await VerificationHelper.createVerificationFor(this.identity, targetId, nonce)
+
+    changePersonalDoc((doc) => {
+      if (!doc.verifications) doc.verifications = {} as any
+      doc.verifications[verification.id] = {
+        id: verification.id,
+        fromDid: verification.from,
+        toDid: verification.to,
+        timestamp: verification.timestamp,
+        proofJson: JSON.stringify(verification.proof),
+        locationJson: null,
+      } as any
+    })
+  }
+
+  override async getClaimsByMe(): Promise<SignedClaim[]> {
+    return this.claimsObs.current.filter((c) => c.from === this.identity.getDid())
+  }
+
+  override async getClaimsAboutMe(): Promise<SignedClaim[]> {
+    return this.claimsObs.current.filter((c) => c.to === this.identity.getDid())
+  }
+
+  override observeClaims(): Observable<SignedClaim[]> {
+    return this.claimsObs
+  }
+
+  override getVerificationStatus(contactId: string): VerificationDirection {
+    const did = this.identity.getDid()
+    const claims = this.claimsObs.current.filter(
+      (c) => c.tags?.includes("verification")
+    )
+    const outgoing = claims.some((c) => c.from === did && c.to === contactId)
+    const incoming = claims.some((c) => c.from === contactId && c.to === did)
+    if (outgoing && incoming) return "mutual"
+    if (outgoing) return "outgoing"
+    if (incoming) return "incoming"
+    return "none"
+  }
+
+  override async setAccepted(id: string, accepted: boolean): Promise<void> {
+    changePersonalDoc((doc) => {
+      if (doc.attestationMetadata?.[id]) {
+        doc.attestationMetadata[id].accepted = accepted
+        doc.attestationMetadata[id].acceptedAt = accepted ? new Date().toISOString() : null
+      }
+    })
+  }
+
+  override observeDeliveryStatuses(): Observable<Map<string, ClaimDeliveryStatus>> {
+    return this.deliveryStatusObs
+  }
+
+  override async retryClaim(_id: string): Promise<void> {
+    // TODO: Re-queue in outbox for delivery
+  }
+
+  // ==================== Internal: Claims sync ====================
+
+  private syncClaimsFromPersonalDoc(): void {
+    try {
+      const doc = getPersonalDoc()
+      const claims: SignedClaim[] = []
+
+      // Map verifications → SignedClaim with tag "verification"
+      const verifications = doc.verifications ?? {}
+      for (const [, v] of Object.entries(verifications)) {
+        const vDoc = v as unknown as VerificationDoc
+        if (!vDoc.id) continue
+        claims.push({
+          id: vDoc.id,
+          from: vDoc.fromDid,
+          to: vDoc.toDid,
+          claim: "physical-meeting",
+          tags: ["verification"],
+          createdAt: vDoc.timestamp,
+          isAccepted: true,
+        })
+      }
+
+      // Map attestations → SignedClaim
+      const attestations = doc.attestations ?? {}
+      const metadata = doc.attestationMetadata ?? {}
+      for (const [, a] of Object.entries(attestations)) {
+        const aDoc = a as unknown as AttestationDoc
+        if (!aDoc.id) continue
+        const meta = metadata[aDoc.id] as unknown as AttestationMetadataDoc | undefined
+        const tags = aDoc.tagsJson ? JSON.parse(aDoc.tagsJson) : undefined
+        claims.push({
+          id: aDoc.id,
+          from: aDoc.fromDid,
+          to: aDoc.toDid,
+          claim: aDoc.claim,
+          tags,
+          createdAt: aDoc.createdAt,
+          isAccepted: meta?.accepted ?? false,
+        })
+      }
+
+      this.claimsObs.set(claims)
+
+      // Sync delivery statuses
+      const statuses = new Map<string, ClaimDeliveryStatus>()
+      for (const [id, m] of Object.entries(metadata)) {
+        const mDoc = m as unknown as AttestationMetadataDoc
+        if (mDoc.deliveryStatus) {
+          statuses.set(id, mDoc.deliveryStatus as ClaimDeliveryStatus)
+        }
+      }
+      this.deliveryStatusObs.set(statuses)
+    } catch {
+      // PersonalDoc not ready yet
+    }
   }
 
   // ==================== Internal: Contacts sync ====================

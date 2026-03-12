@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   Contact,
+  Shield,
 } from "lucide-react"
 
 import {
@@ -54,6 +55,7 @@ import {
   ProfileDialog,
   ContactList,
   AddContactDialog,
+  VerificationDialog,
   RelayStatusBadge,
   ConnectorProvider,
   useItems,
@@ -70,6 +72,7 @@ import {
   useDeleteItem,
   useConnector,
   useContacts,
+  useVerification,
   useRelayStatus,
   type Workspace,
   type UserData,
@@ -107,9 +110,10 @@ const CONNECTOR_OPTIONS: ConnectorOption[] = [
   { id: "wot", name: "Web of Trust", description: "E2E-verschlüsselt, Multi-Device" },
 ]
 
-// Helper: resolve user info from members list
-function resolveAuthor(userId: string, members: User[]) {
+// Helper: resolve user info from members list or current user
+function resolveAuthor(userId: string, members: User[], currentUser?: User | null) {
   const member = members.find((m) => m.id === userId)
+    ?? (currentUser?.id === userId ? currentUser : undefined)
   return {
     name: member?.displayName ?? userId,
     avatar: member?.avatarUrl,
@@ -130,10 +134,10 @@ function timeAgo(date: Date): string {
 }
 
 // Helper: map Item to Post for PostCard
-function itemToPost(item: Item, members: User[]): Post {
+function itemToPost(item: Item, members: User[], currentUser?: User | null): Post {
   return {
     id: item.id,
-    author: resolveAuthor(item.createdBy, members),
+    author: resolveAuthor(item.createdBy, members, currentUser),
     content: String(item.data.content ?? item.data.description ?? ""),
     timestamp: timeAgo(item.createdAt),
     likes: 0,
@@ -147,19 +151,20 @@ function FeedView() {
   const { data: events } = useItems({ type: "event" })
   const { data: members } = useMembers("group-1")
   const { mutate: createItem } = useCreateItem()
+  const { data: currentUser } = useCurrentUser()
 
   const mappedPosts = useMemo(
     () =>
       [...posts]
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        .map((item) => itemToPost(item, members)),
-    [posts, members]
+        .map((item) => itemToPost(item, members, currentUser)),
+    [posts, members, currentUser]
   )
 
   const handlePost = (content: string) => {
     createItem({
       type: "post",
-      createdBy: "user-1",
+      createdBy: currentUser?.id ?? "anonymous",
       data: { title: "Neuer Post", content, tags: [] },
     })
   }
@@ -696,7 +701,9 @@ function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string |
 
 function ContactsView() {
   const { activeContacts, pendingContacts, addContact, removeContact, updateContactName } = useContacts()
+  const verification = useVerification()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false)
 
   return (
     <div className="space-y-6">
@@ -707,10 +714,16 @@ function ContactsView() {
             {activeContacts.length} verifiziert · {pendingContacts.length} ausstehend
           </p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)} size="sm">
-          <UserPlus className="h-4 w-4 mr-2" />
-          Hinzufügen
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setVerifyDialogOpen(true)} size="sm" variant="outline">
+            <Shield className="h-4 w-4 mr-2" />
+            Verifizieren
+          </Button>
+          <Button onClick={() => setAddDialogOpen(true)} size="sm">
+            <UserPlus className="h-4 w-4 mr-2" />
+            Hinzufügen
+          </Button>
+        </div>
       </div>
 
       {pendingContacts.length > 0 && (
@@ -740,6 +753,19 @@ function ContactsView() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAdd={addContact}
+      />
+
+      <VerificationDialog
+        open={verifyDialogOpen}
+        onOpenChange={setVerifyDialogOpen}
+        challenge={verification.challenge}
+        peerInfo={verification.peerInfo}
+        isProcessing={verification.isProcessing}
+        error={verification.error}
+        onCreateChallenge={verification.createChallenge}
+        onScanChallenge={verification.scanChallenge}
+        onConfirmVerification={verification.confirmVerification}
+        onReset={verification.reset}
       />
     </div>
   )

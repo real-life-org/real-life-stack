@@ -361,7 +361,7 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
               onClick={handleFinalize}
               disabled={loading || passphrase.length < 8 || passphrase !== confirm}
             >
-              {loading ? "Schütze Identity…" : "Identity schützen"}
+              {loading ? "Wird gesichert…" : "Passwort setzen"}
             </Button>
           </CardContent>
         </Card>
