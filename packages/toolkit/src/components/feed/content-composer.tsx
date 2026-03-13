@@ -360,7 +360,7 @@ export function ContentComposer({
           {renderPreview ? (
             renderPreview(data, selectedType)
           ) : (
-            <DefaultPreview data={data} />
+            <DefaultPreview data={data} activeWidgets={activeWidgets} config={currentConfig} />
           )}
         </div>
       ) : (
@@ -593,30 +593,48 @@ export function ContentComposer({
 
 // ── Default Preview ──────────────────────────────────────────────────────
 
-function DefaultPreview({ data }: { data: WidgetData }) {
+function DefaultPreview({
+  data,
+  activeWidgets,
+  config,
+}: {
+  data: WidgetData
+  activeWidgets: Set<string>
+  config: ContentTypeConfig
+}) {
+  const has = (w: string) => activeWidgets.has(w)
+
+  const statusLabel = has("status") && data.status
+    ? config.statusOptions?.find((o) => o.id === data.status)?.label
+    : undefined
+
+  const groupLabel = has("group") && data.group
+    ? config.groupOptions?.find((o) => o.id === data.group)?.name
+    : undefined
+
   return (
     <div className="space-y-3">
-      {data.title && (
+      {(groupLabel || statusLabel) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {groupLabel && (
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">
+              {groupLabel}
+            </span>
+          )}
+          {statusLabel && (
+            <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+              {statusLabel}
+            </span>
+          )}
+        </div>
+      )}
+      {has("title") && data.title && (
         <h2 className="text-xl font-bold">{data.title}</h2>
       )}
-      {data.text && (
+      {has("text") && data.text && (
         <div className="whitespace-pre-wrap text-sm">{data.text}</div>
       )}
-      {data.date?.start && (
-        <div className="text-sm text-muted-foreground">
-          {data.date.start}
-          {data.date.end && ` — ${data.date.end}`}
-        </div>
-      )}
-      {data.location?.address && (
-        <div className="text-sm text-muted-foreground">
-          {data.location.address}
-        </div>
-      )}
-      {data.location?.link && (
-        <div className="text-sm text-muted-foreground">{data.location.link}</div>
-      )}
-      {data.media && data.media.length > 0 && (
+      {has("media") && data.media && data.media.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           {data.media.map((file) => (
             <img
@@ -628,7 +646,18 @@ function DefaultPreview({ data }: { data: WidgetData }) {
           ))}
         </div>
       )}
-      {data.people && data.people.length > 0 && (
+      {has("date") && data.date?.start && (
+        <div className="text-sm text-muted-foreground">
+          {data.date.start}
+          {data.date.end && ` — ${data.date.end}`}
+        </div>
+      )}
+      {has("location") && (data.location?.address || data.location?.link) && (
+        <div className="text-sm text-muted-foreground">
+          {data.location.address || data.location.link}
+        </div>
+      )}
+      {has("people") && data.people && data.people.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {data.people.map((p) => (
             <span
@@ -640,7 +669,7 @@ function DefaultPreview({ data }: { data: WidgetData }) {
           ))}
         </div>
       )}
-      {data.tags && data.tags.length > 0 && (
+      {has("tags") && data.tags && data.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {data.tags.map((t) => (
             <span
