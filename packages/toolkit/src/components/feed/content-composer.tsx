@@ -1,8 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { Globe, Lock, Trash2, X } from "lucide-react"
+import { ChevronDown, Globe, Lock, Trash2, X } from "lucide-react"
 import { Button } from "@/components/primitives/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/primitives/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { WidgetWrapper } from "./widgets/widget-wrapper"
 import { TitleWidget } from "./widgets/title-widget"
@@ -500,31 +506,9 @@ export function ContentComposer({
         </div>
       )}
 
-      {/* Footer: visibility + actions */}
-      <div className="flex items-center justify-between border-t pt-3">
+      {/* Footer: actions */}
+      <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-2">
-          {/* Visibility toggle */}
-          {showVisibility && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsPublic(!isPublic)}
-              className="gap-1.5 text-xs"
-            >
-              {isPublic ? (
-                <>
-                  <Globe className="h-3.5 w-3.5" />
-                  Oeffentlich
-                </>
-              ) : (
-                <>
-                  <Lock className="h-3.5 w-3.5" />
-                  Privat
-                </>
-              )}
-            </Button>
-          )}
           {/* Delete button (edit mode only) */}
           {isEditMode && onDelete && (
             <Button
@@ -556,9 +540,51 @@ export function ContentComposer({
               {isPreviewing ? "Bearbeiten" : "Vorschau"}
             </Button>
           )}
-          <Button type="button" size="sm" onClick={handleSubmit}>
-            {submitLabel}
-          </Button>
+          {/* Split-Button: Submit + Visibility */}
+          {showVisibility ? (
+            <div className="flex items-center">
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSubmit}
+                className="gap-1.5 rounded-r-none"
+              >
+                {isPublic ? (
+                  <Globe className="h-3.5 w-3.5" />
+                ) : (
+                  <Lock className="h-3.5 w-3.5" />
+                )}
+                {submitLabel}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-l-none border-l border-l-primary-foreground/20 px-1.5"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsPublic(true)}>
+                    <Globe className="h-3.5 w-3.5" />
+                    Oeffentlich
+                    {isPublic && <span className="ml-auto text-xs">✓</span>}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsPublic(false)}>
+                    <Lock className="h-3.5 w-3.5" />
+                    Privat
+                    {!isPublic && <span className="ml-auto text-xs">✓</span>}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <Button type="button" size="sm" onClick={handleSubmit}>
+              {submitLabel}
+            </Button>
+          )}
         </div>
       </div>
     </div>
