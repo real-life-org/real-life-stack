@@ -254,6 +254,11 @@ export function ContentComposer({
   const hasStatusOptions = currentConfig.statusOptions && currentConfig.statusOptions.length > 0
   const hasGroupOptions = currentConfig.groupOptions && currentConfig.groupOptions.length > 0
 
+  // Group: im Edit-Modus automatisch aktiv wenn ≥2 Options, sonst nur als Toggle
+  if (hasGroupOptions && isEditMode && currentConfig.groupOptions!.length >= 2) {
+    activeWidgets.add("group")
+  }
+
   // Widgets available to toggle on (not active, not title/text, not status/group without config)
   const toggleableWidgets = WIDGET_ORDER.filter(
     (w) =>
