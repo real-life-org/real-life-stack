@@ -3,20 +3,19 @@ import type { ContactInfo } from "@real-life-stack/data-interface"
 import { hasContacts } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
-function useContactConnector() {
-  const connector = useConnector()
-  if (!hasContacts(connector)) {
-    throw new Error("Connector does not support contacts")
-  }
-  return connector
-}
+const noop = () => Promise.resolve() as any
 
 export function useContacts() {
-  const connector = useContactConnector()
-  const observable = connector.observeContacts()
-  const [contacts, setContacts] = useState<ContactInfo[]>(observable.current)
+  const connector = useConnector()
+  const supportsContacts = hasContacts(connector)
+  const observable = supportsContacts ? connector.observeContacts() : null
+  const [contacts, setContacts] = useState<ContactInfo[]>(observable?.current ?? [])
 
-  useEffect(() => observable.subscribe(setContacts), [observable])
+  useEffect(() => {
+    if (!observable) return
+    setContacts(observable.current)
+    return observable.subscribe(setContacts)
+  }, [observable])
 
   const activeContacts = useMemo(
     () => contacts.filter((c) => c.status === "active"),
@@ -29,23 +28,31 @@ export function useContacts() {
   )
 
   const addContact = useCallback(
-    (id: string, name?: string) => connector.addContact(id, name),
-    [connector]
+    supportsContacts
+      ? (id: string, name?: string) => connector.addContact(id, name)
+      : noop,
+    [connector, supportsContacts]
   )
 
   const activateContact = useCallback(
-    (id: string) => connector.activateContact(id),
-    [connector]
+    supportsContacts
+      ? (id: string) => connector.activateContact(id)
+      : noop,
+    [connector, supportsContacts]
   )
 
   const updateContactName = useCallback(
-    (id: string, name: string) => connector.updateContactName(id, name),
-    [connector]
+    supportsContacts
+      ? (id: string, name: string) => connector.updateContactName(id, name)
+      : noop,
+    [connector, supportsContacts]
   )
 
   const removeContact = useCallback(
-    (id: string) => connector.removeContact(id),
-    [connector]
+    supportsContacts
+      ? (id: string) => connector.removeContact(id)
+      : noop,
+    [connector, supportsContacts]
   )
 
   return {
@@ -56,5 +63,6 @@ export function useContacts() {
     activateContact,
     updateContactName,
     removeContact,
+    supportsContacts,
   }
 }

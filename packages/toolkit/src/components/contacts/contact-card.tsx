@@ -41,7 +41,7 @@ export function ContactCard({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const displayName = contact.name || truncateId(contact.id)
+  const displayName = contact.name || `User-${contact.id.slice(-6)}`
 
   return (
     <div

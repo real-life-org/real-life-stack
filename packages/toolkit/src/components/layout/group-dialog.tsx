@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react"
-import { Trash2, UserMinus, UserPlus } from "lucide-react"
-import type { Group, User } from "@real-life-stack/data-interface"
+import { Trash2, UserMinus, UserPlus, Check, Loader2, ChevronDown, ChevronUp } from "lucide-react"
+import type { Group, User, ContactInfo } from "@real-life-stack/data-interface"
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,11 @@ function getInitials(name: string): string {
     .toUpperCase()
 }
 
+/** Human-readable fallback for raw IDs (e.g. DIDs) */
+function shortName(id: string): string {
+  return `User-${id.slice(-6)}`
+}
+
 // --- Types ---
 
 export type GroupDialogMode =
@@ -35,6 +40,7 @@ export interface GroupDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: GroupDialogMode
+  contacts?: ContactInfo[]
   onCreateGroup: (name: string) => Promise<void>
   onUpdateGroup: (id: string, updates: Partial<Group>) => Promise<void>
   onDeleteGroup: (id: string) => Promise<void>
@@ -48,6 +54,7 @@ export function GroupDialog({
   open,
   onOpenChange,
   mode,
+  contacts,
   onCreateGroup,
   onUpdateGroup,
   onDeleteGroup,
@@ -59,10 +66,16 @@ export function GroupDialog({
   const [name, setName] = useState(() =>
     isEdit ? mode.group.name : ""
   )
-  const [inviteId, setInviteId] = useState("")
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Invite state
+  const [invitingId, setInvitingId] = useState<string | null>(null)
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
+  const [inviteErrors, setInviteErrors] = useState<Map<string, string>>(new Map())
+  const [showManualDid, setShowManualDid] = useState(false)
+  const [manualDid, setManualDid] = useState("")
 
   // Reset state when dialog opens/closes
   const handleOpenChange = useCallback(
@@ -70,7 +83,11 @@ export function GroupDialog({
       if (!nextOpen) {
         setConfirmDelete(false)
         setError(null)
-        setInviteId("")
+        setInvitingId(null)
+        setInvitedIds(new Set())
+        setInviteErrors(new Map())
+        setShowManualDid(false)
+        setManualDid("")
       }
       onOpenChange(nextOpen)
     },
@@ -114,14 +131,33 @@ export function GroupDialog({
     }
   }
 
-  const handleInvite = async () => {
-    if (!isEdit || !onInviteMember || !inviteId.trim()) return
+  const handleInviteContact = async (contactId: string) => {
+    if (!isEdit || !onInviteMember) return
+    setInvitingId(contactId)
+    setInviteErrors((prev) => { const m = new Map(prev); m.delete(contactId); return m })
+    try {
+      await onInviteMember(mode.group.id, contactId)
+      setInvitedIds((prev) => new Set([...prev, contactId]))
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Einladung fehlgeschlagen"
+      setInviteErrors((prev) => new Map([...prev, [contactId, msg]]))
+    } finally {
+      setInvitingId(null)
+    }
+  }
+
+  const handleManualInvite = async () => {
+    if (!isEdit || !onInviteMember || !manualDid.trim()) return
+    setInvitingId("manual")
     setError(null)
     try {
-      await onInviteMember(mode.group.id, inviteId.trim())
-      setInviteId("")
+      await onInviteMember(mode.group.id, manualDid.trim())
+      setInvitedIds((prev) => new Set([...prev, manualDid.trim()]))
+      setManualDid("")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Fehler beim Einladen")
+      setError(err instanceof Error ? err.message : "Einladung fehlgeschlagen")
+    } finally {
+      setInvitingId(null)
     }
   }
 
@@ -134,6 +170,15 @@ export function GroupDialog({
       setError(err instanceof Error ? err.message : "Fehler beim Entfernen")
     }
   }
+
+  // Filter contacts: only active, not already members, not already invited
+  const memberIds = isEdit ? new Set(mode.members.map((m) => m.id)) : new Set<string>()
+  const invitableContacts = (contacts ?? []).filter(
+    (c) => c.status === "active" && !memberIds.has(c.id) && !invitedIds.has(c.id)
+  )
+  const justInvitedContacts = (contacts ?? []).filter(
+    (c) => invitedIds.has(c.id) && !memberIds.has(c.id)
+  )
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -180,11 +225,11 @@ export function GroupDialog({
                     <Avatar className="h-8 w-8">
                       {member.avatarUrl && <AvatarImage src={member.avatarUrl} />}
                       <AvatarFallback className="text-xs">
-                        {getInitials(member.displayName ?? member.id)}
+                        {getInitials(member.displayName ?? shortName(member.id))}
                       </AvatarFallback>
                     </Avatar>
                     <span className="flex-1 truncate text-sm">
-                      {member.displayName ?? member.id}
+                      {member.displayName ?? shortName(member.id)}
                     </span>
                     {onRemoveMember && (
                       <Button
@@ -205,29 +250,114 @@ export function GroupDialog({
                 )}
               </div>
 
-              {/* Invite */}
+              {/* Just invited (success feedback) */}
+              {justInvitedContacts.length > 0 && (
+                <div className="space-y-1">
+                  {justInvitedContacts.map((c) => (
+                    <div key={c.id} className="flex items-center gap-3 rounded-lg p-2 bg-green-500/5">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs bg-green-500/10 text-green-700">
+                          {getInitials(c.name ?? shortName(c.id))}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="flex-1 truncate text-sm">{c.name ?? shortName(c.id)}</span>
+                      <Check className="h-4 w-4 text-green-600" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Contact Picker */}
+              {onInviteMember && invitableContacts.length > 0 && (
+                <>
+                  <Label className="text-muted-foreground">Kontakt einladen</Label>
+                  <div className="max-h-36 space-y-1 overflow-y-auto">
+                    {invitableContacts.map((contact) => {
+                      const isInviting = invitingId === contact.id
+                      const inviteError = inviteErrors.get(contact.id)
+                      return (
+                        <div key={contact.id}>
+                          <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted/50">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-xs">
+                                {getInitials(contact.name ?? contact.id)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="flex-1 truncate text-sm">
+                              {contact.name ?? shortName(contact.id)}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleInviteContact(contact.id)}
+                              disabled={isInviting || invitingId !== null}
+                            >
+                              {isInviting ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <UserPlus className="h-3 w-3" />
+                              )}
+                              <span className="ml-1">Einladen</span>
+                            </Button>
+                          </div>
+                          {inviteError && (
+                            <p className="text-xs text-destructive ml-11 -mt-1 mb-1">{inviteError}</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+
+              {/* No contacts hint — only if truly no active contacts at all */}
+              {onInviteMember && invitableContacts.length === 0 && justInvitedContacts.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {(contacts ?? []).some((c) => c.status === "active")
+                    ? "Alle Kontakte sind bereits Mitglied."
+                    : "Keine verifizierten Kontakte. Verifiziere zuerst einen Kontakt im Kontakte-Tab."}
+                </p>
+              )}
+
+              {/* Manual DID fallback */}
               {onInviteMember && (
-                <div className="flex gap-2">
-                  <Input
-                    value={inviteId}
-                    onChange={(e) => setInviteId(e.target.value)}
-                    placeholder="User-ID oder DID eingeben..."
-                    className="flex-1"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        handleInvite()
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleInvite}
-                    disabled={!inviteId.trim()}
+                <div>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowManualDid(!showManualDid)}
                   >
-                    <UserPlus className="h-4 w-4" />
-                  </Button>
+                    {showManualDid ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    DID manuell eingeben
+                  </button>
+                  {showManualDid && (
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        value={manualDid}
+                        onChange={(e) => setManualDid(e.target.value)}
+                        placeholder="did:key:z6Mk..."
+                        className="flex-1 font-mono text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            handleManualInvite()
+                          }
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleManualInvite}
+                        disabled={!manualDid.trim() || invitingId !== null}
+                      >
+                        {invitingId === "manual" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <UserPlus className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

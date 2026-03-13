@@ -511,9 +511,12 @@ export class WotConnector extends BaseConnector {
 
       if (updates.type) existing.type = updates.type
       if (updates.data) {
-        // Merge field-by-field to avoid Automerge "reference to existing document object" error
+        // Merge field-by-field; deep-clone values to avoid Automerge
+        // "reference to existing document object" error
         for (const [key, value] of Object.entries(updates.data)) {
-          existing.data[key] = value as any
+          existing.data[key] = (typeof value === "object" && value !== null)
+            ? JSON.parse(JSON.stringify(value))
+            : value as any
         }
       }
       if (updates.relations !== undefined) existing.relations = updates.relations
@@ -575,8 +578,14 @@ export class WotConnector extends BaseConnector {
     }
     try { localStorage.setItem("rls-wot-active-did", did) } catch { /* ignore */ }
 
-    // 1. Messaging (WebSocket MUST connect before PersonalDoc)
+    // 1. WebSocket connect (MUST happen before PersonalDoc so it can receive sync messages)
     this.wsAdapter = new WebSocketMessagingAdapter(this.config.relayUrl)
+
+    // Register relay state listener BEFORE connect so we catch the 'connected' event
+    this.wsAdapter.onStateChange((state) => {
+      this.relayStateObs.set(state as RelayState)
+    })
+
     const outboxStore = new AutomergeOutboxStore()
     this.outboxAdapter = new OutboxMessagingAdapter(this.wsAdapter, outboxStore, {
       skipTypes: ["profile-update", "attestation-ack", "personal-sync"] as any,
@@ -589,6 +598,11 @@ export class WotConnector extends BaseConnector {
       this.outboxAdapter as unknown as MessagingAdapter,
       this.config.vaultUrl,
     )
+
+    // 3. Now that PersonalDoc is ready, connect OutboxAdapter to enable
+    //    flush + auto-reconnect. wsAdapter.connect() is idempotent, so this
+    //    just triggers flushOutbox() + _startAutoReconnect() without reconnecting.
+    await this.outboxAdapter.connect(did)
     const spaceMetadataStorage = new AutomergeSpaceMetadataStorage()
 
     // 3. Group Keys
@@ -605,12 +619,7 @@ export class WotConnector extends BaseConnector {
     })
     await this.replication.start()
 
-    // 5. Relay state → relayStateObs
-    this.wsAdapter.onStateChange((state) => {
-      this.relayStateObs.set(state as RelayState)
-    })
-
-    // 6. Outbox pending count → outboxCountObs
+    // 5. Outbox pending count → outboxCountObs
     if (outboxStore.watchPendingCount) {
       outboxStore.watchPendingCount().subscribe((count) => {
         this.outboxCountObs.set(count)
@@ -1064,20 +1073,50 @@ export class WotConnector extends BaseConnector {
     try {
       const doc = getPersonalDoc()
       const contacts = doc.contacts ?? {}
-      const mapped: ContactInfo[] = Object.entries(contacts).map(([did, c]: [string, any]) => ({
-        id: did,
-        publicKey: c.publicKey || undefined,
-        name: c.name || undefined,
-        avatar: c.avatar || undefined,
-        bio: c.bio || undefined,
-        status: c.status ?? "pending",
-        verifiedAt: c.verifiedAt || undefined,
-        createdAt: c.createdAt ?? new Date().toISOString(),
-        updatedAt: c.updatedAt ?? new Date().toISOString(),
-      }))
+      const unresolvedDids: string[] = []
+      const mapped: ContactInfo[] = Object.entries(contacts).map(([did, c]: [string, any]) => {
+        if (!c.name) unresolvedDids.push(did)
+        return {
+          id: did,
+          publicKey: c.publicKey || undefined,
+          name: c.name || undefined,
+          avatar: c.avatar || undefined,
+          bio: c.bio || undefined,
+          status: c.status ?? "pending",
+          verifiedAt: c.verifiedAt || undefined,
+          createdAt: c.createdAt ?? new Date().toISOString(),
+          updatedAt: c.updatedAt ?? new Date().toISOString(),
+        }
+      })
       this.contactsObs.set(mapped)
+
+      // Background: resolve names for contacts without one
+      if (unresolvedDids.length > 0) {
+        this.resolveContactNames(unresolvedDids)
+      }
     } catch {
       // PersonalDoc not ready yet
+    }
+  }
+
+  /** Resolve display names for contacts via Discovery and persist in PersonalDoc */
+  private async resolveContactNames(dids: string[]): Promise<void> {
+    for (const did of dids) {
+      try {
+        const result = await this.discovery.resolveProfile(did)
+        if (result.profile?.name) {
+          changePersonalDoc((doc) => {
+            if (doc.contacts?.[did]) {
+              doc.contacts[did].name = result.profile!.name
+              if (result.profile!.avatar) doc.contacts[did].avatar = result.profile!.avatar
+              if (result.profile!.bio) doc.contacts[did].bio = result.profile!.bio
+              doc.contacts[did].updatedAt = new Date().toISOString()
+            }
+          })
+        }
+      } catch {
+        // Discovery unavailable — will retry on next sync
+      }
     }
   }
 

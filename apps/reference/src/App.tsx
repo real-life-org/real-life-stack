@@ -110,12 +110,17 @@ const CONNECTOR_OPTIONS: ConnectorOption[] = [
   { id: "wot", name: "Web of Trust", description: "E2E-verschlüsselt, Multi-Device" },
 ]
 
+//** Short human-readable fallback for raw IDs (DIDs etc.) */
+function shortName(id: string): string {
+  return `User-${id.slice(-6)}`
+}
+
 // Helper: resolve user info from members list or current user
 function resolveAuthor(userId: string, members: User[], currentUser?: User | null) {
   const member = members.find((m) => m.id === userId)
     ?? (currentUser?.id === userId ? currentUser : undefined)
   return {
-    name: member?.displayName ?? userId,
+    name: member?.displayName ?? shortName(userId),
     avatar: member?.avatarUrl,
   }
 }
@@ -146,10 +151,10 @@ function itemToPost(item: Item, members: User[], currentUser?: User | null): Pos
   }
 }
 
-function FeedView({ onInvite }: { onInvite?: () => void }) {
+function FeedView({ onInvite, groupId }: { onInvite?: () => void; groupId: string }) {
   const { data: posts } = useItems({ type: "post" })
   const { data: events } = useItems({ type: "event" })
-  const { data: members } = useMembers("group-1")
+  const { data: members } = useMembers(groupId)
   const { mutate: createItem } = useCreateItem()
   const { data: currentUser } = useCurrentUser()
 
@@ -785,6 +790,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   const inviteMember = useInviteMember()
   const removeMember = useRemoveMember()
   const { data: currentUser } = useCurrentUser()
+  const { contacts: allContacts } = useContacts()
 
   // Profile dialog state
   const [profileDialogOpen, setProfileDialogOpen] = useState(false)
@@ -989,7 +995,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
 
       <AppShellMain withBottomNav>
         <div className={`container mx-auto px-4 pt-6 ${activeModule === "kanban" ? "max-w-5xl" : "max-w-2xl"}`}>
-          {activeModule === "feed" && <FeedView onInvite={() => activeWorkspace && openEditDialog(activeWorkspace)} />}
+          {activeModule === "feed" && <FeedView groupId={activeWorkspace?.id ?? ""} onInvite={() => activeWorkspace && openEditDialog(activeWorkspace)} />}
           {activeModule === "kanban" && <KanbanView activeWorkspaceId={activeWorkspace?.id ?? null} groups={groups} />}
           {activeModule === "map" && <MapView />}
           {activeModule === "calendar" && <CalendarViewWrapper />}
@@ -1007,6 +1013,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
         open={groupDialogOpen}
         onOpenChange={setGroupDialogOpen}
         mode={groupDialogMode}
+        contacts={allContacts}
         onCreateGroup={async (name) => {
           const group = await createGroup(name)
           handleWorkspaceChange({ id: group.id, name: group.name })
@@ -1127,10 +1134,22 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY_CONNECTOR, connectorId)
     setLoading(true)
     setConnector(null)
+    let cancelled = false
+    let instance: DataInterface | null = null
     createConnector(connectorId).then((c) => {
+      if (cancelled) return // Don't dispose — global singletons (PersonalDoc) are shared
+      instance = c
       setConnector(c)
       setLoading(false)
     })
+    return () => {
+      cancelled = true
+      // Only dispose on real unmount (connector switch), not Strict Mode re-mount.
+      // We detect this by checking if the connector was actually set.
+      if (instance && typeof (instance as any).dispose === "function") {
+        (instance as any).dispose()
+      }
+    }
   }, [connectorId])
 
   if (loading || !connector) {
