@@ -1,6 +1,6 @@
 "use client"
 
-import { LogOut, Settings, User } from "lucide-react"
+import { LogOut, Settings, User, Users } from "lucide-react"
 
 import {
   DropdownMenu,
@@ -22,6 +22,8 @@ export interface UserData {
 interface UserMenuProps {
   user: UserData
   onProfile?: () => void
+  onContacts?: () => void
+  contactCount?: number
   onSettings?: () => void
   onLogout?: () => void
 }
@@ -29,6 +31,8 @@ interface UserMenuProps {
 export function UserMenu({
   user,
   onProfile,
+  onContacts,
+  contactCount,
   onSettings,
   onLogout,
 }: UserMenuProps) {
@@ -63,6 +67,15 @@ export function UserMenu({
           <DropdownMenuItem onClick={onProfile} className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span>Profil</span>
+          </DropdownMenuItem>
+        )}
+        {onContacts && (
+          <DropdownMenuItem onClick={onContacts} className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            <span>Kontakte</span>
+            {contactCount != null && contactCount > 0 && (
+              <span className="ml-auto text-xs text-muted-foreground tabular-nums">{contactCount}</span>
+            )}
           </DropdownMenuItem>
         )}
         {onSettings && (

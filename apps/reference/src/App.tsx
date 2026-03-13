@@ -16,8 +16,6 @@ import {
   LayoutList,
   ChevronDown,
   ChevronRight,
-  Contact,
-  Shield,
 } from "lucide-react"
 
 import {
@@ -53,7 +51,7 @@ import {
   DropdownMenuCheckboxItem,
   GroupDialog,
   ProfileDialog,
-  ContactList,
+  ContactsDialog,
   AddContactDialog,
   VerificationDialog,
   RelayStatusBadge,
@@ -83,7 +81,7 @@ import {
   type GroupDialogMode,
 } from "@real-life-stack/toolkit"
 import type { Item, User, Relation, Group, DataInterface, GroupManager } from "@real-life-stack/data-interface"
-import { hasGroups, isAuthenticatable, hasContacts, hasMessaging } from "@real-life-stack/data-interface"
+import { hasGroups, isAuthenticatable, hasMessaging } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
 import { MockConnector } from "@real-life-stack/mock-connector"
 import { LocalConnector } from "@real-life-stack/local-connector"
@@ -93,7 +91,6 @@ const MODULE_ICONS: Record<string, typeof Newspaper> = {
   map: MapIcon,
   calendar: Calendar,
   kanban: Columns3,
-  contacts: Contact,
 }
 
 const MODULE_LABELS: Record<string, string> = {
@@ -101,7 +98,6 @@ const MODULE_LABELS: Record<string, string> = {
   map: "Karte",
   calendar: "Kalender",
   kanban: "Kanban",
-  contacts: "Kontakte",
 }
 
 const CONNECTOR_OPTIONS: ConnectorOption[] = [
@@ -704,78 +700,6 @@ function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string |
   )
 }
 
-function ContactsView() {
-  const { activeContacts, pendingContacts, addContact, removeContact, updateContactName } = useContacts()
-  const verification = useVerification()
-  const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false)
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Kontakte</h2>
-          <p className="text-sm text-muted-foreground">
-            {activeContacts.length} verifiziert · {pendingContacts.length} ausstehend
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setVerifyDialogOpen(true)} size="sm" variant="outline">
-            <Shield className="h-4 w-4 mr-2" />
-            Verifizieren
-          </Button>
-          <Button onClick={() => setAddDialogOpen(true)} size="sm">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Hinzufügen
-          </Button>
-        </div>
-      </div>
-
-      {pendingContacts.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground">Ausstehend</h3>
-          <ContactList
-            contacts={pendingContacts}
-            onRemove={removeContact}
-            onEditName={updateContactName}
-          />
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {activeContacts.length > 0 && pendingContacts.length > 0 && (
-          <h3 className="text-sm font-medium text-muted-foreground">Verifiziert</h3>
-        )}
-        <ContactList
-          contacts={activeContacts}
-          onRemove={removeContact}
-          onEditName={updateContactName}
-          emptyMessage="Noch keine verifizierten Kontakte"
-        />
-      </div>
-
-      <AddContactDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onAdd={addContact}
-      />
-
-      <VerificationDialog
-        open={verifyDialogOpen}
-        onOpenChange={setVerifyDialogOpen}
-        challenge={verification.challenge}
-        peerInfo={verification.peerInfo}
-        isProcessing={verification.isProcessing}
-        error={verification.error}
-        onCreateChallenge={verification.createChallenge}
-        onScanChallenge={verification.scanChallenge}
-        onConfirmVerification={verification.confirmVerification}
-        onReset={verification.reset}
-      />
-    </div>
-  )
-}
-
 function RelayStatusBadgeWrapper() {
   const { state, pendingCount } = useRelayStatus()
   return <RelayStatusBadge state={state} pendingCount={pendingCount} />
@@ -790,9 +714,13 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   const inviteMember = useInviteMember()
   const removeMember = useRemoveMember()
   const { data: currentUser } = useCurrentUser()
-  const { contacts: allContacts } = useContacts()
+  const { activeContacts, pendingContacts, contacts: allContacts, addContact, removeContact, updateContactName, supportsContacts } = useContacts()
+  const verification = useVerification()
 
-  // Profile dialog state
+  // Dialog state
+  const [contactsDialogOpen, setContactsDialogOpen] = useState(false)
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false)
+  const [addContactDialogOpen, setAddContactDialogOpen] = useState(false)
   const [profileDialogOpen, setProfileDialogOpen] = useState(false)
   const profileData = useMemo(() => {
     const did = (connector as any).getDid?.() ?? currentUser?.id ?? ""
@@ -892,19 +820,12 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   // Derive available modules from active group's data.modules
   const activeGroup = groups.find((g) => g.id === activeWorkspace?.id)
   const groupModuleIds = (activeGroup?.data?.modules as string[] | undefined) ?? ["feed", "kanban", "calendar", "map"]
-  const supportsContacts = hasContacts(connector)
   const supportsMessaging = hasMessaging(connector)
   const modules: Module[] = useMemo(
-    () => {
-      const base = groupModuleIds
-        .filter((id) => MODULE_ICONS[id])
-        .map((id) => ({ id, label: MODULE_LABELS[id] ?? id, icon: MODULE_ICONS[id] }))
-      if (supportsContacts) {
-        base.push({ id: "contacts", label: MODULE_LABELS.contacts, icon: MODULE_ICONS.contacts })
-      }
-      return base
-    },
-    [groupModuleIds.join(","), supportsContacts]
+    () => groupModuleIds
+      .filter((id) => MODULE_ICONS[id])
+      .map((id) => ({ id, label: MODULE_LABELS[id] ?? id, icon: MODULE_ICONS[id] })),
+    [groupModuleIds.join(",")]
   )
 
   // When switching workspace, update connector scope and reset module if needed
@@ -980,6 +901,8 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           <UserMenu
             user={userData}
             onProfile={() => setProfileDialogOpen(true)}
+            onContacts={supportsContacts ? () => setContactsDialogOpen(true) : undefined}
+            contactCount={activeContacts.length}
             onLogout={isAuthenticatable(connector) ? async () => {
               await connector.logout()
               window.location.reload()
@@ -994,7 +917,6 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           {activeModule === "kanban" && <KanbanView activeWorkspaceId={activeWorkspace?.id ?? null} groups={groups} />}
           {activeModule === "map" && <MapView />}
           {activeModule === "calendar" && <CalendarViewWrapper />}
-          {activeModule === "contacts" && <ContactsView />}
         </div>
       </AppShellMain>
 
@@ -1041,6 +963,37 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
         onOpenChange={setProfileDialogOpen}
         profile={profileData}
         onSave={handleSaveProfile}
+      />
+
+      {/* Contacts Dialog */}
+      <ContactsDialog
+        open={contactsDialogOpen}
+        onOpenChange={setContactsDialogOpen}
+        activeContacts={activeContacts}
+        pendingContacts={pendingContacts}
+        onRemove={removeContact}
+        onEditName={updateContactName}
+        onVerify={() => { setContactsDialogOpen(false); setVerifyDialogOpen(true) }}
+        onAdd={() => { setContactsDialogOpen(false); setAddContactDialogOpen(true) }}
+      />
+
+      <VerificationDialog
+        open={verifyDialogOpen}
+        onOpenChange={setVerifyDialogOpen}
+        challenge={verification.challenge}
+        peerInfo={verification.peerInfo}
+        isProcessing={verification.isProcessing}
+        error={verification.error}
+        onCreateChallenge={verification.createChallenge}
+        onScanChallenge={verification.scanChallenge}
+        onConfirmVerification={verification.confirmVerification}
+        onReset={verification.reset}
+      />
+
+      <AddContactDialog
+        open={addContactDialogOpen}
+        onOpenChange={setAddContactDialogOpen}
+        onAdd={addContact}
       />
 
       {/* Connector FAB — bottom-left, above BottomNav */}

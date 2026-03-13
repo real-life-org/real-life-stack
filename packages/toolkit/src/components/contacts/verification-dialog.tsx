@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Shield, Copy, Check, Loader2, UserCheck } from "lucide-react"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { Shield, Copy, Check, Loader2, UserCheck, Camera, ChevronDown, ChevronUp, X } from "lucide-react"
 
 import { Button } from "@/components/primitives/button"
 import {
@@ -11,9 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/primitives/dialog"
-import { Input } from "@/components/primitives/input"
 
-type VerificationStep = "choose" | "show-code" | "enter-code" | "confirm" | "done"
+type VerificationStep = "ready" | "confirm" | "done" | "error"
 
 export interface VerificationDialogProps {
   open: boolean
@@ -40,28 +39,73 @@ export function VerificationDialog({
   onConfirmVerification,
   onReset,
 }: VerificationDialogProps) {
-  const [step, setStep] = useState<VerificationStep>("choose")
-  const [inputCode, setInputCode] = useState("")
+  const [step, setStep] = useState<VerificationStep>("ready")
   const [copied, setCopied] = useState(false)
   const [scannedCode, setScannedCode] = useState("")
+  const [showManualEntry, setShowManualEntry] = useState(false)
+  const [manualCode, setManualCode] = useState("")
+  const [isScanning, setIsScanning] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const scannerRef = useRef<{ stream: MediaStream | null }>({ stream: null })
+  const challengeCreated = useRef(false)
 
-  const handleClose = (isOpen: boolean) => {
+  // Auto-create challenge when dialog opens
+  useEffect(() => {
+    if (open && !challenge && !challengeCreated.current) {
+      challengeCreated.current = true
+      onCreateChallenge()
+    }
+    if (!open) {
+      challengeCreated.current = false
+    }
+  }, [open, challenge, onCreateChallenge])
+
+  // Generate QR code when challenge changes
+  useEffect(() => {
+    if (!challenge?.code) {
+      setQrDataUrl(null)
+      return
+    }
+    let cancelled = false
+    import("qrcode").then((QRCode) => {
+      if (cancelled) return
+      QRCode.toDataURL(challenge.code, {
+        width: 220,
+        margin: 2,
+        color: { dark: "#1e293b", light: "#ffffff" },
+      }).then((url: string) => {
+        if (!cancelled) setQrDataUrl(url)
+      })
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [challenge?.code])
+
+  const stopScanner = useCallback(() => {
+    if (scannerRef.current.stream) {
+      for (const track of scannerRef.current.stream.getTracks()) {
+        track.stop()
+      }
+      scannerRef.current.stream = null
+    }
+    setIsScanning(false)
+  }, [])
+
+  const handleClose = useCallback((isOpen: boolean) => {
     if (!isOpen) {
-      setStep("choose")
-      setInputCode("")
+      setStep("ready")
       setCopied(false)
       setScannedCode("")
+      setShowManualEntry(false)
+      setManualCode("")
+      setQrDataUrl(null)
+      stopScanner()
       onReset()
     }
     onOpenChange(isOpen)
-  }
+  }, [onOpenChange, onReset, stopScanner])
 
-  const handleCreateChallenge = async () => {
-    await onCreateChallenge()
-    setStep("show-code")
-  }
-
-  const handleCopyCode = async () => {
+  const handleCopy = async () => {
     if (challenge?.code) {
       await navigator.clipboard.writeText(challenge.code)
       setCopied(true)
@@ -69,16 +113,55 @@ export function VerificationDialog({
     }
   }
 
-  const handleEnterCode = () => {
-    setStep("enter-code")
-  }
-
-  const handleSubmitCode = async () => {
-    const code = inputCode.trim()
-    if (!code) return
+  const processScannedCode = async (code: string) => {
     setScannedCode(code)
     await onScanChallenge(code)
     setStep("confirm")
+  }
+
+  const startScanner = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      })
+      scannerRef.current.stream = stream
+      setIsScanning(true)
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+      // Use BarcodeDetector if available
+      if ("BarcodeDetector" in window) {
+        const detector = new (window as any).BarcodeDetector({ formats: ["qr_code"] })
+        const scanFrame = async () => {
+          if (!videoRef.current || !scannerRef.current.stream) return
+          try {
+            const barcodes = await detector.detect(videoRef.current)
+            if (barcodes.length > 0) {
+              const code = barcodes[0].rawValue
+              stopScanner()
+              await processScannedCode(code)
+              return
+            }
+          } catch { /* ignore detection errors */ }
+          if (scannerRef.current.stream) {
+            requestAnimationFrame(scanFrame)
+          }
+        }
+        videoRef.current?.addEventListener("loadeddata", () => {
+          requestAnimationFrame(scanFrame)
+        }, { once: true })
+      }
+    } catch {
+      // Camera not available — show manual entry instead
+      setIsScanning(false)
+      setShowManualEntry(true)
+    }
+  }
+
+  const handleManualSubmit = async () => {
+    const code = manualCode.trim()
+    if (!code) return
+    await processScannedCode(code)
   }
 
   const handleConfirm = async () => {
@@ -86,103 +169,164 @@ export function VerificationDialog({
     setStep("done")
   }
 
+  const handleAnother = async () => {
+    setStep("ready")
+    setCopied(false)
+    setScannedCode("")
+    setShowManualEntry(false)
+    setManualCode("")
+    onReset()
+    challengeCreated.current = true
+    await onCreateChallenge()
+  }
+
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => stopScanner()
+  }, [stopScanner])
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            {step === "done" ? "Verifizierung abgeschlossen" : "Kontakt verifizieren"}
+            {step === "done" ? "Verifizierung erfolgreich!" : "Verifizieren"}
           </DialogTitle>
-          <DialogDescription>
-            {step === "choose" && "Verifiziere einen Kontakt, den du persönlich triffst."}
-            {step === "show-code" && "Teile diesen Code mit deinem Gegenüber."}
-            {step === "enter-code" && "Gib den Code ein, den dir dein Gegenüber zeigt."}
-            {step === "confirm" && "Bestätige, dass du diese Person persönlich triffst."}
-            {step === "done" && "Die gegenseitige Verifizierung war erfolgreich."}
-          </DialogDescription>
+          {step === "ready" && (
+            <DialogDescription>
+              Zeige deinen Code oder scanne den Code deines Gegenübers.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         {error && (
           <p className="text-sm text-destructive">{error}</p>
         )}
 
-        {step === "choose" && (
-          <div className="flex flex-col gap-3 pt-2">
-            <Button onClick={handleCreateChallenge} disabled={isProcessing}>
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Code erzeugen (ich zeige)
-            </Button>
-            <Button variant="outline" onClick={handleEnterCode}>
-              Code eingeben (ich scanne)
-            </Button>
-          </div>
-        )}
-
-        {step === "show-code" && challenge && (
-          <div className="space-y-4 pt-2">
-            <div className="relative">
-              <div className="rounded-lg border bg-muted p-4 font-mono text-xs break-all select-all">
-                {challenge.code}
+        {step === "ready" && (
+          <div className="space-y-4">
+            {/* QR Code or Camera Scanner */}
+            {isScanning ? (
+              <div className="relative">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full rounded-lg border bg-black aspect-square object-cover"
+                />
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                  onClick={stopScanner}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
+            ) : qrDataUrl ? (
+              <div className="flex justify-center">
+                <div className="rounded-xl border bg-white p-3 shadow-sm">
+                  <img src={qrDataUrl} alt="QR Code" className="w-[220px] h-[220px]" />
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                <div className="rounded-xl border bg-muted p-3 w-[246px] h-[246px] flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              </div>
+            )}
+
+            {/* Action row: Copy + Scan */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={handleCopy}
+                disabled={!challenge?.code}
+              >
+                {copied ? (
+                  <><Check className="h-3.5 w-3.5 mr-1.5 text-green-500" /> Kopiert</>
+                ) : (
+                  <><Copy className="h-3.5 w-3.5 mr-1.5" /> Code kopieren</>
+                )}
+              </Button>
               <Button
                 size="sm"
-                variant="ghost"
-                className="absolute top-2 right-2"
-                onClick={handleCopyCode}
+                className="flex-1"
+                onClick={startScanner}
+                disabled={isScanning}
               >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                <Camera className="h-3.5 w-3.5 mr-1.5" />
+                Scannen
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Zeige oder sende diesen Code an die Person, die du verifizieren möchtest.
-              Sie gibt ihn auf ihrer Seite ein.
-            </p>
-          </div>
-        )}
 
-        {step === "enter-code" && (
-          <div className="space-y-4 pt-2">
-            <Input
-              placeholder="Code einfügen..."
-              value={inputCode}
-              onChange={(e) => setInputCode(e.target.value)}
-              className="font-mono text-xs"
-            />
-            <Button
-              className="w-full"
-              onClick={handleSubmitCode}
-              disabled={!inputCode.trim() || isProcessing}
-            >
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Code prüfen
-            </Button>
+            {/* Manual entry toggle */}
+            <div>
+              <button
+                type="button"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowManualEntry(!showManualEntry)}
+              >
+                {showManualEntry ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                Code manuell eingeben
+              </button>
+              {showManualEntry && (
+                <div className="flex gap-2 mt-2">
+                  <textarea
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value)}
+                    placeholder="Code hier einfügen..."
+                    className="flex-1 rounded-md border bg-background px-3 py-2 text-xs font-mono min-h-[60px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleManualSubmit}
+                    disabled={!manualCode.trim() || isProcessing}
+                    className="self-end"
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {step === "confirm" && peerInfo && (
           <div className="space-y-4 pt-2">
+            <p className="text-sm text-center text-muted-foreground">
+              Stehst du gerade vor dieser Person?
+            </p>
             <div className="rounded-lg border bg-primary/5 p-4 text-center">
               <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                 <UserCheck className="h-6 w-6 text-primary" />
               </div>
               <p className="font-medium">
-                {peerInfo.peerName ?? peerInfo.peerId.slice(-8)}
+                {peerInfo.peerName ?? `User-${peerInfo.peerId.slice(-6)}`}
               </p>
               <p className="mt-1 text-xs text-muted-foreground font-mono">
                 {peerInfo.peerId.slice(0, 20)}...{peerInfo.peerId.slice(-8)}
               </p>
             </div>
-            <p className="text-sm text-center text-muted-foreground">
-              Stehst du gerade vor dieser Person?
+            <p className="text-xs text-center text-muted-foreground">
+              Bestätige nur, wenn du diese Person persönlich kennst.
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => handleClose(false)}>
-                Abbrechen
+              <Button variant="outline" className="flex-1" onClick={() => setStep("ready")}>
+                Zurück
               </Button>
               <Button className="flex-1" onClick={handleConfirm} disabled={isProcessing}>
                 {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Ja, verifizieren
+                Bestätigen
               </Button>
             </div>
           </div>
@@ -194,10 +338,31 @@ export function VerificationDialog({
               <Check className="h-8 w-8 text-green-500" />
             </div>
             <p className="text-sm text-muted-foreground">
-              Der Kontakt wurde erfolgreich verifiziert und ist jetzt aktiv.
+              {peerInfo?.peerName
+                ? `${peerInfo.peerName} wurde verifiziert.`
+                : "Der Kontakt wurde erfolgreich verifiziert."}
             </p>
-            <Button className="w-full" onClick={() => handleClose(false)}>
-              Fertig
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => handleClose(false)}>
+                Fertig
+              </Button>
+              <Button className="flex-1" onClick={handleAnother}>
+                Weitere Verifizierung
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "error" && (
+          <div className="space-y-4 pt-2 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+              <X className="h-8 w-8 text-destructive" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Die Verifizierung ist fehlgeschlagen.
+            </p>
+            <Button className="w-full" onClick={handleAnother}>
+              Erneut versuchen
             </Button>
           </div>
         )}
