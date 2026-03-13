@@ -32,12 +32,11 @@ export function ConnectorSwitcher({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-mono hover:bg-accent border border-dashed border-muted-foreground/30">
-        <span className="text-muted-foreground">Connector:</span>
+      <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-mono bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-accent transition-colors cursor-pointer">
+        <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
         <span className="font-semibold">{active?.name ?? activeConnector}</span>
-        <ChevronsUpDown className="h-3 w-3 opacity-50" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="start" side="top" className="w-56">
         <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
           Connector wechseln (Dev)
         </DropdownMenuLabel>
