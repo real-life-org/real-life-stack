@@ -1098,6 +1098,9 @@ export default function App() {
       instance = c
       setConnector(c)
       setLoading(false)
+    }).catch((err) => {
+      console.error("[App] Failed to create connector:", err)
+      if (!cancelled) setLoading(false) // Show empty state instead of infinite loader
     })
     return () => {
       cancelled = true

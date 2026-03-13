@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useContext, type ReactNode } from "react"
 import type { DataInterface } from "@real-life-stack/data-interface"
 
 const ConnectorContext = createContext<DataInterface | null>(null)
@@ -9,22 +9,8 @@ export interface ConnectorProviderProps {
 }
 
 export function ConnectorProvider({ connector, children }: ConnectorProviderProps) {
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    let disposed = false
-    setReady(false)
-    connector.init().then(() => {
-      if (!disposed) setReady(true)
-    })
-    return () => {
-      disposed = true
-      connector.dispose()
-    }
-  }, [connector])
-
-  if (!ready) return null
-
+  // The connector is expected to be already initialized by the caller.
+  // Do NOT call init() or dispose() here — the parent component manages the lifecycle.
   return <ConnectorContext value={connector}>{children}</ConnectorContext>
 }
 
