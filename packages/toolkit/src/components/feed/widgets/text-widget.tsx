@@ -194,7 +194,7 @@ export function TextWidget({
   return (
     <div>
       {/* Formatting toolbar (top) */}
-      <div className="flex flex-wrap items-center gap-0.5 rounded-t-md border border-b-0 bg-muted/30 px-1 py-0.5">
+      <div className="flex flex-wrap items-center gap-0.5 rounded-t-md border border-b-0 border-input bg-muted/30 px-1 py-0.5">
         {formatButtons.map(({ format, icon: Icon, title }) => (
           <Button
             key={format}
@@ -217,12 +217,12 @@ export function TextWidget({
         placeholder={label}
         className={cn(
           "min-h-[120px] resize-y rounded-t-none border-t-0",
-          availableWidgets.length > 0 && onToggleWidget && "rounded-b-none border-b-0",
+          availableWidgets.length > 0 && onToggleWidget && "rounded-b-none border-b-0 shadow-none",
         )}
       />
       {/* Widget toggle icons (bottom bar) */}
       {availableWidgets.length > 0 && onToggleWidget && (
-        <div className="flex flex-wrap items-center gap-0.5 rounded-b-md border border-t-0 bg-muted/30 px-1 py-0.5">
+        <div className="flex flex-wrap items-center gap-0.5 rounded-b-md border border-t-0 border-input px-1 py-0.5">
           {availableWidgets.map((widgetId) => {
             const Icon = WIDGET_ICONS[widgetId]
             if (!Icon) return null
