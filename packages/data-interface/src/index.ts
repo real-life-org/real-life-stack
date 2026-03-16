@@ -265,7 +265,14 @@ export interface MutualVerificationEvent {
   fromName?: string
 }
 
-export type IncomingEvent = IncomingVerificationEvent | IncomingSpaceInviteEvent | MutualVerificationEvent
+export interface IncomingClaimEvent {
+  type: "incoming-claim"
+  fromId: string
+  fromName?: string
+  claimId: string
+}
+
+export type IncomingEvent = IncomingVerificationEvent | IncomingSpaceInviteEvent | MutualVerificationEvent | IncomingClaimEvent
 
 export interface EventListenerCapable {
   onIncomingEvent(callback: (event: IncomingEvent) => void): () => void

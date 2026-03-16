@@ -1019,6 +1019,36 @@ export class WotConnector extends BaseConnector {
       } as any
     })
 
+    // Send attestation via relay
+    if (this.outboxAdapter) {
+      const proof = { type: "Ed25519Signature2020", proofValue: signature }
+      const envelope: MessageEnvelope = {
+        v: 1,
+        id,
+        type: "attestation" as MessageType,
+        fromDid: did,
+        toDid: toId,
+        createdAt: now,
+        encoding: "json",
+        payload: JSON.stringify({ id, from: did, to: toId, claim, tags, createdAt: now, proof }),
+        signature,
+      }
+      this.outboxAdapter.send(envelope).then((receipt) => {
+        const status = receipt.reason === "queued-in-outbox" ? "queued" : "delivered"
+        changeYjsPersonalDoc((doc) => {
+          if (doc.attestationMetadata?.[id]) {
+            doc.attestationMetadata[id].deliveryStatus = status
+          }
+        })
+      }).catch(() => {
+        changeYjsPersonalDoc((doc) => {
+          if (doc.attestationMetadata?.[id]) {
+            doc.attestationMetadata[id].deliveryStatus = "failed"
+          }
+        })
+      })
+    }
+
     return { id, from: did, to: toId, claim, tags, createdAt: now, isAccepted: true }
   }
 
@@ -1221,8 +1251,46 @@ export class WotConnector extends BaseConnector {
     return this.deliveryStatusObs
   }
 
-  override async retryClaim(_id: string): Promise<void> {
-    // TODO: Re-queue in outbox for delivery
+  override async retryClaim(id: string): Promise<void> {
+    if (!this.outboxAdapter) return
+    const doc = getYjsPersonalDoc()
+    const att = doc.attestations?.[id]
+    if (!att) return
+
+    const proof = att.proofJson ? JSON.parse(att.proofJson) : null
+    if (!proof?.proofValue) return
+
+    const tags = att.tagsJson ? JSON.parse(att.tagsJson) : undefined
+    const envelope: MessageEnvelope = {
+      v: 1,
+      id: att.id,
+      type: "attestation" as MessageType,
+      fromDid: att.fromDid,
+      toDid: att.toDid,
+      createdAt: att.createdAt,
+      encoding: "json",
+      payload: JSON.stringify({
+        id: att.id, from: att.fromDid, to: att.toDid,
+        claim: att.claim, tags, createdAt: att.createdAt, proof,
+      }),
+      signature: proof.proofValue,
+    }
+
+    try {
+      const receipt = await this.outboxAdapter.send(envelope)
+      const status = receipt.reason === "queued-in-outbox" ? "queued" : "delivered"
+      changeYjsPersonalDoc((doc) => {
+        if (doc.attestationMetadata?.[id]) {
+          doc.attestationMetadata[id].deliveryStatus = status
+        }
+      })
+    } catch {
+      changeYjsPersonalDoc((doc) => {
+        if (doc.attestationMetadata?.[id]) {
+          doc.attestationMetadata[id].deliveryStatus = "failed"
+        }
+      })
+    }
   }
 
   // ==================== Incoming Events ====================
@@ -1307,6 +1375,94 @@ export class WotConnector extends BaseConnector {
           fromName: inviterName,
           spaceId: payload.spaceId,
           spaceName: payload.spaceName ?? "Unnamed Space",
+        })
+      } catch { /* ignore malformed */ }
+    }
+
+    if (envelope.type === "attestation" && envelope.toDid === did) {
+      try {
+        const attestation = JSON.parse(envelope.payload)
+        if (!attestation.id || !attestation.from || !attestation.to || !attestation.proof) return
+
+        // Verify signature using same pattern as VerificationHelper.verifySignature
+        try {
+          const dataToVerify = JSON.stringify({
+            from: attestation.from,
+            to: attestation.to,
+            claim: attestation.claim,
+            tags: attestation.tags,
+            createdAt: attestation.createdAt,
+          })
+          const publicKeyMultibase = VerificationHelper.publicKeyFromDid(attestation.from)
+          const publicKeyBytes = VerificationHelper.multibaseToBytes(publicKeyMultibase)
+          const publicKey = await crypto.subtle.importKey('raw', publicKeyBytes, 'Ed25519', false, ['verify'])
+          const signatureBytes = VerificationHelper.base64UrlToBytes(attestation.proof.proofValue)
+          const encoder = new TextEncoder()
+          const isValid = await crypto.subtle.verify('Ed25519', publicKey, signatureBytes, encoder.encode(dataToVerify))
+          if (!isValid) return
+        } catch {
+          return // Invalid signature or crypto error
+        }
+
+        // Store in PersonalDoc
+        changeYjsPersonalDoc((doc) => {
+          if (!doc.attestations) doc.attestations = {} as any
+          doc.attestations[attestation.id] = {
+            id: attestation.id,
+            attestationId: attestation.id,
+            fromDid: attestation.from,
+            toDid: attestation.to,
+            claim: attestation.claim,
+            tagsJson: attestation.tags ? JSON.stringify(attestation.tags) : null,
+            context: null,
+            createdAt: attestation.createdAt,
+            proofJson: JSON.stringify(attestation.proof),
+          } as any
+          if (!doc.attestationMetadata) doc.attestationMetadata = {} as any
+          doc.attestationMetadata[attestation.id] = {
+            attestationId: attestation.id,
+            accepted: false,
+            acceptedAt: null,
+            deliveryStatus: null,
+          } as any
+        })
+
+        // Send ACK (fire-and-forget)
+        if (this.outboxAdapter) {
+          this.outboxAdapter.send({
+            v: 1,
+            id: `ack-${attestation.id}`,
+            type: "attestation-ack" as MessageType,
+            fromDid: did,
+            toDid: attestation.from,
+            createdAt: new Date().toISOString(),
+            encoding: "json",
+            payload: JSON.stringify({ attestationId: attestation.id }),
+            signature: "",
+          }).catch(() => {})
+        }
+
+        // Emit event for UI
+        const contact = this.contactsObs.current.find((c) => c.id === attestation.from)
+        this.emitEvent({
+          type: "incoming-claim",
+          fromId: attestation.from,
+          fromName: contact?.name,
+          claimId: attestation.id,
+        })
+      } catch { /* ignore malformed */ }
+    }
+
+    if (envelope.type === "attestation-ack" && envelope.toDid === did) {
+      try {
+        const { attestationId } = JSON.parse(envelope.payload)
+        if (!attestationId) return
+
+        // Update delivery status in PersonalDoc
+        changeYjsPersonalDoc((doc) => {
+          if (doc.attestationMetadata?.[attestationId]) {
+            doc.attestationMetadata[attestationId].deliveryStatus = "acknowledged"
+          }
         })
       } catch { /* ignore malformed */ }
     }
