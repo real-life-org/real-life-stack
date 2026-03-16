@@ -328,7 +328,7 @@ type KanbanPanelState =
   | { mode: "edit"; item: Item }
   | { mode: "create" }
 
-function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string | null; groups: Group[] }) {
+function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, onItemClose }: { activeWorkspaceId: string | null; groups: Group[]; selectedItemId?: string; onItemSelect?: (id: string) => void; onItemClose?: () => void }) {
   const connector = useConnector()
   const { data: tasks } = useItems({ type: "task" })
   const { data: members } = useMembers("group-1")
@@ -344,6 +344,18 @@ function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string |
   })
   const [panelState, setPanelState] = useState<KanbanPanelState>({ mode: "closed" })
   const [panelPinned, setPanelPinned] = useState(false)
+
+  // Open item panel from URL deep-link
+  useEffect(() => {
+    if (selectedItemId && tasks.length > 0) {
+      const item = tasks.find((t) => t.id === selectedItemId)
+      if (item) {
+        setPanelState({ mode: "edit", item })
+      }
+    } else if (!selectedItemId && panelState.mode === "edit") {
+      setPanelState({ mode: "closed" })
+    }
+  }, [selectedItemId, tasks.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const [groupedView, setGroupedView] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null)
@@ -390,16 +402,21 @@ function KanbanView({ activeWorkspaceId, groups }: { activeWorkspaceId: string |
 
   const handleItemClick = useCallback((item: Item) => {
     setPanelState({ mode: "edit", item })
-  }, [])
+    onItemSelect?.(item.id)
+  }, [onItemSelect])
 
   const handleClosePanel = useCallback(() => {
-    if (!panelPinned) setPanelState({ mode: "closed" })
-  }, [panelPinned])
+    if (!panelPinned) {
+      setPanelState({ mode: "closed" })
+      onItemClose?.()
+    }
+  }, [panelPinned, onItemClose])
 
   // Explicit close — always closes, ignoring pinned state (used by X button / drawer drag)
   const handleForceClosePanel = useCallback(() => {
     setPanelState({ mode: "closed" })
-  }, [])
+    onItemClose?.()
+  }, [onItemClose])
 
   // Determine if the active workspace is the aggregate ("Alles") view
   const activeGroup = groups.find((g) => g.id === activeWorkspaceId)
@@ -756,7 +773,7 @@ function IncomingEventDialogs() {
 function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: string; onConnectorChange: (id: string) => void }) {
   const connector = useConnector()
   const navigate = useNavigate()
-  const { spaceId: urlSpaceId, module: urlModule } = useParams<{ spaceId?: string; module?: string }>()
+  const { spaceId: urlSpaceId, module: urlModule, itemId: urlItemId } = useParams<{ spaceId?: string; module?: string; itemId?: string }>()
   const { data: groups } = useGroups()
   const createGroup = useCreateGroup()
   const updateGroup = useUpdateGroup()
@@ -958,12 +975,20 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       </Navbar>
 
       <AppShellMain withBottomNav>
-        <div className={`container mx-auto px-4 pt-6 ${activeModule === "kanban" ? "max-w-5xl" : "max-w-2xl"}`}>
-          {activeModule === "feed" && <FeedView groupId={activeWorkspace?.id ?? ""} onInvite={() => activeWorkspace && openEditDialog(activeWorkspace)} />}
-          {activeModule === "kanban" && <KanbanView activeWorkspaceId={activeWorkspace?.id ?? null} groups={groups} />}
-          {activeModule === "map" && <MapView />}
-          {activeModule === "calendar" && <CalendarViewWrapper />}
-        </div>
+        {urlSpaceId && !activeWorkspace && workspaces.length > 0 ? (
+          <div className="container mx-auto px-4 pt-12 max-w-md text-center">
+            <p className="text-lg font-medium text-foreground">Du bist kein Mitglied dieses Spaces</p>
+            <p className="text-sm text-muted-foreground mt-2">Der Space existiert nicht oder du hast keinen Zugang.</p>
+            <Button variant="outline" className="mt-4" onClick={() => navigate("/")}>Zurück zur Übersicht</Button>
+          </div>
+        ) : (
+          <div className={`container mx-auto px-4 pt-6 ${activeModule === "kanban" ? "max-w-5xl" : "max-w-2xl"}`}>
+            {activeModule === "feed" && <FeedView groupId={activeWorkspace?.id ?? ""} onInvite={() => activeWorkspace && openEditDialog(activeWorkspace)} />}
+            {activeModule === "kanban" && <KanbanView activeWorkspaceId={activeWorkspace?.id ?? null} groups={groups} selectedItemId={urlItemId} onItemSelect={(id) => navigate(`/spaces/${activeWorkspace?.id}/${activeModule}/item/${id}`)} onItemClose={() => navigate(`/spaces/${activeWorkspace?.id}/${activeModule}`)} />}
+            {activeModule === "map" && <MapView />}
+            {activeModule === "calendar" && <CalendarViewWrapper />}
+          </div>
+        )}
       </AppShellMain>
 
       <BottomNav
