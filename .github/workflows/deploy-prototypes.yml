@@ -27,17 +27,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          path: real-life-stack
 
       - name: Checkout web-of-trust (for linked packages)
         uses: actions/checkout@v4
         with:
           repository: antontranelis/web-of-trust
-          path: web-of-trust
+          path: ../web-of-trust
 
       - name: Build web-of-trust packages
-        working-directory: web-of-trust
+        working-directory: ../web-of-trust
         run: |
           corepack enable
           pnpm install --frozen-lockfile
@@ -52,50 +50,44 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: real-life-stack/pnpm-lock.yaml
 
       - name: Install dependencies
-        working-directory: real-life-stack
         run: pnpm install --no-frozen-lockfile
 
       - name: Build packages (data-interface, connectors, toolkit)
-        working-directory: real-life-stack
         run: |
           pnpm --filter @real-life-stack/data-interface build
           pnpm --filter @real-life-stack/mock-connector --filter @real-life-stack/local-connector build
           pnpm --filter @real-life-stack/toolkit build
 
       - name: Build landing page
-        working-directory: real-life-stack
         run: pnpm --filter landing build
         env:
           VITE_BASE_PATH: /
 
       - name: Build reference app
-        working-directory: real-life-stack
         run: pnpm --filter reference build
         env:
           VITE_BASE_PATH: /app/
 
       - name: Build prototype
-        working-directory: real-life-stack/apps/prototype
+        working-directory: apps/prototype
         run: pnpm tsc -b && pnpm vite build --base="/edge/"
 
       - name: Build Storybook
-        working-directory: real-life-stack
         run: pnpm build:storybook
 
       - name: Prepare deployment
         run: |
           mkdir -p gh-pages/app gh-pages/edge gh-pages/storybook
           # Landing page at root
-          cp -R real-life-stack/apps/landing/dist/. gh-pages/
+          cp -R apps/landing/dist/. gh-pages/
           # Reference app at /app/
-          cp -R real-life-stack/apps/reference/dist/. gh-pages/app/
+          cp -R apps/reference/dist/. gh-pages/app/
           # Prototype at /edge/
-          cp -R real-life-stack/apps/prototype/dist/. gh-pages/edge/
+          cp -R apps/prototype/dist/. gh-pages/edge/
           # Storybook at /storybook/
-          cp -R real-life-stack/packages/toolkit/storybook-static/. gh-pages/storybook/
+          cp -R packages/toolkit/storybook-static/. gh-pages/storybook/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
