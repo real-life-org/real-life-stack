@@ -422,7 +422,7 @@ export class WotConnector extends BaseConnector {
 
     if (!handle) throw new Error("Group not found")
 
-    handle.transact((doc) => {
+    handle.transact((doc: any) => {
       if (updates.name) doc.metadata.name = updates.name
       if (updates.data?.modules) doc.metadata.modules = updates.data.modules as string[]
     })
@@ -468,7 +468,7 @@ export class WotConnector extends BaseConnector {
     const users = await Promise.all(
       space.members.map((did: string) => this.getUser(did))
     )
-    return users.filter((u): u is User => u !== null)
+    return users.filter((u: User | null): u is User => u !== null)
   }
 
   override async inviteMember(groupId: string, userId: string): Promise<void> {
@@ -871,7 +871,7 @@ export class WotConnector extends BaseConnector {
       this.currentHandle = await this.replication.openSpace<RlsSpaceDoc>(this.currentGroupId)
 
       // Listen for remote updates -> refresh observables
-      this.handleRemoteUnsub = this.currentHandle.onRemoteUpdate(() => {
+      this.handleRemoteUnsub = this.currentHandle!.onRemoteUpdate(() => {
         this.notifyAllObservers()
       })
     } catch (err) {
@@ -1507,7 +1507,7 @@ export class WotConnector extends BaseConnector {
         const profile = result.profile
         if (profile?.name && this.storage) {
           const contacts = await this.storage.getContacts()
-          const contact = contacts.find((c) => c.did === envelope.fromDid)
+          const contact = contacts.find((c: any) => c.did === envelope.fromDid)
           if (contact) {
             const needsUpdate =
               (contact.name || null) !== (profile.name || null) ||

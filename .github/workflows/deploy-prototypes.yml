@@ -56,6 +56,12 @@ jobs:
           sed -i 's|link:../web-of-trust/|link:.wot/|g' package.json
           pnpm install --no-frozen-lockfile
 
+      - name: Debug — check linked packages
+        run: |
+          ls -la node_modules/@real-life/ || echo "no @real-life dir"
+          ls -la packages/wot-connector/node_modules/@real-life/ 2>/dev/null || echo "no wot-connector @real-life dir"
+          cat package.json | grep -A5 overrides || echo "no overrides"
+
       - name: Build packages (data-interface, toolkit, connectors)
         run: |
           pnpm --filter @real-life-stack/data-interface build
