@@ -423,6 +423,7 @@ export class WotConnector extends BaseConnector {
     if (!handle) throw new Error("Group not found")
 
     handle.transact((doc: any) => {
+      if (!doc.metadata) doc.metadata = { name: "", modules: ["feed", "kanban", "calendar", "map"] }
       if (updates.name) doc.metadata.name = updates.name
       if (updates.data?.modules) doc.metadata.modules = updates.data.modules as string[]
     })
