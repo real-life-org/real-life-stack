@@ -30,6 +30,9 @@ import {
   AutomergeSpaceMetadataStorage,
   GroupKeyService,
   HttpDiscoveryAdapter,
+  OfflineFirstDiscoveryAdapter,
+  InMemoryPublishStateStore,
+  InMemoryGraphCacheStore,
   VerificationHelper,
   CompactStorageManager,
   getDefaultDisplayName,
@@ -75,7 +78,10 @@ const DEFAULT_MODULES = ["feed", "kanban", "calendar", "map"]
 export class WotConnector extends BaseConnector {
   private config: WotConnectorConfig
   private identity: WotIdentity
-  private discovery: HttpDiscoveryAdapter
+  private httpDiscovery: HttpDiscoveryAdapter
+  private discovery: OfflineFirstDiscoveryAdapter
+  private publishStateStore: InMemoryPublishStateStore
+  private graphCacheStore: InMemoryGraphCacheStore
 
   // Adapters (initialized after auth)
   private wsAdapter: WebSocketMessagingAdapter | null = null
@@ -115,7 +121,10 @@ export class WotConnector extends BaseConnector {
     super()
     this.config = config
     this.identity = new WotIdentity()
-    this.discovery = new HttpDiscoveryAdapter(config.profilesUrl)
+    this.httpDiscovery = new HttpDiscoveryAdapter(config.profilesUrl)
+    this.publishStateStore = new InMemoryPublishStateStore()
+    this.graphCacheStore = new InMemoryGraphCacheStore()
+    this.discovery = new OfflineFirstDiscoveryAdapter(this.httpDiscovery, this.publishStateStore, this.graphCacheStore)
     this.authStateObs = createObservable<AuthState>({ status: "loading" })
     this.contactsObs = createObservable<ContactInfo[]>([])
     this.claimsObs = createObservable<SignedClaim[]>([])
@@ -603,6 +612,10 @@ export class WotConnector extends BaseConnector {
     // Register relay state listener BEFORE connect so we catch the 'connected' event
     this.wsAdapter.onStateChange((state) => {
       this.relayStateObs.set(state as RelayState)
+      // Retry pending discovery publishes on reconnect
+      if (state === "connected") {
+        this.syncDiscoveryPending().catch(() => {})
+      }
     })
 
     const personalDocFns = {
@@ -794,6 +807,24 @@ export class WotConnector extends BaseConnector {
         }
       } catch { /* ignore individual fetch failures */ }
     }
+  }
+
+  /** Retry all pending discovery publish operations (profile, verifications, attestations) */
+  private async syncDiscoveryPending(): Promise<void> {
+    const did = this.identity.getDid()
+    await this.discovery.syncPending(did, this.identity, async () => {
+      const doc = getYjsPersonalDoc()
+      const encPubKeyBytes = await this.identity.getEncryptionPublicKeyBytes()
+      const profile = {
+        did,
+        name: doc.profile?.name ?? getDefaultDisplayName(did),
+        ...(doc.profile?.bio ? { bio: doc.profile.bio } : {}),
+        ...(doc.profile?.avatar ? { avatar: doc.profile.avatar } : {}),
+        encryptionPublicKey: encodeBase64Url(encPubKeyBytes),
+        updatedAt: new Date().toISOString(),
+      }
+      return { profile }
+    })
   }
 
   // ==================== Internal: Space/Group mapping ====================

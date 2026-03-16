@@ -19,8 +19,8 @@
 | 6 | **Attestation signature verification** | Verifies incoming attestation signatures | Ed25519 verify in `handleIncomingMessage()` | MEDIUM | ✅ DONE |
 | 7 | **Attestation send via relay** | `createAttestation()` sends via messaging | `createClaim()` sends via outboxAdapter | MEDIUM | ✅ DONE |
 | 8 | **Incoming attestation + auto-ACK** | Receive, store, send ACK automatically | Full handler + ACK in `handleIncomingMessage()` | MEDIUM | ✅ DONE |
-| 9 | **OfflineFirstDiscoveryAdapter** | Wraps HttpDiscoveryAdapter with local cache + dirty flags | Direct HTTP only | LOW | open |
-| 10 | **Dirty flag sync** | Tracks failed profile publishes, retries on reconnect | Not implemented | LOW | open |
+| 9 | **OfflineFirstDiscoveryAdapter** | Wraps HttpDiscoveryAdapter with local cache + dirty flags | Wraps with InMemory stores | LOW | ✅ DONE |
+| 10 | **Dirty flag sync** | Tracks failed profile publishes, retries on reconnect | `syncDiscoveryPending()` on relay reconnect | LOW | ✅ DONE |
 
 ## Partial (works but different)
 
