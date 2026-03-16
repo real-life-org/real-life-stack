@@ -212,7 +212,7 @@ export class WotConnector extends BaseConnector {
       if (creds.displayName || creds.bio) {
         const did = this.identity.getDid()
         const now = new Date().toISOString()
-        changeYjsPersonalDoc((doc) => {
+        changeYjsPersonalDoc((doc: any) => {
           doc.profile = {
             did,
             name: creds.displayName || null,
@@ -277,7 +277,7 @@ export class WotConnector extends BaseConnector {
   async updateProfile(updates: { name?: string; bio?: string; avatar?: string }): Promise<User> {
     const did = this.identity.getDid()
     const now = new Date().toISOString()
-    changeYjsPersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc: any) => {
       if (!doc.profile) {
         doc.profile = {
           did,
@@ -466,7 +466,7 @@ export class WotConnector extends BaseConnector {
     if (!space) return []
 
     const users = await Promise.all(
-      space.members.map((did) => this.getUser(did))
+      space.members.map((did: string) => this.getUser(did))
     )
     return users.filter((u): u is User => u !== null)
   }
@@ -660,14 +660,14 @@ export class WotConnector extends BaseConnector {
       groupKeyService: this.groupKeyService,
       metadataStorage: spaceMetadataStorage,
       vaultUrl: this.config.vaultUrl,
-      spaceFilter: (info) => info.appTag === RLS_SPACE_TYPE,
+      spaceFilter: (info: SpaceInfo) => info.appTag === RLS_SPACE_TYPE,
       compactStore: spaceCompactStore,
     })
     await this.replication.start()
 
     // 7. Outbox pending count → outboxCountObs
     if (outboxStore.watchPendingCount) {
-      outboxStore.watchPendingCount().subscribe((count) => {
+      outboxStore.watchPendingCount().subscribe((count: number) => {
         this.outboxCountObs.set(count)
       })
     }
@@ -686,8 +686,8 @@ export class WotConnector extends BaseConnector {
     })
 
     // Reactive contacts via StorageAdapter
-    this.storage.watchContacts().subscribe((contacts) => {
-      const mapped: ContactInfo[] = contacts.map((c) => ({
+    this.storage.watchContacts().subscribe((contacts: any[]) => {
+      const mapped: ContactInfo[] = contacts.map((c: any) => ({
         id: c.did,
         publicKey: c.publicKey || undefined,
         name: c.name || undefined,
@@ -702,7 +702,7 @@ export class WotConnector extends BaseConnector {
     })
     // Load initial contacts
     this.contactsObs.set(
-      this.storage.watchContacts().getValue().map((c) => ({
+      this.storage.watchContacts().getValue().map((c: any) => ({
         id: c.did,
         publicKey: c.publicKey || undefined,
         name: c.name || undefined,
@@ -722,7 +722,7 @@ export class WotConnector extends BaseConnector {
 
     // 9. Watch spaces for reactive group list
     const spacesSubscribable = this.replication.watchSpaces()
-    this.spacesSubscriptionUnsub = spacesSubscribable.subscribe((spaces) => {
+    this.spacesSubscriptionUnsub = spacesSubscribable.subscribe((spaces: SpaceInfo[]) => {
       this.updateGroupsFromSpaces(spaces)
     })
     // Load initial spaces
@@ -1031,7 +1031,7 @@ export class WotConnector extends BaseConnector {
     const signature = await this.identity.sign(claimData)
 
     // Store as attestation in PersonalDoc
-    changeYjsPersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc: any) => {
       if (!doc.attestations) doc.attestations = {} as any
       doc.attestations[id] = {
         id,
@@ -1069,13 +1069,13 @@ export class WotConnector extends BaseConnector {
       }
       this.outboxAdapter.send(envelope).then((receipt) => {
         const status = receipt.reason === "queued-in-outbox" ? "queued" : "delivered"
-        changeYjsPersonalDoc((doc) => {
+        changeYjsPersonalDoc((doc: any) => {
           if (doc.attestationMetadata?.[id]) {
             doc.attestationMetadata[id].deliveryStatus = status
           }
         })
       }).catch(() => {
-        changeYjsPersonalDoc((doc) => {
+        changeYjsPersonalDoc((doc: any) => {
           if (doc.attestationMetadata?.[id]) {
             doc.attestationMetadata[id].deliveryStatus = "failed"
           }
@@ -1131,7 +1131,7 @@ export class WotConnector extends BaseConnector {
     } catch { /* Discovery unavailable */ }
 
     // Store verification + add/activate contact in PersonalDoc
-    changeYjsPersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc: any) => {
       if (!doc.verifications) doc.verifications = {} as any
       doc.verifications[verification.id] = {
         id: verification.id,
@@ -1200,7 +1200,7 @@ export class WotConnector extends BaseConnector {
       }
     } catch { /* Discovery unavailable */ }
 
-    changeYjsPersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc: any) => {
       if (!doc.verifications) doc.verifications = {} as any
       doc.verifications[verification.id] = {
         id: verification.id,
@@ -1273,7 +1273,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async setAccepted(id: string, accepted: boolean): Promise<void> {
-    changeYjsPersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc: any) => {
       if (doc.attestationMetadata?.[id]) {
         doc.attestationMetadata[id].accepted = accepted
         doc.attestationMetadata[id].acceptedAt = accepted ? new Date().toISOString() : null
@@ -1313,13 +1313,13 @@ export class WotConnector extends BaseConnector {
     try {
       const receipt = await this.outboxAdapter.send(envelope)
       const status = receipt.reason === "queued-in-outbox" ? "queued" : "delivered"
-      changeYjsPersonalDoc((doc) => {
+      changeYjsPersonalDoc((doc: any) => {
         if (doc.attestationMetadata?.[id]) {
           doc.attestationMetadata[id].deliveryStatus = status
         }
       })
     } catch {
-      changeYjsPersonalDoc((doc) => {
+      changeYjsPersonalDoc((doc: any) => {
         if (doc.attestationMetadata?.[id]) {
           doc.attestationMetadata[id].deliveryStatus = "failed"
         }
@@ -1353,7 +1353,7 @@ export class WotConnector extends BaseConnector {
         if (!isValid) return
 
         // Save to PersonalDoc
-        changeYjsPersonalDoc((doc) => {
+        changeYjsPersonalDoc((doc: any) => {
           if (!doc.verifications) doc.verifications = {} as any
           doc.verifications[verification.id] = {
             id: verification.id,
@@ -1439,7 +1439,7 @@ export class WotConnector extends BaseConnector {
         }
 
         // Store in PersonalDoc
-        changeYjsPersonalDoc((doc) => {
+        changeYjsPersonalDoc((doc: any) => {
           if (!doc.attestations) doc.attestations = {} as any
           doc.attestations[attestation.id] = {
             id: attestation.id,
@@ -1493,7 +1493,7 @@ export class WotConnector extends BaseConnector {
         if (!attestationId) return
 
         // Update delivery status in PersonalDoc
-        changeYjsPersonalDoc((doc) => {
+        changeYjsPersonalDoc((doc: any) => {
           if (doc.attestationMetadata?.[attestationId]) {
             doc.attestationMetadata[attestationId].deliveryStatus = "acknowledged"
           }
