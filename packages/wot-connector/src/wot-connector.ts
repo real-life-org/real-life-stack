@@ -29,17 +29,12 @@ import {
   AutomergeOutboxStore,
   AutomergeSpaceMetadataStorage,
   GroupKeyService,
-  AutomergeReplicationAdapter,
   HttpDiscoveryAdapter,
   VerificationHelper,
-  initPersonalDoc,
-  getPersonalDoc,
-  resetPersonalDoc,
-  deletePersonalDocDB,
-  onPersonalDocChange,
+  CompactStorageManager,
   getDefaultDisplayName,
-  changePersonalDoc,
   encodeBase64Url,
+  decodeBase64Url,
 } from "@real-life/wot-core"
 import type {
   SpaceInfo,
@@ -47,12 +42,24 @@ import type {
   Subscribable,
   MessagingAdapter,
   MessageEnvelope,
-  PersonalDoc,
+  MessageType,
   PublicProfile,
+} from "@real-life/wot-core"
+import {
+  YjsReplicationAdapter,
+  initYjsPersonalDoc,
+  getYjsPersonalDoc,
+  resetYjsPersonalDoc,
+  deleteYjsPersonalDocDB,
+  onYjsPersonalDocChange,
+  changeYjsPersonalDoc,
+} from "@real-life/adapter-yjs"
+import type {
+  PersonalDoc,
   VerificationDoc,
   AttestationDoc,
   AttestationMetadataDoc,
-} from "@real-life/wot-core"
+} from "@real-life/adapter-yjs"
 
 import type { WotConnectorConfig, RlsSpaceDoc, SerializedItem } from "./types.js"
 import { serializeItem, deserializeItem } from "./serialization.js"
@@ -72,7 +79,7 @@ export class WotConnector extends BaseConnector {
   // Adapters (initialized after auth)
   private wsAdapter: WebSocketMessagingAdapter | null = null
   private outboxAdapter: OutboxMessagingAdapter | null = null
-  private replication: AutomergeReplicationAdapter | null = null
+  private replication: YjsReplicationAdapter | null = null
   private groupKeyService: GroupKeyService | null = null
 
   // State
@@ -144,7 +151,7 @@ export class WotConnector extends BaseConnector {
     await this.replication?.stop()
     await this.outboxAdapter?.disconnect()
     await this.wsAdapter?.disconnect()
-    await resetPersonalDoc()
+    await resetYjsPersonalDoc()
 
     for (const obs of this.itemObservables.values()) obs.destroy()
     for (const obs of this.itemByIdObservables.values()) obs.destroy()
@@ -194,7 +201,7 @@ export class WotConnector extends BaseConnector {
       if (creds.displayName || creds.bio) {
         const did = this.identity.getDid()
         const now = new Date().toISOString()
-        changePersonalDoc((doc) => {
+        changeYjsPersonalDoc((doc) => {
           doc.profile = {
             did,
             name: creds.displayName || null,
@@ -245,7 +252,7 @@ export class WotConnector extends BaseConnector {
     this.groupsCache = []
     this.groupsObservable.set([])
 
-    await deletePersonalDocDB()
+    await deleteYjsPersonalDocDB()
     await this.identity.deleteStoredIdentity()
 
     // Clear identity switch marker
@@ -259,7 +266,7 @@ export class WotConnector extends BaseConnector {
   async updateProfile(updates: { name?: string; bio?: string; avatar?: string }): Promise<User> {
     const did = this.identity.getDid()
     const now = new Date().toISOString()
-    changePersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc) => {
       if (!doc.profile) {
         doc.profile = {
           did,
@@ -282,6 +289,21 @@ export class WotConnector extends BaseConnector {
     return (await this.getCurrentUser())!
   }
 
+  override async updateMyProfile(updates: Partial<Record<string, unknown>>): Promise<Item> {
+    const user = await this.updateProfile({
+      name: updates.name as string | undefined,
+      bio: updates.bio as string | undefined,
+      avatar: updates.avatar as string | undefined,
+    })
+    return (await this.getMyProfile()) ?? {
+      id: user.id,
+      type: "profile",
+      createdAt: new Date(),
+      createdBy: user.id,
+      data: { name: user.displayName },
+    }
+  }
+
   /** Get the current user's DID */
   getDid(): string {
     return this.identity.getDid()
@@ -290,7 +312,7 @@ export class WotConnector extends BaseConnector {
   override async getCurrentUser(): Promise<User | null> {
     try {
       const did = this.identity.getDid()
-      const doc = getPersonalDoc()
+      const doc = getYjsPersonalDoc()
       const profile = doc.profile
       return {
         id: did,
@@ -303,21 +325,11 @@ export class WotConnector extends BaseConnector {
   }
 
   override async getUser(id: string): Promise<User | null> {
-    // Lookup cascade: cachedGraph -> contacts -> HttpDiscovery -> fallback
+    // Lookup cascade: contacts -> HttpDiscovery -> fallback
     try {
-      const doc = getPersonalDoc()
+      const doc = getYjsPersonalDoc()
 
-      // 1. cachedGraph
-      const cached = doc.cachedGraph?.entries?.[id]
-      if (cached) {
-        return {
-          id,
-          displayName: cached.name ?? getDefaultDisplayName(id),
-          avatarUrl: cached.avatar ?? undefined,
-        }
-      }
-
-      // 2. contacts
+      // 1. contacts
       const contact = doc.contacts?.[id]
       if (contact) {
         return {
@@ -454,7 +466,7 @@ export class WotConnector extends BaseConnector {
     }
 
     // Decode the base64url encryption key
-    const keyBytes = base64UrlToBytes(result.profile.encryptionPublicKey)
+    const keyBytes = decodeBase64Url(result.profile.encryptionPublicKey)
     await this.replication.addMember(groupId, userId, keyBytes)
   }
 
@@ -516,8 +528,7 @@ export class WotConnector extends BaseConnector {
 
       if (updates.type) existing.type = updates.type
       if (updates.data) {
-        // Merge field-by-field; deep-clone values to avoid Automerge
-        // "reference to existing document object" error
+        // Merge field-by-field; deep-clone values to avoid CRDT reference errors
         for (const [key, value] of Object.entries(updates.data)) {
           existing.data[key] = (typeof value === "object" && value !== null)
             ? JSON.parse(JSON.stringify(value))
@@ -591,14 +602,20 @@ export class WotConnector extends BaseConnector {
       this.relayStateObs.set(state as RelayState)
     })
 
-    const outboxStore = new AutomergeOutboxStore()
+    const personalDocFns = {
+      getPersonalDoc: getYjsPersonalDoc,
+      changePersonalDoc: changeYjsPersonalDoc,
+      onPersonalDocChange: onYjsPersonalDocChange,
+    }
+
+    const outboxStore = new AutomergeOutboxStore(personalDocFns)
     this.outboxAdapter = new OutboxMessagingAdapter(this.wsAdapter, outboxStore, {
-      skipTypes: ["profile-update", "attestation-ack", "personal-sync"] as any,
+      skipTypes: ["profile-update", "attestation-ack", "personal-sync"] as MessageType[],
     })
     await this.wsAdapter.connect(did)
 
-    // 2. PersonalDoc (multi-device sync for space metadata + group keys)
-    await initPersonalDoc(
+    // 2. PersonalDoc (Yjs-based, multi-device sync)
+    await initYjsPersonalDoc(
       this.identity,
       this.outboxAdapter as unknown as MessagingAdapter,
       this.config.vaultUrl,
@@ -608,36 +625,41 @@ export class WotConnector extends BaseConnector {
     //    flush + auto-reconnect. wsAdapter.connect() is idempotent, so this
     //    just triggers flushOutbox() + _startAutoReconnect() without reconnecting.
     await this.outboxAdapter.connect(did)
-    const spaceMetadataStorage = new AutomergeSpaceMetadataStorage()
+    const spaceMetadataStorage = new AutomergeSpaceMetadataStorage(personalDocFns)
 
-    // 3. Group Keys
+    // 4. Group Keys
     this.groupKeyService = new GroupKeyService()
 
-    // 4. Replication
-    this.replication = new AutomergeReplicationAdapter({
+    // 5. CompactStore for Yjs spaces
+    const spaceCompactStore = new CompactStorageManager("rls-yjs-space-compact-store")
+    await spaceCompactStore.open()
+
+    // 6. Replication (Yjs)
+    this.replication = new YjsReplicationAdapter({
       identity: this.identity,
       messaging: this.outboxAdapter as unknown as MessagingAdapter,
       groupKeyService: this.groupKeyService,
       metadataStorage: spaceMetadataStorage,
       vaultUrl: this.config.vaultUrl,
       spaceFilter: (info) => info.appTag === RLS_SPACE_TYPE,
+      compactStore: spaceCompactStore,
     })
     await this.replication.start()
 
-    // 5. Outbox pending count → outboxCountObs
+    // 7. Outbox pending count → outboxCountObs
     if (outboxStore.watchPendingCount) {
       outboxStore.watchPendingCount().subscribe((count) => {
         this.outboxCountObs.set(count)
       })
     }
 
-    // 7. Incoming message handler (verification, space-invite)
+    // 8. Incoming message handler (verification, space-invite)
     this.wsAdapter.onMessage(async (envelope) => {
       await this.handleIncomingMessage(envelope)
     })
 
-    // 8. PersonalDoc changes -> restore spaces + update contacts + claims
-    this.personalDocUnsub = onPersonalDocChange(() => {
+    // 9. PersonalDoc changes -> restore spaces + update contacts + claims
+    this.personalDocUnsub = onYjsPersonalDocChange(() => {
       this.replication?.requestSync?.("__all__").catch(() => {})
       this.syncContactsFromPersonalDoc()
       this.syncClaimsFromPersonalDoc()
@@ -672,7 +694,7 @@ export class WotConnector extends BaseConnector {
 
   private async publishProfile(): Promise<void> {
     const did = this.identity.getDid()
-    const doc = getPersonalDoc()
+    const doc = getYjsPersonalDoc()
     const encPubKeyBytes = await this.identity.getEncryptionPublicKeyBytes()
     const profile: PublicProfile = {
       did,
@@ -820,7 +842,7 @@ export class WotConnector extends BaseConnector {
       updatedAt: now,
     }
 
-    changePersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc) => {
       if (!doc.contacts) doc.contacts = {}
       doc.contacts[id] = {
         did: id,
@@ -838,7 +860,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async activateContact(id: string): Promise<void> {
-    changePersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc) => {
       if (doc.contacts?.[id]) {
         doc.contacts[id].status = "active"
         doc.contacts[id].updatedAt = new Date().toISOString()
@@ -847,7 +869,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async updateContactName(id: string, name: string): Promise<void> {
-    changePersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc) => {
       if (doc.contacts?.[id]) {
         doc.contacts[id].name = name as any
         doc.contacts[id].updatedAt = new Date().toISOString()
@@ -856,7 +878,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async removeContact(id: string): Promise<void> {
-    changePersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc) => {
       if (doc.contacts) {
         delete doc.contacts[id]
       }
@@ -885,7 +907,7 @@ export class WotConnector extends BaseConnector {
     const signature = await this.identity.sign(claimData)
 
     // Store as attestation in PersonalDoc
-    changePersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc) => {
       if (!doc.attestations) doc.attestations = {} as any
       doc.attestations[id] = {
         id,
@@ -911,7 +933,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async createChallenge(): Promise<{ code: string; nonce: string }> {
-    const displayName = getPersonalDoc()?.profile?.name ?? getDefaultDisplayName(this.identity.getDid())
+    const displayName = getYjsPersonalDoc()?.profile?.name ?? getDefaultDisplayName(this.identity.getDid())
     const code = await VerificationHelper.createChallenge(this.identity, displayName)
     // Parse the nonce from the challenge
     const parsed = JSON.parse(atob(code))
@@ -955,7 +977,7 @@ export class WotConnector extends BaseConnector {
     } catch { /* Discovery unavailable */ }
 
     // Store verification + add/activate contact in PersonalDoc
-    changePersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc) => {
       if (!doc.verifications) doc.verifications = {} as any
       doc.verifications[verification.id] = {
         id: verification.id,
@@ -1024,7 +1046,7 @@ export class WotConnector extends BaseConnector {
       }
     } catch { /* Discovery unavailable */ }
 
-    changePersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc) => {
       if (!doc.verifications) doc.verifications = {} as any
       doc.verifications[verification.id] = {
         id: verification.id,
@@ -1097,7 +1119,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async setAccepted(id: string, accepted: boolean): Promise<void> {
-    changePersonalDoc((doc) => {
+    changeYjsPersonalDoc((doc) => {
       if (doc.attestationMetadata?.[id]) {
         doc.attestationMetadata[id].accepted = accepted
         doc.attestationMetadata[id].acceptedAt = accepted ? new Date().toISOString() : null
@@ -1139,7 +1161,7 @@ export class WotConnector extends BaseConnector {
         if (!isValid) return
 
         // Save to PersonalDoc
-        changePersonalDoc((doc) => {
+        changeYjsPersonalDoc((doc) => {
           if (!doc.verifications) doc.verifications = {} as any
           doc.verifications[verification.id] = {
             id: verification.id,
@@ -1220,7 +1242,7 @@ export class WotConnector extends BaseConnector {
 
   private syncClaimsFromPersonalDoc(): void {
     try {
-      const doc = getPersonalDoc()
+      const doc = getYjsPersonalDoc()
       const claims: SignedClaim[] = []
 
       // Map verifications → SignedClaim with tag "verification"
@@ -1278,7 +1300,7 @@ export class WotConnector extends BaseConnector {
 
   private syncContactsFromPersonalDoc(): void {
     try {
-      const doc = getPersonalDoc()
+      const doc = getYjsPersonalDoc()
       const contacts = doc.contacts ?? {}
       const unresolvedDids: string[] = []
       const mapped: ContactInfo[] = Object.entries(contacts).map(([did, c]: [string, any]) => {
@@ -1297,9 +1319,10 @@ export class WotConnector extends BaseConnector {
       })
       this.contactsObs.set(mapped)
 
-      // Background: resolve names for contacts without one
-      if (unresolvedDids.length > 0) {
-        this.resolveContactNames(unresolvedDids)
+      // Background: resolve/refresh names for all contacts from Discovery
+      const allDids = Object.keys(contacts)
+      if (allDids.length > 0) {
+        this.resolveContactNames(allDids)
       }
     } catch {
       // PersonalDoc not ready yet
@@ -1312,7 +1335,7 @@ export class WotConnector extends BaseConnector {
       try {
         const result = await this.discovery.resolveProfile(did)
         if (result.profile?.name) {
-          changePersonalDoc((doc) => {
+          changeYjsPersonalDoc((doc) => {
             if (doc.contacts?.[did]) {
               doc.contacts[did].name = result.profile!.name
               if (result.profile!.avatar) doc.contacts[did].avatar = result.profile!.avatar
@@ -1331,7 +1354,18 @@ export class WotConnector extends BaseConnector {
 
   private async cleanupOldIdentity(): Promise<void> {
     // Delete old IndexedDB databases to prevent data leaks between identities
-    const dbNames = ["automerge-personal", "automerge-repo"]
+    const dbNames = [
+      // Yjs databases
+      "wot-yjs-compact-store",
+      "rls-yjs-space-compact-store",
+      // Legacy Automerge databases (cleanup from migration)
+      "automerge-personal",
+      "automerge-repo",
+      "rls-space-compact-store",
+      "rls-space-sync-states",
+      "wot-compact-store",
+      "wot-sync-states",
+    ]
     for (const name of dbNames) {
       try {
         await new Promise<void>((resolve) => {
@@ -1351,14 +1385,3 @@ function safeLocalStorage(key: string): string | null {
   try { return localStorage.getItem(key) } catch { return null }
 }
 
-function base64UrlToBytes(base64url: string): Uint8Array {
-  const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/")
-  const pad = base64.length % 4
-  const padded = pad ? base64 + "=".repeat(4 - pad) : base64
-  const binary = atob(padded)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i)
-  }
-  return bytes
-}

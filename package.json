@@ -19,7 +19,8 @@
   },
   "pnpm": {
     "overrides": {
-      "@real-life/wot-core": "link:../web-of-trust/packages/wot-core"
+      "@real-life/wot-core": "link:../web-of-trust/packages/wot-core",
+      "@real-life/adapter-yjs": "link:../web-of-trust/packages/adapter-yjs"
     }
   }
 }

@@ -6,6 +6,7 @@ settings:
 
 overrides:
   '@real-life/wot-core': link:../web-of-trust/packages/wot-core
+  '@real-life/adapter-yjs': link:../web-of-trust/packages/adapter-yjs
 
 importers:
 
@@ -451,6 +452,9 @@ importers:
       '@real-life-stack/toolkit':
         specifier: workspace:*
         version: link:../toolkit
+      '@real-life/adapter-yjs':
+        specifier: link:../../../web-of-trust/packages/adapter-yjs
+        version: link:../../../web-of-trust/packages/adapter-yjs
       '@real-life/wot-core':
         specifier: link:../../../web-of-trust/packages/wot-core
         version: link:../../../web-of-trust/packages/wot-core
