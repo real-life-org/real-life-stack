@@ -10,6 +10,18 @@ const config: StorybookConfig = {
   viteFinal: (config) => {
     config.plugins = config.plugins || []
     config.plugins.push(tailwindcss())
+
+    // Suppress "use client" and sourcemap warnings from shadcn/ui + Radix UI
+    const existingOnwarn = config.build?.rollupOptions?.onwarn
+    config.build = config.build || {}
+    config.build.rollupOptions = config.build.rollupOptions || {}
+    config.build.rollupOptions.onwarn = (warning, warn) => {
+      if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return
+      if (warning.message?.includes('sourcemap')) return
+      if (existingOnwarn) existingOnwarn(warning, warn)
+      else warn(warning)
+    }
+
     return config
   },
 }
