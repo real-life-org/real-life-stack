@@ -28,20 +28,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Checkout web-of-trust (for linked packages)
-        uses: actions/checkout@v4
-        with:
-          repository: antontranelis/web-of-trust
-          path: ../web-of-trust
-
-      - name: Build web-of-trust packages
-        working-directory: ../web-of-trust
-        run: |
-          corepack enable
-          pnpm install --frozen-lockfile
-          pnpm --filter @real-life/wot-core build
-          pnpm --filter @real-life/adapter-yjs build
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
@@ -51,8 +37,24 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      - name: Checkout web-of-trust (for linked packages)
+        uses: actions/checkout@v4
+        with:
+          repository: antontranelis/web-of-trust
+          path: .wot
+
+      - name: Build web-of-trust packages
+        working-directory: .wot
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @real-life/wot-core build
+          pnpm --filter @real-life/adapter-yjs build
+
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: |
+          # Rewrite link: overrides to point to .wot/ instead of ../web-of-trust/
+          sed -i 's|link:../web-of-trust/|link:.wot/|g' package.json
+          pnpm install --no-frozen-lockfile
 
       - name: Build packages (data-interface, connectors, toolkit)
         run: |
