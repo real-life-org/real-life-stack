@@ -56,12 +56,12 @@ jobs:
           sed -i 's|link:../web-of-trust/|link:.wot/|g' package.json
           pnpm install --no-frozen-lockfile
 
-      - name: Build packages (data-interface, connectors, toolkit)
+      - name: Build packages (data-interface, toolkit, connectors)
         run: |
           pnpm --filter @real-life-stack/data-interface build
+          pnpm --filter @real-life-stack/toolkit build
           pnpm --filter @real-life-stack/mock-connector --filter @real-life-stack/local-connector build
           pnpm --filter @real-life-stack/wot-connector build
-          pnpm --filter @real-life-stack/toolkit build
 
       - name: Build landing page
         run: pnpm --filter landing build
