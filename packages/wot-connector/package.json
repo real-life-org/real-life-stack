@@ -29,7 +29,8 @@
   "dependencies": {
     "@real-life-stack/data-interface": "workspace:*",
     "@real-life-stack/toolkit": "workspace:*",
-    "@real-life/wot-core": "^0.2.0"
+    "@real-life/wot-core": "^0.2.0",
+    "@real-life/adapter-yjs": "^0.1.0"
   },
   "peerDependencies": {
     "react": "^18 || ^19"

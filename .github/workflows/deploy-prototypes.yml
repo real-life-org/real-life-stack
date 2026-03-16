@@ -54,13 +54,9 @@ jobs:
         run: |
           # Rewrite link: overrides to point to .wot/ instead of ../web-of-trust/
           sed -i 's|link:../web-of-trust/|link:.wot/|g' package.json
+          # Also rewrite wot-connector's dependency to use local link
+          sed -i 's|"@real-life/adapter-yjs": "^0.1.0"|"@real-life/adapter-yjs": "link:../../.wot/packages/adapter-yjs"|g' packages/wot-connector/package.json
           pnpm install --no-frozen-lockfile
-
-      - name: Debug — check linked packages
-        run: |
-          ls -la node_modules/@real-life/ || echo "no @real-life dir"
-          ls -la packages/wot-connector/node_modules/@real-life/ 2>/dev/null || echo "no wot-connector @real-life dir"
-          cat package.json | grep -A5 overrides || echo "no overrides"
 
       - name: Build packages (data-interface, toolkit, connectors)
         run: |
