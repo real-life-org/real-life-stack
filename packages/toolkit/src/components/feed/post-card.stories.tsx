@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import React from 'react'
 import { PostCard, type Post } from './post-card'
 
 const meta: Meta<typeof PostCard> = {

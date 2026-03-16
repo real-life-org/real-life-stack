@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { BottomNav, type NavItem } from './bottom-nav'
 import { Home, Map, Calendar, User } from 'lucide-react'
 

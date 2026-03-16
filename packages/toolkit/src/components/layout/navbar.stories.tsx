@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import React from 'react'
 import { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from './navbar'
 import { Button } from '../primitives/button'
 import { Avatar, AvatarFallback } from '../primitives/avatar'
