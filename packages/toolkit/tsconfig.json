@@ -6,7 +6,6 @@
     "rootDir": "./src",
     "baseUrl": ".",
     "paths": {
-      "@real-life-stack/data-interface": ["../data-interface/src"],
       "@/*": ["./src/*"]
     }
   },
