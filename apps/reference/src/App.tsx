@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, type DragEvent, lazy, Suspense } from "react"
-import { Routes, Route } from "react-router-dom"
+import { Routes, Route, useParams, useNavigate } from "react-router-dom"
 import {
   Newspaper,
   Map as MapIcon,
@@ -720,8 +720,11 @@ function IncomingEventDialogs() {
     dismiss()
   }
 
+  const navigate = useNavigate()
   const handleOpenSpace = () => {
-    // TODO: navigate to the invited space
+    if (spaceInvite) {
+      navigate(`/spaces/${spaceInvite.spaceId}/feed`)
+    }
     dismiss()
   }
 
@@ -752,6 +755,8 @@ function IncomingEventDialogs() {
 
 function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: string; onConnectorChange: (id: string) => void }) {
   const connector = useConnector()
+  const navigate = useNavigate()
+  const { spaceId: urlSpaceId, module: urlModule } = useParams<{ spaceId?: string; module?: string }>()
   const { data: groups } = useGroups()
   const createGroup = useCreateGroup()
   const updateGroup = useUpdateGroup()
@@ -820,43 +825,50 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     [currentUser]
   )
 
-  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(() => {
-    const savedId = localStorage.getItem(STORAGE_KEY_GROUP)
-    if (savedId) {
-      // Will be resolved once workspaces load
-      return { id: savedId, name: "" }
-    }
-    return null
-  })
-  const [activeModule, setActiveModule] = useState(() => {
-    return localStorage.getItem(STORAGE_KEY_MODULE) ?? "feed"
-  })
   const [isDark, setIsDark] = useState(false)
 
-  // Resolve active workspace once workspaces are loaded
+  // Derive active workspace from URL params (with fallback to localStorage → first space)
+  const activeWorkspace: Workspace | null = useMemo(() => {
+    if (urlSpaceId) {
+      const found = workspaces.find((w) => w.id === urlSpaceId)
+      if (found) return found
+      // Space ID from URL but not found in list — might still be loading
+      if (workspaces.length === 0) return { id: urlSpaceId, name: "" }
+      return null // Unknown space
+    }
+    // No space in URL — try localStorage, then first workspace
+    const savedId = localStorage.getItem(STORAGE_KEY_GROUP)
+    if (savedId) {
+      const found = workspaces.find((w) => w.id === savedId)
+      if (found) return found
+    }
+    return workspaces[0] ?? null
+  }, [urlSpaceId, workspaces])
+
+  // Derive active module from URL params
+  const VALID_MODULES = ["feed", "kanban", "calendar", "map"]
+  const activeModule = urlModule && VALID_MODULES.includes(urlModule) ? urlModule : (localStorage.getItem(STORAGE_KEY_MODULE) ?? "feed")
+
+  // Redirect to URL with space/module if not already there
   useEffect(() => {
     if (workspaces.length === 0) return
-    // If we have a saved workspace ID, try to find it in the loaded list
-    if (activeWorkspace) {
-      const found = workspaces.find((w) => w.id === activeWorkspace.id)
-      if (found) {
-        // Update name in case it was a placeholder from localStorage
-        if (found.name !== activeWorkspace.name) {
-          setActiveWorkspace(found)
-        }
-        if (hasGroups(connector)) {
-          (connector as DataInterface & GroupManager).setCurrentGroup(found.id)
-        }
-        return
-      }
+    if (!urlSpaceId && activeWorkspace) {
+      navigate(`/spaces/${activeWorkspace.id}/${activeModule}`, { replace: true })
     }
-    // Fallback: select first workspace
-    setActiveWorkspace(workspaces[0])
-    localStorage.setItem(STORAGE_KEY_GROUP, workspaces[0].id)
-    if (hasGroups(connector)) {
-      (connector as DataInterface & GroupManager).setCurrentGroup(workspaces[0].id)
+  }, [workspaces.length, urlSpaceId, activeWorkspace, activeModule, navigate])
+
+  // Sync connector current group when workspace changes
+  useEffect(() => {
+    if (activeWorkspace && hasGroups(connector)) {
+      (connector as DataInterface & GroupManager).setCurrentGroup(activeWorkspace.id)
     }
-  }, [workspaces, connector]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeWorkspace?.id, connector])
+
+  // Save to localStorage for next session
+  useEffect(() => {
+    if (activeWorkspace) localStorage.setItem(STORAGE_KEY_GROUP, activeWorkspace.id)
+    if (urlModule && VALID_MODULES.includes(urlModule)) localStorage.setItem(STORAGE_KEY_MODULE, urlModule)
+  }, [activeWorkspace?.id, urlModule])
 
   // Derive available modules from active group's data.modules
   const activeGroup = groups.find((g) => g.id === activeWorkspace?.id)
@@ -869,25 +881,18 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     [groupModuleIds.join(",")]
   )
 
-  // When switching workspace, update connector scope and reset module if needed
+  // When switching workspace, navigate to URL
   const handleWorkspaceChange = useCallback((workspace: Workspace) => {
-    setActiveWorkspace(workspace)
-    localStorage.setItem(STORAGE_KEY_GROUP, workspace.id)
-    if (hasGroups(connector)) {
-      (connector as DataInterface & GroupManager).setCurrentGroup(workspace.id)
-    }
     const group = groups.find((g) => g.id === workspace.id)
     const mods = (group?.data?.modules as string[] | undefined) ?? ["feed", "kanban", "calendar", "map"]
-    if (!mods.includes(activeModule)) {
-      const newModule = mods[0] ?? "feed"
-      setActiveModule(newModule)
-      localStorage.setItem(STORAGE_KEY_MODULE, newModule)
-    }
-  }, [connector, groups, activeModule])
+    const mod = mods.includes(activeModule) ? activeModule : (mods[0] ?? "feed")
+    navigate(`/spaces/${workspace.id}/${mod}`)
+  }, [groups, activeModule, navigate])
 
   const handleModuleChange = (moduleId: string) => {
-    setActiveModule(moduleId)
-    localStorage.setItem(STORAGE_KEY_MODULE, moduleId)
+    if (activeWorkspace) {
+      navigate(`/spaces/${activeWorkspace.id}/${moduleId}`)
+    }
   }
 
   const toggleTheme = () => {
@@ -987,8 +992,8 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
             if (remaining.length > 0) {
               handleWorkspaceChange(remaining[0])
             } else {
-              setActiveWorkspace(null)
               localStorage.removeItem(STORAGE_KEY_GROUP)
+              navigate("/")
             }
           }
         }}
@@ -1165,7 +1170,13 @@ export default function App() {
       <IncomingEventsProvider>
         <AuthGate connector={connector}>
           <Routes>
-            <Route path="/" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
+            <Route path="spaces/:spaceId/:module/item/:itemId" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
+            <Route path="spaces/:spaceId/item/:itemId" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
+            <Route path="spaces/:spaceId/:module" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
+            <Route path="spaces/:spaceId" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
+            <Route path="profile" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
+            <Route path="contacts" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
+            <Route path="*" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
           </Routes>
         </AuthGate>
       </IncomingEventsProvider>
