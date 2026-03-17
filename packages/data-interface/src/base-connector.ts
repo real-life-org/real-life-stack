@@ -23,6 +23,25 @@ import type {
 
 export type ReactiveObservable<T> = Observable<T> & { set(value: T): void; destroy(): void }
 
+/**
+ * Shallow equality check for Observable values.
+ * - Primitives + null/undefined: strict equality
+ * - Arrays: same length + every element === (reference equality)
+ * - Objects: always false (new objects from notifyObservers are intentional updates)
+ */
+export function shallowEqual<T>(a: T, b: T): boolean {
+  if (a === b) return true
+  if (a == null || b == null) return a === b
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false
+    }
+    return true
+  }
+  return false
+}
+
 export function createObservable<T>(initial: T): ReactiveObservable<T> {
   let current = initial
   const subscribers = new Set<(value: T) => void>()
@@ -36,6 +55,7 @@ export function createObservable<T>(initial: T): ReactiveObservable<T> {
       return () => subscribers.delete(callback)
     },
     set(value: T) {
+      if (shallowEqual(current, value)) return
       current = value
       subscribers.forEach((cb) => cb(value))
     },

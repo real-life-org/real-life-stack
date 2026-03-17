@@ -96,6 +96,8 @@ export class WotConnector extends BaseConnector {
   private currentHandle: SpaceHandle<RlsSpaceDoc> | null = null
   private handleReady: Promise<void> = Promise.resolve()
   private handleRemoteUnsub: (() => void) | null = null
+  private notifyScheduled = false
+  private itemCache: Item[] | null = null
   private spacesSubscriptionUnsub: (() => void) | null = null
   private personalDocUnsub: (() => void) | null = null
   private contactsUnsub: (() => void) | null = null
@@ -1002,6 +1004,7 @@ export class WotConnector extends BaseConnector {
     this.handleRemoteUnsub = null
     this.currentHandle?.close()
     this.currentHandle = null
+    this.invalidateItemCache()
   }
 
   private getCurrentDoc(): RlsSpaceDoc | null {
@@ -1016,8 +1019,30 @@ export class WotConnector extends BaseConnector {
   // ==================== Internal: Observers ====================
 
   private notifyAllObservers(): void {
+    this.invalidateItemCache()
+    if (this.notifyScheduled) return
+    this.notifyScheduled = true
+    queueMicrotask(() => {
+      this.notifyScheduled = false
+      this.notifyAllObserversNow()
+    })
+  }
+
+  private invalidateItemCache(): void {
+    this.itemCache = null
+  }
+
+  private getCachedItems(): Item[] {
+    if (!this.itemCache) {
+      const doc = this.getCurrentDoc()
+      this.itemCache = doc ? Object.values(doc.items ?? {}).map(deserializeItem) : []
+    }
+    return this.itemCache
+  }
+
+  private notifyAllObserversNow(): void {
     const doc = this.getCurrentDoc()
-    const allItems = doc ? Object.values(doc.items ?? {}).map(deserializeItem) : []
+    const allItems = this.getCachedItems()
 
     // Update item list observables
     for (const [key, obs] of this.itemObservables) {

@@ -35,6 +35,7 @@ interface BroadcastMessage {
 
 export class LocalConnector implements FullConnector {
   private items: Item[] = []
+  private notifyScheduled = false
   private groups: Group[] = []
   private users: User[] = []
   private groupMembers: Record<string, string[]> = {}
@@ -464,10 +465,19 @@ export class LocalConnector implements FullConnector {
   // --- Internal: Observable Notification ---
 
   private notifyGroupObservers(): void {
-    this.groupsObs.set([...this.groups])
+    this.groupsObs.set(this.groups.map((g) => ({ ...g })))
   }
 
   private notifyObservers(): void {
+    if (this.notifyScheduled) return
+    this.notifyScheduled = true
+    queueMicrotask(() => {
+      this.notifyScheduled = false
+      this.notifyObserversNow()
+    })
+  }
+
+  private notifyObserversNow(): void {
     const scoped = this.getScopedItems()
     for (const [key, observable] of this.itemObservables) {
       const filter: ItemFilter = JSON.parse(key)

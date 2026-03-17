@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { createObservable, matchesFilter, findRelatedItems } from "../src/base-connector.js"
+import { createObservable, shallowEqual, matchesFilter, findRelatedItems } from "../src/base-connector.js"
 import type { Item, ItemFilter } from "../src/index.js"
 
 // Helper: create a minimal Item
@@ -185,6 +185,102 @@ describe("findRelatedItems", () => {
     expect(result).toHaveLength(2)
     expect(result.map((i) => i.id)).toContain("post-1")
     expect(result.map((i) => i.id)).toContain("comment-3")
+  })
+})
+
+describe("shallowEqual", () => {
+  it("returns true for identical primitives", () => {
+    expect(shallowEqual(42, 42)).toBe(true)
+    expect(shallowEqual("hello", "hello")).toBe(true)
+    expect(shallowEqual(true, true)).toBe(true)
+    expect(shallowEqual(null, null)).toBe(true)
+    expect(shallowEqual(undefined, undefined)).toBe(true)
+  })
+
+  it("returns false for different primitives", () => {
+    expect(shallowEqual(42, 43)).toBe(false)
+    expect(shallowEqual("a", "b")).toBe(false)
+    expect(shallowEqual(null, undefined)).toBe(false)
+  })
+
+  it("returns true for same array reference", () => {
+    const arr = [1, 2, 3]
+    expect(shallowEqual(arr, arr)).toBe(true)
+  })
+
+  it("returns true for arrays with same elements", () => {
+    const a = { id: "1" }
+    const b = { id: "2" }
+    expect(shallowEqual([a, b], [a, b])).toBe(true)
+  })
+
+  it("returns false for arrays with different length", () => {
+    expect(shallowEqual([1, 2], [1, 2, 3])).toBe(false)
+  })
+
+  it("returns false for arrays with different elements", () => {
+    const a = { id: "1" }
+    const b = { id: "1" } // Same content but different reference
+    expect(shallowEqual([a], [b])).toBe(false)
+  })
+
+  it("returns false for different objects (always)", () => {
+    expect(shallowEqual({ a: 1 }, { a: 1 })).toBe(false)
+  })
+})
+
+describe("createObservable — shallow comparison", () => {
+  it("does not fire subscribers when set with same primitive value", () => {
+    const obs = createObservable(42)
+    const values: number[] = []
+    obs.subscribe((v) => values.push(v))
+
+    obs.set(42)
+
+    expect(values).toEqual([])
+  })
+
+  it("does not fire when set with same array (same element references)", () => {
+    const item1 = { id: "1" }
+    const item2 = { id: "2" }
+    const obs = createObservable([item1, item2])
+    const updates: unknown[][] = []
+    obs.subscribe((v) => updates.push(v))
+
+    obs.set([item1, item2])
+
+    expect(updates).toEqual([])
+  })
+
+  it("fires when array length changes", () => {
+    const item1 = { id: "1" }
+    const obs = createObservable([item1])
+    const updates: unknown[][] = []
+    obs.subscribe((v) => updates.push(v))
+
+    obs.set([item1, { id: "2" }])
+
+    expect(updates).toHaveLength(1)
+  })
+
+  it("fires when null changes to value", () => {
+    const obs = createObservable<string | null>(null)
+    const values: (string | null)[] = []
+    obs.subscribe((v) => values.push(v))
+
+    obs.set("hello")
+
+    expect(values).toEqual(["hello"])
+  })
+
+  it("does not fire when null stays null", () => {
+    const obs = createObservable<string | null>(null)
+    const values: (string | null)[] = []
+    obs.subscribe((v) => values.push(v))
+
+    obs.set(null)
+
+    expect(values).toEqual([])
   })
 })
 

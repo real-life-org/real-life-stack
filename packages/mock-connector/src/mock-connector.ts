@@ -15,6 +15,7 @@ import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } fr
 
 export class MockConnector implements FullConnector {
   private items: Item[]
+  private notifyScheduled = false
   private groups: Group[]
   private users: User[]
   private groupMembers: Record<string, string[]>
@@ -321,6 +322,15 @@ export class MockConnector implements FullConnector {
   }
 
   private notifyObservers(): void {
+    if (this.notifyScheduled) return
+    this.notifyScheduled = true
+    queueMicrotask(() => {
+      this.notifyScheduled = false
+      this.notifyObserversNow()
+    })
+  }
+
+  private notifyObserversNow(): void {
     const scoped = this.getScopedItems()
     for (const [key, observable] of this.itemObservables) {
       const filter: ItemFilter = JSON.parse(key)
