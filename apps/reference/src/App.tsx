@@ -726,6 +726,8 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
             }}
             peopleOptions={members.map((m) => ({ id: m.id, name: m.displayName ?? m.id }))}
             tagSuggestions={availableTags}
+            tagQuickSuggestions={availableTags.slice(0, 10)}
+            peopleQuickSuggestions={members.slice(0, 10).map((m) => ({ id: m.id, name: m.displayName ?? m.id }))}
           />
         )}
       </AdaptivePanel>

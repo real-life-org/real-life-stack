@@ -17,6 +17,8 @@ interface PeopleWidgetProps {
   options?: PersonOption[]
   /** Simple string suggestions (legacy). Ignored when `options` is provided. */
   suggestions?: string[] | ((query: string) => Promise<string[]>)
+  /** Quick-select suggestions shown as clickable chips below the input */
+  quickSuggestions?: PersonOption[]
 }
 
 export function PeopleWidget({
@@ -25,6 +27,7 @@ export function PeopleWidget({
   label,
   options,
   suggestions,
+  quickSuggestions,
 }: PeopleWidgetProps) {
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<PersonOption[]>([])
@@ -170,6 +173,22 @@ export function PeopleWidget({
               {option.name}
             </button>
           ))}
+        </div>
+      )}
+      {quickSuggestions && quickSuggestions.filter((s) => !value.includes(s.id)).length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {quickSuggestions
+            .filter((s) => !value.includes(s.id))
+            .map((person) => (
+              <button
+                key={person.id}
+                type="button"
+                onClick={() => addPerson(person.id)}
+                className="inline-flex cursor-pointer items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-700 opacity-70 transition-opacity hover:opacity-100 dark:bg-sky-900/30 dark:text-sky-300"
+              >
+                {person.name}
+              </button>
+            ))}
         </div>
       )}
     </div>

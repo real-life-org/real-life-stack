@@ -135,6 +135,10 @@ export interface ContentComposerProps {
   /** Simple string suggestions (legacy). Ignored when `peopleOptions` is provided. */
   peopleSuggestions?: string[] | ((query: string) => Promise<string[]>)
   tagSuggestions?: string[] | ((query: string) => Promise<string[]>)
+  /** Quick-select tag suggestions shown as clickable chips below the tag input */
+  tagQuickSuggestions?: string[]
+  /** Quick-select people suggestions shown as clickable chips below the people input */
+  peopleQuickSuggestions?: PersonOption[]
   widgets?: CustomWidgetDefinition[]
   showVisibility?: boolean
   defaultPublic?: boolean
@@ -199,6 +203,8 @@ export function ContentComposer({
   peopleOptions,
   peopleSuggestions,
   tagSuggestions,
+  tagQuickSuggestions,
+  peopleQuickSuggestions,
   widgets: customWidgets,
   showVisibility = true,
   defaultPublic = true,
@@ -488,6 +494,7 @@ export function ContentComposer({
                       label={widgetLabel}
                       options={peopleOptions}
                       suggestions={peopleSuggestions}
+                      quickSuggestions={peopleQuickSuggestions}
                     />
                   )}
                   {widgetId === "tags" && (
@@ -496,6 +503,7 @@ export function ContentComposer({
                       onChange={(v) => updateData("tags", v)}
                       label={widgetLabel}
                       suggestions={tagSuggestions}
+                      quickSuggestions={tagQuickSuggestions}
                     />
                   )}
                 </div>

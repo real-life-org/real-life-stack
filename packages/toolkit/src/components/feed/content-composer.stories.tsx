@@ -96,14 +96,16 @@ const adType: ContentTypeConfig = {
 
 const allTypes = [postType, eventType, taskType, projectType, adType]
 
-const peopleSuggestions = [
-  "Anna Schmidt",
-  "Max Mustermann",
-  "Thomas Mueller",
-  "Lisa Weber",
-  "Jan Becker",
-  "Sarah Koch",
+const peopleOptions = [
+  { id: "u1", name: "Anna Schmidt" },
+  { id: "u2", name: "Max Mustermann" },
+  { id: "u3", name: "Thomas Mueller" },
+  { id: "u4", name: "Lisa Weber" },
+  { id: "u5", name: "Jan Becker" },
+  { id: "u6", name: "Sarah Koch" },
 ]
+
+const peopleSuggestions = peopleOptions.map((p) => p.name)
 
 const tagSuggestions = [
   "Wichtig",
@@ -167,6 +169,8 @@ export const TaskEinzelTyp: Story = {
     onSubmit: action("onSubmit"),
     peopleSuggestions,
     tagSuggestions,
+    tagQuickSuggestions: tagSuggestions,
+    peopleQuickSuggestions: peopleOptions,
   },
 }
 
@@ -181,15 +185,17 @@ export const EditModus: Story = {
       title: "Beete umgraben",
       text: "Die **Hochbeete** im Gemeinschaftsgarten muessen fuer die Saison vorbereitet werden.",
       status: "doing",
-      people: ["Anna Schmidt", "Max Mustermann"],
+      people: ["u1", "u2"],
       tags: ["Wichtig", "Projekt"],
     },
     showVisibility: false,
     showPreview: false,
     onSubmit: action("onSubmit"),
     onDelete: action("onDelete"),
-    peopleSuggestions,
+    peopleOptions,
     tagSuggestions,
+    tagQuickSuggestions: tagSuggestions,
+    peopleQuickSuggestions: peopleOptions,
   },
 }
 
@@ -225,5 +231,24 @@ export const ProjektMitMedien: Story = {
     mode: "project",
     onSubmit: action("onSubmit"),
     peopleSuggestions,
+  },
+}
+
+export const MitQuickSuggestions: Story = {
+  name: "Quick-Suggestions (Tags + People)",
+  args: {
+    contentTypes: [taskType],
+    mode: "task",
+    showVisibility: false,
+    initialData: {
+      title: "Beispiel-Task",
+      tags: ["Wichtig"],
+      people: ["u1"],
+    },
+    onSubmit: action("onSubmit"),
+    peopleOptions,
+    tagSuggestions,
+    tagQuickSuggestions: tagSuggestions,
+    peopleQuickSuggestions: peopleOptions,
   },
 }

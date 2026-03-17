@@ -9,6 +9,8 @@ interface TagsWidgetProps {
   onChange: (value: string[]) => void
   label: string
   suggestions?: string[] | ((query: string) => Promise<string[]>)
+  /** Quick-select suggestions shown as clickable chips below the input */
+  quickSuggestions?: string[]
 }
 
 export function TagsWidget({
@@ -16,6 +18,7 @@ export function TagsWidget({
   onChange,
   label,
   suggestions,
+  quickSuggestions,
 }: TagsWidgetProps) {
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<string[]>([])
@@ -135,6 +138,25 @@ export function TagsWidget({
               {suggestion}
             </button>
           ))}
+        </div>
+      )}
+      {quickSuggestions && quickSuggestions.filter((s) => !value.includes(s)).length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {quickSuggestions
+            .filter((s) => !value.includes(s))
+            .map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => addTag(tag)}
+                className={cn(
+                  "inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-[10px] font-medium opacity-70 transition-opacity hover:opacity-100",
+                  getTagColor(tag),
+                )}
+              >
+                {tag}
+              </button>
+            ))}
         </div>
       )}
     </div>
