@@ -838,7 +838,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     () => groups.map((g) => ({
       id: g.id,
       name: g.name,
-      avatar: g.data?.avatar ? `${basePath}${g.data.avatar}` : undefined,
+      avatar: g.data?.image as string | undefined ?? (g.data?.avatar ? `${basePath}${g.data.avatar}` : undefined),
     })),
     [groups, basePath]
   )
