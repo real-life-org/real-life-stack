@@ -980,6 +980,7 @@ export class WotConnector extends BaseConnector {
       data: {
         scope: "group",
         modules: doc?.metadata?.modules ?? DEFAULT_MODULES,
+        ...(space.image ? { image: space.image } : {}),
       },
     }
   }
