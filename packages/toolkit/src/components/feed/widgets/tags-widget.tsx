@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, getTagColor } from "@/lib/utils"
 
 interface TagsWidgetProps {
   value: string[]
@@ -96,7 +96,7 @@ export function TagsWidget({
         {value.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-0.5 rounded-full bg-secondary px-2 py-0.5 text-xs"
+            className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium", getTagColor(tag))}
           >
             {tag}
             <button

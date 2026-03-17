@@ -189,6 +189,53 @@ export const MobileLayout: Story = {
   },
 }
 
+export const MultipleAssignees: Story = {
+  args: {
+    items: [
+      {
+        id: "a-1",
+        type: "task",
+        createdAt: new Date(),
+        createdBy: "user-1",
+        data: { title: "Einzelner Assignee", status: "todo", position: 0, tags: ["beispiel"] },
+        relations: [{ predicate: "assignedTo", target: "global:user-1" }],
+      },
+      {
+        id: "a-2",
+        type: "task",
+        createdAt: new Date(),
+        createdBy: "user-1",
+        data: { title: "Zwei Assignees (kommasepariert)", status: "todo", position: 1, tags: ["beispiel"] },
+        relations: [
+          { predicate: "assignedTo", target: "global:user-1" },
+          { predicate: "assignedTo", target: "global:user-2" },
+        ],
+      },
+      {
+        id: "a-3",
+        type: "task",
+        createdAt: new Date(),
+        createdBy: "user-1",
+        data: { title: "Drei Assignees (+ N weitere)", status: "doing", position: 0, tags: ["beispiel"] },
+        relations: [
+          { predicate: "assignedTo", target: "global:user-1" },
+          { predicate: "assignedTo", target: "global:user-2" },
+          { predicate: "assignedTo", target: "global:user-3" },
+        ],
+      },
+      {
+        id: "a-4",
+        type: "task",
+        createdAt: new Date(),
+        createdBy: "user-1",
+        data: { title: "Ohne Assignee", status: "done", position: 0 },
+      },
+    ],
+    users,
+    onItemClick: (item) => console.log("Clicked:", item.id),
+  },
+}
+
 export const ManyColumns: Story = {
   render: () => {
     const manyColumns = [

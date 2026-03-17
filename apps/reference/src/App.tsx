@@ -492,10 +492,8 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
     if (panelState.mode !== "edit") return
     const item = panelState.item
     const { data } = submitData
-    const assigneeId = data.people?.[0] ?? null
-    const relations: Relation[] = assigneeId
-      ? [{ predicate: "assignedTo", target: `global:${assigneeId}` }]
-      : []
+    const relations: Relation[] = (data.people ?? [])
+      .map((id) => ({ predicate: "assignedTo", target: `global:${id}` }))
     // Ensure the item's group is active before updating (WoT-Connector needs an open handle)
     const itemGroupId = data.group || activeWorkspaceId
     if (itemGroupId && hasGroups(connector)) {
@@ -719,9 +717,9 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
               text: String(panelState.item.data.description ?? ""),
               status: String(panelState.item.data.status ?? "todo"),
               tags: (panelState.item.data.tags as string[]) ?? [],
-              people: [(panelState.item.relations ?? [])
-                .find((r) => r.predicate === "assignedTo")
-                ?.target.replace(/^global:/, "")].filter(Boolean) as string[],
+              people: (panelState.item.relations ?? [])
+                .filter((r) => r.predicate === "assignedTo")
+                .map((r) => r.target.replace(/^global:/, "")),
               group: (hasItemGroups(connector)
                 ? connector.getItemGroupId(panelState.item.id)
                 : null) ?? activeWorkspaceId ?? undefined,

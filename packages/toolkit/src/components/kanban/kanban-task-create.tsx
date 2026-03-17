@@ -6,7 +6,7 @@ import { Input } from "../primitives/input"
 import { Textarea } from "../primitives/textarea"
 import { Button } from "../primitives/button"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
-import { cn } from "../../lib/utils"
+import { cn, getTagColor } from "../../lib/utils"
 import { AlignLeft, Tag, Columns3, X, UserIcon, FolderOpen, ChevronRight, Trash2 } from "lucide-react"
 
 function getInitials(name: string): string {
@@ -36,18 +36,6 @@ function getStatusColor(status: string): string {
   return colors[status] ?? "bg-muted text-muted-foreground"
 }
 
-function getTagColor(tag: string): string {
-  const colors = [
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-    "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-    "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-    "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
-  ]
-  let hash = 0
-  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash)
-  return colors[Math.abs(hash) % colors.length]
-}
 
 export interface KanbanTaskFormData {
   title: string

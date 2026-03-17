@@ -1,6 +1,6 @@
 import type { Item, User, Relation } from "@real-life-stack/data-interface"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
-import { cn } from "../../lib/utils"
+import { cn, getTagColor } from "../../lib/utils"
 import { Calendar, Tag, User as UserIcon, AlignLeft } from "lucide-react"
 
 function getInitials(name: string): string {
@@ -18,18 +18,6 @@ function getAssigneeIds(item: Item): string[] {
     .map((r: Relation) => r.target.replace(/^global:/, ""))
 }
 
-function getTagColor(tag: string): string {
-  const colors = [
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-    "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-    "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-    "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
-  ]
-  let hash = 0
-  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash)
-  return colors[Math.abs(hash) % colors.length]
-}
 
 function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {

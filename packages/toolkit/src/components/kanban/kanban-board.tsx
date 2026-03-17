@@ -2,7 +2,8 @@ import { useState, useCallback, useMemo, type DragEvent } from "react"
 import type { Item, User, Relation } from "@real-life-stack/data-interface"
 import { Card, CardContent, CardHeader, CardTitle } from "../primitives/card"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
-import { cn } from "../../lib/utils"
+import { Tooltip, TooltipTrigger, TooltipContent } from "../primitives/tooltip"
+import { cn, getTagColor } from "../../lib/utils"
 import { EyeOff, Eye, ChevronDown, ChevronRight } from "lucide-react"
 
 export interface KanbanColumn {
@@ -46,18 +47,6 @@ function getAssigneeIds(item: Item): string[] {
     .map((r: Relation) => r.target.replace(/^global:/, ""))
 }
 
-function getTagColor(tag: string): string {
-  const colors = [
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-    "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-    "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-    "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
-  ]
-  let hash = 0
-  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash)
-  return colors[Math.abs(hash) % colors.length]
-}
 
 interface KanbanCardProps {
   item: Item
@@ -70,7 +59,8 @@ interface KanbanCardProps {
 
 function KanbanCard({ item, users, isDragged, onDragStart, onDragEnd, onClick }: KanbanCardProps) {
   const assigneeIds = getAssigneeIds(item)
-  const assignees = (users ?? []).filter((u) => assigneeIds.includes(u.id))
+  const userMap = new Map((users ?? []).map((u) => [u.id, u]))
+  const assignees = assigneeIds.map((id) => userMap.get(id)).filter((u): u is User => u != null)
   const tags = (item.data.tags as string[]) ?? []
 
   return (
@@ -110,23 +100,32 @@ function KanbanCard({ item, users, isDragged, onDragStart, onDragEnd, onClick }:
       )}
 
       {assignees.length > 0 && (
-        <div className="flex items-center gap-1 mt-2">
-          <div className="flex -space-x-1.5">
-            {assignees.map((user) => (
-              <Avatar key={user.id} className="h-5 w-5 border border-background">
-                <AvatarImage src={user.avatarUrl} alt={user.displayName} />
-                <AvatarFallback className="text-[8px] bg-muted">
-                  {getInitials(user.displayName ?? user.id)}
-                </AvatarFallback>
-              </Avatar>
-            ))}
-          </div>
-          {assignees.length === 1 && (
-            <span className="text-[10px] text-muted-foreground">
-              {assignees[0].displayName}
-            </span>
-          )}
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1 mt-2">
+              <div className="flex -space-x-1.5">
+                {assignees.map((user) => (
+                  <Avatar key={user.id} className="h-5 w-5 border border-background">
+                    <AvatarImage src={user.avatarUrl} alt={user.displayName} />
+                    <AvatarFallback className="text-[8px] bg-muted">
+                      {getInitials(user.displayName ?? user.id)}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
+              <span className="text-[10px] text-muted-foreground">
+                {assignees.length === 1
+                  ? assignees[0].displayName
+                  : assignees.length === 2
+                    ? `${assignees[0].displayName}, ${assignees[1].displayName}`
+                    : `${assignees[0].displayName} + ${assignees.length - 1} weitere`}
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {assignees.map((u) => u.displayName ?? u.id).join(", ")}
+          </TooltipContent>
+        </Tooltip>
       )}
     </div>
   )

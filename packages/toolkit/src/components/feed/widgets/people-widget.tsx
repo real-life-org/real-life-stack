@@ -131,7 +131,7 @@ export function PeopleWidget({
         {value.map((personId) => (
           <span
             key={personId}
-            className="inline-flex items-center gap-0.5 rounded-full bg-secondary px-2 py-0.5 text-xs"
+            className="inline-flex items-center gap-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 px-2 py-0.5 text-xs font-medium"
           >
             {resolveLabel(personId)}
             <button
