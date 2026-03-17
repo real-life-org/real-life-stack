@@ -944,12 +944,7 @@ export class WotConnector extends BaseConnector {
     // All shared spaces are groups — WoT and RLS spaces are fully compatible
     this.groupsCache = spaces
       .filter((s) => s.type === "shared")
-      .map((s) => ({
-        id: s.id,
-        name: s.name ?? "Unnamed Space",
-        members: s.members,
-        data: { scope: "group", modules: DEFAULT_MODULES },
-      }))
+      .map((s) => this.spaceToGroup(s))
 
     // Update the reactive observable (inherited from BaseConnector)
     this.groupsObservable.set([...this.groupsCache])
