@@ -4,10 +4,18 @@ import * as React from "react"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+export interface PersonOption {
+  id: string
+  name: string
+}
+
 interface PeopleWidgetProps {
   value: string[]
   onChange: (value: string[]) => void
   label: string
+  /** Structured options: widget stores IDs, displays names */
+  options?: PersonOption[]
+  /** Simple string suggestions (legacy). Ignored when `options` is provided. */
   suggestions?: string[] | ((query: string) => Promise<string[]>)
 }
 
@@ -15,39 +23,68 @@ export function PeopleWidget({
   value,
   onChange,
   label,
+  options,
   suggestions,
 }: PeopleWidgetProps) {
   const [query, setQuery] = React.useState("")
-  const [filtered, setFiltered] = React.useState<string[]>([])
+  const [filtered, setFiltered] = React.useState<PersonOption[]>([])
   const [showSuggestions, setShowSuggestions] = React.useState(false)
   const wrapperRef = React.useRef<HTMLDivElement>(null)
 
-  React.useEffect(() => {
-    if (!query.trim()) {
-      setFiltered([])
-      return
-    }
+  // Build a lookup map from options for resolving display names
+  const optionMap = React.useMemo(() => {
+    if (!options) return null
+    const map = new Map<string, string>()
+    for (const o of options) map.set(o.id, o.name)
+    return map
+  }, [options])
 
-    if (Array.isArray(suggestions)) {
+  const resolveLabel = React.useCallback(
+    (id: string) => optionMap?.get(id) ?? id,
+    [optionMap],
+  )
+
+  React.useEffect(() => {
+    const q = query.trim().toLowerCase()
+
+    if (options) {
+      // Show all non-selected options when query is empty, filter by name otherwise
       setFiltered(
-        suggestions.filter(
-          (s) =>
-            s.toLowerCase().includes(query.toLowerCase()) &&
-            !value.includes(s),
+        options.filter(
+          (o) =>
+            (!q || o.name.toLowerCase().includes(q)) &&
+            !value.includes(o.id),
         ),
+      )
+    } else if (!q) {
+      // Legacy string suggestions: no query means no suggestions
+      setFiltered([])
+    } else if (Array.isArray(suggestions)) {
+      setFiltered(
+        suggestions
+          .filter(
+            (s) =>
+              s.toLowerCase().includes(q) &&
+              !value.includes(s),
+          )
+          .map((s) => ({ id: s, name: s })),
       )
     } else if (typeof suggestions === "function") {
       let cancelled = false
       suggestions(query).then((results) => {
         if (!cancelled) {
-          setFiltered(results.filter((s) => !value.includes(s)))
+          setFiltered(
+            results
+              .filter((s) => !value.includes(s))
+              .map((s) => ({ id: s, name: s })),
+          )
         }
       })
       return () => {
         cancelled = true
       }
     }
-  }, [query, suggestions, value])
+  }, [query, options, suggestions, value])
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -62,8 +99,8 @@ export function PeopleWidget({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  const addPerson = (person: string) => {
-    const trimmed = person.trim()
+  const addPerson = (id: string) => {
+    const trimmed = id.trim()
     if (trimmed && !value.includes(trimmed)) {
       onChange([...value, trimmed])
     }
@@ -71,15 +108,15 @@ export function PeopleWidget({
     setShowSuggestions(false)
   }
 
-  const removePerson = (person: string) => {
-    onChange(value.filter((p) => p !== person))
+  const removePerson = (id: string) => {
+    onChange(value.filter((p) => p !== id))
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault()
       if (filtered.length > 0) {
-        addPerson(filtered[0])
+        addPerson(filtered[0].id)
       }
     }
     if (e.key === "Backspace" && !query && value.length > 0) {
@@ -91,15 +128,15 @@ export function PeopleWidget({
     <div className="relative" ref={wrapperRef}>
       <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
       <div className="flex flex-wrap items-center gap-1.5 rounded-md border px-2 py-1.5">
-        {value.map((person) => (
+        {value.map((personId) => (
           <span
-            key={person}
+            key={personId}
             className="inline-flex items-center gap-0.5 rounded-full bg-secondary px-2 py-0.5 text-xs"
           >
-            {person}
+            {resolveLabel(personId)}
             <button
               type="button"
-              onClick={() => removePerson(person)}
+              onClick={() => removePerson(personId)}
               className="text-muted-foreground hover:text-foreground"
             >
               <X className="h-2.5 w-2.5" />
@@ -120,17 +157,17 @@ export function PeopleWidget({
       </div>
       {showSuggestions && filtered.length > 0 && (
         <div className="absolute top-full z-10 mt-1 w-full rounded-md border bg-popover p-1 shadow-md">
-          {filtered.slice(0, 8).map((suggestion) => (
+          {filtered.slice(0, 8).map((option) => (
             <button
-              key={suggestion}
+              key={option.id}
               type="button"
-              onClick={() => addPerson(suggestion)}
+              onClick={() => addPerson(option.id)}
               className={cn(
                 "w-full rounded-sm px-2 py-1.5 text-left text-sm",
                 "hover:bg-accent hover:text-accent-foreground",
               )}
             >
-              {suggestion}
+              {option.name}
             </button>
           ))}
         </div>

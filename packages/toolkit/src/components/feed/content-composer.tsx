@@ -16,7 +16,8 @@ import { TextWidget } from "./widgets/text-widget"
 import { DateWidget } from "./widgets/date-widget"
 import { LocationWidget } from "./widgets/location-widget"
 import { MediaWidget } from "./widgets/media-widget"
-import { PeopleWidget } from "./widgets/people-widget"
+import { PeopleWidget, type PersonOption } from "./widgets/people-widget"
+export type { PersonOption } from "./widgets/people-widget"
 import { TagsWidget } from "./widgets/tags-widget"
 import { StatusWidget } from "./widgets/status-widget"
 import { GroupWidget } from "./widgets/group-widget"
@@ -129,6 +130,9 @@ export interface ContentComposerProps {
     onPositionChange: (pos: { lat: number; lng: number }) => void
     onConfirm: () => void
   }) => React.ReactNode
+  /** Structured people options: stores IDs, displays names. Takes precedence over peopleSuggestions. */
+  peopleOptions?: PersonOption[]
+  /** Simple string suggestions (legacy). Ignored when `peopleOptions` is provided. */
   peopleSuggestions?: string[] | ((query: string) => Promise<string[]>)
   tagSuggestions?: string[] | ((query: string) => Promise<string[]>)
   widgets?: CustomWidgetDefinition[]
@@ -136,6 +140,8 @@ export interface ContentComposerProps {
   defaultPublic?: boolean
   showPreview?: boolean
   renderPreview?: (data: WidgetData, contentType: string) => React.ReactNode
+  /** When true, every data change immediately calls onSubmit and the footer is hidden */
+  liveUpdate?: boolean
   className?: string
 }
 
@@ -190,6 +196,7 @@ export function ContentComposer({
   onDelete,
   editMode: editModeProp,
   renderLocationMap,
+  peopleOptions,
   peopleSuggestions,
   tagSuggestions,
   widgets: customWidgets,
@@ -197,6 +204,7 @@ export function ContentComposer({
   defaultPublic = true,
   showPreview = true,
   renderPreview,
+  liveUpdate = false,
   className,
 }: ContentComposerProps) {
   const isEditMode = editModeProp ?? !!onDelete
@@ -238,13 +246,25 @@ export function ContentComposer({
 
   // Set defaults on mount
   React.useEffect(() => {
-    setData((d) => ({
-      ...d,
-      status: d.status || currentConfig.defaultStatus || "",
-      group: d.group || currentConfig.defaultGroup || "",
-    }))
+    setData((d) => {
+      const newStatus = d.status || currentConfig.defaultStatus || ""
+      const newGroup = d.group || currentConfig.defaultGroup || ""
+      if (newStatus === d.status && newGroup === d.group) return d
+      return { ...d, status: newStatus, group: newGroup }
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Live update: submit on every data change (skip until user actually edits)
+  const prevDataRef = React.useRef(data)
+  React.useEffect(() => {
+    if (prevDataRef.current === data) return
+    prevDataRef.current = data
+    if (liveUpdate) {
+      onSubmit({ contentType: selectedType, isPublic, data })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, liveUpdate])
 
   // Active widgets = defaults + manually added
   const defaultWidgets = new Set(currentConfig.defaultWidgets)
@@ -466,6 +486,7 @@ export function ContentComposer({
                       value={data.people || []}
                       onChange={(v) => updateData("people", v)}
                       label={widgetLabel}
+                      options={peopleOptions}
                       suggestions={peopleSuggestions}
                     />
                   )}
@@ -520,8 +541,8 @@ export function ContentComposer({
         </div>
       )}
 
-      {/* Footer: actions */}
-      <div className="flex items-center justify-between pt-1">
+      {/* Footer: actions (hidden in liveUpdate mode) */}
+      {!liveUpdate && <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-2">
           {/* Delete button (edit mode only) */}
           {isEditMode && onDelete && (
@@ -600,7 +621,7 @@ export function ContentComposer({
             </Button>
           )}
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

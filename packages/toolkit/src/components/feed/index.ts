@@ -14,4 +14,5 @@ export {
   type CustomWidgetDefinition,
   type ContentComposerSubmitData,
   type ContentComposerProps,
+  type PersonOption,
 } from "./content-composer"

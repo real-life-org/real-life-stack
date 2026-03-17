@@ -37,7 +37,10 @@ import {
   KanbanBoard,
   KanbanToolbar,
   applyKanbanFilter,
-  KanbanTaskForm,
+  ContentComposer,
+  type ContentComposerSubmitData,
+  type ContentTypeConfig,
+  defaultColumns,
   AdaptivePanel,
   CalendarView,
   Card,
@@ -326,12 +329,11 @@ function CalendarViewWrapper() {
 type KanbanPanelState =
   | { mode: "closed" }
   | { mode: "edit"; item: Item }
-  | { mode: "create" }
 
 function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, onItemClose }: { activeWorkspaceId: string | null; groups: Group[]; selectedItemId?: string; onItemSelect?: (id: string) => void; onItemClose?: () => void }) {
   const connector = useConnector()
   const { data: tasks } = useItems({ type: "task" })
-  const { data: members } = useMembers("group-1")
+  const { data: members } = useMembers(activeWorkspaceId ?? "group-1")
   const { data: currentUser } = useCurrentUser()
   const { mutate: updateItem } = useUpdateItem()
   const { mutate: createItem } = useCreateItem()
@@ -396,21 +398,10 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
     }
   }
 
-  const handleCreateItem = useCallback(() => {
-    setPanelState({ mode: "create" })
-  }, [])
-
   const handleItemClick = useCallback((item: Item) => {
     setPanelState({ mode: "edit", item })
     onItemSelect?.(item.id)
   }, [onItemSelect])
-
-  const handleClosePanel = useCallback(() => {
-    if (!panelPinned) {
-      setPanelState({ mode: "closed" })
-      onItemClose?.()
-    }
-  }, [panelPinned, onItemClose])
 
   // Explicit close — always closes, ignoring pinned state (used by X button / drawer drag)
   const handleForceClosePanel = useCallback(() => {
@@ -427,6 +418,20 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
     () => groups.filter((g) => (g.data?.scope as string) !== "aggregate"),
     [groups]
   )
+
+  const taskContentType: ContentTypeConfig = useMemo(() => ({
+    id: "task",
+    label: "Task",
+    defaultWidgets: ["title", "text", "status", "people", "tags"],
+    widgetLabels: { text: "Beschreibung", people: "Zugewiesen" },
+    statusOptions: defaultColumns.map((col) => ({
+      id: col.id,
+      label: col.label,
+    })),
+    defaultStatus: "todo",
+    groupOptions: concreteGroups.map((g) => ({ id: g.id, name: g.name })),
+    groupRequired: true,
+  }), [concreteGroups])
 
   // Group tasks by their group for the grouped view
   const tasksByGroup = useMemo(() => {
@@ -457,47 +462,64 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
     })
   }, [])
 
-  const handleTaskCreate = useCallback((data: { title: string; description: string; status: string; tags: string[]; assigneeId: string | null; groupId: string | null }) => {
-    const relations: Relation[] = data.assigneeId
-      ? [{ predicate: "assignedTo", target: `global:${data.assigneeId}` }]
-      : []
+  const handleTaskCreate = useCallback(async () => {
+    // Determine the target group
+    const targetGroupId = isAggregate ? concreteGroups[0]?.id : activeWorkspaceId
     // Temporarily switch to the target group so the connector scopes the item correctly
     const previousGroupId = activeWorkspaceId
-    if (data.groupId && hasGroups(connector)) {
-      (connector as DataInterface & GroupManager).setCurrentGroup(data.groupId)
+    if (targetGroupId && hasGroups(connector)) {
+      (connector as DataInterface & GroupManager).setCurrentGroup(targetGroupId)
     }
-    createItem({
+    const newItem = await createItem({
       type: "task",
       createdBy: currentUser?.id ?? "user-1",
-      data: { title: data.title, description: data.description, status: data.status, position: tasks.length, tags: data.tags },
-      relations,
+      data: { title: "", description: "", status: "todo", position: tasks.length, tags: [] },
     })
     // Restore previous group
-    if (data.groupId && previousGroupId && data.groupId !== previousGroupId && hasGroups(connector)) {
+    if (targetGroupId && previousGroupId && targetGroupId !== previousGroupId && hasGroups(connector)) {
       (connector as DataInterface & GroupManager).setCurrentGroup(previousGroupId)
     }
-    if (!panelPinned) setPanelState({ mode: "closed" })
-  }, [createItem, currentUser?.id, tasks.length, activeWorkspaceId, connector, panelPinned])
+    if (newItem) {
+      setPanelState({ mode: "edit", item: newItem })
+    }
+  }, [createItem, currentUser?.id, tasks.length, activeWorkspaceId, connector, isAggregate, concreteGroups])
 
-  const handleTaskEdit = useCallback((data: { title: string; description: string; status: string; tags: string[]; assigneeId: string | null; groupId: string | null }) => {
+  const handleCreateItem = useCallback(() => {
+    handleTaskCreate()
+  }, [handleTaskCreate])
+
+  const handleTaskEdit = useCallback(async (submitData: ContentComposerSubmitData) => {
     if (panelState.mode !== "edit") return
     const item = panelState.item
-    const relations: Relation[] = data.assigneeId
-      ? [{ predicate: "assignedTo", target: `global:${data.assigneeId}` }]
+    const { data } = submitData
+    const assigneeId = data.people?.[0] ?? null
+    const relations: Relation[] = assigneeId
+      ? [{ predicate: "assignedTo", target: `global:${assigneeId}` }]
       : []
-    updateItem(item.id, {
-      data: { ...item.data, title: data.title, description: data.description, status: data.status, tags: data.tags },
-      relations,
-    })
-    // Move item to different group if changed
-    if (data.groupId && hasItemGroups(connector)) {
-      const currentGroupId = connector.getItemGroupId(item.id)
-      if (currentGroupId !== data.groupId) {
-        connector.moveItemToGroup(item.id, data.groupId)
+    // Ensure the item's group is active before updating (WoT-Connector needs an open handle)
+    const itemGroupId = data.group || activeWorkspaceId
+    if (itemGroupId && hasGroups(connector)) {
+      const current = (connector as DataInterface & GroupManager).getCurrentGroup()
+      if (current?.id !== itemGroupId) {
+        (connector as DataInterface & GroupManager).setCurrentGroup(itemGroupId)
       }
     }
-    if (!panelPinned) setPanelState({ mode: "closed" })
-  }, [panelState, updateItem, connector, panelPinned])
+    try {
+      await updateItem(item.id, {
+        data: { ...item.data, title: data.title, description: data.text, status: data.status, tags: data.tags },
+        relations,
+      })
+    } catch (err) {
+      console.error("[KanbanView] updateItem failed:", err)
+    }
+    // Move item to different group if changed
+    if (data.group && hasItemGroups(connector)) {
+      const currentGroupId = connector.getItemGroupId(item.id)
+      if (currentGroupId !== data.group) {
+        connector.moveItemToGroup(item.id, data.group)
+      }
+    }
+  }, [panelState, updateItem, connector, activeWorkspaceId])
 
   const handleTaskDelete = useCallback(() => {
     if (panelState.mode !== "edit") return
@@ -681,36 +703,31 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
         onPinnedChange={setPanelPinned}
       >
         {panelState.mode === "edit" && (
-          <KanbanTaskForm
+          <ContentComposer
             key={panelState.item.id}
+            className="p-4"
+            contentTypes={[taskContentType]}
+            mode="task"
+            liveUpdate
+            editMode
             onSubmit={handleTaskEdit}
-            onCancel={handleClosePanel}
             onDelete={handleTaskDelete}
+            showVisibility={false}
+            showPreview={false}
             initialData={{
               title: String(panelState.item.data.title ?? ""),
-              description: String(panelState.item.data.description ?? ""),
+              text: String(panelState.item.data.description ?? ""),
               status: String(panelState.item.data.status ?? "todo"),
               tags: (panelState.item.data.tags as string[]) ?? [],
-              assigneeId: (panelState.item.relations ?? [])
+              people: [(panelState.item.relations ?? [])
                 .find((r) => r.predicate === "assignedTo")
-                ?.target.replace(/^global:/, "") ?? null,
-              groupId: hasItemGroups(connector)
+                ?.target.replace(/^global:/, "")].filter(Boolean) as string[],
+              group: (hasItemGroups(connector)
                 ? connector.getItemGroupId(panelState.item.id)
-                : activeWorkspaceId,
+                : null) ?? activeWorkspaceId ?? undefined,
             }}
-            users={members}
-            groups={groups}
-            availableTags={availableTags}
-          />
-        )}
-        {panelState.mode === "create" && (
-          <KanbanTaskForm
-            onSubmit={handleTaskCreate}
-            onCancel={handleClosePanel}
-            users={members}
-            groups={groups}
-            defaultGroupId={isAggregate ? null : activeWorkspaceId}
-            availableTags={availableTags}
+            peopleOptions={members.map((m) => ({ id: m.id, name: m.displayName ?? m.id }))}
+            tagSuggestions={availableTags}
           />
         )}
       </AdaptivePanel>
