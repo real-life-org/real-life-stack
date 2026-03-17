@@ -148,12 +148,33 @@ export class GraphQLConnector implements FullConnector {
     return members
   }
 
+  private memberObservables = new Map<string, ReturnType<typeof createObservable<User[]>>>()
+
+  observeMembers(groupId: string): Observable<User[]> {
+    if (!this.memberObservables.has(groupId)) {
+      const obs = createObservable<User[]>([])
+      this.memberObservables.set(groupId, obs)
+      void this.getMembers(groupId).then((members) => obs.set(members))
+    }
+    return this.memberObservables.get(groupId)!
+  }
+
+  private async notifyMemberObservers(groupId: string): Promise<void> {
+    const obs = this.memberObservables.get(groupId)
+    if (obs) {
+      const members = await this.getMembers(groupId)
+      obs.set(members)
+    }
+  }
+
   async inviteMember(groupId: string, userId: string): Promise<void> {
     await this.client.request(INVITE_MEMBER_MUTATION, { groupId, userId })
+    void this.notifyMemberObservers(groupId)
   }
 
   async removeMember(groupId: string, userId: string): Promise<void> {
     await this.client.request(REMOVE_MEMBER_MUTATION, { groupId, userId })
+    void this.notifyMemberObservers(groupId)
   }
 
   // --- Items ---

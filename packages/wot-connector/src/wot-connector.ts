@@ -192,6 +192,8 @@ export class WotConnector extends BaseConnector {
     this.outboxCountObs.destroy()
     this.profileObs.destroy()
     this.syncPendingObs.destroy()
+    for (const obs of this.memberObservables.values()) obs.destroy()
+    this.memberObservables.clear()
   }
 
   // ==================== Auth ====================
@@ -523,6 +525,26 @@ export class WotConnector extends BaseConnector {
     return users.filter((u: User | null): u is User => u !== null)
   }
 
+  private memberObservables = new Map<string, ReactiveObservable<User[]>>()
+
+  override observeMembers(groupId: string): Observable<User[]> {
+    if (!this.memberObservables.has(groupId)) {
+      const obs = createObservable<User[]>([])
+      this.memberObservables.set(groupId, obs)
+      // Load initial members
+      void this.getMembers(groupId).then((members) => obs.set(members))
+    }
+    return this.memberObservables.get(groupId)!
+  }
+
+  private async notifyMemberObservers(groupId: string): Promise<void> {
+    const obs = this.memberObservables.get(groupId)
+    if (obs) {
+      const members = await this.getMembers(groupId)
+      obs.set(members)
+    }
+  }
+
   override async inviteMember(groupId: string, userId: string): Promise<void> {
     if (!this.replication) throw new Error("Not authenticated")
 
@@ -535,11 +557,13 @@ export class WotConnector extends BaseConnector {
     // Decode the base64url encryption key
     const keyBytes = decodeBase64Url(result.profile.encryptionPublicKey)
     await this.replication.addMember(groupId, userId, keyBytes)
+    void this.notifyMemberObservers(groupId)
   }
 
   override async removeMember(groupId: string, userId: string): Promise<void> {
     if (!this.replication) throw new Error("Not authenticated")
     await this.replication.removeMember(groupId, userId)
+    void this.notifyMemberObservers(groupId)
   }
 
   // ==================== Items ====================
@@ -937,6 +961,11 @@ export class WotConnector extends BaseConnector {
       this.currentGroupObservable.set(
         this.groupsCache.find((g) => g.id === this.currentGroupId) ?? null
       )
+    }
+
+    // Update member observables for any group that has active subscribers
+    for (const groupId of this.memberObservables.keys()) {
+      void this.notifyMemberObservers(groupId)
     }
 
     // Auto-select first group if none selected

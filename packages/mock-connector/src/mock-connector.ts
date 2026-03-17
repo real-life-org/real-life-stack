@@ -115,17 +115,38 @@ export class MockConnector implements FullConnector {
     return this.users.filter((u) => memberIds.includes(u.id))
   }
 
+  private memberObservables = new Map<string, ReturnType<typeof createObservable<User[]>>>()
+
+  observeMembers(groupId: string): Observable<User[]> {
+    if (!this.memberObservables.has(groupId)) {
+      const memberIds = this.groupMembers[groupId] ?? []
+      const members = this.users.filter((u) => memberIds.includes(u.id))
+      this.memberObservables.set(groupId, createObservable(members))
+    }
+    return this.memberObservables.get(groupId)!
+  }
+
+  private notifyMemberObservers(groupId: string): void {
+    const obs = this.memberObservables.get(groupId)
+    if (obs) {
+      const memberIds = this.groupMembers[groupId] ?? []
+      obs.set(this.users.filter((u) => memberIds.includes(u.id)))
+    }
+  }
+
   async inviteMember(groupId: string, userId: string): Promise<void> {
     if (!this.groupMembers[groupId]) this.groupMembers[groupId] = []
     if (!this.groupMembers[groupId].includes(userId)) {
       this.groupMembers[groupId].push(userId)
     }
+    this.notifyMemberObservers(groupId)
   }
 
   async removeMember(groupId: string, userId: string): Promise<void> {
     if (this.groupMembers[groupId]) {
       this.groupMembers[groupId] = this.groupMembers[groupId].filter((id) => id !== userId)
     }
+    this.notifyMemberObservers(groupId)
   }
 
   // --- Items ---

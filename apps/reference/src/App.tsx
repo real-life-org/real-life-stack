@@ -826,18 +826,12 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     setGroupDialogOpen(true)
   }, [])
 
-  const openEditDialog = useCallback(async (workspace: Workspace) => {
+  const openEditDialog = useCallback((workspace: Workspace) => {
     const group = groups.find((g) => g.id === workspace.id)
     if (!group) return
-    let members: User[] = []
-    if (hasGroups(connector)) {
-      try {
-        members = await (connector as DataInterface & GroupManager).getMembers(group.id)
-      } catch { /* ignore */ }
-    }
-    setGroupDialogMode({ type: "edit", group, members })
+    setGroupDialogMode({ type: "edit", group })
     setGroupDialogOpen(true)
-  }, [groups, connector])
+  }, [groups])
 
   const basePath = import.meta.env.BASE_URL
   const workspaces: Workspace[] = useMemo(

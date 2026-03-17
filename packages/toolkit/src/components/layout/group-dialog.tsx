@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react"
 import { LogOut, UserMinus, UserPlus, Check, Loader2, ChevronDown, ChevronUp } from "lucide-react"
-import type { Group, User, ContactInfo } from "@real-life-stack/data-interface"
+import type { Group, ContactInfo } from "@real-life-stack/data-interface"
+import { useMembers } from "../../hooks/use-groups"
 import {
   Dialog,
   DialogContent,
@@ -34,7 +35,7 @@ function shortName(id: string): string {
 
 export type GroupDialogMode =
   | { type: "create" }
-  | { type: "edit"; group: Group; members: User[] }
+  | { type: "edit"; group: Group }
 
 export interface GroupDialogProps {
   open: boolean
@@ -62,6 +63,8 @@ export function GroupDialog({
   onRemoveMember,
 }: GroupDialogProps) {
   const isEdit = mode.type === "edit"
+  const groupId = isEdit ? mode.group.id : "__none__"
+  const { data: members } = useMembers(groupId)
 
   const [name, setName] = useState(() =>
     isEdit ? mode.group.name : ""
@@ -180,7 +183,7 @@ export function GroupDialog({
   }
 
   // Filter contacts: only active, not already members, not already invited
-  const memberIds = isEdit ? new Set(mode.members.map((m) => m.id)) : new Set<string>()
+  const memberIds = isEdit ? new Set(members.map((m) => m.id)) : new Set<string>()
   const invitableContacts = (contacts ?? []).filter(
     (c) => c.status === "active" && !memberIds.has(c.id) && !invitedIds.has(c.id)
   )
@@ -229,9 +232,9 @@ export function GroupDialog({
           <>
             <Separator />
             <div className="space-y-3">
-              <Label>Mitglieder ({mode.members.length})</Label>
+              <Label>Mitglieder ({members.length})</Label>
               <div className="max-h-48 space-y-2 overflow-y-auto">
-                {mode.members.map((member) => (
+                {members.map((member) => (
                   <div
                     key={member.id}
                     className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted/50"
@@ -257,7 +260,7 @@ export function GroupDialog({
                     )}
                   </div>
                 ))}
-                {mode.members.length === 0 && (
+                {members.length === 0 && (
                   <p className="text-sm text-muted-foreground py-2">
                     Noch keine Mitglieder
                   </p>

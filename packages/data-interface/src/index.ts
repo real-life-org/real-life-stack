@@ -137,6 +137,7 @@ export interface GroupManager {
   updateGroup(id: string, updates: Partial<Group>): Promise<Group>
   deleteGroup(id: string): Promise<void>
   getMembers(groupId: string): Promise<User[]>
+  observeMembers(groupId: string): Observable<User[]>
   inviteMember(groupId: string, userId: string): Promise<void>
   removeMember(groupId: string, userId: string): Promise<void>
 }

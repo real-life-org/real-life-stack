@@ -69,28 +69,15 @@ export function useDeleteGroup() {
 
 export function useMembers(groupId: string) {
   const connector = useGroupConnector()
-  const [data, setData] = useState<User[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  // Re-fetch members when groups change (member updates trigger group observable)
-  const groupsObservable = useMemo(() => connector.observeGroups(), [connector])
+  const observable = useMemo(() => connector.observeMembers(groupId), [connector, groupId])
+  const [data, setData] = useState<User[]>(observable.current)
 
   useEffect(() => {
-    let cancelled = false
-    const fetch = () => {
-      connector.getMembers(groupId).then((members) => {
-        if (!cancelled) {
-          setData(members)
-          setIsLoading(false)
-        }
-      })
-    }
-    fetch()
-    const unsub = groupsObservable.subscribe(() => fetch())
-    return () => { cancelled = true; unsub() }
-  }, [connector, groupId, groupsObservable])
+    setData(observable.current)
+    return observable.subscribe(setData)
+  }, [observable])
 
-  return { data, isLoading }
+  return { data, isLoading: data.length === 0 && observable.current.length === 0 }
 }
 
 export function useInviteMember() {

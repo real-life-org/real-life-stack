@@ -230,6 +230,10 @@ export abstract class BaseConnector implements FullConnector {
     return []
   }
 
+  observeMembers(_groupId: string): Observable<User[]> {
+    return createObservable<User[]>([])
+  }
+
   async inviteMember(_groupId: string, _userId: string): Promise<void> {
     throw new Error("inviteMember not supported")
   }
