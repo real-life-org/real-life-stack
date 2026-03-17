@@ -38,6 +38,7 @@ import {
   InMemoryGraphCacheStore,
   VerificationHelper,
   CompactStorageManager,
+  InMemoryAuthorizationAdapter,
   getDefaultDisplayName,
   encodeBase64Url,
   decodeBase64Url,
@@ -111,6 +112,9 @@ export class WotConnector extends BaseConnector {
   private deliveryStatusObs: ReactiveObservable<Map<string, ClaimDeliveryStatus>>
   private relayStateObs: ReactiveObservable<RelayState>
   private outboxCountObs: ReactiveObservable<number>
+  private profileObs: ReactiveObservable<Item | null>
+  private syncPendingObs: ReactiveObservable<boolean>
+  private profileUnsub: (() => void) | null = null
   private groupsCache: Group[] = []
 
   // Verification challenge state (in-progress challenges)
@@ -138,6 +142,8 @@ export class WotConnector extends BaseConnector {
     this.deliveryStatusObs = createObservable<Map<string, ClaimDeliveryStatus>>(new Map())
     this.relayStateObs = createObservable<RelayState>("disconnected")
     this.outboxCountObs = createObservable<number>(0)
+    this.profileObs = createObservable<Item | null>(null)
+    this.syncPendingObs = createObservable<boolean>(false)
   }
 
   // ==================== Lifecycle ====================
@@ -169,6 +175,7 @@ export class WotConnector extends BaseConnector {
     this.contactsUnsub?.()
     this.verificationsUnsub?.()
     this.attestationsUnsub?.()
+    this.profileUnsub?.()
     await this.replication?.stop()
     await this.outboxAdapter?.disconnect()
     await this.wsAdapter?.disconnect()
@@ -183,6 +190,8 @@ export class WotConnector extends BaseConnector {
     this.contactsObs.destroy()
     this.relayStateObs.destroy()
     this.outboxCountObs.destroy()
+    this.profileObs.destroy()
+    this.syncPendingObs.destroy()
   }
 
   // ==================== Auth ====================
@@ -325,6 +334,27 @@ export class WotConnector extends BaseConnector {
       createdBy: user.id,
       data: { name: user.displayName },
     }
+  }
+
+  override async getMyProfile(): Promise<Item | null> {
+    return this.profileObs.current
+  }
+
+  override observeMyProfile(): Observable<Item | null> {
+    return this.profileObs
+  }
+
+  override async syncProfile(): Promise<void> {
+    this.syncPendingObs.set(true)
+    try {
+      await this.publishProfile()
+    } finally {
+      this.syncPendingObs.set(false)
+    }
+  }
+
+  override isSyncPending(): Observable<boolean> {
+    return this.syncPendingObs
   }
 
   /** Get the current user's DID */
@@ -686,7 +716,13 @@ export class WotConnector extends BaseConnector {
     const spaceCompactStore = new CompactStorageManager("rls-yjs-space-compact-store")
     await spaceCompactStore.open()
 
-    // 6. Replication (Yjs)
+    // 6. Authorization
+    const authAdapter = new InMemoryAuthorizationAdapter(
+      this.identity.getDid(),
+      this.identity.signJws.bind(this.identity)
+    )
+
+    // 7. Replication (Yjs)
     this.replication = new YjsReplicationAdapter({
       identity: this.identity,
       messaging: this.outboxAdapter as unknown as MessagingAdapter,
@@ -695,6 +731,7 @@ export class WotConnector extends BaseConnector {
       vaultUrl: this.config.vaultUrl,
       // No spaceFilter — all spaces are visible (WoT + RLS fully compatible)
       compactStore: spaceCompactStore,
+      authorizationAdapter: authAdapter,
     })
     await this.replication.start()
 
@@ -752,6 +789,19 @@ export class WotConnector extends BaseConnector {
     this.verificationsUnsub = this.storage.watchAllVerifications().subscribe(() => this.syncClaimsFromPersonalDoc())
     this.attestationsUnsub = this.storage.watchAllAttestations().subscribe(() => this.syncClaimsFromPersonalDoc())
     this.syncClaimsFromPersonalDoc()
+
+    // Reactive profile via PersonalDoc changes
+    let lastProfileKey = ""
+    this.profileUnsub = onYjsPersonalDocChange(() => {
+      const doc = getYjsPersonalDoc()
+      const profile = doc?.profile
+      const key = JSON.stringify(profile ?? null)
+      if (key !== lastProfileKey) {
+        lastProfileKey = key
+        this.syncProfileObservable()
+      }
+    })
+    this.syncProfileObservable()
 
     // 9. Watch spaces for reactive group list
     const spacesSubscribable = this.replication.watchSpaces()
@@ -1118,12 +1168,14 @@ export class WotConnector extends BaseConnector {
             doc.attestationMetadata[id].deliveryStatus = status
           }
         })
+        this.syncClaimsFromPersonalDoc()
       }).catch(() => {
         changeYjsPersonalDoc((doc: any) => {
           if (doc.attestationMetadata?.[id]) {
             doc.attestationMetadata[id].deliveryStatus = "failed"
           }
         })
+        this.syncClaimsFromPersonalDoc()
       })
     }
 
@@ -1362,12 +1414,14 @@ export class WotConnector extends BaseConnector {
           doc.attestationMetadata[id].deliveryStatus = status
         }
       })
+      this.syncClaimsFromPersonalDoc()
     } catch {
       changeYjsPersonalDoc((doc: any) => {
         if (doc.attestationMetadata?.[id]) {
           doc.attestationMetadata[id].deliveryStatus = "failed"
         }
       })
+      this.syncClaimsFromPersonalDoc()
     }
   }
 
@@ -1542,6 +1596,7 @@ export class WotConnector extends BaseConnector {
             doc.attestationMetadata[attestationId].deliveryStatus = "acknowledged"
           }
         })
+        this.syncClaimsFromPersonalDoc()
       } catch { /* ignore malformed */ }
     }
 
@@ -1646,6 +1701,27 @@ export class WotConnector extends BaseConnector {
   }
 
   // (syncContactsFromPersonalDoc removed — contacts are now reactive via YjsStorageAdapter.watchContacts())
+
+  private syncProfileObservable(): void {
+    try {
+      const did = this.identity.getDid()
+      const doc = getYjsPersonalDoc()
+      const profile = doc?.profile
+      this.profileObs.set({
+        id: did,
+        type: "profile",
+        createdAt: new Date(profile?.createdAt ?? Date.now()),
+        createdBy: did,
+        data: {
+          name: profile?.name ?? getDefaultDisplayName(did),
+          bio: profile?.bio ?? undefined,
+          avatar: profile?.avatar ?? undefined,
+        },
+      })
+    } catch {
+      // PersonalDoc not ready yet
+    }
+  }
 
   // ==================== Internal: Cleanup ====================
 
