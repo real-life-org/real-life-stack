@@ -38,7 +38,6 @@ import {
   InMemoryGraphCacheStore,
   VerificationHelper,
   CompactStorageManager,
-  InMemoryAuthorizationAdapter,
   getDefaultDisplayName,
   encodeBase64Url,
   decodeBase64Url,
@@ -743,13 +742,7 @@ export class WotConnector extends BaseConnector {
     const spaceCompactStore = new CompactStorageManager("rls-yjs-space-compact-store")
     await spaceCompactStore.open()
 
-    // 6. Authorization
-    const authAdapter = new InMemoryAuthorizationAdapter(
-      this.identity.getDid(),
-      this.identity.signJws.bind(this.identity)
-    )
-
-    // 7. Replication (Yjs)
+    // 6. Replication (Yjs)
     this.replication = new YjsReplicationAdapter({
       identity: this.identity,
       messaging: this.outboxAdapter as unknown as MessagingAdapter,
@@ -758,7 +751,6 @@ export class WotConnector extends BaseConnector {
       vaultUrl: this.config.vaultUrl,
       // No spaceFilter — all spaces are visible (WoT + RLS fully compatible)
       compactStore: spaceCompactStore,
-      authorizationAdapter: authAdapter,
     })
     await this.replication.start()
 
