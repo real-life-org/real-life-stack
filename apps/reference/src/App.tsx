@@ -513,7 +513,7 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
     // Move item to different group if changed
     if (data.group && hasItemGroups(connector)) {
       const currentGroupId = connector.getItemGroupId(item.id)
-      if (currentGroupId !== data.group) {
+      if (currentGroupId && currentGroupId !== data.group) {
         connector.moveItemToGroup(item.id, data.group)
       }
     }
