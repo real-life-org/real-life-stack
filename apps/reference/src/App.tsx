@@ -862,9 +862,9 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       if (found) return found
       // Space ID from URL but not found in list — might still be loading
       if (workspaces.length === 0) return { id: urlSpaceId, name: "" }
-      return null // Unknown space
+      // Unknown space ID (e.g. from a different connector) — fall back to first workspace
     }
-    // No space in URL — try localStorage, then first workspace
+    // No space in URL or unknown ID — try localStorage, then first workspace
     const savedId = localStorage.getItem(STORAGE_KEY_GROUP)
     if (savedId) {
       const found = workspaces.find((w) => w.id === savedId)
