@@ -2,6 +2,7 @@ import type {
   FullConnector,
   Item,
   ItemFilter,
+  ItemObserveOptions,
   Group,
   User,
   Observable,
@@ -10,7 +11,7 @@ import type {
   RelatedItemsOptions,
   Source,
 } from "@real-life-stack/data-interface"
-import { createObservable, matchesFilter } from "@real-life-stack/data-interface"
+import { createObservable, matchesFilter, findRelatedItems, resolveIncludes } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
 
 export class MockConnector implements FullConnector {
@@ -23,6 +24,8 @@ export class MockConnector implements FullConnector {
   private currentUser: User | null
   private authState: ReturnType<typeof createObservable<AuthState>>
   private groupsObs: ReturnType<typeof createObservable<Group[]>>
+  private currentGroupObs: ReturnType<typeof createObservable<Group | null>>
+  private singleItemOptions = new Map<string, ItemObserveOptions>()
   private itemObservables = new Map<string, ReturnType<typeof createObservable<Item[]>>>()
   private singleItemObservables = new Map<string, ReturnType<typeof createObservable<Item | null>>>()
   private nextItemId = 100
@@ -41,6 +44,7 @@ export class MockConnector implements FullConnector {
         : { status: "unauthenticated" }
     )
     this.groupsObs = createObservable<Group[]>([...this.groups])
+    this.currentGroupObs = createObservable<Group | null>(this.currentGroup)
   }
 
   async init(): Promise<void> {
@@ -66,10 +70,16 @@ export class MockConnector implements FullConnector {
     return this.currentGroup
   }
 
+  observeCurrentGroup(): Observable<Group | null> {
+    return this.currentGroupObs
+  }
+
   setCurrentGroup(id: string): void {
+    if (this.currentGroup?.id === id) return
     const group = this.groups.find((g) => g.id === id)
     if (group) {
       this.currentGroup = group
+      this.currentGroupObs.set(group)
       this.notifyObservers()
     }
   }
@@ -95,6 +105,7 @@ export class MockConnector implements FullConnector {
     delete this.groupMembers[id]
     if (this.currentGroup?.id === id) {
       this.currentGroup = this.groups[0] ?? null
+      this.currentGroupObs.set(this.currentGroup)
     }
     this.notifyGroupObservers()
   }
@@ -137,7 +148,11 @@ export class MockConnector implements FullConnector {
   async getItems(filter?: ItemFilter): Promise<Item[]> {
     const scoped = this.getScopedItems()
     if (!filter) return scoped
-    return scoped.filter((item) => matchesFilter(item, filter))
+    let filtered = scoped.filter((item) => matchesFilter(item, filter))
+    if (filter.include?.length) {
+      filtered = resolveIncludes(filtered, scoped, filter.include)
+    }
+    return filtered
   }
 
   async getItem(id: string): Promise<Item | null> {
@@ -148,18 +163,26 @@ export class MockConnector implements FullConnector {
     const key = JSON.stringify(filter)
     if (!this.itemObservables.has(key)) {
       const scoped = this.getScopedItems()
-      const filtered = scoped.filter((item) => matchesFilter(item, filter))
+      let filtered = scoped.filter((item) => matchesFilter(item, filter))
+      if (filter.include?.length) {
+        filtered = resolveIncludes(filtered, scoped, filter.include)
+      }
       this.itemObservables.set(key, createObservable(filtered))
     }
     return this.itemObservables.get(key)!
   }
 
-  observeItem(id: string): Observable<Item | null> {
-    if (!this.singleItemObservables.has(id)) {
-      const item = this.items.find((i) => i.id === id) ?? null
-      this.singleItemObservables.set(id, createObservable(item))
+  observeItem(id: string, options?: ItemObserveOptions): Observable<Item | null> {
+    const key = options?.include ? id + JSON.stringify(options) : id
+    if (!this.singleItemObservables.has(key)) {
+      let item = this.items.find((i) => i.id === id) ?? null
+      if (item && options?.include?.length) {
+        [item] = resolveIncludes([item], this.items, options.include)
+      }
+      this.singleItemObservables.set(key, createObservable(item))
+      if (options) this.singleItemOptions.set(key, options)
     }
-    return this.singleItemObservables.get(id)!
+    return this.singleItemObservables.get(key)!
   }
 
   async createItem(item: Omit<Item, "id" | "createdAt">): Promise<Item> {
@@ -217,20 +240,9 @@ export class MockConnector implements FullConnector {
   async getRelatedItems(
     itemId: string,
     predicate?: string,
-    _options?: RelatedItemsOptions
+    options?: RelatedItemsOptions
   ): Promise<Item[]> {
-    const item = this.items.find((i) => i.id === itemId)
-    if (!item?.relations) return []
-
-    const matchingRelations = predicate
-      ? item.relations.filter((r) => r.predicate === predicate)
-      : item.relations
-
-    const targetIds = matchingRelations
-      .map((r) => r.target.replace(/^(item:|global:)/, ""))
-      .filter((t) => !t.startsWith("space:"))
-
-    return this.items.filter((i) => targetIds.includes(i.id))
+    return findRelatedItems(itemId, this.items, predicate, options)
   }
 
   // --- Users ---
@@ -289,11 +301,19 @@ export class MockConnector implements FullConnector {
     const scoped = this.getScopedItems()
     for (const [key, observable] of this.itemObservables) {
       const filter: ItemFilter = JSON.parse(key)
-      const filtered = scoped.filter((item) => matchesFilter(item, filter))
+      let filtered = scoped.filter((item) => matchesFilter(item, filter))
+      if (filter.include?.length) {
+        filtered = resolveIncludes(filtered, scoped, filter.include)
+      }
       observable.set(filtered)
     }
-    for (const [id, observable] of this.singleItemObservables) {
-      const item = this.items.find((i) => i.id === id) ?? null
+    for (const [key, observable] of this.singleItemObservables) {
+      const opts = this.singleItemOptions.get(key)
+      const id = opts ? key.slice(0, key.indexOf("{")) : key
+      let item = this.items.find((i) => i.id === id) ?? null
+      if (item && opts?.include?.length) {
+        [item] = resolveIncludes([item], scoped, opts.include)
+      }
       observable.set(item)
     }
   }

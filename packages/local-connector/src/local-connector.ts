@@ -60,6 +60,7 @@ export class LocalConnector implements FullConnector {
 
   private authState = createObservable<AuthState>({ status: "loading" })
   private groupsObs = createObservable<Group[]>([])
+  private currentGroupObs = createObservable<Group | null>(null)
   private itemObservables = new Map<string, ReturnType<typeof createObservable<Item[]>>>()
   private singleItemObservables = new Map<string, ReturnType<typeof createObservable<Item | null>>>()
   private singleItemOptions = new Map<string, ItemObserveOptions>()
@@ -129,6 +130,7 @@ export class LocalConnector implements FullConnector {
         : { status: "unauthenticated" }
     )
     this.groupsObs.set([...this.groups])
+    this.currentGroupObs.set(this.currentGroup)
 
     // Set up cross-tab sync
     this.channel = new BroadcastChannel("rls-local-connector")
@@ -159,10 +161,16 @@ export class LocalConnector implements FullConnector {
     return this.currentGroup
   }
 
+  observeCurrentGroup(): Observable<Group | null> {
+    return this.currentGroupObs
+  }
+
   setCurrentGroup(id: string): void {
+    if (this.currentGroup?.id === id) return
     const group = this.groups.find((g) => g.id === id)
     if (group) {
       this.currentGroup = group
+      this.currentGroupObs.set(group)
       this.notifyObservers()
     }
   }
@@ -192,6 +200,7 @@ export class LocalConnector implements FullConnector {
     delete this.groupMembers[id]
     if (this.currentGroup?.id === id) {
       this.currentGroup = this.groups[0] ?? null
+      this.currentGroupObs.set(this.currentGroup)
     }
     this.notifyGroupObservers()
     await this.persist()

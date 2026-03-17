@@ -26,7 +26,15 @@ export function useGroups() {
 
 export function useCurrentGroup() {
   const connector = useGroupConnector()
-  return connector.getCurrentGroup()
+  const observable = useMemo(() => connector.observeCurrentGroup(), [connector])
+  const [data, setData] = useState<Group | null>(observable.current)
+
+  useEffect(() => {
+    setData(observable.current)
+    return observable.subscribe(setData)
+  }, [observable])
+
+  return data
 }
 
 export function useCreateGroup() {
@@ -64,12 +72,23 @@ export function useMembers(groupId: string) {
   const [data, setData] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  // Re-fetch members when groups change (member updates trigger group observable)
+  const groupsObservable = useMemo(() => connector.observeGroups(), [connector])
+
   useEffect(() => {
-    connector.getMembers(groupId).then((members) => {
-      setData(members)
-      setIsLoading(false)
-    })
-  }, [connector, groupId])
+    let cancelled = false
+    const fetch = () => {
+      connector.getMembers(groupId).then((members) => {
+        if (!cancelled) {
+          setData(members)
+          setIsLoading(false)
+        }
+      })
+    }
+    fetch()
+    const unsub = groupsObservable.subscribe(() => fetch())
+    return () => { cancelled = true; unsub() }
+  }, [connector, groupId, groupsObservable])
 
   return { data, isLoading }
 }

@@ -194,6 +194,7 @@ export abstract class BaseConnector implements FullConnector {
   // --- Groups (Default: eine Default-Gruppe) ---
 
   protected groupsObservable: ReactiveObservable<Group[]> = createObservable<Group[]>([DEFAULT_GROUP])
+  protected currentGroupObservable: ReactiveObservable<Group | null> = createObservable<Group | null>(DEFAULT_GROUP)
 
   async getGroups(): Promise<Group[]> {
     return this.groupsObservable.current
@@ -204,7 +205,11 @@ export abstract class BaseConnector implements FullConnector {
   }
 
   getCurrentGroup(): Group | null {
-    return DEFAULT_GROUP
+    return this.currentGroupObservable.current
+  }
+
+  observeCurrentGroup(): Observable<Group | null> {
+    return this.currentGroupObservable
   }
 
   setCurrentGroup(_id: string): void {}

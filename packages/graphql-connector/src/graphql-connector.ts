@@ -56,6 +56,7 @@ export class GraphQLConnector implements FullConnector {
   private currentGroup: Group | null = null
   private authStateObservable = createObservable<AuthState>({ status: "loading" })
   private groupsObs = createObservable<Group[]>([])
+  private currentGroupObs = createObservable<Group | null>(null)
   private cleanupFns: (() => void)[] = []
 
   constructor(url = "http://localhost:4000/graphql") {
@@ -110,10 +111,15 @@ export class GraphQLConnector implements FullConnector {
     return this.currentGroup
   }
 
+  observeCurrentGroup(): Observable<Group | null> {
+    return this.currentGroupObs
+  }
+
   setCurrentGroup(id: string): void {
     this.client.request(SET_CURRENT_GROUP_MUTATION, { id }).then((res) => {
       const { setCurrentGroup } = res as { setCurrentGroup: Group | null }
       this.currentGroup = setCurrentGroup
+      this.currentGroupObs.set(setCurrentGroup)
     })
   }
 

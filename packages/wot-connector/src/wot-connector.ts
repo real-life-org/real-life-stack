@@ -280,6 +280,7 @@ export class WotConnector extends BaseConnector {
     this.replication = null
     this.groupKeyService = null
     this.currentGroupId = null
+    this.currentGroupObservable.set(null)
     this.groupsCache = []
     this.groupsObservable.set([])
 
@@ -425,6 +426,7 @@ export class WotConnector extends BaseConnector {
   override setCurrentGroup(id: string): void {
     if (this.currentGroupId === id) return
     this.currentGroupId = id
+    this.currentGroupObservable.set(this.getCurrentGroup())
 
     // Close old handle, open new one
     this.closeCurrentHandle()
@@ -505,6 +507,7 @@ export class WotConnector extends BaseConnector {
     if (this.currentGroupId === id) {
       this.closeCurrentHandle()
       this.currentGroupId = null
+      this.currentGroupObservable.set(null)
       this.notifyAllObservers()
     }
   }
@@ -928,6 +931,13 @@ export class WotConnector extends BaseConnector {
 
     // Update the reactive observable (inherited from BaseConnector)
     this.groupsObservable.set([...this.groupsCache])
+
+    // Keep currentGroup observable in sync (group metadata may have changed)
+    if (this.currentGroupId) {
+      this.currentGroupObservable.set(
+        this.groupsCache.find((g) => g.id === this.currentGroupId) ?? null
+      )
+    }
 
     // Auto-select first group if none selected
     if (!this.currentGroupId && this.groupsCache.length > 0) {

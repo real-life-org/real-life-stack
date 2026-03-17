@@ -131,6 +131,7 @@ export interface GroupManager {
   getGroups(): Promise<Group[]>
   observeGroups(): Observable<Group[]>
   getCurrentGroup(): Group | null
+  observeCurrentGroup(): Observable<Group | null>
   setCurrentGroup(id: string): void
   createGroup(name: string, data?: Record<string, unknown>): Promise<Group>
   updateGroup(id: string, updates: Partial<Group>): Promise<Group>
