@@ -505,7 +505,7 @@ export class WotConnector extends BaseConnector {
     const doc = this.getCurrentDoc()
     if (!doc) return []
 
-    const items = Object.values(doc.items).map(deserializeItem)
+    const items = Object.values(doc.items ?? {}).map(deserializeItem)
     if (!filter) return items
     return items.filter((item) => matchesFilter(item, filter))
   }
@@ -515,7 +515,7 @@ export class WotConnector extends BaseConnector {
     const doc = this.getCurrentDoc()
     if (!doc) return null
 
-    const serialized = doc.items[id]
+    const serialized = doc.items?.[id]
     if (!serialized) return null
     return deserializeItem(serialized)
   }
@@ -534,6 +534,7 @@ export class WotConnector extends BaseConnector {
 
     const serialized = serializeItem(newItem)
     handle.transact((doc) => {
+      if (!doc.items) doc.items = {}
       doc.items[id] = serialized
     })
     this.notifyAllObservers()
@@ -915,7 +916,7 @@ export class WotConnector extends BaseConnector {
       if (!doc) {
         obs.set([])
       } else {
-        const items = Object.values(doc.items).map(deserializeItem)
+        const items = Object.values(doc.items ?? {}).map(deserializeItem)
         const filtered = items.filter((item) => matchesFilter(item, filter))
         obs.set(filtered)
       }
@@ -926,7 +927,7 @@ export class WotConnector extends BaseConnector {
       if (!doc) {
         obs.set(null)
       } else {
-        const serialized = doc.items[id]
+        const serialized = doc.items?.[id]
         obs.set(serialized ? deserializeItem(serialized) : null)
       }
     }
