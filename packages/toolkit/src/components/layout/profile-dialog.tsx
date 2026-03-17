@@ -1,17 +1,13 @@
 import { useState, useEffect } from "react"
-import { Copy, Check, ImagePlus, X } from "lucide-react"
+import { Copy, Check, ImagePlus, X, Camera } from "lucide-react"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "../primitives/dialog"
 import { Button } from "../primitives/button"
 import { Input } from "../primitives/input"
 import { Label } from "../primitives/label"
-import { Separator } from "../primitives/separator"
 
 export interface ProfileData {
   did: string
@@ -40,7 +36,6 @@ export function ProfileDialog({
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // Sync state when profile changes
   useEffect(() => {
     setName(profile.name)
     setBio(profile.bio ?? "")
@@ -79,96 +74,105 @@ export function ProfileDialog({
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const shortDid = profile.did.length > 24
+    ? `${profile.did.slice(0, 16)}...${profile.did.slice(-8)}`
+    : profile.did
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Profil</DialogTitle>
-          <DialogDescription>
-            Dein öffentliches Profil bearbeiten.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-sm gap-0 p-0 overflow-hidden">
+        {/* Profile Card Header */}
+        <div className="relative bg-gradient-to-b from-primary/8 to-transparent px-6 pt-7 pb-5">
+          {/* Avatar */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative group">
+              {avatar ? (
+                <>
+                  <img
+                    src={avatar}
+                    alt={name}
+                    className="w-20 h-20 rounded-full object-cover ring-3 ring-background shadow-md"
+                  />
+                  <button
+                    onClick={() => setAvatar("")}
+                    className="absolute -top-1 -right-1 p-1 bg-destructive text-white rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Bild entfernen"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                  <label className="absolute bottom-0 right-0 p-1.5 bg-card border border-border rounded-full shadow-sm cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent">
+                    <Camera className="h-3 w-3 text-muted-foreground" />
+                    <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+                  </label>
+                </>
+              ) : (
+                <label className="w-20 h-20 rounded-full border-2 border-dashed border-border hover:border-primary/50 bg-muted/30 flex items-center justify-center cursor-pointer transition-all hover:bg-muted/50">
+                  <ImagePlus className="h-5 w-5 text-muted-foreground/40" />
+                  <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+                </label>
+              )}
+            </div>
 
-        {/* DID */}
-        <div className="space-y-1.5">
-          <Label>Deine DID</Label>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 rounded-md border bg-muted/50 px-3 py-2 text-xs font-mono break-all select-all">
-              {profile.did}
-            </code>
-            <Button
-              variant="outline"
-              size="icon-sm"
+            {/* DID badge */}
+            <button
               onClick={handleCopyDid}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 hover:bg-muted transition-colors cursor-pointer group/did"
               title="DID kopieren"
             >
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            </Button>
+              <code className="text-[10px] font-mono text-muted-foreground tracking-tight">
+                {shortDid}
+              </code>
+              {copied ? (
+                <Check className="h-3 w-3 text-green-600 shrink-0" />
+              ) : (
+                <Copy className="h-3 w-3 text-muted-foreground/50 group-hover/did:text-muted-foreground shrink-0 transition-colors" />
+              )}
+            </button>
           </div>
         </div>
 
-        <Separator />
-
-        {/* Avatar */}
-        <div className="space-y-2">
-          <Label>Profilbild</Label>
-          <div className="flex items-center gap-3">
-            {avatar ? (
-              <div className="relative group">
-                <img src={avatar} alt="Avatar" className="w-16 h-16 rounded-full object-cover border" />
-                <button onClick={() => setAvatar("")} className="absolute -top-1.5 -right-1.5 p-0.5 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ) : (
-              <label className="w-16 h-16 rounded-full border-2 border-dashed border-border hover:border-primary flex items-center justify-center cursor-pointer transition-colors">
-                <ImagePlus className="h-5 w-5 text-muted-foreground/50" />
-                <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
-              </label>
-            )}
+        {/* Form Fields */}
+        <div className="px-6 pb-2 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="profile-name" className="text-xs text-muted-foreground">Name</Label>
+            <Input
+              id="profile-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Dein Name"
+              autoFocus
+              className="h-9"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSave()
+                }
+              }}
+            />
           </div>
-        </div>
 
-        {/* Name */}
-        <div className="space-y-2">
-          <Label htmlFor="profile-name">Name</Label>
-          <Input
-            id="profile-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Dein Name"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault()
-                handleSave()
-              }
-            }}
-          />
-        </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="profile-bio" className="text-xs text-muted-foreground">Ueber mich</Label>
+            <Input
+              id="profile-bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Ein kurzer Satz ueber dich (optional)"
+              className="h-9"
+            />
+          </div>
 
-        {/* Bio */}
-        <div className="space-y-2">
-          <Label htmlFor="profile-bio">Über mich</Label>
-          <Input
-            id="profile-bio"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="Ein kurzer Satz über dich (optional)"
-          />
+          {error && (
+            <p className="text-xs text-destructive">{error}</p>
+          )}
         </div>
-
-        {/* Error */}
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
 
         {/* Footer */}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+        <DialogFooter className="px-6 py-4 border-t bg-muted/20">
+          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={saving}>
             Abbrechen
           </Button>
-          <Button onClick={handleSave} disabled={saving || !name.trim()}>
+          <Button size="sm" onClick={handleSave} disabled={saving || !name.trim()}>
             {saving ? "Speichern..." : "Speichern"}
           </Button>
         </DialogFooter>
