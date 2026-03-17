@@ -42,6 +42,8 @@ export interface GroupDialogProps {
   onOpenChange: (open: boolean) => void
   mode: GroupDialogMode
   contacts?: ContactInfo[]
+  /** Current user's ID (DID) — used to determine creator status */
+  currentUserId?: string
   onCreateGroup: (name: string) => Promise<void>
   onUpdateGroup: (id: string, updates: Partial<Group>) => Promise<void>
   onDeleteGroup: (id: string) => Promise<void>
@@ -56,6 +58,7 @@ export function GroupDialog({
   onOpenChange,
   mode,
   contacts,
+  currentUserId,
   onCreateGroup,
   onUpdateGroup,
   onDeleteGroup,
@@ -65,6 +68,7 @@ export function GroupDialog({
   const isEdit = mode.type === "edit"
   const groupId = isEdit ? mode.group.id : "__none__"
   const { data: members } = useMembers(groupId)
+  const isCreator = isEdit && members.length > 0 && members[0]?.id === currentUserId
 
   const [name, setName] = useState(() =>
     isEdit ? mode.group.name : ""
@@ -248,7 +252,10 @@ export function GroupDialog({
                     <span className="flex-1 truncate text-sm">
                       {member.displayName ?? shortName(member.id)}
                     </span>
-                    {onRemoveMember && (
+                    {members[0]?.id === member.id && (
+                      <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-muted rounded">Admin</span>
+                    )}
+                    {isCreator && onRemoveMember && member.id !== currentUserId && (
                       <Button
                         variant="ghost"
                         size="icon-sm"
