@@ -44,16 +44,6 @@ Wir sind das Dokument `docs/spec/reaktivitaet.md` Schritt für Schritt durchgega
 - `reaktivitaet.md` überarbeitet: Forward/Reverse Relations klar beschrieben, Pagination-Abschnitt, Scope-Prefixe
 - `architektur2.md` aktualisiert
 
-### Bugfixes & UI-Verbesserungen (während der Session)
-- SVG-Gruppenbilder werden nicht mehr durch Canvas-Rasterisierung beschnitten
-- QR-Scanner: schwarzes Kamerabild behoben (Video-Stream-Zuweisung nach React-Render)
-- GitHub Pages SPA-Routing für Deep Links
-- Modul-Toggles in Gruppen werden jetzt korrekt persistiert und synchronisiert
-- Profil-Dialog: Layout überarbeitet (analog zum Gruppen-Dialog)
-- StatCards: zentriertes Layout
-- Passwort-Felder in `<form>` gewrappt (Browser-Autofill)
-- Diverse Mobile-Fixes (Footer-Buttons, Hover-Only-Elemente)
-
 ## Nächste Schritte
 
 - **Sebastian:** Kommentare und Reaktionen für Items einbauen (Content Composer erweitern)
