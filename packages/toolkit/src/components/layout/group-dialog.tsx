@@ -335,7 +335,7 @@ export function GroupDialog({
                     size="icon-sm"
                     onClick={() => handleRemoveMember(member.id)}
                     title="Mitglied entfernen"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                    className="h-6 w-6 opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
                   </Button>

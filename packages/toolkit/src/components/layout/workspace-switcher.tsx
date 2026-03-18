@@ -73,7 +73,7 @@ export function WorkspaceSwitcher({
             {onEditWorkspace && (
               <button
                 type="button"
-                className="rounded p-0.5 opacity-0 group-hover/ws:opacity-50 hover:opacity-100! hover:bg-accent shrink-0"
+                className="rounded p-0.5 opacity-50 sm:opacity-0 sm:group-hover/ws:opacity-50 hover:opacity-100! hover:bg-accent shrink-0"
                 onClick={(e) => {
                   e.stopPropagation()
                   onEditWorkspace(workspace)
