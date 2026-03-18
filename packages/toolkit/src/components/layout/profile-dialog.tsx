@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogContent,
   DialogFooter,
+  DialogTitle,
 } from "../primitives/dialog"
 import { Button } from "../primitives/button"
 import { Input } from "../primitives/input"
@@ -81,7 +82,8 @@ export function ProfileDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm gap-0 p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-sm gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Profil bearbeiten</DialogTitle>
         {/* Profile Card Header */}
         <div className="relative bg-gradient-to-b from-primary/8 to-transparent px-6 pt-7 pb-5">
           {/* Avatar */}
