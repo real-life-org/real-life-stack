@@ -1,6 +1,6 @@
 "use client"
 
-import { LogOut, Settings, User, Users } from "lucide-react"
+import { LogOut, QrCode, Settings, User, Users } from "lucide-react"
 
 import {
   DropdownMenu,
@@ -24,6 +24,7 @@ interface UserMenuProps {
   onProfile?: () => void
   onContacts?: () => void
   contactCount?: number
+  onVerify?: () => void
   onSettings?: () => void
   onLogout?: () => void
 }
@@ -33,6 +34,7 @@ export function UserMenu({
   onProfile,
   onContacts,
   contactCount,
+  onVerify,
   onSettings,
   onLogout,
 }: UserMenuProps) {
@@ -76,6 +78,12 @@ export function UserMenu({
             {contactCount != null && contactCount > 0 && (
               <span className="ml-auto text-xs text-muted-foreground tabular-nums">{contactCount}</span>
             )}
+          </DropdownMenuItem>
+        )}
+        {onVerify && (
+          <DropdownMenuItem onClick={onVerify} className="flex items-center gap-2">
+            <QrCode className="h-4 w-4" />
+            <span>Verifizieren</span>
           </DropdownMenuItem>
         )}
         {onSettings && (

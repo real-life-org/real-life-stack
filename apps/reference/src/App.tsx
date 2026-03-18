@@ -987,6 +987,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
             onProfile={() => setProfileDialogOpen(true)}
             onContacts={supportsContacts ? () => setContactsDialogOpen(true) : undefined}
             contactCount={activeContacts.length}
+            onVerify={() => setVerifyDialogOpen(true)}
             onLogout={isAuthenticatable(connector) ? async () => {
               await connector.logout()
               window.location.reload()
@@ -1067,7 +1068,6 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
         onRemove={removeContact}
         onEditName={updateContactName}
         onVerify={() => { setContactsDialogOpen(false); setVerifyDialogOpen(true) }}
-        onAdd={() => { setContactsDialogOpen(false); setVerifyDialogOpen(true) }}
       />
 
       <VerificationDialog

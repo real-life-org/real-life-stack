@@ -1,6 +1,6 @@
 "use client"
 
-import { Shield, UserPlus, Users } from "lucide-react"
+import { Shield, Users } from "lucide-react"
 import type { ContactInfo } from "@real-life-stack/data-interface"
 
 import { Button } from "@/components/primitives/button"
@@ -21,7 +21,6 @@ export interface ContactsDialogProps {
   onRemove: (id: string) => void
   onEditName: (id: string, name: string) => void
   onVerify: () => void
-  onAdd: () => void
 }
 
 export function ContactsDialog({
@@ -32,7 +31,6 @@ export function ContactsDialog({
   onRemove,
   onEditName,
   onVerify,
-  onAdd,
 }: ContactsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,16 +45,10 @@ export function ContactsDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto space-y-4 -mx-6 px-6">
-          <div className="flex gap-2">
-            <Button size="sm" className="flex-1" onClick={onVerify}>
-              <Shield className="h-3.5 w-3.5 mr-1.5" />
-              Verifizieren
-            </Button>
-            <Button size="sm" variant="outline" className="flex-1" onClick={onAdd}>
-              <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-              Hinzufügen
-            </Button>
-          </div>
+          <Button size="sm" className="w-full" onClick={onVerify}>
+            <Shield className="h-3.5 w-3.5 mr-1.5" />
+            Verifizieren
+          </Button>
           {pendingContacts.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Ausstehend</h3>
