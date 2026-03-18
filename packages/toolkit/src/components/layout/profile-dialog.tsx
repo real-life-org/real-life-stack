@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react"
-import { Copy, Check, ImagePlus, X, Camera } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Copy, Check, ImagePlus, X, Camera, Pencil } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ export function ProfileDialog({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setName(profile.name)
@@ -88,7 +89,7 @@ export function ProfileDialog({
         <DialogTitle className="sr-only">Profil bearbeiten</DialogTitle>
         {/* Profile Identity Header */}
         <div className="relative px-6 pt-6 pb-5">
-          <div className="flex items-start gap-4">
+          <div className="flex items-center gap-4">
             {/* Avatar */}
             <div className="relative group shrink-0">
               {avatar ? (
@@ -114,20 +115,30 @@ export function ProfileDialog({
             </div>
 
             {/* Name + Meta */}
-            <div className="flex-1 min-w-0 pt-1">
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Dein Name"
-                autoFocus
-                className="h-8 text-base font-semibold border-transparent bg-transparent px-0 hover:bg-muted/50 focus:bg-card focus:border-input transition-colors"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSave()
-                  }
-                }}
-              />
+            <div className="flex-1 min-w-0 -mt-1 group/name">
+              <div className="flex items-center gap-1 focus-within:gap-0">
+                <Input
+                  ref={nameInputRef}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Dein Name"
+                  className="h-7 text-base font-semibold border-transparent shadow-none bg-transparent -ml-1.5 px-1 w-auto min-w-32 max-w-[calc(100%-2rem)] hover:bg-muted/50 focus:shadow-sm focus:bg-card focus:border-input focus:ml-0 focus:px-2 focus:min-w-0 focus:w-full focus:max-w-full transition-all"
+                  style={{ width: `${Math.max(name.length + 1, 8)}ch` }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSave()
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => nameInputRef.current?.focus()}
+                  className="shrink-0 group-focus-within/name:hidden text-muted-foreground/30 group-hover/name:text-muted-foreground/60 transition-colors"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {contactCount != null ? `${contactCount} Kontakte` : ""}
               </p>

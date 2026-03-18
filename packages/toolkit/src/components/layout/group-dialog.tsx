@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react"
-import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Newspaper, Columns3, Calendar, MapIcon } from "lucide-react"
+import { useState, useCallback, useRef } from "react"
+import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, Newspaper, Columns3, Calendar, MapIcon } from "lucide-react"
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import {
@@ -80,6 +80,7 @@ export function GroupDialog({
     isEdit ? mode.group.name : ""
   )
   const [saving, setSaving] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [groupImage, setGroupImage] = useState(() =>
@@ -278,20 +279,31 @@ export function GroupDialog({
             </div>
 
             {/* Name Input */}
-            <div className="flex-1 min-w-0 pt-1">
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={handleNameBlur}
-                className="h-8 text-base font-semibold border-transparent bg-transparent px-0 hover:bg-muted/50 focus:bg-card focus:border-input transition-colors"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    handleNameBlur()
-                    ;(e.target as HTMLInputElement).blur()
-                  }
-                }}
-              />
+            <div className="flex-1 min-w-0 pt-1 group/name">
+              <div className="flex items-center gap-1 focus-within:gap-0">
+                <Input
+                  ref={nameInputRef}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={handleNameBlur}
+                  className="h-8 text-base font-semibold border-transparent shadow-none bg-transparent -ml-1.5 px-1 w-auto min-w-32 max-w-[calc(100%-2rem)] hover:bg-muted/50 focus:shadow-sm focus:bg-card focus:border-input focus:ml-0 focus:px-2 focus:min-w-0 focus:w-full focus:max-w-full transition-all"
+                  style={{ width: `${Math.max(name.length + 1, 8)}ch` }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      handleNameBlur()
+                      ;(e.target as HTMLInputElement).blur()
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => nameInputRef.current?.focus()}
+                  className="shrink-0 group-focus-within/name:hidden text-muted-foreground/30 group-hover/name:text-muted-foreground/60 transition-colors"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">{members.length} Mitglieder</p>
             </div>
           </div>
