@@ -308,7 +308,7 @@ export function GroupDialog({
             {members.map((member) => (
               <div
                 key={member.id}
-                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors"
+                className="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors"
               >
                 <Avatar className="h-7 w-7">
                   {member.avatarUrl && <AvatarImage src={member.avatarUrl} />}
