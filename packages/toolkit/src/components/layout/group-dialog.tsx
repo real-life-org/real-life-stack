@@ -280,14 +280,13 @@ export function GroupDialog({
 
             {/* Name Input */}
             <div className="flex-1 min-w-0 pt-1 group/name">
-              <div className="flex items-center gap-1 focus-within:gap-0">
+              <div className="relative">
                 <Input
                   ref={nameInputRef}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onBlur={handleNameBlur}
-                  className="h-8 text-base font-semibold border-transparent shadow-none bg-transparent -ml-1.5 px-1 w-auto min-w-32 max-w-[calc(100%-2rem)] hover:bg-muted/50 focus:shadow-sm focus:bg-card focus:border-input focus:ml-0 focus:px-2 focus:min-w-0 focus:w-full focus:max-w-full transition-all"
-                  style={{ width: `${Math.max(name.length + 1, 8)}ch` }}
+                  className="h-8 text-base font-semibold border-transparent shadow-none bg-transparent -ml-1.5 px-1 min-w-32 max-w-[calc(100%-2rem)] hover:bg-muted/50 focus:shadow-sm focus:bg-card focus:border-input focus:ml-0 focus:px-2 focus:max-w-[calc(100%-2rem)] transition-all truncate"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault()
@@ -299,7 +298,8 @@ export function GroupDialog({
                 <button
                   type="button"
                   onClick={() => nameInputRef.current?.focus()}
-                  className="shrink-0 group-focus-within/name:hidden text-muted-foreground/30 group-hover/name:text-muted-foreground/60 transition-colors"
+                  className="absolute top-1/2 -translate-y-1/2 group-focus-within/name:hidden text-muted-foreground/30 group-hover/name:text-muted-foreground/60 transition-colors"
+                  style={{ left: `${Math.min(name.length + 1, 20)}ch` }}
                 >
                   <Pencil className="h-3 w-3" />
                 </button>
@@ -452,7 +452,7 @@ export function GroupDialog({
         )}
 
         {/* Footer */}
-        <DialogFooter className="px-6 py-3 border-t bg-muted/20">
+        <DialogFooter className="flex-row! px-6 py-3 border-t bg-muted/20">
           <Button
             variant={confirmDelete ? "destructive" : "ghost"}
             size="sm"

@@ -455,11 +455,10 @@ export class WotConnector extends BaseConnector {
     const initialDoc: RlsSpaceDoc = {
       _type: RLS_SPACE_TYPE,
       items: {},
-      metadata: { modules },
     }
 
-    const space = await this.replication.createSpace("shared", initialDoc, { name, appTag: RLS_SPACE_TYPE })
-    const group = this.spaceToGroup(space, initialDoc)
+    const space = await this.replication.createSpace("shared", initialDoc, { name, appTag: RLS_SPACE_TYPE, modules })
+    const group = this.spaceToGroup(space)
 
     // Auto-select first group
     if (!this.currentGroupId) {
@@ -472,27 +471,13 @@ export class WotConnector extends BaseConnector {
   override async updateGroup(id: string, updates: Partial<Group>): Promise<Group> {
     if (!this.replication) throw new Error("Not authenticated")
 
-    // Name/description/image via updateSpace (framework level — syncs via _meta)
-    const metaUpdate: Record<string, string> = {}
+    // All metadata via updateSpace (framework level — syncs via _meta)
+    const metaUpdate: Record<string, unknown> = {}
     if (updates.name) metaUpdate.name = updates.name
     if (updates.data?.image !== undefined) metaUpdate.image = updates.data.image as string
+    if (updates.data?.modules !== undefined) metaUpdate.modules = updates.data.modules as string[]
     if (Object.keys(metaUpdate).length > 0) {
-      await this.replication.updateSpace(id, metaUpdate)
-    }
-
-    // Modules via transact (app-specific data in the doc)
-    if (updates.data?.modules) {
-      const handle = id === this.currentGroupId
-        ? this.currentHandle
-        : await this.replication.openSpace<RlsSpaceDoc>(id)
-
-      if (handle) {
-        handle.transact((doc: any) => {
-          if (!doc.metadata) doc.metadata = {}
-          doc.metadata.modules = updates.data!.modules as string[]
-        })
-        if (id !== this.currentGroupId) handle.close()
-      }
+      await this.replication.updateSpace(id, metaUpdate as any)
     }
 
     const group = this.groupsCache.find((g) => g.id === id)
@@ -980,14 +965,14 @@ export class WotConnector extends BaseConnector {
     }
   }
 
-  private spaceToGroup(space: SpaceInfo, doc?: RlsSpaceDoc): Group {
+  private spaceToGroup(space: SpaceInfo): Group {
     return {
       id: space.id,
-      name: space.name ?? doc?.metadata?.name ?? "Unnamed Space",
+      name: space.name ?? "Unnamed Space",
       members: space.members,
       data: {
         scope: "group",
-        modules: doc?.metadata?.modules ?? DEFAULT_MODULES,
+        modules: space.modules ?? DEFAULT_MODULES,
         ...(space.image ? { image: space.image } : {}),
       },
     }
