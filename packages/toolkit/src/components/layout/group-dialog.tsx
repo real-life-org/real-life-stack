@@ -364,42 +364,6 @@ export function GroupDialog({
             ))}
           </div>
 
-          {/* Module Toggles (admin only) */}
-          {isCreator && (
-            <div className="mt-3 pt-3 border-t border-border/50">
-              <Label className="text-xs text-muted-foreground">Module</Label>
-              <div className="mt-2 space-y-1">
-                {AVAILABLE_MODULES.map((mod) => {
-                  const isActive = activeModules.includes(mod.id)
-                  const isLast = isActive && activeModules.length === 1
-                  const Icon = mod.icon
-                  return (
-                    <button
-                      key={mod.id}
-                      type="button"
-                      disabled={isLast}
-                      onClick={async () => {
-                        if (mode.type !== "edit") return
-                        const newModules = isActive
-                          ? activeModules.filter((m) => m !== mod.id)
-                          : [...activeModules, mod.id]
-                        setActiveModules(newModules)
-                        await onUpdateGroup(mode.group.id, { data: { ...mode.group.data, modules: newModules } })
-                      }}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                      <span className="flex-1 text-left text-sm">{mod.label}</span>
-                      <div className={`h-4 w-8 rounded-full transition-colors ${isActive ? "bg-primary" : "bg-muted"} relative`}>
-                        <div className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${isActive ? "translate-x-4" : "translate-x-0.5"}`} />
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
           {/* Invite Section */}
           {onInviteMember && invitableContacts.length > 0 && (
             <div className="mt-3 pt-3 border-t border-border/50">
@@ -491,6 +455,41 @@ export function GroupDialog({
                   </Button>
                 </div>
               )}
+            </div>
+          )}
+          {/* Module Toggles (admin only) */}
+          {isCreator && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <Label className="text-xs text-muted-foreground">Module</Label>
+              <div className="mt-2 grid grid-cols-2 gap-1">
+                {AVAILABLE_MODULES.map((mod) => {
+                  const isActive = activeModules.includes(mod.id)
+                  const isLast = isActive && activeModules.length === 1
+                  const Icon = mod.icon
+                  return (
+                    <button
+                      key={mod.id}
+                      type="button"
+                      disabled={isLast}
+                      onClick={async () => {
+                        if (mode.type !== "edit") return
+                        const newModules = isActive
+                          ? activeModules.filter((m) => m !== mod.id)
+                          : [...activeModules, mod.id]
+                        setActiveModules(newModules)
+                        await onUpdateGroup(mode.group.id, { data: { ...mode.group.data, modules: newModules } })
+                      }}
+                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <div className={`h-4 w-8 shrink-0 rounded-full transition-colors ${isActive ? "bg-primary" : "bg-muted"} relative`}>
+                        <div className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${isActive ? "translate-x-4" : "translate-x-0.5"}`} />
+                      </div>
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm">{mod.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>
