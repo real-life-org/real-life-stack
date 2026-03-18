@@ -1717,7 +1717,7 @@ export class WotConnector extends BaseConnector {
     }
   }
 
-  private checkMutualVerification(peerId: string): void {
+  private async checkMutualVerification(peerId: string): Promise<void> {
     const did = this.identity.getDid()
     const claims = this.claimsObs.current.filter((c) => c.tags?.includes("verification"))
     const outgoing = claims.some((c) => c.from === did && c.to === peerId)
@@ -1725,11 +1725,21 @@ export class WotConnector extends BaseConnector {
 
     if (outgoing && incoming) {
       const contact = this.contactsObs.current.find((c) => c.id === peerId)
+      let peerAvatar = contact?.avatar
+      let peerName = contact?.name
+      // Contact may have just been added without avatar — resolve from discovery
+      if (!peerAvatar) {
+        try {
+          const result = await this.discovery.resolveProfile(peerId)
+          peerAvatar = result.profile?.avatar ?? undefined
+          peerName = peerName ?? result.profile?.name ?? undefined
+        } catch { /* ignore */ }
+      }
       this.emitEvent({
         type: "mutual-verification",
         fromId: peerId,
-        fromName: contact?.name,
-        fromAvatar: contact?.avatar,
+        fromName: peerName,
+        fromAvatar: peerAvatar,
       })
     }
   }
