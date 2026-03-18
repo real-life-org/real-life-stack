@@ -1600,6 +1600,7 @@ export class WotConnector extends BaseConnector {
           fromName: inviterName,
           spaceId: payload.spaceId,
           spaceName: payload.spaceInfo?.name ?? payload.spaceName ?? "Unnamed Space",
+          spaceImage: payload.spaceInfo?.image ?? undefined,
         })
       } catch { /* ignore malformed */ }
     }

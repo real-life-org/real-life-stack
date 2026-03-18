@@ -781,6 +781,7 @@ function IncomingEventDialogs({ onCloseVerifyDialog }: { onCloseVerifyDialog?: (
       <IncomingSpaceInviteDialog
         open={!!spaceInvite}
         spaceName={spaceInvite?.spaceName ?? ""}
+        spaceImage={spaceInvite?.spaceImage}
         inviterName={spaceInvite?.fromName}
         onOpen={handleOpenSpace}
         onDismiss={dismiss}

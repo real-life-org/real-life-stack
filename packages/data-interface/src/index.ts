@@ -259,6 +259,7 @@ export interface IncomingSpaceInviteEvent {
   fromName?: string
   spaceId: string
   spaceName: string
+  spaceImage?: string
 }
 
 export interface MutualVerificationEvent {
