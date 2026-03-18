@@ -189,13 +189,13 @@ export function VerificationDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <DialogHeader className="text-center">
+          <DialogTitle className="flex items-center justify-center gap-2">
             <QrCode className="h-5 w-5 text-primary" />
             {step === "done" ? "Verifizierung erfolgreich!" : "Verifizieren"}
           </DialogTitle>
           {step === "ready" && (
-            <DialogDescription>
+            <DialogDescription className="text-center">
               Zeige deinen Code oder scanne den Code deines Gegenübers.
             </DialogDescription>
           )}
@@ -263,7 +263,7 @@ export function VerificationDialog({
             </Button>
 
             {/* Manual entry toggle */}
-            <div>
+            <div className="flex flex-col items-center">
               <button
                 type="button"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
