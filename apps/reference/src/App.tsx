@@ -744,7 +744,7 @@ function RelayStatusBadgeWrapper() {
  * Global incoming event dialogs — counter-verify, space invite, mutual verification.
  * Must be rendered inside IncomingEventsProvider.
  */
-function IncomingEventDialogs() {
+function IncomingEventDialogs({ onCloseVerifyDialog }: { onCloseVerifyDialog?: () => void }) {
   const connector = useConnector()
   const { incomingVerification, spaceInvite, mutualVerification, dismiss } = useIncomingEvents()
 
@@ -761,6 +761,11 @@ function IncomingEventDialogs() {
     }
     dismiss()
   }
+
+  // Close the verify dialog when an incoming verification arrives
+  useEffect(() => {
+    if (incomingVerification) onCloseVerifyDialog?.()
+  }, [incomingVerification, onCloseVerifyDialog])
 
   return (
     <>
@@ -1075,7 +1080,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       />
 
       {/* Incoming event dialogs */}
-      <IncomingEventDialogs />
+      <IncomingEventDialogs onCloseVerifyDialog={() => setVerifyDialogOpen(false)} />
 
       {/* Connector FAB — bottom-left, above BottomNav */}
       <div className="fixed bottom-20 left-4 z-50">
