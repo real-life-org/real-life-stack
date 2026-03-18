@@ -112,6 +112,7 @@ export class WotConnector extends BaseConnector {
   private relayStateObs: ReactiveObservable<RelayState>
   private outboxCountObs: ReactiveObservable<number>
   private profileObs: ReactiveObservable<Item | null>
+  private currentUserObs: ReactiveObservable<User | null>
   private syncPendingObs: ReactiveObservable<boolean>
   private profileUnsub: (() => void) | null = null
   private groupsCache: Group[] = []
@@ -143,6 +144,7 @@ export class WotConnector extends BaseConnector {
     this.relayStateObs = createObservable<RelayState>("disconnected")
     this.outboxCountObs = createObservable<number>(0)
     this.profileObs = createObservable<Item | null>(null)
+    this.currentUserObs = createObservable<User | null>(null)
     this.syncPendingObs = createObservable<boolean>(false)
   }
 
@@ -189,6 +191,8 @@ export class WotConnector extends BaseConnector {
     this.relatedObservables.clear()
     this.authStateObs.destroy()
     this.contactsObs.destroy()
+    this.claimsObs.destroy()
+    this.deliveryStatusObs.destroy()
     this.relayStateObs.destroy()
     this.outboxCountObs.destroy()
     this.profileObs.destroy()
@@ -293,6 +297,7 @@ export class WotConnector extends BaseConnector {
     // Clear identity switch marker
     try { localStorage.removeItem("rls-wot-active-did") } catch { /* ignore */ }
 
+    this.currentUserObs.set(null)
     this.authStateObs.set({ status: "unauthenticated" })
     this.notifyAllObservers()
   }
@@ -367,26 +372,30 @@ export class WotConnector extends BaseConnector {
   }
 
   override async getCurrentUser(): Promise<User | null> {
-    try {
-      const did = this.identity.getDid()
-      const doc = getYjsPersonalDoc()
-      const profile = doc.profile
-      return {
-        id: did,
-        displayName: profile?.name ?? getDefaultDisplayName(did),
-        avatarUrl: profile?.avatar ?? undefined,
-      }
-    } catch {
-      return null
-    }
+    return this.currentUserObs.current
+  }
+
+  override observeCurrentUser(): Observable<User | null> {
+    return this.currentUserObs
   }
 
   override async getUser(id: string): Promise<User | null> {
-    // Lookup cascade: contacts -> HttpDiscovery -> fallback
+    // Lookup cascade: self -> contacts -> HttpDiscovery -> fallback
     try {
       const doc = getYjsPersonalDoc()
 
-      // 1. contacts
+      // 1. Own profile (we're not in our own contacts list)
+      const ownDid = this.identity.getDid()
+      if (id === ownDid) {
+        const profile = doc.profile
+        return {
+          id,
+          displayName: profile?.name ?? getDefaultDisplayName(id),
+          avatarUrl: profile?.avatar ?? undefined,
+        }
+      }
+
+      // 2. contacts
       const contact = doc.contacts?.[id]
       if (contact) {
         return {
@@ -794,6 +803,10 @@ export class WotConnector extends BaseConnector {
         updatedAt: c.updatedAt ?? new Date().toISOString(),
       }))
       this.contactsObs.set(mapped)
+      // Contact profile changed → refresh member observables (displayName/avatar)
+      for (const groupId of this.memberObservables.keys()) {
+        void this.notifyMemberObservers(groupId)
+      }
     })
     // Load initial contacts
     this.contactsObs.set(
@@ -876,6 +889,7 @@ export class WotConnector extends BaseConnector {
     const doc = getYjsPersonalDoc()
     const name = doc.profile?.name ?? getDefaultDisplayName(did)
 
+    const avatar = doc.profile?.avatar ?? undefined
     const contacts = await this.storage.getContacts()
     for (const contact of contacts) {
       const envelope: MessageEnvelope = {
@@ -886,38 +900,37 @@ export class WotConnector extends BaseConnector {
         toDid: contact.did,
         createdAt: new Date().toISOString(),
         encoding: "json",
-        payload: JSON.stringify({ did, name }),
+        payload: JSON.stringify({ did, name, ...(avatar ? { avatar } : {}) }),
         signature: "",
       }
       this.outboxAdapter.send(envelope).catch(() => {})
     }
   }
 
-  /** Sync all contact profiles from discovery server (called on init) */
+  /** Sync all contact profiles from discovery server (called on init, parallel) */
   private async syncContactProfiles(): Promise<void> {
     if (!this.storage) return
     const contacts = await this.storage.getContacts()
-    for (const contact of contacts) {
-      try {
-        const result = await this.discovery.resolveProfile(contact.did)
-        const profile = result.profile
-        if (!profile?.name) continue
+    const storage = this.storage
+    await Promise.allSettled(contacts.map(async (contact) => {
+      const result = await this.discovery.resolveProfile(contact.did)
+      const profile = result.profile
+      if (!profile?.name) return
 
-        const needsUpdate =
-          (contact.name || null) !== (profile.name || null) ||
-          (contact.avatar || null) !== (profile.avatar || null) ||
-          (contact.bio || null) !== (profile.bio || null)
+      const needsUpdate =
+        (contact.name || null) !== (profile.name || null) ||
+        (contact.avatar || null) !== (profile.avatar || null) ||
+        (contact.bio || null) !== (profile.bio || null)
 
-        if (needsUpdate) {
-          await this.storage.updateContact({
-            ...contact,
-            name: profile.name,
-            ...(profile.avatar ? { avatar: profile.avatar } : {}),
-            ...(profile.bio ? { bio: profile.bio } : {}),
-          })
-        }
-      } catch { /* ignore individual fetch failures */ }
-    }
+      if (needsUpdate) {
+        await storage.updateContact({
+          ...contact,
+          name: profile.name,
+          ...(profile.avatar ? { avatar: profile.avatar } : {}),
+          ...(profile.bio ? { bio: profile.bio } : {}),
+        })
+      }
+    }))
   }
 
   /** Retry all pending discovery publish operations (profile, verifications, attestations) */
@@ -1248,9 +1261,27 @@ export class WotConnector extends BaseConnector {
     return { code, nonce }
   }
 
-  override async prepareResponse(challengeCode: string): Promise<{ peerId: string; peerName?: string }> {
+  override async prepareResponse(challengeCode: string): Promise<{ peerId: string; peerName?: string; peerAvatar?: string }> {
     const parsed = JSON.parse(atob(challengeCode))
-    return { peerId: parsed.fromDid, peerName: parsed.fromName }
+    const peerId = parsed.fromDid as string
+    let peerName = parsed.fromName as string | undefined
+    let peerAvatar: string | undefined
+
+    // Resolve avatar from local contacts first, then discovery
+    const contact = this.contactsObs.current.find((c) => c.id === peerId)
+    if (contact) {
+      peerName = peerName ?? contact.name ?? undefined
+      peerAvatar = contact.avatar ?? undefined
+    }
+    if (!peerAvatar) {
+      try {
+        const result = await this.discovery.resolveProfile(peerId)
+        peerAvatar = result.profile?.avatar ?? undefined
+        peerName = peerName ?? result.profile?.name ?? undefined
+      } catch { /* ignore */ }
+    }
+
+    return { peerId, peerName, peerAvatar }
   }
 
   override async confirmAndRespond(challengeCode: string): Promise<void> {
@@ -1524,17 +1555,23 @@ export class WotConnector extends BaseConnector {
         if (nonce && verification.id.includes(nonce)) {
           this.pendingChallenge = null // Nonce consumed
 
-          // Resolve peer name
-          let peerName: string | undefined
-          try {
-            const result = await this.discovery.resolveProfile(verification.from)
-            peerName = result.profile?.name ?? undefined
-          } catch { /* ignore */ }
+          // Resolve peer info (local contacts first, discovery as fallback)
+          const knownContact = this.contactsObs.current.find((c) => c.id === verification.from)
+          let peerName = knownContact?.name ?? undefined
+          let peerAvatar = knownContact?.avatar ?? undefined
+          if (!peerName) {
+            try {
+              const result = await this.discovery.resolveProfile(verification.from)
+              peerName = result.profile?.name ?? undefined
+              peerAvatar = result.profile?.avatar ?? undefined
+            } catch { /* ignore */ }
+          }
 
           this.emitEvent({
             type: "incoming-verification",
             fromId: verification.from,
             fromName: peerName,
+            fromAvatar: peerAvatar,
             challengeCode: envelope.payload, // Pass for counter-verify
           })
         }
@@ -1658,22 +1695,20 @@ export class WotConnector extends BaseConnector {
 
     if (envelope.type === "profile-update") {
       try {
-        const result = await this.discovery.resolveProfile(envelope.fromDid)
-        const profile = result.profile
-        if (profile?.name && this.storage) {
+        // Use payload directly (authoritative — comes from the sender via relay)
+        const payload = JSON.parse(envelope.payload)
+        if (payload.name && this.storage) {
           const contacts = await this.storage.getContacts()
           const contact = contacts.find((c: any) => c.did === envelope.fromDid)
           if (contact) {
             const needsUpdate =
-              (contact.name || null) !== (profile.name || null) ||
-              (contact.avatar || null) !== (profile.avatar || null) ||
-              (contact.bio || null) !== (profile.bio || null)
+              (contact.name || null) !== (payload.name || null) ||
+              (contact.avatar || null) !== (payload.avatar || null)
             if (needsUpdate) {
               await this.storage.updateContact({
                 ...contact,
-                name: profile.name,
-                ...(profile.avatar ? { avatar: profile.avatar } : {}),
-                ...(profile.bio ? { bio: profile.bio } : {}),
+                name: payload.name,
+                ...(payload.avatar ? { avatar: payload.avatar } : {}),
               })
             }
           }
@@ -1763,17 +1798,24 @@ export class WotConnector extends BaseConnector {
       const did = this.identity.getDid()
       const doc = getYjsPersonalDoc()
       const profile = doc?.profile
+      const name = profile?.name ?? getDefaultDisplayName(did)
+      const avatar = profile?.avatar ?? undefined
       this.profileObs.set({
         id: did,
         type: "profile",
         createdAt: profile?.createdAt ?? new Date().toISOString(),
         createdBy: did,
         data: {
-          name: profile?.name ?? getDefaultDisplayName(did),
+          name,
           bio: profile?.bio ?? undefined,
-          avatar: profile?.avatar ?? undefined,
+          avatar,
         },
       })
+      this.currentUserObs.set({ id: did, displayName: name, avatarUrl: avatar })
+      // Own profile changed → refresh member observables (own displayName in member lists)
+      for (const groupId of this.memberObservables.keys()) {
+        void this.notifyMemberObservers(groupId)
+      }
     } catch {
       // PersonalDoc not ready yet
     }

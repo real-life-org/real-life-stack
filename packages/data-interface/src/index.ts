@@ -136,6 +136,7 @@ export interface GroupManager {
 
 export interface Authenticatable {
   getCurrentUser(): Promise<User | null>
+  observeCurrentUser(): Observable<User | null>
   getUser(id: string): Promise<User | null>
   getAuthState(): Observable<AuthState>
   getAuthMethods(): AuthMethod[]
@@ -202,7 +203,7 @@ export interface SignedClaimCapable {
 
   // Erstellen (Verification via Challenge-Response)
   createChallenge(): Promise<{ code: string; nonce: string }>
-  prepareResponse(challengeCode: string): Promise<{ peerId: string; peerName?: string }>
+  prepareResponse(challengeCode: string): Promise<{ peerId: string; peerName?: string; peerAvatar?: string }>
   confirmAndRespond(challengeCode: string): Promise<void>
   counterVerify(targetId: string): Promise<void>
 
@@ -247,6 +248,7 @@ export interface IncomingVerificationEvent {
   type: "incoming-verification"
   fromId: string
   fromName?: string
+  fromAvatar?: string
   /** The challenge code needed for counter-verification */
   challengeCode: string
 }

@@ -251,6 +251,10 @@ export abstract class BaseConnector implements FullConnector {
     return null
   }
 
+  observeCurrentUser(): Observable<User | null> {
+    return createObservable<User | null>(null)
+  }
+
   async getUser(_id: string): Promise<User | null> {
     return null
   }
@@ -329,7 +333,7 @@ export abstract class BaseConnector implements FullConnector {
     throw new Error("createChallenge not supported")
   }
 
-  async prepareResponse(_challengeCode: string): Promise<{ peerId: string; peerName?: string }> {
+  async prepareResponse(_challengeCode: string): Promise<{ peerId: string; peerName?: string; peerAvatar?: string }> {
     throw new Error("prepareResponse not supported")
   }
 

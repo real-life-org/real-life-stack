@@ -52,6 +52,7 @@ export class GraphQLConnector implements FullConnector {
   private wsUrl: string
   private currentGroup: Group | null = null
   private authStateObservable = createObservable<AuthState>({ status: "loading" })
+  private currentUserObs = createObservable<User | null>(null)
   private groupsObs = createObservable<Group[]>([])
   private currentGroupObs = createObservable<Group | null>(null)
   private cleanupFns: (() => void)[] = []
@@ -78,14 +79,27 @@ export class GraphQLConnector implements FullConnector {
     this.subscribeWs<{ authStateChanged: AuthState }>(
       AUTH_STATE_CHANGED_SUBSCRIPTION,
       {},
-      (data) => this.authStateObservable.set(data.authStateChanged),
+      (data) => {
+        const state = data.authStateChanged
+        this.authStateObservable.set(state)
+        this.currentUserObs.set(state.status === "authenticated" ? state.user : null)
+      },
     )
+
+    // Fetch initial current user
+    this.getCurrentUser().then((user) => this.currentUserObs.set(user))
   }
 
   async dispose(): Promise<void> {
     for (const cleanup of this.cleanupFns) cleanup()
     this.cleanupFns = []
     this.authStateObservable.destroy()
+    this.groupsObs.destroy()
+    this.currentGroupObs.destroy()
+    for (const obs of this.memberObservables.values()) obs.destroy()
+    this.memberObservables.clear()
+    for (const obs of this.relatedObservables.values()) obs.destroy()
+    this.relatedObservables.clear()
     await this.wsClient?.dispose()
     this.wsClient = null
   }
@@ -274,6 +288,10 @@ export class GraphQLConnector implements FullConnector {
   async getCurrentUser(): Promise<User | null> {
     const { currentUser } = await this.client.request<{ currentUser: User | null }>(CURRENT_USER_QUERY)
     return currentUser
+  }
+
+  observeCurrentUser(): Observable<User | null> {
+    return this.currentUserObs
   }
 
   async getUser(id: string): Promise<User | null> {

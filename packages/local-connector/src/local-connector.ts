@@ -45,6 +45,7 @@ export class LocalConnector implements FullConnector {
   private nextItemId = 100
 
   private authState = createObservable<AuthState>({ status: "loading" })
+  private currentUserObs = createObservable<User | null>(null)
   private groupsObs = createObservable<Group[]>([])
   private currentGroupObs = createObservable<Group | null>(null)
   private memberObservables = new Map<string, ReturnType<typeof createObservable<User[]>>>()
@@ -112,6 +113,7 @@ export class LocalConnector implements FullConnector {
       await this.persist()
     }
 
+    this.currentUserObs.set(this.currentUser)
     this.authState.set(
       this.currentUser
         ? { status: "authenticated", user: this.currentUser }
@@ -131,8 +133,18 @@ export class LocalConnector implements FullConnector {
   async dispose(): Promise<void> {
     this.channel?.close()
     this.channel = null
+    for (const obs of this.itemObservables.values()) obs.destroy()
+    for (const obs of this.singleItemObservables.values()) obs.destroy()
+    for (const obs of this.relatedObservables.values()) obs.destroy()
+    for (const obs of this.memberObservables.values()) obs.destroy()
     this.itemObservables.clear()
     this.singleItemObservables.clear()
+    this.relatedObservables.clear()
+    this.relatedObservableParams.clear()
+    this.memberObservables.clear()
+    this.authState.destroy()
+    this.groupsObs.destroy()
+    this.currentGroupObs.destroy()
   }
 
   // --- Groups ---
@@ -362,6 +374,10 @@ export class LocalConnector implements FullConnector {
     return this.currentUser
   }
 
+  observeCurrentUser(): Observable<User | null> {
+    return this.currentUserObs
+  }
+
   async getUser(id: string): Promise<User | null> {
     return this.users.find((u) => u.id === id) ?? null
   }
@@ -379,6 +395,7 @@ export class LocalConnector implements FullConnector {
   async authenticate(_method: string, _credentials: unknown): Promise<User> {
     const user = this.users[0]
     this.currentUser = user
+    this.currentUserObs.set(user)
     this.authState.set({ status: "authenticated", user })
     await this.persist()
     return user
@@ -386,6 +403,7 @@ export class LocalConnector implements FullConnector {
 
   async logout(): Promise<void> {
     this.currentUser = null
+    this.currentUserObs.set(null)
     this.authState.set({ status: "unauthenticated" })
     await this.persist()
   }
@@ -414,6 +432,7 @@ export class LocalConnector implements FullConnector {
     this.groupMembers = {}
     this.groupItems = {}
     this.currentUser = null
+    this.currentUserObs.set(null)
     this.currentGroup = null
     this.nextItemId = 100
     this.notifyObservers()

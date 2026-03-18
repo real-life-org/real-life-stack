@@ -768,6 +768,7 @@ function IncomingEventDialogs() {
         open={!!incomingVerification}
         fromId={incomingVerification?.fromId ?? ""}
         fromName={incomingVerification?.fromName}
+        fromAvatar={incomingVerification?.fromAvatar}
         onConfirm={handleCounterVerify}
         onReject={dismiss}
       />

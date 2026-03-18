@@ -75,7 +75,7 @@ export function useVerification() {
   const connector = useConnector()
   const supported = hasSignedClaims(connector)
   const [challenge, setChallenge] = useState<{ code: string; nonce: string } | null>(null)
-  const [peerInfo, setPeerInfo] = useState<{ peerId: string; peerName?: string } | null>(null)
+  const [peerInfo, setPeerInfo] = useState<{ peerId: string; peerName?: string; peerAvatar?: string } | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

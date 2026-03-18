@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { UserCheck, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/primitives/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
 import {
   Dialog,
   DialogContent,
@@ -15,14 +16,20 @@ export interface IncomingVerificationDialogProps {
   open: boolean
   fromId: string
   fromName?: string
+  fromAvatar?: string
   onConfirm: () => Promise<void>
   onReject: () => void
+}
+
+function getInitials(name: string): string {
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 }
 
 export function IncomingVerificationDialog({
   open,
   fromId,
   fromName,
+  fromAvatar,
   onConfirm,
   onReject,
 }: IncomingVerificationDialogProps) {
@@ -50,9 +57,12 @@ export function IncomingVerificationDialog({
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-3 py-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <UserCheck className="h-8 w-8 text-primary" />
-          </div>
+          <Avatar className="h-16 w-16">
+            <AvatarImage src={fromAvatar} alt={name} />
+            <AvatarFallback className="text-lg bg-primary/10 text-primary">
+              {fromAvatar ? null : getInitials(name)}
+            </AvatarFallback>
+          </Avatar>
           <div className="text-center">
             <p className="text-xl font-semibold">{name}</p>
             <p className="mt-1 text-xs text-muted-foreground font-mono max-w-[280px] truncate">

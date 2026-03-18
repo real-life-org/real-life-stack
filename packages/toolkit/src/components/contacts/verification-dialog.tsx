@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Shield, Copy, Check, Loader2, UserCheck, Camera, ChevronDown, ChevronUp, X } from "lucide-react"
+import { Shield, Copy, Check, Loader2, Camera, ChevronDown, ChevronUp, X } from "lucide-react"
 
 import { Button } from "@/components/primitives/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,7 @@ export interface VerificationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   challenge: { code: string; nonce: string } | null
-  peerInfo: { peerId: string; peerName?: string } | null
+  peerInfo: { peerId: string; peerName?: string; peerAvatar?: string } | null
   isProcessing: boolean
   error: string | null
   onCreateChallenge: () => Promise<unknown>
@@ -307,9 +308,12 @@ export function VerificationDialog({
               Stehst du gerade vor dieser Person?
             </p>
             <div className="rounded-lg border bg-primary/5 p-4 text-center">
-              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <UserCheck className="h-6 w-6 text-primary" />
-              </div>
+              <Avatar className="mx-auto mb-2 h-12 w-12">
+                <AvatarImage src={peerInfo.peerAvatar} alt={peerInfo.peerName ?? ""} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {(peerInfo.peerName ?? peerInfo.peerId.slice(-6)).slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <p className="font-medium">
                 {peerInfo.peerName ?? `User-${peerInfo.peerId.slice(-6)}`}
               </p>

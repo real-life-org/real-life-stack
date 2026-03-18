@@ -22,6 +22,7 @@ export class MockConnector implements FullConnector {
   private groupItems: Record<string, string[]>
   private currentGroup: Group | null
   private currentUser: User | null
+  private currentUserObs: ReturnType<typeof createObservable<User | null>>
   private authState: ReturnType<typeof createObservable<AuthState>>
   private groupsObs: ReturnType<typeof createObservable<Group[]>>
   private currentGroupObs: ReturnType<typeof createObservable<Group | null>>
@@ -39,6 +40,7 @@ export class MockConnector implements FullConnector {
     this.groupItems = { ...demoGroupItems }
     this.currentGroup = this.groups[0] ?? null
     this.currentUser = this.users[0] ?? null
+    this.currentUserObs = createObservable<User | null>(this.currentUser)
     this.authState = createObservable<AuthState>(
       this.currentUser
         ? { status: "authenticated", user: this.currentUser }
@@ -53,8 +55,18 @@ export class MockConnector implements FullConnector {
   }
 
   async dispose(): Promise<void> {
+    for (const obs of this.itemObservables.values()) obs.destroy()
+    for (const obs of this.singleItemObservables.values()) obs.destroy()
+    for (const obs of this.relatedObservables.values()) obs.destroy()
+    for (const obs of this.memberObservables.values()) obs.destroy()
     this.itemObservables.clear()
     this.singleItemObservables.clear()
+    this.relatedObservables.clear()
+    this.relatedObservableParams.clear()
+    this.memberObservables.clear()
+    this.authState.destroy()
+    this.groupsObs.destroy()
+    this.currentGroupObs.destroy()
   }
 
   // --- Groups ---
@@ -275,6 +287,10 @@ export class MockConnector implements FullConnector {
     return this.currentUser
   }
 
+  observeCurrentUser(): Observable<User | null> {
+    return this.currentUserObs
+  }
+
   async getUser(id: string): Promise<User | null> {
     return this.users.find((u) => u.id === id) ?? null
   }
@@ -292,12 +308,14 @@ export class MockConnector implements FullConnector {
   async authenticate(_method: string, _credentials: unknown): Promise<User> {
     const user = this.users[0]
     this.currentUser = user
+    this.currentUserObs.set(user)
     this.authState.set({ status: "authenticated", user })
     return user
   }
 
   async logout(): Promise<void> {
     this.currentUser = null
+    this.currentUserObs.set(null)
     this.authState.set({ status: "unauthenticated" })
   }
 
