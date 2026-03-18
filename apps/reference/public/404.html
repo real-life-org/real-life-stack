@@ -5,14 +5,15 @@
     <title>Real Life Stack</title>
     <script>
       // GitHub Pages SPA redirect
-      // Redirects all 404s to index.html, preserving the path
-      var base = '/app/'
+      // Converts /app/spaces/123/feed → /app/?p=/spaces/123/feed
+      // index.html picks this up and restores the route
+      var base = '/app'
       var path = window.location.pathname
       if (path.startsWith(base)) {
-        var route = path.slice(base.length)
-        window.location.replace(base + '?' + route + window.location.hash)
+        var route = path.slice(base.length) || '/'
+        window.location.replace(base + '/?p=' + encodeURIComponent(route) + window.location.hash)
       } else {
-        window.location.replace(base)
+        window.location.replace(base + '/')
       }
     </script>
   </head>

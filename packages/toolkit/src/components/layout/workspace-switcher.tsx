@@ -45,8 +45,8 @@ export function WorkspaceSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-accent">
-        <Avatar className="h-8 w-8 rounded-md">
-          <AvatarImage src={activeWorkspace.avatar} alt={activeWorkspace.name} className="rounded-md" />
+        <Avatar className="h-8 w-8 rounded-lg">
+          <AvatarImage src={activeWorkspace.avatar} alt={activeWorkspace.name} className="rounded-lg" />
           <AvatarFallback className="text-sm font-semibold rounded-md">
             {getInitials(activeWorkspace.name)}
           </AvatarFallback>
@@ -63,9 +63,9 @@ export function WorkspaceSwitcher({
             onClick={() => onWorkspaceChange(workspace)}
             className="group/ws flex items-center gap-2"
           >
-            <Avatar className="h-5 w-5 rounded-none">
-              <AvatarImage src={workspace.avatar} alt={workspace.name} className="rounded-none" />
-              <AvatarFallback className="text-xs rounded-none">
+            <Avatar className="h-5 w-5 rounded-sm">
+              <AvatarImage src={workspace.avatar} alt={workspace.name} className="rounded-sm object-contain" />
+              <AvatarFallback className="text-xs rounded-sm">
                 {getInitials(workspace.name)}
               </AvatarFallback>
             </Avatar>

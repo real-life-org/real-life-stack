@@ -127,31 +127,6 @@ export function VerificationDialog({
       })
       scannerRef.current.stream = stream
       setIsScanning(true)
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-      }
-      // Use BarcodeDetector if available
-      if ("BarcodeDetector" in window) {
-        const detector = new (window as any).BarcodeDetector({ formats: ["qr_code"] })
-        const scanFrame = async () => {
-          if (!videoRef.current || !scannerRef.current.stream) return
-          try {
-            const barcodes = await detector.detect(videoRef.current)
-            if (barcodes.length > 0) {
-              const code = barcodes[0].rawValue
-              stopScanner()
-              await processScannedCode(code)
-              return
-            }
-          } catch { /* ignore detection errors */ }
-          if (scannerRef.current.stream) {
-            requestAnimationFrame(scanFrame)
-          }
-        }
-        videoRef.current?.addEventListener("loadeddata", () => {
-          requestAnimationFrame(scanFrame)
-        }, { once: true })
-      }
     } catch {
       // Camera not available — show manual entry instead
       setIsScanning(false)
@@ -180,6 +155,32 @@ export function VerificationDialog({
     challengeCreated.current = true
     await onCreateChallenge()
   }
+
+  // Assign stream to video element after React renders it
+  useEffect(() => {
+    if (!isScanning || !videoRef.current || !scannerRef.current.stream) return
+    const video = videoRef.current
+    video.srcObject = scannerRef.current.stream
+
+    if (!("BarcodeDetector" in window)) return
+    const detector = new (window as any).BarcodeDetector({ formats: ["qr_code"] })
+    const scanFrame = async () => {
+      if (!videoRef.current || !scannerRef.current.stream) return
+      try {
+        const barcodes = await detector.detect(videoRef.current)
+        if (barcodes.length > 0) {
+          const code = barcodes[0].rawValue
+          stopScanner()
+          await processScannedCode(code)
+          return
+        }
+      } catch { /* ignore detection errors */ }
+      if (scannerRef.current.stream) {
+        requestAnimationFrame(scanFrame)
+      }
+    }
+    video.addEventListener("loadeddata", () => requestAnimationFrame(scanFrame), { once: true })
+  }, [isScanning, stopScanner])
 
   // Cleanup scanner on unmount
   useEffect(() => {

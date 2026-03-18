@@ -11,10 +11,11 @@
     <script>
       // GitHub Pages SPA: restore path from 404.html redirect
       (function() {
-        var q = window.location.search.slice(1)
-        if (q && !q.includes('=')) {
-          var base = '/app/'
-          history.replaceState(null, '', base + q + window.location.hash)
+        var params = new URLSearchParams(window.location.search)
+        var route = params.get('p')
+        if (route) {
+          var base = '/app'
+          history.replaceState(null, '', base + route + window.location.hash)
         }
       })()
     </script>
