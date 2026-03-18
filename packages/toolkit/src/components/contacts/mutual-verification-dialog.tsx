@@ -45,7 +45,7 @@ export function MutualVerificationDialog({
             <Avatar className="h-14 w-14">
               <AvatarImage src={myAvatar} alt={myName ?? "Du"} />
               <AvatarFallback className="bg-green-500/10 text-green-600">
-                {getInitials(myName ?? "Du")}
+                {myName ? getInitials(myName) : "?"}
               </AvatarFallback>
             </Avatar>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/10">
