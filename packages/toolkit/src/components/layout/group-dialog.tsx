@@ -251,7 +251,7 @@ export function GroupDialog({
       <DialogContent className="sm:max-w-sm gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
         <DialogTitle className="sr-only">{isEdit ? mode.group.name : "Neue Gruppe"}</DialogTitle>
         {/* Group Identity Header */}
-        <div className="relative bg-gradient-to-b from-primary/8 to-transparent px-6 pt-6 pb-5">
+        <div className="relative px-6 pt-6 pb-5">
           <div className="flex items-start gap-4">
             {/* Group Image */}
             <div className="relative group shrink-0">

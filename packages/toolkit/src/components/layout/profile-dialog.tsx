@@ -85,7 +85,7 @@ export function ProfileDialog({
       <DialogContent className="sm:max-w-sm gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Profil bearbeiten</DialogTitle>
         {/* Profile Card Header */}
-        <div className="relative bg-gradient-to-b from-primary/8 to-transparent px-6 pt-7 pb-5">
+        <div className="relative px-6 pt-7 pb-5">
           {/* Avatar */}
           <div className="flex flex-col items-center gap-3">
             <div className="relative group">
