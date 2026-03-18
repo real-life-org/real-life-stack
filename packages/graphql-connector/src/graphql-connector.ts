@@ -191,7 +191,7 @@ export class GraphQLConnector implements FullConnector {
   // --- Items ---
 
   async getItems(filter?: ItemFilter): Promise<Item[]> {
-    const gqlFilter = filter ? { type: filter.type, hasField: filter.hasField, createdBy: filter.createdBy } : undefined
+    const gqlFilter = filter ? { type: filter.type, hasField: filter.hasField, createdBy: filter.createdBy, limit: filter.limit, offset: filter.offset } : undefined
     const { items } = await this.client.request<{ items: Record<string, unknown>[] }>(ITEMS_QUERY, { filter: gqlFilter })
     return items.map(parseItem)
   }
@@ -208,7 +208,7 @@ export class GraphQLConnector implements FullConnector {
     this.getItems(filter).then((items) => observable.set(items))
 
     // SSE subscription for live updates
-    const gqlFilter = filter ? { type: filter.type, hasField: filter.hasField, createdBy: filter.createdBy } : undefined
+    const gqlFilter = filter ? { type: filter.type, hasField: filter.hasField, createdBy: filter.createdBy, limit: filter.limit, offset: filter.offset } : undefined
     this.subscribeWs<{ itemsChanged: Record<string, unknown>[] }>(
       ITEMS_CHANGED_SUBSCRIPTION,
       { filter: gqlFilter },
@@ -258,11 +258,11 @@ export class GraphQLConnector implements FullConnector {
   async getRelatedItems(
     itemId: string,
     predicate?: string,
-    _options?: RelatedItemsOptions,
+    options?: RelatedItemsOptions,
   ): Promise<Item[]> {
     const { relatedItems } = await this.client.request<{ relatedItems: Record<string, unknown>[] }>(
       RELATED_ITEMS_QUERY,
-      { itemId, predicate },
+      { itemId, predicate, limit: options?.limit, offset: options?.offset, direction: options?.direction },
     )
     return relatedItems.map(parseItem)
   }

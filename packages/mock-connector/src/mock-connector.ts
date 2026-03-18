@@ -10,7 +10,7 @@ import type {
   RelatedItemsOptions,
   Source,
 } from "@real-life-stack/data-interface"
-import { createObservable, matchesFilter, findRelatedItems } from "@real-life-stack/data-interface"
+import { createObservable, matchesFilter, findRelatedItems, applyPagination } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
 
 export class MockConnector implements FullConnector {
@@ -182,7 +182,8 @@ export class MockConnector implements FullConnector {
   async getItems(filter?: ItemFilter): Promise<Item[]> {
     const scoped = this.getScopedItems()
     if (!filter) return scoped
-    return scoped.filter((item) => matchesFilter(item, filter))
+    const filtered = scoped.filter((item) => matchesFilter(item, filter))
+    return applyPagination(filtered, filter.limit, filter.offset)
   }
 
   async getItem(id: string): Promise<Item | null> {
@@ -194,7 +195,7 @@ export class MockConnector implements FullConnector {
     if (!this.itemObservables.has(key)) {
       const scoped = this.getScopedItems()
       const filtered = scoped.filter((item) => matchesFilter(item, filter))
-      this.itemObservables.set(key, createObservable(filtered))
+      this.itemObservables.set(key, createObservable(applyPagination(filtered, filter.limit, filter.offset)))
     }
     return this.itemObservables.get(key)!
   }
@@ -353,7 +354,7 @@ export class MockConnector implements FullConnector {
     for (const [key, observable] of this.itemObservables) {
       const filter: ItemFilter = JSON.parse(key)
       const filtered = scoped.filter((item) => matchesFilter(item, filter))
-      observable.set(filtered)
+      observable.set(applyPagination(filtered, filter.limit, filter.offset))
     }
     for (const [id, observable] of this.singleItemObservables) {
       const item = this.items.find((i) => i.id === id) ?? null

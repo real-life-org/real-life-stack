@@ -65,6 +65,16 @@ export function createObservable<T>(initial: T): ReactiveObservable<T> {
   }
 }
 
+/**
+ * Apply limit/offset pagination to a sorted array.
+ */
+export function applyPagination<T>(items: T[], limit?: number, offset?: number): T[] {
+  const start = offset ?? 0
+  if (limit != null) return items.slice(start, start + limit)
+  if (start > 0) return items.slice(start)
+  return items
+}
+
 export function matchesFilter(item: Item, filter: ItemFilter): boolean {
   if (filter.type && item.type !== filter.type) return false
   if (filter.createdBy && item.createdBy !== filter.createdBy) return false
@@ -131,7 +141,7 @@ export function findRelatedItems(
     }
   }
 
-  return results
+  return applyPagination(results, options?.limit, options?.offset)
 }
 
 const DEFAULT_GROUP: Group = { id: "default", name: "Default" }

@@ -1,7 +1,7 @@
 // @real-life-stack/data-interface
 // Zentrale Typdefinitionen für das DataInterface (Connector-Schnittstelle)
 
-export { BaseConnector, createObservable, shallowEqual, matchesFilter, findRelatedItems, type ReactiveObservable } from "./base-connector.js"
+export { BaseConnector, createObservable, shallowEqual, matchesFilter, findRelatedItems, applyPagination, type ReactiveObservable } from "./base-connector.js"
 
 // --- Core Types ---
 
@@ -67,11 +67,15 @@ export interface ItemFilter {
   hasField?: string[]
   createdBy?: string
   source?: string
+  limit?: number
+  offset?: number
 }
 
 export interface RelatedItemsOptions {
   direction?: "from" | "to" | "both"
   depth?: number
+  limit?: number
+  offset?: number
 }
 
 // --- Source (Multi-Source) ---

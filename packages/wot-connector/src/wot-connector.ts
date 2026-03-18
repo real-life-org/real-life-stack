@@ -20,6 +20,7 @@ import {
   createObservable,
   matchesFilter,
   findRelatedItems,
+  applyPagination,
   type ReactiveObservable,
 } from "@real-life-stack/data-interface"
 
@@ -573,7 +574,8 @@ export class WotConnector extends BaseConnector {
 
     const allItems = Object.values(doc.items ?? {}).map(deserializeItem)
     if (!filter) return allItems
-    return allItems.filter((item) => matchesFilter(item, filter))
+    const filtered = allItems.filter((item) => matchesFilter(item, filter))
+    return applyPagination(filtered, filter.limit, filter.offset)
   }
 
   override async getItem(id: string): Promise<Item | null> {
@@ -1048,7 +1050,7 @@ export class WotConnector extends BaseConnector {
         obs.set([])
       } else {
         const filtered = allItems.filter((item) => matchesFilter(item, filter))
-        obs.set(filtered)
+        obs.set(applyPagination(filtered, filter.limit, filter.offset))
       }
     }
 
