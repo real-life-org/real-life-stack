@@ -148,6 +148,8 @@ type Unsubscribe = () => void
 interface RelatedItemsOptions {
   direction?: "from" | "to" | "both"   // Default: "to"
   depth?: number                        // Verschachtelte Relations auflösen
+  limit?: number                        // Max. Anzahl (für Paging)
+  offset?: number                       // Überspringe die ersten N
 }
 
 interface Group {
@@ -169,6 +171,8 @@ interface ItemFilter {
   hasField?: string[]              // Items filtern die bestimmte Felder in data haben
   createdBy?: string
   source?: string
+  limit?: number                   // Max. Anzahl (für Paging)
+  offset?: number                  // Überspringe die ersten N
   include?: IncludeDirective[]     // Relations inline mitladen
 }
 
@@ -176,6 +180,7 @@ interface IncludeDirective {
   predicate: string                // Welche Relation auflösen?
   as: string                       // Feld-Name in _included
   limit?: number                   // Max. Anzahl
+  offset?: number                  // Überspringe die ersten N
 }
 ```
 
