@@ -762,10 +762,10 @@ function IncomingEventDialogs({ onCloseVerifyDialog }: { onCloseVerifyDialog?: (
     dismiss()
   }
 
-  // Close the verify dialog when an incoming verification arrives
+  // Close the verify dialog when an incoming/mutual verification arrives
   useEffect(() => {
-    if (incomingVerification) onCloseVerifyDialog?.()
-  }, [incomingVerification, onCloseVerifyDialog])
+    if (incomingVerification || mutualVerification) onCloseVerifyDialog?.()
+  }, [incomingVerification, mutualVerification, onCloseVerifyDialog])
 
   return (
     <>
