@@ -103,8 +103,6 @@ export function GroupDialog({
         setInvitingId(null)
         setInvitedIds(new Set())
         setInviteErrors(new Map())
-        setShowManualDid(false)
-        setManualDid("")
       }
       onOpenChange(nextOpen)
     },
