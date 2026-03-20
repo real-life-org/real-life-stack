@@ -15,6 +15,8 @@ export interface CommentWithAuthor {
 export interface UseCommentsResult {
   /** First-level comments sorted chronologically (oldest first). */
   comments: CommentWithAuthor[]
+  /** All comments (first + second level) for threading. */
+  allComments: Item[]
   /** Whether the data is still loading. */
   isLoading: boolean
   /** Whether the current user can comment (authenticated + writable connector). */
@@ -147,7 +149,8 @@ export function useComments(itemId: string): UseCommentsResult {
 
   return {
     comments: commentsWithAuthors,
-    isLoading: observable !== null && allComments.length === 0 && observable.current.length === 0,
+    allComments,
+    isLoading: false,
     canComment,
     createComment,
   }

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../primitives/card"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Tooltip, TooltipTrigger, TooltipContent } from "../primitives/tooltip"
 import { cn, getTagColor } from "../../lib/utils"
-import { EyeOff, Eye, ChevronDown, ChevronRight } from "lucide-react"
+import { EyeOff, Eye, ChevronDown, ChevronRight, MessageCircle } from "lucide-react"
 
 export interface KanbanColumn {
   id: string
@@ -62,6 +62,7 @@ function KanbanCard({ item, users, isDragged, onDragStart, onDragEnd, onClick }:
   const userMap = new Map((users ?? []).map((u) => [u.id, u]))
   const assignees = assigneeIds.map((id) => userMap.get(id)).filter((u): u is User => u != null)
   const tags = (item.data.tags as string[]) ?? []
+  const commentCount = (item.data.commentCount as number | undefined) ?? 0
 
   return (
     <div
@@ -93,34 +94,43 @@ function KanbanCard({ item, users, isDragged, onDragStart, onDragEnd, onClick }:
         </div>
       )}
 
-      {assignees.length > 0 && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1 mt-2">
-              <div className="flex -space-x-1.5">
-                {assignees.map((user) => (
-                  <Avatar key={user.id} className="h-5 w-5 border border-background">
-                    <AvatarImage src={user.avatarUrl} alt={user.displayName} />
-                    <AvatarFallback className="text-[8px] bg-muted">
-                      {getInitials(user.displayName ?? user.id)}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
+      <div className="flex items-center gap-2 mt-2">
+        {assignees.length > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1">
+                <div className="flex -space-x-1.5">
+                  {assignees.map((user) => (
+                    <Avatar key={user.id} className="h-5 w-5 border border-background">
+                      <AvatarImage src={user.avatarUrl} alt={user.displayName} />
+                      <AvatarFallback className="text-[8px] bg-muted">
+                        {getInitials(user.displayName ?? user.id)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                  {assignees.length === 1
+                    ? assignees[0].displayName
+                    : assignees.length === 2
+                      ? `${assignees[0].displayName}, ${assignees[1].displayName}`
+                      : `${assignees[0].displayName} + ${assignees.length - 1} weitere`}
+                </span>
               </div>
-              <span className="text-[10px] text-muted-foreground">
-                {assignees.length === 1
-                  ? assignees[0].displayName
-                  : assignees.length === 2
-                    ? `${assignees[0].displayName}, ${assignees[1].displayName}`
-                    : `${assignees[0].displayName} + ${assignees.length - 1} weitere`}
-              </span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            {assignees.map((u) => u.displayName ?? u.id).join(", ")}
-          </TooltipContent>
-        </Tooltip>
-      )}
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {assignees.map((u) => u.displayName ?? u.id).join(", ")}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {commentCount > 0 && (
+          <div className="flex items-center gap-0.5 text-muted-foreground ml-auto">
+            <MessageCircle className="h-3 w-3" />
+            <span className="text-[10px]">{commentCount}</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
