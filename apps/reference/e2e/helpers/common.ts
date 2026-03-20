@@ -6,12 +6,25 @@ export async function createFreshContext(browser: Browser): Promise<{ context: B
     locale: 'de-DE',
   })
   const page = await context.newPage()
+
   return { context, page }
 }
 
 export async function navigateTo(page: Page, path = '/'): Promise<void> {
   const sep = path.includes('?') ? '&' : '?'
-  await page.goto(`${path}${sep}connector=wot`)
+  const url = `${path}${sep}connector=wot`
+  await page.goto(url)
+
+  // Clear IndexedDB to ensure fresh identity per context
+  await page.evaluate(async () => {
+    const dbs = await indexedDB.databases?.() ?? []
+    for (const db of dbs) {
+      if (db.name) indexedDB.deleteDatabase(db.name)
+    }
+  }).catch(() => {})
+
+  // Reload to pick up the clean state
+  await page.goto(url)
 }
 
 /**
