@@ -483,8 +483,9 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
     }
     if (newItem) {
       setPanelState({ mode: "edit", item: newItem })
+      onItemSelect?.(newItem.id)
     }
-  }, [createItem, currentUser?.id, tasks.length, activeWorkspaceId, connector, isAggregate, concreteGroups])
+  }, [createItem, currentUser?.id, tasks.length, activeWorkspaceId, connector, isAggregate, concreteGroups, onItemSelect])
 
   const handleCreateItem = useCallback(() => {
     handleTaskCreate()

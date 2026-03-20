@@ -77,8 +77,11 @@ function KanbanCard({ item, users, isDragged, onDragStart, onDragEnd, onClick }:
         isDragged && "opacity-50"
       )}
     >
-      <p className="font-medium text-sm text-foreground leading-snug">
-        {String(item.data.title ?? "")}
+      <p className={cn(
+        "font-medium text-sm leading-snug",
+        String(item.data.title ?? "") ? "text-foreground" : "text-muted-foreground italic"
+      )}>
+        {String(item.data.title ?? "") || "Ohne Titel"}
       </p>
 
       {tags.length > 0 && (
