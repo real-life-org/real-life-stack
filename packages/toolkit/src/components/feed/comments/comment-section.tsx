@@ -86,12 +86,10 @@ export function CommentSection({
   }, [])
 
   return (
-    <div className={cn("flex flex-col", className)}>
-      {/* Scrollable comment list */}
-      <div className="flex-1 overflow-y-auto">
-        {comments.length === 0 ? (
-          null
-        ) : (
+    <div className={cn("flex flex-col min-h-full", className)}>
+      {/* Comment list — grows to push input to the bottom */}
+      <div className="flex-1">
+        {comments.length > 0 && (
           <div className="space-y-4 p-4">
             {comments.map((comment) => (
               <CommentThread
@@ -107,7 +105,7 @@ export function CommentSection({
         )}
       </div>
 
-      {/* Sticky input at the bottom of the nearest scroll container */}
+      {/* Input at the bottom — sticky when scrolling, pushed down by flex-1 when not */}
       {canComment && (
         <div className="sticky bottom-0 bg-background z-10">
           <CommentInput
