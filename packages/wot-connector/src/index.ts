@@ -1,3 +1,5 @@
-export { WotConnector } from "./wot-connector.js"
+export { WotConnector, PERSONAL_ID } from "./wot-connector.js"
 export type { WotConnectorConfig, RlsSpaceDoc, SerializedItem } from "./types.js"
 export { serializeItem, deserializeItem } from "./serialization.js"
+export { CrossSpaceIndex } from "./CrossSpaceIndex.js"
+export type { CrossSpaceEntry, CrossSpaceIndexOptions } from "./CrossSpaceIndex.js"

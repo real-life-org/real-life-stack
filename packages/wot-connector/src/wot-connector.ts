@@ -71,11 +71,13 @@ import type {
 
 import type { WotConnectorConfig, RlsSpaceDoc, SerializedItem } from "./types.js"
 import { serializeItem, deserializeItem } from "./serialization.js"
+import { CrossSpaceIndex } from "./CrossSpaceIndex.js"
 
 // --- Constants ---
 
 const RLS_SPACE_TYPE = "rls"
 const DEFAULT_MODULES = ["feed", "kanban", "calendar", "map"]
+export const PERSONAL_ID = "__personal__"
 
 // --- WotConnector ---
 
@@ -101,6 +103,8 @@ export class WotConnector extends BaseConnector {
   private handleRemoteUnsub: (() => void) | null = null
   private notifyScheduled = false
   private itemCache: Item[] | null = null
+  private crossSpaceIndex: CrossSpaceIndex<RlsSpaceDoc, Item> | null = null
+  private crossSpaceUnsub: (() => void) | null = null
   private spacesSubscriptionUnsub: (() => void) | null = null
   private personalDocUnsub: (() => void) | null = null
   private contactsUnsub: (() => void) | null = null
@@ -175,6 +179,9 @@ export class WotConnector extends BaseConnector {
 
   async dispose(): Promise<void> {
     this.closeCurrentHandle()
+    this.crossSpaceUnsub?.()
+    this.crossSpaceIndex?.stop()
+    this.crossSpaceIndex = null
     this.spacesSubscriptionUnsub?.()
     this.personalDocUnsub?.()
     this.contactsUnsub?.()
@@ -279,6 +286,9 @@ export class WotConnector extends BaseConnector {
 
   override async logout(): Promise<void> {
     this.closeCurrentHandle()
+    this.crossSpaceUnsub?.()
+    this.crossSpaceIndex?.stop()
+    this.crossSpaceIndex = null
     this.spacesSubscriptionUnsub?.()
     this.personalDocUnsub?.()
     await this.replication?.stop()
@@ -443,10 +453,14 @@ export class WotConnector extends BaseConnector {
     this.currentGroupId = id
     this.currentGroupObservable.set(this.getCurrentGroup())
 
-    // Close old handle, open new one
+    // Close old handle
     this.closeCurrentHandle()
 
-    if (this.replication) {
+    if (id === PERSONAL_ID) {
+      // Personal view reads from CrossSpaceIndex — no handle needed
+      this.handleReady = Promise.resolve()
+      this.notifyAllObservers()
+    } else if (this.replication) {
       this.handleReady = this.openCurrentHandle().then(() => this.notifyAllObservers())
     }
   }
@@ -472,6 +486,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async updateGroup(id: string, updates: Partial<Group>): Promise<Group> {
+    if (id === PERSONAL_ID) throw new Error("Cannot update personal view")
     if (!this.replication) throw new Error("Not authenticated")
 
     // All metadata via updateSpace (framework level — syncs via _meta)
@@ -493,6 +508,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async deleteGroup(id: string): Promise<void> {
+    if (id === PERSONAL_ID) throw new Error("Cannot delete personal view")
     if (!this.replication) throw new Error("Not authenticated")
 
     // "Delete" = leave the space: remove self from members, clean up local data
@@ -517,6 +533,24 @@ export class WotConnector extends BaseConnector {
 
   override async getMembers(groupId: string): Promise<User[]> {
     if (!this.replication) return []
+
+    if (groupId === PERSONAL_ID) {
+      // Personal view: union of all members from all shared spaces
+      const spaces = await this.replication.getSpaces()
+      const allDids = new Set<string>()
+      for (const space of spaces) {
+        if (space.type === "shared") {
+          for (const did of space.members) {
+            allDids.add(did)
+          }
+        }
+      }
+      const users = await Promise.all(
+        [...allDids].map((did) => this.getUser(did))
+      )
+      return users.filter((u: User | null): u is User => u !== null)
+    }
+
     const space = await this.replication.getSpace(groupId)
     if (!space) return []
 
@@ -571,10 +605,8 @@ export class WotConnector extends BaseConnector {
 
   override async getItems(filter?: ItemFilter): Promise<Item[]> {
     await this.handleReady
-    const doc = this.getCurrentDoc()
-    if (!doc) return []
-
-    const allItems = Object.values(doc.items ?? {}).map(deserializeItem)
+    const allItems = this.getCachedItems()
+    if (allItems.length === 0) return []
     if (!filter) return allItems
     const filtered = allItems.filter((item) => matchesFilter(item, filter))
     return applyPagination(filtered, filter.limit, filter.offset)
@@ -582,6 +614,10 @@ export class WotConnector extends BaseConnector {
 
   override async getItem(id: string): Promise<Item | null> {
     await this.handleReady
+    if (this.currentGroupId === PERSONAL_ID && this.crossSpaceIndex) {
+      const entry = this.crossSpaceIndex.getAll().get(id)
+      return entry?.item ?? null
+    }
     const doc = this.getCurrentDoc()
     if (!doc) return null
 
@@ -592,6 +628,11 @@ export class WotConnector extends BaseConnector {
 
   override async createItem(item: Omit<Item, "id" | "createdAt">): Promise<Item> {
     await this.handleReady
+
+    if (this.currentGroupId === PERSONAL_ID) {
+      throw new Error("Cannot create items in personal view without a target space. Use setCurrentGroup() to select a specific group first.")
+    }
+
     const handle = this.currentHandle
     if (!handle) throw new Error("No active group selected")
 
@@ -613,8 +654,8 @@ export class WotConnector extends BaseConnector {
 
   override async updateItem(id: string, updates: Partial<Item>): Promise<Item> {
     await this.handleReady
-    const handle = this.currentHandle
-    if (!handle) throw new Error("No active group selected")
+
+    const handle = await this.resolveHandleForItem(id)
 
     handle.transact((doc) => {
       const existing = doc.items[id]
@@ -634,6 +675,12 @@ export class WotConnector extends BaseConnector {
       if (updates.schemaVersion !== undefined) existing.schemaVersion = updates.schemaVersion
     })
 
+    // Reindex if in personal view (handle is not currentHandle)
+    if (this.currentGroupId === PERSONAL_ID && this.crossSpaceIndex) {
+      const spaceId = this.crossSpaceIndex.getItemSpaceId(id)
+      if (spaceId) this.crossSpaceIndex.reindexSpace(spaceId)
+    }
+
     this.notifyAllObservers()
     const updated = await this.getItem(id)
     if (!updated) throw new Error(`Item ${id} disappeared after update`)
@@ -642,13 +689,38 @@ export class WotConnector extends BaseConnector {
 
   override async deleteItem(id: string): Promise<void> {
     await this.handleReady
-    const handle = this.currentHandle
-    if (!handle) throw new Error("No active group selected")
+
+    const handle = await this.resolveHandleForItem(id)
 
     handle.transact((doc) => {
       delete doc.items[id]
     })
+
+    // Reindex if in personal view
+    if (this.currentGroupId === PERSONAL_ID && this.crossSpaceIndex) {
+      const spaceId = this.crossSpaceIndex.getItemSpaceId(id)
+      if (spaceId) this.crossSpaceIndex.reindexSpace(spaceId)
+    }
+
     this.notifyAllObservers()
+  }
+
+  /**
+   * Resolve the SpaceHandle that owns a given item.
+   * In personal view, looks up the space via CrossSpaceIndex and opens a temporary handle.
+   * In normal group view, returns the current handle.
+   */
+  private async resolveHandleForItem(itemId: string): Promise<SpaceHandle<RlsSpaceDoc>> {
+    if (this.currentGroupId === PERSONAL_ID && this.crossSpaceIndex && this.replication) {
+      const spaceId = this.crossSpaceIndex.getItemSpaceId(itemId)
+      if (!spaceId) throw new Error(`Item ${itemId} not found in any space`)
+      // The CrossSpaceIndex already has handles open for all spaces,
+      // so openSpace returns the existing handle (no extra cost)
+      return this.replication.openSpace<RlsSpaceDoc>(spaceId)
+    }
+
+    if (!this.currentHandle) throw new Error("No active group selected")
+    return this.currentHandle
   }
 
   // ==================== Observables ====================
@@ -831,7 +903,27 @@ export class WotConnector extends BaseConnector {
     })
     this.syncProfileObservable()
 
-    // 9. Watch spaces for reactive group list
+    // 9. CrossSpaceIndex for personal view (aggregates items across all shared spaces)
+    this.crossSpaceIndex = new CrossSpaceIndex<RlsSpaceDoc, Item>(
+      this.replication,
+      (doc) => {
+        const map = new Map<string, Item>()
+        for (const [id, s] of Object.entries(doc.items ?? {})) {
+          map.set(id, deserializeItem(s))
+        }
+        return map
+      },
+      (item) => item.type,
+      { spaceFilter: (info) => info.type === "shared" },
+    )
+    this.crossSpaceIndex.start()
+    this.crossSpaceUnsub = this.crossSpaceIndex.onChange(() => {
+      if (this.currentGroupId === PERSONAL_ID) {
+        this.notifyAllObservers()
+      }
+    })
+
+    // 10. Watch spaces for reactive group list
     const spacesSubscribable = this.replication.watchSpaces()
     this.spacesSubscriptionUnsub = spacesSubscribable.subscribe((spaces: SpaceInfo[]) => {
       this.updateGroupsFromSpaces(spaces)
@@ -945,9 +1037,29 @@ export class WotConnector extends BaseConnector {
 
   private updateGroupsFromSpaces(spaces: SpaceInfo[]): void {
     // All shared spaces are groups — WoT and RLS spaces are fully compatible
-    this.groupsCache = spaces
+    const realGroups = spaces
       .filter((s) => s.type === "shared")
       .map((s) => this.spaceToGroup(s))
+
+    // Build module union from all groups for the personal view
+    const allModules = new Set<string>()
+    for (const g of realGroups) {
+      for (const m of (g.data?.modules as string[]) ?? DEFAULT_MODULES) {
+        allModules.add(m)
+      }
+    }
+
+    // Personal view is always first
+    const personalGroup: Group = {
+      id: PERSONAL_ID,
+      name: "Mein Netzwerk",
+      data: {
+        scope: "personal",
+        modules: [...allModules],
+      },
+    }
+
+    this.groupsCache = [personalGroup, ...realGroups]
 
     // Update the reactive observable (inherited from BaseConnector)
     this.groupsObservable.set([...this.groupsCache])
@@ -964,9 +1076,9 @@ export class WotConnector extends BaseConnector {
       void this.notifyMemberObservers(groupId)
     }
 
-    // Auto-select first group if none selected
-    if (!this.currentGroupId && this.groupsCache.length > 0) {
-      this.setCurrentGroup(this.groupsCache[0].id)
+    // Auto-select personal view if none selected
+    if (!this.currentGroupId) {
+      this.setCurrentGroup(PERSONAL_ID)
     }
   }
 
@@ -1036,20 +1148,26 @@ export class WotConnector extends BaseConnector {
 
   private getCachedItems(): Item[] {
     if (!this.itemCache) {
-      const doc = this.getCurrentDoc()
-      this.itemCache = doc ? Object.values(doc.items ?? {}).map(deserializeItem) : []
+      if (this.currentGroupId === PERSONAL_ID && this.crossSpaceIndex) {
+        this.itemCache = [...this.crossSpaceIndex.getAll().values()].map((e) => e.item)
+      } else {
+        const doc = this.getCurrentDoc()
+        this.itemCache = doc ? Object.values(doc.items ?? {}).map(deserializeItem) : []
+      }
     }
     return this.itemCache
   }
 
   private notifyAllObserversNow(): void {
-    const doc = this.getCurrentDoc()
+    const isPersonal = this.currentGroupId === PERSONAL_ID
+    const doc = isPersonal ? null : this.getCurrentDoc()
     const allItems = this.getCachedItems()
+    const hasData = isPersonal ? this.crossSpaceIndex != null : doc != null
 
     // Update item list observables
     for (const [key, obs] of this.itemObservables) {
       const filter: ItemFilter = JSON.parse(key)
-      if (!doc) {
+      if (!hasData) {
         obs.set([])
       } else {
         const filtered = allItems.filter((item) => matchesFilter(item, filter))
@@ -1059,11 +1177,16 @@ export class WotConnector extends BaseConnector {
 
     // Update single-item observables
     for (const [id, obs] of this.itemByIdObservables) {
-      if (!doc) {
+      if (!hasData) {
         obs.set(null)
-      } else {
+      } else if (isPersonal && this.crossSpaceIndex) {
+        const entry = this.crossSpaceIndex.getAll().get(id)
+        obs.set(entry?.item ?? null)
+      } else if (doc) {
         const serialized = doc.items?.[id]
         obs.set(serialized ? deserializeItem(serialized) : null)
+      } else {
+        obs.set(null)
       }
     }
 
