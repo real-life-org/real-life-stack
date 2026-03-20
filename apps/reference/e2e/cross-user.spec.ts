@@ -42,7 +42,9 @@ test.describe('Cross-User — Verification, Invite, Sync', () => {
       // Step 4: Bob accepts invitation
       await bobPage.getByText('Neue Einladung').waitFor({ timeout: 30_000 })
       await bobPage.getByRole('button', { name: 'Öffnen' }).click()
-      await bobPage.waitForTimeout(2000)
+      // Wait until Bob is in the group (navbar tabs appear)
+      await bobPage.getByRole('button', { name: 'Feed' }).waitFor({ timeout: 30_000 })
+      await bobPage.waitForTimeout(1000)
 
       // Step 5: Bob sees "Einkaufen"
       await navigateToKanban(bobPage)
