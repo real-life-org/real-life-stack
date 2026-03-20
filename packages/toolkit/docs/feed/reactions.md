@@ -6,7 +6,7 @@
 
 1. **ReactionBar** — inline summary of existing reactions on an item, plus a button to add new ones
 2. **ReactionPicker** — floating panel showing the available emoji set for selection
-3. **ReactionUsersPanel** — panel showing which users reacted, with emoji tabs
+3. **ReactionDetails** — panel showing who reacted, filterable by emoji
 
 Reactions are applicable to any item type that supports them (initially: post, comment). The architecture follows the RLS item+relations model: each reaction is a dedicated item with a `reactsTo` relation to the target.
 
@@ -103,14 +103,19 @@ We evaluated existing React emoji picker and reaction libraries. None met our re
 
 Reactions are stored at two levels:
 
-1. **Summary on the target item** (`data.reactions`) — aggregated emoji counts, available immediately without extra requests. Enables the ReactionBar to render from the item alone.
-2. **Individual reaction items** (`type: "reaction"`) — one per user+emoji+target, linked via `reactsTo` relation. Enables per-user attribution, toggle behavior, and the "who reacted" panel.
+1. **Summary on the target item** (`data.reactions` + `data.myReaction`) — aggregated emoji counts and current user's reaction, available immediately without extra requests. Enables the ReactionBar to render fully (counts + highlight state) from the item alone.
+2. **Individual reaction items** (`type: "reaction"`) — one per user per target (at most one), linked via `reactsTo` relation. Enables per-user attribution and the "who reacted" panel.
 
-The summary is the **read-optimized view**. The reaction items are the **source of truth**. Connectors keep them in sync (e.g. on createItem/deleteItem of a reaction, the connector updates the target item's `data.reactions`).
+The summary is the **read-optimized view**. The reaction items are the **source of truth**. Connectors keep them in sync (e.g. on createItem/deleteItem of a reaction, the connector updates `data.reactions` and `data.myReaction` on the target).
+
+**Constraint: one reaction per user per item.** A user can react with exactly one emoji per item. Selecting a different emoji replaces the previous reaction. Selecting the same emoji removes it.
 
 ### Layer 1: Reactions summary on the target item
 
-Any item that supports reactions carries a `reactions` field in its `data`:
+Any item that supports reactions carries two fields in its `data`:
+
+- **`reactions`** — aggregated counts (`Record<string, number>`): emoji → total number of users
+- **`myReaction`** — current user's emoji (`string | undefined`): which emoji the authenticated user has used, if any
 
 ```typescript
 // Post item with reaction summary
@@ -123,12 +128,13 @@ Any item that supports reactions carries a `reactions` field in its `data`:
       "❤️": 12,
       "👍": 5,
       "😂": 3
-    }
+    },
+    myReaction: "❤️"  // current user has reacted with ❤️
   }
 }
 ```
 
-This is a `Record<string, number>` — emoji → count. The ReactionBar renders directly from this field. No extra request needed.
+The ReactionBar renders directly from these fields — counts for the pills, `myReaction` for the highlighted state. No extra request needed. Each user can have at most one reaction per item.
 
 ### Layer 2: Individual reaction items (per-user attribution)
 
@@ -156,6 +162,12 @@ Each reaction is a lightweight item with a `reactsTo` relation to the target:
 /** Aggregated reaction counts, embedded in target item's data. */
 export type ReactionSummary = Record<string, number>
 
+/** Mixin for item data types that support reactions. */
+export interface Reactable {
+  reactions?: ReactionSummary
+  myReaction?: string
+}
+
 export interface ReactionData {
   /** The emoji character used for this reaction. */
   emoji: string
@@ -171,26 +183,25 @@ export interface ReactionRelations {
 }
 ```
 
-Additionally, PostData (and any other item type supporting reactions) has an optional `reactions` field:
+Item data types that support reactions extend `Reactable`:
 
 ```typescript
-export interface PostData {
-  // ... existing fields ...
-  /** Aggregated reaction counts. Emoji → number of users. Maintained by connector. */
-  reactions?: ReactionSummary
-}
+export interface PostData extends Reactable { ... }
+export interface EventData extends Reactable { ... }
 ```
+
+This means any post, task, or event can carry `reactions` and `myReaction` in its data. The `Reactable` mixin avoids repeating these fields in every interface and clearly documents which item types support reactions.
 
 #### Querying
 
-- **Render ReactionBar:** Read `item.data.reactions` — no extra request
-- **Check if current user reacted with a specific emoji:** `getRelatedItems(postId, "reactsTo", { direction: "to" })`, filter by `createdBy === currentUserId` and `data.emoji === emoji`
-- **Get users who reacted with an emoji (for ReactionUsersPanel):** `getRelatedItems(postId, "reactsTo", { direction: "to" })`, filter by `data.emoji`, resolve user info from `createdBy`
-- **Toggle reaction:** Create or delete the user's reaction item — connector updates `data.reactions` on the target
+- **Render ReactionBar:** Read `item.data.reactions` (counts) + `item.data.myReaction` (highlight state) — no extra request
+- **Check if current user reacted:** Read `item.data.myReaction` — no extra request
+- **Get users who reacted with an emoji (for ReactionDetails):** `getRelatedItems(itemId, "reactsTo", { direction: "to" })`, filter by `data.emoji`, resolve user info from `createdBy`
+- **Toggle reaction:** Create, update, or delete the user's reaction item — connector updates `data.reactions` and `data.myReaction` on the target. Selecting the same emoji removes the reaction; selecting a different emoji replaces it.
 
 ### Aggregated view model (UI)
 
-The hook computes this from `item.data.reactions` (counts) + current user's reaction items (toggle state):
+The hook computes this directly from `item.data.reactions` (counts) + `item.data.myReaction` (current user's emoji):
 
 ```typescript
 interface AggregatedReaction {
@@ -198,8 +209,8 @@ interface AggregatedReaction {
   emoji: string
   /** Total count of users who reacted with this emoji. */
   count: number
-  /** Whether the current user has reacted with this emoji. */
-  reacted: boolean
+  /** Whether this is the current user's reaction. At most one emoji can be true. */
+  isMyReaction: boolean
 }
 ```
 
@@ -211,31 +222,34 @@ interface AggregatedReaction {
 
 - **US-R1**: As a user I see a compact row of emoji pills below a post/comment, each showing the emoji and its count (e.g. `❤️ 12  👍 5  😂 3`), sorted by frequency (highest first).
 - **US-R2**: As a user I see at most N emojis in the bar (e.g. 6). If there are more distinct emojis, the rest are collapsed into a `+3` overflow indicator.
-- **US-R3**: As a user I can click an emoji pill to toggle my reaction — if I haven't reacted with that emoji, I add my reaction; if I already have, I remove it.
-- **US-R4**: As a user I see my own reactions visually highlighted (e.g. colored border or background) so I know which emojis I've used.
+- **US-R3**: As a user I can click/tap the emoji area of a pill to set or change my reaction. Clicking my current reaction removes it. Clicking a different emoji switches my reaction to that one (each user can only have one reaction per item).
+- **US-R4**: As a user I see my own reaction visually highlighted (e.g. colored border or background) so I know which emoji I've used.
 - **US-R5**: As a user I see a `+` button (or `+ 😊`) at the end of the reaction bar to open the ReactionPicker.
-- **US-R6**: As a user I can tap/click on an emoji pill to open the **ReactionUsersPanel** that shows all users who reacted with that emoji.
+- **US-R6a** (desktop): As a user I can click the **count** of an emoji pill to open the **ReactionDetails** panel, pre-filtered to that emoji. The count is styled as a clickable element (e.g. underline on hover).
+- **US-R6b** (mobile): As a user I can **long-press** (~500ms) anywhere on an emoji pill to open the **ReactionDetails** panel. A subtle visual cue (e.g. slight scale) indicates the long press is registering.
 
 ### ReactionPicker
 
 - **US-R7**: As a user, when I click the `+` button, a floating panel appears near the trigger showing all 16 available emojis as clickable buttons.
-- **US-R8**: As a user I can click an emoji in the picker to immediately add my reaction — the picker closes after selection.
+- **US-R8**: As a user I can click an emoji in the picker to set my reaction (or switch to it if I already reacted with a different emoji) — the picker closes after selection.
 - **US-R9**: As a user the picker always positions itself to fit on screen — it flips direction if there isn't enough space above/below/left/right.
 - **US-R10**: As a user I can close the picker by clicking outside, pressing Escape, or selecting an emoji.
 
-### ReactionUsersPanel (who reacted)
+### ReactionDetails (who reacted)
 
-- **US-R11**: As a user I see the ReactionUsersPanel when I tap/click an emoji pill in the ReactionBar. It shows a list of users (avatar + display name) who reacted with that emoji.
-- **US-R12**: As a user I see emoji tabs/pills at the top of the panel so I can switch between emojis to see who reacted with each one, without closing and reopening.
-- **US-R13**: As a user the first tab shows "All" with all users who reacted (any emoji), grouped by emoji.
-- **US-R14**: As a user the panel opens in an AdaptivePanel (bottom sheet on mobile, popover/panel on desktop).
-- **US-R15**: As a user I can close the panel by swiping down (mobile), clicking outside, or pressing Escape.
+- **US-R11**: As a user I see the ReactionDetails panel when I tap/click an emoji pill in the ReactionBar.
+- **US-R12**: As a user I see a **filter row** at the top of the panel showing all emojis that have been used, each with its count (e.g. `❤️ 12  👍 5  😂 3`). An "All" option is shown first.
+- **US-R13**: As a user I can click an emoji in the filter row to filter the list to only users who reacted with that emoji. Clicking "All" shows all reactions. The panel opens pre-filtered to the emoji I clicked in the ReactionBar.
+- **US-R14**: As a user I see a flat list of reactions below the filter row. Each row shows: avatar, display name, and the emoji they reacted with. The list is sorted in reverse chronological order (most recent first). No timestamps are displayed.
+- **US-R15**: As a user the panel opens in an AdaptivePanel (bottom sheet on mobile, popover/panel on desktop).
+- **US-R16**: As a user I can close the panel by swiping down (mobile), clicking outside, or pressing Escape.
 
 ### General
 
-- **US-R16**: As a user the ReactionBar, ReactionPicker, and ReactionUsersPanel work on both posts and comments.
-- **US-R17**: As a user I see reaction changes in real-time when other users react (via observable pattern).
-- **US-R18**: As a developer I can embed `<ReactionBar>` on any item by passing the item ID. The component handles data fetching and mutations internally via hooks.
+- **US-R17**: As a user the ReactionBar, ReactionPicker, and ReactionDetails work on posts, events, and comments.
+- **US-R18**: As a user I see reaction changes in real-time when other users react (via observable pattern).
+- **US-R19**: As a developer I can embed `<ReactionBar>` on any item by passing the item ID. The component handles data fetching and mutations internally via hooks.
+- **US-R20**: As an unauthenticated user I can see existing reactions (counts) but the `+` button and pill click-to-react are hidden. I can still open ReactionDetails to see who reacted.
 
 ---
 
@@ -246,13 +260,13 @@ interface AggregatedReaction {
 ```
 ReactionBar            — inline display: emoji pills + "add" button
 ReactionPicker         — floating panel with all 16 emojis
-ReactionUsersPanel     — panel showing which users reacted, with emoji tabs
+ReactionDetails        — panel showing who reacted, with emoji filter row + flat user list
 ```
 
 ### Hooks
 
 ```
-useReactions(itemId)                — returns AggregatedReaction[], toggle(emoji), loading state
+useReactions(itemId)                — returns AggregatedReaction[], react(emoji), loading state
 useReactionUsers(itemId, emoji?)    — returns users who reacted (optionally filtered by emoji), lazy-loaded
 ```
 
@@ -263,7 +277,7 @@ useReactionUsers(itemId, emoji?)    — returns users who reacted (optionally fi
   {/* Renders: emoji pills | +add button */}
 
   {/* On emoji pill click: */}
-  <ReactionUsersPanel
+  <ReactionDetails
     itemId="post-1"
     initialEmoji="❤️"
     reactions={aggregatedReactions}
@@ -296,15 +310,39 @@ Implementation: CSS `position: fixed` with calculated `top`/`left`. No Popper.js
 
 ---
 
-## 8. Animations
+## 8. Pill Interaction Model
+
+Each emoji pill has two interaction zones:
+
+```
+┌─────────────┐
+│  ❤️  │  12  │
+│ emoji│count │
+└─────────────┘
+```
+
+**Desktop:**
+- Click on emoji area → toggle reaction
+- Click on count area → open ReactionDetails (count styled as clickable: cursor pointer, underline on hover)
+
+**Mobile (touch):**
+- Short tap (anywhere on pill) → toggle reaction
+- Long press (~500ms, anywhere on pill) → open ReactionDetails
+
+Long press detection uses `pointerdown`/`pointerup` with a 500ms timer. If the pointer is released before 500ms → toggle. If held ≥ 500ms → open details (and suppress the toggle). Visual feedback during long press: subtle `scale(1.05)` transition starting at ~200ms to signal "keep holding".
+
+---
+
+## 9. Animations
 
 - **Picker appear/disappear:** `opacity 0→1` + `scale(0.95)→scale(1)`, 150ms ease-out. Origin at trigger button.
 - **Emoji pill toggle:** Brief `scale(1.2)` pulse on the pill, 150ms.
+- **Long press feedback:** `scale(1.05)` at 200ms into the press, revert on release.
 - **No Framer Motion.** CSS transitions only.
 
 ---
 
-## 9. Accessibility
+## 10. Accessibility
 
 - ReactionPicker is keyboard-navigable (arrow keys between emojis, Enter to select, Escape to close)
 - Focus trap inside the picker when open
@@ -314,7 +352,7 @@ Implementation: CSS `position: fixed` with calculated `top`/`left`. No Popper.js
 
 ---
 
-## 10. Props Interfaces
+## 11. Props Interfaces
 
 ```typescript
 /** The 16 available reaction emojis. */
@@ -343,12 +381,12 @@ interface ReactionPickerProps {
   anchorRef: React.RefObject<HTMLElement>
 }
 
-interface ReactionUsersPanelProps {
-  /** ID of the item to show reaction users for. */
+interface ReactionDetailsProps {
+  /** ID of the item to show reaction details for. */
   itemId: string
-  /** Emoji to show initially (pre-selects the tab). */
+  /** Emoji to pre-filter to when opening. If undefined, shows "All". */
   initialEmoji?: string
-  /** Aggregated reactions (passed from ReactionBar to avoid re-fetching). */
+  /** Aggregated reactions (passed from ReactionBar to avoid re-fetching counts). */
   reactions: AggregatedReaction[]
   /** Callback when the panel is dismissed. */
   onClose: () => void
@@ -357,15 +395,44 @@ interface ReactionUsersPanelProps {
 
 ---
 
-## 11. Scope and Non-Goals
+## 12. Edge Cases and Behavioral Rules
+
+### Authentication
+- **Unauthenticated users** see reaction counts and can open ReactionDetails, but the `+` button and click-to-react on pills are hidden. `myReaction` is always `undefined`.
+
+### Optimistic updates
+- Clicking an emoji immediately updates the UI (count ±1, highlight state) before the server confirms. If the request fails, the UI reverts.
+
+### Rapid clicks (race conditions)
+- **Latest wins.** If a user clicks ❤️ → 👍 → 😂 quickly, only the last emoji (😂) is sent. Previous in-flight requests are cancelled or ignored. Implementation: debounce or abort controller pattern.
+
+### Empty state
+- If an item has no reactions, only the `+` button is shown (no empty pill row). The first reaction creates the first pill.
+
+### Self-reactions
+- Users can react to their own posts, tasks, events, and comments.
+
+### Deleted users
+- **Open question (to be clarified with team).** Options: show "Unknown user" in ReactionDetails, or cascade-delete the reaction. Until decided, the UI should handle missing user info gracefully (fallback avatar + "Unknown").
+
+### Item types supporting reactions
+- Content item types that extend `Reactable`: **PostData**, **EventData**. Since comments are regular items (e.g. posts with a `commentOn` relation), they inherit reactions from their item type.
+- **TaskData**, **PlaceData**, **FeatureData**, **ProfileItemData** do NOT support reactions. Tasks are work items — reactions on them add no value.
+
+### Demo data
+- `packages/data-interface/data/items.json` should include example posts with `reactions` and `myReaction` fields, plus corresponding reaction items with `reactsTo` relations, to enable development and testing.
+
+---
+
+## 13. Scope and Non-Goals
 
 ### In scope
 - ReactionBar display with aggregation and toggle
 - ReactionPicker with 16 fixed emojis
-- ReactionUsersPanel showing who reacted per emoji
+- ReactionDetails panel with emoji filter and chronological user list
 - Reaction data model: summary counts on item + individual reaction items with `reactsTo` relation
 - `useReactions` and `useReactionUsers` hooks with real-time updates
-- Applicable to posts and comments
+- Applicable to posts, events, and comments (all Reactable item types)
 - User attribution (who reacted)
 - Keyboard accessibility
 
@@ -389,3 +456,8 @@ interface ReactionUsersPanelProps {
 | 2026-03-19 | Removed likedBy predicate in favor of reactsTo |
 | 2026-03-19 | Fixed emoji set (16 emojis) instead of full picker — library evaluation documented |
 | 2026-03-19 | Evaluated frimousse, emoji-picker-react, emoji-mart, emoji-picker-element, @charkour/react-reactions — decided to build in-house |
+| 2026-03-20 | Added myReaction field (singular) — one reaction per user per item |
+| 2026-03-20 | Renamed ReactionUsersPanel → ReactionDetails — flat list with emoji filter row, reverse chronological |
+| 2026-03-20 | Reactable mixin interface — TaskData, EventData, PostData all extend Reactable |
+| 2026-03-20 | Edge cases: auth, optimistic updates, race conditions, empty state, self-reactions, deleted users, demo data |
+| 2026-03-20 | Pill interaction model: desktop click-on-count vs. mobile long-press for ReactionDetails |

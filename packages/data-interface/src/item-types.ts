@@ -32,6 +32,14 @@ export interface GeoLocation {
 /** Aggregated reaction counts, embedded in target item's data. Emoji → number of users. */
 export type ReactionSummary = Record<string, number>
 
+/** Mixin for item data types that support reactions. */
+export interface Reactable {
+  /** Aggregated reaction counts. Emoji → number of users. Maintained by connector. */
+  reactions?: ReactionSummary
+  /** The emoji the current user has reacted with, or undefined if none. User-specific, set by connector per session. */
+  myReaction?: string
+}
+
 // ============================================================
 // Task
 // ============================================================
@@ -81,7 +89,7 @@ export function isTask(item: Item): item is TaskItem {
 // Event
 // ============================================================
 
-export interface EventData {
+export interface EventData extends Reactable {
   /** Display name of the event. */
   title: string
   /** Description, markdown. */
@@ -113,6 +121,8 @@ export interface EventRelations {
   reverse: {
     /** Comments on this event (commentOn → this event, 0..n) */
     commentOn: Item
+    /** Reactions on this event (reactsTo → this event, 0..n) */
+    reactsTo: ReactionItem
   }
 }
 
@@ -124,15 +134,13 @@ export function isEvent(item: Item): item is EventItem {
 // Post
 // ============================================================
 
-export interface PostData {
+export interface PostData extends Reactable {
   /** Optional headline. */
   title?: string
   /** Body content, markdown. Determines feed display. */
   content: string
   /** Free-text tags for filtering and categorization. */
   tags?: string[]
-  /** Aggregated reaction counts. Emoji → number of users. Maintained by connector. */
-  reactions?: ReactionSummary
 }
 
 export type PostItem = Item & { type: "post"; data: PostData }
