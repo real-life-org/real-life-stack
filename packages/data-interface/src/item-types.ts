@@ -40,11 +40,17 @@ export interface Reactable {
   myReaction?: string
 }
 
+/** Mixin for item data types that support comments. */
+export interface Commentable {
+  /** Total number of comments (all levels). Maintained by connector. */
+  commentCount?: number
+}
+
 // ============================================================
 // Task
 // ============================================================
 
-export interface TaskData {
+export interface TaskData extends Commentable {
   /** Display name of the task. */
   title: string
   /** Description, markdown. */
@@ -89,7 +95,7 @@ export function isTask(item: Item): item is TaskItem {
 // Event
 // ============================================================
 
-export interface EventData extends Reactable {
+export interface EventData extends Reactable, Commentable {
   /** Display name of the event. */
   title: string
   /** Description, markdown. */
@@ -134,7 +140,7 @@ export function isEvent(item: Item): item is EventItem {
 // Post
 // ============================================================
 
-export interface PostData extends Reactable {
+export interface PostData extends Reactable, Commentable {
   /** Optional headline. */
   title?: string
   /** Body content, markdown. Determines feed display. */
@@ -283,15 +289,34 @@ export function isReaction(item: Item): item is ReactionItem {
 }
 
 // ============================================================
-// Comment (not a distinct item type — any item can be a comment)
+// Comment
 // ============================================================
 
-/** Any item can point to another item as a comment. */
+export interface CommentData extends Reactable {
+  /** Comment text content. */
+  content: string
+  /** ID of the first-level comment this is a reply to. If undefined, this is a first-level comment. */
+  replyTo?: string
+  /** ID of the specific comment being replied to (for quote display). May differ from replyTo when replying to a second-level comment. */
+  replyToComment?: string
+}
+
+export type CommentItem = Item & { type: "comment"; data: CommentData }
+
+/** Forward and reverse relations for a comment. */
 export interface CommentRelations {
   forward: {
-    /** Comment refers to → any item (scope: item:, 1) */
+    /** Comment belongs to a root item → any Item (scope: item:, 1) */
     commentOn: Item
   }
+  reverse: {
+    /** Reactions on this comment (reactsTo → this comment, 0..n) */
+    reactsTo: ReactionItem
+  }
+}
+
+export function isComment(item: Item): item is CommentItem {
+  return item.type === "comment"
 }
 
 // ============================================================
@@ -323,4 +348,4 @@ export type KnownPredicate =
   | keyof CommentRelations["forward"]
 
 /** Known item types. Connectors may define additional ones. */
-export type KnownItemType = "task" | "event" | "post" | "place" | "feature" | "profile" | "reaction"
+export type KnownItemType = "task" | "event" | "post" | "place" | "feature" | "profile" | "reaction" | "comment"
