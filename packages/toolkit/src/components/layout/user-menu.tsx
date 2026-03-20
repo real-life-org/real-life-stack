@@ -49,7 +49,7 @@ export function UserMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-full">
+      <DropdownMenuTrigger className="flex items-center gap-2 rounded-full" data-testid="user-menu-trigger">
         <Avatar className="h-8 w-8">
           <AvatarImage src={user.avatar} alt={user.name} />
           <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
