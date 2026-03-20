@@ -1,31 +1,43 @@
 import type { Page } from '@playwright/test'
 
 /**
+ * Create a new group and switch to it.
+ * "Mein Netzwerk" is a meta-group — tests need real groups for items.
+ */
+export async function createGroup(page: Page, name: string): Promise<void> {
+  // Open workspace switcher dropdown
+  await page.getByText('Mein Netzwerk').first().click()
+  await page.getByText('Neue Gruppe erstellen').waitFor({ timeout: 5_000 })
+  await page.getByText('Neue Gruppe erstellen').click()
+
+  // Fill group name in the dialog
+  const nameInput = page.getByPlaceholder('z.B. Nachbarschaft, Projekt-Team...')
+  await nameInput.waitFor({ timeout: 5_000 })
+  await nameInput.click()
+  await page.keyboard.type(name)
+  await page.waitForTimeout(300)
+  await page.getByRole('button', { name: /Erstellen/ }).click()
+  await page.waitForTimeout(2000)
+}
+
+/**
  * Create a task in the Kanban board.
  * Clicks "Task" button → waits for edit panel → fills title → closes panel.
  */
 export async function createTask(page: Page, title: string): Promise<void> {
   await page.getByRole('button', { name: 'Task', exact: true }).click()
 
-  // Wait for the edit panel — it opens via URL route /kanban/item/{id}
-  // The "Titel" textbox appears in the side panel
-  const titleInput = page.getByRole('textbox', { name: 'Titel' })
-
-  // If panel didn't open, click the empty card that was just created
-  if (!await titleInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
-    // The new card is the last empty paragraph in a card
-    const emptyCards = page.locator('p:empty')
-    if (await emptyCards.count() > 0) {
-      await emptyCards.last().click()
-    }
-  }
-
+  // Wait for edit panel to open with title input (placeholder="Titel")
+  const titleInput = page.getByPlaceholder('Titel')
   await titleInput.waitFor({ timeout: 10_000 })
   await titleInput.fill(title)
 
+  // Wait for liveUpdate debounce (300ms) + save
+  await page.waitForTimeout(1000)
+
   // Close the edit panel
   await page.getByRole('button', { name: 'Schliessen' }).click()
-  await page.waitForTimeout(1000)
+  await page.waitForTimeout(500)
 }
 
 /**

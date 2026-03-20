@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createFreshContext, createIdentity, recoverIdentity, waitForRelayConnected } from './helpers/common'
-import { createTask, navigateToKanban } from './helpers/kanban'
+import { createGroup, createTask, navigateToKanban } from './helpers/kanban'
 import { resetServerState } from './helpers/reset-servers'
 
 test.describe('CRDT Merge — Concurrent Items', () => {
@@ -17,13 +17,19 @@ test.describe('CRDT Merge — Concurrent Items', () => {
       })
       await waitForRelayConnected(d1Page)
 
+      // Debug: screenshot after onboarding
+      await d1Page.screenshot({ path: 'test-results/debug-after-onboarding.png' })
+
+      // Device 1: Create a group (Mein Netzwerk is a meta-group, not usable for items)
+      await createGroup(d1Page, 'Testgruppe')
+
       // Device 1: Navigate to Kanban + create task
       await navigateToKanban(d1Page)
       await createTask(d1Page, 'Einkaufen')
       await expect(d1Page.getByText('Einkaufen')).toBeVisible({ timeout: 10_000 })
 
-      // Wait for sync
-      await d1Page.waitForTimeout(5000)
+      // Wait for sync + vault push
+      await d1Page.waitForTimeout(8000)
 
       // Device 2: Recover same identity
       await recoverIdentity(d2Page, {
@@ -31,6 +37,13 @@ test.describe('CRDT Merge — Concurrent Items', () => {
         passphrase: 'alice-d2-pw',
       })
       await waitForRelayConnected(d2Page)
+
+      // Device 2: Switch to Testgruppe via workspace switcher
+      await d2Page.getByText('Mein Netzwerk').first().waitFor({ timeout: 30_000 })
+      await d2Page.getByText('Mein Netzwerk').first().click()
+      await d2Page.getByText('Testgruppe').waitFor({ timeout: 30_000 })
+      await d2Page.getByText('Testgruppe').click()
+      await d2Page.waitForTimeout(1000)
 
       // Device 2: Navigate to Kanban — should see "Einkaufen"
       await navigateToKanban(d2Page)

@@ -81,8 +81,8 @@ export async function createIdentity(page: Page, opts: { name: string; passphras
   }
   await page.getByRole('button', { name: /Schützen|Fertig|Passwort setzen/ }).click()
 
-  // Wait for main app to load
-  await page.getByRole('button', { name: 'Kanban' }).waitFor({ timeout: 30_000 })
+  // Wait for main app to load (could land on Feed, Kanban, or Mein Netzwerk)
+  await page.getByText(/Mein Netzwerk|Feed|Kanban/).first().waitFor({ timeout: 30_000 })
 
   return { mnemonic }
 }
@@ -124,7 +124,7 @@ export async function recoverIdentity(page: Page, opts: { mnemonic: string; pass
   }
 
   // Wait for main app
-  await page.getByRole('button', { name: 'Kanban' }).waitFor({ timeout: 30_000 })
+  await page.getByText(/Mein Netzwerk|Feed|Kanban/).first().waitFor({ timeout: 30_000 })
 }
 
 export async function waitForRelayConnected(page: Page): Promise<void> {

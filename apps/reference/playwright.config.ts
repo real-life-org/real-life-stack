@@ -52,7 +52,7 @@ export default defineConfig({
       `npx vite --port 5174`,
     ].join(' '),
     port: 5174,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 30_000,
     cwd: path.resolve(__dirname),
   },
