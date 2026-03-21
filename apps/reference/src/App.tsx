@@ -900,6 +900,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   }, [])
 
   const openEditDialog = useCallback((workspace: Workspace) => {
+    if (workspace.scope === "personal") return
     const group = groups.find((g) => g.id === workspace.id)
     if (!group) return
     setGroupDialogMode({ type: "edit", group })
@@ -912,6 +913,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       id: g.id,
       name: g.name,
       avatar: g.data?.image as string | undefined ?? (g.data?.avatar ? `${basePath}${g.data.avatar}` : undefined),
+      scope: g.data?.scope as string | undefined,
     })),
     [groups, basePath]
   )
