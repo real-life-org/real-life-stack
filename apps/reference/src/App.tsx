@@ -900,7 +900,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   }, [])
 
   const openEditDialog = useCallback((workspace: Workspace) => {
-    if (workspace.scope === "personal") return
+    if (workspace.scope === "overview") return
     const group = groups.find((g) => g.id === workspace.id)
     if (!group) return
     setGroupDialogMode({ type: "edit", group })

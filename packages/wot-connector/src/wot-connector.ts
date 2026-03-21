@@ -79,7 +79,7 @@ import { CrossSpaceIndex } from "./CrossSpaceIndex.js"
 
 const RLS_SPACE_TYPE = "rls"
 const DEFAULT_MODULES = ["feed", "kanban", "calendar", "map"]
-export const PERSONAL_ID = "__personal__"
+export const OVERVIEW_ID = "__overview__"
 
 // --- WotConnector ---
 
@@ -105,6 +105,7 @@ export class WotConnector extends BaseConnector {
   private handleRemoteUnsub: (() => void) | null = null
   private notifyScheduled = false
   private itemCache: Item[] | null = null
+  private privateSpaceId: string | null = null
   private crossSpaceIndex: CrossSpaceIndex<RlsSpaceDoc, Item> | null = null
   private crossSpaceUnsub: (() => void) | null = null
   private spacesSubscriptionUnsub: (() => void) | null = null
@@ -184,6 +185,7 @@ export class WotConnector extends BaseConnector {
     this.crossSpaceUnsub?.()
     this.crossSpaceIndex?.stop()
     this.crossSpaceIndex = null
+    this.privateSpaceId = null
     this.spacesSubscriptionUnsub?.()
     this.personalDocUnsub?.()
     this.contactsUnsub?.()
@@ -291,6 +293,7 @@ export class WotConnector extends BaseConnector {
     this.crossSpaceUnsub?.()
     this.crossSpaceIndex?.stop()
     this.crossSpaceIndex = null
+    this.privateSpaceId = null
     this.spacesSubscriptionUnsub?.()
     this.personalDocUnsub?.()
     await this.replication?.stop()
@@ -458,7 +461,7 @@ export class WotConnector extends BaseConnector {
     // Close old handle
     this.closeCurrentHandle()
 
-    if (id === PERSONAL_ID) {
+    if (id === OVERVIEW_ID) {
       // Personal view reads from CrossSpaceIndex — no handle needed
       this.handleReady = Promise.resolve()
       this.notifyAllObservers()
@@ -488,7 +491,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async updateGroup(id: string, updates: Partial<Group>): Promise<Group> {
-    if (id === PERSONAL_ID) throw new Error("Cannot update personal view")
+    if (id === OVERVIEW_ID) throw new Error("Cannot update personal view")
     if (!this.replication) throw new Error("Not authenticated")
 
     // All metadata via updateSpace (framework level — syncs via _meta)
@@ -515,7 +518,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async deleteGroup(id: string): Promise<void> {
-    if (id === PERSONAL_ID) throw new Error("Cannot delete personal view")
+    if (id === OVERVIEW_ID) throw new Error("Cannot delete personal view")
     if (!this.replication) throw new Error("Not authenticated")
 
     // "Delete" = leave the space: remove self from members, clean up local data
@@ -541,7 +544,7 @@ export class WotConnector extends BaseConnector {
   override async getMembers(groupId: string): Promise<User[]> {
     if (!this.replication) return []
 
-    if (groupId === PERSONAL_ID) {
+    if (groupId === OVERVIEW_ID) {
       // Personal view: union of all members from all shared spaces
       const spaces = await this.replication.getSpaces()
       const allDids = new Set<string>()
@@ -621,7 +624,7 @@ export class WotConnector extends BaseConnector {
 
   override async getItem(id: string): Promise<Item | null> {
     await this.handleReady
-    if (this.currentGroupId === PERSONAL_ID && this.crossSpaceIndex) {
+    if (this.currentGroupId === OVERVIEW_ID && this.crossSpaceIndex) {
       const entry = this.crossSpaceIndex.getAll().get(id)
       return entry?.item ?? null
     }
@@ -636,21 +639,33 @@ export class WotConnector extends BaseConnector {
   override async createItem(item: Omit<Item, "id" | "createdAt">): Promise<Item> {
     await this.handleReady
 
-    if (this.currentGroupId === PERSONAL_ID) {
-      throw new Error("Cannot create items in personal view without a target space. Use setCurrentGroup() to select a specific group first.")
-    }
-
-    const handle = this.currentHandle
-    if (!handle) throw new Error("No active group selected")
-
     const id = crypto.randomUUID()
     const newItem: Item = {
       ...item,
       id,
       createdAt: new Date().toISOString(),
     }
-
     const serialized = serializeItem(newItem)
+
+    // In overview mode, create in private space
+    if (this.currentGroupId === OVERVIEW_ID) {
+      if (!this.privateSpaceId || !this.replication) {
+        throw new Error("Private space not available")
+      }
+      const privateHandle = await this.replication.openSpace<RlsSpaceDoc>(this.privateSpaceId)
+      privateHandle.transact((doc) => {
+        if (!doc.items) doc.items = {}
+        doc.items[id] = serialized
+      })
+      privateHandle.close()
+      this.crossSpaceIndex?.reindexSpace(this.privateSpaceId)
+      this.notifyAllObservers()
+      return newItem
+    }
+
+    const handle = this.currentHandle
+    if (!handle) throw new Error("No active group selected")
+
     handle.transact((doc) => {
       if (!doc.items) doc.items = {}
       doc.items[id] = serialized
@@ -683,7 +698,7 @@ export class WotConnector extends BaseConnector {
     })
 
     // Reindex if in personal view (handle is not currentHandle)
-    if (this.currentGroupId === PERSONAL_ID && this.crossSpaceIndex) {
+    if (this.currentGroupId === OVERVIEW_ID && this.crossSpaceIndex) {
       const spaceId = this.crossSpaceIndex.getItemSpaceId(id)
       if (spaceId) this.crossSpaceIndex.reindexSpace(spaceId)
     }
@@ -704,7 +719,7 @@ export class WotConnector extends BaseConnector {
     })
 
     // Reindex if in personal view
-    if (this.currentGroupId === PERSONAL_ID && this.crossSpaceIndex) {
+    if (this.currentGroupId === OVERVIEW_ID && this.crossSpaceIndex) {
       const spaceId = this.crossSpaceIndex.getItemSpaceId(id)
       if (spaceId) this.crossSpaceIndex.reindexSpace(spaceId)
     }
@@ -718,7 +733,7 @@ export class WotConnector extends BaseConnector {
    * In normal group view, returns the current handle.
    */
   private async resolveHandleForItem(itemId: string): Promise<SpaceHandle<RlsSpaceDoc>> {
-    if (this.currentGroupId === PERSONAL_ID && this.crossSpaceIndex && this.replication) {
+    if (this.currentGroupId === OVERVIEW_ID && this.crossSpaceIndex && this.replication) {
       const spaceId = this.crossSpaceIndex.getItemSpaceId(itemId)
       if (!spaceId) throw new Error(`Item ${itemId} not found in any space`)
       // The CrossSpaceIndex already has handles open for all spaces,
@@ -925,7 +940,7 @@ export class WotConnector extends BaseConnector {
     )
     this.crossSpaceIndex.start()
     this.crossSpaceUnsub = this.crossSpaceIndex.onChange(() => {
-      if (this.currentGroupId === PERSONAL_ID) {
+      if (this.currentGroupId === OVERVIEW_ID) {
         this.notifyAllObservers()
       }
     })
@@ -938,10 +953,19 @@ export class WotConnector extends BaseConnector {
     // Load initial spaces
     this.updateGroupsFromSpaces(spacesSubscribable.getValue())
 
-    // 12. Auto-create personal default group if no shared spaces exist
-    const hasSharedSpaces = this.groupsCache.some((g) => g.data?.scope === "group")
-    if (!hasSharedSpaces) {
-      await this.createGroup("Mein Bereich")
+    // 12. Ensure private space exists (hidden space for personal items)
+    const allSpaces = this.replication.watchSpaces().getValue()
+    const existingPrivate = allSpaces.find((s) => s.appTag === "rls-private")
+    if (existingPrivate) {
+      this.privateSpaceId = existingPrivate.id
+    } else {
+      const initialDoc = { _type: "rls", items: {} } as unknown as RlsSpaceDoc
+      const created = await this.replication.createSpace("shared", initialDoc, {
+        name: "Privat",
+        appTag: "rls-private",
+        modules: DEFAULT_MODULES,
+      })
+      this.privateSpaceId = created.id
     }
 
     // 13. Sync contact profiles from discovery server (non-blocking)
@@ -1047,8 +1071,14 @@ export class WotConnector extends BaseConnector {
 
   private updateGroupsFromSpaces(spaces: SpaceInfo[]): void {
     // All shared spaces are groups — WoT and RLS spaces are fully compatible
+    // Track private space ID + filter it from visible groups
+    const privateSpace = spaces.find((s) => s.appTag === "rls-private")
+    if (privateSpace) {
+      this.privateSpaceId = privateSpace.id
+    }
+
     const realGroups = spaces
-      .filter((s) => s.type === "shared")
+      .filter((s) => s.type === "shared" && s.appTag !== "rls-private")
       .map((s) => this.spaceToGroup(s))
 
     // Build module union from all groups for the personal view
@@ -1061,10 +1091,10 @@ export class WotConnector extends BaseConnector {
 
     // Personal view is always first
     const personalGroup: Group = {
-      id: PERSONAL_ID,
+      id: OVERVIEW_ID,
       name: "Mein Netzwerk",
       data: {
-        scope: "personal",
+        scope: "overview",
         modules: [...allModules],
       },
     }
@@ -1088,7 +1118,7 @@ export class WotConnector extends BaseConnector {
 
     // Auto-select personal view if none selected
     if (!this.currentGroupId) {
-      this.setCurrentGroup(PERSONAL_ID)
+      this.setCurrentGroup(OVERVIEW_ID)
     }
   }
 
@@ -1158,7 +1188,7 @@ export class WotConnector extends BaseConnector {
 
   private getCachedItems(): Item[] {
     if (!this.itemCache) {
-      if (this.currentGroupId === PERSONAL_ID && this.crossSpaceIndex) {
+      if (this.currentGroupId === OVERVIEW_ID && this.crossSpaceIndex) {
         this.itemCache = [...this.crossSpaceIndex.getAll().values()].map((e) => e.item)
       } else {
         const doc = this.getCurrentDoc()
@@ -1169,7 +1199,7 @@ export class WotConnector extends BaseConnector {
   }
 
   private notifyAllObserversNow(): void {
-    const isPersonal = this.currentGroupId === PERSONAL_ID
+    const isPersonal = this.currentGroupId === OVERVIEW_ID
     const doc = isPersonal ? null : this.getCurrentDoc()
     const allItems = this.getCachedItems()
     const hasData = isPersonal ? this.crossSpaceIndex != null : doc != null
