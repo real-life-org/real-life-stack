@@ -1,14 +1,5 @@
 [
   {
-    "id": "all",
-    "name": "Alles",
-    "data": {
-      "scope": "aggregate",
-      "description": "Alle Items aus allen Bereichen",
-      "modules": ["feed", "kanban", "calendar", "map"]
-    }
-  },
-  {
     "id": "group-1",
     "name": "Real Life Stack",
     "data": {

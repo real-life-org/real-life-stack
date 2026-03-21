@@ -412,7 +412,7 @@ type KanbanPanelState =
 function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, onItemClose }: { activeWorkspaceId: string | null; groups: Group[]; selectedItemId?: string; onItemSelect?: (id: string) => void; onItemClose?: () => void }) {
   const connector = useConnector()
   const { data: tasks } = useItems({ type: "task" })
-  const { data: members } = useMembers(activeWorkspaceId ?? "group-1")
+  const { data: members } = useMembers(activeWorkspaceId === "__overview__" ? null : (activeWorkspaceId ?? "group-1"))
   const { data: currentUser } = useCurrentUser()
   const { mutate: updateItem } = useUpdateItem()
   const { mutate: createItem } = useCreateItem()
@@ -488,15 +488,11 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
     onItemClose?.()
   }, [onItemClose])
 
-  // Determine if the active workspace is the aggregate ("Alles") view
-  const activeGroup = groups.find((g) => g.id === activeWorkspaceId)
-  const isAggregate = (activeGroup?.data?.scope as string) === "aggregate"
+  // Determine if the active workspace is the overview view
+  const isAggregate = activeWorkspaceId === "__overview__"
 
-  // Non-aggregate groups for grouped view
-  const concreteGroups = useMemo(
-    () => groups.filter((g) => (g.data?.scope as string) !== "aggregate"),
-    [groups]
-  )
+  // All groups are concrete — no aggregate/overview group in the list anymore
+  const concreteGroups = groups
 
   const taskContentType: ContentTypeConfig = useMemo(() => ({
     id: "task",
@@ -542,22 +538,11 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
   }, [])
 
   const handleTaskCreate = useCallback(async () => {
-    // Determine the target group
-    const targetGroupId = isAggregate ? concreteGroups[0]?.id : activeWorkspaceId
-    // Temporarily switch to the target group so the connector scopes the item correctly
-    const previousGroupId = activeWorkspaceId
-    if (targetGroupId && hasGroups(connector)) {
-      connector.setCurrentGroup(targetGroupId)
-    }
     const newItem = await createItem({
       type: "task",
       createdBy: currentUser?.id ?? "user-1",
       data: { title: "", description: "", status: "todo", position: tasks.length, tags: [] },
     })
-    // Restore previous group
-    if (targetGroupId && previousGroupId && targetGroupId !== previousGroupId && hasGroups(connector)) {
-      connector.setCurrentGroup(previousGroupId)
-    }
     if (newItem) {
       setPanelState({ mode: "edit", item: newItem })
       onItemSelect?.(newItem.id)
@@ -574,14 +559,6 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
     const { data } = submitData
     const relations: Relation[] = (data.people ?? [])
       .map((id) => ({ predicate: "assignedTo", target: `global:${id}` }))
-    // Ensure the item's group is active before updating (WoT-Connector needs an open handle)
-    const itemGroupId = data.group || activeWorkspaceId
-    if (itemGroupId && hasGroups(connector)) {
-      const current = connector.getCurrentGroup()
-      if (current?.id !== itemGroupId) {
-        connector.setCurrentGroup(itemGroupId)
-      }
-    }
     try {
       await updateItem(item.id, {
         data: { ...item.data, title: data.title, description: data.text, status: data.status, tags: data.tags },
@@ -908,13 +885,17 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   }, [groups])
 
   const basePath = import.meta.env.BASE_URL
+  const OVERVIEW_WORKSPACE: Workspace = { id: "__overview__", name: "Mein Netzwerk", scope: "overview" }
   const workspaces: Workspace[] = useMemo(
-    () => groups.map((g) => ({
-      id: g.id,
-      name: g.name,
-      avatar: g.data?.image as string | undefined ?? (g.data?.avatar ? `${basePath}${g.data.avatar}` : undefined),
-      scope: g.data?.scope as string | undefined,
-    })),
+    () => [
+      OVERVIEW_WORKSPACE,
+      ...groups.map((g) => ({
+        id: g.id,
+        name: g.name,
+        avatar: g.data?.image as string | undefined ?? (g.data?.avatar ? `${basePath}${g.data.avatar}` : undefined),
+        scope: g.data?.scope as string | undefined,
+      })),
+    ],
     [groups, basePath]
   )
 
@@ -963,7 +944,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   // Sync connector current group when workspace changes
   useEffect(() => {
     if (activeWorkspace && hasGroups(connector)) {
-      connector.setCurrentGroup(activeWorkspace.id)
+      connector.setCurrentGroup(activeWorkspace.scope === "overview" ? null : activeWorkspace.id)
     }
   }, [activeWorkspace?.id, connector])
 
@@ -973,9 +954,12 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     if (urlModule && VALID_MODULES.includes(urlModule)) localStorage.setItem(STORAGE_KEY_MODULE, urlModule)
   }, [activeWorkspace?.id, urlModule])
 
-  // Derive available modules from active group's data.modules
-  const activeGroup = groups.find((g) => g.id === activeWorkspace?.id)
-  const groupModuleIds = (activeGroup?.data?.modules as string[] | undefined) ?? ["feed", "kanban", "calendar", "map"]
+  // Derive available modules from active group's data.modules (overview = all modules)
+  const isOverview = activeWorkspace?.scope === "overview"
+  const activeGroup = isOverview ? null : groups.find((g) => g.id === activeWorkspace?.id)
+  const groupModuleIds = isOverview
+    ? ["feed", "kanban", "calendar", "map"]
+    : (activeGroup?.data?.modules as string[] | undefined) ?? ["feed", "kanban", "calendar", "map"]
   const supportsMessaging = hasMessaging(connector)
   const modules: Module[] = useMemo(
     () => groupModuleIds

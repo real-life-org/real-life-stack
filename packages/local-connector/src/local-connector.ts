@@ -48,7 +48,7 @@ export class LocalConnector implements FullConnector {
   private currentUserObs = createObservable<User | null>(null)
   private groupsObs = createObservable<Group[]>([])
   private currentGroupObs = createObservable<Group | null>(null)
-  private memberObservables = new Map<string, ReturnType<typeof createObservable<User[]>>>()
+  private memberObservables = new Map<string | null, ReturnType<typeof createObservable<User[]>>>()
   private itemObservables = new Map<string, ReturnType<typeof createObservable<Item[]>>>()
   private singleItemObservables = new Map<string, ReturnType<typeof createObservable<Item | null>>>()
   private relatedObservables = new Map<string, ReturnType<typeof createObservable<Item[]>>>()
@@ -165,7 +165,14 @@ export class LocalConnector implements FullConnector {
     return this.currentGroupObs
   }
 
-  setCurrentGroup(id: string): void {
+  setCurrentGroup(id: string | null): void {
+    if (id === null) {
+      if (this.currentGroup === null) return
+      this.currentGroup = null
+      this.currentGroupObs.set(null)
+      this.notifyObservers()
+      return
+    }
     if (this.currentGroup?.id === id) return
     const group = this.groups.find((g) => g.id === id)
     if (group) {
@@ -207,15 +214,17 @@ export class LocalConnector implements FullConnector {
     this.broadcast({ type: "groups-changed" })
   }
 
-  async getMembers(groupId: string): Promise<User[]> {
+  async getMembers(groupId: string | null): Promise<User[]> {
+    if (groupId === null) return this.users
     const memberIds = this.groupMembers[groupId] ?? []
     return this.users.filter((u) => memberIds.includes(u.id))
   }
 
-  observeMembers(groupId: string): Observable<User[]> {
+  observeMembers(groupId: string | null): Observable<User[]> {
     if (!this.memberObservables.has(groupId)) {
-      const memberIds = this.groupMembers[groupId] ?? []
-      const members = this.users.filter((u) => memberIds.includes(u.id))
+      const members = groupId === null
+        ? this.users
+        : this.users.filter((u) => (this.groupMembers[groupId] ?? []).includes(u.id))
       this.memberObservables.set(groupId, createObservable(members))
     }
     return this.memberObservables.get(groupId)!

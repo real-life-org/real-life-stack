@@ -129,12 +129,12 @@ export interface GroupManager {
   observeGroups(): Observable<Group[]>
   getCurrentGroup(): Group | null
   observeCurrentGroup(): Observable<Group | null>
-  setCurrentGroup(id: string): void
+  setCurrentGroup(id: string | null): void
   createGroup(name: string, data?: Record<string, unknown>): Promise<Group>
   updateGroup(id: string, updates: Partial<Group>): Promise<Group>
   deleteGroup(id: string): Promise<void>
-  getMembers(groupId: string): Promise<User[]>
-  observeMembers(groupId: string): Observable<User[]>
+  getMembers(groupId: string | null): Promise<User[]>
+  observeMembers(groupId: string | null): Observable<User[]>
   inviteMember(groupId: string, userId: string): Promise<void>
   removeMember(groupId: string, userId: string): Promise<void>
 }

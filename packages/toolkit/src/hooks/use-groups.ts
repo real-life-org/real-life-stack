@@ -69,7 +69,7 @@ export function useDeleteGroup() {
   )
 }
 
-export function useMembers(groupId: string) {
+export function useMembers(groupId: string | null) {
   const connector = useGroupConnector()
   const observable = useMemo(() => connector.observeMembers(groupId), [connector, groupId])
   const [data, setData] = useState<User[]>(observable.current)

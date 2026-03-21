@@ -1,4 +1,4 @@
-export { WotConnector, OVERVIEW_ID } from "./wot-connector.js"
+export { WotConnector } from "./wot-connector.js"
 export type { WotConnectorConfig, RlsSpaceDoc, SerializedItem } from "./types.js"
 export { serializeItem, deserializeItem } from "./serialization.js"
 export { CrossGroupIndex } from "./CrossGroupIndex.js"

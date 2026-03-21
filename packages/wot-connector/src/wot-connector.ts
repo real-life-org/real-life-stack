@@ -79,7 +79,7 @@ import { CrossGroupIndex } from "./CrossGroupIndex.js"
 
 const RLS_SPACE_TYPE = "rls"
 const DEFAULT_MODULES = ["feed", "kanban", "calendar", "map"]
-export const OVERVIEW_ID = "__overview__"
+// Overview mode: setCurrentGroup(null) = show all items from all spaces
 
 // --- WotConnector ---
 
@@ -453,7 +453,7 @@ export class WotConnector extends BaseConnector {
     return this.groupsCache.find((g) => g.id === this.currentGroupId) ?? null
   }
 
-  override setCurrentGroup(id: string): void {
+  override setCurrentGroup(id: string | null): void {
     if (this.currentGroupId === id) return
     this.currentGroupId = id
     this.currentGroupObservable.set(this.getCurrentGroup())
@@ -461,8 +461,8 @@ export class WotConnector extends BaseConnector {
     // Close old handle
     this.closeCurrentHandle()
 
-    if (id === OVERVIEW_ID) {
-      // Personal view reads from CrossGroupIndex — no handle needed
+    if (id === null) {
+      // Overview mode reads from CrossGroupIndex — no handle needed
       this.handleReady = Promise.resolve()
       this.notifyAllObservers()
     } else if (this.replication) {
@@ -491,7 +491,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async updateGroup(id: string, updates: Partial<Group>): Promise<Group> {
-    if (id === OVERVIEW_ID) throw new Error("Cannot update personal view")
+    if (id === null) throw new Error("Cannot update personal view")
     if (!this.replication) throw new Error("Not authenticated")
 
     // All metadata via updateSpace (framework level — syncs via _meta)
@@ -518,7 +518,7 @@ export class WotConnector extends BaseConnector {
   }
 
   override async deleteGroup(id: string): Promise<void> {
-    if (id === OVERVIEW_ID) throw new Error("Cannot delete personal view")
+    if (id === null) throw new Error("Cannot delete personal view")
     if (!this.replication) throw new Error("Not authenticated")
 
     // "Delete" = leave the space: remove self from members, clean up local data
@@ -541,10 +541,10 @@ export class WotConnector extends BaseConnector {
     }
   }
 
-  override async getMembers(groupId: string): Promise<User[]> {
+  override async getMembers(groupId: string | null): Promise<User[]> {
     if (!this.replication) return []
 
-    if (groupId === OVERVIEW_ID) {
+    if (groupId === null) {
       // Personal view: union of all members from all shared spaces
       const spaces = await this.replication.getSpaces()
       const allDids = new Set<string>()
@@ -570,9 +570,9 @@ export class WotConnector extends BaseConnector {
     return users.filter((u: User | null): u is User => u !== null)
   }
 
-  private memberObservables = new Map<string, ReactiveObservable<User[]>>()
+  private memberObservables = new Map<string | null, ReactiveObservable<User[]>>()
 
-  override observeMembers(groupId: string): Observable<User[]> {
+  override observeMembers(groupId: string | null): Observable<User[]> {
     if (!this.memberObservables.has(groupId)) {
       const obs = createObservable<User[]>([])
       this.memberObservables.set(groupId, obs)
@@ -582,7 +582,7 @@ export class WotConnector extends BaseConnector {
     return this.memberObservables.get(groupId)!
   }
 
-  private async notifyMemberObservers(groupId: string): Promise<void> {
+  private async notifyMemberObservers(groupId: string | null): Promise<void> {
     const obs = this.memberObservables.get(groupId)
     if (obs) {
       const members = await this.getMembers(groupId)
@@ -624,7 +624,7 @@ export class WotConnector extends BaseConnector {
 
   override async getItem(id: string): Promise<Item | null> {
     await this.handleReady
-    if (this.currentGroupId === OVERVIEW_ID && this.crossGroupIndex) {
+    if (this.currentGroupId === null && this.crossGroupIndex) {
       const entry = this.crossGroupIndex.getAll().get(id)
       return entry?.item ?? null
     }
@@ -648,7 +648,7 @@ export class WotConnector extends BaseConnector {
     const serialized = serializeItem(newItem)
 
     // In overview mode, create in private space
-    if (this.currentGroupId === OVERVIEW_ID) {
+    if (this.currentGroupId === null) {
       if (!this.privateSpaceId || !this.replication) {
         throw new Error("Private space not available")
       }
@@ -698,7 +698,7 @@ export class WotConnector extends BaseConnector {
     })
 
     // Reindex if in personal view (handle is not currentHandle)
-    if (this.currentGroupId === OVERVIEW_ID && this.crossGroupIndex) {
+    if (this.currentGroupId === null && this.crossGroupIndex) {
       const spaceId = this.crossGroupIndex.getItemGroupId(id)
       if (spaceId) this.crossGroupIndex.reindexGroup(spaceId)
     }
@@ -719,7 +719,7 @@ export class WotConnector extends BaseConnector {
     })
 
     // Reindex if in personal view
-    if (this.currentGroupId === OVERVIEW_ID && this.crossGroupIndex) {
+    if (this.currentGroupId === null && this.crossGroupIndex) {
       const spaceId = this.crossGroupIndex.getItemGroupId(id)
       if (spaceId) this.crossGroupIndex.reindexGroup(spaceId)
     }
@@ -779,7 +779,7 @@ export class WotConnector extends BaseConnector {
    * In normal group view, returns the current handle.
    */
   private async resolveHandleForItem(itemId: string): Promise<SpaceHandle<RlsSpaceDoc>> {
-    if (this.currentGroupId === OVERVIEW_ID && this.crossGroupIndex && this.replication) {
+    if (this.currentGroupId === null && this.crossGroupIndex && this.replication) {
       const spaceId = this.crossGroupIndex.getItemGroupId(itemId)
       if (!spaceId) throw new Error(`Item ${itemId} not found in any space`)
       // The CrossGroupIndex already has handles open for all spaces,
@@ -986,7 +986,7 @@ export class WotConnector extends BaseConnector {
     )
     this.crossGroupIndex.start()
     this.crossGroupUnsub = this.crossGroupIndex.onChange(() => {
-      if (this.currentGroupId === OVERVIEW_ID) {
+      if (this.currentGroupId === null) {
         this.notifyAllObservers()
       }
     })
@@ -1127,25 +1127,7 @@ export class WotConnector extends BaseConnector {
       .filter((s) => s.type === "shared" && s.appTag !== "rls-private")
       .map((s) => this.spaceToGroup(s))
 
-    // Build module union from all groups for the personal view
-    const allModules = new Set<string>()
-    for (const g of realGroups) {
-      for (const m of (g.data?.modules as string[]) ?? DEFAULT_MODULES) {
-        allModules.add(m)
-      }
-    }
-
-    // Personal view is always first
-    const personalGroup: Group = {
-      id: OVERVIEW_ID,
-      name: "Mein Netzwerk",
-      data: {
-        scope: "overview",
-        modules: [...allModules],
-      },
-    }
-
-    this.groupsCache = [personalGroup, ...realGroups]
+    this.groupsCache = realGroups
 
     // Update the reactive observable (inherited from BaseConnector)
     this.groupsObservable.set([...this.groupsCache])
@@ -1162,9 +1144,9 @@ export class WotConnector extends BaseConnector {
       void this.notifyMemberObservers(groupId)
     }
 
-    // Auto-select personal view if none selected
-    if (!this.currentGroupId) {
-      this.setCurrentGroup(OVERVIEW_ID)
+    // Notify observers when in overview mode (null) so items refresh
+    if (this.currentGroupId === null) {
+      this.notifyAllObservers()
     }
   }
 
@@ -1234,7 +1216,7 @@ export class WotConnector extends BaseConnector {
 
   private getCachedItems(): Item[] {
     if (!this.itemCache) {
-      if (this.currentGroupId === OVERVIEW_ID && this.crossGroupIndex) {
+      if (this.currentGroupId === null && this.crossGroupIndex) {
         this.itemCache = [...this.crossGroupIndex.getAll().values()].map((e) => e.item)
       } else {
         const doc = this.getCurrentDoc()
@@ -1245,7 +1227,7 @@ export class WotConnector extends BaseConnector {
   }
 
   private notifyAllObserversNow(): void {
-    const isPersonal = this.currentGroupId === OVERVIEW_ID
+    const isPersonal = this.currentGroupId === null
     const doc = isPersonal ? null : this.getCurrentDoc()
     const allItems = this.getCachedItems()
     const hasData = isPersonal ? this.crossGroupIndex != null : doc != null

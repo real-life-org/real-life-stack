@@ -225,7 +225,7 @@ export abstract class BaseConnector implements FullConnector {
     return this.currentGroupObservable
   }
 
-  setCurrentGroup(_id: string): void {}
+  setCurrentGroup(_id: string | null): void {}
 
   async createGroup(_name: string, _data?: Record<string, unknown>): Promise<Group> {
     throw new Error("createGroup not supported")
@@ -239,11 +239,11 @@ export abstract class BaseConnector implements FullConnector {
     throw new Error("deleteGroup not supported")
   }
 
-  async getMembers(_groupId: string): Promise<User[]> {
+  async getMembers(_groupId: string | null): Promise<User[]> {
     return []
   }
 
-  observeMembers(_groupId: string): Observable<User[]> {
+  observeMembers(_groupId: string | null): Observable<User[]> {
     return createObservable<User[]>([])
   }
 
