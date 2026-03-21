@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { createFreshContext, createIdentity, recoverIdentity, waitForRelayConnected } from './helpers/common'
 import { performMutualVerification } from './helpers/verification'
-import { createGroup, createTask, navigateToKanban } from './helpers/kanban'
+import { createGroup, createTask, navigateToKanban, switchToGroup } from './helpers/kanban'
 import { resetServerState } from './helpers/reset-servers'
 
 test.describe('Cross-User + Multi-Device', () => {
@@ -39,11 +39,7 @@ test.describe('Cross-User + Multi-Device', () => {
       await bobPage.waitForTimeout(1000)
 
       // Alice D1: back to Testgruppe (invite may have switched to Mein Netzwerk)
-      if (!await d1Page.getByRole('button', { name: 'Kanban' }).isVisible().catch(() => false)) {
-        await d1Page.getByText('Mein Netzwerk').first().click()
-        await d1Page.getByText('Testgruppe').click()
-        await d1Page.waitForTimeout(1000)
-      }
+      await switchToGroup(d1Page, 'Testgruppe')
       // Alice D1: create task "Von D1"
       await navigateToKanban(d1Page)
       await createTask(d1Page, 'Von D1')

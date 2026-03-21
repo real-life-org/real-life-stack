@@ -41,6 +41,19 @@ export async function createTask(page: Page, title: string): Promise<void> {
 }
 
 /**
+ * Switch to a specific group via workspace switcher.
+ */
+export async function switchToGroup(page: Page, groupName: string): Promise<void> {
+  // Open workspace switcher (click whatever group name is shown in navbar)
+  const switcher = page.locator('button').filter({ hasText: /Mein Netzwerk|Testgruppe/ }).first()
+  await switcher.click()
+  await page.waitForTimeout(500)
+  // Click the target group in the dropdown
+  await page.getByRole('menuitem', { name: new RegExp(groupName) }).click()
+  await page.waitForTimeout(1000)
+}
+
+/**
  * Navigate to Kanban and wait for columns to appear.
  */
 export async function navigateToKanban(page: Page): Promise<void> {

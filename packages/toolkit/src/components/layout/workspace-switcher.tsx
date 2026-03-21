@@ -43,9 +43,9 @@ export function WorkspaceSwitcher({
       .slice(0, 2)
   }
 
-  const personalWorkspace = workspaces.find((w) => w.scope === "personal")
-  const groupWorkspaces = workspaces.filter((w) => w.scope !== "personal")
-  const isPersonalActive = activeWorkspace.scope === "personal"
+  const personalWorkspace = workspaces.find((w) => w.scope === "overview")
+  const groupWorkspaces = workspaces.filter((w) => w.scope !== "overview")
+  const isPersonalActive = activeWorkspace.scope === "overview"
 
   return (
     <DropdownMenu>
