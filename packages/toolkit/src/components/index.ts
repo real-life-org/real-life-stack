@@ -10,6 +10,9 @@ export * from "./auth"
 // Contacts
 export * from "./contacts"
 
+// Debug
+export * from "./debug"
+
 // Feature modules
 export * from "./feed"
 export * from "./kanban"

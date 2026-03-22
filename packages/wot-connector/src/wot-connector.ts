@@ -37,6 +37,9 @@ import {
   InMemoryGraphCacheStore,
   VerificationHelper,
   CompactStorageManager,
+  TracedCompactStorageManager,
+  TracedOutboxMessagingAdapter,
+  getMetrics,
   getDefaultDisplayName,
   encodeBase64Url,
   decodeBase64Url,
@@ -843,11 +846,15 @@ export class WotConnector extends BaseConnector {
     try { localStorage.setItem("rls-wot-active-did", did) } catch { /* ignore */ }
 
     // 1. WebSocket connect (MUST happen before PersonalDoc so it can receive sync messages)
-    this.wsAdapter = new WebSocketMessagingAdapter(this.config.relayUrl)
+    this.wsAdapter = new WebSocketMessagingAdapter(this.config.relayUrl, {
+      signChallenge: (nonce: string) => this.identity.sign(nonce),
+    })
 
     // Register relay state listener BEFORE connect so we catch the 'connected' event
     this.wsAdapter.onStateChange((state) => {
       this.relayStateObs.set(state as RelayState)
+      // Update PersistenceMetrics so DebugSnapshot reflects relay status
+      getMetrics().setRelayStatus(state === "connected", this.config.relayUrl, 0)
       // Retry pending discovery publishes on reconnect
       if (state === "connected") {
         this.syncDiscoveryPending().catch(() => {})
@@ -861,9 +868,10 @@ export class WotConnector extends BaseConnector {
     }
 
     const outboxStore = new PersonalDocOutboxStore(personalDocFns)
-    this.outboxAdapter = new OutboxMessagingAdapter(this.wsAdapter, outboxStore, {
+    const rawOutbox = new OutboxMessagingAdapter(this.wsAdapter, outboxStore, {
       skipTypes: ["profile-update", "attestation-ack", "personal-sync"] as MessageType[],
     })
+    this.outboxAdapter = new TracedOutboxMessagingAdapter(rawOutbox) as unknown as OutboxMessagingAdapter
     await this.wsAdapter.connect(did)
 
     // 2. PersonalDoc (Yjs-based, multi-device sync)
@@ -883,7 +891,7 @@ export class WotConnector extends BaseConnector {
     this.groupKeyService = new GroupKeyService()
 
     // 5. CompactStore for Yjs spaces
-    const spaceCompactStore = new CompactStorageManager("rls-yjs-space-compact-store")
+    const spaceCompactStore = new TracedCompactStorageManager(new CompactStorageManager("rls-yjs-space-compact-store"))
     await spaceCompactStore.open()
 
     // 6. Replication (Yjs)

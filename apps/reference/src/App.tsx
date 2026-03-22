@@ -774,9 +774,19 @@ function KanbanView({ activeWorkspaceId, groups, selectedItemId, onItemSelect, o
   )
 }
 
-function RelayStatusBadgeWrapper() {
+const DebugDashboard = lazy(() =>
+  import("@real-life-stack/toolkit").then((m) => ({ default: m.DebugDashboard }))
+)
+
+function RelayStatusBadgeWrapper({ onOpenDebug }: { onOpenDebug: () => void }) {
   const { state, pendingCount } = useRelayStatus()
-  return <RelayStatusBadge state={state} pendingCount={pendingCount} />
+  return (
+    <RelayStatusBadge
+      state={state}
+      pendingCount={pendingCount}
+      onClick={onOpenDebug}
+    />
+  )
 }
 
 /**
@@ -961,6 +971,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     ? ["feed", "kanban", "calendar", "map"]
     : (activeGroup?.data?.modules as string[] | undefined) ?? ["feed", "kanban", "calendar", "map"]
   const supportsMessaging = hasMessaging(connector)
+  const [debugOpen, setDebugOpen] = useState(false)
   const modules: Module[] = useMemo(
     () => groupModuleIds
       .filter((id) => MODULE_ICONS[id])
@@ -1018,7 +1029,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           />
         </NavbarCenter>
         <NavbarEnd>
-          {supportsMessaging && <RelayStatusBadgeWrapper />}
+          {supportsMessaging && <RelayStatusBadgeWrapper onOpenDebug={() => setDebugOpen(prev => !prev)} />}
           <Button
             variant="ghost"
             size="icon"
@@ -1044,6 +1055,10 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           />
         </NavbarEnd>
       </Navbar>
+
+      <Suspense fallback={null}>
+        <DebugDashboard open={debugOpen} onClose={() => setDebugOpen(false)} />
+      </Suspense>
 
       <AppShellMain withBottomNav>
         {urlSpaceId && !activeWorkspace && workspaces.length > 0 ? (

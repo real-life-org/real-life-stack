@@ -12,6 +12,7 @@ export interface RelayStatusBadgeProps {
   state: RelayState
   pendingCount?: number
   className?: string
+  onClick?: () => void
 }
 
 const stateConfig: Record<RelayState, { color: string; label: string }> = {
@@ -25,6 +26,7 @@ export function RelayStatusBadge({
   state,
   pendingCount = 0,
   className,
+  onClick,
 }: RelayStatusBadgeProps) {
   const config = stateConfig[state]
 
@@ -32,7 +34,10 @@ export function RelayStatusBadge({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className={cn("flex items-center gap-1.5 cursor-default", className)}>
+          <div
+            className={cn("flex items-center gap-1.5", onClick ? "cursor-pointer" : "cursor-default", className)}
+            onClick={onClick}
+          >
             <span className={cn("h-2 w-2 rounded-full shrink-0", config.color)} />
             {pendingCount > 0 && (
               <span className="text-[10px] font-medium text-muted-foreground tabular-nums">
