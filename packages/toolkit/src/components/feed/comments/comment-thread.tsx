@@ -17,25 +17,8 @@ export interface CommentThreadProps {
   onReply?: (comment: CommentWithAuthor) => void
   /** Whether the user can reply. */
   canReply?: boolean
-  /** Relative timestamp formatter. */
-  formatTimestamp?: (createdAt: string) => string
   /** Slot builder for ReactionBar per comment. */
   renderReactions?: (itemId: string) => React.ReactNode
-}
-
-function defaultFormatTimestamp(createdAt: string): string {
-  const now = Date.now()
-  const then = new Date(createdAt).getTime()
-  const diffMs = now - then
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffH = Math.floor(diffMin / 60)
-  const diffD = Math.floor(diffH / 24)
-
-  if (diffMin < 1) return "gerade eben"
-  if (diffMin < 60) return `vor ${diffMin} Min.`
-  if (diffH < 24) return `vor ${diffH} Std.`
-  if (diffD < 7) return `vor ${diffD} Tag${diffD > 1 ? "en" : ""}`
-  return new Date(createdAt).toLocaleDateString("de-DE", { day: "numeric", month: "short" })
 }
 
 /**
@@ -47,7 +30,6 @@ export function CommentThread({
   defaultExpanded = false,
   onReply,
   canReply = true,
-  formatTimestamp = defaultFormatTimestamp,
   renderReactions,
 }: CommentThreadProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
@@ -60,7 +42,7 @@ export function CommentThread({
         authorName={comment.authorName}
         authorAvatar={comment.authorAvatar}
         content={(comment.item.data as { content: string }).content}
-        timestamp={formatTimestamp(comment.item.createdAt)}
+        timestamp={comment.item.createdAt}
         onReply={() => onReply?.(comment)}
         canReply={canReply}
         reactionSlot={renderReactions?.(comment.item.id)}
@@ -105,7 +87,7 @@ export function CommentThread({
                   authorName={reply.authorName}
                   authorAvatar={reply.authorAvatar}
                   content={data.content}
-                  timestamp={formatTimestamp(reply.item.createdAt)}
+                  timestamp={reply.item.createdAt}
                   onReply={() => onReply?.(reply)}
                   canReply={canReply}
                   quotedAuthor={quotedReply?.authorName}

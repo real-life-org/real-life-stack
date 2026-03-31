@@ -2,6 +2,7 @@
 
 import { Reply } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
+import { RelativeTime } from "@/components/primitives/relative-time"
 import { cn } from "@/lib/utils"
 
 export interface CommentBubbleProps {
@@ -11,7 +12,7 @@ export interface CommentBubbleProps {
   authorAvatar?: string
   /** Comment text content. */
   content: string
-  /** Relative timestamp string (e.g. "vor 2 Stunden"). */
+  /** ISO-8601 date string or relative timestamp string. */
   timestamp: string
   /** Callback when reply button is clicked. */
   onReply?: () => void
@@ -24,6 +25,10 @@ export interface CommentBubbleProps {
   reactionSlot?: React.ReactNode
   /** Additional CSS classes. */
   className?: string
+}
+
+function isISODate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T/.test(value)
 }
 
 function getInitials(name: string): string {
@@ -63,7 +68,10 @@ export function CommentBubble({
         {/* Author + timestamp */}
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-medium text-foreground">{authorName}</span>
-          <span className="text-xs text-muted-foreground">{timestamp}</span>
+          {isISODate(timestamp)
+            ? <RelativeTime date={timestamp} className="text-xs" />
+            : <span className="text-xs text-muted-foreground">{timestamp}</span>
+          }
         </div>
 
         {/* Quote reference (for replies to second-level comments) */}

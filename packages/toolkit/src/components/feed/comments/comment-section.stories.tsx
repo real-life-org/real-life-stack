@@ -67,15 +67,6 @@ function getReplies(commentId: string): CommentWithAuthor[] {
   return []
 }
 
-function formatTimestamp(createdAt: string): string {
-  const now = Date.now()
-  const then = new Date(createdAt).getTime()
-  const diffMin = Math.floor((now - then) / 60000)
-  const diffH = Math.floor(diffMin / 60)
-  if (diffMin < 60) return `vor ${diffMin} Min.`
-  if (diffH < 24) return `vor ${diffH} Std.`
-  return new Date(createdAt).toLocaleDateString("de-DE", { day: "numeric", month: "short" })
-}
 
 // ---- Standalone CommentSection for Storybook ----
 
@@ -136,7 +127,7 @@ function StandaloneCommentSection() {
               comment={comment}
               replies={getReplies(comment.item.id)}
               onReply={handleReply}
-              formatTimestamp={formatTimestamp}
+
             />
           ))}
         </div>
@@ -208,7 +199,7 @@ export const SingleBubble: Story = {
         authorName="Anna Schmidt"
         authorAvatar="https://randomuser.me/api/portraits/women/44.jpg"
         content="Tolle Idee! Bin dabei. Wer kommt noch mit?"
-        timestamp="vor 2 Stunden"
+        timestamp={new Date(Date.now() - 2 * 3600000).toISOString()}
         onReply={() => console.log("Reply")}
       />
     </div>
@@ -223,7 +214,7 @@ export const BubbleWithQuote: Story = {
         authorName="Lena Weber"
         authorAvatar="https://randomuser.me/api/portraits/women/68.jpg"
         content="Ich bringe Kuchen mit!"
-        timestamp="vor 30 Min."
+        timestamp={new Date(Date.now() - 30 * 60000).toISOString()}
         quotedAuthor="Thomas"
         quotedText="Super, ich komme auch!"
         onReply={() => console.log("Reply")}
@@ -241,7 +232,6 @@ export const ThreadWithReplies: Story = {
         replies={MOCK_REPLIES_C1}
         defaultExpanded
         onReply={(c) => console.log("Reply to:", c.authorName)}
-        formatTimestamp={formatTimestamp}
       />
     </div>
   ),
@@ -255,7 +245,6 @@ export const ThreadCollapsed: Story = {
         comment={MOCK_COMMENTS[0]}
         replies={MOCK_REPLIES_C1}
         onReply={(c) => console.log("Reply to:", c.authorName)}
-        formatTimestamp={formatTimestamp}
       />
     </div>
   ),
