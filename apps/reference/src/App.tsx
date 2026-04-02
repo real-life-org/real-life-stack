@@ -1190,14 +1190,16 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       {/* Incoming event dialogs */}
       <IncomingEventDialogs onCloseVerifyDialog={() => setVerifyDialogOpen(false)} />
 
-      {/* Connector FAB — bottom-left, above BottomNav */}
-      <div className="fixed bottom-20 left-4 z-50">
-        <ConnectorSwitcher
-          connectors={CONNECTOR_OPTIONS}
-          activeConnector={activeConnectorId}
-          onConnectorChange={onConnectorChange}
-        />
-      </div>
+      {/* Connector FAB — bottom-left, above BottomNav (only with ?dev URL param) */}
+      {new URLSearchParams(window.location.search).has('dev') && (
+        <div className="fixed bottom-20 left-4 z-50">
+          <ConnectorSwitcher
+            connectors={CONNECTOR_OPTIONS}
+            activeConnector={activeConnectorId}
+            onConnectorChange={onConnectorChange}
+          />
+        </div>
+      )}
     </AppShell>
   )
 }
