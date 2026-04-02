@@ -1263,7 +1263,7 @@ function AuthGate({ connector, children }: { connector: DataInterface; children:
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex h-full items-center justify-center">
           <div className="animate-pulse text-muted-foreground">Lade Auth…</div>
         </div>
       }
@@ -1308,7 +1308,7 @@ export default function App() {
 
   if (loading || !connector) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <div className="animate-pulse text-muted-foreground">
           Lade {CONNECTOR_OPTIONS.find((o) => o.id === connectorId)?.name ?? connectorId}…
         </div>
