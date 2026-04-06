@@ -74,6 +74,7 @@ jobs:
         run: pnpm --filter reference build
         env:
           VITE_BASE_PATH: /app/
+          VITE_UPDATE_SERVER_URL: https://real-life-stack.de
 
       - name: Build prototype
         working-directory: apps/prototype
