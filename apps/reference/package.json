@@ -11,8 +11,7 @@
     "cap:android": "cap open android",
     "cap:ios": "cap open ios",
     "build:android": "tsc -b && vite build && cap sync android",
-    "build:ios": "tsc -b && vite build && cap sync ios",
-    "build:ota": "vite build && ./scripts/bundle-ota.sh"
+    "build:ios": "tsc -b && vite build && cap sync ios"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",

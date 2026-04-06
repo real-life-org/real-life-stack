@@ -72,24 +72,10 @@ Statische Dateien auf GitHub Pages (`real-life-stack.de`), Zips in GitHub Releas
 
 ### Bundle erstellen & deployen
 
-```bash
-cd apps/reference
+Über GitHub Actions: **Actions → "OTA Release" → "Run workflow"** → Version + Channels eingeben.
 
-# 1. Web-Bundle für den jeweiligen Channel bauen
-VITE_UPDATE_CHANNEL=ios pnpm build
-
-# 2. OTA-Bundle + latest.json erstellen
-./scripts/bundle-ota.sh 1.0.2 ios
-# → ota-bundles/ios/bundle-ios-1.0.2.zip
-# → ota-bundles/ios/latest.json
-
-# 3. Zip als GitHub Release hochladen
-gh release create ota-1.0.2 ota-bundles/ios/bundle-ios-1.0.2.zip --title "OTA 1.0.2"
-# Weitere Channels anhängen:
-gh release upload ota-1.0.2 ota-bundles/android/bundle-android-1.0.2.zip
-
-# 4. latest.json in gh-pages Branch committen (Pfad: updates/<channel>/latest.json)
-```
+Der Workflow baut das Bundle pro Channel, erstellt einen GitHub Release mit den Zips und
+committed die `latest.json` Dateien automatisch in den `gh-pages` Branch.
 
 ### Wie es funktioniert
 
