@@ -1,4 +1,4 @@
-package org.reallifestack.reference;
+package org.reallife.reallifestack;
 
 import com.getcapacitor.BridgeActivity;
 

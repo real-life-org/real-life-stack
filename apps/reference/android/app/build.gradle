@@ -4,10 +4,10 @@ def versionProps = new Properties()
 versionProps.load(new FileInputStream(rootProject.file("version.properties")))
 
 android {
-    namespace = "org.reallifestack.reference"
+    namespace = "org.reallife.reallifestack"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "org.reallifestack.reference"
+        applicationId "org.reallife.reallifestack"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode versionProps['VERSION_CODE'] as Integer

@@ -39,7 +39,7 @@ gradle assembleDebug -p android
 
 # 4. Install & launch
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-adb shell am start -n org.reallifestack.reference/.MainActivity
+adb shell am start -n org.reallife.reallifestack/.MainActivity
 ```
 
 ### Key Notes

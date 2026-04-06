@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Real Life Stack</string>
     <string name="title_activity_main">Real Life Stack</string>
-    <string name="package_name">org.reallifestack.reference</string>
-    <string name="custom_url_scheme">org.reallifestack.reference</string>
+    <string name="package_name">org.reallife.reallifestack</string>
+    <string name="custom_url_scheme">org.reallife.reallifestack</string>
 </resources>

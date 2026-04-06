@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli"
 
 const config: CapacitorConfig = {
-  appId: "org.reallifestack.reference",
+  appId: "org.reallife.reallifestack",
   appName: "Real Life Stack",
   webDir: "dist",
   server: {
@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
   },
   plugins: {
     LiveUpdate: {
-      appId: "org.reallifestack.reference",
+      appId: "org.reallife.reallifestack",
     },
   },
 }
