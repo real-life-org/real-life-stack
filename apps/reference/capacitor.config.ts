@@ -9,6 +9,11 @@ const config: CapacitorConfig = {
     // url: "http://192.168.x.x:5173",
     // cleartext: true,
   },
+  plugins: {
+    LiveUpdate: {
+      appId: "org.reallifestack.reference",
+    },
+  },
 }
 
 export default config

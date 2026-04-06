@@ -5,3 +5,4 @@ node_modules
 dist
 .turbo
 /prototype/
+apps/reference/ota-bundles/

@@ -48,3 +48,45 @@ adb shell am start -n org.reallifestack.reference/.MainActivity
 - iOS signing: set your own Development Team in Xcode or `project.pbxproj`
 - `viewport-fit=cover` in `index.html` is required for `env()` safe area variables to work
 - Android needs Gradle 8.14+ on PATH (no local Gradle wrapper in this project)
+
+## OTA Updates (Live Update)
+
+Ermöglicht Web-Bundle-Updates ohne neuen App-Store-Release via `@capawesome/capacitor-live-update`.
+
+### Channels (3 Targets)
+
+| Channel | Target |
+|---|---|
+| `ios` | Apple App Store |
+| `android` | Google Play Store |
+| `android-foss` | F-Droid / ohne Google Services |
+
+Jeder Channel hat eine eigene `latest.json`, wird aber mit demselben Web-Bundle gebaut (sofern keine FOSS-spezifischen Env-Vars nötig sind).
+
+### Einrichtung Update-Server
+
+Statische Dateien auf GitHub Pages (`real-life-stack.de`), Zips in GitHub Releases:
+- `real-life-stack.de/updates/ios/latest.json`
+- `real-life-stack.de/updates/android/latest.json`
+- `real-life-stack.de/updates/android-foss/latest.json`
+
+### Bundle erstellen & deployen
+
+Über GitHub Actions: **Actions → "OTA Release" → "Run workflow"** → Version + Channels eingeben.
+
+Der Workflow baut das Bundle pro Channel, erstellt einen GitHub Release mit den Zips und
+committed die `latest.json` Dateien automatisch in den `gh-pages` Branch.
+
+### Wie es funktioniert
+
+1. App startet → `checkForLiveUpdate()` in `main.tsx` wird aufgerufen
+2. Fetch `https://real-life-stack.de/updates/<channel>/latest.json`
+3. Wenn `bundleId` neu: Bundle-Zip herunterladen, entpacken, App neu laden
+4. Bei Fehler: App läuft normal weiter (kein Crash)
+5. Im Browser/Dev: komplett inaktiv (kein nativer Kontext)
+
+Der `VITE_UPDATE_CHANNEL` wird beim nativen App-Build gesetzt (lokal / Xcode / Android Studio).
+Im CI-Workflow spielt er keine Rolle — dort läuft die OTA-Logik nie (kein nativer Kontext).
+
+### Apple-Richtlinien
+OTA-Updates sind erlaubt für reine Web-Bundle-Änderungen (kein `eval`, keine neuen nativen APIs).

@@ -11,6 +11,11 @@ on:
       - 'pnpm-workspace.yaml'
       - '.github/workflows/deploy-prototypes.yml'
   workflow_dispatch:
+    inputs:
+      rollback_tag:
+        description: 'OTA rollback: release tag to restore (e.g. ota-a3f9c12). Leave empty for normal deploy.'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -24,6 +29,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,9 +59,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Rewrite link: overrides to point to .wot/ instead of ../web-of-trust/
           sed -i 's|link:../web-of-trust/|link:.wot/|g' package.json
-          # Also rewrite wot-connector's dependency to use local link
           sed -i 's|"@real-life/adapter-yjs": "^0.1.0"|"@real-life/adapter-yjs": "link:../../.wot/packages/adapter-yjs"|g' packages/wot-connector/package.json
           pnpm install --no-frozen-lockfile
 
@@ -70,10 +75,25 @@ jobs:
         env:
           VITE_BASE_PATH: /
 
-      - name: Build reference app
+      - name: Set SHORT_SHA
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Build OTA bundles
+        run: |
+          for channel in ios android android-foss; do
+            pnpm --filter reference build
+            (cd apps/reference/dist && zip -r "../../../bundle-${channel}-${SHORT_SHA}.zip" .)
+          done
+        env:
+          VITE_BASE_PATH: /app/
+          VITE_UPDATE_SERVER_URL: https://real-life-stack.de
+
+      - name: Build reference app (for Pages)
         run: pnpm --filter reference build
         env:
           VITE_BASE_PATH: /app/
+          VITE_UPDATE_SERVER_URL: https://real-life-stack.de
+          VITE_UPDATE_CHANNEL: ios
 
       - name: Build prototype
         working-directory: apps/prototype
@@ -82,19 +102,68 @@ jobs:
       - name: Build Storybook
         run: pnpm build:storybook
 
+      - name: Compute bundle hashes
+        run: |
+          for channel in ios android android-foss; do
+            sha256sum "bundle-${channel}-${SHORT_SHA}.zip" | cut -d' ' -f1 > "hash-${channel}.txt"
+          done
+
+      - name: Create GitHub Release with OTA bundles
+        if: inputs.rollback_tag == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "ota-${SHORT_SHA}" \
+            --title "OTA ${SHORT_SHA}" \
+            --notes "Automatic OTA release from commit ${SHORT_SHA}" \
+            bundle-ios-${SHORT_SHA}.zip \
+            bundle-android-${SHORT_SHA}.zip \
+            bundle-android-foss-${SHORT_SHA}.zip
+
+      - name: Generate latest.json (normal deploy)
+        if: inputs.rollback_tag == ''
+        run: |
+          REPO="${{ github.repository }}"
+          for channel in ios android android-foss; do
+            HASH=$(cat "hash-${channel}.txt")
+            mkdir -p gh-pages-ota/updates/${channel}
+            printf '{"bundleId":"%s","url":"%s","sha256":"%s"}\n' \
+              "${SHORT_SHA}" \
+              "https://github.com/${REPO}/releases/download/ota-${SHORT_SHA}/bundle-${channel}-${SHORT_SHA}.zip" \
+              "${HASH}" \
+              > gh-pages-ota/updates/${channel}/latest.json
+          done
+
+      - name: Generate latest.json (rollback)
+        if: inputs.rollback_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPO="${{ github.repository }}"
+          TAG="${{ inputs.rollback_tag }}"
+          BUNDLE_ID="${TAG#ota-}"
+          for channel in ios android android-foss; do
+            mkdir -p gh-pages-ota/updates/${channel}
+            # Download bundle to compute hash
+            gh release download "${TAG}" -p "bundle-${channel}-${BUNDLE_ID}.zip" -D /tmp
+            HASH=$(sha256sum "/tmp/bundle-${channel}-${BUNDLE_ID}.zip" | cut -d' ' -f1)
+            printf '{"bundleId":"%s","url":"%s","sha256":"%s"}\n' \
+              "${BUNDLE_ID}" \
+              "https://github.com/${REPO}/releases/download/${TAG}/bundle-${channel}-${BUNDLE_ID}.zip" \
+              "${HASH}" \
+              > gh-pages-ota/updates/${channel}/latest.json
+          done
+          echo "Rolling back OTA to ${TAG}"
+
       - name: Prepare deployment
         run: |
           mkdir -p gh-pages/app gh-pages/edge gh-pages/storybook
-          # Landing page at root
           cp -R apps/landing/dist/. gh-pages/
-          # Reference app at /app/
           cp -R apps/reference/dist/. gh-pages/app/
-          # SPA 404 handler must be at site root for GitHub Pages
           cp apps/reference/public/404.html gh-pages/404.html
-          # Prototype at /edge/
           cp -R apps/prototype/dist/. gh-pages/edge/
-          # Storybook at /storybook/
           cp -R packages/toolkit/storybook-static/. gh-pages/storybook/
+          cp -R gh-pages-ota/updates/. gh-pages/updates/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

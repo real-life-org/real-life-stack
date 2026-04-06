@@ -17,6 +17,7 @@
     "@capacitor/android": "^8.2.0",
     "@capacitor/core": "^8.2.0",
     "@capacitor/ios": "^8.2.0",
+    "@capawesome/capacitor-live-update": "^8.2.1",
     "@real-life-stack/data-interface": "workspace:*",
     "@real-life-stack/local-connector": "workspace:*",
     "@real-life-stack/mock-connector": "workspace:*",
