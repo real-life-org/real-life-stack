@@ -9,6 +9,7 @@ on:
       - 'apps/**'
       - 'packages/**'
       - 'pnpm-workspace.yaml'
+      - 'updates/**'
       - '.github/workflows/deploy-prototypes.yml'
   workflow_dispatch:
 
