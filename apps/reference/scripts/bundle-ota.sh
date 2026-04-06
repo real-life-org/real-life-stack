@@ -25,7 +25,7 @@ fi
 (cd dist && zip -r "../${BUNDLE_DIR}/${BUNDLE_FILE}" .)
 
 # Write latest.json — set OTA_SERVER_URL before running
-SERVER_URL="${OTA_SERVER_URL:-https://real-life-org.github.io/real-life-stack}"
+SERVER_URL="${OTA_SERVER_URL:-https://real-life-stack.de}"
 
 cat > "${BUNDLE_DIR}/latest.json" <<EOF
 {
@@ -37,6 +37,6 @@ EOF
 echo "Bundle created: ${BUNDLE_DIR}/${BUNDLE_FILE}"
 echo "latest.json:   ${BUNDLE_DIR}/latest.json"
 echo ""
-echo "Deploy to GitHub Pages (real-life-org):"
-echo "  1. Copy ${BUNDLE_DIR}/ contents into the gh-pages branch of real-life-org/real-life-stack"
+echo "Deploy to GitHub Pages (real-life-org/real-life-stack, gh-pages branch):"
+echo "  1. Copy ${BUNDLE_DIR}/ contents into the gh-pages branch root"
 echo "  2. The app fetches: ${SERVER_URL}/latest.json"
