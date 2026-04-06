@@ -11,12 +11,14 @@
     "cap:android": "cap open android",
     "cap:ios": "cap open ios",
     "build:android": "tsc -b && vite build && cap sync android",
-    "build:ios": "tsc -b && vite build && cap sync ios"
+    "build:ios": "tsc -b && vite build && cap sync ios",
+    "build:ota": "vite build && ./scripts/bundle-ota.sh"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
     "@capacitor/core": "^8.2.0",
     "@capacitor/ios": "^8.2.0",
+    "@capawesome/capacitor-live-update": "^8.2.1",
     "@real-life-stack/data-interface": "workspace:*",
     "@real-life-stack/local-connector": "workspace:*",
     "@real-life-stack/mock-connector": "workspace:*",
