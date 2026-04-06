@@ -99,12 +99,10 @@ jobs:
       - name: Write latest.json
         if: steps.check.outputs.skip == 'false'
         run: |
-          cat > latest-${{ matrix.channel }}.json <<EOF
-          {
-            "bundleId": "${{ inputs.version }}",
-            "url": "https://github.com/${{ github.repository }}/releases/download/ota-${{ inputs.version }}/bundle-${{ matrix.channel }}-${{ inputs.version }}.zip"
-          }
-          EOF
+          printf '{"bundleId":"%s","url":"%s"}\n' \
+            "${{ inputs.version }}" \
+            "https://github.com/${{ github.repository }}/releases/download/ota-${{ inputs.version }}/bundle-${{ matrix.channel }}-${{ inputs.version }}.zip" \
+            > latest-${{ matrix.channel }}.json
 
       - name: Upload artifacts
         if: steps.check.outputs.skip == 'false'

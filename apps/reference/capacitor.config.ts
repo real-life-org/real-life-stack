@@ -11,10 +11,7 @@ const config: CapacitorConfig = {
   },
   plugins: {
     LiveUpdate: {
-      // URL to your update server — replace with actual deployment URL
-      // The server must expose: GET /api/latest → { "bundleId": "1.0.1", "url": "https://.../bundle-1.0.1.zip" }
       appId: "org.reallifestack.reference",
-      publicKey: undefined, // optional: RSA public key for bundle signature verification
     },
   },
 }
