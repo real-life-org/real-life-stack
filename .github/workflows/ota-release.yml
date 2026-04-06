@@ -87,9 +87,8 @@ jobs:
           VITE_BASE_PATH: /app/
           VITE_UPDATE_SERVER_URL: https://real-life-stack.de
           VITE_UPDATE_CHANNEL: ${{ matrix.channel }}
-          # Channel-specific env vars — add secrets in repo settings as needed:
-          # VITE_GOOGLE_MAPS_API_KEY is only set for ios/android, not android-foss
-          VITE_GOOGLE_MAPS_API_KEY: ${{ matrix.channel != 'android-foss' && secrets.VITE_GOOGLE_MAPS_API_KEY || '' }}
+          # TODO: android-foss uses a different push notification provider (no FCM).
+          # Add channel-specific secrets here once push notifications are implemented.
 
       - name: Create bundle zip
         if: steps.check.outputs.skip == 'false'
