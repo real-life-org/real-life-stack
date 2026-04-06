@@ -96,6 +96,8 @@ jobs:
           cp -R apps/prototype/dist/. gh-pages/edge/
           # Storybook at /storybook/
           cp -R packages/toolkit/storybook-static/. gh-pages/storybook/
+          # OTA update manifests at /updates/<channel>/latest.json
+          cp -R updates/. gh-pages/updates/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
