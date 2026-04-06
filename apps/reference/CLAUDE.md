@@ -53,40 +53,54 @@ adb shell am start -n org.reallifestack.reference/.MainActivity
 
 Ermöglicht Web-Bundle-Updates ohne neuen App-Store-Release via `@capawesome/capacitor-live-update`.
 
+### Channels (3 Targets)
+
+| Channel | Target |
+|---|---|
+| `ios` | Apple App Store |
+| `android` | Google Play Store |
+| `android-foss` | F-Droid / ohne Google Services |
+
+Jeder Channel hat eine eigene `latest.json`, wird aber mit demselben Web-Bundle gebaut (sofern keine FOSS-spezifischen Env-Vars nötig sind).
+
 ### Einrichtung Update-Server
 
-Der Server muss zwei statische Dateien bereitstellen:
-- `/latest.json` → `{ "bundleId": "1.0.2", "url": "https://…/bundle-1.0.2.zip" }`
-- Die Bundle-Zip-Datei unter der angegebenen URL
-
-Funktioniert mit jedem Static-Host: **GitHub Pages**, Cloudflare Pages, S3, Nginx, …
+Statische Dateien auf GitHub Pages (`real-life-stack.de`), Zips in GitHub Releases:
+- `real-life-stack.de/updates/ios/latest.json`
+- `real-life-stack.de/updates/android/latest.json`
+- `real-life-stack.de/updates/android-foss/latest.json`
 
 ### Bundle erstellen & deployen
 
 ```bash
-# .env anlegen (einmalig)
-echo "VITE_UPDATE_SERVER_URL=https://real-life-stack.de" > .env.local
-
-# OTA-Bundle bauen
 cd apps/reference
-pnpm build:ota 1.0.2              # erstellt ota-bundles/bundle-1.0.2.zip + latest.json
 
-# Dateien in gh-pages Branch deployen
-git checkout gh-pages
-cp apps/reference/ota-bundles/* .
-git add bundle-1.0.2.zip latest.json
-git commit -m "chore: OTA bundle 1.0.2"
-git push origin gh-pages
-git checkout -
+# 1. Web-Bundle für den jeweiligen Channel bauen
+VITE_UPDATE_CHANNEL=ios pnpm build
+
+# 2. OTA-Bundle + latest.json erstellen
+./scripts/bundle-ota.sh 1.0.2 ios
+# → ota-bundles/ios/bundle-ios-1.0.2.zip
+# → ota-bundles/ios/latest.json
+
+# 3. Zip als GitHub Release hochladen
+gh release create ota-1.0.2 ota-bundles/ios/bundle-ios-1.0.2.zip --title "OTA 1.0.2"
+# Weitere Channels anhängen:
+gh release upload ota-1.0.2 ota-bundles/android/bundle-android-1.0.2.zip
+
+# 4. latest.json in gh-pages Branch committen (Pfad: updates/<channel>/latest.json)
 ```
 
 ### Wie es funktioniert
 
 1. App startet → `checkForLiveUpdate()` in `main.tsx` wird aufgerufen
-2. Fetch `$VITE_UPDATE_SERVER_URL/latest.json`
+2. Fetch `https://real-life-stack.de/updates/<channel>/latest.json`
 3. Wenn `bundleId` neu: Bundle-Zip herunterladen, entpacken, App neu laden
 4. Bei Fehler: App läuft normal weiter (kein Crash)
 5. Im Browser/Dev: komplett inaktiv (kein nativer Kontext)
+
+Der `VITE_UPDATE_CHANNEL` wird beim nativen App-Build gesetzt (lokal / Xcode / Android Studio).
+Im CI-Workflow spielt er keine Rolle — dort läuft die OTA-Logik nie (kein nativer Kontext).
 
 ### Apple-Richtlinien
 OTA-Updates sind erlaubt für reine Web-Bundle-Änderungen (kein `eval`, keine neuen nativen APIs).

@@ -5,12 +5,12 @@ import { LiveUpdate } from "@capawesome/capacitor-live-update"
  * Checks for OTA updates on app startup.
  * Only runs on native platforms (iOS/Android), no-op in browser.
  *
- * Server contract:
- *   GET <UPDATE_SERVER_URL>/latest.json
- *   → { "bundleId": "1.0.1", "url": "https://…/bundle-1.0.1.zip" }
+ * Channel URLs (set VITE_UPDATE_SERVER_URL + VITE_UPDATE_CHANNEL at build time):
+ *   https://real-life-stack.de/updates/ios/latest.json
+ *   https://real-life-stack.de/updates/android/latest.json
+ *   https://real-life-stack.de/updates/android-foss/latest.json
  *
- * Works with any static host (GitHub Pages, Cloudflare Pages, S3, …).
- * Set VITE_UPDATE_SERVER_URL in your .env to enable.
+ * Falls back to platform name if VITE_UPDATE_CHANNEL is not set.
  */
 export async function checkForLiveUpdate(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
@@ -18,8 +18,11 @@ export async function checkForLiveUpdate(): Promise<void> {
   const serverUrl = import.meta.env.VITE_UPDATE_SERVER_URL
   if (!serverUrl) return
 
+  const channel =
+    import.meta.env.VITE_UPDATE_CHANNEL || Capacitor.getPlatform()
+
   try {
-    const response = await fetch(`${serverUrl}/latest.json`)
+    const response = await fetch(`${serverUrl}/updates/${channel}/latest.json`)
     if (!response.ok) return
 
     const { bundleId, url } = (await response.json()) as {
