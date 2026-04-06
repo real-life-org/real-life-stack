@@ -18,7 +18,7 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -29,6 +29,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -73,39 +75,25 @@ jobs:
         env:
           VITE_BASE_PATH: /
 
-      - name: Build reference app (ios)
+      - name: Set SHORT_SHA
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Build OTA bundles
+        run: |
+          for channel in ios android android-foss; do
+            pnpm --filter reference build
+            (cd apps/reference/dist && zip -r "../../../bundle-${channel}-${SHORT_SHA}.zip" .)
+          done
+        env:
+          VITE_BASE_PATH: /app/
+          VITE_UPDATE_SERVER_URL: https://real-life-stack.de
+
+      - name: Build reference app (for Pages)
         run: pnpm --filter reference build
         env:
           VITE_BASE_PATH: /app/
           VITE_UPDATE_SERVER_URL: https://real-life-stack.de
           VITE_UPDATE_CHANNEL: ios
-
-      - name: Zip iOS bundle
-        run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
-          (cd apps/reference/dist && zip -r "../../../bundle-ios-${SHORT_SHA}.zip" .)
-
-      - name: Build reference app (android)
-        run: pnpm --filter reference build
-        env:
-          VITE_BASE_PATH: /app/
-          VITE_UPDATE_SERVER_URL: https://real-life-stack.de
-          VITE_UPDATE_CHANNEL: android
-
-      - name: Zip Android bundle
-        run: cd apps/reference/dist && zip -r "../../../bundle-android-${SHORT_SHA}.zip" .
-
-      - name: Build reference app (android-foss)
-        run: pnpm --filter reference build
-        env:
-          VITE_BASE_PATH: /app/
-          VITE_UPDATE_SERVER_URL: https://real-life-stack.de
-          VITE_UPDATE_CHANNEL: android-foss
-          # TODO: add FOSS-specific env vars here once push notifications are implemented
-
-      - name: Zip Android FOSS bundle
-        run: cd apps/reference/dist && zip -r "../../../bundle-android-foss-${SHORT_SHA}.zip" .
 
       - name: Build prototype
         working-directory: apps/prototype
@@ -113,6 +101,12 @@ jobs:
 
       - name: Build Storybook
         run: pnpm build:storybook
+
+      - name: Compute bundle hashes
+        run: |
+          for channel in ios android android-foss; do
+            sha256sum "bundle-${channel}-${SHORT_SHA}.zip" | cut -d' ' -f1 > "hash-${channel}.txt"
+          done
 
       - name: Create GitHub Release with OTA bundles
         if: inputs.rollback_tag == ''
@@ -131,10 +125,12 @@ jobs:
         run: |
           REPO="${{ github.repository }}"
           for channel in ios android android-foss; do
+            HASH=$(cat "hash-${channel}.txt")
             mkdir -p gh-pages-ota/updates/${channel}
-            printf '{"bundleId":"%s","url":"%s"}\n' \
+            printf '{"bundleId":"%s","url":"%s","sha256":"%s"}\n' \
               "${SHORT_SHA}" \
               "https://github.com/${REPO}/releases/download/ota-${SHORT_SHA}/bundle-${channel}-${SHORT_SHA}.zip" \
+              "${HASH}" \
               > gh-pages-ota/updates/${channel}/latest.json
           done
 
@@ -148,9 +144,13 @@ jobs:
           BUNDLE_ID="${TAG#ota-}"
           for channel in ios android android-foss; do
             mkdir -p gh-pages-ota/updates/${channel}
-            printf '{"bundleId":"%s","url":"%s"}\n' \
+            # Download bundle to compute hash
+            gh release download "${TAG}" -p "bundle-${channel}-${BUNDLE_ID}.zip" -D /tmp
+            HASH=$(sha256sum "/tmp/bundle-${channel}-${BUNDLE_ID}.zip" | cut -d' ' -f1)
+            printf '{"bundleId":"%s","url":"%s","sha256":"%s"}\n' \
               "${BUNDLE_ID}" \
               "https://github.com/${REPO}/releases/download/${TAG}/bundle-${channel}-${BUNDLE_ID}.zip" \
+              "${HASH}" \
               > gh-pages-ota/updates/${channel}/latest.json
           done
           echo "Rolling back OTA to ${TAG}"

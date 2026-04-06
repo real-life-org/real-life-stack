@@ -25,19 +25,47 @@ export async function checkForLiveUpdate(): Promise<void> {
     const response = await fetch(`${serverUrl}/updates/${channel}/latest.json`)
     if (!response.ok) return
 
-    const { bundleId, url } = (await response.json()) as {
+    const { bundleId, url, sha256 } = (await response.json()) as {
       bundleId: string
       url: string
+      sha256?: string
     }
 
     const currentBundleId = await LiveUpdate.getCurrentBundle()
     if (currentBundleId.bundleId === bundleId) return
 
     await LiveUpdate.downloadBundle({ bundleId, url })
+
+    if (sha256) {
+      const isValid = await verifyBundleHash(bundleId, sha256)
+      if (!isValid) {
+        console.warn("[LiveUpdate] Bundle hash mismatch — skipping update")
+        await LiveUpdate.deleteBundle({ bundleId })
+        return
+      }
+    }
+
     await LiveUpdate.setNextBundle({ bundleId })
     await LiveUpdate.reload()
   } catch (err) {
     // Update failures must never crash the app
     console.warn("[LiveUpdate] Update check failed:", err)
+  }
+}
+
+async function verifyBundleHash(
+  bundleId: string,
+  expectedHash: string
+): Promise<boolean> {
+  try {
+    const path = await LiveUpdate.getBundlePath({ bundleId })
+    const response = await fetch(path.path)
+    const buffer = await response.arrayBuffer()
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+    return hashHex === expectedHash
+  } catch {
+    return false
   }
 }
