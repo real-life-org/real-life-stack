@@ -1221,7 +1221,8 @@ const STORAGE_KEY_MODULE = "rls-active-module"
 
 function getInitialConnectorId(): string {
   const params = new URLSearchParams(window.location.search)
-  return params.get("connector") ?? localStorage.getItem(STORAGE_KEY_CONNECTOR) ?? "mock"
+  const envDefault = import.meta.env.VITE_DEFAULT_CONNECTOR as string | undefined
+  return params.get("connector") ?? envDefault ?? localStorage.getItem(STORAGE_KEY_CONNECTOR) ?? "mock"
 }
 
 // Lazy-load the DIDAuthScreen to keep WoT bundle separate
