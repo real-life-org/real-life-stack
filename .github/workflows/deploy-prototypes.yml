@@ -54,12 +54,13 @@ jobs:
         working-directory: .wot
         run: |
           pnpm install --frozen-lockfile
-          pnpm --filter @real-life/wot-core build
-          pnpm --filter @real-life/adapter-yjs build
+          pnpm --filter @web_of_trust/core build
+          pnpm --filter @web_of_trust/adapter-yjs build
 
       - name: Install dependencies
         run: |
           sed -i 's|link:../web-of-trust/|link:.wot/|g' package.json
+          sed -i 's|"@real-life/wot-core": "^0.2.0"|"@real-life/wot-core": "link:../../.wot/packages/wot-core"|g' packages/wot-connector/package.json
           sed -i 's|"@real-life/adapter-yjs": "^0.1.0"|"@real-life/adapter-yjs": "link:../../.wot/packages/adapter-yjs"|g' packages/wot-connector/package.json
           pnpm install --no-frozen-lockfile
 
