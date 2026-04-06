@@ -4,8 +4,6 @@ import {
   Newspaper,
   Map as MapIcon,
   Calendar,
-  Users,
-  MessageCircle,
   Plus,
   MapPin,
   Sun,
@@ -29,7 +27,6 @@ import {
   ModuleTabs,
   BottomNav,
   ConnectorSwitcher,
-  StatCard,
   KanbanBoard,
   KanbanToolbar,
   applyKanbanFilter,
@@ -117,16 +114,6 @@ const CONNECTOR_OPTIONS: ConnectorOption[] = [
 //** Short human-readable fallback for raw IDs (DIDs etc.) */
 function shortName(id: string): string {
   return `User-${id.slice(-6)}`
-}
-
-// Helper: resolve user info from members list or current user
-function resolveAuthor(userId: string, members: User[], currentUser?: User | null) {
-  const member = members.find((m) => m.id === userId)
-    ?? (currentUser?.id === userId ? currentUser : undefined)
-  return {
-    name: member?.displayName ?? shortName(userId),
-    avatar: member?.avatarUrl,
-  }
 }
 
 function FeedView({ groupId }: { groupId: string }) {
