@@ -15,8 +15,7 @@ import { LiveUpdate } from "@capawesome/capacitor-live-update"
 export async function checkForLiveUpdate(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
 
-  const serverUrl = import.meta.env.VITE_UPDATE_SERVER_URL
-  if (!serverUrl) return
+  const serverUrl = import.meta.env.VITE_UPDATE_SERVER_URL ?? 'https://real-life-stack.de'
 
   const channel =
     import.meta.env.VITE_UPDATE_CHANNEL || Capacitor.getPlatform()
