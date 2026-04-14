@@ -1173,7 +1173,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       <IncomingEventDialogs onCloseVerifyDialog={() => setVerifyDialogOpen(false)} />
 
       {/* Connector FAB — bottom-left, above BottomNav (only with ?dev URL param) */}
-      {new URLSearchParams(window.location.search).has('dev') && (
+      {initialDevMode && (
         <div className="fixed bottom-20 left-4 z-50">
           <ConnectorSwitcher
             connectors={CONNECTOR_OPTIONS}
@@ -1218,11 +1218,12 @@ async function createConnector(type: string): Promise<DataInterface> {
 const STORAGE_KEY_CONNECTOR = "rls-connector"
 const STORAGE_KEY_GROUP = "rls-active-group"
 const STORAGE_KEY_MODULE = "rls-active-module"
+const initialDevMode = new URLSearchParams(window.location.search).has('dev')
 
 function getInitialConnectorId(): string {
   const params = new URLSearchParams(window.location.search)
   const envDefault = import.meta.env.VITE_DEFAULT_CONNECTOR as string | undefined
-  return params.get("connector") ?? envDefault ?? localStorage.getItem(STORAGE_KEY_CONNECTOR) ?? "mock"
+  return params.get("connector") ?? envDefault ?? localStorage.getItem(STORAGE_KEY_CONNECTOR) ?? "wot"
 }
 
 // Lazy-load the DIDAuthScreen to keep WoT bundle separate
