@@ -20,11 +20,11 @@ Real Life Stack ist ein modularer UI-Baukasten für lokale Vernetzung. Die Archi
 │  → Einheitliche API, liefert { data, isLoading, error }    │
 ├─────────────────────────────────────────────────────────────┤
 │                    Daten-Schnittstelle                      │
-│  DataInterface: observe(), createItem(), getUser(), ...     │
-│  Alles ist ein Item — auch Features und Capabilities        │
+│  DataInterface: getItems(), getItem(), observe(), ...       │
+│  Optional: ItemWriter, GroupManager, Authenticatable, ...    │
 ├─────────────────────────────────────────────────────────────┤
 │                      Connector(s)                           │
-│         (implementiert die Schnittstelle vollständig)       │
+│       (implementiert Core + passende Capabilities)          │
 │     Caching, Optimistic Updates, Reaktivität — alles intern │
 ├────────────────┬────────────────┬───────────────────────────┤
 │ REST-Connector │ WoT-Connector  │   Weitere Connectoren     │
@@ -39,7 +39,7 @@ Real Life Stack ist ein modularer UI-Baukasten für lokale Vernetzung. Die Archi
 
 1. **Module sind pure UI** – Sie wissen nicht, woher die Daten kommen
 2. **Generische Items** – Ein Item kann in mehreren Modulen erscheinen
-3. **Connector-Pattern** – Jeder Connector implementiert die komplette Schnittstelle
+3. **Connector-Pattern** – Jeder Connector implementiert den read-only Kern und nur die Capabilities, die er unterstützt
 4. **Daten-Mixing** – Daten aus verschiedenen Quellen können kombiniert werden
 5. **Connector-Verantwortung** – Der Connector ist vollständig verantwortlich für Caching, Optimistic Updates und Reaktivität. Die Hooks sind dünn — sie konsumieren nur die Connector-API
 
@@ -67,30 +67,17 @@ Module sind reine Darstellungskomponenten. Sie:
 
 ### 2. Daten-Schnittstelle
 
-Die zentrale API, die von den Hooks konsumiert und von Connectoren implementiert wird. Sie abstrahiert:
-- **Daten** – Items, Profile, Gruppen
+Die zentrale API, die von den Hooks konsumiert und von Connectoren implementiert wird. Der Kern ist bewusst read-only und abstrahiert:
+- **Daten** – Items als Snapshots lesen
 - **Reaktivität** – Observables für Live-Updates
-- **Identität** – Aktueller Nutzer, Authentifizierung
-- **Quellen** – Woher Daten kommen (für Anzeige)
+
+Alles Weitere wird über Capability-Interfaces ergänzt. So kann ein einfacher Import-Connector nur lesen, während ein vollwertiger App-Connector zusätzlich schreiben, Gruppen verwalten, Nutzer authentifizieren oder Relations auflösen kann.
 
 ```typescript
 interface DataInterface {
   // Lifecycle
   init(): Promise<void>       // Setup: Connections öffnen, CRDT laden, Sync starten
   dispose(): Promise<void>    // Cleanup: Connections schließen, Subscriptions aufräumen
-
-  // Gruppen — lesen & wechseln
-  getGroups(): Promise<Group[]>
-  getCurrentGroup(): Group | null
-  setCurrentGroup(id: string): void
-
-  // Gruppen — verwalten (Feature-gesteuert)
-  createGroup(name: string, data?: Record<string, unknown>): Promise<Group>
-  updateGroup(id: string, updates: Partial<Group>): Promise<Group>
-  deleteGroup(id: string): Promise<void>
-  getMembers(groupId: string): Promise<User[]>
-  inviteMember(groupId: string, userId: string): Promise<void>
-  removeMember(groupId: string, userId: string): Promise<void>
 
   // Items — einmalig laden
   getItems(filter?: ItemFilter): Promise<Item[]>
@@ -99,33 +86,44 @@ interface DataInterface {
   // Items — reaktiv beobachten (bevorzugter Weg)
   observe(filter: ItemFilter): Observable<Item[]>
   observeItem(id: string): Observable<Item | null>
+}
 
-  // Items — schreiben (Connector vergibt id + createdAt)
+interface ItemWriter {
   createItem(item: Omit<Item, 'id' | 'createdAt'>): Promise<Item>
   updateItem(id: string, updates: Partial<Item>): Promise<Item>
   deleteItem(id: string): Promise<void>
+}
 
-  // Relations
+interface RelationCapable {
   getRelatedItems(
     itemId: string,
     predicate?: string,
     options?: RelatedItemsOptions
   ): Promise<Item[]>
+}
 
-  // Nutzer
+interface GroupManager {
+  getGroups(): Promise<Group[]>
+  observeGroups(): Observable<Group[]>
+  getCurrentGroup(): Group | null
+  observeCurrentGroup(): Observable<Group | null>
+  setCurrentGroup(id: string | null): void
+  createGroup(name: string, data?: Record<string, unknown>): Promise<Group>
+  updateGroup(id: string, updates: Partial<Group>): Promise<Group>
+  deleteGroup(id: string): Promise<void>
+  getMembers(groupId: string | null): Promise<User[]>
+  inviteMember(groupId: string, userId: string): Promise<void>
+  removeMember(groupId: string, userId: string): Promise<void>
+}
+
+interface Authenticatable {
   getCurrentUser(): Promise<User | null>
+  observeCurrentUser(): Observable<User | null>
   getUser(id: string): Promise<User | null>
-
-  // Auth
   getAuthState(): Observable<AuthState>
   getAuthMethods(): AuthMethod[]
   authenticate(method: string, credentials: unknown): Promise<User>
   logout(): Promise<void>
-
-  // Quellen (für Multi-Source)
-  getSources(): Source[]
-  getActiveSource(): Source
-  setActiveSource(sourceId: string): void
 }
 
 type AuthState =
@@ -172,14 +170,6 @@ interface ItemFilter {
   createdBy?: string
   source?: string
   limit?: number                   // Max. Anzahl (für Paging)
-  offset?: number                  // Überspringe die ersten N
-  include?: IncludeDirective[]     // Relations inline mitladen
-}
-
-interface IncludeDirective {
-  predicate: string                // Welche Relation auflösen?
-  as: string                       // Feld-Name in _included
-  limit?: number                   // Max. Anzahl
   offset?: number                  // Überspringe die ersten N
 }
 ```
@@ -273,11 +263,11 @@ function AddTaskButton() {
 
 | Connector | Was passiert bei `createItem()` |
 |---|---|
-| WoT (Automerge) | Sofort ins lokale CRDT geschrieben, Observable feuert automatisch, Sync im Hintergrund |
+| WoT (Yjs/CRDT) | Sofort ins lokale CRDT geschrieben, Observable feuert automatisch, Sync im Hintergrund |
 | REST | Request an Server, Response mit ID, Connector aktualisiert internen Cache, Observable feuert |
 | REST (optimistisch) | Item sofort im Cache anzeigen, Request abschicken, bei Fehler rollback |
 
-Die UI muss sich nicht um Caching, Optimistic Updates oder Rollback kümmern — der Connector handhabt das intern. Bei Local-First-Connectors (Automerge) existiert das Problem gar nicht: Writes sind instant, das Observable feuert sofort.
+Die UI muss sich nicht um Caching, Optimistic Updates oder Rollback kümmern — der Connector handhabt das intern. Bei Local-First-Connectors mit CRDT existiert das Problem kaum: Writes sind instant, das Observable feuert sofort.
 
 #### Connector-interne Hilfsmittel
 
@@ -314,15 +304,15 @@ Jeder Connector implementiert `observe()` — **wie** er das intern macht, ist s
 
 | Connector | Mechanismus | Latenz |
 |-----------|-------------|--------|
-| WoT (Automerge) | CRDT-Events, alles lokal | Sofort |
-| WoT (Evolu) | SQLite Live-Queries | Sofort |
+| WoT (Yjs/CRDT) | CRDT-Events, alles lokal | Sofort |
+| Local | IndexedDB + BroadcastChannel | Sofort |
 | GraphQL | GraphQL Subscriptions | Sofort |
 | REST + WebSocket | WS für Push, REST für Daten, lokaler Cache | Sofort |
 | REST (minimal) | Polling-Fallback | Sekunden |
 
 Die Observable-API ist für alle Backends gleich — nur der Mechanismus dahinter unterscheidet sich. Ein REST-Server ohne WebSocket funktioniert trotzdem, pollt aber statt zu pushen.
 
-**Hinweis für Connector-Implementierungen:** CRDT-basierte Connectors (z.B. Automerge) feuern Events auf Dokument-Ebene, während `observe()` auf Query-Ebene arbeitet. Der Connector muss intern filtern und sollte Subscriber nur benachrichtigen, wenn sich das Query-Ergebnis tatsächlich geändert hat (z.B. via Shallow Comparison). Das vermeidet unnötige Re-Renders.
+**Hinweis für Connector-Implementierungen:** CRDT-basierte Connectors feuern Events auf Dokument-Ebene, während `observe()` auf Query-Ebene arbeitet. Der Connector muss intern filtern und sollte Subscriber nur benachrichtigen, wenn sich das Query-Ergebnis tatsächlich geändert hat (z.B. via Shallow Comparison). Das vermeidet unnötige Re-Renders.
 
 ### 4. Connector
 
@@ -346,7 +336,7 @@ interface Item {
   // Pflichtfelder
   id: string
   type: string             // Was IST das Item? ("task", "event", "post", "place", ...)
-  createdAt: Date
+  createdAt: string          // ISO-Zeitstempel
   createdBy: string        // User-ID (DID oder Server-ID)
 
   // Schema-Versionierung
@@ -361,7 +351,6 @@ interface Item {
 
   // Metadaten (nur lesen)
   _source?: string         // Woher kommt das Item?
-  _included?: Record<string, Item[]>  // Aufgelöste Relations (bei include-Abfragen)
 }
 ```
 
@@ -522,9 +511,7 @@ Prädikate sind definierte Strings, kein Freitext. Der Katalog wächst mit den A
 
 ### Relations abfragen
 
-Das DataInterface bietet zwei Wege, Relations aufzulösen:
-
-**1. Explizit — verwandte Items laden:**
+Relations werden über `RelationCapable` aufgelöst, nicht über eingebettete `_included`-Daten am Item:
 
 ```typescript
 // Alle Kommentare zu einem Post
@@ -534,22 +521,7 @@ const comments = await connector.getRelatedItems("post-abc", "commentOn")
 const subtasks = await connector.getRelatedItems("task-100", "childOf", { depth: 2 })
 ```
 
-**2. Inline — beim Laden von Items Relations mitauflösen:**
-
-```typescript
-// Feed laden mit Kommentaren und Likes in einem Aufruf
-const posts = await connector.getItems({
-  type: "post",
-  include: [
-    { predicate: "commentOn", as: "comments", limit: 3 },
-    { predicate: "likedBy", as: "likes" }
-  ]
-})
-
-// Ergebnis: Jeder Post hat _included.comments und _included.likes
-posts[0]._included?.comments  // → [{ id: "comment-1", ... }, ...]
-posts[0]._included?.likes     // → [{ id: "did:key:...", ... }, ...]
-```
+In React-Komponenten wird dafür `useRelatedItems()` genutzt. So bleiben Relations reaktiv, ohne dass Connectoren Items mit abgeleiteten `_included`-Feldern anreichern müssen.
 
 ### Backend-Umsetzung
 
@@ -559,7 +531,7 @@ Wie ein Connector Relations intern auflöst, ist ihm überlassen:
 | --- | --- |
 | REST | `GET /items/post-abc/relations?predicate=commentOn` |
 | GraphQL | `query { item(id: "post-abc") { comments { ... } } }` |
-| WoT (Automerge) | Index-Dokument lesen → referenzierte Dokumente laden |
+| WoT (Yjs/CRDT) | Space-Dokument oder Cross-Group-Index lesen → referenzierte Items laden |
 
 Die Schnittstelle ist identisch — nur die Implementierung unterscheidet sich.
 
@@ -592,8 +564,8 @@ Die Konvertierung erfordert keine Änderung an der Datenstruktur — nur das Hin
 
 ## Connectoren
 
-Jeder Connector implementiert das `DataInterface` vollständig und ist verantwortlich für:
-- **ID-Vergabe** bei `createItem()` — die ID wird vom Connector erzeugt und im zurückgegebenen Item mitgeliefert
+Jeder Connector implementiert den read-only Kern des `DataInterface` und die passenden Capability-Interfaces. Für die Fähigkeiten, die er unterstützt, ist er verantwortlich für:
+- **ID-Vergabe** bei `createItem()` — wenn `ItemWriter` unterstützt wird, erzeugt der Connector die ID und liefert sie im zurückgegebenen Item mit
 - **Pagination** — der Connector entscheidet, ob `totalCount` in Collections geliefert wird
 - **Observable-Implementierung** — der Connector entscheidet, wie er Observables intern umsetzt (CRDT-Events, WebSocket, Polling)
 - **Caching** — der Connector verwaltet seinen eigenen Cache (z.B. via TanStack Query, eigener Store, oder CRDT-State)
@@ -605,7 +577,7 @@ Jeder Connector implementiert das `DataInterface` vollständig und ist verantwor
 Klassische Server-Anbindung mit Session-basierter Authentifizierung.
 
 ```typescript
-class RestConnector implements DataInterface {
+class RestConnector implements DataInterface, ItemWriter, Authenticatable {
   constructor(config: {
     baseUrl: string
   })
@@ -629,12 +601,14 @@ class RestConnector implements DataInterface {
 
 ### WoT-Connector
 
-Dezentrale Anbindung via [Web of Trust](https://github.com/IT4Change/web-of-trust).
+Dezentrale Anbindung via [Web of Trust](https://github.com/real-life-org/web-of-trust).
 
 ```typescript
-class WotConnector implements DataInterface {
+class WotConnector implements DataInterface, ItemWriter, GroupManager, Authenticatable {
   constructor(config: {
-    storage: WotStorage  // z.B. Evolu, LocalStorage
+    relayUrl: string
+    profilesUrl: string
+    vaultUrl?: string
   })
 
   // Keine separates Login — DID ist die Identität
@@ -646,9 +620,9 @@ class WotConnector implements DataInterface {
 ```
 
 **Eigenschaften:**
-- Nutzt `wot-core` für DID, Kryptografie, Signaturen
+- Nutzt `wot-core` und den Yjs-Adapter für DID, Kryptografie, Signaturen und CRDT-Spaces
 - Local-first: ID-Vergabe lokal (z.B. UUID), Sync im Hintergrund
-- `observe()` nativ über CRDT-Events (Automerge) oder Live Queries (Evolu)
+- `observe()` nativ über CRDT-Events und lokale Indizes
 - `totalCount` ggf. nicht effizient ermittelbar (dezentrale Daten)
 - E2E-verschlüsselt
 - Vertrauen durch persönliche Verifizierung
@@ -1142,19 +1116,19 @@ Diese Aspekte werden in der Implementierung geklärt:
 - **Reaktivität** → Observable-Pattern: `observe()` liefert ein lebendes Objekt mit `current` und `subscribe()`. Connector-intern umgesetzt via CRDT-Events, WebSocket, GraphQL Subscriptions oder Polling-Fallback. *(Entschieden: 5. März 2026)*
 - **title in data vs. top-level** → `title` lebt in `data`, nicht als Pflichtfeld. Nicht jeder Item-Typ hat einen Titel. Module nutzen Fallbacks. *(Entschieden: 5. März 2026)*
 - **Item-Typ** → `type` ist Pflichtfeld auf Item-Ebene. Bestimmt Rendering (wie dargestellt), während Daten-Felder das Modul-Routing bestimmen (wo dargestellt). *(Entschieden: 5. März 2026)*
-- **Relations** → RDF-kompatibles Tripel-Modell, eingebettet am Item als `relations[]`. Abfrage via `getRelatedItems()` und `include`-Direktive. *(Entschieden: 5. März 2026)*
+- **Relations** → RDF-kompatibles Tripel-Modell, eingebettet am Item als `relations[]`. Abfrage via `getRelatedItems()` / `observeRelatedItems()` aus `RelationCapable`. *(Entschieden: 5. März 2026; Capability-Zuschnitt aktualisiert)*
 - **Relations-Scope** → Scope-Prefixes für Relation-Targets: `item:` (selber Space), `space:{id}/item:` (Cross-Space), `global:` (User-IDs). Cross-Space-Referenzen sind ein Kernziel — Menschen kooperieren über Kontextgrenzen hinweg. Connector zeigt bei fehlenden Zugriffsrechten einen Hinweis statt stillschweigend zu ignorieren. *(Entschieden: 7. März 2026)*
 - **Schema-Versionierung** → Optionale Felder `schema` und `schemaVersion` am Item. *(Entschieden: 5. März 2026)*
 - **Kein separater Data Layer** → Der Connector ist vollständig verantwortlich für Caching, Optimistic Updates und Reaktivität. Die Hooks sind dünn — sie übersetzen nur Observable → React State und Mutations → `Promise<Item>`. Server-Connectors können intern TanStack Query nutzen. Bei Local-First ist Caching/Optimistic Update unnötig, da Writes instant sind. *(Entschieden: 6. März 2026)*
-- **Mutations-Vertrag** → `createItem()` und `updateItem()` geben `Promise<Item>` zurück — ein vollständiges Item mit ID und allen Feldern, sofort nutzbar. Der Connector garantiert die Zustände. *(Entschieden: 6. März 2026)*
+- **Mutations-Vertrag** → Wenn ein Connector `ItemWriter` unterstützt, geben `createItem()` und `updateItem()` `Promise<Item>` zurück — ein vollständiges Item mit ID und allen Feldern, sofort nutzbar. Der Connector garantiert die Zustände. *(Entschieden: 6. März 2026; Capability-Zuschnitt aktualisiert)*
 - **User vs. Profil** → User = Identität (nur ID, mit gecachtem displayName/avatarUrl aus dem Profil-Item). Profil = Item (`type: "profile"`) mit zwei Sichtbarkeitsstufen: öffentlich (jeder) und privat (nur Kontakte). User ist kein Item, Profil ist ein Item. *(Entschieden: 7. März 2026)*
 - **Auth-Abstraktion** → Connector liefert nur Daten (`getAuthMethods()` → Strings), Frontend besitzt die Auth-UI-Komponenten in einer Registry. `AuthState` als Observable. Plattformbetreiber kann Auth-Methoden über Connector-Konfiguration einschränken. *(Entschieden: 6. März 2026)*
 - **FeatureInterface gestrichen** → Kein separates Interface. Feature-Erkennung über ein generisches Item (`type: "feature"`) mit verschachteltem Objektbaum in `data`. Truthy = unterstützt, falsy = nicht unterstützt. Alles läuft über das DataInterface. *(Entschieden: 6. März 2026)*
 - **Lifecycle** → `init()` und `dispose()` im DataInterface. App ruft `init()` beim Start, `dispose()` beim Unmount. Connector nutzt `init()` für Setup (Connections, CRDT laden, Sync starten) und `dispose()` für Cleanup. *(Entschieden: 7. März 2026)*
-- **Group-Interface** → `Group` bekommt ein `data`-Feld (analog zu Item) für Beschreibung, Bild, Zugangsmodell, aktivierte Module, Rollen. Management-Methoden (`createGroup`, `updateGroup`, `deleteGroup`, `getMembers`, `inviteMember`, `removeMember`) im DataInterface. Feature-Item steuert, welche Gruppen-Funktionen der Connector unterstützt. Das Interface ist bewusst additiv erweiterbar — zukünftige Funktionen (Einladungs-Annahme, demokratische Abstimmungen, neue Zugangsmodelle) können als neue Methoden und `data`-Felder hinzugefügt werden, ohne bestehenden Code zu brechen. *(Entschieden: 7. März 2026, mit Sebastian)*
+- **Group-Interface** → `Group` bekommt ein `data`-Feld (analog zu Item) für Beschreibung, Bild, Zugangsmodell, aktivierte Module, Rollen. Management-Methoden (`createGroup`, `updateGroup`, `deleteGroup`, `getMembers`, `inviteMember`, `removeMember`) liegen in `GroupManager`, nicht im read-only `DataInterface`. Feature-Item steuert, welche Gruppen-Funktionen der Connector unterstützt. Das Interface ist bewusst additiv erweiterbar — zukünftige Funktionen (Einladungs-Annahme, demokratische Abstimmungen, neue Zugangsmodelle) können als neue Methoden und `data`-Felder hinzugefügt werden, ohne bestehenden Code zu brechen. *(Entschieden: 7. März 2026, mit Sebastian; Capability-Zuschnitt aktualisiert)*
 - **Hooks + ConnectorProvider im Toolkit** → Hooks (`useItems`, `useItem`, `useGroups`, `useCurrentUser`, `useCreateItem`, `useUpdateItem`) und der `ConnectorProvider` (React Context) leben im Toolkit-Package — nicht in der App. Jede App übergibt ihren Connector via `<ConnectorProvider connector={...}>`. *(Entschieden: 7. März 2026, mit Sebastian)*
 - **Kanban-Spalten konfigurierbar** → Kanban-Spalten sind nicht hardcoded (Todo/Doing/Done), sondern konfigurierbar. Das Feature-Item meldet `kanban.customColumns: true`. *(Entschieden: 7. März 2026, mit Sebastian)*
-- **BaseConnector** → Abstrakte Klasse mit sinnvollen Default-Implementierungen für alle optionalen Methoden (Groups, Auth, Sources). Ein einfacher Connector erbt von `BaseConnector` und implementiert nur die CRUD-Methoden für Items. Das DataInterface bleibt unverändert — die BaseConnector-Klasse ist eine Convenience, kein Zwang. *(Entschieden: 7. März 2026, mit Sebastian und Ulf)*
+- **BaseConnector** → Abstrakte Convenience-Klasse mit sinnvollen Default-Implementierungen für optionale Capabilities (Groups, Auth, Sources). Ein einfacher Connector kann direkt nur `DataInterface` implementieren; wer von `BaseConnector` erbt, bekommt FullConnector-Komfort und implementiert die Item-Methoden. Die BaseConnector-Klasse ist Convenience, kein Zwang. *(Entschieden: 7. März 2026, mit Sebastian und Ulf; Capability-Zuschnitt aktualisiert)*
 - **Gruppen als Scopes / Item-Zuordnung** → Items haben kein `groupId`-Feld. `setCurrentGroup()` setzt den Scope, `getItems()` liefert nur Items dieses Scopes. Der Connector entscheidet intern über die Zuordnung. "Persönlich", "Freunde" und "Alles" werden als spezielle Gruppen modelliert (`data.scope: "personal" | "friends" | "aggregate"`). Das Interface ändert sich nicht. **Begründung:** Bei WoT leben Items *in* verschlüsselten CRDT-Spaces — sie haben kein `groupId`, weil sie außerhalb des Space nicht existieren. Ein flaches Datenmodell mit `groupId` auf Item-Ebene würde zu diesem Backend nicht passen. *(Entschieden: 10. März 2026)*
 
 ---

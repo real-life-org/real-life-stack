@@ -64,11 +64,11 @@ Die **App-Shell** ist der Container, die **UI-Module** (Kanban, Kalender, Karte,
 
 ### Hooks + DataInterface
 
-Die Hooks sind eine dünne Schicht zwischen UI und Connector — sie übersetzen Observables in React State und Mutations in Promises. Das **DataInterface** definiert den Vertrag: Items, Gruppen, Identität, Reaktivität. Module kennen nur dieses Interface, nicht das Backend.
+Die Hooks sind eine dünne Schicht zwischen UI und Connector — sie übersetzen Observables in React State und Mutations in Promises. Das **DataInterface** definiert den read-only Kernvertrag: Items lesen und reaktiv beobachten. Zusätzliche Fähigkeiten wie Schreiben, Gruppen, Identität oder Relations werden über Capability-Interfaces (`ItemWriter`, `GroupManager`, `Authenticatable`, ...) erkannt. Module kennen nur diese Interfaces, nicht das Backend.
 
 ### Connectoren
 
-Jeder Connector implementiert das DataInterface für ein spezifisches Backend. Der **MockConnector** (in-memory) dient zur Entwicklung, ein **REST-Connector** für klassische Server, der **WoT-Connector** (Automerge + E2EE) für dezentrale, verschlüsselte Zusammenarbeit.
+Jeder Connector implementiert das DataInterface und nur die Capabilities, die seine Datenquelle unterstützt. Der **MockConnector** (in-memory) dient zur Entwicklung, der **LocalConnector** für lokale IndexedDB-Persistenz, ein **GraphQL-Connector** für klassische Server, der **WoT-Connector** (Yjs/CRDT + E2EE) für dezentrale, verschlüsselte Zusammenarbeit.
 
 ---
 
@@ -142,9 +142,13 @@ Das Projekt wird von einem Team mit langjähriger Erfahrung in Open-Source-Commu
 ```text
 real-life-stack/
 ├── packages/
-│   ├── data-interface/    # @real-life-stack/data-interface - TypeScript-Typen
+│   ├── data-interface/    # @real-life-stack/data-interface - TypeScript-Typen + Capabilities
 │   ├── mock-connector/    # @real-life-stack/mock-connector - In-Memory-Implementierung
-│   └── toolkit/           # @real-life-stack/toolkit - UI-Komponenten
+│   ├── local-connector/   # @real-life-stack/local-connector - IndexedDB + Cross-Tab-Sync
+│   ├── graphql-connector/ # @real-life-stack/graphql-connector - GraphQL-Client
+│   ├── graphql-server/    # @real-life-stack/graphql-server - Fastify/Mercurius Server
+│   ├── wot-connector/     # @real-life-stack/wot-connector - WoT/Yjs/E2EE
+│   └── toolkit/           # @real-life-stack/toolkit - UI-Komponenten + Hooks
 ├── apps/
 │   ├── landing/           # Landing Page
 │   ├── reference/         # Reference App (React 19)
@@ -174,11 +178,11 @@ pnpm build:toolkit
 
 ## DataInterface & Connectoren
 
-UI-Module arbeiten gegen das **DataInterface** — ein TypeScript-Interface, das Daten, Gruppen, Identitaet und Reaktivitaet abstrahiert. Connectoren implementieren dieses Interface fuer verschiedene Backends.
+UI-Module arbeiten gegen das **DataInterface** und optionale Capability-Interfaces — TypeScript-Vertraege, die Daten, Reaktivitaet, Schreibzugriff, Gruppen und Identitaet abstrahieren. Connectoren implementieren diese Interfaces fuer verschiedene Backends.
 
 ### @real-life-stack/data-interface
 
-Reine TypeScript-Typen (keine Runtime-Abhaengigkeiten):
+Reine TypeScript-Typen und Shared Helper (keine externen Runtime-Abhaengigkeiten):
 
 ```typescript
 import type { DataInterface, Item, Group, User, Observable } from "@real-life-stack/data-interface"
