@@ -141,6 +141,28 @@ jobs:
           curl -fsS http://127.0.0.1:8080/ | grep -q "<html" && echo "Landingpage wird ausgeliefert."
           curl -fsS http://127.0.0.1:8080/app/config.json \
             | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["branding"]["appName"]=="Smoke Test", d; print("config.json korrekt erzeugt.")'
+
+          # Der Weg von der Landingpage in die App fuehrt ueber den
+          # Verzeichnis-Redirect /app -> /app/. Geprueft wird er mit fremdem
+          # Host-Header, denn genau so kommt jede Anfrage hinter einem Reverse
+          # Proxy an. Ohne `absolute_redirect off` zeigt das Ziel hier auf
+          # `http://<host>:8080/app/` — von aussen unerreichbar, und der Klick
+          # auf "App oeffnen" laeuft ins Leere. Gegen 127.0.0.1:8080 faellt das
+          # nicht auf, weil die falsche Adresse dort zufaellig stimmt.
+          # Geprueft wird der ROHE Location-Header. `curl -w %{redirect_url}`
+          # taugt nicht: curl loest relative Ziele selbst zur absoluten URL auf
+          # und verdeckt damit genau den Unterschied, um den es hier geht.
+          ZIEL=$(curl -sSI -H 'Host: instanz.example.org' http://127.0.0.1:8080/app \
+            | tr -d '\r' | awk 'tolower($1) == "location:" { print $2 }')
+          echo "Location fuer /app: ${ZIEL:-<keiner>}"
+          if [ "$ZIEL" != "/app/" ]; then
+            echo "FEHLER: Redirect muss relativ auf /app/ zeigen, war: ${ZIEL:-<keiner>}"
+            echo "Ohne 'absolute_redirect off' steht hier http://<host>:8080/app/ —"
+            echo "von aussen unerreichbar, der Weg in die App bricht."
+            exit 1
+          fi
+          echo "Redirect /app -> /app/ ist proxy-tauglich."
+
           docker rm -f rls-smoke
 
       # Kein zweiter Build: dasselbe lokale Image bekommt die Tags und wird
