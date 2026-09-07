@@ -324,8 +324,20 @@ function filterTokens(
  * Legt das Branding auf das Dokument. Wird von App-Shell-Flaechen aufgerufen,
  * nie von einem Space Module (Spec 11, Regel 4).
  *
- * Dark-Tokens werden unter `.dark` wirksam — die App schaltet dieselbe Klasse,
- * die auch das Toolkit-Theme steuert (siehe color-scheme.ts).
+ * Beide Schemata kommen als CSS-Regeln, nicht als Inline-Style. Inline schlaegt
+ * jede Regel, die auf dasselbe Element zielt — die hellen Tokens haetten damit
+ * sowohl die gebrandeten dunklen als auch die dunklen des Toolkits ueberschrieben,
+ * und eine Instanz, die Farben setzt, haette ihren Dunkelmodus verloren.
+ *
+ * Die Selektoren schliessen einander aus und tragen beide eine Klasse mehr als
+ * das Toolkit-CSS (`:root` bzw. `.dark`). So gilt Branding unabhaengig davon,
+ * in welcher Reihenfolge die Stylesheets im Dokument stehen:
+ *
+ *   :root:not(.dark)  helle Tokens, nur ausserhalb des Dunkelmodus
+ *   :root.dark        dunkle Tokens
+ *
+ * Die Klasse `.dark` ist dieselbe, die auch das Toolkit-Theme steuert
+ * (siehe color-scheme.ts).
  */
 export function applyBranding(branding: Branding | undefined, doc: Document = document): void {
   if (!branding) return
@@ -341,16 +353,21 @@ export function applyBranding(branding: Branding | undefined, doc: Document = do
 
   const known = knownTokens(doc)
 
-  for (const [name, value] of filterTokens(branding.colors?.light, known)) {
-    doc.documentElement.style.setProperty(`--${name}`, value)
-  }
-
+  const light = filterTokens(branding.colors?.light, known)
   const dark = filterTokens(branding.colors?.dark, known)
-  if (dark.length > 0) {
-    const styleId = "rls-branding-dark"
-    const style =
-      doc.getElementById(styleId) ??
-      doc.head.appendChild(Object.assign(doc.createElement("style"), { id: styleId }))
-    style.textContent = `.dark { ${dark.map(([n, v]) => `--${n}: ${v};`).join(" ")} }`
-  }
+  if (light.length === 0 && dark.length === 0) return
+
+  // Name und Wert sind zu diesem Zeitpunkt geprueft: der Name ist ein einfacher
+  // Bezeichner, der Wert traegt weder `;` noch `{}` noch `url()`. Es kann hier
+  // also nichts aus der Deklaration ausbrechen.
+  const block = (selector: string, tokens: [string, string][]) =>
+    tokens.length > 0 ? `${selector} { ${tokens.map(([n, v]) => `--${n}: ${v};`).join(" ")} }` : ""
+
+  const styleId = "rls-branding"
+  const style =
+    doc.getElementById(styleId) ??
+    doc.head.appendChild(Object.assign(doc.createElement("style"), { id: styleId }))
+  style.textContent = [block(":root:not(.dark)", light), block(":root.dark", dark)]
+    .filter(Boolean)
+    .join("\n")
 }

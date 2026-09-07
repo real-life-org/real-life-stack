@@ -112,10 +112,23 @@ describe("loadRuntimeConfig", () => {
   })
 })
 
+/** Der Wert, der tatsaechlich gilt — nicht der Ort, an dem er abgelegt ist. */
+function wirksam(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
+/** Raeumt auf, was applyBranding im Dokument hinterlaesst. */
+function brandingZuruecksetzen(): void {
+  document.documentElement.removeAttribute("style")
+  document.documentElement.classList.remove("dark")
+  document.getElementById("rls-branding")?.remove()
+  document.querySelectorAll("style[data-toolkit]").forEach((e) => e.remove())
+}
+
 describe("applyBranding", () => {
   beforeEach(() => {
     resetRuntimeConfigForTests()
-    document.documentElement.removeAttribute("style")
+    brandingZuruecksetzen()
     document.title = ""
   })
 
@@ -130,19 +143,21 @@ describe("applyBranding", () => {
     expect(document.title).toBe("unveraendert")
   })
 
-  it("writes light colors as custom properties on the root element", () => {
+  it("makes light colors take effect on the root element", () => {
     applyBranding({ colors: { light: { primary: "#2f6b3a" } } })
-    expect(document.documentElement.style.getPropertyValue("--primary")).toBe("#2f6b3a")
+    expect(wirksam("--primary")).toBe("#2f6b3a")
   })
 
   it("ignores token names that are not plain identifiers", () => {
     applyBranding({ colors: { light: { "primary; background: url(x)": "#000" } } })
-    expect(document.documentElement.getAttribute("style") ?? "").not.toContain("url(")
+    expect(document.getElementById("rls-branding")?.textContent ?? "").not.toContain("url(")
+    expect(wirksam("--primary")).toBe("")
   })
 
   it("ignores colour values containing CSS escapes", () => {
     applyBranding({ colors: { light: { primary: "red; --injected: bad" } } })
-    expect(document.documentElement.style.getPropertyValue("--injected")).toBe("")
+    expect(wirksam("--injected")).toBe("")
+    expect(wirksam("--primary")).toBe("")
   })
 
   it("does nothing without branding", () => {
@@ -239,9 +254,7 @@ describe("Validierung (Review #276)", () => {
 describe("applyBranding — Tokenpruefung (Review #276)", () => {
   beforeEach(() => {
     resetRuntimeConfigForTests()
-    document.documentElement.removeAttribute("style")
-    document.getElementById("rls-branding-dark")?.remove()
-    document.querySelectorAll("style[data-toolkit]").forEach((e) => e.remove())
+    brandingZuruecksetzen()
   })
 
   /** Simuliert die Tokens des Toolkits, damit die Herkunftspruefung greifen kann. */
@@ -255,32 +268,71 @@ describe("applyBranding — Tokenpruefung (Review #276)", () => {
   it("accepts oklch() and other function notations", () => {
     withToolkitTokens(["primary"])
     applyBranding({ colors: { light: { primary: "oklch(0.63 0.16 55)" } } })
-    expect(document.documentElement.style.getPropertyValue("--primary")).toBe("oklch(0.63 0.16 55)")
+    expect(wirksam("--primary")).toBe("oklch(0.63 0.16 55)")
   })
 
   it("ignores a syntactically valid but unknown token name", () => {
     withToolkitTokens(["primary"])
     applyBranding({ colors: { light: { "erfundenes-token": "#123456" } } })
-    expect(document.documentElement.style.getPropertyValue("--erfundenes-token")).toBe("")
+    expect(wirksam("--erfundenes-token")).toBe("")
   })
 
   it("still applies tokens when no stylesheet is readable", () => {
     // Kein Toolkit-CSS im Dokument -> nicht filtern, sonst waere frueh
     // aufgerufenes Branding komplett wirkungslos.
     applyBranding({ colors: { light: { primary: "#123456" } } })
-    expect(document.documentElement.style.getPropertyValue("--primary")).toBe("#123456")
+    expect(wirksam("--primary")).toBe("#123456")
   })
 
   it("rejects a value that tries to smuggle a url()", () => {
     withToolkitTokens(["primary"])
     applyBranding({ colors: { light: { primary: "url(https://evil.example/x)" } } })
-    expect(document.documentElement.style.getPropertyValue("--primary")).toBe("")
+    expect(wirksam("--primary")).toBe("red")
   })
 
   it("rejects an over-long value", () => {
     withToolkitTokens(["primary"])
     applyBranding({ colors: { light: { primary: "#".padEnd(200, "a") } } })
-    expect(document.documentElement.style.getPropertyValue("--primary")).toBe("")
+    expect(wirksam("--primary")).toBe("red")
+  })
+})
+
+describe("applyBranding — Branding und Dunkelmodus (Spec 11, Regel 2)", () => {
+  beforeEach(() => {
+    resetRuntimeConfigForTests()
+    brandingZuruecksetzen()
+  })
+
+  /** Toolkit-CSS mit hellen UND dunklen Werten — so sieht die echte App aus. */
+  function withToolkitTheme() {
+    const style = document.createElement("style")
+    style.setAttribute("data-toolkit", "")
+    style.textContent = `:root { --primary: rgb(1, 1, 1); } .dark { --primary: rgb(2, 2, 2); }`
+    document.head.appendChild(style)
+  }
+
+  it("laesst die gebrandeten Dunkel-Werte unter .dark gelten", () => {
+    withToolkitTheme()
+    applyBranding({
+      colors: { light: { primary: "rgb(255, 255, 255)" }, dark: { primary: "rgb(10, 10, 10)" } },
+    })
+    document.documentElement.classList.add("dark")
+    expect(wirksam("--primary")).toBe("rgb(10, 10, 10)")
+  })
+
+  it("laesst den Dunkelmodus der App stehen, wenn nur Helligkeit gebrandet ist", () => {
+    // Der Fall, der eine gebrandete Instanz um ihren Dunkelmodus bringt:
+    // Light-Branding darf die dunklen Werte des Toolkits NICHT ueberschreiben.
+    withToolkitTheme()
+    applyBranding({ colors: { light: { primary: "rgb(255, 255, 255)" } } })
+    document.documentElement.classList.add("dark")
+    expect(wirksam("--primary")).toBe("rgb(2, 2, 2)")
+  })
+
+  it("laesst die gebrandeten Hell-Werte ohne .dark gelten", () => {
+    withToolkitTheme()
+    applyBranding({ colors: { light: { primary: "rgb(255, 255, 255)" } } })
+    expect(wirksam("--primary")).toBe("rgb(255, 255, 255)")
   })
 })
 
