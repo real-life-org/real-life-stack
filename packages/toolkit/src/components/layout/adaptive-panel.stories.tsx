@@ -126,6 +126,20 @@ export const SidebarLeft: Story = {
   ),
 }
 
+/**
+ * Die schwebende Detail-Karte: liegt als Karte ueber dem Inhalt statt als
+ * Spalte daneben, rueckt ihn aber genauso ein (360px + 2x16px Rand).
+ */
+export const Floating: Story = {
+  render: () => <PanelDemo allowedModes={["floating", "drawer"]} title="Schwebende Karte" />,
+}
+
+export const FloatingLeft: Story = {
+  render: () => (
+    <PanelDemo allowedModes={["floating", "drawer"]} side="left" title="Schwebend, links" />
+  ),
+}
+
 export const Drawer: Story = {
   parameters: {
     viewport: { defaultViewport: "mobile1" },

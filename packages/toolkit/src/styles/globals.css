@@ -61,6 +61,14 @@
 
   --radius: 0.5rem;
 
+  /*
+   * Hoehe der Navbar. Bisher stand sie als `top-14` an jeder Stelle, die
+   * darunter beginnt — die schwebende Detail-Karte braucht sie rechnerisch
+   * (`calc(var(--navbar-h) + 16px)`), und zwei Orte mit derselben Zahl laufen
+   * frueher oder spaeter auseinander.
+   */
+  --navbar-h: 3.5rem;
+
   /* Shadows */
   --shadow-2xs: 0 1px 3px 0px oklch(0.00 0 0 / 0.05);
   --shadow-xs: 0 1px 3px 0px oklch(0.00 0 0 / 0.05);

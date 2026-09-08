@@ -18,7 +18,12 @@ import {
   getAdaptivePanelZIndex,
 } from "./adaptive-panel-stack"
 
-export type PanelMode = "modal" | "sidebar" | "drawer"
+/**
+ * `floating` ist die schwebende Detail-Karte: sie liegt als Karte ueber dem
+ * Inhalt statt als Spalte daneben, rueckt ihn aber genauso ein. Ebene 1 wie
+ * `sidebar` — eine Instanz pro App, Inhalt wird getauscht statt gestapelt.
+ */
+export type PanelMode = "modal" | "sidebar" | "drawer" | "floating"
 
 export interface DrawerSnapConfig {
   /** Lower snap point as fraction of viewport height (default 0.2) — below this minus zone → close */
@@ -69,6 +74,16 @@ export interface AdaptivePanelProps {
 
 const VELOCITY_THRESHOLD = 0.15
 
+/** Breite der schwebenden Karte und ihr Abstand zum Rand. */
+const FLOATING_WIDTH = 360
+const FLOATING_GAP = 16
+/**
+ * Was die Karte dem Inhalt wegnimmt: ihre Breite plus die Raender links und
+ * rechts davon. Sie schwebt zwar darueber, aber Inhalt, FAB und
+ * Map-Controls sollen nicht unter ihr liegen.
+ */
+const FLOATING_INSET = FLOATING_WIDTH + FLOATING_GAP * 2
+
 function syncAdaptivePanelInsets(): void {
   const { left, right } = adaptivePanelStack.getInsets()
   const root = document.documentElement
@@ -89,15 +104,32 @@ export function drawerHeightFromY(drawerY: number, viewportHeight: number): numb
   return Math.max(0, Math.min(100, 100 - drawerY)) * viewportHeight / 100
 }
 
+/**
+ * Welche Darstellung gilt: auf schmalen Schirmen immer der Drawer — eine
+ * 360px breite Karte neben 375px Viewport waere keine Karte mehr, sondern
+ * eine Wand. Auf breiten Schirmen gewinnt `floating` vor `sidebar`, wo beide
+ * erlaubt sind; wer floating nicht erlaubt, behaelt die Sidebar.
+ *
+ * Exportiert, weil die Regel fuer sich pruefbar sein soll.
+ */
+export function resolveAdaptivePanelMode(
+  allowedModes: PanelMode[],
+  isCompact: boolean
+): PanelMode {
+  if (isCompact && allowedModes.includes("drawer")) return "drawer"
+  if (!isCompact) {
+    if (allowedModes.includes("floating")) return "floating"
+    if (allowedModes.includes("sidebar")) return "sidebar"
+  }
+  if (allowedModes.includes("modal")) return "modal"
+  return allowedModes[0]
+}
+
 function resolveMode(
   allowedModes: PanelMode[],
   isCompact: boolean
 ): PanelMode {
-  const preferred = isCompact ? "drawer" : "sidebar"
-  if (allowedModes.includes(preferred)) return preferred
-  const fallback = "modal"
-  if (allowedModes.includes(fallback)) return fallback
-  return allowedModes[0]
+  return resolveAdaptivePanelMode(allowedModes, isCompact)
 }
 
 // --- Mode Switch Button ---
@@ -273,7 +305,7 @@ export function AdaptivePanel({
         {
           mode,
           side,
-          sidebarWidth: currentSidebarWidth,
+          sidebarWidth: mode === "floating" ? FLOATING_INSET : currentSidebarWidth,
           insetActive: open && !animatingOut,
         },
         updateStackPosition,
@@ -630,10 +662,16 @@ export function AdaptivePanel({
         className={cn(
           mode === "modal" && "fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none",
           mode === "sidebar" && cn(
-            "fixed top-14 bottom-0 bg-background shadow-xl flex overflow-hidden z-55",
+            "fixed top-[var(--navbar-h)] bottom-0 bg-background shadow-xl flex overflow-hidden z-55",
             isLeft ? "left-0" : "right-0",
           ),
           mode === "drawer" && "fixed inset-x-0 bottom-0 z-[60] pointer-events-auto",
+          // Schwebende Karte: fest am Rand, unterhalb der Navbar, mit 16px Luft
+          // ringsum. Der Inhalt darunter bleibt sichtbar und bedienbar.
+          mode === "floating" && cn(
+            "fixed top-[calc(var(--navbar-h)+16px)] bottom-4 w-[360px] pointer-events-auto",
+            isLeft ? "left-4" : "right-4",
+          ),
           suspended && mode !== "sidebar" && "invisible pointer-events-none",
         )}
         style={{ ...(mode === "sidebar" ? outerStyle : {}), zIndex: panelZIndex }}
@@ -657,6 +695,18 @@ export function AdaptivePanel({
             ),
             // Drawer styling
             mode === "drawer" && "bg-background rounded-t-xl shadow-xl flex flex-col",
+            // Schwebende Karte: eigene Huelle mit Rand und Schatten; Kopf und
+            // Fuss bleiben stehen, der Body scrollt darin (flex + overflow).
+            mode === "floating" && cn(
+              "h-full bg-background border rounded-2xl shadow-xl overflow-hidden flex flex-col",
+              // Hereinfahren von der Seite. Bei reduzierter Bewegung bleibt die
+              // Karte stehen und blendet nur ein.
+              "transition-[transform,opacity] duration-300 ease-out",
+              "motion-reduce:transition-opacity motion-reduce:transform-none",
+              isOpen
+                ? "translate-x-0 opacity-100"
+                : cn("opacity-0", isLeft ? "-translate-x-4" : "translate-x-4"),
+            ),
             className,
           )}
           style={

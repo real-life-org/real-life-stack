@@ -82,6 +82,37 @@ describe("AdaptivePanelStack", () => {
     expect(stack.isTopmost(sidebar)).toBe(true)
   })
 
+  // Die schwebende Karte verdraengt den Inhalt genauso wie eine Sidebar - sie
+  // liegt zwar darueber, aber der Inhalt soll nicht unter ihr verschwinden.
+  // Wer den Modus beim Inset vergisst, bekommt eine Karte, die den Inhalt
+  // verdeckt, statt ihn einruecken zu lassen.
+  it("keeps a floating panel's inset like a sidebar's", () => {
+    const stack = new AdaptivePanelStack()
+    const detail = Symbol("detail")
+
+    stack.upsert(detail, { mode: "floating", side: "right", sidebarWidth: 392 })
+
+    expect(stack.getInsets()).toEqual({ left: 0, right: 392 })
+  })
+
+  it("drops a floating panel's inset while it animates out", () => {
+    const stack = new AdaptivePanelStack()
+    const detail = Symbol("detail")
+
+    stack.upsert(detail, { mode: "floating", side: "right", sidebarWidth: 392, insetActive: false })
+
+    expect(stack.getInsets()).toEqual({ left: 0, right: 0 })
+  })
+
+  it("lets a floating panel and a left sidebar hold their own sides", () => {
+    const stack = new AdaptivePanelStack()
+
+    stack.upsert(Symbol("nav"), { mode: "sidebar", side: "left", sidebarWidth: 280 })
+    stack.upsert(Symbol("detail"), { mode: "floating", side: "right", sidebarWidth: 392 })
+
+    expect(stack.getInsets()).toEqual({ left: 280, right: 392 })
+  })
+
   it("keeps deep stacks distinct and below the dialog layer", () => {
     const stack = new AdaptivePanelStack()
     const positions = new Map<symbol, { order: number; size: number }>()
