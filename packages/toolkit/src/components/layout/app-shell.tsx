@@ -21,12 +21,21 @@ interface AppShellMainProps {
   className?: string
   /** Add padding at bottom for mobile bottom navigation */
   withBottomNav?: boolean
+  /**
+   * Weicht die Flaeche einem offenen Panel aus? Standard `true`.
+   *
+   * `false` fuer Module, deren Flaeche der Inhalt IST (Karte, Graph): das
+   * Panel legt sich darueber, statt sie schmaler zu machen. Siehe
+   * `ModulePanelFit` im Modul-Register.
+   */
+  inset?: boolean
 }
 
 export function AppShellMain({
   children,
   className,
   withBottomNav = false,
+  inset = true,
 }: AppShellMainProps) {
   return (
     <main
@@ -36,10 +45,19 @@ export function AppShellMain({
         withBottomNav && "pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0",
         className
       )}
-      style={{
-        paddingRight: "var(--adaptive-panel-margin-right, 0px)",
-        paddingLeft: "var(--adaptive-panel-margin-left, 0px)",
-      }}
+      style={
+        // `inset={false}`: die Flaeche bleibt stehen, das Panel legt sich
+        // darueber. Fuer Module, deren Flaeche der Inhalt IST — eine Karte,
+        // die beim Oeffnen eines Details schmaler wird, zeigt weniger Welt.
+        // Die schwebenden Controls ruecken trotzdem ein, sie lesen die
+        // Variable selbst.
+        inset
+          ? {
+              paddingRight: "var(--adaptive-panel-margin-right, 0px)",
+              paddingLeft: "var(--adaptive-panel-margin-left, 0px)",
+            }
+          : undefined
+      }
     >
       {children}
     </main>

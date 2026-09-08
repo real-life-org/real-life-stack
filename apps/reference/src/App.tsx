@@ -67,6 +67,7 @@ import {
   AddContactDialog,
   IncomingContactRequestDialog,
   getRuntimeConfig,
+  getModule,
 } from "@real-life-stack/toolkit"
 import { initialDarkMode, rememberColorScheme } from "./initial-color-scheme"
 import type { DataInterface, User } from "@real-life-stack/data-interface"
@@ -97,7 +98,7 @@ function ModulePanelHost({ children, onDrawerHeightChange }: { children: ReactNo
     // sidebar; maximise hides the context, esp. on the map). Chrome is just the
     // close button; item actions live in the card header (ItemDetailActions).
     <ModulePanelProvider
-      allowedModes={["sidebar", "drawer"]}
+      allowedModes={["floating", "drawer"]}
       sidebarWidth="420px"
       sidebarMinWidth="300px"
       sidebarMaxWidth="70vw"
@@ -732,7 +733,12 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       {/* Map is full-bleed: skip the bottom-nav padding so the map fills the
           area behind the translucent BottomNav instead of leaving a gap above
           it. Scrolling modules keep the padding so content clears the nav. */}
-      <AppShellMain withBottomNav={activeModule !== "map"}>
+      <AppShellMain
+        withBottomNav={activeModule !== "map"}
+        // Aus dem Register, nicht aus einer Liste hier: sonst weiss die App
+        // wieder, welches Modul was braucht, und die Liste driftet.
+        inset={getModule(activeModule)?.panelFit !== "overlay"}
+      >
         <ModuleOutlet
           activeWorkspace={activeWorkspace}
           activeModule={activeModule}
