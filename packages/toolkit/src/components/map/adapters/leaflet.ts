@@ -20,6 +20,7 @@
  *   install `@types/leaflet` do not see a leaflet reference in our `.d.ts`.
  */
 
+import { focusOffsetFor } from "../focus-offset"
 import type * as L from "leaflet"
 import type {
   LngLat,
@@ -273,7 +274,14 @@ export class LeafletMapAdapter implements MapAdapter {
 
   focusOn(
     center: LngLat,
-    options?: { bottomInset?: number; animate?: boolean; zoom?: number; duration?: number },
+    options?: {
+      bottomInset?: number
+      rightInset?: number
+      leftInset?: number
+      animate?: boolean
+      zoom?: number
+      duration?: number
+    },
   ): void {
     const map = this.mapInstance as L.Map | null
     if (!map) return
@@ -283,17 +291,22 @@ export class LeafletMapAdapter implements MapAdapter {
     // (1500 ms fly / 500 ms pan) so the contract is consistent across adapters.
     const flyDuration = (options?.duration ?? 1500) / 1000
     const panDuration = (options?.duration ?? 500) / 1000
-    // Centre the target, then shift the view up by half the obscured strip so it
-    // sits centred in the visible area above a bottom sheet (panBy +y moves the
-    // map content up, i.e. the target rises). A zoom change flies (smooth
-    // zoom+pan) instead of a hard setView.
+    // Centre the target, then shift the view so it sits centred in the area not
+    // covered by a bottom sheet or a floating panel. A zoom change flies
+    // (smooth zoom+pan) instead of a hard setView.
     if (options?.zoom != null) {
       map.flyTo(toLatLngTuple(center), options.zoom, { animate, duration: flyDuration })
     } else {
       map.panTo(toLatLngTuple(center), { animate, duration: panDuration })
     }
-    const bottomInset = options?.bottomInset ?? 0
-    if (bottomInset) map.panBy([0, bottomInset / 2], { animate, duration: panDuration })
+    // `focusOffsetFor` liefert die Verschiebung des ZIELS (MapLibre-Vorzeichen).
+    // `panBy` verschiebt dagegen den AUSSCHNITT, bewegt das Ziel also in die
+    // Gegenrichtung — daher beide Werte negiert.
+    const [offsetX, offsetY] = focusOffsetFor(options ?? {})
+    // Umgekehrtes Vorzeichen, aber ohne aus einer Null eine `-0` zu machen.
+    const dx = offsetX ? -offsetX : 0
+    const dy = offsetY ? -offsetY : 0
+    if (dx || dy) map.panBy([dx, dy], { animate, duration: panDuration })
   }
 
   getView(): MapViewState {

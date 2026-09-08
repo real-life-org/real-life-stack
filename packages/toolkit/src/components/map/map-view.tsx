@@ -7,6 +7,7 @@ import { emptyFilterBarValue, FilterBar, type FilterBarValue, type FilterTypeOpt
 import { CreateFab } from "../create-fab"
 import { PanelSafeArea } from "../layout/panel-safe-area"
 import { Button, Input } from "../primitives"
+import { focusOffsetFor, readPanelInsets, type MapFocusInsets } from "./focus-offset"
 import { MapLens } from "../lens/map-lens"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { getSpacePrimaryColor } from "../../lib/utils"
@@ -186,8 +187,24 @@ export function filterMapViewItems(items: readonly Item[], filter: FilterBarValu
   })
 }
 
+/**
+ * Die Raender, die gerade Karte verdecken: unten das Blatt auf schmalen
+ * Geraeten, links/rechts ein schwebendes Panel. Beides zusammen, damit ein
+ * angeklickter Marker im sichtbaren Rest landet und nicht hinter dem Panel.
+ */
+export function mapViewFocusInsets(isCompact: boolean): MapFocusInsets {
+  const bottomInset = isCompact ? window.innerHeight * MAP_SHEET_FRACTION : 0
+  const { leftInset, rightInset } = readPanelInsets()
+  return { bottomInset, leftInset, rightInset }
+}
+
+export function mapViewHasFocusInset(insets: MapFocusInsets): boolean {
+  const [x, y] = focusOffsetFor(insets)
+  return x !== 0 || y !== 0
+}
+
 export function mapViewRevealOptions(fromMarkerClick: boolean, isCompact: boolean) {
-  return { animate: !fromMarkerClick, ...(isCompact ? { bottomInset: window.innerHeight * MAP_SHEET_FRACTION } : {}) }
+  return { animate: !fromMarkerClick, ...mapViewFocusInsets(isCompact) }
 }
 
 /** Full Map module: filter/create/bbox behaviour around the filterless MapLens core. */
@@ -240,25 +257,27 @@ export function MapView({
     if (!adapter || viewportMode !== "bbox-module") return
     const point = latLngFromPoint(focusedItem.data.position)
     if (!point) return
-    const bottomInset = isCompact ? window.innerHeight * MAP_SHEET_FRACTION : 0
+    const insets = mapViewFocusInsets(isCompact)
     const fromClick = markerClick.current === focusedItem.id
     markerClick.current = null
     if (fromClick) {
       settledReveal.current = focusedItem.id
       approachedReveal.current = focusedItem.id
-      if (bottomInset) adapter.focusOn([point.lng, point.lat], { bottomInset, animate: true })
+      if (mapViewHasFocusInset(insets)) {
+        adapter.focusOn([point.lng, point.lat], { ...insets, animate: true })
+      }
       return
     }
     if (settledReveal.current === focusedItem.id) return
     if (items.some((item) => item.id === focusedItem.id)) {
       settledReveal.current = focusedItem.id
-      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, mapViewSeparationZoom(focusedItem, items)), bottomInset, animate: true })
+      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, mapViewSeparationZoom(focusedItem, items)), ...insets, animate: true })
       return
     }
     if (bounds.current && inBounds(focusedItem, bounds.current)) return
     if (approachedReveal.current !== focusedItem.id && bounds.current && !itemsLoading) {
       approachedReveal.current = focusedItem.id
-      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, MIN_REVEAL_ZOOM), bottomInset, animate: true })
+      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, MIN_REVEAL_ZOOM), ...insets, animate: true })
     }
   }, [active, adapter, focusedItem, isCompact, items, itemsLoading, viewportMode])
   useEffect(() => {

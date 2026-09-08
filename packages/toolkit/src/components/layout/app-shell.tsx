@@ -31,17 +31,58 @@ interface AppShellMainProps {
   inset?: boolean
 }
 
+/**
+ * Die Padding-Animation gehoert dem Panel: sie zeigt, wie die Flaeche einem
+ * auf- oder zugehenden Panel ausweicht. Wechselt dagegen die REGEL — weil ein
+ * anderes Modul aktiv wird und `inset` umspringt — aendert sich das Padding,
+ * ohne dass am Panel irgendetwas passiert waere. Animiert sieht man dann, wie
+ * ein zu breit gestartetes Modul zusammenschnurrt (Karte -> Kalender) oder ein
+ * zu schmales sich auf die volle Breite streckt (Kalender -> Karte). Deshalb:
+ * beim Regelwechsel einmal ohne Uebergang setzen, danach wieder animiert.
+ */
+function useSprungOhneUebergang(wert: boolean): boolean {
+  const [springt, setSpringt] = React.useState(false)
+  const vorheriger = React.useRef(wert)
+
+  // Vor dem Zeichnen, damit der Browser den neuen Wert gar nicht erst mit
+  // eingeschaltetem Uebergang zu sehen bekommt.
+  React.useLayoutEffect(() => {
+    if (vorheriger.current === wert) return
+    vorheriger.current = wert
+    setSpringt(true)
+  }, [wert])
+
+  React.useEffect(() => {
+    if (!springt) return
+    // Zwei Bilder: das erste liegt noch VOR dem Zeichnen des Sprungs. Erst im
+    // zweiten ist der neue Wert gemalt, und der Uebergang darf zurueck, ohne
+    // ihn nachtraeglich doch noch zu animieren.
+    let inneres = 0
+    const aeusseres = requestAnimationFrame(() => {
+      inneres = requestAnimationFrame(() => setSpringt(false))
+    })
+    return () => {
+      cancelAnimationFrame(aeusseres)
+      cancelAnimationFrame(inneres)
+    }
+  }, [springt])
+
+  return springt
+}
+
 export function AppShellMain({
   children,
   className,
   withBottomNav = false,
   inset = true,
 }: AppShellMainProps) {
+  const springt = useSprungOhneUebergang(inset)
   return (
     <main
       className={cn(
         "@container flex-1 overflow-y-auto",
         "transition-[padding] duration-300 ease-out [.adaptive-panel-resizing_&]:transition-none",
+        springt && "transition-none",
         withBottomNav && "pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0",
         className
       )}

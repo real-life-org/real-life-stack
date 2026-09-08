@@ -100,6 +100,14 @@ Der Content-Bereich ist die Fläche unterhalb der Top-Navigation, links einer re
 
 Module wählen einen **Füllmodus** im Content-Bereich: *full-bleed* (füllt die Fläche randlos, z.B. Map) oder *zentrierter Container* (Standard, z.B. Feed, Calendar, Kanban). Full-bleed räumt auf Mobile auch unter die BottomNav.
 
+Nicht jedes Modul darf einrücken. Für Feed, Kalender oder Kanban ist die Fläche ein **Behälter**: Wird sie schmaler, rückt der Inhalt nach — nichts geht verloren. Für Karte und Graph IST die Fläche der Inhalt: Eine Karte, die beim Öffnen eines Details schmaler wird, zeigt weniger Welt, und der gerade angeklickte Punkt wandert unter dem Zeiger weg. Solche Module tragen darum `panelFit: "overlay"`; das Panel legt sich über sie, statt sie zu verdrängen. Daraus folgen drei Pflichten:
+
+1. Das Modul entscheidet das nicht selbst und die App auch nicht: `panelFit` steht im **Registereintrag** (siehe unten). Eine Liste in der App, welches Modul überlagert wird, driftet.
+2. Schwebende Bedienelemente über einer überlagerten Fläche — Zoom-Knöpfe, Ladeanzeige, Hinweise — rücken trotzdem ein. Sie lesen dieselbe CSS-Variable und liegen dafür in einer gemeinsamen Schutzzone (`PanelSafeArea`), nicht jedes für sich. Was die ganze Fläche bedeckt (ein Ladeschleier), bleibt dagegen ganzflächig, sonst hat der Bereich hinter dem Panel eine andere Farbe.
+3. Eine überlagerte Fläche MUSS ihr eigenes Zentrum korrigieren: Was sie in den Blick nimmt, gehört in die Mitte des **sichtbaren** Rests, nicht der ganzen Fläche — sonst öffnet sich die Detailkarte genau über dem Punkt, den sie beschreibt.
+
+Der Übergang gehört dem Panel: Die Fläche weicht einem auf- oder zugehenden Panel animiert aus. Wechselt dagegen das Modul und damit die Regel, MUSS die neue Breite sofort gelten — animiert sähe man ein zu breit gestartetes Modul zusammenschnurren.
+
 ### Verworfene Alternativen
 
 Festgehalten, damit sie nicht neu aufgemacht werden:
@@ -166,6 +174,7 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 | `fill` | wie das Modul den Content-Bereich füllt: `container` oder `bleed` |
 | `maxWidth` | Container-Breite, nur bei `fill: "container"` |
 | `keepMounted` | Fläche im Baum halten statt beim Wechsel abzubauen — für Module, deren Aufbau teuer ist (Map: WebGL-Kontext, Worker, entfernter Style) |
+| `panelFit` | ob ein offenes Panel die Fläche einrückt (`inset`, Standard) oder sich darüber legt (`overlay`) — siehe Content-Bereich |
 | `view` | die Fläche selbst; wird von der App beigesteuert, nicht vom Toolkit |
 
 ### Regeln

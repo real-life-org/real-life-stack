@@ -130,9 +130,9 @@ export interface MapAdapter {
   fitBounds(bounds: MapBounds): void
 
   /**
-   * Pan so `center` ends up centred in the viewport area NOT covered by a
-   * bottom inset (in CSS pixels) — e.g. the strip of map above a bottom sheet.
-   * `bottomInset` 0 centres normally. Animated unless `animate` is `false`.
+   * Pan so `center` ends up centred in the viewport area NOT covered by an
+   * inset (in CSS pixels) — the strip of map above a bottom sheet, or the part
+   * left of a floating detail panel. All insets 0 centres normally. Animated unless `animate` is `false`.
    * Pass `zoom` to also change the zoom level (e.g. to reveal a deep-linked item
    * past the cluster-break threshold); omitted keeps the current zoom — a zoom
    * change animates as a smooth flight (eased zoom+pan) rather than a hard race.
@@ -140,7 +140,16 @@ export interface MapAdapter {
    */
   focusOn(
     center: LngLat,
-    options?: { bottomInset?: number; animate?: boolean; zoom?: number; duration?: number },
+    options?: {
+      bottomInset?: number
+      /** Panel am rechten Rand, das die Karte ueberlagert (CSS-Pixel). */
+      rightInset?: number
+      /** Panel am linken Rand, das die Karte ueberlagert (CSS-Pixel). */
+      leftInset?: number
+      animate?: boolean
+      zoom?: number
+      duration?: number
+    },
   ): void
 
   /** Current viewport. */
