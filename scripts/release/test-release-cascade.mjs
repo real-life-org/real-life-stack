@@ -101,6 +101,50 @@ for (const dep of workspaceDeps) {
   check(resolvedType(path) === 'node', `${dep} (${path}) ist node`, `aufgeloest: "${resolvedType(path)}"`)
 }
 
+console.log('\n== jedes publizierte Paket nennt sein Repository ==')
+// npm prueft beim Publish mit Provenance, dass repository.url zum Repo aus dem
+// Sigstore-Bundle passt. Fehlt das Feld, bricht das Publish mit
+//   422 — package.json: "repository.url" is "", expected to match ...
+// und zwar ERST beim Release, nachdem der Tag schon steht. Genau so ist
+// 0.1.3 gestorben: sechs Pakete, sechs rote Publish-Laeufe.
+const REPO_URL = 'https://github.com/real-life-org/real-life-stack'
+for (const [name, path] of componentByName) {
+  if (path === appPath) continue                 // die App wird nicht publiziert
+  const pj = readJson(join(path, 'package.json'))
+  if (pj.private) continue
+  const url = pj.repository?.url ?? ''
+  const passt = url.replace(/^git\+/, '').replace(/\.git$/, '') === REPO_URL
+  check(passt, `${name} nennt repository.url`, url ? `steht auf "${url}"` : 'Feld fehlt')
+  check(
+    pj.repository?.directory === path,
+    `${name} nennt sein Verzeichnis`,
+    `erwartet "${path}", steht auf "${pj.repository?.directory ?? '<nichts>'}"`,
+  )
+}
+
+console.log('\n== der Android-Build ermittelt seine Abhaengigkeiten selbst ==')
+// Eine gepflegte Aufzaehlung driftet lautlos: kommt der App eine Abhaengigkeit
+// dazu, faellt es erst beim Release auf, wenn tsc das Modul nicht findet.
+// Genau so starb app-v0.2.6 am supabase-connector. Der Filter `<app>^...`
+// fragt pnpm nach den Abhaengigkeiten der App, statt sie zu behaupten.
+const BUILD_SKRIPT = 'scripts/release/build-android.sh'
+// FAIL-CLOSED statt Absturz: fehlt das Skript, ist das eine Verletzung mit
+// klarer Meldung. Ein Waechter, der stirbt, sagt niemandem, was kaputt ist.
+const buildSkript = existsSync(join(ROOT, BUILD_SKRIPT)) ? read(BUILD_SKRIPT) : null
+const rumpf = buildSkript?.match(/build_workspace_deps\(\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
+check(buildSkript !== null, `${BUILD_SKRIPT} existiert`, 'nicht gefunden')
+check(
+  /--filter\s+"\$\{?APP_PKG\}?\^\.\.\."/.test(rumpf),
+  'build_workspace_deps nutzt den Abhaengigkeits-Filter',
+  'erwartet: pnpm --filter "$APP_PKG^..." build',
+)
+const genannt = [...rumpf.matchAll(/@real-life-stack\/[a-z-]+/g)].map((m) => m[0])
+check(
+  genannt.length === 0,
+  'build_workspace_deps zaehlt keine Pakete von Hand auf',
+  genannt.length ? `nennt: ${[...new Set(genannt)].join(', ')}` : '',
+)
+
 console.log('\n== extra-files verdrahtet GENAU die Versionsdatei (package-relativ) ==')
 // FAIL-CLOSED: es reicht NICHT, dass irgendein extra-files-Ziel existiert. Zeigte
 // der Eintrag z.B. auf package.json (existiert ja), bliebe der Test gruen,

@@ -45,7 +45,27 @@ const VALID = () => ({
     version: '0.2.7',
     dependencies: { '@scope/core': 'workspace:*' },
   },
-  'packages/core/package.json': { name: '@scope/core', version: '1.0.0' },
+  'packages/core/package.json': {
+    name: '@scope/core',
+    version: '1.0.0',
+    // npm verlangt bei Provenance ein passendes repository — ohne das Feld
+    // stirbt das Publish erst nach dem Tag mit 422.
+    repository: {
+      type: 'git',
+      url: 'git+https://github.com/real-life-org/real-life-stack.git',
+      directory: 'packages/core',
+    },
+  },
+  // Nur der Rumpf, den der Waechter liest: die Abhaengigkeiten werden
+  // ermittelt, nicht aufgezaehlt.
+  'scripts/release/build-android.sh': [
+    '#!/bin/sh',
+    'APP_PKG="$(node -p "require(\'./apps/demo/package.json\').name")"',
+    'build_workspace_deps() {',
+    '  pnpm --filter "$APP_PKG^..." build',
+    '}',
+    '',
+  ].join('\n'),
   'apps/demo/android/version.properties':
     '# x-release-please-start-version\nVERSION_NAME=0.2.7\n# x-release-please-end\n',
   // Minimale Workflows, strukturgleich zum echten Repo: die Dispatch-
@@ -172,6 +192,30 @@ const MUTATIONS = [
   }],
   ['keine App-Komponente (component "app" fehlt)', (f) => {
     delete f['release-please-config.json'].packages['apps/demo'].component
+  }],
+
+  // Die beiden Ursachen, an denen app-v0.2.6 zur Haelfte gestorben ist.
+  ['publiziertes Paket ohne repository (npm-Publish stirbt mit 422)', (f) => {
+    delete f['packages/core/package.json'].repository
+  }],
+  ['repository zeigt auf ein fremdes Repo', (f) => {
+    f['packages/core/package.json'].repository.url = 'git+https://github.com/jemand/anderes.git'
+  }],
+  ['repository nennt das falsche Verzeichnis', (f) => {
+    f['packages/core/package.json'].repository.directory = 'packages/falsch'
+  }],
+  ['build-android.sh zaehlt Abhaengigkeiten wieder von Hand auf', (f) => {
+    f['scripts/release/build-android.sh'] = [
+      '#!/bin/sh',
+      'build_workspace_deps() {',
+      '  pnpm --filter @real-life-stack/data-interface build',
+      '  pnpm --filter @real-life-stack/toolkit build',
+      '}',
+      '',
+    ].join('\n')
+  }],
+  ['build-android.sh fehlt ganz', (f) => {
+    delete f['scripts/release/build-android.sh']
   }],
 ]
 
