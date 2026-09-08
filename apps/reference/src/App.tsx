@@ -68,6 +68,7 @@ import {
   IncomingContactRequestDialog,
   getRuntimeConfig,
 } from "@real-life-stack/toolkit"
+import { initialDarkMode, rememberColorScheme } from "./initial-color-scheme"
 import type { DataInterface, User } from "@real-life-stack/data-interface"
 import { isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
@@ -611,7 +612,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     [currentUser]
   )
 
-  const [isDark, setIsDark] = useState(false)
+  const [isDark, setIsDark] = useState(initialDarkMode)
   const [drawerHeight, setDrawerHeight] = useState(0)
   const [activityOpen, setActivityOpen] = useState(false)
   const closeActivity = useCallback(() => setActivityOpen(false), [])
@@ -636,9 +637,18 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   }, [activeModule, activeWorkspace, allItems, focusItem, groups, navigate])
   const supportsMessaging = hasMessaging(connector)
 
+  // Die Klasse folgt dem Zustand, nicht dem Klick. Gespeichert wird hier
+  // BEWUSST nicht: dieser Effekt laeuft auch beim Mount, und dann schriebe er
+  // die Systemvorgabe als Wahl fest — ein spaeterer Wechsel des Systems bliebe
+  // wirkungslos. Festgehalten wird nur, was jemand wirklich waehlt.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark)
+  }, [isDark])
+
   const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle("dark")
+    const naechster = !isDark
+    setIsDark(naechster)
+    rememberColorScheme(naechster)
   }
 
   return (
