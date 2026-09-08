@@ -163,6 +163,17 @@ jobs:
           fi
           echo "Redirect /app -> /app/ ist proxy-tauglich."
 
+          # Der Redirect ist der Rueckfallweg, nicht der Normalfall: wer den
+          # kaputten 301 von frueher gecacht hat, laeuft daran vorbei, weil
+          # Browser einen permanenten Redirect behalten. Die mitgelieferte
+          # Landingpage muss deshalb von sich aus auf /app/ zeigen.
+          if curl -fsS http://127.0.0.1:8080/ | grep -qE 'href="/app"'; then
+            echo "FEHLER: die Landingpage verlinkt /app ohne Schraegstrich."
+            echo "Ein Browser mit dem alten, gecachten 301 umgeht damit den Fix."
+            exit 1
+          fi
+          echo "Landingpage verlinkt /app/ direkt."
+
           docker rm -f rls-smoke
 
       # Kein zweiter Build: dasselbe lokale Image bekommt die Tags und wird
