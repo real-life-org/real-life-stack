@@ -13,6 +13,7 @@ import { checkForLiveUpdate } from './live-update'
 import { prefetchMapLibre } from '@real-life-stack/toolkit/maplibre'
 import { loadRuntimeConfig, applyBranding } from '@real-life-stack/toolkit'
 import { RootError } from './root-error'
+import { applyInitialColorScheme } from './initial-color-scheme'
 
 // Check for OTA updates before rendering (no-op in browser/dev)
 checkForLiveUpdate()
@@ -63,6 +64,10 @@ async function start() {
     },
   })
   applyBranding(config.branding)
+  // Erscheinungsbild ebenfalls vor dem ersten Render: Anmeldung und Onboarding
+  // liegen VOR der App-Shell und blieben sonst hell, egal was System oder eine
+  // frueher getroffene Wahl sagen.
+  applyInitialColorScheme()
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

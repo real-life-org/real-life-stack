@@ -637,14 +637,19 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   }, [activeModule, activeWorkspace, allItems, focusItem, groups, navigate])
   const supportsMessaging = hasMessaging(connector)
 
-  // Die Klasse folgt dem Zustand, nicht dem Klick: so gilt sie auch beim
-  // ersten Anstrich, wenn der Startwert aus Wahl oder Systemvorgabe kommt.
+  // Die Klasse folgt dem Zustand, nicht dem Klick. Gespeichert wird hier
+  // BEWUSST nicht: dieser Effekt laeuft auch beim Mount, und dann schriebe er
+  // die Systemvorgabe als Wahl fest — ein spaeterer Wechsel des Systems bliebe
+  // wirkungslos. Festgehalten wird nur, was jemand wirklich waehlt.
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark)
-    rememberColorScheme(isDark)
   }, [isDark])
 
-  const toggleTheme = () => setIsDark(!isDark)
+  const toggleTheme = () => {
+    const naechster = !isDark
+    setIsDark(naechster)
+    rememberColorScheme(naechster)
+  }
 
   return (
     <OpenProfileProvider openProfile={openProfile}>

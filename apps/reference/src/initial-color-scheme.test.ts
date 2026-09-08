@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
-import { initialDarkMode, rememberColorScheme, STORAGE_KEY_THEME } from "./initial-color-scheme"
+import {
+  initialDarkMode,
+  applyInitialColorScheme,
+  rememberColorScheme,
+  STORAGE_KEY_THEME,
+} from "./initial-color-scheme"
 
 /** Systemvorgabe stellen — jsdom bringt kein echtes matchMedia mit. */
 function systemMag(dunkel: boolean) {
@@ -12,8 +17,11 @@ function systemMag(dunkel: boolean) {
   }))
 }
 
-describe("Startwert des Erscheinungsbilds", () => {
-  beforeEach(() => localStorage.clear())
+describe("Erscheinungsbild beim Start", () => {
+  beforeEach(() => {
+    localStorage.clear()
+    document.documentElement.classList.remove("dark")
+  })
   afterEach(() => vi.unstubAllGlobals())
 
   it("folgt der Systemvorgabe, solange nichts gewaehlt wurde", () => {
@@ -33,27 +41,55 @@ describe("Startwert des Erscheinungsbilds", () => {
     expect(initialDarkMode()).toBe(false)
   })
 
-  it("haelt die Wahl ueber einen Neustart hinweg", () => {
+  it("haelt eine gewaehlte Fassung ueber einen Neustart hinweg", () => {
     systemMag(false)
     rememberColorScheme(true)
     expect(localStorage.getItem(STORAGE_KEY_THEME)).toBe("dark")
     expect(initialDarkMode()).toBe(true)   // wie beim naechsten Laden
   })
 
-  it("faellt auf die Systemvorgabe zurueck, wenn der Speicher wirft", () => {
-    // Private Fenster koennen schon beim Zugriff werfen. Das darf den Start
-    // nicht kosten — und rememberColorScheme darf das Umschalten nicht brechen.
+  // Der Kern: das blosse Lesen darf die Systemvorgabe NICHT festschreiben.
+  // Sonst waere sie ab dem ersten Besuch eine Wahl, und ein spaeterer Wechsel
+  // des Systems bliebe wirkungslos.
+  it("schreibt beim Lesen nichts — die Systemvorgabe wird nicht zur Wahl", () => {
     systemMag(true)
-    const kaputt = { getItem() { throw new Error("gesperrt") },
-                     setItem() { throw new Error("gesperrt") } }
-    vi.stubGlobal("localStorage", kaputt)
-    expect(initialDarkMode()).toBe(true)
-    expect(() => rememberColorScheme(false)).not.toThrow()
+    initialDarkMode()
+    applyInitialColorScheme()
+    expect(localStorage.getItem(STORAGE_KEY_THEME)).toBeNull()
   })
 
-  it("ignoriert einen Wert, der weder dark noch light ist", () => {
+  it("folgt dem System weiter, wenn es nach dem ersten Besuch wechselt", () => {
+    systemMag(true)
+    applyInitialColorScheme()
+    expect(document.documentElement.classList.contains("dark")).toBe(true)
+
+    systemMag(false)                       // System spaeter auf hell gestellt
+    applyInitialColorScheme()
+    expect(document.documentElement.classList.contains("dark")).toBe(false)
+  })
+
+  // Ein Fremdwert ist KEINE Wahl. Zaehlte er als "hell", folgte die App der
+  // Systemvorgabe nicht mehr, ohne dass jemand das gewaehlt haette.
+  it("behandelt einen unbekannten Wert wie keine Wahl", () => {
     systemMag(true)
     localStorage.setItem(STORAGE_KEY_THEME, "auto")
-    expect(initialDarkMode()).toBe(false)   // alles ausser "dark" heisst hell
+    expect(initialDarkMode()).toBe(true)
+  })
+
+  it("setzt die dark-Klasse passend zum Ergebnis", () => {
+    systemMag(false)
+    localStorage.setItem(STORAGE_KEY_THEME, "dark")
+    applyInitialColorScheme()
+    expect(document.documentElement.classList.contains("dark")).toBe(true)
+  })
+
+  it("faellt auf die Systemvorgabe zurueck, wenn der Speicher wirft", () => {
+    systemMag(true)
+    vi.stubGlobal("localStorage", {
+      getItem() { throw new Error("gesperrt") },
+      setItem() { throw new Error("gesperrt") },
+    })
+    expect(initialDarkMode()).toBe(true)
+    expect(() => rememberColorScheme(false)).not.toThrow()
   })
 })
