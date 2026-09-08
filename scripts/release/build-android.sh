@@ -26,6 +26,9 @@ set -euo pipefail
 
 # ---------------------------------------------------------------- App-Profil
 APP_DIR=apps/reference
+# Der pnpm-Filtername der App - aus ihrer package.json gelesen, damit auch er
+# nicht neben der Wirklichkeit herlaeuft.
+APP_PKG="$(node -p "require('./$APP_DIR/package.json').name")"
 APP_ID=org.reallife.reallifestack
 TAG_PREFIX=app-v                               # RLS taggt app-v0.2.1
 BUILD_SCRIPT=build:android                      # tsc -b && vite build && cap sync android
@@ -72,13 +75,17 @@ PLAY_ENV=(
 # Abschalt-Garant ist PLAY_ENV + RLS' __local__-Behandlung, nicht der Bundle-String.
 OTA_SENTINEL=android-foss
 
-# Workspace-Pakete, die vor dem App-Build gebaut sein muessen. Reihenfolge und
-# Auswahl gespiegelt aus deploy-prototypes.yml (dort bewaehrt).
+# Workspace-Pakete, die vor dem App-Build gebaut sein muessen.
+#
+# BEWUSST KEINE HANDLISTE: `reference^...` sind die Workspace-Abhaengigkeiten
+# der App laut ihrer eigenen package.json, ohne die App selbst; pnpm baut sie
+# in topologischer Reihenfolge. Eine gepflegte Aufzaehlung driftet lautlos,
+# sobald die App eine Abhaengigkeit dazubekommt - genau das ist mit dem
+# supabase-connector passiert: der Build von app-v0.2.6 starb an
+# `TS2307: Cannot find module '@real-life-stack/supabase-connector'`, weil das
+# Paket in der Liste fehlte, obwohl App.tsx es importiert.
 build_workspace_deps() {
-  pnpm --filter @real-life-stack/data-interface build
-  pnpm --filter @real-life-stack/toolkit build
-  pnpm --filter @real-life-stack/mock-connector --filter @real-life-stack/local-connector build
-  pnpm --filter @real-life-stack/wot-connector build
+  pnpm --filter "$APP_PKG^..." build
 }
 # ---------------------------------------------------------------------------
 
