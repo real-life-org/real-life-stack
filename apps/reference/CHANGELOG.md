@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.7](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.6...app-v0.2.7) (2026-09-08)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.1.4
+    * @real-life-stack/local-connector bumped to 0.1.4
+    * @real-life-stack/mock-connector bumped to 0.1.4
+    * @real-life-stack/supabase-connector bumped to 0.1.4
+    * @real-life-stack/toolkit bumped to 0.1.4
+    * @real-life-stack/wot-connector bumped to 0.1.4
+
 ## [0.2.6](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.5...app-v0.2.6) (2026-09-08)
 
 

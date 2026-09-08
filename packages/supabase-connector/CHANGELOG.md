@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.4](https://github.com/real-life-org/real-life-stack/compare/supabase-connector-v0.1.3...supabase-connector-v0.1.4) (2026-09-08)
+
+
+### Bug Fixes
+
+* **release:** npm-Publish und Android-Build reparieren ([#299](https://github.com/real-life-org/real-life-stack/issues/299)) ([84eda7f](https://github.com/real-life-org/real-life-stack/commit/84eda7fce41f27f9cf36365955876ca9ee3bd5c9))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.1.4
+
 ## [0.1.3](https://github.com/real-life-org/real-life-stack/compare/supabase-connector-v0.1.2...supabase-connector-v0.1.3) (2026-09-08)
 
 

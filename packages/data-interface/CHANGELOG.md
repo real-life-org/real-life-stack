@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.1.3...data-interface-v0.1.4) (2026-09-08)
+
+
+### Bug Fixes
+
+* **release:** npm-Publish und Android-Build reparieren ([#299](https://github.com/real-life-org/real-life-stack/issues/299)) ([84eda7f](https://github.com/real-life-org/real-life-stack/commit/84eda7fce41f27f9cf36365955876ca9ee3bd5c9))
+
 ## [0.1.3](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.1.2...data-interface-v0.1.3) (2026-09-08)
 
 
