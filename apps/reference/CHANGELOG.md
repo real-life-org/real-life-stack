@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.8](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.7...app-v0.2.8) (2026-09-08)
+
+
+### Bug Fixes
+
+* **reference:** App folgt der Systemvorgabe und merkt sich die Wahl ([#302](https://github.com/real-life-org/real-life-stack/issues/302)) ([1eeb54d](https://github.com/real-life-org/real-life-stack/commit/1eeb54d9efda6716bb66700ab2761becd6ea41be))
+
 ## [0.2.7](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.6...app-v0.2.7) (2026-09-08)
 
 
