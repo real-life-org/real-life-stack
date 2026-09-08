@@ -1,4 +1,5 @@
 export { AppShell, AppShellMain } from "./app-shell"
+export { PanelSafeArea, type PanelSafeAreaProps } from "./panel-safe-area"
 export { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"
 export { WorkspaceSwitcher } from "./workspace-switcher"
 export type { Workspace } from "./workspace-switcher"
