@@ -68,6 +68,7 @@ import {
   IncomingContactRequestDialog,
   getRuntimeConfig,
 } from "@real-life-stack/toolkit"
+import { initialDarkMode, rememberColorScheme } from "./initial-color-scheme"
 import type { DataInterface, User } from "@real-life-stack/data-interface"
 import { isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
@@ -611,7 +612,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     [currentUser]
   )
 
-  const [isDark, setIsDark] = useState(false)
+  const [isDark, setIsDark] = useState(initialDarkMode)
   const [drawerHeight, setDrawerHeight] = useState(0)
   const [activityOpen, setActivityOpen] = useState(false)
   const closeActivity = useCallback(() => setActivityOpen(false), [])
@@ -636,10 +637,14 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   }, [activeModule, activeWorkspace, allItems, focusItem, groups, navigate])
   const supportsMessaging = hasMessaging(connector)
 
-  const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle("dark")
-  }
+  // Die Klasse folgt dem Zustand, nicht dem Klick: so gilt sie auch beim
+  // ersten Anstrich, wenn der Startwert aus Wahl oder Systemvorgabe kommt.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark)
+    rememberColorScheme(isDark)
+  }, [isDark])
+
+  const toggleTheme = () => setIsDark(!isDark)
 
   return (
     <OpenProfileProvider openProfile={openProfile}>
