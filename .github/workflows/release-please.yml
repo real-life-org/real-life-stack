@@ -1,16 +1,27 @@
 # release-please fuer Real Life Stack: verwaltet die publizierbaren Pakete
 # (data-interface, toolkit, vier Konnektoren) UND die Reference App in EINER
 # Release-PR. Merge der PR erzeugt die Tags → npm-Publish (publish.yml) bzw.
-# App-Build (build-on-tag), beide per Dispatch (GITHUB_TOKEN-Tags triggern keine
-# Workflows). Siehe docs/RELEASING.md.
+# App-Build (build-on-tag), beide per Dispatch. Siehe docs/RELEASING.md.
+#
+# Die Dispatch-Kette bleibt auch mit RELEASE_PLEASE_TOKEN bestehen: bei
+# publish.yml ist sie KEIN Workaround, sondern Voraussetzung dafuer, dass das
+# OIDC-Token publish.yml nennt und npm den Trusted Publisher akzeptiert.
 name: Release Please
 
 on:
   push:
     branches: [master]
 
+# `issues: write` gehoert dazu, auch wenn dieser Workflow keine Issues
+# anlegt: release-please verwaltet Labels auf der Release-PR
+# (`autorelease: pending` → `tagged`), und Labels haengen in der GitHub-API am
+# Issues-Bereich. Ohne das Recht scheitert die Label-Verwaltung — die
+# Action nennt alle drei in ihrer eigenen Doku. Gilt fuer das GITHUB_TOKEN
+# (also den Fallback unten); der eigene Token braucht dasselbe Recht als
+# "Issues: read+write".
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 jobs:
@@ -39,6 +50,23 @@ jobs:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
+          # Eigener Token statt GITHUB_TOKEN — sonst bleibt die Release-PR ohne
+          # Checks liegen: GitHub startet fuer Ereignisse, die mit dem
+          # GITHUB_TOKEN ausgeloest werden, keine Workflows. Die Tests landen
+          # dann auf "wartet auf Freigabe", und `pr-title` entsteht gar nicht
+          # erst — als Pflicht-Check des Rulesets blockiert der fehlende Status
+          # den Merge dauerhaft ("Expected — Waiting for status to be
+          # reported"). Der Handgriff dagegen war, den PR-Titel einmal zu
+          # aendern und zurueckzusetzen.
+          #
+          # Der Fallback haelt den Workflow lauffaehig, solange das Secret
+          # fehlt: dann gilt wieder das alte Verhalten samt Handgriff, statt
+          # dass release-please gar nicht mehr laeuft.
+          #
+          # Noetige Rechte (fein granuliert, nur dieses Repo):
+          # Contents: read+write · Issues: read+write · Pull requests: read+write
+          # Issues, weil release-please Labels auf der Release-PR fuehrt.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           manifest-file: .release-please-manifest.json
           config-file: release-please-config.json
 

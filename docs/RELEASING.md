@@ -184,6 +184,39 @@ Tag-Commit, exakter Hash, OTA-Zustand). Details im `wot-release`-README.
 
 ---
 
+## Warum release-please einen eigenen Token braucht
+
+GitHub startet **keine Workflows** für Ereignisse, die mit dem `GITHUB_TOKEN`
+ausgelöst werden. Für die Release-PR heißt das zweierlei:
+
+* Die **Tests** entstehen zwar, bleiben aber auf `action_required` stehen und
+  müssen von Hand freigegeben werden.
+* **`pr-title`** entsteht gar nicht erst. Als Pflicht-Check des Rulesets
+  blockiert der fehlende Status den Merge dauerhaft — die PR zeigt
+  „Expected — Waiting for status to be reported", und freigeben lässt sich ein
+  Lauf nicht, den es nie gab.
+
+Der Handgriff dagegen ist, den PR-Titel einmal zu ändern und sofort
+zurückzusetzen: das Ereignis stammt dann von einem Menschen und startet die
+Workflows. Beide Zwischenstände müssen gültige Conventional-Titel sein.
+
+Dauerhaft gelöst wird es über das Repo-Secret **`RELEASE_PLEASE_TOKEN`** — ein
+fein granulierter Token auf *dieses* Repo mit **Contents: read+write**,
+**Issues: read+write** und **Pull requests: read+write**. Fehlt das Secret,
+läuft alles weiter wie bisher, inklusive Handgriff.
+
+*Issues* ist nicht überflüssig, obwohl der Workflow keine Issues anlegt:
+release-please führt Labels auf der Release-PR (`autorelease: pending` →
+`tagged`), und Labels hängen in der GitHub-API am Issues-Bereich. Die Action
+nennt alle drei Rechte in ihrer eigenen Dokumentation.
+
+**Die Dispatch-Kette bleibt trotzdem.** Bei `publish.yml` ist sie kein
+Workaround, sondern Voraussetzung: nur als Top-Level-Workflow nennt das
+OIDC-Token `publish.yml`, worauf npm den Trusted Publisher prüft. Wer sie
+gegen einen `on: release`-Trigger tauscht, bricht das npm-Publish.
+
+---
+
 ## Ein Release schneiden
 
 1. **Arbeiten mit Conventional Commits** (`feat:`, `fix:`, `feat!:`). Der Pfad
