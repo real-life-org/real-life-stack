@@ -12,8 +12,16 @@ on:
   push:
     branches: [master]
 
+# `issues: write` gehoert dazu, auch wenn dieser Workflow keine Issues
+# anlegt: release-please verwaltet Labels auf der Release-PR
+# (`autorelease: pending` → `tagged`), und Labels haengen in der GitHub-API am
+# Issues-Bereich. Ohne das Recht scheitert die Label-Verwaltung — die
+# Action nennt alle drei in ihrer eigenen Doku. Gilt fuer das GITHUB_TOKEN
+# (also den Fallback unten); der eigene Token braucht dasselbe Recht als
+# "Issues: read+write".
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 jobs:
@@ -56,7 +64,8 @@ jobs:
           # dass release-please gar nicht mehr laeuft.
           #
           # Noetige Rechte (fein granuliert, nur dieses Repo):
-          # Contents: read+write · Pull requests: read+write
+          # Contents: read+write · Issues: read+write · Pull requests: read+write
+          # Issues, weil release-please Labels auf der Release-PR fuehrt.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           manifest-file: .release-please-manifest.json
           config-file: release-please-config.json

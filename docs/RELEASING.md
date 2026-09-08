@@ -201,9 +201,14 @@ zurückzusetzen: das Ereignis stammt dann von einem Menschen und startet die
 Workflows. Beide Zwischenstände müssen gültige Conventional-Titel sein.
 
 Dauerhaft gelöst wird es über das Repo-Secret **`RELEASE_PLEASE_TOKEN`** — ein
-fein granulierter Token auf *dieses* Repo mit **Contents: read+write** und
-**Pull requests: read+write**. Fehlt das Secret, läuft alles weiter wie
-bisher, inklusive Handgriff.
+fein granulierter Token auf *dieses* Repo mit **Contents: read+write**,
+**Issues: read+write** und **Pull requests: read+write**. Fehlt das Secret,
+läuft alles weiter wie bisher, inklusive Handgriff.
+
+*Issues* ist nicht überflüssig, obwohl der Workflow keine Issues anlegt:
+release-please führt Labels auf der Release-PR (`autorelease: pending` →
+`tagged`), und Labels hängen in der GitHub-API am Issues-Bereich. Die Action
+nennt alle drei Rechte in ihrer eigenen Dokumentation.
 
 **Die Dispatch-Kette bleibt trotzdem.** Bei `publish.yml` ist sie kein
 Workaround, sondern Voraussetzung: nur als Top-Level-Workflow nennt das
