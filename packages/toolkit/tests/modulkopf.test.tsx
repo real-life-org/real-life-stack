@@ -89,6 +89,55 @@ describe("Der Modulkopf", () => {
     expect(host.querySelector("[data-module-controls] [data-filter-pill-trigger]")).not.toBeNull()
   })
 
+  it("zeigt Modul-Aktionen ohne Suche, wenn das Modul nicht sucht", () => {
+    // `search={false}` schaltete die ganze Zeile ab oder gar nichts — die
+    // Suche kam trotzdem mit, sobald es Aktionen gab (#322).
+    rendere(
+      createElement(
+        ModuleFrame,
+        { moduleId: "feed" },
+        createElement(ModuleToolbar, {
+          search: false,
+          trailingActions: createElement("button", { "data-heute": true }, "Heute"),
+        }),
+        "INHALT",
+      ),
+    )
+    expect(kopf()!.hasAttribute("hidden")).toBe(false)
+    expect(kopfInhalt()!.querySelector("[data-heute]")).not.toBeNull()
+    expect(kopfInhalt()!.querySelector("input")).toBeNull()
+  })
+
+  it("bleibt leer, wenn das Modul-Extra gerade nichts rendert", () => {
+    // Ein leeres Fragment als `chipsExtra` hielt den Kopf am Leben: eine
+    // unsichtbare Zeile mit 32px Polster (Copilot-Befund).
+    rendere(
+      createElement(
+        ModuleFrame,
+        { moduleId: "feed" },
+        createElement(ModuleToolbar, { search: false, chipsExtra: undefined }),
+        "INHALT",
+      ),
+    )
+    expect(kopf()!.hasAttribute("hidden")).toBe(true)
+  })
+
+  it("kommt zurueck, sobald ein Modul-Extra aktiv ist", () => {
+    rendere(
+      createElement(
+        ModuleFrame,
+        { moduleId: "feed" },
+        createElement(ModuleToolbar, {
+          search: false,
+          chipsExtra: createElement("span", { "data-extra": true }, "Nur meine"),
+        }),
+        "INHALT",
+      ),
+    )
+    expect(kopf()!.hasAttribute("hidden")).toBe(false)
+    expect(kopfInhalt()!.querySelector("[data-extra]")).not.toBeNull()
+  })
+
   it("stellt die Filter-Pille in die schwebende Ecke, nicht in den Scrollbereich", () => {
     rendere(
       createElement(
