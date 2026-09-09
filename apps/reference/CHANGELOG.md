@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.2.10](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.9...app-v0.2.10) (2026-09-09)
+
+
+### Features
+
+* **toolkit:** die Modulfläche besitzt den Kopf, der Filter gehört der App ([#318](https://github.com/real-life-org/real-life-stack/issues/318)) ([305451d](https://github.com/real-life-org/real-life-stack/commit/305451d3d54c00e9754e6a86ac114e2ec111412c))
+* **toolkit:** die Modulfläche wird eine Spalte ([#315](https://github.com/real-life-org/real-life-stack/issues/315)) ([41f2456](https://github.com/real-life-org/real-life-stack/commit/41f2456f0508d8806942cc7cbb74a8d21e6436ec))
+* **toolkit:** Filter-Pille und weißer Erstellen-Knopf wie im Design-Board ([#321](https://github.com/real-life-org/real-life-stack/issues/321)) ([5e26dc2](https://github.com/real-life-org/real-life-stack/commit/5e26dc2e57776624d88abb02416e50cfc43f9b0d))
+* **toolkit:** Tag-Klick filtert, der Feed-Kopf bekommt einen Erstellen-Knopf ([#319](https://github.com/real-life-org/real-life-stack/issues/319)) ([8d0f8ec](https://github.com/real-life-org/real-life-stack/commit/8d0f8ec7443dc10a0eb4c7e7080fac8a30c121e1))
+
+
+### Bug Fixes
+
+* **reference:** die App darf den Standort abfragen ([#335](https://github.com/real-life-org/real-life-stack/issues/335)) ([3f1aa6b](https://github.com/real-life-org/real-life-stack/commit/3f1aa6ba30f0c894f66398a273182eadb20a7dc1))
+* **toolkit:** der Drawer endet oben an der Schutzzone des Geräts ([#332](https://github.com/real-life-org/real-life-stack/issues/332)) ([fc96f76](https://github.com/real-life-org/real-life-stack/commit/fc96f768e4c1a41d3a033e6e64e27f9173a6ed5b))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/toolkit bumped to 0.1.6
+    * @real-life-stack/wot-connector bumped to 0.1.6
+
 ## [0.2.9](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.8...app-v0.2.9) (2026-09-09)
 
 
