@@ -95,6 +95,27 @@ describe("Der Adress-Vorschlag", () => {
     )
   })
 
+  it("kommt mit einem eigenen Geocoder ohne lange Form aus", async () => {
+    // Der Geocoder ist injizierbar; fremde Implementierungen liefern nur
+    // label/lat/lng (#331). Dann gibt es genau eine Zeile.
+    const onChange = vi.fn()
+    const eigen: GeocodeResult[] = [{ label: "Markthalle Neun", lat: 52.5, lng: 13.4 }]
+    act(() => {
+      root.render(
+        createElement(LocationWidget, {
+          value: { address: "" },
+          onChange,
+          geocode: async () => eigen,
+        }),
+      )
+    })
+    await tippe(onChange, eigen)
+
+    const eintrag = host.querySelector("[role=option]")!
+    expect(eintrag.textContent).toBe("Markthalle Neun")
+    expect(eintrag.querySelector("span")).toBeNull()
+  })
+
   it("zeigt nur eine Zeile, wenn beide Formen gleich sind", async () => {
     const onChange = vi.fn()
     const gleich: GeocodeResult[] = [

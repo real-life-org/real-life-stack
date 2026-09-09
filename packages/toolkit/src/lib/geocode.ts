@@ -21,8 +21,12 @@ export interface GeocodeResult {
    * Die lange Form (`display_name`) — fuer die Auswahlliste, wo zwei
    * gleichnamige Strassen sonst nicht zu unterscheiden waeren. Gleich `label`,
    * wenn es keine Strukturdaten gab.
+   *
+   * Optional: Der Geocoder ist ein injizierbarer Vertrag (Spec Location-Widget),
+   * eigene Implementierungen liefern nur `label`, `lat`, `lng`. Ein Pflichtfeld
+   * hier braeche sie (#331).
    */
-  detail: string
+  detail?: string
   lat: number
   lng: number
 }

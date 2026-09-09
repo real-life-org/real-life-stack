@@ -199,7 +199,7 @@ export function LocationWidget({
                     {/* Die lange Form nur, wenn sie mehr sagt: Zwei
                         gleichnamige Strassen sind sonst nicht zu
                         unterscheiden — gespeichert wird trotzdem die kurze. */}
-                    {r.detail !== r.label && (
+                    {r.detail && r.detail !== r.label && (
                       <span className="block truncate text-xs text-muted-foreground">
                         {r.detail}
                       </span>
