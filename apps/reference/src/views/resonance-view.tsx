@@ -10,11 +10,9 @@ import {
   ReactionBar,
   renderTypeFooter,
   emptyFilterBarValue,
-  getActivePanelGlow,
   useCurrentUser,
   useFilterableItems,
   useGroups,
-  useItemGroupColorResolver,
   useItems,
   useMembers,
   useModulePanel,
@@ -68,7 +66,6 @@ export function ResonanceView({ groupId }: { groupId: string }) {
   const { data: currentUser } = useCurrentUser()
   const modulePanel = useModulePanel()
   const { itemId: focusedId, focusItem } = useItemFocus()
-  const resolveGroupColor = useItemGroupColorResolver(groupId === "__overview__" ? undefined : groupId)
 
   // Author resolution: members first, then the connector cascade (contacts),
   // never a raw DID if avoidable — same approach as the feed.
@@ -196,7 +193,7 @@ export function ResonanceView({ groupId }: { groupId: string }) {
               <ItemPreview
                 item={item}
                 author={resolveAuthor(item.createdBy)}
-                style={modulePanel.current?.itemId === item.id ? getActivePanelGlow(resolveGroupColor(item)) : undefined}
+                active={modulePanel.current?.itemId === item.id}
                 onClick={() => focusItem(item.id)}
                 headerAdornment={<ItemTypeBadge type={item.type} />}
                 metaAdornment={<ItemMetaRow item={item} />}

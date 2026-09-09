@@ -25,7 +25,6 @@ import {
   useItemGroupColorResolver,
   useItemGroupResolver,
   useItemPrivacyResolver,
-  getActivePanelGlow,
   resolveTypePresentation,
 } from "@real-life-stack/toolkit"
 import { FileText, Search, SearchX } from "lucide-react"
@@ -260,7 +259,7 @@ export function FeedView({ groupId }: { groupId: string }) {
               <ItemPreview
                 item={item}
                 author={resolveAuthor(item.createdBy)}
-                style={modulePanel.current?.itemId === item.id ? getActivePanelGlow(resolveItemGroupColor(item)) : undefined}
+                active={modulePanel.current?.itemId === item.id}
                 onClick={() => focusItem(item.id)}
                 headerAdornment={
                   <>

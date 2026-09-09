@@ -7,7 +7,7 @@ import { RelativeTime } from "../primitives/relative-time"
 import { ProfileLink } from "../profile/profile-link"
 import { TagChip } from "../tag/tag-chip"
 import { MarkdownText } from "./markdown-text"
-import { cn, getActivePanelGlow } from "../../lib/utils"
+import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
 import { useUserNameResolver } from "../../hooks/use-user-names"
 import { useCommentCount } from "../../hooks/use-comment-count"
@@ -104,9 +104,20 @@ export interface ItemPreviewProps {
    *   fuer neue Detailflaechen `ItemDetailBody` nehmen.
    */
   surface?: ItemPreviewSurface
-  /** Highlights the selected item using the shared panel-glow treatment. */
+  /**
+   * Hebt die ausgewaehlte Karte hervor — mit demselben Schatten, den das
+   * schwebende Panel traegt (`shadow-xl`), und neutralem Rahmen.
+   *
+   * Frueher war das ein farbiger Schein in der Space-Farbe. Neben einer
+   * schwebenden Karte auf getoentem Grund liest sich derselbe Schatten als
+   * „diese Karte gehoert zu dem, was rechts offen ist"; ein bunter Rand
+   * behauptet stattdessen eine eigene Bedeutung, die es nicht gibt.
+   */
   active?: boolean
-  /** Optional `#rrggbb` override for the active-item glow. */
+  /**
+   * @deprecated Ohne Wirkung. Die aktive Karte hebt sich ueber ihren Schatten
+   * ab, nicht ueber eine Farbe — siehe {@link active}.
+   */
   activeGlowColor?: string
   className?: string
   /** Inline style on the card root — e.g. the active-item glow (box-shadow). */
@@ -135,7 +146,6 @@ export function ItemPreview({
   density = "comfortable",
   surface = "card",
   active = false,
-  activeGlowColor = DEFAULT_ACTIVE_ITEM_GLOW_COLOR,
   className,
   style,
 }: ItemPreviewProps) {
@@ -188,9 +198,12 @@ export function ItemPreview({
         "rounded-lg border bg-card transition-all",
         interactive &&
           "cursor-pointer hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        // Derselbe Schatten wie die schwebende Karte: die ausgewaehlte Karte
+        // hebt sich vom Grund ab, statt sich einzufaerben.
+        active && "shadow-xl",
         className,
       )}
-      style={{ ...(active ? getActivePanelGlow(activeGlowColor) : {}), ...style }}
+      style={style}
       onClick={onClick}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}

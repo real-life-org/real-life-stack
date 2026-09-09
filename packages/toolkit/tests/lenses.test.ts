@@ -248,7 +248,14 @@ describe("read-only lenses", () => {
     expect(grouped.get("done")).toEqual([])
   })
 
-  it("8: List, Grid and Board pass the active item to ItemPreview with the default glow", () => {
+  /**
+   * Die ausgewaehlte Karte hebt sich ueber denselben Schatten ab, den das
+   * schwebende Panel traegt — nicht mehr ueber einen farbigen Schein in der
+   * Space-Farbe. Neben einer schwebenden Karte auf getoentem Grund liest sich
+   * derselbe Schatten als Zusammengehoerigkeit; ein bunter Rand behauptet eine
+   * Bedeutung, die es nicht gibt.
+   */
+  it("8: List, Grid and Board mark the active item with the panel's elevation", () => {
     const items = [item("task-1", "task", { title: "Aktive Aufgabe", status: "open" })]
     const listMarkup = renderToStaticMarkup(createElement(ListView, { items, activeItemId: "task-1" }))
     const gridMarkup = renderToStaticMarkup(createElement(GridView, { items, activeItemId: "task-1" }))
@@ -260,8 +267,11 @@ describe("read-only lenses", () => {
 
     for (const markup of [listMarkup, gridMarkup, boardMarkup]) {
       expect(markup).toContain('data-active-preview="true"')
-      expect(markup).toContain("box-shadow:")
-      expect(markup).toContain("#64748b")
+      expect(markup).toContain("shadow-xl")
+      // Kein eingefaerbter Schein mehr — weder der Standardton noch ein
+      // Inline-Schatten.
+      expect(markup).not.toContain("#64748b")
+      expect(markup).not.toContain("box-shadow:")
     }
   })
 
