@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { ModuleToolbarSlotContext } from "./module-toolbar"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -78,13 +77,13 @@ export function AppShellMain({
   inset = true,
 }: AppShellMainProps) {
   const springt = useSprungOhneUebergang(inset)
-  const [kopfSlot, setKopfSlot] = React.useState<HTMLElement | null>(null)
   return (
     <main
       className={cn(
-        "@container flex flex-1 flex-col overflow-hidden",
+        "@container flex-1 overflow-y-auto",
         "transition-[margin] duration-300 ease-out [.adaptive-panel-resizing_&]:transition-none",
         springt && "transition-none",
+        withBottomNav && "pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0",
         className
       )}
       style={
@@ -106,29 +105,7 @@ export function AppShellMain({
           : undefined
       }
     >
-      {/* Der Kopf steht still. Was hier landet, kommt aus dem Modul
-          (`ModuleToolbar`) — eine Steuerleiste, die mitscrollt, zwingt zum
-          Zurueckspringen, sobald die Liste laenger ist als der Schirm.
-          `empty:hidden`, weil ein Portal an seiner Ursprungsstelle nichts
-          hinterlaesst und ein Modul ohne Leiste sonst eine leere Zeile
-          bekaeme. */}
-      <div
-        data-module-toolbar
-        ref={setKopfSlot}
-        className="shrink-0 empty:hidden"
-      />
-
-      <div
-        data-scroll-area
-        className={cn(
-          "min-h-0 flex-1 overflow-y-auto",
-          withBottomNav && "pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0",
-        )}
-      >
-        <ModuleToolbarSlotContext.Provider value={kopfSlot}>
-          {children}
-        </ModuleToolbarSlotContext.Provider>
-      </div>
+      {children}
     </main>
   )
 }

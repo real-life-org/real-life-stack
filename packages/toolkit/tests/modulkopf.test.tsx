@@ -1,100 +1,44 @@
 // @vitest-environment jsdom
-import { act, createElement } from "react"
-import { createRoot, type Root } from "react-dom/client"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { renderToStaticMarkup } from "react-dom/server"
+import { describe, expect, it } from "vitest"
 
-import { AppShellMain } from "../src/components/layout/app-shell"
 import { ModuleToolbar } from "../src/components/layout/module-toolbar"
-
-;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 /**
  * Zwei Beobachtungen, eine Ursache: Die Scrollleiste klemmte im 16px-Spalt
  * rechts neben dem Panel, und die Modul-Steuerleiste scrollte mit weg.
  *
- * Beides lag daran, dass `main` bis zum Fensterrand reichte und ALLES
- * enthielt — nur sein Inhalt rückte per Padding ein. Jetzt ist die Fläche
- * eine Spalte: ein fester Kopf, darunter der Scrollbereich, und der endet
- * dort, wo der Platz endet.
+ * Die Leiste bleibt jetzt oben kleben — IM Container des Moduls, nicht in
+ * einem eigenen Kopf darueber. Der erste Versuch tat Letzteres und handelte
+ * sich damit eine zweite Geometrie ein: Die Leiste sass am Fensterrand,
+ * waehrend die Karten zentriert standen.
  */
-let host: HTMLDivElement
-let root: Root
+describe("Die Steuerleiste bleibt oben", () => {
+  const html = renderToStaticMarkup(<ModuleToolbar>FILTERLEISTE</ModuleToolbar>)
 
-function rendern(kinder: React.ReactNode, inset = true) {
-  act(() => {
-    root.render(createElement(AppShellMain, { inset }, kinder))
-  })
-}
-
-const scrollbereich = () => host.querySelector<HTMLElement>("[data-scroll-area]")
-const kopf = () => host.querySelector<HTMLElement>("[data-module-toolbar]")
-
-beforeEach(() => {
-  host = document.createElement("div")
-  document.body.appendChild(host)
-  root = createRoot(host)
-})
-
-afterEach(() => {
-  act(() => root.unmount())
-  host.remove()
-})
-
-describe("Die Modulfläche ist eine Spalte", () => {
-  it("scrollt im Inhalt, nicht in der ganzen Fläche", () => {
-    rendern("Inhalt")
-    const bereich = scrollbereich()
-    expect(bereich, "kein eigener Scrollbereich").not.toBeNull()
-    expect(bereich!.className).toContain("overflow-y-auto")
-    // Die Fläche selbst scrollt nicht mehr — sonst wanderte der Kopf mit.
-    expect(host.querySelector("main")!.className).not.toContain("overflow-y-auto")
+  it("klebt am oberen Rand des Scrollbereichs", () => {
+    expect(html).toContain("sticky")
+    expect(html).toContain("top-0")
   })
 
-  /**
-   * Der Scrollbereich endet, wo der Platz endet — nicht am Fensterrand. Sonst
-   * sitzt die Leiste rechts NEBEN dem Panel, in einem 16px-Spalt.
-   */
-  it("hört an der Panelkante auf, statt am Fensterrand", () => {
-    rendern("Inhalt")
-    const stil = host.querySelector("main")!.getAttribute("style") ?? ""
-    expect(stil).toContain("margin-right: var(--adaptive-panel-margin-right, 0px)")
-    // Kein Padding mehr: Das schob nur den Inhalt, nicht den Scrollbereich.
-    expect(stil).not.toContain("padding-right")
+  it("deckt den durchscrollenden Inhalt ab", () => {
+    // Ohne eigene Flaeche schiene der Inhalt beim Scrollen durch die Leiste.
+    expect(html).toContain("bg-background")
+    expect(html).toContain("z-20")
   })
 
-  it("nimmt der Karte den Platz nicht weg", () => {
-    rendern("Inhalt", false)
-    expect(host.querySelector("main")!.getAttribute("style") ?? "").not.toContain("margin-right")
-  })
-})
-
-describe("Der Modulkopf bleibt stehen", () => {
-  it("nimmt die Steuerleiste aus dem Scrollbereich heraus", () => {
-    rendern([
-      createElement(ModuleToolbar, { key: "t" }, "FILTERLEISTE"),
-      createElement("div", { key: "i" }, "Inhalt"),
-    ])
-
-    expect(kopf(), "kein Modulkopf").not.toBeNull()
-    expect(kopf()!.textContent).toContain("FILTERLEISTE")
-    // Entscheidend: NICHT im Scrollbereich, sonst scrollt sie mit weg.
-    expect(scrollbereich()!.textContent).not.toContain("FILTERLEISTE")
-    expect(scrollbereich()!.textContent).toContain("Inhalt")
+  it("zieht ihre Flaeche ueber den Rand des Containers", () => {
+    // Der Container gibt 16px Rand; ohne das Herausziehen bliebe links und
+    // rechts ein Streifen, durch den der Inhalt sichtbar vorbeizieht.
+    expect(html).toContain("-mx-4")
+    expect(html).toContain("px-4")
   })
 
-  it("lässt den Kopf weg, wo ein Modul keinen beisteuert", () => {
-    rendern("Nur Inhalt")
-    expect(kopf()?.textContent ?? "").toBe("")
-  })
-
-  /**
-   * Ohne Shell darüber — Story, Test, eingebettete Ansicht — bleibt die Leiste
-   * an Ort und Stelle, statt spurlos zu verschwinden.
-   */
-  it("bleibt sichtbar, wo keine Fläche sie aufnimmt", () => {
-    act(() => {
-      root.render(createElement("div", null, createElement(ModuleToolbar, null, "FILTERLEISTE")))
-    })
-    expect(host.textContent).toContain("FILTERLEISTE")
+  it("traegt keine eigene Geometrie", () => {
+    // Randabstand, Zentrierung und Hoechstbreite kommen vom Container des
+    // Moduls — eine zweite Angabe daneben driftet.
+    expect(html).not.toContain("container")
+    expect(html).not.toContain("mx-auto")
+    expect(html).not.toMatch(/max-w-/)
   })
 })

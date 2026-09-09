@@ -1,37 +1,47 @@
 "use client"
 
-import { createContext, useContext, type ReactNode } from "react"
-import { createPortal } from "react-dom"
+import type { ReactNode } from "react"
 
-/**
- * Das DOM-Element im Kopf der Modulflaeche, in das ein Modul seine
- * Steuerleiste legt. `null`, wenn keine Flaeche darueber liegt (Story, Test,
- * eingebettete Ansicht).
- */
-export const ModuleToolbarSlotContext = createContext<HTMLElement | null>(null)
+import { cn } from "../../lib/utils"
 
 export interface ModuleToolbarProps {
   children: ReactNode
+  className?: string
 }
 
 /**
  * Die Steuerleiste eines Moduls — Filter, Suche, Ansichtswechsel.
  *
- * **Warum sie nicht einfach oben im Inhalt steht.** Dort scrollte sie mit weg:
- * Wer weit unten in einer langen Liste nach etwas filtern will, muss erst nach
- * oben zurueck. Sie gehoert also aus dem Scrollbereich heraus.
+ * **Sie bleibt oben stehen.** Mitscrollen hiess: Wer weit unten in einer langen
+ * Liste filtern will, muss erst zurueck nach oben.
  *
- * Sie oben im Modul `sticky` zu machen waere der billigere Weg gewesen — aber
- * dann loest ihn jedes Modul selbst, und die sieben Loesungen driften
- * auseinander. Stattdessen besitzt die Flaeche ihren Kopf, und das Modul
- * reicht hinein. Ohne Flaeche darueber bleibt die Leiste an Ort und Stelle,
- * statt spurlos zu verschwinden.
+ * **Warum klebend und nicht ausserhalb des Scrollbereichs.** Erst lag sie in
+ * einem eigenen Kopf der Modulflaeche — dann aber ausserhalb des
+ * Modul-Containers, der Randabstand, Zentrierung und Hoechstbreite setzt. Die
+ * Leiste sass am Fensterrand, waehrend die Karten zentriert standen, und die
+ * Scrollleiste verschob die Zentrierung des Inhalts um weitere Pixel gegen den
+ * Kopf. Beides zu flicken hiesse, dieselbe Geometrie an zwei Orten zu pflegen.
  *
- * Schwester von `PanelHeaderActions`: dort reicht ein Inhalt in die
- * Knopfleiste des Panels, hier in den Kopf der Modulflaeche.
+ * Hier steht sie im selben Container wie der Inhalt und erbt seine Geometrie —
+ * es gibt keine zweite, die abweichen koennte.
+ *
+ * `-mx-4 px-4` zieht den Hintergrund ueber den Rand des Containers hinaus:
+ * sonst schiene der Inhalt links und rechts daneben durch, waehrend er darunter
+ * wegscrollt.
  */
-export function ModuleToolbar({ children }: ModuleToolbarProps) {
-  const slot = useContext(ModuleToolbarSlotContext)
-  if (!slot) return <>{children}</>
-  return createPortal(children, slot)
+export function ModuleToolbar({ children, className }: ModuleToolbarProps) {
+  return (
+    <div
+      data-module-toolbar
+      className={cn(
+        "sticky top-0 z-20 -mx-4 bg-background px-4 pb-3",
+        // Der Container gibt oben 16px; die uebernimmt die Leiste, damit beim
+        // Kleben kein Inhalt in dieser Luecke durchscheint.
+        "-mt-4 pt-4",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
 }
