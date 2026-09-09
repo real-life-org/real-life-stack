@@ -93,8 +93,15 @@ describe("MAP-ABSINK parity matrix — MapView module with fake-adapter probes",
     expect([...inventory.keys()]).toEqual(["next"])
   })
 
-  it("4: renders the real module FilterBar/search surface and filters its marker input", () => {
-    expect(renderMap()).toContain('aria-label="Karte durchsuchen"')
+  it("4: bringt die Modulflaeche mit und filtert dieselbe Marker-Eingabe", () => {
+    // Die Leiste selbst steht nicht mehr im Markup der Karte: Sie wird in die
+    // Slots der Flaeche portalt, und Portale rendern serverseitig nicht. Was
+    // hier zu pruefen bleibt, ist, dass die Karte ihre Flaeche mitbringt —
+    // sonst faende die Leiste kein Zuhause (CodeRabbit zu #321).
+    const markup = renderMap()
+    expect(markup).toContain("data-module-frame")
+    expect(markup).toContain("data-module-head-slot")
+    expect(markup).toContain("data-module-controls")
     expect(filterMapViewItems([point("match"), point("relation", "relation")], { types: [], tags: [] }, "match").map(({ id }) => id)).toEqual(["match"])
   })
 

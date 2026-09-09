@@ -38,7 +38,7 @@ import { ItemPreview } from "../preview/item-preview"
 import { ItemTypeBadge } from "../preview/item-type-badge"
 import { ItemTimeRange } from "../preview/item-time-range"
 import { FilterSection, FilterToggle, FilterMultiSelect } from "../filter/filter-building-blocks"
-import { FilterScope } from "../filter/filter-store"
+import { ModuleSurfaceScope } from "../layout/module-surface-scope"
 import type { FilterTypeOption } from "../filter/types"
 import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
 import type { Item } from "@real-life-stack/data-interface"
@@ -347,15 +347,17 @@ export interface CalendarViewProps {
 
 /**
  * Der Kalender laeuft auch ausserhalb der App-Shell (Story, Test,
- * apps/network). Der `FilterScope` an seiner WURZEL sorgt dafuer, dass Leiste
- * und Inhalt dort denselben Filter sehen; unter der App reicht er den
- * vorhandenen durch, damit ein im Feed gesetztes Tag hier weiterwirkt.
+ * apps/network). Die Huelle an seiner WURZEL bringt dort mit, was sonst die
+ * App stellt: den Besitzer des Filters — damit Leiste und Inhalt denselben
+ * sehen — und die Modulflaeche, die Kopf und schwebende Ecke platziert. Unter
+ * der App reicht sie beides durch, damit ein im Feed gesetztes Tag hier
+ * weiterwirkt.
  */
 export function CalendarView(props: CalendarViewProps) {
   return (
-    <FilterScope>
+    <ModuleSurfaceScope maxWidth="max-w-5xl">
       <CalendarViewInner {...props} />
-    </FilterScope>
+    </ModuleSurfaceScope>
   )
 }
 

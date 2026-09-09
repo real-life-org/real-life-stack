@@ -96,9 +96,11 @@ describe("Overlays der Karte liegen ausnahmslos in der Flaeche", () => {
   })
 
   it("nutzt die Flaeche fuer jedes schwebende Element", () => {
-    // Ladeanzeige, Hinweis, Steuerleiste - drei Stellen, ein Vertrag.
+    // Ladeanzeige und Hinweis beim Ort-Waehlen — dieselbe Regel wie vorher,
+    // nur eine Stelle weniger: Die Steuerleiste platziert die Modulflaeche
+    // selbst (`ModuleFrame`), sie ist kein Overlay der Karte mehr.
     const anzahl = (quelle.match(/<PanelSafeArea/g) ?? []).length
-    expect(anzahl).toBeGreaterThanOrEqual(3)
+    expect(anzahl).toBeGreaterThanOrEqual(2)
   })
 })
 
