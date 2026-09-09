@@ -24,6 +24,7 @@ import {
   AdaptivePanel,
   CommentNavigationProvider,
   FieldNavigationProvider,
+  TagNavigationProvider,
   findModulePresenting,
   OpenProfileProvider,
   DraftItemProvider,
@@ -704,6 +705,10 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
         Modulwechsel (Spec shared-components → „Modul-uebergreifender
         Filter-State", Regel 1). */}
     <FilterProvider>
+    {/* Tags werden zum Weg: ein Klick setzt den geteilten Filter. Der Provider
+        haengt UNTER dem Filter, nicht bei den anderen Navigationen — er
+        braucht den Zustand, den er setzt. */}
+    <TagNavigationProvider>
     <ModulePanelHost onDrawerHeightChange={setDrawerHeight}>
     <ActivityPanelController open={activityOpen} onClose={closeActivity} onOpenNotification={openNotification} onOpenEntryTarget={openEntryTarget} onOpenGroup={(groupId) => { const group = workspaces.find((workspace) => workspace.id === groupId); if (group) handleWorkspaceChange(group); closeActivity() }} />
     <CreateSheetController />
@@ -892,6 +897,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       )}
     </AppShell>
     </ModulePanelHost>
+    </TagNavigationProvider>
     </FilterProvider>
     </CreateHostProvider>
     </LocationPickProvider>

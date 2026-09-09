@@ -8,3 +8,9 @@ export {
   useCommentLink,
   type CommentNavigationValue,
 } from "./comment-navigation"
+export {
+  TagNavigationProvider,
+  useTagLink,
+  type TagNavigationValue,
+  type TagLink,
+} from "./tag-navigation"

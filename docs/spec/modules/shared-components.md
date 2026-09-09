@@ -460,16 +460,24 @@ Caller löst die User-Objekte auf (typischerweise aus `assignedTo`-Relations + M
 interface TagChipProps {
   tag: string
   size?: "sm" | "md"
-  selected?: boolean      // Toggle-Modus (Filter-Picker)
+  selected?: boolean      // Toggle-Modus (Filter-Picker) / aktiv im Klick-Modus
   onToggle?: () => void
+  onClick?: () => void    // Klick-Modus (Tag auf Card/Detail)
   onRemove?: () => void   // entfernbarer Modus (aktiver Filter-Chip)
   className?: string
 }
 ```
 
-**Prinzip:** Tags tragen **eine deterministische Farb-Palette** (`getTagColor`), über alle Flächen identisch (Posts, Filter, Kanban). Drei Modi: statisch (Post), Toggle (Filter-Picker — selektiert volle Deckkraft, sonst gedimmt; die Tag-Farbe bleibt immer sichtbar) und entfernbar (aktiver Filter-Chip mit ✕). Die Palette gehört langfristig in die Design-Tokens; bis dahin liefert sie `getTagColor` (Spec [07-tags.md](../07-tags.md)).
+**Prinzip:** Tags tragen **eine deterministische Farb-Palette** (`getTagColor`), über alle Flächen identisch (Posts, Filter, Kanban). Vier Modi: statisch (Post), Toggle (Filter-Picker — selektiert volle Deckkraft, sonst gedimmt; die Tag-Farbe bleibt immer sichtbar), Klick (Tag auf Card/Detail) und entfernbar (aktiver Filter-Chip mit ✕). Die Palette gehört langfristig in die Design-Tokens; bis dahin liefert sie `getTagColor` (Spec [07-tags.md](../07-tags.md)).
 
-**Code:** `packages/toolkit/src/components/tag/tag-chip.tsx`.
+**Klick-Modus (Tag als Filter):** Ein Tag auf einer Card oder im Detail führt zu allem, was so verschlagwortet ist — der Klick setzt den geteilten `tags`-Filter (siehe „Modul-übergreifender Filter-State"). Regeln:
+
+1. Ein noch nicht gesetztes Tag wird **hinzugefügt**, ein bereits aktives **entfernt**. Tags sind UND-verknüpft; der zweite Klick verengt, er ersetzt nicht.
+2. Der Chip ist im Klick-Modus ein `<button>` mit `aria-pressed`, damit vorgelesen wird, ob er gerade filtert.
+3. Der Klick gilt dem Tag, **nicht der Card darunter**: Der Chip stoppt die Propagation, sonst filtert er und öffnet zugleich das Item.
+4. Ob Tags klickbar sind, entscheidet die App durch Montage des `TagNavigationProvider` (unter dem `FilterProvider`). Ohne ihn bleiben `ItemPreview`/`ItemDetailBody` bei statischen Chips — ein Knopf, der nichts tut, wäre schlechter als schlichter Text.
+
+**Code:** `packages/toolkit/src/components/tag/tag-chip.tsx`, `tag-filter-chip.tsx` (Chip + `useTagLink`), `components/navigation/tag-navigation.tsx`.
 
 ### `FilterBar`
 
