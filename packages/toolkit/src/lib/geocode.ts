@@ -8,8 +8,25 @@
  */
 
 export interface GeocodeResult {
-  /** Human-readable place label (e.g. Nominatim `display_name`). */
+  /**
+   * Die kurze Form: „Strasse Nr, PLZ Ort" (siehe {@link formatShortAddress}).
+   *
+   * Das ist, was gespeichert wird. Der volle Nominatim-Name nennt jeden
+   * Verwaltungsschritt bis zum Staat — „14a, Rainwiesenweg, Sophienpark,
+   * Behringersdorf, Malmsbach, Schwaig bei Nürnberg, Landkreis Nürnberger
+   * Land, Bayern, 90571, Deutschland" — und das steht dann in jeder Karte.
+   */
   label: string
+  /**
+   * Die lange Form (`display_name`) — fuer die Auswahlliste, wo zwei
+   * gleichnamige Strassen sonst nicht zu unterscheiden waeren. Gleich `label`,
+   * wenn es keine Strukturdaten gab.
+   *
+   * Optional: Der Geocoder ist ein injizierbarer Vertrag (Spec Location-Widget),
+   * eigene Implementierungen liefern nur `label`, `lat`, `lng`. Ein Pflichtfeld
+   * hier braeche sie (#331).
+   */
+  detail?: string
   lat: number
   lng: number
 }
@@ -30,7 +47,7 @@ export interface NominatimGeocoderOptions {
 
 const DEFAULT_ENDPOINT = "https://nominatim.openstreetmap.org/search"
 
-interface NominatimEntry {
+interface NominatimEntry extends NominatimPlace {
   lat: string
   lon: string
   display_name: string
@@ -52,7 +69,9 @@ export function createNominatimGeocoder(
       q,
       format: "jsonv2",
       limit: String(limit),
-      addressdetails: "0",
+      // Die Strukturdaten sind der ganze Punkt: Ohne sie gibt es nur den
+      // vollen `display_name`, und der ist die lange Kette.
+      addressdetails: "1",
     })
     if (language) params.set("accept-language", language)
     const res = await fetch(`${endpoint}?${params.toString()}`, {
@@ -63,7 +82,10 @@ export function createNominatimGeocoder(
     const data = (await res.json()) as NominatimEntry[]
     return data
       .map((e) => ({
-        label: e.display_name,
+        // Faellt die Strukturierung aus, bleibt es beim vollen Namen — das
+        // alte Verhalten, lieber lang als leer.
+        label: formatShortAddress(e) ?? e.display_name,
+        detail: e.display_name,
         lat: Number.parseFloat(e.lat),
         lng: Number.parseFloat(e.lon),
       }))
@@ -99,6 +121,7 @@ const DEFAULT_REVERSE_ENDPOINT = "https://nominatim.openstreetmap.org/reverse"
 
 /** Structured address from Nominatim (`addressdetails=1`). All fields optional. */
 interface NominatimAddress {
+  postcode?: string
   road?: string
   pedestrian?: string
   footway?: string
@@ -112,23 +135,38 @@ interface NominatimAddress {
   city_district?: string
 }
 
-interface NominatimReverseEntry {
+/**
+ * Ein Ort, wie Nominatim ihn beschreibt — von der Suche wie von der
+ * Rueckwaertssuche.
+ *
+ * Ein Typ fuer beide Richtungen: Es ist dasselbe Format, und zwei Fassungen
+ * davon liefen auseinander, sobald jemand ein Feld ergaenzt.
+ */
+interface NominatimPlace {
   /** Primary feature name, e.g. "Junges Museum Frankfurt" (empty for plain addresses). */
   name?: string
   display_name?: string
   address?: NominatimAddress
 }
 
+type NominatimReverseEntry = NominatimPlace
+
 /**
- * Compact, two-segment label from a Nominatim reverse result: a named place
- * (or street + house number) followed by its town/city — e.g.
- * "Junges Museum Frankfurt, Frankfurt am Main" or "Saalhof 1, Frankfurt am Main".
+ * Compact, two-segment label from a Nominatim result: a named place (or street
+ * + house number) followed by postcode and town — e.g. "Junges Museum
+ * Frankfurt, 60311 Frankfurt am Main" or "Saalhof 1, Frankfurt am Main".
  * Falls back to the raw `display_name` when the structured address is missing.
+ *
+ * Geteilt von Suche und Rueckwaertssuche: Eine Adresse soll nicht davon
+ * abhaengen, auf welchem Weg sie gefunden wurde.
  */
 export function formatShortAddress(entry: NominatimReverseEntry): string | null {
   const a = entry.address ?? {}
-  const locality =
+  const ort =
     a.city ?? a.town ?? a.village ?? a.municipality ?? a.suburb ?? a.city_district
+  // Postleitzahl vor den Ort: Sie unterscheidet zwei gleichnamige Orte, ohne
+  // die Zeile lang zu machen — anders als Landkreis, Bundesland und Staat.
+  const locality = ort ? (a.postcode ? `${a.postcode} ${ort}` : ort) : undefined
   const street = a.road ?? a.pedestrian ?? a.footway ?? a.path
   const streetLine = street
     ? a.house_number
