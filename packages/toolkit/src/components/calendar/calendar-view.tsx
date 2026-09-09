@@ -20,7 +20,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "../primitives/dropdown-menu"
-import { cn, getItemColor, getReadableTextColor, getActivePanelGlow } from "../../lib/utils"
+import { cn, getItemColor, getReadableTextColor } from "../../lib/utils"
 import { isAllDayDate, parseEventDate } from "../../lib/date-utils"
 import {
   addDays,
@@ -732,7 +732,10 @@ export function CalendarView({
         }
       />
 
-      <div className="-mx-4 sm:mx-0 sm:overflow-hidden sm:rounded-lg sm:border">
+      {/* Das Raster ist eine Flaeche, kein Loch in der Modulflaeche: mit
+          getoentem Seitenhintergrund muessen die Tage weiss stehen, sonst
+          liest sich der Kalender als transparent. */}
+      <div className="-mx-4 bg-card sm:mx-0 sm:overflow-hidden sm:rounded-lg sm:border">
       <div className="flex flex-col gap-3 border-b p-3 sm:gap-4 sm:p-4 md:flex-row md:items-center md:justify-between">
         {/* Title between the two arrows, hugging the text (no reserved width, so
             no floating gap). Centred on mobile to sit balanced above the
@@ -777,7 +780,7 @@ export function CalendarView({
                     "inline-flex h-8 min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-medium transition-colors sm:px-3",
                     selected
                       ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background hover:text-foreground",
+                      : "text-muted-foreground hover:bg-card hover:text-foreground",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -1137,7 +1140,7 @@ function WeekCalendar({
 
       {allDayBars.length > 0 && (
         <div
-          className={cn("grid gap-y-0.5 border-b bg-background py-0.5", WEEK_COLS)}
+          className={cn("grid gap-y-0.5 border-b bg-card py-0.5", WEEK_COLS)}
           style={{ gridTemplateRows: `repeat(${allDayLaneCount}, minmax(22px, auto))` }}
         >
           <div
@@ -1366,11 +1369,13 @@ function EventPill({ event, compact = false, onClick, bar }: EventPillProps) {
       style={{
         backgroundColor: color,
         color: getReadableTextColor(color),
-        // Soft glow in the group colour for the item open in the shared panel.
-        ...(isActive ? getActivePanelGlow(groupColor) : null),
       }}
       className={cn(
         "flex w-full items-center gap-1 rounded-md px-2 text-left text-xs font-medium transition-opacity hover:opacity-90",
+        // Wie ueberall: Was im Panel offen ist, hebt sich ueber denselben
+        // Schatten ab. Ein farbiger Schein unter einer ohnehin farbigen Pille
+        // wird nur zum Farbfleck.
+        isActive && "shadow-xl",
         // A bar fills its lane row exactly; a free-standing pill sizes itself.
         bar ? "h-full py-0" : "py-1.5",
         // A square end reads as "continues past the edge"; a rounded one as
@@ -1412,7 +1417,8 @@ function EventCard({ event, onClick }: EventCardProps) {
     <ItemPreview
       item={event.item}
       author={null}
-      style={isActive ? getActivePanelGlow(resolveGroupColor(event.item)) : undefined}
+      active={isActive}
+      activeColor={resolveGroupColor(event.item)}
       onClick={onClick ? () => onClick(event.item) : undefined}
       headerAdornment={
         <ItemTypeBadge type={event.item.type} />

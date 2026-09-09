@@ -1,3 +1,5 @@
+export { ItemDetailBody, type ItemDetailBodyProps } from "./item-detail-body"
+export { ItemDetailSkeleton } from "./item-detail-skeleton"
 export { ItemDetailPanel, type ItemDetailPanelProps } from "./item-detail-panel"
 export { ItemDetailView, type ItemDetailViewProps } from "./item-detail-view"
 export { ItemDetailActions, type ItemDetailActionsProps } from "./item-detail-actions"

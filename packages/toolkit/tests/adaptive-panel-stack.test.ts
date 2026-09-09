@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { DIALOG_Z_INDEX, FLOATING_CHOICE_Z_INDEX, PANEL_Z_INDEX_BASE, PANEL_Z_INDEX_CEILING } from "../src/lib/z-layers"
 import {
   AdaptivePanelScrollLock,
   AdaptivePanelStack,
@@ -221,5 +222,27 @@ describe("AdaptivePanelStack: Inhalts-Inset und Panelkante", () => {
     stack.upsert(Symbol("drawer"), { mode: "drawer", side: "right", sidebarWidth: 420 })
 
     expect(stack.getEdges()).toEqual({ left: 0, right: 0 })
+  })
+})
+
+/**
+ * Der Emoji-Waehler lag auf 50 und damit unter dem Detail-Panel (59–64): Im
+ * Feed sichtbar, im geoeffneten Panel nicht — ein Klick, auf den nichts folgte.
+ * Die Ordnung lebt jetzt an einer Stelle, dieser Test haelt sie fest.
+ */
+describe("Stapelordnung der schwebenden Flaechen", () => {
+  it("legt kurzlebige Auswahlflaechen ueber Panel und Dialog", () => {
+    expect(PANEL_Z_INDEX_BASE).toBeLessThan(PANEL_Z_INDEX_CEILING)
+    expect(PANEL_Z_INDEX_CEILING).toBeLessThan(DIALOG_Z_INDEX)
+    expect(DIALOG_Z_INDEX).toBeLessThan(FLOATING_CHOICE_Z_INDEX)
+  })
+
+  it("haelt den vollen Panel-Stapel unter der Dialog-Ebene", () => {
+    const stack = new AdaptivePanelStack()
+    const ids = Array.from({ length: 8 }, (_, i) => Symbol(`p${i}`))
+    ids.forEach((id) => stack.upsert(id, { mode: "sidebar", side: "right", sidebarWidth: 400 }))
+
+    const hoechster = Math.max(...ids.map((_, i) => getAdaptivePanelZIndex(i + 1, ids.length)))
+    expect(hoechster).toBeLessThan(DIALOG_Z_INDEX)
   })
 })

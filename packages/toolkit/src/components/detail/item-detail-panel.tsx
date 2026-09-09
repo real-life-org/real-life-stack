@@ -27,7 +27,11 @@ export interface ItemDetailPanelProps {
   children: ReactNode
   /** Optional reactions renderer for individual comments. */
   renderCommentReactions?: (commentId: string) => ReactNode
-  /** Heading above the comment list. */
+  /**
+   * @deprecated Ohne Wirkung. Die Diskussion traegt keine Ueberschrift mehr —
+   * Blasen unter einem Item sind als Kommentare erkennbar, und ohne Kommentare
+   * stuende dort eine Ueberschrift ohne Inhalt.
+   */
   commentsLabel?: string
   className?: string
 }
@@ -36,7 +40,6 @@ export function ItemDetailPanel({
   itemId,
   children,
   renderCommentReactions,
-  commentsLabel = "Kommentare",
   className,
 }: ItemDetailPanelProps) {
   // Reply wiring: CommentSection owns the comment tree and hands us its
@@ -74,9 +77,10 @@ export function ItemDetailPanel({
       <div className="flex-1 overflow-y-auto min-h-0">
         {children}
 
-        <div className="border-t px-4 pt-3 pb-2">
-          <p className="text-xs font-medium text-muted-foreground mb-2">{commentsLabel}</p>
-        </div>
+        {/* Keine Ueberschrift ueber der Diskussion: Blasen unter einem Item
+            sind als Kommentare erkennbar, und ohne Kommentare stuende dort
+            eine Ueberschrift ohne Inhalt. Der Trenner gehoert zur
+            Aktionszeile darueber, nicht hierher. */}
         <CommentSection
           itemId={itemId}
           renderReactions={renderCommentReactions}

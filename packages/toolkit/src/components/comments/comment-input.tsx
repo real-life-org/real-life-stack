@@ -83,7 +83,7 @@ export function CommentInput({
   if (disabled) return null
 
   return (
-    <div className={cn("border-t bg-background", className)}>
+    <div className={cn("border-t bg-card", className)}>
       {/* Quote preview when replying */}
       {replyTo && (
         <div className="flex items-start gap-2 px-3 pt-2 pb-1">
@@ -113,7 +113,9 @@ export function CommentInput({
           placeholder={placeholder}
           rows={1}
           className={cn(
-            "flex-1 resize-none rounded-lg border bg-muted/30 px-3 py-2 text-sm",
+            // Pille statt Kasten: die Eingabe ist die einzige Aktion in der
+            // Fusszeile und traegt deren Form.
+            "flex-1 resize-none rounded-3xl border bg-muted/30 px-4 py-2 text-sm",
             "placeholder:text-muted-foreground",
             "focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40",
             "transition-colors"
@@ -122,7 +124,7 @@ export function CommentInput({
         />
         <Button
           size="sm"
-          className="h-9 w-9 p-0 shrink-0"
+          className="h-9 w-9 shrink-0 rounded-full p-0"
           disabled={!text.trim()}
           onClick={handleSubmit}
           aria-label="Send comment"

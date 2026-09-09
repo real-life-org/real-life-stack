@@ -10,7 +10,7 @@ import {
   ItemDetailView,
   renderTypeFooter,
   resolveTypePresentation,
-  ItemPreview,
+  ItemDetailBody,
   ItemScopeBadge,
   ItemTypeBadge,
   ReactionBar,
@@ -214,12 +214,9 @@ export function ItemDetailRead({
   const presentation = resolveTypePresentation(item.type)
 
   return (
-    <ItemPreview
+    <ItemDetailBody
       item={item}
       author={author}
-      // The panel shows everything: full body, and no comment hint (the
-      // discussion is listed right below).
-      surface="panel"
       headerAdornment={
         <>
           <ItemTypeBadge type={item.type} />
@@ -227,10 +224,13 @@ export function ItemDetailRead({
         </>
       }
       actions={actions}
-      metaAdornment={<presentation.detail item={item} />}
-      footerAdornment={
-        // Full-width column: a type footer (vote bar) may need the whole row
-        // for its distribution bar; reactions flow below it.
+      // Was in der Meta-Box steht, sagt der TYP (spec 06) - derselbe Slot,
+      // aus dem auch die Vorschau ihre Zeile zieht. Die Detailansicht gibt
+      // ihm nur die Flaeche.
+      meta={<presentation.detail item={item} />}
+      footer={
+        // Volle Spalte: eine Typ-Fusszeile (Stimmverteilung) braucht unter
+        // Umstaenden die ganze Breite; Reaktionen fliessen darunter.
         <div className="flex w-full flex-col gap-2">
           {/* Type-own footer (task -> assignees, statement -> votes) from the
               register (spec 06, rule 3) - no type branching here. Reactions

@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { REACTION_EMOJIS, REACTION_NAMES } from "./reaction-constants"
+import { FLOATING_CHOICE_Z_INDEX } from "../../lib/z-layers"
+import { createPortal } from "react-dom"
 
 export interface ReactionPickerProps {
   /** Callback when an emoji is selected. */
@@ -93,7 +95,13 @@ export function ReactionPicker({ onSelect, onClose, anchorRef, className }: Reac
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [onClose])
 
-  return (
+  // In den Body hinein, nicht an Ort und Stelle: Das Detail-Panel traegt beim
+  // Oeffnen ein `transform` (die Einblend-Bewegung), und ein transformierter
+  // Vorfahre macht jedes `position: fixed` darin PANEL-relativ statt
+  // viewport-relativ. Der Waehler landete dadurch bei x=2026 in einem 1440px
+  // breiten Fenster und wurde auf 46px zusammengequetscht — sichtbar war davon
+  // nichts. Am Body haengend meint `fixed` wieder den Bildschirm.
+  return createPortal(
     <>
       <style>{`
         @keyframes reaction-picker-in {
@@ -112,10 +120,13 @@ export function ReactionPicker({ onSelect, onClose, anchorRef, className }: Reac
         role="dialog"
         aria-label="Choose a reaction"
         className={cn(
-          "fixed z-50 grid grid-cols-8 gap-1 p-2 rounded-lg border bg-popover shadow-lg",
+          // Ueber dem Detail-Panel: Der Waehler gehoert zu dem Knopf, der ihn
+          // geoeffnet hat — und der steht oft IM Panel. Siehe z-layers.
+          "fixed grid grid-cols-8 gap-1 p-2 rounded-lg border bg-popover shadow-lg",
           className
         )}
         style={{
+          zIndex: FLOATING_CHOICE_Z_INDEX,
           top: position?.top ?? -9999,
           left: position?.left ?? -9999,
           animation: position ? "reaction-picker-in 200ms ease-out both" : undefined,
@@ -136,6 +147,7 @@ export function ReactionPicker({ onSelect, onClose, anchorRef, className }: Reac
           </button>
         ))}
       </div>
-    </>
+    </>,
+    document.body,
   )
 }

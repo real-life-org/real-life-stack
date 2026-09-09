@@ -248,7 +248,13 @@ describe("read-only lenses", () => {
     expect(grouped.get("done")).toEqual([])
   })
 
-  it("8: List, Grid and Board pass the active item to ItemPreview with the default glow", () => {
+  /**
+   * Die ausgewaehlte Karte traegt denselben Schatten wie das schwebende Panel
+   * und einen duennen Rand in der Space-Farbe. Was wegfaellt, ist der breite
+   * farbige Schein darunter: Der Schatten sagt „gehoert zu dem, was rechts
+   * offen ist", der Rand sagt, zu welchem Space. Zwei Aussagen, nicht drei.
+   */
+  it("8: List, Grid and Board mark the active item with the panel's elevation", () => {
     const items = [item("task-1", "task", { title: "Aktive Aufgabe", status: "open" })]
     const listMarkup = renderToStaticMarkup(createElement(ListView, { items, activeItemId: "task-1" }))
     const gridMarkup = renderToStaticMarkup(createElement(GridView, { items, activeItemId: "task-1" }))
@@ -260,8 +266,11 @@ describe("read-only lenses", () => {
 
     for (const markup of [listMarkup, gridMarkup, boardMarkup]) {
       expect(markup).toContain('data-active-preview="true"')
-      expect(markup).toContain("box-shadow:")
-      expect(markup).toContain("#64748b")
+      expect(markup).toContain("shadow-xl")
+      // Der Rand bleibt farbig, aber so zurueckhaltend wie beim Ueberfahren …
+      expect(markup).toContain("border-color:#64748b4d")
+      // … der breite Schein darunter ist weg.
+      expect(markup).not.toContain("box-shadow:")
     }
   })
 

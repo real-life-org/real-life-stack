@@ -1,3 +1,5 @@
+import { PANEL_Z_INDEX_BASE, PANEL_Z_INDEX_CEILING } from "../../lib/z-layers"
+
 export type AdaptivePanelStackMode = "modal" | "sidebar" | "drawer" | "floating"
 
 export interface AdaptivePanelStackEntry {
@@ -25,8 +27,8 @@ export interface AdaptivePanelStackEntry {
   insetActive?: boolean
 }
 
-const ADAPTIVE_PANEL_Z_INDEX_BASE = 59
-const ADAPTIVE_PANEL_Z_INDEX_CEILING = 64
+const ADAPTIVE_PANEL_Z_INDEX_BASE = PANEL_Z_INDEX_BASE
+const ADAPTIVE_PANEL_Z_INDEX_CEILING = PANEL_Z_INDEX_CEILING
 const ADAPTIVE_PANEL_Z_INDEX_CAPACITY =
   ADAPTIVE_PANEL_Z_INDEX_CEILING - ADAPTIVE_PANEL_Z_INDEX_BASE
 

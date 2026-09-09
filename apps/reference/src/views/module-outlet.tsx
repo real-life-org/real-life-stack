@@ -59,7 +59,10 @@ export function ModuleOutlet({
     const mod = getModule(id)
     if (mod?.fill === "bleed") return node
     return (
-      <div className={`container mx-auto px-4 pt-6 ${mod?.maxWidth ?? "max-w-3xl"}`}>{node}</div>
+      // Derselbe Randabstand wie das schwebende Panel (16px): Ein Modul, das
+      // weiter vom Rand steht als die Karte daneben, laesst das Fenster
+      // schief wirken.
+      <div className={`container mx-auto px-4 pt-4 ${mod?.maxWidth ?? "max-w-3xl"}`}>{node}</div>
     )
   }
 

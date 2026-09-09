@@ -7,7 +7,7 @@ import { RelativeTime } from "../primitives/relative-time"
 import { ProfileLink } from "../profile/profile-link"
 import { TagChip } from "../tag/tag-chip"
 import { MarkdownText } from "./markdown-text"
-import { cn, getActivePanelGlow } from "../../lib/utils"
+import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
 import { useUserNameResolver } from "../../hooks/use-user-names"
 import { useCommentCount } from "../../hooks/use-comment-count"
@@ -58,7 +58,10 @@ export type ItemPreviewDensity = "comfortable" | "compact"
 export type ItemPreviewSurface = "card" | "panel"
 
 /** Neutral toolkit default; apps may supply an origin-group colour instead. */
-export const DEFAULT_ACTIVE_ITEM_GLOW_COLOR = "#64748b"
+/** Rand der aktiven Karte, wenn kein Space eine Farbe beisteuert. */
+export const DEFAULT_ACTIVE_ITEM_COLOR = "#64748b"
+/** @deprecated Frueherer Name von {@link DEFAULT_ACTIVE_ITEM_COLOR}. */
+export const DEFAULT_ACTIVE_ITEM_GLOW_COLOR = DEFAULT_ACTIVE_ITEM_COLOR
 
 export interface ItemPreviewProps {
   item: Item
@@ -96,14 +99,27 @@ export interface ItemPreviewProps {
    * - `card` (default): one of many. Clamps the body to four lines so a long
    *   text cannot push its neighbours off screen, and hints at comments the
    *   reader cannot see.
-   * - `panel`: the detail surface, alone on screen. Shows the body in full,
-   *   and drops the comment hint — the discussion is listed right below it,
-   *   so a count would only repeat what is already visible.
+   * - `panel`: **ueberholt.** Die Detailansicht ist keine Vorschau mehr,
+   *   sondern `ItemDetailBody` mit eigener Anatomie — die wiederverwendete
+   *   Card ergab im schwebenden Panel eine Card in der Card, und die
+   *   Reihenfolge (Autor zuerst) gehoert einer Liste, nicht einer geoeffneten
+   *   Ansicht. Bleibt erhalten, damit bestehende Einbindungen weiterlaufen;
+   *   fuer neue Detailflaechen `ItemDetailBody` nehmen.
    */
   surface?: ItemPreviewSurface
-  /** Highlights the selected item using the shared panel-glow treatment. */
+  /**
+   * Hebt die ausgewaehlte Karte hervor: derselbe Schatten, den das schwebende
+   * Panel traegt (`shadow-xl`), plus ein duenner Rand in der Space-Farbe.
+   *
+   * Frueher lag darunter zusaetzlich ein breiter farbiger Schein. Neben einer
+   * schwebenden Karte auf getoentem Grund trug der zu dick auf — der Schatten
+   * sagt „gehoert zu dem, was rechts offen ist", der Rand sagt, zu welchem
+   * Space. Zwei Aussagen, nicht drei.
+   */
   active?: boolean
-  /** Optional `#rrggbb` override for the active-item glow. */
+  /** Farbe des Rands der aktiven Karte (`#rrggbb`), meist die Space-Farbe. */
+  activeColor?: string
+  /** @deprecated Frueherer Name von {@link activeColor}. */
   activeGlowColor?: string
   className?: string
   /** Inline style on the card root — e.g. the active-item glow (box-shadow). */
@@ -132,7 +148,8 @@ export function ItemPreview({
   density = "comfortable",
   surface = "card",
   active = false,
-  activeGlowColor = DEFAULT_ACTIVE_ITEM_GLOW_COLOR,
+  activeColor,
+  activeGlowColor,
   className,
   style,
 }: ItemPreviewProps) {
@@ -177,6 +194,13 @@ export function ItemPreview({
       }
     : undefined
 
+  // Alter Prop-Name gilt weiter: das Toolkit ist veroeffentlicht.
+  const aktivFarbe = activeColor ?? activeGlowColor ?? DEFAULT_ACTIVE_ITEM_COLOR
+  // Dieselbe Zurueckhaltung wie beim Ueberfahren (`hover:border-primary/30`):
+  // Der Rand soll den Space andeuten, nicht die Karte umranden. Bei voller
+  // Deckkraft traegt er sichtbar dicker auf, obwohl er gleich breit ist.
+  const aktivRand = /^#[0-9a-f]{6}$/i.test(aktivFarbe) ? `${aktivFarbe}4d` : aktivFarbe
+
   return (
     <article
       data-preview-density={density}
@@ -185,9 +209,12 @@ export function ItemPreview({
         "rounded-lg border bg-card transition-all",
         interactive &&
           "cursor-pointer hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        // Derselbe Schatten wie die schwebende Karte: die ausgewaehlte Karte
+        // hebt sich vom Grund ab. Die Farbe steckt nur noch im Rand.
+        active && "shadow-xl",
         className,
       )}
-      style={{ ...(active ? getActivePanelGlow(activeGlowColor) : {}), ...style }}
+      style={{ ...(active ? { borderColor: aktivRand } : {}), ...style }}
       onClick={onClick}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}

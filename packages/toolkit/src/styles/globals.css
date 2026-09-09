@@ -1,6 +1,21 @@
 :root {
-  /* Background & Foreground */
-  --background: oklch(1.00 0 0);
+  /* Background & Foreground
+   *
+   * Die Seitenflaeche ist leicht getoent, erhabene Flaechen (--card,
+   * --popover) sind weiss. Erst dieser Unterschied laesst eine schwebende
+   * Karte als schwebend lesen; auf gleichem Weiss traegt allein der Schatten
+   * die Tiefe, und der verschwindet auf hellen Bildschirmen.
+   *
+   * Der Wert stammt aus den Entwuerfen (Claude Design, „RLS System Design“):
+   * Modulflaeche getoent, Cards und Panel weiss. Bewusst eine Spur dunkler als
+   * --muted, damit muted-Flaechen darauf noch als eigene Flaeche lesbar sind.
+   *
+   * Die Toenung geht ins Warme (Farbton aus der Primary-Familie statt des
+   * ueblichen Blaugraus): Ein kaltes Grau stellt sich gegen das Orange der
+   * Marke. Die Saettigung ist dabei sehr gering — bei 0.007 Chroma las sich
+   * die Flaeche bereits als beige statt als neutraler Grund.
+   */
+  --background: oklch(0.975 0.003 70);
   --foreground: oklch(0.28 0.02 265);
   --card: oklch(1.00 0 0);
   --card-foreground: oklch(0.28 0.02 265);
@@ -15,8 +30,9 @@
   --secondary: oklch(0.55 0.21 264);
   --secondary-foreground: oklch(1.00 0 0);
 
-  /* Muted - Slate light */
-  --muted: oklch(0.98 0.00 247);
+  /* Muted - warm light (Farbton wie --background, sonst steht die Meta-Box
+     kalt auf warmem Grund) */
+  --muted: oklch(0.985 0.0025 70);
   --muted-foreground: oklch(0.45 0.02 265);
 
   /* Accent - Light orange (for hover states, from primary family) */
@@ -231,14 +247,13 @@
 }
 
 /* Glass effect for navbar */
+/* Die Navbar liegt UEBER dem Inhalt, traegt also die erhabene Flaeche und
+   nicht die getoente Seitenflaeche — sonst verschwimmt sie mit dem Modul
+   darunter, sobald der Hintergrund getoent ist. */
 .glass-navbar {
-  background-color: oklch(from var(--background) l c h / 0.8);
+  background-color: oklch(from var(--card) l c h / 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-}
-
-.dark .glass-navbar {
-  background-color: oklch(from var(--background) l c h / 0.8);
 }
 
 /* Drop shadow under map markers (the rendered pin SVG is an <img>; a CSS
