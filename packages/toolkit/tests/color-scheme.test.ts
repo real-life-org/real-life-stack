@@ -25,4 +25,15 @@ describe("Der Browser malt seine eigenen Flächen mit", () => {
   it("nennt das dunkle Schema im Dark-Block", () => {
     expect(blockVon(".dark")).toMatch(/color-scheme:\s*dark/)
   })
+
+  /**
+   * Die Leiste ist eine Ortsangabe, keine Fläche: schmal, und ohne eigene
+   * Spur — ein grauer Kanal neben dem Inhalt zieht Aufmerksamkeit auf sich,
+   * die dem Inhalt gehört.
+   */
+  it("lässt die Spur der Scrollleiste durchsichtig", () => {
+    expect(blockVon(":root")).toMatch(/scrollbar-width:\s*thin/)
+    expect(blockVon(":root")).toMatch(/scrollbar-color:[^;]*transparent/)
+    expect(blockVon(".dark")).toMatch(/scrollbar-color:[^;]*transparent/)
+  })
 })

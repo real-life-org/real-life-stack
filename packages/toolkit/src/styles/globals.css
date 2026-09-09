@@ -11,6 +11,15 @@
    */
   color-scheme: light;
 
+  /*
+   * Schmal und ohne eigene Spur: Die Leiste ist eine Ortsangabe, keine
+   * Flaeche. Ein grauer Kanal neben dem Inhalt zieht Aufmerksamkeit auf sich,
+   * die dem Inhalt gehoert. `transparent` als zweiter Wert laesst die Spur
+   * weg — der Daumen schwebt dann ueber dem, was ohnehin da ist.
+   */
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.00 0 0 / 0.22) transparent;
+
   /* Background & Foreground
    *
    * Die Seitenflaeche ist leicht getoent, erhabene Flaechen (--card,
@@ -141,6 +150,7 @@
 
 .dark {
   color-scheme: dark;
+  scrollbar-color: oklch(1.00 0 0 / 0.24) transparent;
 
   /* Background & Foreground - Dark slate */
   --background: oklch(0.15 0.02 265);
