@@ -21,6 +21,8 @@ import {
   Button,
   GroupDialog,
   AdaptivePanel,
+  FieldNavigationProvider,
+  findModulePresenting,
   OpenProfileProvider,
   DraftItemProvider,
   UnsavedChangesProvider,
@@ -71,7 +73,8 @@ import {
 } from "@real-life-stack/toolkit"
 import { initialDarkMode, rememberColorScheme } from "./initial-color-scheme"
 import type { DataInterface, User } from "@real-life-stack/data-interface"
-import { isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
+import {
+  type Item, isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
 import { MockConnector } from "@real-life-stack/mock-connector"
 import { LocalConnector } from "@real-life-stack/local-connector"
@@ -638,6 +641,27 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   }, [activeModule, activeWorkspace, allItems, focusItem, groups, navigate])
   const supportsMessaging = hasMessaging(connector)
 
+  // Ein Feld fuehrt zu der Sicht, die es darstellen kann — das Datum in den
+  // Kalender, die Position auf die Karte. Drei Dinge kommen hier zusammen, und
+  // nur hier liegen sie alle vor: WELCHES Modul ein Feld zeigt (Register),
+  // WELCHE Module dieser Space fuehrt, und WIE man hinkommt.
+  const feldNavigation = useMemo(
+    () => ({
+      openField: (field: string, item: Item) => {
+        const ziel = findModulePresenting(field, modules.map(({ id }) => id))
+        // Kein Modul dafuer, oder wir stehen schon darin: Dann ist der Wert
+        // eine Auskunft und kein Weg. Ein Link, der nichts tut, ist schlimmer
+        // als schlichter Text.
+        if (!ziel || ziel.id === activeModule) return null
+        return () => {
+          handleModuleChange(ziel.id)
+          focusItem(item.id)
+        }
+      },
+    }),
+    [activeModule, focusItem, handleModuleChange, modules],
+  )
+
   // Die Klasse folgt dem Zustand, nicht dem Klick. Gespeichert wird hier
   // BEWUSST nicht: dieser Effekt laeuft auch beim Mount, und dann schriebe er
   // die Systemvorgabe als Wahl fest — ein spaeterer Wechsel des Systems bliebe
@@ -653,6 +677,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   }
 
   return (
+    <FieldNavigationProvider value={feldNavigation}>
     <OpenProfileProvider openProfile={openProfile}>
     <DraftItemProvider>
     <UnsavedChangesProvider>
@@ -857,6 +882,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     </UnsavedChangesProvider>
     </DraftItemProvider>
     </OpenProfileProvider>
+    </FieldNavigationProvider>
   )
 }
 

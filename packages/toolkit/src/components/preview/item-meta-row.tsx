@@ -1,9 +1,11 @@
 "use client"
 
+import type { ReactNode } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 import { Calendar, MapPin } from "lucide-react"
 import { cn } from "../../lib/utils"
 import { isAllDayDate, parseEventDate } from "../../lib/date-utils"
+import { useFieldLink } from "../navigation/field-navigation"
 
 /**
  * `ItemMetaRow` — small inline meta row showing the temporal and
@@ -42,23 +44,70 @@ export function ItemMetaRow({ item, className }: ItemMetaRowProps) {
     (typeof data.address === "string" && data.address) ||
     undefined
 
+  // Fuehrt das Feld irgendwohin? Das entscheidet nicht diese Zeile, sondern
+  // das Modul-Register (wer stellt es dar) und die App (fuehrt der Space es,
+  // und wie kommt man hin). Ohne Ziel bleibt der Wert Text.
+  // Beide Hooks laufen immer — ein bedingter Aufruf waere ein Verstoss gegen
+  // die Hook-Regeln, auch wenn das Ergebnis danach verworfen wird.
+  const zumDatum = useFieldLink("start", item)
+  const ortsziel = useFieldLink("position", item)
+  // Die Karte braucht Koordinaten; ein Ort, der nur benannt ist, laesst sich
+  // dort nicht zeigen.
+  const zumOrt = data.position ? ortsziel : null
+
   if (!start && !place) return null
 
   return (
     <div className={cn("flex flex-wrap gap-3 text-xs text-muted-foreground", className)}>
       {start && (
-        <span className="inline-flex items-center gap-1">
-          <Calendar className="h-3 w-3" />
+        <MetaWert icon={<Calendar className="h-3 w-3" />} onClick={zumDatum}>
           {formatEventRange(start, end)}
-        </span>
+        </MetaWert>
       )}
       {place && (
-        <span className="inline-flex items-center gap-1">
-          <MapPin className="h-3 w-3" />
+        <MetaWert icon={<MapPin className="h-3 w-3" />} onClick={zumOrt}>
           {place}
-        </span>
+        </MetaWert>
       )}
     </div>
+  )
+}
+
+/**
+ * Ein Meta-Wert — anklickbar, wenn er irgendwohin fuehrt, sonst schlichter
+ * Text. Beides sieht bis auf die Unterstreichung beim Ueberfahren gleich aus:
+ * Der Wert ist die Auskunft, der Weg dorthin eine Zugabe.
+ */
+function MetaWert({
+  icon,
+  onClick,
+  children,
+}: {
+  icon: ReactNode
+  onClick: (() => void) | null
+  children: ReactNode
+}) {
+  const inhalt = (
+    <>
+      {icon}
+      {children}
+    </>
+  )
+  if (!onClick) return <span className="inline-flex items-center gap-1">{inhalt}</span>
+  return (
+    <button
+      type="button"
+      // Der Klick gehoert dem Wert, nicht der Karte darunter: Sonst oeffnete
+      // ein Tippen auf das Datum die Detailansicht, statt in den Kalender zu
+      // fuehren.
+      onClick={(event) => {
+        event.stopPropagation()
+        onClick()
+      }}
+      className="inline-flex items-center gap-1 rounded-sm hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+    >
+      {inhalt}
+    </button>
   )
 }
 
