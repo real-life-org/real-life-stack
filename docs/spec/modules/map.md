@@ -235,16 +235,28 @@ interface GlobeCapable {
   setProjection(projection: "mercator" | "globe"): void
 }
 
+interface ViewportPaddingCapable {
+  /** Verschiebt, was die Kamera als ihre MITTE behandelt. */
+  setViewportPadding(padding: { left?: number; right?: number; top?: number; bottom?: number }): void
+}
+
 function hasCluster(a: MapAdapter): a is MapAdapter & ClusterCapable
 function hasGlobe(a: MapAdapter): a is MapAdapter & GlobeCapable
+function hasViewportPadding(a: MapAdapter): a is MapAdapter & ViewportPaddingCapable
 ```
 
 Regeln:
 
 1. Der Basis-Contract `MapAdapter` ist Pflicht; jede Capability ist optional. Modul-/UI-Code MUSS Capabilities per Feature-Detection prüfen und bei Abwesenheit degradieren — niemals annehmen, dass ein Adapter sie hat.
-2. **Clustering-Degradation:** ohne `ClusterCapable` zeigt das Modul die viewport-begrenzte Einzel-Marker-Menge (siehe Datenquelle), nicht alle Marker global. Mit `ClusterCapable` werden Cluster nativ/Plugin-seitig aus der gesetzten Marker-Menge gebildet.
-3. **Globe-Degradation:** ohne `GlobeCapable` entfällt der Projection-Toggle; die Karte bleibt 2D (Mercator).
-4. Capabilities leaken keine library-spezifischen Typen; ihre Signaturen nutzen nur Contract-Typen (`LngLat`, `Unsubscribe`, …).
+2. **Verdeckte Ränder gehören der Kamera, wo sie eine kennt.** Ein offenes Panel überlagert einen Teil der Fläche. Mit `ViewportPaddingCapable` sagt das Modul der Kamera **einmal**, wo ihre Mitte liegt; jede weitere Bewegung stimmt dann von selbst — auch die, die das Modul nicht auslöst. Ohne diese Fähigkeit muss es jede eigene Bewegung selbst ausgleichen (`focusOn` mit `leftInset`/`rightInset`), und alles Übrige — Zoomen von Hand, Ziehen — bleibt unkorrigiert: Beim Herauszoomen wächst der Globus dann um die Container-Mitte und wandert hinter das Panel.
+
+   **Beides zugleich ist ein Fehler.** Kennt die Kamera die Ränder, verschiebt eine zusätzliche Korrektur pro Bewegung den Punkt ein zweites Mal.
+
+   Eine Ausnahme bleibt beim Modul: das Blatt am unteren Rand auf schmalen Geräten. Es ändert seine Höhe beim Ziehen laufend, und eine animierte Kamera-Polsterung liefe gegen die Geste.
+
+3. **Clustering-Degradation:** ohne `ClusterCapable` zeigt das Modul die viewport-begrenzte Einzel-Marker-Menge (siehe Datenquelle), nicht alle Marker global. Mit `ClusterCapable` werden Cluster nativ/Plugin-seitig aus der gesetzten Marker-Menge gebildet.
+4. **Globe-Degradation:** ohne `GlobeCapable` entfällt der Projection-Toggle; die Karte bleibt 2D (Mercator).
+5. Capabilities leaken keine library-spezifischen Typen; ihre Signaturen nutzen nur Contract-Typen (`LngLat`, `Unsubscribe`, …).
 
 ### Bereitgestellte Adapter
 

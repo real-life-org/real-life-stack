@@ -23,6 +23,11 @@
  */
 
 import { focusOffsetFor } from "../focus-offset"
+
+/** Eine Polsterung ist eine Strecke: negativ oder unsinnig gibt es nicht. */
+function gueltigePolsterung(wert: number | undefined): number {
+  return Number.isFinite(wert) && (wert as number) > 0 ? (wert as number) : 0
+}
 import type {
   Map as MlMap,
   MapOptions,
@@ -38,6 +43,7 @@ import type {
   AttributionControlOptions,
 } from "maplibre-gl"
 import type {
+  MapViewportPadding,
   ClusterCapable,
   GlobeCapable,
   LngLat,
@@ -242,6 +248,7 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
   // does not reference `maplibre-gl`. Consumers without it installed can
   // import the toolkit without TS errors.
   private mapInstance: unknown = null
+  private viewportPadding: Required<MapViewportPadding> | null = null
   // WebGL markers: a GeoJSON source + symbol layer, plus an image atlas keyed by
   // appearance. `markersVersion` ignores stale setData after async image loads.
   private markerLayersReady = false
@@ -919,6 +926,35 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     } else {
       map.easeTo({ center, offset, duration: animate ? options?.duration ?? 500 : 0, essential: true })
     }
+  }
+
+  /**
+   * Wo die Karte ihre MITTE sieht. Einmal gesetzt, gilt es fuer jede weitere
+   * Bewegung — auch fuer die, die der Nutzer selbst ausloest: Beim Zoomen
+   * waechst der Globus dann in den sichtbaren Bereich statt hinter das Panel.
+   */
+  setViewportPadding(padding: MapViewportPadding): void {
+    const naechste = {
+      left: gueltigePolsterung(padding.left),
+      right: gueltigePolsterung(padding.right),
+      top: gueltigePolsterung(padding.top),
+      bottom: gueltigePolsterung(padding.bottom),
+    }
+    const bisher = this.viewportPadding
+    if (
+      bisher &&
+      bisher.left === naechste.left && bisher.right === naechste.right &&
+      bisher.top === naechste.top && bisher.bottom === naechste.bottom
+    ) {
+      // Eine Kamerabewegung pro Aenderung, nicht pro Render.
+      return
+    }
+    this.viewportPadding = naechste
+    const map = this.mapInstance as MlMap | null
+    if (!map) return
+    // Mitbewegen statt springen: dieselbe Dauer, mit der das Panel auf- und
+    // zugeht, sonst laufen Karte und Panel gegeneinander.
+    map.easeTo({ padding: naechste, duration: 300, essential: true })
   }
 
   getView(): MapViewState {

@@ -12,7 +12,7 @@ import { usePanelEdges, type PanelEdges } from "../layout/panel-edges"
 import { MapLens } from "../lens/map-lens"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { getSpacePrimaryColor } from "../../lib/utils"
-import { hasGlobe, type MapAdapter, type MapMountOptions, type MapProjection } from "./adapter"
+import { hasViewportPadding, hasGlobe, type MapAdapter, type MapMountOptions, type MapProjection } from "./adapter"
 import { useLocationPick } from "./location-pick"
 
 const MAP_TYPES: FilterTypeOption[] = [
@@ -193,8 +193,25 @@ export function filterMapViewItems(items: readonly Item[], filter: FilterBarValu
  * Geraeten, links/rechts ein schwebendes Panel. Beides zusammen, damit ein
  * angeklickter Marker im sichtbaren Rest landet und nicht hinter dem Panel.
  */
-export function mapViewFocusInsets(isCompact: boolean, panelEdges: PanelEdges): MapFocusInsets {
+/**
+ * Die Raender, die die Karte bei einer Bewegung selbst ausgleichen muss.
+ *
+ * `kameraKenntSeiten`: Wo die Kamera eine Polsterung traegt
+ * ({@link ViewportPaddingCapable}), weiss sie bereits, wo ihre Mitte liegt —
+ * die Seitenraender hier nochmal aufzuschlagen hiesse, den Punkt zweimal zu
+ * verschieben.
+ *
+ * Das Blatt am unteren Rand bleibt in beiden Faellen hier: Es aendert seine
+ * Hoehe beim Ziehen laufend, und eine animierte Kamera-Polsterung liefe dabei
+ * gegen die Geste.
+ */
+export function mapViewFocusInsets(
+  isCompact: boolean,
+  panelEdges: PanelEdges,
+  kameraKenntSeiten = false,
+): MapFocusInsets {
   const bottomInset = isCompact ? window.innerHeight * MAP_SHEET_FRACTION : 0
+  if (kameraKenntSeiten) return { bottomInset, leftInset: 0, rightInset: 0 }
   return { bottomInset, leftInset: panelEdges.left, rightInset: panelEdges.right }
 }
 
@@ -254,13 +271,21 @@ export function MapView({
     })
   }, [adapter, onViewportBoundsChange, viewportMode])
   useEffect(() => { if (adapter && hasGlobe(adapter)) adapter.setProjection(projection) }, [adapter, projection])
+  // Der Karte einmal sagen, wo ihre Mitte liegt: Dann stimmt jede weitere
+  // Bewegung von selbst — auch das Zoomen von Hand, bei dem der Globus sonst
+  // um die Container-Mitte waechst und hinter dem Panel verschwindet.
+  const kameraKenntSeiten = !!adapter && hasViewportPadding(adapter)
+  useEffect(() => {
+    if (!adapter || !hasViewportPadding(adapter)) return
+    adapter.setViewportPadding({ left: panelEdges.left, right: panelEdges.right })
+  }, [adapter, panelEdges])
   useEffect(() => {
     if (!active) { settledReveal.current = null; approachedReveal.current = null; revealOffset.current = null; return }
     if (!focusedItem) { settledReveal.current = null; approachedReveal.current = null; revealOffset.current = null; return }
     if (!adapter || viewportMode !== "bbox-module") return
     const point = latLngFromPoint(focusedItem.data.position)
     if (!point) return
-    const insets = mapViewFocusInsets(isCompact, panelEdges)
+    const insets = mapViewFocusInsets(isCompact, panelEdges, kameraKenntSeiten)
     const offset = focusOffsetFor(insets)
     const fromClick = markerClick.current === focusedItem.id
     markerClick.current = null
@@ -295,7 +320,7 @@ export function MapView({
       revealOffset.current = offset
       adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, MIN_REVEAL_ZOOM), ...insets, animate: true })
     }
-  }, [active, adapter, focusedItem, isCompact, items, itemsLoading, panelEdges, viewportMode])
+  }, [active, adapter, focusedItem, isCompact, items, itemsLoading, kameraKenntSeiten, panelEdges, viewportMode])
   useEffect(() => {
     if (!adapter || !isPicking) return
     return adapter.observeClicks(({ position: [lng, lat] }) => {
