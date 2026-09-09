@@ -317,9 +317,10 @@ describe("Keine Kamerabewegung ohne Polsterung", () => {
   })
 
   it("kennt beim Einpassen von Grenzen beide Fälle bewusst", () => {
-    // Mit Polsterung: mitgeben. Ohne: unverändert lassen, ein leeres
+    // Mit Polsterung (der Kamera oder aus den Optionen des Aufrufers):
+    // mitgeben. Ohne irgendeine Angabe: unverändert lassen, ein leeres
     // Optionsobjekt wäre Rauschen.
-    expect(quelle).toContain("map.fitBounds(box, { padding: this.viewportPadding })")
+    expect(quelle).toContain("hatPolsterung ? { padding: polsterung }")
     expect(quelle).toContain("else map.fitBounds(box)")
   })
 })

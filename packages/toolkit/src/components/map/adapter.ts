@@ -126,8 +126,25 @@ export interface MapAdapter {
    */
   setView(view: MapViewPatch): void
 
-  /** Fit the viewport to a GeoJSON-order bounding box. */
-  fitBounds(bounds: MapBounds): void
+  /**
+   * Fit the viewport to a GeoJSON-order bounding box.
+   *
+   * `maxZoom` deckelt das Heranfahren — ein winziger Ausschnitt (ein
+   * Genauigkeitskreis von 5m) landete sonst auf der Maximalstufe, auf der
+   * nichts mehr einzuordnen ist. Die Insets sind dieselben wie bei
+   * {@link MapAdapter.focusOn}: der Ausschnitt gehoert in den SICHTBAREN Rest,
+   * nicht hinter ein Panel.
+   */
+  fitBounds(
+    bounds: MapBounds,
+    options?: {
+      maxZoom?: number
+      animate?: boolean
+      bottomInset?: number
+      leftInset?: number
+      rightInset?: number
+    },
+  ): void
 
   /**
    * Pan so `center` ends up centred in the viewport area NOT covered by an

@@ -280,13 +280,38 @@ export class LeafletMapAdapter implements MapAdapter, UserPositionCapable, UserG
     map.setView(center, zoom)
   }
 
-  fitBounds(bounds: MapBounds): void {
+  fitBounds(
+    bounds: MapBounds,
+    options?: {
+      maxZoom?: number
+      animate?: boolean
+      bottomInset?: number
+      leftInset?: number
+      rightInset?: number
+    },
+  ): void {
     const map = this.mapInstance as L.Map | null
     if (!map) return
-    map.fitBounds([
+    // Leaflet kennt keine Kamera-Polsterung; die verdeckten Raender kommen
+    // hier als Polster in die Bewegung selbst.
+    const links = options?.leftInset ?? 0
+    const rechts = options?.rightInset ?? 0
+    const unten = options?.bottomInset ?? 0
+    const box: [[number, number], [number, number]] = [
       [bounds.south, bounds.west],
       [bounds.north, bounds.east],
-    ])
+    ]
+    const optionen = {
+      ...(options?.maxZoom != null ? { maxZoom: options.maxZoom } : {}),
+      ...(options?.animate === false ? { animate: false } : {}),
+      ...(links || rechts || unten
+        ? { paddingTopLeft: [links, 0] as [number, number], paddingBottomRight: [rechts, unten] as [number, number] }
+        : {}),
+    }
+    // Ohne Angabe bleibt der Aufruf, wie er war — ein leeres Optionsobjekt
+    // waere Rauschen.
+    if (Object.keys(optionen).length > 0) map.fitBounds(box, optionen)
+    else map.fitBounds(box)
   }
 
   focusOn(

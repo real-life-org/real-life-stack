@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
-import { Calendar, Loader2, LocateFixed, MapPin } from "lucide-react"
+import { Calendar, Loader2, MapPin } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"
 import { useSharedFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
 import { CreateFab } from "../create-fab"
+import { StandortIcon } from "./standort-icon"
 import { PanelSafeArea } from "../layout/panel-safe-area"
 import { ModuleToolbar } from "../layout/module-toolbar"
 import { ModuleSurfaceScope } from "../layout/module-surface-scope"
@@ -14,7 +15,7 @@ import { usePanelEdges, type PanelEdges } from "../layout/panel-edges"
 import { MapLens } from "../lens/map-lens"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { cn, getSpacePrimaryColor } from "../../lib/utils"
-import { hasViewportPadding, hasGlobe, hasUserPosition, hasUserGesture, type MapAdapter, type MapMountOptions, type MapProjection } from "./adapter"
+import { hasViewportPadding, hasGlobe, hasUserPosition, hasUserGesture, type MapAdapter, type MapBounds, type MapMountOptions, type MapProjection } from "./adapter"
 import { useLocationPick } from "./location-pick"
 
 const MAP_TYPES: FilterTypeOption[] = [
@@ -137,8 +138,46 @@ export function mapViewProjection(adapter: MapAdapter | null): MapProjection {
   return adapter && hasGlobe(adapter) ? "globe" : "mercator"
 }
 
-/** Zoomstufe, auf die die Ortung heranfaehrt, wenn die Karte weiter draussen steht. */
+/** Zoomstufe, auf die die Ortung heranfaehrt, wenn die Genauigkeit unbekannt ist. */
 export const LOCATE_ZOOM = 14
+
+/**
+ * So nah hoechstens: Bei wenigen Metern Genauigkeit landete der Ausschnitt
+ * sonst auf der Maximalstufe, auf der nichts mehr einzuordnen ist. 18 statt
+ * niedriger, damit auch ein 10-Meter-Ring noch deutlich als Ring erscheint
+ * (rund 0,6 m/px in unseren Breiten, also ~17px Radius).
+ */
+export const LOCATE_MAX_ZOOM = 18
+
+/** Grad pro Meter in Nord-Sued-Richtung — ueberall gleich. */
+const METER_JE_GRAD = 111_320
+
+/**
+ * Der Ausschnitt, der den Genauigkeitskreis ganz zeigt.
+ *
+ * Anton: „Beim Orten den Zoom so setzen, dass man auch den Ring sieht." Ein
+ * fester Zoom kann das nicht — der Ring misst mal fuenf Meter und mal einen
+ * halben Kilometer. Also nicht die Stufe waehlen, sondern den Ausschnitt: der
+ * Kreis plus etwas Luft, damit er nicht am Rand klebt.
+ *
+ * Die Ost-West-Ausdehnung haengt am Breitengrad: Ein Meter ist dort weniger
+ * Laengengrad als am Aequator; ohne die Korrektur waere der Ausschnitt in
+ * Mitteleuropa rund ein Drittel zu schmal.
+ */
+export function userPositionBounds(
+  position: { lng: number; lat: number; accuracy: number },
+  luft = 1.3,
+): MapBounds {
+  const radius = Math.max(position.accuracy, 1) * luft
+  const dLat = radius / METER_JE_GRAD
+  const dLng = radius / (METER_JE_GRAD * Math.max(Math.cos((position.lat * Math.PI) / 180), 0.01))
+  return {
+    south: position.lat - dLat,
+    north: position.lat + dLat,
+    west: position.lng - dLng,
+    east: position.lng + dLng,
+  }
+}
 
 /** Aus, suchend, aktiv — mehr Zustaende hat die Ortung nicht. */
 export type LocateState = "aus" | "suchend" | "aktiv"
@@ -281,6 +320,8 @@ function MapViewInner({
    * seine eigene Geste.
    */
   const folgt = useRef(false)
+  /** Ist der erste Fix schon eingelaufen? Nur er waehlt den Ausschnitt. */
+  const ersterFix = useRef(true)
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)
   const { isPicking, updatePick, confirmPick, cancelPick } = useLocationPick()
   const accumulated = useRef(new Map<string, Item>())
@@ -399,6 +440,7 @@ function MapViewInner({
       ortungsId.current = null
     }
     folgt.current = false
+    ersterFix.current = true
     setOrtung("aus")
     if (adapter && hasUserPosition(adapter)) adapter.setUserPosition(null)
   }, [adapter])
@@ -420,6 +462,7 @@ function MapViewInner({
     setStandortFehler(null)
     setOrtung("suchend")
     folgt.current = true
+    ersterFix.current = true
 
     const starte = () => {
       ortungsId.current = navigator.geolocation.watchPosition(
@@ -431,14 +474,35 @@ function MapViewInner({
           // weniger koennen als vorher.
           if (hasUserPosition(adapter)) adapter.setUserPosition(position)
           if (!folgt.current) return
+          // Dieselbe Polsterung wie bei jedem anderen Hinfahren: Der Standort
+          // gehoert in den SICHTBAREN Rest, nicht hinter das Panel.
+          const raender = mapViewFocusInsets(isCompact, panelEdges, kameraKenntSeiten)
+          const erste = ersterFix.current
+          ersterFix.current = false
+          if (erste && position.accuracy > 0) {
+            // Der erste Fix waehlt den AUSSCHNITT, nicht die Stufe: So ist der
+            // Genauigkeitskreis ganz zu sehen — er sagt, wie genau das hier
+            // gerade ist, und das ist beim ersten Blick die halbe Auskunft.
+            //
+            // Und zwar IMMER, egal wo die Karte gerade steht: Der Zoom ergibt
+            // sich aus dem Ring, nicht aus dem Ausgangszustand. Wer weit
+            // draussen stand, blieb sonst auf halbem Weg stehen (Zoom 14) und
+            // sah gar keinen Ring.
+            adapter.fitBounds(userPositionBounds(position), {
+              maxZoom: LOCATE_MAX_ZOOM,
+              animate: true,
+              ...raender,
+            })
+            return
+          }
           adapter.focusOn([position.lng, position.lat], {
-            // Heranfahren nur, wenn die Karte weiter draussen steht: Wer schon
-            // naeher dran ist, will nicht zurueckgezogen werden.
-            ...(adapter.getView().zoom < LOCATE_ZOOM ? { zoom: LOCATE_ZOOM } : {}),
+            // Nur der erste Fix ohne Genauigkeit faehrt heran — und auch der
+            // nur, wenn die Karte weiter draussen steht. Spaetere Fixe ziehen
+            // die Kamera nur nach: Ein Ring, der mit der Genauigkeit waechst
+            // und schrumpft, wuerde sonst dauernd nachzoomen und flackern.
+            ...(erste && adapter.getView().zoom < LOCATE_ZOOM ? { zoom: LOCATE_ZOOM } : {}),
             animate: true,
-            // Dieselbe Polsterung wie bei jedem anderen Hinfahren: Der Standort
-            // gehoert in die Mitte des SICHTBAREN Rests, nicht hinter das Panel.
-            ...mapViewFocusInsets(isCompact, panelEdges, kameraKenntSeiten),
+            ...raender,
           })
         },
         () => {
@@ -503,7 +567,7 @@ function MapViewInner({
     {/* Der Beitrag der Karte zur Steuerung ihrer Flaeche — WO er steht,
         entscheidet die Flaeche (Suche und Chips schwebend oben, Pille unten).
         `clearsTopLeft`: links oben sitzen die Zoom-Knoepfe. */}
-    <ModuleToolbar searchLabel="Karte durchsuchen" clearsTopLeft availableTags={availableTags} availableTypes={MAP_TYPES} trailingActions={hasGeolocation() && !isPicking ? <div className="flex flex-col items-end gap-1"><Button size="icon-sm" variant="outline" aria-label={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} title={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} aria-pressed={ortung === "aktiv"} aria-busy={ortung === "suchend"} onClick={zeigeStandort} className="bg-card!">{ortung === "suchend" ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className={cn("h-4 w-4", ortung === "aktiv" && "text-primary")} />}</Button>{standortFehler && <span role="status" className="rounded-full border bg-card/95 px-2 py-0.5 text-xs text-muted-foreground shadow-sm">{standortFehler}</span>}</div> : undefined} />
+    <ModuleToolbar searchLabel="Karte durchsuchen" clearsTopLeft availableTags={availableTags} availableTypes={MAP_TYPES} trailingActions={hasGeolocation() && !isPicking ? <div className="flex flex-col items-end gap-1"><Button size="icon-sm" variant="outline" aria-label={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} title={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} aria-pressed={ortung === "aktiv"} aria-busy={ortung === "suchend"} onClick={zeigeStandort} className="bg-card!">{ortung === "suchend" ? <Loader2 className="h-4 w-4 animate-spin" /> : <StandortIcon className={cn(ortung === "aktiv" && "text-primary")} />}</Button>{standortFehler && <span role="status" className="rounded-full border bg-card/95 px-2 py-0.5 text-xs text-muted-foreground shadow-sm">{standortFehler}</span>}</div> : undefined} />
     {!isPicking && canCreate && <CreateFab onClick={onCreate!} label="Ort erstellen" />}
   </div>
 }

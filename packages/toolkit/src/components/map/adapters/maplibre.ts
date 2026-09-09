@@ -1046,16 +1046,40 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     map.jumpTo(this.mitPolsterung({ center, zoom }))
   }
 
-  fitBounds(bounds: MapBounds): void {
+  fitBounds(
+    bounds: MapBounds,
+    options?: {
+      maxZoom?: number
+      animate?: boolean
+      bottomInset?: number
+      leftInset?: number
+      rightInset?: number
+    },
+  ): void {
     const map = this.mapInstance as MlMap | null
     if (!map) return
     const box: [[number, number], [number, number]] = [
       [bounds.west, bounds.south],
       [bounds.east, bounds.north],
     ]
-    // Ohne Polsterung bleibt der Aufruf, wie er war — ein leeres
+    // Die Kamera-Polsterung und die Insets des Aufrufers liegen auf derselben
+    // Achse; addiert werden sie nicht: Wer die Polsterung kennt, gibt keine
+    // Seiten-Insets mit (siehe `mapViewFocusInsets`).
+    const polsterung = {
+      top: (this.viewportPadding?.top ?? 0),
+      bottom: (this.viewportPadding?.bottom ?? 0) + (options?.bottomInset ?? 0),
+      left: (this.viewportPadding?.left ?? 0) + (options?.leftInset ?? 0),
+      right: (this.viewportPadding?.right ?? 0) + (options?.rightInset ?? 0),
+    }
+    const hatPolsterung = Object.values(polsterung).some((wert) => wert > 0)
+    const optionen = {
+      ...(hatPolsterung ? { padding: polsterung } : {}),
+      ...(options?.maxZoom != null ? { maxZoom: options.maxZoom } : {}),
+      ...(options?.animate === false ? { animate: false } : {}),
+    }
+    // Ohne irgendeine Angabe bleibt der Aufruf, wie er war — ein leeres
     // Optionsobjekt waere Rauschen.
-    if (this.viewportPadding) map.fitBounds(box, { padding: this.viewportPadding })
+    if (Object.keys(optionen).length > 0) map.fitBounds(box, optionen)
     else map.fitBounds(box)
   }
 

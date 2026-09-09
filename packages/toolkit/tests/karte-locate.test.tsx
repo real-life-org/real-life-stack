@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client"
 import type { Item } from "@real-life-stack/data-interface"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { MapView, type MapViewProps } from "../src/components/map/map-view"
+import { MapView, userPositionBounds, type MapViewProps } from "../src/components/map/map-view"
 import type {
   GlobeCapable,
   MapAdapter,
@@ -38,7 +38,9 @@ class ProbeAdapter implements MapAdapter {
   unmount = vi.fn(async () => undefined)
   setMarkers = vi.fn()
   setView = vi.fn()
-  fitBounds = vi.fn()
+  fitBounds = vi.fn<
+    (bounds: { north: number; south: number; east: number; west: number }, options?: { maxZoom?: number; animate?: boolean }) => void
+  >()
   focusOn = vi.fn()
   resize = vi.fn()
   getView() {
@@ -63,6 +65,13 @@ class OrtungsAdapter extends ProbeAdapter implements UserPositionCapable, UserGe
     return () => {
       this.geste = null
     }
+  }
+}
+
+/** Steht weit draussen (Zoom 3) — wie eine Karte, die gerade die Welt zeigt. */
+class WeitDraussenAdapter extends OrtungsAdapter {
+  getView() {
+    return { center: [0, 0] as [number, number], zoom: 3, bounds: { west: -180, south: -85, east: 180, north: 85 } }
   }
 }
 
@@ -164,7 +173,7 @@ describe("Der Standort-Knopf", () => {
     expect(locateKnopf()).toBeNull()
   })
 
-  it("startet eine laufende Ortung, zeigt die Position und faehrt hin", async () => {
+  it("startet eine laufende Ortung und zeigt den Genauigkeitskreis ganz", async () => {
     const ortung = stubbeOrtung()
     const adapter = new OrtungsAdapter()
     await rendereKarte(adapter)
@@ -175,14 +184,78 @@ describe("Der Standort-Knopf", () => {
     expect(ortung.watchPosition).toHaveBeenCalled()
     expect(locateKnopf()!.getAttribute("aria-busy")).toBe("true")
 
-    ortung.fix(8.6, 50.1)
-    expect(adapter.setUserPosition).toHaveBeenLastCalledWith({ lng: 8.6, lat: 50.1, accuracy: 25 })
+    ortung.fix(8.6, 50.1, 500)
+    expect(adapter.setUserPosition).toHaveBeenLastCalledWith({ lng: 8.6, lat: 50.1, accuracy: 500 })
+    // Kein fester Zoom: Der Ausschnitt umfasst den Kreis (500m) mit Luft.
+    const [bounds, optionen] = adapter.fitBounds.mock.calls.at(-1)!
+    expect(optionen).toEqual(expect.objectContaining({ maxZoom: 18, animate: true }))
+    const kreis = userPositionBounds({ lng: 8.6, lat: 50.1, accuracy: 500 }, 1)
+    expect(bounds.north).toBeGreaterThanOrEqual(kreis.north)
+    expect(bounds.south).toBeLessThanOrEqual(kreis.south)
+    expect(bounds.east).toBeGreaterThanOrEqual(kreis.east)
+    expect(bounds.west).toBeLessThanOrEqual(kreis.west)
+    expect(adapter.focusOn).not.toHaveBeenCalled()
+    expect(locateKnopf()!.getAttribute("aria-pressed")).toBe("true")
+    expect(locateKnopf()!.getAttribute("aria-busy")).toBe("false")
+  })
+
+  it("traegt das Fadenkreuz der Utopia Map", async () => {
+    vi.stubGlobal("navigator", { ...navigator, geolocation: { watchPosition: vi.fn(), clearWatch: vi.fn() } })
+    await rendereKarte(new ProbeAdapter())
+    expect(locateKnopf()!.querySelector('svg[viewBox="0 0 32 32"]')).not.toBeNull()
+  })
+
+  it("faehrt bei winziger Genauigkeit nicht auf die Maximalstufe", async () => {
+    const ortung = stubbeOrtung()
+    const adapter = new OrtungsAdapter()
+    await rendereKarte(adapter)
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+
+    ortung.fix(8.6, 50.1, 5)
+    const [, optionen] = adapter.fitBounds.mock.calls.at(-1)!
+    expect(optionen.maxZoom).toBe(18)
+  })
+
+  it("faehrt auch von weit draussen bis zum Ring durch", async () => {
+    // Antons Beobachtung am festen Zoom 14: Von weit draussen stoppte die
+    // Karte auf halbem Weg, und man sah gar keinen Ring. Der Zoom ergibt sich
+    // aus dem Ring, nicht aus dem Ausgangszustand.
+    const ortung = stubbeOrtung()
+    const adapter = new WeitDraussenAdapter()
+    await rendereKarte(adapter)
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+
+    ortung.fix(8.6, 50.1, 30)
+    const [bounds, optionen] = adapter.fitBounds.mock.calls.at(-1)!
+    const ring = userPositionBounds({ lng: 8.6, lat: 50.1, accuracy: 30 }, 1)
+    expect(bounds.north).toBeGreaterThanOrEqual(ring.north)
+    expect(bounds.west).toBeLessThanOrEqual(ring.west)
+    expect(optionen.maxZoom).toBe(18)
+    // Welche Stufe daraus folgt, rechnet die Kamera — die Spanne sagt es
+    // trotzdem: 360° bei Stufe 0, je Stufe halb so viel, auf 1024px Breite.
+    const spanne = bounds.east - bounds.west
+    const stufe = Math.log2((360 / spanne) * (1024 / 256))
+    expect(stufe).toBeGreaterThan(14)
+  })
+
+  it("faellt ohne gemeldete Genauigkeit auf das Herankommen zurueck", async () => {
+    const ortung = stubbeOrtung()
+    const adapter = new OrtungsAdapter()
+    await rendereKarte(adapter)
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+
+    ortung.fix(8.6, 50.1, 0)
+    expect(adapter.fitBounds).not.toHaveBeenCalled()
     expect(adapter.focusOn).toHaveBeenLastCalledWith(
       [8.6, 50.1],
       expect.objectContaining({ zoom: 14, animate: true }),
     )
-    expect(locateKnopf()!.getAttribute("aria-pressed")).toBe("true")
-    expect(locateKnopf()!.getAttribute("aria-busy")).toBe("false")
   })
 
   it("zieht die Kamera nach — bis der Nutzer selbst schwenkt", async () => {
@@ -195,7 +268,12 @@ describe("Der Standort-Knopf", () => {
 
     ortung.fix(8.6, 50.1)
     ortung.fix(8.7, 50.2)
-    expect(adapter.focusOn).toHaveBeenLastCalledWith([8.7, 50.2], expect.objectContaining({ animate: true }))
+    // Nachziehen ohne Zoom: Ein Ring, der mit der Genauigkeit waechst und
+    // schrumpft, wuerde sonst dauernd nachzoomen und flackern.
+    const [ziel, optionen] = adapter.focusOn.mock.calls.at(-1)!
+    expect(ziel).toEqual([8.7, 50.2])
+    expect(optionen).toEqual(expect.objectContaining({ animate: true }))
+    expect(optionen).not.toHaveProperty("zoom")
 
     // Wer selbst schwenkt, will bleiben, wo er hinschaut.
     act(() => adapter.geste?.())
@@ -256,7 +334,12 @@ describe("Der Standort-Knopf", () => {
     await act(async () => {
       locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
     })
-    ortung.fix(8.6, 50.1)
-    expect(adapter.focusOn).toHaveBeenLastCalledWith([8.6, 50.1], expect.objectContaining({ zoom: 14 }))
+    ortung.fix(8.6, 50.1, 500)
+    // Ohne die Positions-Faehigkeit sieht man keinen Ring — der Ausschnitt
+    // stimmt trotzdem, er ist Sache der Kamera und nicht der Darstellung.
+    expect(adapter.fitBounds).toHaveBeenCalledWith(
+      expect.objectContaining({ north: expect.any(Number) }),
+      expect.objectContaining({ maxZoom: 18 }),
+    )
   })
 })
