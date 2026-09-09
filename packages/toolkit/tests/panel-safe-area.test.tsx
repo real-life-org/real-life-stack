@@ -13,10 +13,14 @@ import { PanelSafeArea } from "../src/components/layout/panel-safe-area"
 describe("PanelSafeArea", () => {
   const markup = () => renderToStaticMarkup(<PanelSafeArea><span>x</span></PanelSafeArea>)
 
-  it("zieht beide Panel-Insets ab", () => {
+  it("endet an der Panelkante, nicht am eingerueckten Inhalt", () => {
+    // Die Zone verhaelt sich wie der Fensterrand: Was darin liegt, setzt
+    // seinen eigenen Abstand darauf. Naehme sie den Inhalts-Inset, kaeme die
+    // Luft neben dem Panel ein zweites Mal dazu — gemessen 32px statt 16px.
     const html = markup()
-    expect(html).toContain("var(--adaptive-panel-margin-left, 0px)")
-    expect(html).toContain("var(--adaptive-panel-margin-right, 0px)")
+    expect(html).toContain("var(--adaptive-panel-edge-left, 0px)")
+    expect(html).toContain("var(--adaptive-panel-edge-right, 0px)")
+    expect(html).not.toContain("--adaptive-panel-margin")
   })
 
   it("spannt sich ueber die volle Hoehe der Modulflaeche", () => {
@@ -42,7 +46,7 @@ describe("PanelSafeArea", () => {
     )
     expect(html).toContain("z-20")
     expect(html).toContain("justify-center")
-    expect(html).toContain("var(--adaptive-panel-margin-right, 0px)")
+    expect(html).toContain("var(--adaptive-panel-edge-right, 0px)")
   })
 })
 
@@ -95,5 +99,30 @@ describe("Overlays der Karte liegen ausnahmslos in der Flaeche", () => {
     // Ladeanzeige, Hinweis, Steuerleiste - drei Stellen, ein Vertrag.
     const anzahl = (quelle.match(/<PanelSafeArea/g) ?? []).length
     expect(anzahl).toBeGreaterThanOrEqual(3)
+  })
+})
+
+/**
+ * Der Rueckfall, den das verhindert: Ein schwebendes Bedienelement richtet sich
+ * am Inhalts-Inset aus und addiert seinen eigenen Rand darauf. Der Inset
+ * enthaelt die Luft neben dem Panel aber schon — der Abstand faellt doppelt aus.
+ * Genau so stand der FAB: 16px vom Fensterrand ohne Panel, 32px vom Panel mit.
+ */
+describe("Schwebende Elemente rechnen mit der Panelkante", () => {
+  const dateien = [
+    "../src/components/create-fab/create-fab.tsx",
+    "../src/components/layout/panel-safe-area.tsx",
+    "../src/components/map/map-view.tsx",
+  ]
+
+  it("addiert keinen eigenen Rand auf den Inhalts-Inset", () => {
+    const treffer = dateien.flatMap((datei) => {
+      const quelle = readFileSync(join(__dirname, datei), "utf8")
+      return [...quelle.matchAll(/calc\([^)]*var\(--adaptive-panel-margin-[^)]*\)[^)]*\)/g)]
+        .map((m) => `${datei}: ${m[0]}`)
+    })
+
+    expect(treffer, `Diese Stellen zaehlen den Rand doppelt — die Kante nehmen:\n${treffer.join("\n")}`)
+      .toEqual([])
   })
 })

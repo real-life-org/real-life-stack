@@ -40,7 +40,7 @@ export type ModuleFill = "container" | "bleed"
  * sonst verdeckt das Panel Eintraege. Die Karte dagegen IST ihre Flaeche;
  * wuerde sie beim Oeffnen eines Details schmaler, zeigte sie weniger Welt.
  * Die schwebenden Controls ruecken in beiden Faellen ein, denn sie lesen
- * `--adaptive-panel-margin-right` selbst.
+ * `--adaptive-panel-edge-right` selbst.
  */
 export type ModulePanelFit = "inset" | "overlay"
 

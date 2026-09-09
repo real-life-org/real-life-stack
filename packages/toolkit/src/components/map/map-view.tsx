@@ -8,7 +8,7 @@ import { CreateFab } from "../create-fab"
 import { PanelSafeArea } from "../layout/panel-safe-area"
 import { Button, Input } from "../primitives"
 import { focusNeedsRecentering, focusOffsetFor, type MapFocusInsets } from "./focus-offset"
-import { usePanelInsets, type PanelInsets } from "../layout/panel-insets"
+import { usePanelEdges, type PanelEdges } from "../layout/panel-edges"
 import { MapLens } from "../lens/map-lens"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { getSpacePrimaryColor } from "../../lib/utils"
@@ -193,17 +193,17 @@ export function filterMapViewItems(items: readonly Item[], filter: FilterBarValu
  * Geraeten, links/rechts ein schwebendes Panel. Beides zusammen, damit ein
  * angeklickter Marker im sichtbaren Rest landet und nicht hinter dem Panel.
  */
-export function mapViewFocusInsets(isCompact: boolean, panelInsets: PanelInsets): MapFocusInsets {
+export function mapViewFocusInsets(isCompact: boolean, panelEdges: PanelEdges): MapFocusInsets {
   const bottomInset = isCompact ? window.innerHeight * MAP_SHEET_FRACTION : 0
-  return { bottomInset, ...panelInsets }
+  return { bottomInset, leftInset: panelEdges.left, rightInset: panelEdges.right }
 }
 
 export function mapViewRevealOptions(
   fromMarkerClick: boolean,
   isCompact: boolean,
-  panelInsets: PanelInsets = { leftInset: 0, rightInset: 0 },
+  panelEdges: PanelEdges = { left: 0, right: 0 },
 ) {
-  return { animate: !fromMarkerClick, ...mapViewFocusInsets(isCompact, panelInsets) }
+  return { animate: !fromMarkerClick, ...mapViewFocusInsets(isCompact, panelEdges) }
 }
 
 /** Full Map module: filter/create/bbox behaviour around the filterless MapLens core. */
@@ -232,7 +232,7 @@ export function MapView({
   // Mit welcher Verschiebung der aktuell gezeigte Punkt zuletzt zentriert
   // wurde. Aendert sich die Verdeckung danach, muss er nachgeholt werden.
   const revealOffset = useRef<[number, number] | null>(null)
-  const panelInsets = usePanelInsets()
+  const panelEdges = usePanelEdges()
 
   useEffect(() => {
     const keyChanged = accumulatedKey.current !== inventoryKey
@@ -260,7 +260,7 @@ export function MapView({
     if (!adapter || viewportMode !== "bbox-module") return
     const point = latLngFromPoint(focusedItem.data.position)
     if (!point) return
-    const insets = mapViewFocusInsets(isCompact, panelInsets)
+    const insets = mapViewFocusInsets(isCompact, panelEdges)
     const offset = focusOffsetFor(insets)
     const fromClick = markerClick.current === focusedItem.id
     markerClick.current = null
@@ -295,7 +295,7 @@ export function MapView({
       revealOffset.current = offset
       adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, MIN_REVEAL_ZOOM), ...insets, animate: true })
     }
-  }, [active, adapter, focusedItem, isCompact, items, itemsLoading, panelInsets, viewportMode])
+  }, [active, adapter, focusedItem, isCompact, items, itemsLoading, panelEdges, viewportMode])
   useEffect(() => {
     if (!adapter || !isPicking) return
     return adapter.observeClicks(({ position: [lng, lat] }) => {

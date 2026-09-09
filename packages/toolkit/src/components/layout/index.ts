@@ -1,6 +1,6 @@
 export { AppShell, AppShellMain } from "./app-shell"
 export { PanelSafeArea, type PanelSafeAreaProps } from "./panel-safe-area"
-export { readPanelInsets, usePanelInsets, type PanelInsets } from "./panel-insets"
+export { readPanelEdges, usePanelEdges, type PanelEdges } from "./panel-edges"
 export { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"
 export { WorkspaceSwitcher } from "./workspace-switcher"
 export type { Workspace } from "./workspace-switcher"

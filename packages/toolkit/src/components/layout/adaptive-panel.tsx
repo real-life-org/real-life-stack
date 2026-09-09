@@ -84,11 +84,24 @@ const FLOATING_GAP = 16
  */
 const FLOATING_INSET = FLOATING_WIDTH + FLOATING_GAP * 2
 
+/**
+ * Zwei Groessen, weil zwei verschiedene Fragen daran haengen:
+ *
+ *   `--adaptive-panel-margin-*` — wieviel Platz das Panel dem INHALT wegnimmt,
+ *   die Luft daneben eingerechnet. Flaechen konsumieren das als Padding.
+ *
+ *   `--adaptive-panel-edge-*` — wo die KANTE des Panels liegt. Daran richten
+ *   sich schwebende Bedienelemente aus, die ihren eigenen Rand mitbringen;
+ *   naehmen sie den Inhalts-Wert, zaehlte der Rand doppelt.
+ */
 function syncAdaptivePanelInsets(): void {
   const { left, right } = adaptivePanelStack.getInsets()
+  const kanten = adaptivePanelStack.getEdges()
   const root = document.documentElement
   root.style.setProperty("--adaptive-panel-margin-left", `${left}px`)
   root.style.setProperty("--adaptive-panel-margin-right", `${right}px`)
+  root.style.setProperty("--adaptive-panel-edge-left", `${kanten.left}px`)
+  root.style.setProperty("--adaptive-panel-edge-right", `${kanten.right}px`)
 }
 
 function parsePx(value: string): number {
@@ -306,6 +319,9 @@ export function AdaptivePanel({
           mode,
           side,
           sidebarWidth: mode === "floating" ? FLOATING_INSET : currentSidebarWidth,
+          // Die schwebende Karte steht eingerueckt: ihre Kante liegt um die
+          // Luft daneben naeher am Rand als ihr Platzbedarf.
+          edgeOffset: mode === "floating" ? FLOATING_WIDTH + FLOATING_GAP : currentSidebarWidth,
           insetActive: open && !animatingOut,
         },
         updateStackPosition,
@@ -541,10 +557,14 @@ export function AdaptivePanel({
         setCurrentSidebarWidth(newWidth)
         const root = document.documentElement
         const width = `${newWidth}px`
+        // Eine gezogene Sidebar klebt am Rand: Platzbedarf und Kante sind
+        // dasselbe.
         if (side === "right") {
           root.style.setProperty("--adaptive-panel-margin-right", width)
+          root.style.setProperty("--adaptive-panel-edge-right", width)
         } else {
           root.style.setProperty("--adaptive-panel-margin-left", width)
+          root.style.setProperty("--adaptive-panel-edge-left", width)
         }
       })
     },
