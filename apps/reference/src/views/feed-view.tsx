@@ -186,19 +186,36 @@ export function FeedView({ groupId }: { groupId: string }) {
   )
   useRegisterCreate("feed", createConfig)
 
+  // Die Pille ist der sichtbare Einstieg ins Schreiben; der Kopf beobachtet
+  // sie, um seinen „+"-Knopf nur zu zeigen, wenn sie weggescrollt ist.
+  const composerTrigger = useRef<HTMLDivElement | null>(null)
+
   const renderFeedFooter = useCallback(feedFooter, [])
 
   return (
     <div className="space-y-4">
-      <ModuleToolbar availableTags={availableTags} availableTypes={availableTypes} />
+      <ModuleToolbar
+        availableTags={availableTags}
+        availableTypes={availableTypes}
+        // Der Feed hat als einziges Modul keinen FAB, sondern die Pille — und
+        // die scrollt weg. Dann uebernimmt der Kopf den Einstieg, der ohnehin
+        // stehen bleibt (Spec shared-components → „Feed-Sonderfall").
+        create={{
+          onCreate: () => startCreate("post"),
+          label: "Beitrag schreiben",
+          hideWhileVisible: composerTrigger,
+        }}
+      />
 
       {/* Composer trigger — hands off to the app-level create host (fullscreen). */}
-      <FeedComposerTrigger
-        placeholder="Was gibt's Neues?"
-        userName={currentUser?.displayName}
-        userAvatar={currentUser?.avatarUrl}
-        onCompose={(initialText) => startCreate("post", initialText ? { text: initialText } : undefined)}
-      />
+      <div ref={composerTrigger}>
+        <FeedComposerTrigger
+          placeholder="Was gibt's Neues?"
+          userName={currentUser?.displayName}
+          userAvatar={currentUser?.avatarUrl}
+          onCompose={(initialText) => startCreate("post", initialText ? { text: initialText } : undefined)}
+        />
+      </div>
 
       {/* Feed items — skeleton while loading, empty state once loaded with
           nothing, otherwise the list. */}
