@@ -57,7 +57,9 @@ describe("Der Abstand der Steuerleiste", () => {
   const html = renderToStaticMarkup(<ModuleToolbar>x</ModuleToolbar>)
 
   it("bringt ihn selbst mit", () => {
-    expect(html).toContain("pb-7")
+    // 16px — derselbe Abstand wie vor dem Umbau, als ihn allein `space-y-4`
+    // des Containers trug.
+    expect(html).toContain("pb-4")
   })
 
   it("nimmt den Abstand des Containers weg, statt ihn zu addieren", () => {

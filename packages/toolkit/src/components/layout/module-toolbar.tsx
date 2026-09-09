@@ -43,7 +43,7 @@ export function ModuleToolbar({ children, className }: ModuleToolbarProps) {
         // heran. Und weil die Module unterschiedliche Container-Abstaende
         // haben (`space-y-4` im Feed, `space-y-3` im Kalender), waere jede
         // Rechnung mit ihnen ohnehin eine, die driftet.
-        "sticky top-0 z-20 -mx-4 bg-background px-4 pb-7 mb-0!",
+        "sticky top-0 z-20 -mx-4 bg-background px-4 pb-4 mb-0!",
         // Der Container gibt oben 16px; die uebernimmt die Leiste, damit beim
         // Kleben kein Inhalt in dieser Luecke durchscheint.
         "-mt-4 pt-4",
