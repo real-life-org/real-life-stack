@@ -20,7 +20,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "../primitives/dropdown-menu"
-import { cn, getItemColor, getReadableTextColor, getActivePanelGlow } from "../../lib/utils"
+import { cn, getItemColor, getReadableTextColor } from "../../lib/utils"
 import { isAllDayDate, parseEventDate } from "../../lib/date-utils"
 import {
   addDays,
@@ -1369,11 +1369,13 @@ function EventPill({ event, compact = false, onClick, bar }: EventPillProps) {
       style={{
         backgroundColor: color,
         color: getReadableTextColor(color),
-        // Soft glow in the group colour for the item open in the shared panel.
-        ...(isActive ? getActivePanelGlow(groupColor) : null),
       }}
       className={cn(
         "flex w-full items-center gap-1 rounded-md px-2 text-left text-xs font-medium transition-opacity hover:opacity-90",
+        // Wie ueberall: Was im Panel offen ist, hebt sich ueber denselben
+        // Schatten ab. Ein farbiger Schein unter einer ohnehin farbigen Pille
+        // wird nur zum Farbfleck.
+        isActive && "shadow-xl",
         // A bar fills its lane row exactly; a free-standing pill sizes itself.
         bar ? "h-full py-0" : "py-1.5",
         // A square end reads as "continues past the edge"; a rounded one as
@@ -1415,7 +1417,8 @@ function EventCard({ event, onClick }: EventCardProps) {
     <ItemPreview
       item={event.item}
       author={null}
-      style={isActive ? getActivePanelGlow(resolveGroupColor(event.item)) : undefined}
+      active={isActive}
+      activeColor={resolveGroupColor(event.item)}
       onClick={onClick ? () => onClick(event.item) : undefined}
       headerAdornment={
         <ItemTypeBadge type={event.item.type} />

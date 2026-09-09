@@ -60,6 +60,12 @@ export function getSpacePrimaryColor(id: string, explicit?: string | null): stri
  * must be a `#rrggbb` value (e.g. from `getSpacePrimaryColor`); the 2-digit
  * alpha suffixes make the 8-digit `#rrggbbaa` form.
  */
+/**
+ * @deprecated Wird nirgends mehr verwendet. Was im Panel offen ist, hebt sich
+ * ueber denselben Schatten ab, den das Panel traegt (`shadow-xl`), plus einen
+ * duennen Rand in der Space-Farbe — siehe `ItemPreview.active`. Der breite
+ * farbige Schein trug neben einer schwebenden Karte zu dick auf.
+ */
 export function getActivePanelGlow(color: string): CSSProperties {
   if (!HEX6.test(color)) return {}
   // Layered, slightly downward-biased glow so the active card reads as "lifted"
