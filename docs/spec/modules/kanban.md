@@ -150,7 +150,7 @@ Regeln:
 1. Die Spalte trägt die **vertiefte** Fläche und **keinen Rahmen**. Ein Rahmen macht sie wieder zum Gegenstand.
 2. Erhaben ist, was darin liegt — die Karten. Ihr Rahmen grenzt sie gegen die vertiefte Fläche ab.
 3. Beim Ziehen färbt sich die **Fläche**, nicht ihr Rand: Es geht um den Ort, auf dem die Karte landet.
-4. Die Reihenfolge gilt in beiden Themes gleichsinnig — tiefer heißt dunkler. Ein Test hält das fest, weil die Staffelung sonst bei einer Token-Änderung lautlos kippt.
+4. Die **Richtung der Helligkeit** ist in beiden Themes dieselbe: tiefer heißt dunkler, also `--sunken` < `--background` < `--card`. Ein Test hält das fest, weil die Staffelung sonst bei einer Token-Änderung lautlos kippt.
 
 ## Komponenten
 
