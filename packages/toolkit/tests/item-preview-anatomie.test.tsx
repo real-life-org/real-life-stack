@@ -80,15 +80,20 @@ describe("ItemPreview: viele Tags", () => {
     const html = markup({ item: viele })
     expect(html).toContain("repair")
     expect(html).toContain("+2")
-    expect(html).not.toContain("werkstatt")
+    // Der vierte Tag steht nicht als eigener Chip in der Zeile — im Titel des
+    // „+2" darf er stehen, sonst müsste man das Item öffnen, um ihn zu sehen.
+    expect(html).not.toContain(">werkstatt<")
   })
 
   it("bricht die Tag-Zeile nicht um", () => {
     const html = markup({ item: viele })
-    // Nur die Zeile mit den Tags: Der Titel darf sehr wohl umbrechen.
-    const zeile = html.slice(html.indexOf("repair") - 400, html.indexOf("repair"))
-    expect(zeile).not.toContain("flex-wrap")
-    expect(zeile).toContain("overflow-hidden")
+    // Nur der Container der Tags — der Titel darf sehr wohl umbrechen. Über
+    // das öffnende Tag VOR dem ersten Tag gesucht, nicht über eine
+    // Zeichenzahl: Die verschiebt sich mit jeder Änderung am Markup.
+    const bisTag = html.slice(0, html.indexOf(">repair<"))
+    const container = bisTag.slice(bisTag.lastIndexOf("<div"))
+    expect(container).not.toContain("flex-wrap")
+    expect(container).toContain("overflow-hidden")
   })
 
   it("zeigt in der dichten Ansicht nur einen Tag", () => {
@@ -140,5 +145,26 @@ describe("ItemPreview: Beitrag ohne Titel", () => {
       item: beitrag({ data: { content: "Der Schlüssel liegt wieder im Café." }, tags: undefined }),
     })
     expect(vorher(html, "Der Schlüssel", "Sebastian")).toBe(true)
+  })
+})
+
+/**
+ * „+2" allein sagt nicht, wovon — weder vorgelesen noch beim Überfahren.
+ */
+describe("ItemPreview: der Rest der Tags", () => {
+  it("sagt, wie viele weitere es sind", () => {
+    const html = markup({
+      item: beitrag({ tags: ["repair", "community", "nachbarschaft", "werkstatt", "offen"] }),
+    })
+    expect(html).toContain('aria-label="2 weitere Tags"')
+    // Und welche: sonst müsste man das Item öffnen, um es zu erfahren.
+    expect(html).toContain('title="werkstatt, offen"')
+  })
+
+  it("bleibt im Singular bei genau einem weiteren", () => {
+    const html = markup({
+      item: beitrag({ tags: ["repair", "community", "nachbarschaft", "werkstatt"] }),
+    })
+    expect(html).toContain('aria-label="1 weiterer Tag"')
   })
 })

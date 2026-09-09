@@ -86,6 +86,23 @@ describe("Der Kommentar-Hinweis als Weg", () => {
     expect(openComments).toHaveBeenCalledWith(expect.objectContaining({ id: "p1" }))
   })
 
+  /**
+   * In der dichten Ansicht bleibt sichtbar nur ein Symbol und eine Zahl —
+   * vorgelesen ergäbe das „2" oder gar nichts. Die Bedeutung muss deshalb
+   * ausgesprochen werden, auch dort, wo der Hinweis nur Auskunft ist.
+   */
+  it("nennt seine Bedeutung, auch wo nur eine Zahl steht", () => {
+    expect(markup([kommentar("k1"), kommentar("k2")], navigation))
+      .toContain('aria-label="2 Kommentare, kommentieren"')
+    expect(markup([kommentar("k1")], navigation))
+      .toContain('aria-label="1 Kommentar, kommentieren"')
+    expect(markup([], navigation)).toContain('aria-label="Kommentieren"')
+  })
+
+  it("nennt sie auch ohne Weg, wo die Zahl sonst unerklärt bliebe", () => {
+    expect(markup([kommentar("k1")])).toContain('aria-label="1 Kommentar, kommentieren"')
+  })
+
   it("zeigt in der dichten Ansicht nur die Zahl", () => {
     const html = renderToStaticMarkup(
       <ConnectorProvider connector={connectorMit([kommentar("k1")]) as never}>

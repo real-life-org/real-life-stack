@@ -152,11 +152,28 @@ function KommentarHinweis({
       {!kompakt && <span>Kommentieren</span>}
     </>
   )
+  // Was hier steht, ist in der dichten Ansicht eine nackte Zahl neben einem
+  // Symbol — vorgelesen ergibt das „2", sonst gar nichts. Die Bedeutung muss
+  // also ausgesprochen werden, und zwar in beiden Ansichten: Auch „💬 2
+  // Kommentieren" liest sich vorgelesen holprig.
+  const beschriftung =
+    anzahl === 0
+      ? "Kommentieren"
+      : `${anzahl} ${anzahl === 1 ? "Kommentar" : "Kommentare"}, kommentieren`
   const klassen = "flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"
-  if (!onClick) return <span className={klassen}>{inhalt}</span>
+  if (!onClick) {
+    // Ohne Weg ist es eine Auskunft, kein Bedienelement — der Name gehoert
+    // trotzdem dazu, sonst bleibt die Zahl unerklaert.
+    return (
+      <span className={klassen} aria-label={beschriftung} title={beschriftung}>
+        {inhalt}
+      </span>
+    )
+  }
   return (
     <button
       type="button"
+      aria-label={beschriftung}
       // Der Klick gehoert dem Hinweis, nicht der Karte darunter: Beides oeffnet
       // dasselbe Item, aber nur dieser Weg setzt den Cursor ins Feld.
       onClick={(event) => {
@@ -323,7 +340,16 @@ export function ItemPreview({
                 <TagChip key={tag} tag={tag} />
               ))}
               {verborgeneTags > 0 && (
-                <span className="shrink-0 rounded-full border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                <span
+                  className="shrink-0 rounded-full border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                  // „+2" allein sagt nicht, wovon — vorgelesen wie im
+                  // Tooltip. Die verborgenen Tags stehen im Titel, damit man
+                  // nicht erst das Item oeffnen muss.
+                  aria-label={
+                    verborgeneTags === 1 ? "1 weiterer Tag" : `${verborgeneTags} weitere Tags`
+                  }
+                  title={tags.slice(sichtbareTags.length).join(", ")}
+                >
                   +{verborgeneTags}
                 </span>
               )}
