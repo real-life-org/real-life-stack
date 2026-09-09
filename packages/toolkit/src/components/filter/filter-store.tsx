@@ -52,7 +52,15 @@ function useFilterValue(): SharedFilterValue {
   )
 }
 
-/** Der geteilte Filter. Wirft ohne Provider — wie `useModulePanel`. */
+/**
+ * Der geteilte Filter. Wirft ohne Provider — wie `useModulePanel`.
+ *
+ * Bewusst KEIN stiller Rueckfall auf lokalen Zustand: Jeder Aufrufer bekaeme
+ * seinen eigenen, und der Filterzustand haette zwei Besitzer. Genau das ist
+ * passiert — die Leiste schrieb in ihren, der Inhalt las einen anderen; im
+ * Suchfeld stand „Garten", gefiltert wurde nichts. Wer ohne App-Shell rendert,
+ * setzt einen `FilterScope` an die Wurzel seiner Flaeche.
+ */
 export function useSharedFilter(): SharedFilterValue {
   const ctx = useContext(FilterContext)
   if (!ctx) {
@@ -67,17 +75,20 @@ export function useOptionalSharedFilter(): SharedFilterValue | null {
 }
 
 /**
- * Der geteilte Filter, wenn es einen gibt — sonst ein lokaler daneben.
+ * Der Besitzer fuer eine Flaeche, die auch AUSSERHALB der App laeuft.
  *
- * Fuer Flaechen, die BEIDES koennen muessen: in der App unter dem Provider
- * (dort teilen sie), in Story und Test allein (dort filtern sie fuer sich).
- * Ohne diesen Rueckfall waere jede Story einer Modulflaeche ein Absturz — und
- * ein Provider in jeder Story waere eine zweite Stelle, die den Vertrag kennt.
+ * Unter der App-Shell ist der `FilterProvider` schon da; dann reicht dieser
+ * Scope die Kinder unveraendert durch — ein zweiter Provider spaerrte die
+ * Flaeche vom app-weiten Filter ab, und ein im Feed gesetztes Tag erreichte
+ * sie nicht mehr. Ohne Provider (Story, Test, eingebettete Ansicht,
+ * apps/network) legt er GENAU EINEN an.
+ *
+ * Er gehoert an die **Wurzel der Flaeche**, um Leiste UND Inhalt herum — nie
+ * an die Leiste allein: Dann besaesse die Leiste einen Zustand, den der Inhalt
+ * nicht sieht, und man tippte in eine Suche, die nichts filtert.
  */
-export function useModuleFilter(): SharedFilterValue {
-  // Der lokale Zustand wird immer angelegt (Hook-Regeln) und nur benutzt,
-  // wenn kein Provider da ist. Er kostet nichts weiter als zwei Slots.
-  const lokal = useFilterValue()
-  const geteilt = useContext(FilterContext)
-  return geteilt ?? lokal
+export function FilterScope({ children }: { children: ReactNode }) {
+  const vorhanden = useContext(FilterContext)
+  if (vorhanden) return <>{children}</>
+  return <FilterProvider>{children}</FilterProvider>
 }

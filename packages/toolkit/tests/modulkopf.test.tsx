@@ -3,6 +3,7 @@ import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { FilterProvider } from "../src/components/filter/filter-store"
 import { ModuleFrame, moduleContainerClass } from "../src/components/layout/module-frame"
 import { ModuleToolbar } from "../src/components/layout/module-toolbar"
 
@@ -26,8 +27,13 @@ afterEach(() => {
   host.remove()
 })
 
+/**
+ * Der Filter hat einen Besitzer, und der steht ueber der Flaeche — in der App
+ * die Shell, hier der Test. Die Leiste bringt ihn NICHT selbst mit: Dann
+ * saehen Leiste und Inhalt verschiedene Werte.
+ */
 function rendere(node: React.ReactNode) {
-  act(() => root.render(node))
+  act(() => root.render(createElement(FilterProvider, null, node)))
 }
 
 const kopf = () => host.querySelector("[data-module-head]")

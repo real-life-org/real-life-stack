@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import type { Item } from "@real-life-stack/data-interface"
-import { useModuleFilter } from "../components/filter/filter-store"
+import { useSharedFilter } from "../components/filter/filter-store"
 import type { FilterBarValue } from "../components/filter/types"
 
 /**
@@ -82,7 +82,7 @@ export function applyItemSearch(items: readonly Item[], search: string): Item[] 
  * eine eigene Reihenfolge aus Filter und Suche zu bauen.
  */
 export function useModuleFilteredItems(items: readonly Item[]): Item[] {
-  const { value, searchText } = useModuleFilter()
+  const { value, searchText } = useSharedFilter()
   const gefiltert = useFilterableItems(items, value)
   return useMemo(() => applyItemSearch(gefiltert, searchText), [gefiltert, searchText])
 }

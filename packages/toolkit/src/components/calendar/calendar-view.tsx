@@ -38,6 +38,7 @@ import { ItemPreview } from "../preview/item-preview"
 import { ItemTypeBadge } from "../preview/item-type-badge"
 import { ItemTimeRange } from "../preview/item-time-range"
 import { FilterSection, FilterToggle, FilterMultiSelect } from "../filter/filter-building-blocks"
+import { FilterScope } from "../filter/filter-store"
 import type { FilterTypeOption } from "../filter/types"
 import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
 import type { Item } from "@real-life-stack/data-interface"
@@ -344,7 +345,21 @@ export interface CalendarViewProps {
   className?: string
 }
 
-export function CalendarView({
+/**
+ * Der Kalender laeuft auch ausserhalb der App-Shell (Story, Test,
+ * apps/network). Der `FilterScope` an seiner WURZEL sorgt dafuer, dass Leiste
+ * und Inhalt dort denselben Filter sehen; unter der App reicht er den
+ * vorhandenen durch, damit ein im Feed gesetztes Tag hier weiterwirkt.
+ */
+export function CalendarView(props: CalendarViewProps) {
+  return (
+    <FilterScope>
+      <CalendarViewInner {...props} />
+    </FilterScope>
+  )
+}
+
+function CalendarViewInner({
   events,
   initialDate,
   initialVisibleDate,
