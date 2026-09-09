@@ -125,9 +125,6 @@ export function FilterBar({
     />
   ))
 
-  const hasAnyChips =
-    activeTagChips.length > 0 || activeTypeChips.length > 0 || !!chipsExtra
-
   const modulePanel = useOptionalModulePanel()
 
   const drawerContent = (
@@ -213,14 +210,18 @@ export function FilterBar({
       </div>
 
       {/* Active-filter chips on their own row so they wrap freely without
-          crowding the controls. */}
-      {hasAnyChips && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {activeTagChips}
-          {activeTypeChips}
-          {chipsExtra}
-        </div>
-      )}
+          crowding the controls.
+
+          `empty:hidden`, nicht `hasAnyChips`: Kanban und Kalender uebergeben
+          `chipsExtra` immer als Fragment, auch wenn darin gerade nichts aktiv
+          ist. Eine Zeile ohne Kinder nahm dann 0px ein, aber die 8px Luecke
+          davor blieb — die Steuerleiste war dort 8px hoeher als im Feed.
+          Ob die Zeile Platz braucht, entscheidet das DOM, nicht der Aufrufer. */}
+      <div data-filter-chips className="flex flex-wrap items-center gap-1.5 empty:hidden">
+        {activeTagChips}
+        {activeTypeChips}
+        {chipsExtra}
+      </div>
 
       {/* Fallback own AdaptivePanel — used in Storybook / standalone
           render where no ModulePanelProvider exists. Inside a module

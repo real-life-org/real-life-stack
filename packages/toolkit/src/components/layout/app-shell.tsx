@@ -81,12 +81,17 @@ export function AppShellMain({
     <main
       className={cn(
         "@container flex-1 overflow-y-auto",
-        "transition-[padding] duration-300 ease-out [.adaptive-panel-resizing_&]:transition-none",
+        "transition-[margin] duration-300 ease-out [.adaptive-panel-resizing_&]:transition-none",
         springt && "transition-none",
         withBottomNav && "pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0",
         className
       )}
       style={
+        // MARGIN, nicht Padding: Padding schob nur den INHALT ein, waehrend die
+        // Flaeche selbst bis zum Fensterrand reichte — und mit ihr die
+        // Scrollleiste, die dadurch im schmalen Spalt rechts neben dem Panel
+        // klemmte. Als Margin endet die Flaeche dort, wo der Platz endet.
+        //
         // `inset={false}`: die Flaeche bleibt stehen, das Panel legt sich
         // darueber. Fuer Module, deren Flaeche der Inhalt IST — eine Karte,
         // die beim Oeffnen eines Details schmaler wird, zeigt weniger Welt.
@@ -94,8 +99,8 @@ export function AppShellMain({
         // Variable selbst.
         inset
           ? {
-              paddingRight: "var(--adaptive-panel-margin-right, 0px)",
-              paddingLeft: "var(--adaptive-panel-margin-left, 0px)",
+              marginRight: "var(--adaptive-panel-margin-right, 0px)",
+              marginLeft: "var(--adaptive-panel-margin-left, 0px)",
             }
           : undefined
       }

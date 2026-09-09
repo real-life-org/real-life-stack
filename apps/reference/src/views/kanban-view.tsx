@@ -22,6 +22,7 @@ import {
   Skeleton,
   ItemPreviewSkeleton,
   FilterBar,
+  ModuleToolbar,
   FilterSection,
   FilterToggle,
   FilterMultiSelect,
@@ -338,83 +339,85 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
 
   return (
     <div className="space-y-4">
-      <FilterBar
-        value={filterBarValue}
-        onChange={setFilterBarValue}
-        availableTags={availableTags}
-        drawerExtra={
-          <>
-            <FilterSection label="Schnellfilter">
-              <FilterToggle
-                label="Nur meine Aufgaben"
-                value={myItemsOnly}
-                onChange={setMyItemsOnly}
-              />
-            </FilterSection>
-            {memberOptions.length > 0 && (
-              <FilterSection label="Zuweisung">
-                <FilterMultiSelect
-                  options={memberOptions}
-                  value={assignedTo}
-                  onChange={setAssignedTo}
+      <ModuleToolbar>
+        <FilterBar
+          value={filterBarValue}
+          onChange={setFilterBarValue}
+          availableTags={availableTags}
+          drawerExtra={
+            <>
+              <FilterSection label="Schnellfilter">
+                <FilterToggle
+                  label="Nur meine Aufgaben"
+                  value={myItemsOnly}
+                  onChange={setMyItemsOnly}
                 />
               </FilterSection>
-            )}
-          </>
-        }
-        chipsExtra={
-          <>
-            {myItemsOnly && (
-              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
-                Nur meine
-                <button
-                  type="button"
-                  onClick={() => setMyItemsOnly(false)}
-                  className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                  aria-label="Filter entfernen"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-          </>
-        }
-        leadingActions={
-          <div className="relative min-w-0 flex-1 sm:flex-none">
-            <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Suche…"
-              aria-label="Aufgaben durchsuchen"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="h-8 w-full pl-7 text-xs sm:w-40"
-            />
-          </div>
-        }
-        trailingActions={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                modulePanel.open({
-                  kind: "settings",
-                  content: (
-                    <ModuleSettingsPlaceholder
-                      moduleLabel="Kanban"
-                      plannedItems={["Spalten bearbeiten", "Standard-Gruppierung", "Sichtbarkeit der Spalten"]}
-                    />
-                  ),
-                })
-              }
-              title="Moduleinstellungen"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-            {viewModeToggle}
-          </>
-        }
-      />
+              {memberOptions.length > 0 && (
+                <FilterSection label="Zuweisung">
+                  <FilterMultiSelect
+                    options={memberOptions}
+                    value={assignedTo}
+                    onChange={setAssignedTo}
+                  />
+                </FilterSection>
+              )}
+            </>
+          }
+          chipsExtra={
+            <>
+              {myItemsOnly && (
+                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
+                  Nur meine
+                  <button
+                    type="button"
+                    onClick={() => setMyItemsOnly(false)}
+                    className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                    aria-label="Filter entfernen"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+            </>
+          }
+          leadingActions={
+            <div className="relative min-w-0 flex-1 sm:flex-none">
+              <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Suche…"
+                aria-label="Aufgaben durchsuchen"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="h-8 w-full pl-7 text-xs sm:w-40"
+              />
+            </div>
+          }
+          trailingActions={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  modulePanel.open({
+                    kind: "settings",
+                    content: (
+                      <ModuleSettingsPlaceholder
+                        moduleLabel="Kanban"
+                        plannedItems={["Spalten bearbeiten", "Standard-Gruppierung", "Sichtbarkeit der Spalten"]}
+                      />
+                    ),
+                  })
+                }
+                title="Moduleinstellungen"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+              {viewModeToggle}
+            </>
+          }
+        />
+      </ModuleToolbar>
 
       {tasksLoading ? (
         // Loading: a board-shaped skeleton (columns with placeholder cards).

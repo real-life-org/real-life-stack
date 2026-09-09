@@ -108,6 +108,20 @@ Nicht jedes Modul darf einrücken. Für Feed, Kalender oder Kanban ist die Fläc
 
 Der Übergang gehört dem Panel: Die Fläche weicht einem auf- oder zugehenden Panel animiert aus. Wechselt dagegen das Modul und damit die Regel, MUSS die neue Breite sofort gelten — animiert sähe man ein zu breit gestartetes Modul zusammenschnurren.
 
+### Die Modulfläche ist eine Spalte
+
+Ein fester **Kopf**, darunter der **Scrollbereich**. Was scrollt, ist der Inhalt — nicht die Fläche.
+
+**Zwei Beobachtungen, eine Ursache.** Vorher reichte die Fläche bis zum Fensterrand und enthielt alles; nur ihr Inhalt rückte per Padding ein. Daraus folgte beides: Die Scrollleiste klemmte im schmalen Spalt rechts *neben* dem Panel, und die Modul-Steuerleiste scrollte mit weg — wer weit unten in einer langen Liste filtern will, musste erst zurück nach oben.
+
+Regeln:
+
+1. Die Fläche weicht dem Panel per **Margin** aus, nicht per Padding. Nur so endet der Scrollbereich dort, wo der Platz endet, und die Leiste sitzt links vom Panel.
+2. Die **Steuerleiste eines Moduls** (Filter, Suche, Ansichtswechsel) gehört in den Kopf, nicht in den Scrollbereich. Module reichen sie über `ModuleToolbar` hinein; die Fläche besitzt den Kopf. Es `sticky` im Modul zu lösen wäre billiger — dann löst es aber jedes Modul selbst, und die Lösungen driften auseinander.
+3. Ohne Fläche darüber (Story, Test, eingebettete Ansicht) bleibt die Leiste an Ort und Stelle, statt spurlos zu verschwinden.
+4. Ein Modul ohne Steuerleiste bekommt **keine leere Zeile**: Der Kopf verschwindet, wenn nichts darin landet.
+5. Für `panelFit: "overlay"` gilt das nicht — dort schwebt die Steuerung bewusst über der Fläche (siehe Content-Bereich).
+
 ### Verworfene Alternativen
 
 Festgehalten, damit sie nicht neu aufgemacht werden:

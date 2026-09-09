@@ -20,6 +20,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "../primitives/dropdown-menu"
+import { ModuleToolbar } from "../layout/module-toolbar"
 import { cn, getItemColor, getReadableTextColor } from "../../lib/utils"
 import { isAllDayDate, parseEventDate } from "../../lib/date-utils"
 import {
@@ -652,85 +653,87 @@ export function CalendarView({
     <CalendarGroupColorContext.Provider value={resolveGroupColor}>
     <CalendarActiveItemContext.Provider value={activeItemId}>
     <div className={cn("w-full space-y-3", className)}>
-      <FilterBar
-        value={filterBarValue}
-        onChange={setFilterBarValue}
-        availableTags={availableTags}
-        availableTypes={availableTypes}
-        leadingActions={
-          <div className="relative min-w-0 flex-1 sm:flex-none">
-            <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Suche…"
-              aria-label="Kalender durchsuchen"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="h-8 w-full pl-7 text-xs sm:w-40"
-            />
-          </div>
-        }
-        trailingActions={
-          <Button variant="outline" size="sm" className="shrink-0" onClick={goToday}>
-            Heute
-          </Button>
-        }
-        drawerExtra={
-          <>
-            <FilterSection label="Ort">
-              <FilterMultiSelect
-                options={[
-                  { id: "with", label: "Mit Ort" },
-                  { id: "without", label: "Ohne Ort" },
-                ]}
-                value={locationFilter === "all" ? [] : [locationFilter]}
-                onChange={(next) => {
-                  if (next.length === 0) setLocationFilter("all")
-                  else setLocationFilter(next[next.length - 1] as LocationFilter)
-                }}
+      <ModuleToolbar>
+        <FilterBar
+          value={filterBarValue}
+          onChange={setFilterBarValue}
+          availableTags={availableTags}
+          availableTypes={availableTypes}
+          leadingActions={
+            <div className="relative min-w-0 flex-1 sm:flex-none">
+              <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Suche…"
+                aria-label="Kalender durchsuchen"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="h-8 w-full pl-7 text-xs sm:w-40"
               />
-            </FilterSection>
-            {currentUserId && (
-              <FilterSection label="Zuweisung">
-                <FilterToggle
-                  label="Nur meine Events"
-                  value={myEventsOnly}
-                  onChange={setMyEventsOnly}
+            </div>
+          }
+          trailingActions={
+            <Button variant="outline" size="sm" className="shrink-0" onClick={goToday}>
+              Heute
+            </Button>
+          }
+          drawerExtra={
+            <>
+              <FilterSection label="Ort">
+                <FilterMultiSelect
+                  options={[
+                    { id: "with", label: "Mit Ort" },
+                    { id: "without", label: "Ohne Ort" },
+                  ]}
+                  value={locationFilter === "all" ? [] : [locationFilter]}
+                  onChange={(next) => {
+                    if (next.length === 0) setLocationFilter("all")
+                    else setLocationFilter(next[next.length - 1] as LocationFilter)
+                  }}
                 />
               </FilterSection>
-            )}
-          </>
-        }
-        chipsExtra={
-          <>
-            {locationFilter !== "all" && (
-              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
-                {locationFilter === "with" ? "Mit Ort" : "Ohne Ort"}
-                <button
-                  type="button"
-                  onClick={() => setLocationFilter("all")}
-                  className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                  aria-label="Ortsfilter entfernen"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            {myEventsOnly && currentUserId && (
-              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
-                Nur meine
-                <button
-                  type="button"
-                  onClick={() => setMyEventsOnly(false)}
-                  className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                  aria-label="Filter entfernen"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-          </>
-        }
-      />
+              {currentUserId && (
+                <FilterSection label="Zuweisung">
+                  <FilterToggle
+                    label="Nur meine Events"
+                    value={myEventsOnly}
+                    onChange={setMyEventsOnly}
+                  />
+                </FilterSection>
+              )}
+            </>
+          }
+          chipsExtra={
+            <>
+              {locationFilter !== "all" && (
+                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
+                  {locationFilter === "with" ? "Mit Ort" : "Ohne Ort"}
+                  <button
+                    type="button"
+                    onClick={() => setLocationFilter("all")}
+                    className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                    aria-label="Ortsfilter entfernen"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {myEventsOnly && currentUserId && (
+                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
+                  Nur meine
+                  <button
+                    type="button"
+                    onClick={() => setMyEventsOnly(false)}
+                    className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                    aria-label="Filter entfernen"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+            </>
+          }
+        />
+      </ModuleToolbar>
 
       {/* Das Raster ist eine Flaeche, kein Loch in der Modulflaeche: mit
           getoentem Seitenhintergrund muessen die Tage weiss stehen, sonst
