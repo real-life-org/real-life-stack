@@ -7,7 +7,8 @@ import { emptyFilterBarValue, FilterBar, type FilterBarValue, type FilterTypeOpt
 import { CreateFab } from "../create-fab"
 import { PanelSafeArea } from "../layout/panel-safe-area"
 import { Button, Input } from "../primitives"
-import { focusOffsetFor, readPanelInsets, type MapFocusInsets } from "./focus-offset"
+import { focusNeedsRecentering, focusOffsetFor, type MapFocusInsets } from "./focus-offset"
+import { usePanelInsets, type PanelInsets } from "../layout/panel-insets"
 import { MapLens } from "../lens/map-lens"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { getSpacePrimaryColor } from "../../lib/utils"
@@ -192,19 +193,17 @@ export function filterMapViewItems(items: readonly Item[], filter: FilterBarValu
  * Geraeten, links/rechts ein schwebendes Panel. Beides zusammen, damit ein
  * angeklickter Marker im sichtbaren Rest landet und nicht hinter dem Panel.
  */
-export function mapViewFocusInsets(isCompact: boolean): MapFocusInsets {
+export function mapViewFocusInsets(isCompact: boolean, panelInsets: PanelInsets): MapFocusInsets {
   const bottomInset = isCompact ? window.innerHeight * MAP_SHEET_FRACTION : 0
-  const { leftInset, rightInset } = readPanelInsets()
-  return { bottomInset, leftInset, rightInset }
+  return { bottomInset, ...panelInsets }
 }
 
-export function mapViewHasFocusInset(insets: MapFocusInsets): boolean {
-  const [x, y] = focusOffsetFor(insets)
-  return x !== 0 || y !== 0
-}
-
-export function mapViewRevealOptions(fromMarkerClick: boolean, isCompact: boolean) {
-  return { animate: !fromMarkerClick, ...mapViewFocusInsets(isCompact) }
+export function mapViewRevealOptions(
+  fromMarkerClick: boolean,
+  isCompact: boolean,
+  panelInsets: PanelInsets = { leftInset: 0, rightInset: 0 },
+) {
+  return { animate: !fromMarkerClick, ...mapViewFocusInsets(isCompact, panelInsets) }
 }
 
 /** Full Map module: filter/create/bbox behaviour around the filterless MapLens core. */
@@ -230,6 +229,10 @@ export function MapView({
   const markerClick = useRef<string | null>(null)
   const settledReveal = useRef<string | null>(null)
   const approachedReveal = useRef<string | null>(null)
+  // Mit welcher Verschiebung der aktuell gezeigte Punkt zuletzt zentriert
+  // wurde. Aendert sich die Verdeckung danach, muss er nachgeholt werden.
+  const revealOffset = useRef<[number, number] | null>(null)
+  const panelInsets = usePanelInsets()
 
   useEffect(() => {
     const keyChanged = accumulatedKey.current !== inventoryKey
@@ -252,34 +255,47 @@ export function MapView({
   }, [adapter, onViewportBoundsChange, viewportMode])
   useEffect(() => { if (adapter && hasGlobe(adapter)) adapter.setProjection(projection) }, [adapter, projection])
   useEffect(() => {
-    if (!active) { settledReveal.current = null; approachedReveal.current = null; return }
-    if (!focusedItem) { settledReveal.current = null; approachedReveal.current = null; return }
+    if (!active) { settledReveal.current = null; approachedReveal.current = null; revealOffset.current = null; return }
+    if (!focusedItem) { settledReveal.current = null; approachedReveal.current = null; revealOffset.current = null; return }
     if (!adapter || viewportMode !== "bbox-module") return
     const point = latLngFromPoint(focusedItem.data.position)
     if (!point) return
-    const insets = mapViewFocusInsets(isCompact)
+    const insets = mapViewFocusInsets(isCompact, panelInsets)
+    const offset = focusOffsetFor(insets)
     const fromClick = markerClick.current === focusedItem.id
     markerClick.current = null
     if (fromClick) {
+      const nachholen = focusNeedsRecentering(null, offset)
       settledReveal.current = focusedItem.id
       approachedReveal.current = focusedItem.id
-      if (mapViewHasFocusInset(insets)) {
+      revealOffset.current = offset
+      if (nachholen) adapter.focusOn([point.lng, point.lat], { ...insets, animate: true })
+      return
+    }
+    if (settledReveal.current === focusedItem.id) {
+      // Der Punkt ist schon im Blick — aber vielleicht hat sich seither ein
+      // Panel darueber gelegt. Das Panel oeffnet in einem eigenen Effekt, also
+      // erst NACH dem Klick, der es ausgeloest hat; ohne diesen Nachlauf legt
+      // sich die Detailkarte genau auf den Marker, den sie beschreibt.
+      if (focusNeedsRecentering(revealOffset.current, offset)) {
+        revealOffset.current = offset
         adapter.focusOn([point.lng, point.lat], { ...insets, animate: true })
       }
       return
     }
-    if (settledReveal.current === focusedItem.id) return
     if (items.some((item) => item.id === focusedItem.id)) {
       settledReveal.current = focusedItem.id
+      revealOffset.current = offset
       adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, mapViewSeparationZoom(focusedItem, items)), ...insets, animate: true })
       return
     }
     if (bounds.current && inBounds(focusedItem, bounds.current)) return
     if (approachedReveal.current !== focusedItem.id && bounds.current && !itemsLoading) {
       approachedReveal.current = focusedItem.id
+      revealOffset.current = offset
       adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, MIN_REVEAL_ZOOM), ...insets, animate: true })
     }
-  }, [active, adapter, focusedItem, isCompact, items, itemsLoading, viewportMode])
+  }, [active, adapter, focusedItem, isCompact, items, itemsLoading, panelInsets, viewportMode])
   useEffect(() => {
     if (!adapter || !isPicking) return
     return adapter.observeClicks(({ position: [lng, lat] }) => {

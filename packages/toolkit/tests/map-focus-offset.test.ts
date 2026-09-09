@@ -1,6 +1,5 @@
-// @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest"
-import { focusOffsetFor, readPanelInsets } from "../src/components/map/focus-offset"
+import { describe, expect, it } from "vitest"
+import { focusNeedsRecentering, focusOffsetFor } from "../src/components/map/focus-offset"
 
 /**
  * Wohin die Kamera zielt, wenn Teile der Karte verdeckt sind.
@@ -43,23 +42,38 @@ describe("Zielpunkt bei verdeckter Karte", () => {
   })
 })
 
-describe("readPanelInsets", () => {
-  afterEach(() => {
-    document.documentElement.style.removeProperty("--adaptive-panel-margin-left")
-    document.documentElement.style.removeProperty("--adaptive-panel-margin-right")
+/**
+ * Ein Panel oeffnet erst NACH dem Klick, der es ausgeloest hat. Die Karte muss
+ * den schon gezeigten Punkt darum nachholen koennen — aber nur, wenn wirklich
+ * mehr verdeckt wird.
+ */
+describe("focusNeedsRecentering", () => {
+  it("zentriert erstmalig, sobald ueberhaupt etwas verdeckt ist", () => {
+    expect(focusNeedsRecentering(null, [-196, 0])).toBe(true)
+    expect(focusNeedsRecentering(null, [0, 0])).toBe(false)
   })
 
-  it("liest die Raender, die ein offenes Panel veroeffentlicht", () => {
-    document.documentElement.style.setProperty("--adaptive-panel-margin-right", "392px")
-    expect(readPanelInsets()).toEqual({ leftInset: 0, rightInset: 392 })
+  it("holt den Punkt nach, wenn sich ein Panel nachtraeglich darueber legt", () => {
+    expect(focusNeedsRecentering([0, 0], [-196, 0])).toBe(true)
   })
 
-  it("meldet ohne offenes Panel keinen Rand", () => {
-    expect(readPanelInsets()).toEqual({ leftInset: 0, rightInset: 0 })
+  it("schwenkt beim Schliessen des Panels nicht zurueck", () => {
+    expect(focusNeedsRecentering([-196, 0], [0, 0])).toBe(false)
   })
 
-  it("ein rechtes Panel schiebt das Ziel nach links", () => {
-    document.documentElement.style.setProperty("--adaptive-panel-margin-right", "392px")
-    expect(focusOffsetFor(readPanelInsets())).toEqual([-196, 0])
+  it("laesst eine unveraenderte Verdeckung in Ruhe", () => {
+    expect(focusNeedsRecentering([-196, 0], [-196, 0])).toBe(false)
+  })
+
+  it("reagiert auf ein breiter werdendes Panel", () => {
+    expect(focusNeedsRecentering([-196, 0], [-240, 0])).toBe(true)
+  })
+
+  it("reagiert auf einen Seitenwechsel bei gleicher Breite", () => {
+    expect(focusNeedsRecentering([-196, 0], [196, 0])).toBe(true)
+  })
+
+  it("sieht auch ein Blatt, das unten aufzieht, waehrend das Panel bleibt", () => {
+    expect(focusNeedsRecentering([-196, 0], [-196, -300])).toBe(true)
   })
 })
