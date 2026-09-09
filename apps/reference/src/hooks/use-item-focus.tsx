@@ -16,7 +16,13 @@ export interface ItemFocus {
   /** Whether the focused item is in edit mode (URL carries `?edit`). */
   isEditing: boolean
   /** Focus an item in the current module → writes `/{scope}/{module}/{id}` (read). */
-  focusItem: (id: string) => void
+  /**
+   * Ein Item in den Blick nehmen. `module` wechselt dabei die Sicht — beides
+   * in EINER Navigation, weil eine zweite den Wechsel sonst ueberschreibt:
+   * Die Callbacks lesen den Pfad aus einem Ref, und der traegt direkt nach
+   * einem Modulwechsel noch das alte Modul.
+   */
+  focusItem: (id: string, module?: string) => void
   /** Clear the focus → writes `/{scope}/{module}` (the module the user is on right now). */
   clearFocus: () => void
   /** Enter edit for the focused item → adds `?edit` (pushed, so back returns to read). */
@@ -76,14 +82,19 @@ export function ItemFocusProvider({ children }: { children: ReactNode }) {
   const searchRef = useRef(location.search)
   searchRef.current = location.search
 
-  const focusItem = useCallback((id: string) => {
+  const focusItem = useCallback((id: string, targetModule?: string) => {
     // The live preview draft (a create's synthetic id) isn't a real focusable
     // item — clicking its preview should do nothing.
     if (id === DRAFT_ITEM_ID) return
     const { scope, module } = parsePath(pathRef.current)
     if (!scope || !module) return
+    // Ein genanntes Zielmodul gewinnt. Es getrennt zu setzen — erst wechseln,
+    // dann fokussieren — ginge schief: Dieser Callback liest den Pfad aus
+    // einem Ref, und der traegt unmittelbar nach einem Modulwechsel noch das
+    // alte Modul. Der zweite Schritt naehme den Wechsel damit zurueck.
+    const ziel = targetModule ?? module
     // Focusing an item is the read view — drop any stale `?edit`, keep other query.
-    const target = buildUrl(`/${scope}/${module}/${id}`, searchRef.current, { edit: false })
+    const target = buildUrl(`/${scope}/${ziel}/${id}`, searchRef.current, { edit: false })
     if (`${pathRef.current}${searchRef.current}` !== target) navigate(target)
   }, [navigate])
 

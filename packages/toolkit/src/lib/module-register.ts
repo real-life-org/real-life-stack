@@ -80,6 +80,21 @@ export interface ModuleEntry {
    * einen entfernten Style, zusammen rund eine Sekunde pro Mount.
    */
   keepMounted?: boolean
+  /**
+   * Item-Felder, die dieses Modul DARSTELLEN kann — die Karte einen Ort, der
+   * Kalender ein Datum.
+   *
+   * Wofuer: Damit ein Datum in der Detailansicht in den Kalender fuehren kann
+   * und eine Position auf die Karte, ohne dass die Ansicht die Module kennt.
+   * Stuende die Zuordnung dort, waere sie eine zweite Liste neben diesem
+   * Register — und die driftet, sobald ein Modul dazukommt oder wegfaellt
+   * (Spec 01, Regel 1).
+   *
+   * Die Richtung ist Absicht: Nicht das Feld sucht sich ein Modul, sondern
+   * das Modul erklaert, was es zeigen kann. So bringt eine App ihr eigenes
+   * Modul samt Feld mit, ohne dass das Toolkit davon wissen muss.
+   */
+  presents?: readonly string[]
   /** Die Flaeche selbst. Kommt von der App, nicht vom Toolkit. */
   view?: ComponentType<ModuleViewProps>
 }
@@ -93,8 +108,8 @@ export interface ModuleFragment extends Partial<Omit<ModuleEntry, "id">> {
 export const CORE_MODULES: readonly ModuleEntry[] = Object.freeze([
   { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl" },
   { id: "kanban", label: "Kanban", icon: Columns3, enabledByDefault: true, maxWidth: "max-w-5xl" },
-  { id: "calendar", label: "Kalender", icon: Calendar, enabledByDefault: true, maxWidth: "max-w-5xl" },
-  { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay" },
+  { id: "calendar", label: "Kalender", icon: Calendar, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["start"] },
+  { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay", presents: ["position"] },
   // Opt-in — spec: docs/spec/modules/resonance.md
   { id: "resonance", label: "Resonanz", icon: Waves, maxWidth: "max-w-3xl" },
   { id: "collection", label: "Liste", icon: List, fill: "bleed" },
@@ -124,7 +139,7 @@ export const CORE_MODULE_LAYER: ModuleLayer = Object.freeze({
   definitions: CORE_MODULES,
 })
 
-const SCALARS = ["label", "icon", "enabledByDefault", "fill", "maxWidth", "keepMounted", "view"] as const
+const SCALARS = ["label", "icon", "enabledByDefault", "fill", "maxWidth", "keepMounted", "presents", "view"] as const
 
 /**
  * Setzt Schichten in der Reihenfolge Core → App zusammen und friert
@@ -310,4 +325,28 @@ export function resolveActiveModule(
 ): string {
   const available = resolveSpaceModules(stored)
   return candidate && available.includes(candidate) ? candidate : available[0]
+}
+
+/**
+ * Welches Modul kann dieses Item-Feld darstellen?
+ *
+ * Die Detailansicht fragt hier nach, statt selbst zu wissen, dass ein Datum in
+ * den Kalender fuehrt und eine Position auf die Karte. Sonst stuende in ihr
+ * eine zweite Modul-Liste (Spec 01, Regel 1).
+ *
+ * `verfuegbar` grenzt auf die Module ein, die der aktuelle Space fuehrt —
+ * ohne Karte im Space bleibt der Ort schlicht Text. Ein Verweis auf eine
+ * Flaeche, die es hier nicht gibt, waere schlimmer als gar keiner.
+ *
+ * Bei mehreren Kandidaten gewinnt der erste in Registerreihenfolge; die ist
+ * zugleich die Tab-Reihenfolge und damit die Rangfolge, die der Nutzer sieht.
+ */
+export function findModulePresenting(
+  field: string,
+  verfuegbar?: readonly string[],
+): ModuleEntry | undefined {
+  const erlaubt = verfuegbar ? new Set(verfuegbar) : null
+  return getModules().find(
+    (modul) => modul.presents?.includes(field) && (!erlaubt || erlaubt.has(modul.id)),
+  )
 }
