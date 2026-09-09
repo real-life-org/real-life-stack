@@ -55,7 +55,41 @@ describe("Der Modulkopf", () => {
     expect(kopf()!.hasAttribute("hidden")).toBe(true)
   })
 
-  it("nimmt die Steuerleiste des Moduls auf, statt sie im Scrollbereich zu lassen", () => {
+  it("zeigt Suche und Modul-Aktionen, aber keinen Filter mehr", () => {
+    rendere(
+      createElement(
+        ModuleFrame,
+        { moduleId: "feed" },
+        createElement(ModuleToolbar, {
+          availableTags: ["garten"],
+          trailingActions: createElement("button", { "data-heute": true }, "Heute"),
+        }),
+        "INHALT",
+      ),
+    )
+    expect(kopf()!.hasAttribute("hidden")).toBe(false)
+    expect(kopfInhalt()!.querySelector("input")).not.toBeNull()
+    expect(kopfInhalt()!.querySelector("[data-heute]")).not.toBeNull()
+    // Der Filter-KNOPF ist unten (Board 2g) — die aktiven Filter bleiben oben.
+    expect(kopfInhalt()!.querySelector("[data-filter-pill-trigger]")).toBeNull()
+    expect(kopfInhalt()!.querySelector("[data-filter-chips]")).not.toBeNull()
+  })
+
+  it("verschwindet ohne Suche und ohne Modul-Aktionen, obwohl es Filter gibt", () => {
+    rendere(
+      createElement(
+        ModuleFrame,
+        { moduleId: "feed" },
+        createElement(ModuleToolbar, { availableTags: ["garten"], search: false }),
+        "INHALT",
+      ),
+    )
+    expect(kopf()!.hasAttribute("hidden")).toBe(true)
+    // Die Pille steht trotzdem — sie haengt nicht am Kopf.
+    expect(host.querySelector("[data-module-controls] [data-filter-pill-trigger]")).not.toBeNull()
+  })
+
+  it("stellt die Filter-Pille in die schwebende Ecke, nicht in den Scrollbereich", () => {
     rendere(
       createElement(
         ModuleFrame,
@@ -64,18 +98,18 @@ describe("Der Modulkopf", () => {
         "INHALT",
       ),
     )
-    expect(kopf()!.hasAttribute("hidden")).toBe(false)
-    expect(kopfInhalt()!.querySelector("[data-filter-chips]")).not.toBeNull()
-    expect(scrollbereich()!.querySelector("[data-filter-chips]")).toBeNull()
+    expect(host.querySelector("[data-module-controls] [data-filter-pill-trigger]")).not.toBeNull()
+    expect(scrollbereich()!.querySelector("[data-filter-pill-trigger]")).toBeNull()
   })
 
   it("faellt ohne Flaeche darueber an seinen Ort zurueck", () => {
-    // Story, Test, eingebettete Ansicht (Spec 01, Regel 3): Die Leiste
-    // verschwindet nicht spurlos, wenn es keinen Kopf gibt.
+    // Story, Test, eingebettete Ansicht (Spec 01, Regel 3): Kopfzeile und
+    // Pille verschwinden nicht spurlos, wenn es keinen Kopf gibt.
     rendere(createElement(ModuleToolbar, { availableTags: ["garten"] }))
     const leiste = host.querySelector("[data-module-toolbar]")
     expect(leiste).not.toBeNull()
-    expect(leiste!.querySelector("[data-filter-chips]")).not.toBeNull()
+    expect(leiste!.querySelector("input")).not.toBeNull()
+    expect(leiste!.querySelector("[data-filter-pill-trigger]")).not.toBeNull()
   })
 
   it("gibt es fuer ueberlagerte Flaechen gar nicht", () => {

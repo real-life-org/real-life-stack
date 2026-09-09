@@ -10,6 +10,7 @@ import {
 
 import { getModule } from "../../lib/module-register"
 import { cn } from "../../lib/utils"
+import { PanelSafeArea } from "./panel-safe-area"
 
 /**
  * Die Geometrie eines Moduls: Randabstand, Zentrierung, Hoechstbreite.
@@ -52,15 +53,19 @@ function moduleHeadClass(id: string): string {
 }
 
 /**
- * Der Kopf-Slot, in den ein Modul seine Steuerleiste reicht.
+ * Die zwei Slots, in die ein Modul seine Steuerung reicht: die Zeile OBEN
+ * (Suche, Modul-Aktionen) und die schwebende Ecke UNTEN LINKS (Filter-Pille).
  *
- * Das Element wird immer gerendert, auch leer: Es ist das Portal-Ziel, und ein
- * Ziel, das erst entsteht, wenn jemand hineinportalt, gibt es nie. Sichtbar
- * ist der Kopf nur mit Beitrag (Spec 01, Regel 4).
+ * Beide Elemente werden immer gerendert, auch leer: Sie sind die Portal-Ziele,
+ * und ein Ziel, das erst entsteht, wenn jemand hineinportalt, gibt es nie.
+ * Sichtbar ist der Kopf nur mit Beitrag (Spec 01, Regel 4) — die Pille haengt
+ * nicht daran, sie steht auch ueber einer Flaeche ohne Kopf.
  */
 interface ModuleHeadValue {
   element: HTMLElement | null
-  /** Meldet eine Leiste an; die Rueckgabe meldet sie wieder ab. */
+  /** Die schwebende Ecke unten links. */
+  controlsElement: HTMLElement | null
+  /** Meldet einen Kopf-Beitrag an; die Rueckgabe meldet ihn wieder ab. */
   anmelden(): () => void
 }
 
@@ -102,16 +107,18 @@ export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
   const geometrie = moduleContainerClass(moduleId)
 
   const [kopfElement, setKopfElement] = useState<HTMLElement | null>(null)
+  const [controlsElement, setControlsElement] = useState<HTMLElement | null>(null)
   const [leisten, setLeisten] = useState(0)
   const kopf = useMemo<ModuleHeadValue>(
     () => ({
       element: kopfElement,
+      controlsElement,
       anmelden() {
         setLeisten((n) => n + 1)
         return () => setLeisten((n) => n - 1)
       },
     }),
-    [kopfElement],
+    [kopfElement, controlsElement],
   )
 
   // Ueberlagerte Flaechen haben keinen Kopf (Spec 01, Regel 5): Die Steuerung
@@ -124,7 +131,9 @@ export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
 
   return (
     <ModuleHeadContext.Provider value={kopf}>
-      <div data-module-frame className="flex h-full min-h-0 flex-col">
+      {/* `relative`: Die schwebende Ecke unten links misst sich an der
+          Modulflaeche, nicht am Fenster (Board, Abschnitt „Positionen"). */}
+      <div data-module-frame className="relative flex h-full min-h-0 flex-col">
         <div
           data-module-head
           hidden={!hatKopf}
@@ -155,7 +164,35 @@ export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
             <div className={cn(geometrie, hatKopf ? "pb-4" : "py-4")}>{children}</div>
           </div>
         )}
+
+        {/* Die schwebende Steuerung gehoert der Flaeche wie der Kopf: Sie
+            weicht dem Panel aus (PanelSafeArea) und liegt ueber dem Inhalt,
+            statt ihm eine Zeile wegzunehmen. Unten polstert sie so weit wie
+            der Erstellen-Knopf gegenueber. */}
+        <ModuleControls>
+          <div data-module-controls ref={setControlsElement} />
+        </ModuleControls>
       </div>
     </ModuleHeadContext.Provider>
+  )
+}
+
+export interface ModuleControlsProps {
+  children: ReactNode
+  className?: string
+}
+
+/**
+ * Die schwebende Ecke unten links einer Modulflaeche — Heimat der
+ * Filter-Pille (Design-Board: `bottom:16px; left:16px`).
+ *
+ * Sie liegt in einer `PanelSafeArea`, damit sie wie jedes schwebende
+ * Bedienelement dem offenen Panel ausweicht (Spec 01 → Content-Bereich,
+ * Pflicht 2). Ueberlagerte Module (Karte, Graph) setzen sie selbst, weil ihre
+ * Flaeche der Inhalt ist und sie ohnehin schon eine Schutzzone fuehren.
+ */
+export function ModuleControls({ children, className }: ModuleControlsProps) {
+  return (
+    <PanelSafeArea className={cn("z-30 flex items-end p-4", className)}>{children}</PanelSafeArea>
   )
 }
