@@ -115,6 +115,60 @@ function parsePx(value: string): number {
   return parseFloat(value)
 }
 
+/**
+ * Die obere Schutzzone in CSS-Pixeln: Statusleiste und Notch.
+ *
+ * **Zwei Quellen, eine Reihenfolge.** Auf Android schreibt Capacitor sie seit
+ * Android 15 selbst in die Wurzel (`--safe-area-inset-top`, siehe
+ * `SystemBars.injectSafeAreaCSS` im Bridge-Code) — und tut das genau deshalb,
+ * weil `env(safe-area-inset-top)` im dortigen WebView nichts liefert, obwohl
+ * die Statusleiste die Seite ueberlagert. Auf iOS und im Web ist `env()` die
+ * Quelle; die App fasst beides in `--safe-top` zusammen.
+ *
+ * Gemessen statt geraten: Ein fester Wert (24px, 48px) waere auf dem naechsten
+ * Geraet falsch.
+ */
+export function readSafeAreaTop(): number {
+  if (typeof document === "undefined") return 0
+  const stil = getComputedStyle(document.documentElement)
+  for (const name of ["--safe-area-inset-top", "--safe-top"]) {
+    const wert = Number.parseFloat(stil.getPropertyValue(name))
+    if (Number.isFinite(wert) && wert > 0) return wert
+  }
+  // `env()` loest sich in einer Variablen nicht zu einer Zahl auf; dafuer
+  // misst eine Sonde, was der Browser daraus macht. In jsdom bleibt sie 0.
+  return messeEnvOben()
+}
+
+/** Misst `env(safe-area-inset-top)` ueber ein unsichtbares Element. */
+function messeEnvOben(): number {
+  const sonde = document.createElement("div")
+  sonde.style.cssText =
+    "position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;height:env(safe-area-inset-top, 0px)"
+  document.body.appendChild(sonde)
+  const hoehe = sonde.getBoundingClientRect().height
+  sonde.remove()
+  return Number.isFinite(hoehe) ? hoehe : 0
+}
+
+/**
+ * Der kleinste Abstand des Blattes vom oberen Rand, in Prozent.
+ *
+ * Ganz nach oben heisst nicht bis an den Fensterrand: Dort liegt auf randlosen
+ * Geraeten die Statusleiste, und darunter verschwanden Griff und Schliessen —
+ * das Blatt liess sich nicht mehr verkleinern.
+ */
+export function drawerMinY(safeTopPx: number, viewportHeight: number): number {
+  if (!(viewportHeight > 0) || !(safeTopPx > 0)) return 0
+  return Math.min(100, (safeTopPx / viewportHeight) * 100)
+}
+
+/** Haelt einen gezogenen Wert zwischen Schutzzone und geschlossen. */
+export function clampDrawerY(y: number, minY: number): number {
+  if (!Number.isFinite(y)) return minY
+  return Math.min(100, Math.max(minY, y))
+}
+
 /** Convert the drawer's top-offset percentage into its visible CSS-pixel height. */
 export function drawerHeightFromY(drawerY: number, viewportHeight: number): number {
   if (!Number.isFinite(drawerY) || !Number.isFinite(viewportHeight) || viewportHeight <= 0) return 0
@@ -259,10 +313,33 @@ export function AdaptivePanel({
   const lastDrawerYRef = useRef(100 - drawerInitialHeight * 100)
   const lastSidebarWidthRef = useRef(parsePx(sidebarWidthProp))
 
+  /**
+   * Die obere Schutzzone, in Prozent der Fensterhoehe.
+   *
+   * Als Ref und nicht als State: Sie wird waehrend des Ziehens gebraucht, in
+   * jedem Bild, und aendert sich nur, wenn sich das Fenster aendert.
+   */
+  const minYRef = useRef(0)
+  const messeSchutzzone = useCallback(() => {
+    minYRef.current = drawerMinY(readSafeAreaTop(), window.innerHeight)
+  }, [])
+  useEffect(() => {
+    // Auch beim Oeffnen neu messen: Auf Android meldet Capacitor die Zone erst,
+    // wenn die Fenster-Insets das erste Mal ankommen — beim Start kann sie also
+    // noch 0 gewesen sein.
+    messeSchutzzone()
+    window.addEventListener("resize", messeSchutzzone)
+    return () => window.removeEventListener("resize", messeSchutzzone)
+  }, [messeSchutzzone, open])
+
   // Helper to update drawerY state + ref synchronously
   const updateDrawerY = useCallback((y: number) => {
-    drawerYRef.current = y
-    setDrawerYState(y)
+    // Hier und nur hier: Kein Weg zum Blatt fuehrt an der Schutzzone vorbei —
+    // weder Ziehen noch Schnappen noch das Wiederherstellen einer gemerkten
+    // Hoehe. Sonst haengt es wieder hinter der Statusleiste.
+    const geklemmt = clampDrawerY(y, minYRef.current)
+    drawerYRef.current = geklemmt
+    setDrawerYState(geklemmt)
   }, [])
 
   const reportDrawerHeight = useCallback(() => {
@@ -470,7 +547,9 @@ export function AdaptivePanel({
       const deltaPercent = (deltaPixels / viewportH) * 100
       let newY = dragRef.current.startDrawerY + deltaPercent
 
-      if (newY < 0) newY = newY * 0.3
+      // Ueber die Schutzzone hinaus gibt es nur noch Gummiband — und
+      // `updateDrawerY` klemmt es danach ganz weg.
+      if (newY < minYRef.current) newY = minYRef.current + (newY - minYRef.current) * 0.3
       if (newY > 100) {
         const overflow = newY - 100
         newY = 100 + overflow * 0.3
@@ -512,8 +591,10 @@ export function AdaptivePanel({
           lastDrawerYRef.current = 100 - snapLower * 100
           break
         case "maximize":
-          updateDrawerY(0)
-          lastDrawerYRef.current = 0
+          // Ganz nach oben heisst: bis an die Schutzzone, nicht bis an den
+          // Fensterrand.
+          updateDrawerY(minYRef.current)
+          lastDrawerYRef.current = minYRef.current
           break
         case "stay":
           lastDrawerYRef.current = currentY
