@@ -133,6 +133,25 @@ oder dorthin öffnen, ohne deren Semantik zu besitzen.
 
 Die konkrete Navigation ist App- oder Shell-Verantwortung.
 
+## Flächen: die Spalte ist ein Ort, keine Karte
+
+Eine Spalte ist kein Gegenstand, sondern der **Platz**, an dem Karten liegen. Als Card mit weißer Fläche und Rahmen sah sie aus wie eine große Karte, in der kleine stecken — dieselbe Verdopplung, die die Detailansicht vor [#307](https://github.com/real-life-org/real-life-stack/pull/307) hatte.
+
+Darum drei Ebenen, die sich unterscheiden **müssen**:
+
+| Ebene | Token | Wofür |
+|---|---|---|
+| vertieft | `--sunken` | der Ort: Kanban-Spalte, Ablagebereich |
+| Grund | `--background` | die Modulfläche |
+| erhaben | `--card` | was darauf liegt: Karten, Panel, Dialog |
+
+Regeln:
+
+1. Die Spalte trägt die **vertiefte** Fläche und **keinen Rahmen**. Ein Rahmen macht sie wieder zum Gegenstand.
+2. Erhaben ist, was darin liegt — die Karten. Ihr Rahmen grenzt sie gegen die vertiefte Fläche ab.
+3. Beim Ziehen färbt sich die **Fläche**, nicht ihr Rand: Es geht um den Ort, auf dem die Karte landet.
+4. Die **Richtung der Helligkeit** ist in beiden Themes dieselbe: tiefer heißt dunkler, also `--sunken` < `--background` < `--card`. Ein Test hält das fest, weil die Staffelung sonst bei einer Token-Änderung lautlos kippt.
+
 ## Komponenten
 
 | Komponente | Rolle | Wiederverwendbar? |

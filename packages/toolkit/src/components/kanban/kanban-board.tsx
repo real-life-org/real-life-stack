@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef, type DragEvent, type ReactNode } from "react"
 import type { Item, User, Relation } from "@real-life-stack/data-interface"
-import { Card, CardContent, CardHeader, CardTitle } from "../primitives/card"
 import { cn } from "../../lib/utils"
 import {
   focusActiveItemOnce,
@@ -466,13 +465,20 @@ export function KanbanBoard({
           const isCollapsed = collapsedColumnIds.has(column.id)
           const columnItems = itemsByColumn.get(column.id) ?? []
           return (
-            <Card
+            // Eine Spalte ist kein Gegenstand, sondern ein ORT: der Platz, an
+            // dem Karten liegen. Als Card mit Rahmen sah sie aus wie eine
+            // grosse Karte, in der kleine stecken — dieselbe Verdopplung wie im
+            // Detail-Panel vor #307. Darum eine vertiefte Flaeche ohne Rahmen;
+            // erhaben sind die Karten darin.
+            <div
               key={column.id}
               className={cn(
-                "transition-colors gap-0 pt-2",
+                "flex flex-col rounded-xl bg-sunken transition-colors gap-0 pt-2",
                 isCollapsed ? "pb-0 @3xl:pb-2" : "pb-2",
                 isHiddenDesktop && "@3xl:hidden",
-                dragOverColumn === column.id && "border-primary/50 bg-primary/5"
+                // Beim Ziehen faerbt sich der Ort, nicht sein Rand: Es geht um
+                // die Flaeche, auf der die Karte landet.
+                dragOverColumn === column.id && "bg-primary/10"
               )}
               {...(!readOnly ? {
                 onDragOver: (e: DragEvent<HTMLDivElement>) => handleColumnDragOver(e, column.id, columnItems.length),
@@ -480,8 +486,8 @@ export function KanbanBoard({
                 onDrop: (e: DragEvent<HTMLDivElement>) => handleDrop(e, column.id, columnItems.length),
               } : {})}
             >
-              <CardHeader className={cn("px-3", isCollapsed ? "pb-0 @3xl:pb-1" : "pb-1")}>
-                <CardTitle className="text-sm font-medium flex items-center justify-between">
+              <div className={cn("px-3", isCollapsed ? "pb-0 @3xl:pb-1" : "pb-1")}>
+                <div className="text-sm font-medium flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     {/* Mobile: collapse toggle */}
                     {!readOnly && <button
@@ -515,10 +521,10 @@ export function KanbanBoard({
                       <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>}
                   </div>
-                </CardTitle>
-              </CardHeader>
+                </div>
+              </div>
               {/* Mobile: hide content when collapsed. Desktop: always show (hidden columns aren't in grid). */}
-              <CardContent className={cn(
+              <div className={cn(
                 "space-y-0 min-h-[40px] @3xl:min-h-[60px] px-3 pb-1",
                 isCollapsed && "hidden @3xl:block"
               )}>
@@ -554,8 +560,8 @@ export function KanbanBoard({
                     />}
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )
         })}
       </div>
