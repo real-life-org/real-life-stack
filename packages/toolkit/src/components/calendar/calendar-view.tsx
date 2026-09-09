@@ -1372,10 +1372,10 @@ function EventPill({ event, compact = false, onClick, bar }: EventPillProps) {
       }}
       className={cn(
         "flex w-full items-center gap-1 rounded-md px-2 text-left text-xs font-medium transition-opacity hover:opacity-90",
-        // Wie ueberall: Was im Panel offen ist, hebt sich ueber denselben
-        // Schatten ab. Ein farbiger Schein unter einer ohnehin farbigen Pille
-        // wird nur zum Farbfleck.
-        isActive && "shadow-xl",
+        // Wie ueberall hebt sich das Offene ueber seinen Schatten ab — hier
+        // aber in der Groesse, die zu einer Pille passt: `--shadow-xl` wirft
+        // 20px weit und war unter einem 20px hohen Element unsichtbar.
+        isActive && "shadow-[var(--shadow-chip)]",
         // A bar fills its lane row exactly; a free-standing pill sizes itself.
         bar ? "h-full py-0" : "py-1.5",
         // A square end reads as "continues past the edge"; a rounded one as

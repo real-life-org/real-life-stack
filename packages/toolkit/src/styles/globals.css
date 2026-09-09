@@ -97,6 +97,16 @@
 
   /* Semantic shadows */
   --shadow-card: var(--shadow-lg);
+  /*
+   * Erhebung fuer KLEINE Flaechen — eine Kalender-Pille, ein Chip.
+   *
+   * Nicht `--shadow-xl`: Der wirft 20px weit und weich bei 10 % Deckkraft.
+   * Unter einer Karte traegt das; unter einem 20px hohen, kraeftig gefaerbten
+   * Element ist davon nichts mehr zu sehen (nachgemessen, vierfach
+   * vergroessert kaum erkennbar). Erhebung skaliert mit der Flaeche: eng und
+   * etwas kraeftiger, damit dieselbe Aussage auch im Kleinen ankommt.
+   */
+  --shadow-chip: 0 2px 6px oklch(0.00 0 0 / 0.28), 0 1px 2px oklch(0.00 0 0 / 0.16);
   --shadow-navbar: var(--shadow-md);
 }
 

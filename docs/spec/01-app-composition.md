@@ -175,6 +175,7 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 | `maxWidth` | Container-Breite, nur bei `fill: "container"` |
 | `keepMounted` | Fläche im Baum halten statt beim Wechsel abzubauen — für Module, deren Aufbau teuer ist (Map: WebGL-Kontext, Worker, entfernter Style) |
 | `panelFit` | ob ein offenes Panel die Fläche einrückt (`inset`, Standard) oder sich darüber legt (`overlay`) — siehe Content-Bereich |
+| `presents` | Item-Felder, die dieses Modul darstellen kann (Karte: `position`, Kalender: `start`) — siehe „Ein Feld führt zu seiner Sicht" |
 | `view` | die Fläche selbst; wird von der App beigesteuert, nicht vom Toolkit |
 
 ### Regeln
@@ -189,6 +190,27 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 6. Eine `id` in `Group.data.modules` ohne Registereintrag ist **kein Fehler**: Sie stammt aus einer anderen App-Version oder einem Modul, das diese App nicht kennt. Sie MUSS erhalten bleiben (nie stillschweigend entfernt) und DARF NICHT dargestellt werden. Zählungen, Garantien — etwa „mindestens ein Modul bleibt aktiv" — **und jede Auswahl eines aktiven Moduls** MÜSSEN die darstellbaren Einträge nehmen, nie die rohe Liste: Sonst bestimmt eine fremde Id das Routing, und der Nutzer landet auf einem Tab ohne Fläche. Bleibt nach dem Filtern nichts übrig, greift der volle Satz — ein Space ganz ohne Tab wäre schlimmer als einer mit den Vorgaben.
 7. Ein Registereintrag ohne `view` MUSS sichtbar degradieren (Hinweis statt leerer Fläche). Ein Modul, das im Tab erscheint und dann nichts zeigt, ist schlimmer als eines, das fehlt.
 8. Das Register trägt **keine Aktivierungsregel**: Welche Items ein Modul zeigt, entscheidet Feld-Präsenz (siehe [06-schema-composition.md](06-schema-composition.md)), nie ein Eintrag hier.
+
+### Ein Feld führt zu seiner Sicht
+
+Ein Datum in der Detailansicht führt in den Kalender, eine Position auf die Karte. Die Regel dahinter ist allgemein: **Ein Feld verweist auf das Modul, das es darstellen kann.**
+
+Die Zuordnung gehört ins **Register**, nicht in die Ansicht. Stünde sie dort, wäre sie eine zweite Modul-Liste neben diesem Register (Regel 1) — und sie driftet, sobald ein Modul dazukommt oder wegfällt. Die Richtung ist deshalb umgekehrt: Nicht das Feld sucht ein Modul, sondern das Modul erklärt in `presents`, was es zeigen kann. Eine App bringt damit ihr eigenes Modul samt Feld mit, ohne dass das Toolkit davon wissen muss.
+
+Zum Verweis gehören drei Auskünfte, die an verschiedenen Stellen liegen:
+
+| Frage | Wer weiß es |
+|---|---|
+| Welches Modul stellt dieses Feld dar? | das Register (`findModulePresenting`) |
+| Führt der aktuelle Space dieses Modul? | die App |
+| Wie kommt man dorthin (Route, Fokus, Panel)? | die App |
+
+Darum stellt die App die Verbindung her (`FieldNavigationProvider`), und Flächen fragen nur: „Führt dieses Feld irgendwohin?" Regeln:
+
+1. Ohne Ziel bleibt der Wert **Text**. Ein Verweis auf eine Fläche, die dieser Space nicht führt, wäre schlimmer als gar keiner.
+2. Ein Feld, dessen Voraussetzung im Item fehlt, verweist nicht: Ein Ort ohne Koordinaten lässt sich auf keiner Karte zeigen, sein Name allein genügt nicht.
+3. Steht man bereits im Zielmodul, verweist das Feld nicht — dort ist der Wert eine Auskunft, kein Weg.
+4. Der Klick gehört dem **Wert**, nicht der Fläche darunter: Ein Tippen auf das Datum führt in den Kalender, es öffnet nicht die Detailansicht.
 
 ### Offener Punkt: Voreinstellung beim Anlegen eines Space
 
