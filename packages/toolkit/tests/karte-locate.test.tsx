@@ -46,7 +46,20 @@ class ProbeAdapter implements MapAdapter {
   getView() {
     return { center: [13.4, 52.5] as [number, number], zoom: 6, bounds: { west: 13, south: 52, east: 14, north: 53 } }
   }
-  observeView() { return () => undefined }
+  /** Die Kamera meldet ihren Halt — der Test loest ihn von Hand aus. */
+  private sichtListener = new Set<() => void>()
+  observeView(callback: () => void) {
+    this.sichtListener.add(callback)
+    return () => {
+      this.sichtListener.delete(callback)
+    }
+  }
+  /** Beendet die laufende Kamerafahrt (`moveend`). */
+  flugEnde() {
+    act(() => {
+      for (const cb of [...this.sichtListener]) cb()
+    })
+  }
   observeClicks() { return () => undefined }
   observeMarkerClicks() { return () => undefined }
 }
@@ -242,6 +255,38 @@ describe("Der Standort-Knopf", () => {
     expect(stufe).toBeGreaterThan(14)
   })
 
+  it("laesst die erste Kamerafahrt ausreden", async () => {
+    // Antons Beobachtung: „Manchmal zoomt es schoen rein, manchmal bricht es
+    // abrupt ab." Ein zweiter Fix waehrend des Flugs zog die Kamera nach — und
+    // brach damit die laufende Fahrt auf halber Stufe ab.
+    const ortung = stubbeOrtung()
+    const adapter = new OrtungsAdapter()
+    await rendereKarte(adapter)
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+
+    ortung.fix(8.6, 50.1, 30)
+    expect(adapter.fitBounds).toHaveBeenCalledTimes(1)
+
+    // Waehrend der Flug laeuft: nur der Punkt wandert.
+    ortung.fix(8.7, 50.2, 30)
+    ortung.fix(8.8, 50.3, 30)
+    expect(adapter.focusOn).not.toHaveBeenCalled()
+    expect(adapter.fitBounds).toHaveBeenCalledTimes(1)
+    expect(adapter.setUserPosition).toHaveBeenLastCalledWith({ lng: 8.8, lat: 50.3, accuracy: 30 })
+
+    // Am Ziel wird genau EINMAL nachgeholt — auf den letzten Fix.
+    adapter.flugEnde()
+    expect(adapter.focusOn).toHaveBeenCalledTimes(1)
+    expect(adapter.focusOn).toHaveBeenLastCalledWith([8.8, 50.3], expect.objectContaining({ animate: true }))
+
+    // Danach geht es normal weiter.
+    adapter.flugEnde()
+    ortung.fix(8.9, 50.4, 30)
+    expect(adapter.focusOn).toHaveBeenLastCalledWith([8.9, 50.4], expect.objectContaining({ animate: true }))
+  })
+
   it("faellt ohne gemeldete Genauigkeit auf das Herankommen zurueck", async () => {
     const ortung = stubbeOrtung()
     const adapter = new OrtungsAdapter()
@@ -267,6 +312,7 @@ describe("Der Standort-Knopf", () => {
     })
 
     ortung.fix(8.6, 50.1)
+    adapter.flugEnde()
     ortung.fix(8.7, 50.2)
     // Nachziehen ohne Zoom: Ein Ring, der mit der Genauigkeit waechst und
     // schrumpft, wuerde sonst dauernd nachzoomen und flackern.
@@ -275,6 +321,7 @@ describe("Der Standort-Knopf", () => {
     expect(optionen).toEqual(expect.objectContaining({ animate: true }))
     expect(optionen).not.toHaveProperty("zoom")
 
+    adapter.flugEnde()
     // Wer selbst schwenkt, will bleiben, wo er hinschaut.
     act(() => adapter.geste?.())
     const vorher = adapter.focusOn.mock.calls.length

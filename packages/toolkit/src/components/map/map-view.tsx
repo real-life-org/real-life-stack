@@ -322,6 +322,16 @@ function MapViewInner({
   const folgt = useRef(false)
   /** Ist der erste Fix schon eingelaufen? Nur er waehlt den Ausschnitt. */
   const ersterFix = useRef(true)
+  /**
+   * Faehrt die Kamera gerade? Dann wird nicht dazwischengefunkt.
+   *
+   * Der Grund: Eine zweite Bewegung bricht die laufende ab — die Karte blieb
+   * auf halbem Weg stehen, mal ja, mal nein, je nachdem wann der naechste Fix
+   * kam. Sichtbar als „manchmal zoomt es schoen rein, manchmal bricht es ab".
+   */
+  const kameraFaehrt = useRef(false)
+  /** Der neueste Fix, der waehrend einer Fahrt kam — genau einer, der letzte. */
+  const offenerFix = useRef<{ lng: number; lat: number; accuracy: number } | null>(null)
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)
   const { isPicking, updatePick, confirmPick, cancelPick } = useLocationPick()
   const accumulated = useRef(new Map<string, Item>())
@@ -441,9 +451,77 @@ function MapViewInner({
     }
     folgt.current = false
     ersterFix.current = true
+    kameraFaehrt.current = false
+    offenerFix.current = null
     setOrtung("aus")
     if (adapter && hasUserPosition(adapter)) adapter.setUserPosition(null)
   }, [adapter])
+
+  /**
+   * Bringt die Kamera zu einem Fix — und laesst sie dabei ausreden.
+   *
+   * Jede Bewegung gilt als Fahrt; wer waehrend einer Fahrt ankommt, wird
+   * gemerkt und beim Halt nachgeholt (siehe `kameraFaehrt`). Bewusst weiter
+   * ANIMIERT statt springend: Ein Punkt, der beim Gehen im Ruck ueber die
+   * Karte setzt, liest sich als Fehler; und das Warten kostet nichts, weil
+   * ohnehin nur der neueste Fix nachgeholt wird.
+   */
+  const fahreZu = useCallback(
+    (position: { lng: number; lat: number; accuracy: number }) => {
+      if (!adapter) return
+      // Dieselbe Polsterung wie bei jedem anderen Hinfahren: Der Standort
+      // gehoert in den SICHTBAREN Rest, nicht hinter das Panel.
+      const raender = mapViewFocusInsets(isCompact, panelEdges, kameraKenntSeiten)
+      const erste = ersterFix.current
+      ersterFix.current = false
+      offenerFix.current = null
+      kameraFaehrt.current = true
+      if (erste && position.accuracy > 0) {
+        // Der erste Fix waehlt den AUSSCHNITT, nicht die Stufe: So ist der
+        // Genauigkeitskreis ganz zu sehen — er sagt, wie genau das hier gerade
+        // ist, und das ist beim ersten Blick die halbe Auskunft.
+        //
+        // Und zwar IMMER, egal wo die Karte gerade steht: Der Zoom ergibt sich
+        // aus dem Ring, nicht aus dem Ausgangszustand. Wer weit draussen
+        // stand, blieb sonst auf halbem Weg stehen (Zoom 14) und sah gar
+        // keinen Ring.
+        adapter.fitBounds(userPositionBounds(position), {
+          maxZoom: LOCATE_MAX_ZOOM,
+          animate: true,
+          ...raender,
+        })
+        return
+      }
+      adapter.focusOn([position.lng, position.lat], {
+        // Nur der erste Fix ohne Genauigkeit faehrt heran — und auch der nur,
+        // wenn die Karte weiter draussen steht. Spaetere Fixe ziehen die
+        // Kamera nur nach: Ein Ring, der mit der Genauigkeit waechst und
+        // schrumpft, wuerde sonst dauernd nachzoomen und flackern.
+        ...(erste && adapter.getView().zoom < LOCATE_ZOOM ? { zoom: LOCATE_ZOOM } : {}),
+        animate: true,
+        ...raender,
+      })
+    },
+    [adapter, isCompact, kameraKenntSeiten, panelEdges],
+  )
+
+  /**
+   * Steht die Kamera wieder? Dann den Fix nachholen, der waehrend der Fahrt kam.
+   *
+   * `observeView` meldet jeden Halt (`moveend`) — auch den nach einer Geste.
+   * Das genuegt: Nachgeholt wird nur, wenn ueberhaupt etwas offen ist und die
+   * Kamera noch folgen soll.
+   */
+  useEffect(() => {
+    if (!adapter) return
+    return adapter.observeView(() => {
+      if (!kameraFaehrt.current) return
+      kameraFaehrt.current = false
+      const offen = offenerFix.current
+      offenerFix.current = null
+      if (offen && folgt.current) fahreZu(offen)
+    })
+  }, [adapter, fahreZu])
 
   /**
    * „Wo bin ich" — ein Umschalter, keine einmalige Frage.
@@ -463,6 +541,8 @@ function MapViewInner({
     setOrtung("suchend")
     folgt.current = true
     ersterFix.current = true
+    kameraFaehrt.current = false
+    offenerFix.current = null
 
     const starte = () => {
       ortungsId.current = navigator.geolocation.watchPosition(
@@ -474,36 +554,14 @@ function MapViewInner({
           // weniger koennen als vorher.
           if (hasUserPosition(adapter)) adapter.setUserPosition(position)
           if (!folgt.current) return
-          // Dieselbe Polsterung wie bei jedem anderen Hinfahren: Der Standort
-          // gehoert in den SICHTBAREN Rest, nicht hinter das Panel.
-          const raender = mapViewFocusInsets(isCompact, panelEdges, kameraKenntSeiten)
-          const erste = ersterFix.current
-          ersterFix.current = false
-          if (erste && position.accuracy > 0) {
-            // Der erste Fix waehlt den AUSSCHNITT, nicht die Stufe: So ist der
-            // Genauigkeitskreis ganz zu sehen — er sagt, wie genau das hier
-            // gerade ist, und das ist beim ersten Blick die halbe Auskunft.
-            //
-            // Und zwar IMMER, egal wo die Karte gerade steht: Der Zoom ergibt
-            // sich aus dem Ring, nicht aus dem Ausgangszustand. Wer weit
-            // draussen stand, blieb sonst auf halbem Weg stehen (Zoom 14) und
-            // sah gar keinen Ring.
-            adapter.fitBounds(userPositionBounds(position), {
-              maxZoom: LOCATE_MAX_ZOOM,
-              animate: true,
-              ...raender,
-            })
+          // Waehrend eine Fahrt laeuft, wandert nur der Punkt: Der Fix wird
+          // gemerkt und danach EINMAL nachgeholt, damit die Kamera nicht auf
+          // einer alten Position endet.
+          if (kameraFaehrt.current) {
+            offenerFix.current = position
             return
           }
-          adapter.focusOn([position.lng, position.lat], {
-            // Nur der erste Fix ohne Genauigkeit faehrt heran — und auch der
-            // nur, wenn die Karte weiter draussen steht. Spaetere Fixe ziehen
-            // die Kamera nur nach: Ein Ring, der mit der Genauigkeit waechst
-            // und schrumpft, wuerde sonst dauernd nachzoomen und flackern.
-            ...(erste && adapter.getView().zoom < LOCATE_ZOOM ? { zoom: LOCATE_ZOOM } : {}),
-            animate: true,
-            ...raender,
-          })
+          fahreZu(position)
         },
         () => {
           // Kein Konsolen-Rauschen: Eine Ablehnung ist keine Stoerung, sondern
@@ -534,7 +592,7 @@ function MapViewInner({
       },
       () => starte(),
     )
-  }, [adapter, beendeOrtung, isCompact, kameraKenntSeiten, ortung, panelEdges])
+  }, [adapter, beendeOrtung, fahreZu, ortung])
 
   // Eine Geste beendet das Nachziehen, nicht die Ortung (siehe `folgt`).
   useEffect(() => {
