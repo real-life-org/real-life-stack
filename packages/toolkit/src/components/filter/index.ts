@@ -2,9 +2,9 @@ export { FilterBar, type FilterBarProps } from "./filter-bar"
 export { ModuleFilterBar, type ModuleFilterBarProps } from "./module-filter-bar"
 export {
   FilterProvider,
+  FilterScope,
   useSharedFilter,
   useOptionalSharedFilter,
-  useModuleFilter,
   type SharedFilterValue,
 } from "./filter-store"
 export {

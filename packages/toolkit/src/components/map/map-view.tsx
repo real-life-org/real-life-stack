@@ -3,7 +3,7 @@ import type { Item } from "@real-life-stack/data-interface"
 import { Calendar, Globe, Loader2, MapPin } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"
-import { ModuleFilterBar, useModuleFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
+import { FilterScope, ModuleFilterBar, useSharedFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
 import { CreateFab } from "../create-fab"
 import { PanelSafeArea } from "../layout/panel-safe-area"
 import { Button } from "../primitives"
@@ -223,8 +223,23 @@ export function mapViewRevealOptions(
   return { animate: !fromMarkerClick, ...mapViewFocusInsets(isCompact, panelEdges) }
 }
 
-/** Full Map module: filter/create/bbox behaviour around the filterless MapLens core. */
-export function MapView({
+/**
+ * Full Map module: filter/create/bbox behaviour around the filterless MapLens core.
+ *
+ * Der `FilterScope` an der Wurzel: Die Karte laeuft auch ohne App-Shell
+ * (Story, Test, apps/network) und braucht dort einen Besitzer fuer den Filter,
+ * den ihre schwebende Leiste UND ihre Marker teilen. Unter der App reicht er
+ * den vorhandenen Zustand durch.
+ */
+export function MapView(props: MapViewProps) {
+  return (
+    <FilterScope>
+      <MapViewInner {...props} />
+    </FilterScope>
+  )
+}
+
+function MapViewInner({
   items, itemsLoading, inventoryKey, focusedItem, createAdapter, initialView, viewportMode,
   onViewportBoundsChange, active = true, activeItemId, selectionFocusVisibleArea, onItemClick,
   allowCreate, onCreate, clustering = false, resolveGroupColor, projection: projectionProp,
@@ -237,7 +252,7 @@ export function MapView({
   // ueber der Flaeche, statt in einem Kopf zu sitzen) — den WERT teilt sie
   // sich aber mit den anderen Modulen. Ein im Feed gesetztes Tag filtert die
   // Karte ohne Zutun mit.
-  const { value: filter, searchText: search } = useModuleFilter()
+  const { value: filter, searchText: search } = useSharedFilter()
   const [uncontrolledProjection, setUncontrolledProjection] = useState<MapProjection>("mercator")
   const projection = projectionProp ?? uncontrolledProjection
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)

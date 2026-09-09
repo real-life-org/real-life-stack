@@ -5,7 +5,7 @@ import { Search } from "lucide-react"
 
 import { Input } from "../primitives/input"
 import { FilterBar } from "./filter-bar"
-import { useModuleFilter } from "./filter-store"
+import { useSharedFilter } from "./filter-store"
 import type { FilterTypeOption } from "./types"
 
 export interface ModuleFilterBarProps {
@@ -32,8 +32,9 @@ export interface ModuleFilterBarProps {
  * `useState`, je eigenem Eingabefeld und leicht abweichender Optik. Hier steht
  * die Verdrahtung einmal; Module reichen nur noch bei, was ihnen gehoert.
  *
- * Sie funktioniert mit und ohne `FilterProvider` (`useModuleFilter`), damit
- * Stories und eingebettete Ansichten nicht auf die App-Shell angewiesen sind.
+ * Sie braucht einen Besitzer ueber sich (`FilterProvider`). Flaechen, die auch
+ * ausserhalb der App laufen, setzen dafuer einen `FilterScope` an ihre Wurzel —
+ * um Leiste UND Inhalt, nie nur um die Leiste.
  */
 export function ModuleFilterBar({
   availableTags,
@@ -44,7 +45,7 @@ export function ModuleFilterBar({
   searchLabel = "Inhalte durchsuchen",
   className,
 }: ModuleFilterBarProps) {
-  const { value, setValue, searchText, setSearchText } = useModuleFilter()
+  const { value, setValue, searchText, setSearchText } = useSharedFilter()
   return (
     <FilterBar
       value={value}
