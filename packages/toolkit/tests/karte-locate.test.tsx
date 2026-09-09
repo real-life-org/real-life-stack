@@ -88,6 +88,38 @@ class WeitDraussenAdapter extends OrtungsAdapter {
   }
 }
 
+/**
+ * Wie `stubbeOrtung`, aber die Berechtigung wird erst auf Zuruf beantwortet —
+ * so laesst sich pruefen, was zwischen Klick und Antwort passieren darf.
+ */
+function stubbeOrtungMitBerechtigung() {
+  const clearWatch = vi.fn()
+  const watchPosition = vi.fn(() => 7)
+  let erlaube: (() => void) | null = null
+  const query = vi.fn(
+    () =>
+      new Promise<{ state: string }>((auf) => {
+        erlaube = () => auf({ state: "granted" })
+      }),
+  )
+  vi.stubGlobal("navigator", {
+    ...navigator,
+    geolocation: { watchPosition, clearWatch },
+    permissions: { query },
+  })
+  return {
+    watchPosition,
+    clearWatch,
+    antworte: async () => {
+      erlaube?.()
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+    },
+  }
+}
+
 /** Ein gestubbtes `watchPosition`, das der Test von Hand weiterlaufen laesst. */
 function stubbeOrtung() {
   const clearWatch = vi.fn()
@@ -357,6 +389,33 @@ describe("Der Standort-Knopf", () => {
     await act(async () => root.unmount())
     expect(ortung.clearWatch).toHaveBeenCalledWith(7)
     // Der zweite Abbau im afterEach darf nicht scheitern.
+    root = createRoot(host)
+  })
+
+  it("startet nicht mehr, wenn die Berechtigung erst nach dem Stop eintrifft", async () => {
+    // Sonst lief `watchPosition` nachtraeglich an — die Ortung war aus, die
+    // Beobachtung lief (#326).
+    const ortung = stubbeOrtungMitBerechtigung()
+    await rendereKarte(new OrtungsAdapter())
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    await ortung.antworte()
+    expect(ortung.watchPosition).not.toHaveBeenCalled()
+  })
+
+  it("startet nicht mehr, wenn die Karte vor der Antwort verschwindet", async () => {
+    const ortung = stubbeOrtungMitBerechtigung()
+    await rendereKarte(new OrtungsAdapter())
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    await act(async () => root.unmount())
+    await ortung.antworte()
+    expect(ortung.watchPosition).not.toHaveBeenCalled()
     root = createRoot(host)
   })
 

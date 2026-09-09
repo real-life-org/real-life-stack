@@ -332,6 +332,16 @@ function MapViewInner({
   const kameraFaehrt = useRef(false)
   /** Der neueste Fix, der waehrend einer Fahrt kam — genau einer, der letzte. */
   const offenerFix = useRef<{ lng: number; lat: number; accuracy: number } | null>(null)
+  /**
+   * Welcher Ortungs-Lauf gilt gerade?
+   *
+   * Stop und Abbau zaehlen hoch; jede spaet eintreffende Antwort prueft ihre
+   * Nummer und verfaellt, wenn sie nicht mehr stimmt. Ohne das startete eine
+   * ausstehende Berechtigungs-Antwort die Beobachtung noch, nachdem der Nutzer
+   * die Ortung ausgeschaltet oder die Flaeche verlassen hatte — die Ortung war
+   * aus und lief trotzdem.
+   */
+  const lauf = useRef(0)
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)
   const { isPicking, updatePick, confirmPick, cancelPick } = useLocationPick()
   const accumulated = useRef(new Map<string, Item>())
@@ -449,6 +459,7 @@ function MapViewInner({
       navigator.geolocation?.clearWatch(ortungsId.current)
       ortungsId.current = null
     }
+    lauf.current += 1
     folgt.current = false
     ersterFix.current = true
     kameraFaehrt.current = false
@@ -519,6 +530,8 @@ function MapViewInner({
       kameraFaehrt.current = false
       const offen = offenerFix.current
       offenerFix.current = null
+      // `folgt` ist beim Stop falsch — der Nachhol-Fix einer beendeten Ortung
+      // faehrt also nicht mehr los.
       if (offen && folgt.current) fahreZu(offen)
     })
   }, [adapter, fahreZu])
@@ -543,10 +556,15 @@ function MapViewInner({
     ersterFix.current = true
     kameraFaehrt.current = false
     offenerFix.current = null
+    lauf.current += 1
+    const meiner = lauf.current
+    const gilt = () => lauf.current === meiner
 
     const starte = () => {
+      if (!gilt()) return
       ortungsId.current = navigator.geolocation.watchPosition(
         ({ coords }) => {
+          if (!gilt()) return
           setOrtung("aktiv")
           const position = { lng: coords.longitude, lat: coords.latitude, accuracy: coords.accuracy }
           // Punkt und Genauigkeitskreis, wo der Adapter es kann; sonst bleibt
@@ -564,6 +582,7 @@ function MapViewInner({
           fahreZu(position)
         },
         () => {
+          if (!gilt()) return
           // Kein Konsolen-Rauschen: Eine Ablehnung ist keine Stoerung, sondern
           // eine Antwort — sie gehoert dorthin, wo gefragt wurde.
           beendeOrtung()
@@ -574,14 +593,22 @@ function MapViewInner({
     }
 
     // Vorher fragen, wo der Browser es anbietet: Eine abgelehnte Berechtigung
-    // beantwortet sich sonst nur ueber den Fehlerpfad — mit Wartezeit.
-    const berechtigung = navigator.permissions?.query?.({ name: "geolocation" as PermissionName })
+    // beantwortet sich sonst nur ueber den Fehlerpfad — mit Wartezeit. Ein
+    // Browser, der die Abfrage kennt, aber diesen Namen nicht, wirft dabei
+    // synchron; das ist kein Grund, gar nicht erst zu orten.
+    let berechtigung: Promise<{ state: string }> | undefined
+    try {
+      berechtigung = navigator.permissions?.query?.({ name: "geolocation" as PermissionName })
+    } catch {
+      berechtigung = undefined
+    }
     if (!berechtigung) {
       starte()
       return
     }
     void berechtigung.then(
       (stand) => {
+        if (!gilt()) return
         if (stand.state === "denied") {
           setOrtung("aus")
           folgt.current = false
@@ -605,6 +632,9 @@ function MapViewInner({
   // Die Karte wird gehalten (`keepMounted`), die Ortung laeuft beim
   // Modulwechsel also weiter — beim Abbau der Flaeche endet sie.
   useEffect(() => () => {
+    // Wie beim Stop: Was jetzt noch antwortet, gehoert zu einem Lauf, den es
+    // nicht mehr gibt.
+    lauf.current += 1
     if (ortungsId.current !== null) navigator.geolocation?.clearWatch(ortungsId.current)
   }, [])
 
