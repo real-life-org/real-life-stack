@@ -352,9 +352,18 @@ Regeln:
 
 ## Globe-Projection (`GlobeCapable`)
 
-1. Globe ist eine **optionale Capability** (`GlobeCapable.setProjection("mercator" | "globe")`). Adapter ohne sie bleiben 2D (Mercator); das Modul blendet den Toggle aus.
-2. Default ist **Mercator**. Globe ist **umschaltbar** (Setting/Toggle), nicht erzwungen — fürs Erproben und weil Globe bei niedrigem Zoom andere UX hat.
+1. Globe ist eine **optionale Capability** (`GlobeCapable.setProjection("mercator" | "globe")`). Adapter ohne sie bleiben 2D (Mercator).
+2. **Globe ist der Standard**, wo der Adapter ihn kann; es gibt **keinen Umschalter** in der Oberfläche. Er stellte eine Frage, auf die es nur eine Antwort gab — wer Mercator sah, sah ihn nicht aus Überzeugung, sondern weil der Knopf so stand. Ein Adapter ohne die Fähigkeit bleibt sichtbar bei Mercator: Ein Versprechen, das die Technik nicht hält, gibt das Modul nicht.
 3. Marker, Cluster und Click-Pfade funktionieren in beiden Projektionen identisch über den Basis-Contract. Rückseiten-Occlusion (Marker auf der abgewandten Globe-Hälfte ausblenden) ist Adapter-Detail.
+
+## Standort („Wo bin ich")
+
+Die Karte führt neben ihrer Suche einen **Standort-Knopf** (32px, `LocateFixed`, `aria-label="Meinen Standort anzeigen"`).
+
+1. Er **zentriert nur die Kamera** (`focusOn`, Zoom 14, animiert, mit derselben Polsterung wie jedes andere Hinfahren, damit der Punkt in der Mitte des *sichtbaren* Rests landet). Er setzt **keine Markierung**: Ein „blauer Punkt" wäre ein zweiter Marker-Vertrag mit eigenem Lebenszyklus, und die Frage ist mit dem Hinfahren beantwortet.
+2. Ohne `navigator.geolocation` erscheint der Knopf **nicht** — ein Knopf, der nur eine Fehlermeldung erzeugen kann, ist keiner.
+3. Während der Abfrage trägt er `aria-busy` und einen Spinner; eine Ablehnung oder ein Fehler wird **an der Karte** gemeldet (kurzer Hinweis, `role="status"`), nicht in der Konsole. Eine Ablehnung ist eine Antwort, keine Störung.
+4. Nur die Karte führt ihn. Andere Flächen ohne Ortsbezug (Graph) bekommen ihn nicht.
 
 ## Datenquelle (viewport-begrenzt)
 
