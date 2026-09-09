@@ -16,8 +16,11 @@
    * Flaeche. Ein grauer Kanal neben dem Inhalt zieht Aufmerksamkeit auf sich,
    * die dem Inhalt gehoert. `transparent` als zweiter Wert laesst die Spur
    * weg — der Daumen schwebt dann ueber dem, was ohnehin da ist.
+   *
+   * Ohne Spur traegt der Daumen allein die Sichtbarkeit: 0.30 statt 0.22,
+   * nachdem er am Fensterrand (Panel zu) kaum zu finden war.
    */
-  scrollbar-color: oklch(0.00 0 0 / 0.22) transparent;
+  scrollbar-color: oklch(0.00 0 0 / 0.30) transparent;
 
   /* Background & Foreground
    *
@@ -147,6 +150,19 @@
   scrollbar-width: thin;
 }
 
+/*
+ * `thin` ist ein Wort, keine Breite: Firefox zeichnet damit 6px, Chrome 10px
+ * (gemessen am Frame-Scrollbereich bei 1440px). Ein 6px-Daumen ohne Spur am
+ * Fensterrand ist kaum zu finden. Firefox bekommt darum `auto` — dort 12px,
+ * also etwa so breit wie Chromes `thin`. `-moz-appearance` kennt nur Firefox;
+ * die Abfrage trifft genau den Browser, dessen `thin` zu schmal ist.
+ */
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: auto;
+  }
+}
+
 /* Transparent globe canvases need a toolkit-owned backdrop around the planet. */
 .rls-globe-sky {
   background: radial-gradient(circle at 50% 44%, #ffffff 24%, #e2f0fc 40%, #93bce4 64%, #4b82bd 86%, #2f679f 100%);
@@ -166,7 +182,7 @@
 
 .dark {
   color-scheme: dark;
-  scrollbar-color: oklch(1.00 0 0 / 0.24) transparent;
+  scrollbar-color: oklch(1.00 0 0 / 0.32) transparent;
 
   /* Background & Foreground - Dark slate */
   --background: oklch(0.15 0.02 265);
