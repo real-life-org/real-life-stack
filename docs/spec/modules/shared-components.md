@@ -104,6 +104,44 @@ interface ContentComposerSubmitData {
 
 **Spec:** [map.md → Adapter-Vertrag](map.md), [01-app-composition.md → Overlay-Flächen](../01-app-composition.md), [place/v1](../schemas/vocab/place/v1/schema.json)
 
+### `ItemDetailBody`
+
+**Zweck:** Die Leseansicht eines Items im Detail-Panel. Eigene Anatomie, **keine** `ItemPreview`-Variante.
+
+**Warum getrennt:** Eine Vorschau führt mit dem Autor — in einer Liste will man zuerst wissen, von wem etwas kommt. Wer ein Item geöffnet hat, will zuerst wissen, WAS es ist. Und die wiederverwendete Card ergab im schwebenden Panel eine Card in der Card: zwei Rahmen, zwei Radien, zwei Schatten um denselben Inhalt.
+
+**Ordnung (normativ):**
+
+1. **Typ-Badge** (und Scope-Badge) — die Aktionen stehen NICHT hier, siehe unten
+2. **Titel**, 20px/600
+3. **Meta-Box** — die harten Fakten des Typs (Datum, Ort, Teilnehmer) auf eigener `--muted`-Fläche mit Rahmen. Ohne Inhalt entfällt sie
+4. **Beschreibung**, ungekürzt (Markdown)
+5. **Tags und Urheber** in einer Zeile: Tags fließen links, „Erstellt von …" bleibt rechts und bricht nicht um
+6. **Aktionszeile** über dem einzigen Divider der Ansicht: Typ-Fußzeile (Zusagen, Stimmen) und Reaktionen
+
+**Vertrag:**
+
+```ts
+interface ItemDetailBodyProps {
+  item: Item
+  author?: User
+  headerAdornment?: ReactNode  // Typ-/Scope-Badge
+  actions?: ReactNode          // ⋮-Menü — wandert in die Panel-Kopfleiste
+  meta?: ReactNode             // Inhalt der Meta-Box, TYP-getrieben
+  footer?: ReactNode           // Typ-Fußzeile + Reaktionen
+  className?: string
+}
+```
+
+**Regeln:**
+
+1. Die Ansicht bringt **keinen eigenen Rahmen** mit — kein `border`, kein `rounded`, kein `shadow`, keine Card-Fläche. Das Panel IST die Karte.
+2. Was in Meta-Box und Fußzeile steht, entscheidet der **Item-Typ**, nicht die Fläche (siehe [06-schema-composition.md](../06-schema-composition.md) → Typ-Register). Beide kommen als Slot herein, gefüllt aus denselben Registereinträgen, aus denen sich auch die Vorschau bedient.
+3. Das ⋮-Menü gehört in die **Kopfleiste des Panels**, neben Modus- und Schließen-Knopf (`PanelHeaderActions`). Es im Inhalt zu zeichnen führt zur Kollision: Das Panel legt seine Knöpfe absolut in dieselbe Ecke, und wieviel Platz zu lassen wäre, hängt vom Modus ab. Ohne Panel darüber bleiben die Aktionen in der Kopfzeile der Ansicht.
+4. Der Ladezustand (`ItemDetailSkeleton`) trägt **dieselbe** Anatomie — sonst springt das Layout, sobald das Item ankommt.
+
+**Spec:** [01-app-composition.md → Content-Bereich](../01-app-composition.md), [06-schema-composition.md → Typ-Register](../06-schema-composition.md)
+
 ### `ItemDetailPanel`
 
 **Zweck:** Container für Item-Detail-Anzeige mit Comments-Section. Library-agnostisches Inneres — Caller entscheidet, wie das Panel gerahmt wird (Modal, Drawer, Side-Panel, Route).
@@ -115,12 +153,13 @@ interface ItemDetailPanelProps {
   itemId: string
   children: ReactNode          // Top-Slot: Read-View ODER Composer im Edit-Mode
   renderCommentReactions?: (commentId: string) => ReactNode
-  commentsLabel?: string
   className?: string
 }
 ```
 
-**Slot-Konvention:** `children` ist der freie Top-Slot. Module füllen ihn mit entweder einer Read-Ansicht (typischerweise `ItemPreview` mit Adornments) oder einem inline `ContentComposer` im Edit-Mode. Der Comments-Bereich wird automatisch gerendert; das `renderCommentReactions`-Slot erlaubt es, ReactionBars an einzelne Comments zu hängen.
+**Slot-Konvention:** `children` ist der freie Top-Slot. Module füllen ihn mit entweder einer Read-Ansicht (`ItemDetailBody`) oder einem inline `ContentComposer` im Edit-Mode. Der Comments-Bereich wird automatisch gerendert; das `renderCommentReactions`-Slot erlaubt es, ReactionBars an einzelne Comments zu hängen.
+
+**Die Diskussion trägt keine Überschrift.** Blasen unter einem Item sind als Kommentare erkennbar; ohne Kommentare stünde dort eine Überschrift ohne Inhalt. Ein Leer-Platzhalter entfällt ebenfalls — die Eingabe genügt als Aufforderung. Sie sitzt als **Pille** in einer gepinnten Fußzeile außerhalb des Scroll-Bereichs.
 
 **Spec:** [01-app-composition.md → Module Components](../01-app-composition.md)
 

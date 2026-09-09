@@ -11,6 +11,7 @@ import {
 } from "react"
 import { cn } from "../../lib/utils"
 import { useIsCompact } from "../../hooks/use-mobile"
+import { PanelHeaderSlotContext } from "./panel-header-actions"
 import { X, Maximize2, PanelRight, GripHorizontal, Pin, PinOff } from "lucide-react"
 import {
   adaptivePanelScrollLock,
@@ -222,6 +223,7 @@ export function AdaptivePanel({
   const snapZone = drawerSnapProp?.zone ?? 0.05
 
   // Sidebar resize state
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null)
   const [currentSidebarWidth, setCurrentSidebarWidth] = useState(() => parsePx(sidebarWidthProp))
   const [isResizing, setIsResizing] = useState(false)
   const resizeDragRef = useRef<{ startX: number; startWidth: number } | null>(null)
@@ -758,6 +760,9 @@ export function AdaptivePanel({
               </div>
               {/* Drawer pin + mode switch */}
               <div className="absolute top-2 right-3 flex items-center gap-0.5">
+                {/* Platz fuer die Aktionen des Inhalts (⋮), links neben den
+                    eigenen Knoepfen des Panels — siehe PanelHeaderActions. */}
+                <div ref={setHeaderSlot} className="flex items-center gap-0.5" />
                 {onPinnedChange && (
                   <button
                     type="button"
@@ -808,6 +813,9 @@ export function AdaptivePanel({
           {/* Close + pin + mode switch buttons (modal and sidebar) */}
           {mode !== "drawer" && (
             <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5">
+              {/* Platz fuer die Aktionen des Inhalts (⋮), links neben den
+                  eigenen Knoepfen des Panels — siehe PanelHeaderActions. */}
+              <div ref={setHeaderSlot} className="flex items-center gap-0.5" />
               {onPinnedChange && mode === "sidebar" && (
                 <button
                   type="button"
@@ -847,7 +855,11 @@ export function AdaptivePanel({
             )}
             style={mode === "modal" ? { maxHeight: "inherit" } : undefined}
           >
-            {children}
+            {/* Der Inhalt darf Aktionen in die Kopfleiste oben reichen, statt
+                unter deren Knoepfe zu laufen. */}
+            <PanelHeaderSlotContext.Provider value={headerSlot}>
+              {children}
+            </PanelHeaderSlotContext.Provider>
           </div>
         </div>
       </div>

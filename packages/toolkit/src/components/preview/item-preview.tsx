@@ -96,9 +96,12 @@ export interface ItemPreviewProps {
    * - `card` (default): one of many. Clamps the body to four lines so a long
    *   text cannot push its neighbours off screen, and hints at comments the
    *   reader cannot see.
-   * - `panel`: the detail surface, alone on screen. Shows the body in full,
-   *   and drops the comment hint — the discussion is listed right below it,
-   *   so a count would only repeat what is already visible.
+   * - `panel`: **ueberholt.** Die Detailansicht ist keine Vorschau mehr,
+   *   sondern `ItemDetailBody` mit eigener Anatomie — die wiederverwendete
+   *   Card ergab im schwebenden Panel eine Card in der Card, und die
+   *   Reihenfolge (Autor zuerst) gehoert einer Liste, nicht einer geoeffneten
+   *   Ansicht. Bleibt erhalten, damit bestehende Einbindungen weiterlaufen;
+   *   fuer neue Detailflaechen `ItemDetailBody` nehmen.
    */
   surface?: ItemPreviewSurface
   /** Highlights the selected item using the shared panel-glow treatment. */

@@ -166,7 +166,7 @@ export const FeedDetail: Story = {
 /** Beliebiger Top-Slot — das Panel besitzt nur das Kommentar-Wiring. */
 export const CustomTopSlot: Story = {
   render: () => (
-    <ItemDetailPanel itemId={POST.id} commentsLabel="Diskussion">
+    <ItemDetailPanel itemId={POST.id}>
       <div className="p-6 space-y-2">
         <h2 className="text-lg font-semibold">Eigener Inhalt</h2>
         <p className="text-sm text-muted-foreground">

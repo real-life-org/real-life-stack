@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 import { ItemDetailPanel } from "./item-detail-panel"
 import { ItemDetailActions } from "./item-detail-actions"
-import { ItemPreviewSkeleton } from "../preview"
+import { ItemDetailSkeleton } from "./item-detail-skeleton"
 import {
   type ContentComposerProps,
   type ContentTypeConfig,
@@ -85,9 +85,7 @@ export function ItemDetailView({
   if (!item) {
     return (
       <ItemDetailPanel itemId={itemId} renderCommentReactions={renderCommentReactions}>
-        <div className="p-4">
-          <ItemPreviewSkeleton />
-        </div>
+        <ItemDetailSkeleton />
       </ItemDetailPanel>
     )
   }
@@ -122,7 +120,7 @@ export function ItemDetailView({
   return (
     <ItemDetailPanel itemId={item.id} renderCommentReactions={renderCommentReactions}>
       {mode === "read" ? (
-        <div className="p-4">{renderRead(item, actions)}</div>
+        renderRead(item, actions)
       ) : (
         <ItemComposer
           key={item.id}
