@@ -352,9 +352,21 @@ Regeln:
 
 ## Globe-Projection (`GlobeCapable`)
 
-1. Globe ist eine **optionale Capability** (`GlobeCapable.setProjection("mercator" | "globe")`). Adapter ohne sie bleiben 2D (Mercator); das Modul blendet den Toggle aus.
-2. Default ist **Mercator**. Globe ist **umschaltbar** (Setting/Toggle), nicht erzwungen — fürs Erproben und weil Globe bei niedrigem Zoom andere UX hat.
+1. Globe ist eine **optionale Capability** (`GlobeCapable.setProjection("mercator" | "globe")`). Adapter ohne sie bleiben 2D (Mercator).
+2. **Globe ist der Standard**, wo der Adapter ihn kann; es gibt **keinen Umschalter** in der Oberfläche. Er stellte eine Frage, auf die es nur eine Antwort gab — wer Mercator sah, sah ihn nicht aus Überzeugung, sondern weil der Knopf so stand. Ein Adapter ohne die Fähigkeit bleibt sichtbar bei Mercator: Ein Versprechen, das die Technik nicht hält, gibt das Modul nicht.
 3. Marker, Cluster und Click-Pfade funktionieren in beiden Projektionen identisch über den Basis-Contract. Rückseiten-Occlusion (Marker auf der abgewandten Globe-Hälfte ausblenden) ist Adapter-Detail.
+
+## Standort („Wo bin ich")
+
+Die Karte führt neben ihrer Suche einen **Standort-Knopf** (32px, `LocateFixed`). Er ist ein **Umschalter**, keine einmalige Frage: Ein einzelner Fix veraltet, sobald man losgeht.
+
+1. Zustände: **aus** → **suchend** (`aria-busy`, Spinner) → **aktiv** (`aria-pressed`, Icon in der Primärfarbe) → aus. Der Name wechselt mit („Standort verfolgen" / „Standortverfolgung beenden"), weil ein Klick zwei verschiedene Dinge tut.
+2. Aktiv läuft eine **fortlaufende Ortung** (`watchPosition`). Der eigene Standort wird gezeigt, wo der Adapter es kann: ein Punkt plus **Genauigkeitskreis** (Radius in *Metern*, wächst beim Zoomen mit) über die optionale Fähigkeit `UserPositionCapable.setUserPosition`. Der Standort ist dabei **kein Item** — keine Id, kein Detail, kein Klick, keine Cluster-Rechnung. Ein Adapter ohne die Fähigkeit fährt trotzdem hin.
+3. **Die Kamera folgt, bis der Nutzer eingreift.** Der erste Fix wählt den **Ausschnitt**, nicht die Zoomstufe: Er umfasst den ganzen Genauigkeitskreis mit etwas Luft (`fitBounds`, gedeckelt bei Zoom 18, damit wenige Meter Genauigkeit nicht auf der Maximalstufe landen) — und zwar **unabhängig davon, wo die Karte gerade steht**: Der Zoom folgt dem Ring, nicht dem Ausgangszustand. Ein fester Zoom kann das nicht — der Ring misst mal fünf Meter und mal einen halben Kilometer. Meldet ein Fix keine Genauigkeit, fährt die Karte wie bisher auf Zoom 14 heran, sofern sie weiter draußen steht. Weitere Fixe **ziehen nur nach und halten den Zoom**: Ein Ring, der mit der Genauigkeit wächst und schrumpft, ließe die Karte sonst dauernd nachzoomen. Eine laufende Kamerafahrt wird dabei **nie unterbrochen** — ein Fix, der währenddessen eintrifft, bewegt nur den Punkt und wird beim Halt der Kamera einmal nachgeholt (der neueste). Sonst bricht die zweite Bewegung die erste auf halber Stufe ab, und das Hineinzoomen endet je nach Zeitpunkt mal vollständig und mal mittendrin. Schwenkt oder zoomt der Nutzer selbst, endet das Nachziehen; die Ortung läuft weiter und der Punkt wandert. Ihn dorthin zurückzuziehen wäre ein Kampf gegen seine eigene Geste. Die Geste kommt aus der optionalen Fähigkeit `UserGestureCapable` — `observeView` taugt nicht dafür, es feuert auch nach jeder eigenen Bewegung.
+4. Ohne `navigator.geolocation` erscheint der Knopf **nicht** — ein Knopf, der nur eine Fehlermeldung erzeugen kann, ist keiner. Wo `navigator.permissions` verfügbar ist, wird eine abgelehnte Berechtigung vorab erkannt, statt sie zu erwarten.
+5. Ablehnung oder Fehler: Die Ortung geht **aus**, und der Grund wird **an der Karte** gemeldet (kurzer Hinweis, `role="status"`), nicht in der Konsole. Eine Ablehnung ist eine Antwort, keine Störung.
+6. **Lebensdauer**: Beim Abbau der Karte endet die Ortung (`clearWatch`). Die Kartenfläche wird gehalten (`keepMounted`), ein Modulwechsel beendet sie also bewusst nicht — wer zurückkommt, findet seinen Standort noch.
+7. Nur die Karte führt ihn. Andere Flächen ohne Ortsbezug (Graph) bekommen ihn nicht.
 
 ## Datenquelle (viewport-begrenzt)
 

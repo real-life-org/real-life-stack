@@ -23,6 +23,9 @@ export type {
   MapAdapter,
   Unsubscribe,
   GlobeCapable,
+  UserPosition,
+  UserPositionCapable,
+  UserGestureCapable,
   MapProjection,
   ClusterCapable,
   MapCluster,
@@ -30,7 +33,7 @@ export type {
 
 // Capability type-guards are runtime values (not types), so they ship as a
 // regular export.
-export { hasGlobe, hasCluster } from "./adapter"
+export { hasGlobe, hasCluster, hasUserPosition, hasUserGesture } from "./adapter"
 export { LocationPickProvider, useLocationPick, type LatLng, type PickHandlers, type LocationPickValue } from "./location-pick"
 export { MapView, type MapViewProps, type MapViewportMode } from "./map-view"
 

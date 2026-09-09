@@ -316,10 +316,27 @@ describe("Keine Kamerabewegung ohne Polsterung", () => {
     expect(ohne, `Diese Bewegungen werfen die Polsterung ab:\n${ohne.join("\n")}`).toEqual([])
   })
 
+  it("hört für Gesten nur auf Ereignisse, die es ohne Nutzer nicht gibt", () => {
+    // Sonst gälte die eigene Kamerafahrt als Geste: Das Folgen schaltete sich
+    // mitten im Flug ab, und niemand vollendete ihn (Anton: „bricht abrupt
+    // ab"). Leaflet: `dragstart` und `wheel` kommen nur von Hand — `zoomstart`
+    // feuert auch bei `setView`/`fitBounds` und darf darum nicht dabei sein.
+    const leaflet = readFileSync(
+      join(__dirname, "../src/components/map/adapters/leaflet.ts"),
+      "utf8",
+    )
+    expect(leaflet).toContain('map.on("dragstart", geste)')
+    // Das Rad kommt am Container an, nicht an der Karte: Leaflets
+    // ScrollWheelZoom haengt dort, `map.on("wheel", …)` bekam nie eines.
+    expect(leaflet).toContain('container.addEventListener("wheel", geste')
+    expect(leaflet).not.toContain('map.on("zoomstart", geste)')
+  })
+
   it("kennt beim Einpassen von Grenzen beide Fälle bewusst", () => {
-    // Mit Polsterung: mitgeben. Ohne: unverändert lassen, ein leeres
+    // Mit Polsterung (der Kamera oder aus den Optionen des Aufrufers):
+    // mitgeben. Ohne irgendeine Angabe: unverändert lassen, ein leeres
     // Optionsobjekt wäre Rauschen.
-    expect(quelle).toContain("map.fitBounds(box, { padding: this.viewportPadding })")
+    expect(quelle).toContain("hatPolsterung ? { padding: polsterung }")
     expect(quelle).toContain("else map.fitBounds(box)")
   })
 })

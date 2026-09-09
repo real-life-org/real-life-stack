@@ -52,6 +52,10 @@ class FakeMap {
   emit(type: string) {
     for (const cb of [...(this.listeners.get(type) ?? [])]) cb({})
   }
+  /** Wie `emit`, aber mit Nutzlast — etwa dem `originalEvent` einer Geste. */
+  emitWith(type: string, event: unknown) {
+    for (const cb of [...(this.listeners.get(type) ?? [])]) cb(event)
+  }
 
   /** When false, `mount()` awaits a "load" event — the initial-load window. */
   initiallyLoaded = true
@@ -366,5 +370,88 @@ describe("MapLibre light/dark style swap", () => {
     pinned.setColorScheme("dark")
     expect(lastMap!.style).toBe("https://example.test/custom-style")
     await pinned.unmount()
+  })
+})
+
+/**
+ * Der eigene Standort ist kein Item: eigene Quelle, zwei Ebenen — der
+ * Genauigkeitskreis (Radius in Metern, waechst beim Zoomen mit) und der Punkt
+ * darin. Beim Beenden der Ortung verschwindet beides wieder.
+ */
+describe("MapLibre: der eigene Standort", () => {
+  it("legt Quelle und Ebenen an und raeumt sie wieder weg", async () => {
+    const adapter = new MapLibreMapAdapter()
+    await adapter.mount(document.createElement("div"), { center: [0, 0], zoom: 5 })
+    const map = lastMap!
+
+    adapter.setUserPosition({ lng: 8.6, lat: 50.1, accuracy: 25 })
+    expect(map.sources.has("rls-user-position")).toBe(true)
+    expect(map.layers.has("rls-user-accuracy")).toBe(true)
+    expect(map.layers.has("rls-user-dot")).toBe(true)
+
+    // Ein zweiter Fix aktualisiert die Daten, statt neu aufzubauen.
+    const quellenVorher = map.addSourceCalls
+    adapter.setUserPosition({ lng: 8.7, lat: 50.2, accuracy: 30 })
+    expect(map.addSourceCalls).toBe(quellenVorher)
+
+    adapter.setUserPosition(null)
+    expect(map.sources.has("rls-user-position")).toBe(false)
+    expect(map.layers.has("rls-user-dot")).toBe(false)
+    await adapter.unmount()
+  })
+
+  it("meldet nur Gesten des Nutzers, nicht die eigenen Bewegungen", async () => {
+    const adapter = new MapLibreMapAdapter()
+    await adapter.mount(document.createElement("div"), { center: [0, 0], zoom: 5 })
+    const gesehen = vi.fn()
+    const stop = adapter.observeUserGesture(gesehen)
+
+    // Ohne `originalEvent`: das war die Karte selbst (`focusOn` der Ortung).
+    lastMap!.emit("zoomstart")
+    expect(gesehen).not.toHaveBeenCalled()
+
+    lastMap!.emitWith("dragstart", { originalEvent: {} })
+    expect(gesehen).toHaveBeenCalledTimes(1)
+
+    stop()
+    lastMap!.emitWith("dragstart", { originalEvent: {} })
+    expect(gesehen).toHaveBeenCalledTimes(1)
+    await adapter.unmount()
+  })
+})
+
+/**
+ * Der Adapter haelt „was ich gerade zeige" als Zustand — sonst ueberlebt der
+ * eigene Standort weder einen Stilwechsel (der Style raeumt Quellen und Ebenen
+ * ab) noch einen Remount (die alten Referenzen zeigten auf eine tote Karte).
+ * Ein Grund, zwei Symptome.
+ */
+describe("MapLibre: der Standort ueberlebt Stilwechsel und Remount", () => {
+  it("zeichnet ihn nach dem Themewechsel erneut, ohne neuen Fix", async () => {
+    const adapter = new MapLibreMapAdapter()
+    await adapter.mount(document.createElement("div"), { center: [0, 0], zoom: 5 })
+    adapter.setUserPosition({ lng: 8.6, lat: 50.1, accuracy: 25 })
+
+    adapter.setColorScheme("dark")
+    lastMap!.completeStyleLoad()
+    await settle()
+
+    expect(lastMap!.sources.has("rls-user-position")).toBe(true)
+    expect(lastMap!.layers.has("rls-user-dot")).toBe(true)
+    await adapter.unmount()
+  })
+
+  it("legt ihn nach einem Remount auf der neuen Karte an", async () => {
+    const adapter = new MapLibreMapAdapter()
+    await adapter.mount(document.createElement("div"), { center: [0, 0], zoom: 5 })
+    adapter.setUserPosition({ lng: 8.6, lat: 50.1, accuracy: 25 })
+    await adapter.unmount()
+
+    await adapter.mount(document.createElement("div"), { center: [0, 0], zoom: 5 })
+    const neue = lastMap!
+    expect(neue.sources.has("rls-user-position")).toBe(false)
+    adapter.setUserPosition({ lng: 8.7, lat: 50.2, accuracy: 30 })
+    expect(neue.sources.has("rls-user-position")).toBe(true)
+    await adapter.unmount()
   })
 })

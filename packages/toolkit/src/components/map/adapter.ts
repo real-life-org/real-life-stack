@@ -126,8 +126,25 @@ export interface MapAdapter {
    */
   setView(view: MapViewPatch): void
 
-  /** Fit the viewport to a GeoJSON-order bounding box. */
-  fitBounds(bounds: MapBounds): void
+  /**
+   * Fit the viewport to a GeoJSON-order bounding box.
+   *
+   * `maxZoom` deckelt das Heranfahren — ein winziger Ausschnitt (ein
+   * Genauigkeitskreis von 5m) landete sonst auf der Maximalstufe, auf der
+   * nichts mehr einzuordnen ist. Die Insets sind dieselben wie bei
+   * {@link MapAdapter.focusOn}: der Ausschnitt gehoert in den SICHTBAREN Rest,
+   * nicht hinter ein Panel.
+   */
+  fitBounds(
+    bounds: MapBounds,
+    options?: {
+      maxZoom?: number
+      animate?: boolean
+      bottomInset?: number
+      leftInset?: number
+      rightInset?: number
+    },
+  ): void
 
   /**
    * Pan so `center` ends up centred in the viewport area NOT covered by an
@@ -182,6 +199,50 @@ export interface GlobeCapable {
 /** True when `adapter` implements {@link GlobeCapable}. */
 export function hasGlobe(adapter: MapAdapter): adapter is MapAdapter & GlobeCapable {
   return typeof (adapter as Partial<GlobeCapable>).setProjection === "function"
+}
+
+/** Der eigene Standort: Position plus die gemeldete Genauigkeit in Metern. */
+export interface UserPosition {
+  lng: number
+  lat: number
+  /** Radius in METERN, in dem der Standort liegt (`GeolocationCoordinates.accuracy`). */
+  accuracy: number
+}
+
+/**
+ * Adapter, die den eigenen Standort zeichnen koennen: ein Punkt und der Kreis
+ * seiner Genauigkeit.
+ *
+ * Eine eigene Faehigkeit und kein Marker: Der Standort ist kein Item. Er hat
+ * keine Id, kein Detail, keinen Klick — und er liegt in Metern auf der Welt,
+ * nicht in Pixeln auf dem Bildschirm, muss also beim Zoomen mitwachsen. Wer
+ * ihn nicht kann, faehrt trotzdem hin ({@link MapAdapter.focusOn}).
+ */
+export interface UserPositionCapable {
+  /** Setzt oder entfernt (`null`) die Darstellung des eigenen Standorts. */
+  setUserPosition(position: UserPosition | null): void
+}
+
+/** True when `adapter` implements {@link UserPositionCapable}. */
+export function hasUserPosition(adapter: MapAdapter): adapter is MapAdapter & UserPositionCapable {
+  return typeof (adapter as Partial<UserPositionCapable>).setUserPosition === "function"
+}
+
+/**
+ * Adapter, die melden koennen, dass der NUTZER die Karte bewegt hat.
+ *
+ * `observeView` reicht dafuer nicht: Es feuert auch nach jeder Bewegung, die
+ * die Karte selbst ausgeloest hat — die laufende Ortung wuerde sich also nach
+ * ihrem eigenen Nachziehen abschalten. Hier gilt nur die Geste: ziehen,
+ * zoomen, scrollen.
+ */
+export interface UserGestureCapable {
+  observeUserGesture(callback: () => void): Unsubscribe
+}
+
+/** True when `adapter` implements {@link UserGestureCapable}. */
+export function hasUserGesture(adapter: MapAdapter): adapter is MapAdapter & UserGestureCapable {
+  return typeof (adapter as Partial<UserGestureCapable>).observeUserGesture === "function"
 }
 
 /**

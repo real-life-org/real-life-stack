@@ -57,6 +57,9 @@ import type {
   MapViewPatch,
   MapViewState,
   Unsubscribe,
+  UserGestureCapable,
+  UserPosition,
+  UserPositionCapable,
 } from "../adapter"
 import { markerDataUrl } from "../markers/render-marker-svg"
 import { PIN_SIZE } from "../markers/marker-shapes"
@@ -81,6 +84,11 @@ const DEFAULT_MARKER_COLOR = "#2563eb"
  *  call for the whole set, so it scales to tens of thousands of pins and gets
  *  globe back-side occlusion for free — unlike per-marker DOM elements). */
 const MARKER_SOURCE = "rls-markers"
+const USER_POSITION_SOURCE = "rls-user-position"
+const USER_POSITION_ACCURACY_LAYER = "rls-user-accuracy"
+const USER_POSITION_DOT_LAYER = "rls-user-dot"
+/** Farbe des eigenen Standorts — dieselbe wie die Primaerfarbe der Oberflaeche. */
+const USER_POSITION_COLOR = "#2563eb"
 const MARKER_SYMBOL_LAYER = "rls-marker-symbols"
 const MARKER_GLOW_LAYER = "rls-marker-glow"
 const CLUSTER_CIRCLE_LAYER = "rls-marker-clusters"
@@ -243,7 +251,7 @@ function dominantColorFromList(list: unknown): string | null {
   return best
 }
 
-export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapable {
+export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapable, UserPositionCapable, UserGestureCapable {
   // Internal MapLibre handles are held as `unknown` so the generated `.d.ts`
   // does not reference `maplibre-gl`. Consumers without it installed can
   // import the toolkit without TS errors.
@@ -252,6 +260,16 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
   // WebGL markers: a GeoJSON source + symbol layer, plus an image atlas keyed by
   // appearance. `markersVersion` ignores stale setData after async image loads.
   private markerLayersReady = false
+  private gestureListeners = new Set<() => void>()
+  /**
+   * Was der Adapter GERADE ZEIGT, nicht was zuletzt hereinkam.
+   *
+   * Der Unterschied traegt drei Faelle auf einmal: den Standort, der vor dem
+   * fertigen Style ankommt (nachholen), den Stilwechsel (`setStyle` raeumt
+   * Quellen und Ebenen ab — hinterher neu zeichnen) und den Remount (der alte
+   * Zustand gehoert nicht auf die neue Karte).
+   */
+  private userPosition: UserPosition | null = null
   private addedImages = new Set<string>()
   private markersVersion = 0
   // Clustering config (null = off). Read when the source is created; a radius/
@@ -362,6 +380,12 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
       map.on("error", onError)
     })
 
+    map.on("load", () => {
+      // Ein Standort, der vor dem fertigen Style kam, wird jetzt gezeichnet:
+      // Vorher gibt es weder Quelle noch Ebene, in die er koennte.
+      this.zeichneUserPosition()
+    })
+
     map.on("moveend", () => {
       // Eine Geste bricht die laufende Bewegung ab — auch die, die gerade die
       // Polsterung setzt. Sie stuende dann auf halbem Weg still, und kein
@@ -371,6 +395,17 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
       const view = this.getView()
       this.viewListeners.forEach((cb) => cb(view))
     })
+
+    // Nur Gesten: `dragstart` und `zoomstart` tragen bei einer Nutzer-Aktion
+    // ein `originalEvent`. Ohne diese Pruefung meldete jede eigene Bewegung
+    // (`focusOn` der laufenden Ortung) eine „Geste" und schaltete ihr eigenes
+    // Nachziehen ab.
+    const geste = (event: { originalEvent?: unknown }) => {
+      if (!event?.originalEvent) return
+      this.gestureListeners.forEach((cb) => cb())
+    }
+    map.on("dragstart", geste)
+    map.on("zoomstart", geste)
 
     map.on("click", (event: MapMouseEvent) => {
       // A click that hit a marker is a marker click, not a map click — it goes
@@ -476,6 +511,10 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
       // `setViewportPadding`: Der vergleicht mit dem Gemerkten und faende
       // „nichts geaendert".
       if (this.viewportPadding) map.setPadding(this.viewportPadding)
+      // Der Standort ist wie die Marker eine eigene Quelle und ging mit dem
+      // alten Style; er kommt aus dem gehaltenen Zustand zurueck, ohne auf
+      // einen neuen Fix zu warten.
+      this.zeichneUserPosition()
       this.reapplyMarkersSafely(this.lastMarkers)
     }
     map.on("styledata", onSettled)
@@ -506,6 +545,10 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     this.addedImages.clear()
     this.renderedMarkers.clear()
     this.lastMarkers = []
+    // Auch die Ortung endet mit der Karte: Der gehaltene Standort gehoert
+    // nicht auf die naechste, und die Gesten-Hoerer haengen an der alten.
+    this.userPosition = null
+    this.gestureListeners.clear()
     map.remove()
     this.mapInstance = null
     this.viewListeners.clear()
@@ -865,6 +908,104 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     map.redraw()
   }
 
+  // --- UserGestureCapable ---
+  observeUserGesture(callback: () => void): Unsubscribe {
+    this.gestureListeners.add(callback)
+    return () => {
+      this.gestureListeners.delete(callback)
+    }
+  }
+
+  // --- UserPositionCapable ---
+  /**
+   * Der eigene Standort als eigene Quelle mit zwei Ebenen: der
+   * Genauigkeitskreis und der Punkt darin.
+   *
+   * Der Kreis traegt seinen Radius in METERN
+   * (`circle-radius` waechst per Zoom-Interpolation mit), denn Genauigkeit ist
+   * eine Groesse auf der Welt und keine auf dem Bildschirm. Der Punkt bleibt
+   * dagegen in jeder Zoomstufe gleich gross.
+   *
+   * Eigene Quelle statt eines Markers in der Marker-Quelle: Der Standort ist
+   * kein Item — er hat keine Id, kein Detail, keinen Klick, und er soll die
+   * Cluster-Rechnung der Marker nicht mitmachen.
+   */
+  setUserPosition(position: UserPosition | null): void {
+    this.userPosition = position
+    this.zeichneUserPosition()
+  }
+
+  /**
+   * Zeichnet den gehaltenen Standort — oder raeumt ihn weg.
+   *
+   * Aufgerufen bei jeder Aenderung UND nach jedem Ereignis, das den Style neu
+   * baut. Vor dem fertigen Style tut sie nichts: Es gaebe keine Quelle, in die
+   * sie schreiben koennte, und der Zustand holt es danach nach.
+   */
+  private zeichneUserPosition(): void {
+    const map = this.mapInstance as MlMap | null
+    if (!map || !map.isStyleLoaded?.()) return
+    const position = this.userPosition
+    if (!position) {
+      for (const id of [USER_POSITION_DOT_LAYER, USER_POSITION_ACCURACY_LAYER]) {
+        if (map.getLayer(id)) map.removeLayer(id)
+      }
+      if (map.getSource(USER_POSITION_SOURCE)) map.removeSource(USER_POSITION_SOURCE)
+      return
+    }
+    const daten = {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          properties: { accuracy: position.accuracy },
+          geometry: { type: "Point" as const, coordinates: [position.lng, position.lat] },
+        },
+      ],
+    }
+    const quelle = map.getSource(USER_POSITION_SOURCE) as GeoJSONSource | undefined
+    if (quelle) {
+      quelle.setData(daten)
+      return
+    }
+    map.addSource(USER_POSITION_SOURCE, { type: "geojson", data: daten })
+    map.addLayer({
+      id: USER_POSITION_ACCURACY_LAYER,
+      type: "circle",
+      source: USER_POSITION_SOURCE,
+      paint: {
+        // Meter → Pixel: Der Radius haengt am Zoom, sonst bliebe der Kreis
+        // beim Hineinzoomen gleich gross und behauptete eine Genauigkeit, die
+        // er nicht meint.
+        "circle-radius": [
+          "interpolate",
+          ["exponential", 2],
+          ["zoom"],
+          0,
+          0,
+          22,
+          ["/", ["get", "accuracy"], 0.0373],
+        ],
+        "circle-color": USER_POSITION_COLOR,
+        "circle-opacity": 0.15,
+        "circle-stroke-color": USER_POSITION_COLOR,
+        "circle-stroke-width": 1,
+        "circle-stroke-opacity": 0.4,
+      },
+    })
+    map.addLayer({
+      id: USER_POSITION_DOT_LAYER,
+      type: "circle",
+      source: USER_POSITION_SOURCE,
+      paint: {
+        "circle-radius": 6,
+        "circle-color": USER_POSITION_COLOR,
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 2,
+      },
+    })
+  }
+
   // --- GlobeCapable ---
   setProjection(projection: MapProjection): void {
     this.currentProjection = projection
@@ -929,16 +1070,40 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     map.jumpTo(this.mitPolsterung({ center, zoom }))
   }
 
-  fitBounds(bounds: MapBounds): void {
+  fitBounds(
+    bounds: MapBounds,
+    options?: {
+      maxZoom?: number
+      animate?: boolean
+      bottomInset?: number
+      leftInset?: number
+      rightInset?: number
+    },
+  ): void {
     const map = this.mapInstance as MlMap | null
     if (!map) return
     const box: [[number, number], [number, number]] = [
       [bounds.west, bounds.south],
       [bounds.east, bounds.north],
     ]
-    // Ohne Polsterung bleibt der Aufruf, wie er war — ein leeres
+    // Die Kamera-Polsterung und die Insets des Aufrufers liegen auf derselben
+    // Achse; addiert werden sie nicht: Wer die Polsterung kennt, gibt keine
+    // Seiten-Insets mit (siehe `mapViewFocusInsets`).
+    const polsterung = {
+      top: (this.viewportPadding?.top ?? 0),
+      bottom: (this.viewportPadding?.bottom ?? 0) + (options?.bottomInset ?? 0),
+      left: (this.viewportPadding?.left ?? 0) + (options?.leftInset ?? 0),
+      right: (this.viewportPadding?.right ?? 0) + (options?.rightInset ?? 0),
+    }
+    const hatPolsterung = Object.values(polsterung).some((wert) => wert > 0)
+    const optionen = {
+      ...(hatPolsterung ? { padding: polsterung } : {}),
+      ...(options?.maxZoom != null ? { maxZoom: options.maxZoom } : {}),
+      ...(options?.animate === false ? { animate: false } : {}),
+    }
+    // Ohne irgendeine Angabe bleibt der Aufruf, wie er war — ein leeres
     // Optionsobjekt waere Rauschen.
-    if (this.viewportPadding) map.fitBounds(box, { padding: this.viewportPadding })
+    if (Object.keys(optionen).length > 0) map.fitBounds(box, optionen)
     else map.fitBounds(box)
   }
 

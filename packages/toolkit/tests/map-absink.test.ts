@@ -9,13 +9,12 @@ import {
   filterMapViewItems,
   mapViewCanCreate,
   mapViewMarkerItems,
-  mapViewProjectionToggleA11y,
   mapViewRevealOptions,
   mapViewSeparationZoom,
   observeMapViewBounds,
   reconcileMapInventory,
   reconcileMapInventoryForKey,
-  toggleMapViewProjection,
+  mapViewProjection,
 } from "../src/components/map/map-view"
 import { mountMapLensAdapter } from "../src/components/lens/map-lens"
 import { mapLensClickableItemsById, mapLensMarkers } from "../src/components/lens/map-lens"
@@ -156,12 +155,14 @@ describe("MAP-ABSINK parity matrix — MapView module with fake-adapter probes",
     expect(errored).toHaveBeenCalledTimes(1); expect(mounted).toHaveBeenCalledWith(second)
   })
 
-  it("8: globe toggling is module-owned and zooms out before enabling globe", () => {
-    const adapter = fakeAdapter({ globe: true })
-    expect(toggleMapViewProjection(adapter, "mercator")).toBe("globe")
-    expect(adapter.setView).toHaveBeenCalledWith({ zoom: 1 })
-    expect(mapViewProjectionToggleA11y("mercator")).toEqual({ "aria-label": "Globusansicht", "aria-pressed": false })
-    expect(mapViewProjectionToggleA11y("globe")).toEqual({ "aria-label": "Globusansicht", "aria-pressed": true })
+  it("8: der Globus ist der Standard, wo der Adapter ihn kann — ohne Umschalter", () => {
+    // Vorher entschied ein Knopf in der Leiste; er stellte eine Frage, auf die
+    // es nur eine Antwort gab. Adapter ohne die Faehigkeit (Leaflet) bleiben
+    // bei Mercator, statt ein Versprechen zu geben, das sie nicht halten.
+    expect(mapViewProjection(fakeAdapter({ globe: true }))).toBe("globe")
+    expect(mapViewProjection(fakeAdapter())).toBe("mercator")
+    expect(mapViewProjection(null)).toBe("mercator")
+    expect(renderMap()).not.toContain("Globusansicht")
   })
 
   it("8b: preserves the network's slate marker style while item colour precedence and group glow stay separate", () => {

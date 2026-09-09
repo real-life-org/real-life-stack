@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
-import { Calendar, Globe, Loader2, MapPin } from "lucide-react"
+import { Calendar, Loader2, MapPin } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"
 import { useSharedFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
 import { CreateFab } from "../create-fab"
+import { StandortIcon } from "./standort-icon"
 import { PanelSafeArea } from "../layout/panel-safe-area"
 import { ModuleToolbar } from "../layout/module-toolbar"
 import { ModuleSurfaceScope } from "../layout/module-surface-scope"
@@ -13,8 +14,8 @@ import { focusNeedsRecentering, focusOffsetFor, type MapFocusInsets } from "./fo
 import { usePanelEdges, type PanelEdges } from "../layout/panel-edges"
 import { MapLens } from "../lens/map-lens"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
-import { getSpacePrimaryColor } from "../../lib/utils"
-import { hasViewportPadding, hasGlobe, type MapAdapter, type MapMountOptions, type MapProjection } from "./adapter"
+import { cn, getSpacePrimaryColor } from "../../lib/utils"
+import { hasViewportPadding, hasGlobe, hasUserPosition, hasUserGesture, type MapAdapter, type MapBounds, type MapMountOptions, type MapProjection } from "./adapter"
 import { useLocationPick } from "./location-pick"
 
 const MAP_TYPES: FilterTypeOption[] = [
@@ -48,9 +49,6 @@ export interface MapViewProps {
   onCreate?: () => void
   clustering?: false | { radius?: number }
   resolveGroupColor?: (item: Item) => string | undefined
-  /** Controlled projection configuration; omitted keeps the established Mercator default. */
-  projection?: MapProjection
-  onProjectionChange?: (projection: MapProjection) => void
   /** A shell-owned composer draft is shown as a non-clickable marker when positioned. */
   draftItem?: Item | null
   isCompact?: boolean
@@ -127,15 +125,66 @@ export function observeMapViewBounds(
   return () => { if (timer) clearTimeout(timer); unsubscribe() }
 }
 
-export function toggleMapViewProjection(adapter: MapAdapter | null, projection: MapProjection): MapProjection {
-  const next = projection === "globe" ? "mercator" : "globe"
-  if (next === "globe" && adapter && adapter.getView().zoom > 2) adapter.setView({ zoom: 1 })
-  return next
+/**
+ * Die Projektion der Karte: Globus, wo der Adapter ihn kann.
+ *
+ * Frueher ein Umschalter in der Leiste. Er stellte eine Frage, auf die es nur
+ * eine Antwort gab — die Erde ist rund, und wer Mercator sah, sah ihn nicht
+ * aus Ueberzeugung, sondern weil der Knopf so stand. Adapter ohne die
+ * Faehigkeit (Leaflet) bleiben bei Mercator; ein Versprechen, das die Technik
+ * nicht halten kann, gibt die Oberflaeche nicht.
+ */
+export function mapViewProjection(adapter: MapAdapter | null): MapProjection {
+  return adapter && hasGlobe(adapter) ? "globe" : "mercator"
 }
 
-/** Projection is a state toggle, so its accessible name stays stable. */
-export function mapViewProjectionToggleA11y(projection: MapProjection) {
-  return { "aria-label": "Globusansicht", "aria-pressed": projection === "globe" }
+/** Zoomstufe, auf die die Ortung heranfaehrt, wenn die Genauigkeit unbekannt ist. */
+export const LOCATE_ZOOM = 14
+
+/**
+ * So nah hoechstens: Bei wenigen Metern Genauigkeit landete der Ausschnitt
+ * sonst auf der Maximalstufe, auf der nichts mehr einzuordnen ist. 18 statt
+ * niedriger, damit auch ein 10-Meter-Ring noch deutlich als Ring erscheint
+ * (rund 0,6 m/px in unseren Breiten, also ~17px Radius).
+ */
+export const LOCATE_MAX_ZOOM = 18
+
+/** Grad pro Meter in Nord-Sued-Richtung — ueberall gleich. */
+const METER_JE_GRAD = 111_320
+
+/**
+ * Der Ausschnitt, der den Genauigkeitskreis ganz zeigt.
+ *
+ * Anton: „Beim Orten den Zoom so setzen, dass man auch den Ring sieht." Ein
+ * fester Zoom kann das nicht — der Ring misst mal fuenf Meter und mal einen
+ * halben Kilometer. Also nicht die Stufe waehlen, sondern den Ausschnitt: der
+ * Kreis plus etwas Luft, damit er nicht am Rand klebt.
+ *
+ * Die Ost-West-Ausdehnung haengt am Breitengrad: Ein Meter ist dort weniger
+ * Laengengrad als am Aequator; ohne die Korrektur waere der Ausschnitt in
+ * Mitteleuropa rund ein Drittel zu schmal.
+ */
+export function userPositionBounds(
+  position: { lng: number; lat: number; accuracy: number },
+  luft = 1.3,
+): MapBounds {
+  const radius = Math.max(position.accuracy, 1) * luft
+  const dLat = radius / METER_JE_GRAD
+  const dLng = radius / (METER_JE_GRAD * Math.max(Math.cos((position.lat * Math.PI) / 180), 0.01))
+  return {
+    south: position.lat - dLat,
+    north: position.lat + dLat,
+    west: position.lng - dLng,
+    east: position.lng + dLng,
+  }
+}
+
+/** Aus, suchend, aktiv — mehr Zustaende hat die Ortung nicht. */
+export type LocateState = "aus" | "suchend" | "aktiv"
+
+/** Kennt dieser Browser ueberhaupt einen Standort? Sonst gibt es keinen Knopf. */
+export function hasGeolocation(): boolean {
+  return typeof navigator !== "undefined" && !!navigator.geolocation
 }
 
 function metersBetween(aLng: number, aLat: number, bLng: number, bLat: number): number {
@@ -245,8 +294,7 @@ export function MapView(props: MapViewProps) {
 function MapViewInner({
   items, itemsLoading, inventoryKey, focusedItem, createAdapter, initialView, viewportMode,
   onViewportBoundsChange, active = true, activeItemId, selectionFocusVisibleArea, onItemClick,
-  allowCreate, onCreate, clustering = false, resolveGroupColor, projection: projectionProp,
-  onProjectionChange, draftItem, isCompact = false,
+  allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false,
 }: MapViewProps) {
   const [adapter, setAdapter] = useState<MapAdapter | null>(null)
   const [mountError, setMountError] = useState(false)
@@ -256,8 +304,44 @@ function MapViewInner({
   // sich aber mit den anderen Modulen. Ein im Feed gesetztes Tag filtert die
   // Karte ohne Zutun mit.
   const { value: filter, searchText: search } = useSharedFilter()
-  const [uncontrolledProjection, setUncontrolledProjection] = useState<MapProjection>("mercator")
-  const projection = projectionProp ?? uncontrolledProjection
+  // Der Globus ist der Standard, wo der Adapter ihn kann — keine Wahl mehr.
+  const projection = mapViewProjection(adapter)
+  const [ortung, setOrtung] = useState<LocateState>("aus")
+  const [standortFehler, setStandortFehler] = useState<string | null>(null)
+  /** Laufende Beobachtung (`watchPosition`), solange die Ortung an ist. */
+  const ortungsId = useRef<number | null>(null)
+  /**
+   * Zieht die Kamera noch mit?
+   *
+   * Wie `setView: "untilPanOrZoom"` im Vorbild: Der erste Fix faehrt hin,
+   * weitere ziehen nach — bis jemand selbst schwenkt. Danach laeuft die
+   * Ortung weiter (der Punkt wandert), aber die Kamera bleibt, wo der Nutzer
+   * sie hingestellt hat. Ihn dorthin zurueckzuziehen waere ein Kampf gegen
+   * seine eigene Geste.
+   */
+  const folgt = useRef(false)
+  /** Ist der erste Fix schon eingelaufen? Nur er waehlt den Ausschnitt. */
+  const ersterFix = useRef(true)
+  /**
+   * Faehrt die Kamera gerade? Dann wird nicht dazwischengefunkt.
+   *
+   * Der Grund: Eine zweite Bewegung bricht die laufende ab — die Karte blieb
+   * auf halbem Weg stehen, mal ja, mal nein, je nachdem wann der naechste Fix
+   * kam. Sichtbar als „manchmal zoomt es schoen rein, manchmal bricht es ab".
+   */
+  const kameraFaehrt = useRef(false)
+  /** Der neueste Fix, der waehrend einer Fahrt kam — genau einer, der letzte. */
+  const offenerFix = useRef<{ lng: number; lat: number; accuracy: number } | null>(null)
+  /**
+   * Welcher Ortungs-Lauf gilt gerade?
+   *
+   * Stop und Abbau zaehlen hoch; jede spaet eintreffende Antwort prueft ihre
+   * Nummer und verfaellt, wenn sie nicht mehr stimmt. Ohne das startete eine
+   * ausstehende Berechtigungs-Antwort die Beobachtung noch, nachdem der Nutzer
+   * die Ortung ausgeschaltet oder die Flaeche verlassen hatte — die Ortung war
+   * aus und lief trotzdem.
+   */
+  const lauf = useRef(0)
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)
   const { isPicking, updatePick, confirmPick, cancelPick } = useLocationPick()
   const accumulated = useRef(new Map<string, Item>())
@@ -291,7 +375,7 @@ function MapViewInner({
       onViewportBoundsChange(nextBounds)
     })
   }, [adapter, onViewportBoundsChange, viewportMode])
-  useEffect(() => { if (adapter && hasGlobe(adapter)) adapter.setProjection(projection) }, [adapter, projection])
+  useEffect(() => { if (adapter && hasGlobe(adapter)) adapter.setProjection("globe") }, [adapter])
   // Der Karte einmal sagen, wo ihre Mitte liegt: Dann stimmt jede weitere
   // Bewegung von selbst — auch das Zoomen von Hand, bei dem der Globus sonst
   // um die Container-Mitte waechst und hinter dem Panel verschwindet.
@@ -369,11 +453,191 @@ function MapViewInner({
     if (viewportMode === "bbox-module") markerClick.current = item.id
     onItemClick?.(item)
   }, [confirmPick, isCompact, isPicking, onItemClick, updatePick, viewportMode])
-  const toggleProjection = useCallback(() => {
-    const next = toggleMapViewProjection(adapter, projection)
-    if (projectionProp === undefined) setUncontrolledProjection(next)
-    onProjectionChange?.(next)
-  }, [adapter, onProjectionChange, projection, projectionProp])
+  /** Beendet eine laufende Ortung und raeumt Punkt und Kreis weg. */
+  const beendeOrtung = useCallback(() => {
+    if (ortungsId.current !== null) {
+      navigator.geolocation?.clearWatch(ortungsId.current)
+      ortungsId.current = null
+    }
+    lauf.current += 1
+    folgt.current = false
+    ersterFix.current = true
+    kameraFaehrt.current = false
+    offenerFix.current = null
+    setOrtung("aus")
+    if (adapter && hasUserPosition(adapter)) adapter.setUserPosition(null)
+  }, [adapter])
+
+  /**
+   * Bringt die Kamera zu einem Fix — und laesst sie dabei ausreden.
+   *
+   * Jede Bewegung gilt als Fahrt; wer waehrend einer Fahrt ankommt, wird
+   * gemerkt und beim Halt nachgeholt (siehe `kameraFaehrt`). Bewusst weiter
+   * ANIMIERT statt springend: Ein Punkt, der beim Gehen im Ruck ueber die
+   * Karte setzt, liest sich als Fehler; und das Warten kostet nichts, weil
+   * ohnehin nur der neueste Fix nachgeholt wird.
+   */
+  const fahreZu = useCallback(
+    (position: { lng: number; lat: number; accuracy: number }) => {
+      if (!adapter) return
+      // Dieselbe Polsterung wie bei jedem anderen Hinfahren: Der Standort
+      // gehoert in den SICHTBAREN Rest, nicht hinter das Panel.
+      const raender = mapViewFocusInsets(isCompact, panelEdges, kameraKenntSeiten)
+      const erste = ersterFix.current
+      ersterFix.current = false
+      offenerFix.current = null
+      kameraFaehrt.current = true
+      if (erste && position.accuracy > 0) {
+        // Der erste Fix waehlt den AUSSCHNITT, nicht die Stufe: So ist der
+        // Genauigkeitskreis ganz zu sehen — er sagt, wie genau das hier gerade
+        // ist, und das ist beim ersten Blick die halbe Auskunft.
+        //
+        // Und zwar IMMER, egal wo die Karte gerade steht: Der Zoom ergibt sich
+        // aus dem Ring, nicht aus dem Ausgangszustand. Wer weit draussen
+        // stand, blieb sonst auf halbem Weg stehen (Zoom 14) und sah gar
+        // keinen Ring.
+        adapter.fitBounds(userPositionBounds(position), {
+          maxZoom: LOCATE_MAX_ZOOM,
+          animate: true,
+          ...raender,
+        })
+        return
+      }
+      adapter.focusOn([position.lng, position.lat], {
+        // Nur der erste Fix ohne Genauigkeit faehrt heran — und auch der nur,
+        // wenn die Karte weiter draussen steht. Spaetere Fixe ziehen die
+        // Kamera nur nach: Ein Ring, der mit der Genauigkeit waechst und
+        // schrumpft, wuerde sonst dauernd nachzoomen und flackern.
+        ...(erste && adapter.getView().zoom < LOCATE_ZOOM ? { zoom: LOCATE_ZOOM } : {}),
+        animate: true,
+        ...raender,
+      })
+    },
+    [adapter, isCompact, kameraKenntSeiten, panelEdges],
+  )
+
+  /**
+   * Steht die Kamera wieder? Dann den Fix nachholen, der waehrend der Fahrt kam.
+   *
+   * `observeView` meldet jeden Halt (`moveend`) — auch den nach einer Geste.
+   * Das genuegt: Nachgeholt wird nur, wenn ueberhaupt etwas offen ist und die
+   * Kamera noch folgen soll.
+   */
+  useEffect(() => {
+    if (!adapter) return
+    return adapter.observeView(() => {
+      if (!kameraFaehrt.current) return
+      kameraFaehrt.current = false
+      const offen = offenerFix.current
+      offenerFix.current = null
+      // `folgt` ist beim Stop falsch — der Nachhol-Fix einer beendeten Ortung
+      // faehrt also nicht mehr los.
+      if (offen && folgt.current) fahreZu(offen)
+    })
+  }, [adapter, fahreZu])
+
+  /**
+   * „Wo bin ich" — ein Umschalter, keine einmalige Frage.
+   *
+   * Vorbild ist der Standort-Knopf der Utopia Map (leaflet.locatecontrol):
+   * Er beantwortet die Frage nicht einmal, er haelt die Antwort aktuell,
+   * solange sie gebraucht wird. Ein einzelner Fix veraltet, sobald man
+   * losgeht.
+   */
+  const zeigeStandort = useCallback(() => {
+    if (!adapter || !hasGeolocation()) return
+    if (ortung !== "aus") {
+      beendeOrtung()
+      return
+    }
+    setStandortFehler(null)
+    setOrtung("suchend")
+    folgt.current = true
+    ersterFix.current = true
+    kameraFaehrt.current = false
+    offenerFix.current = null
+    lauf.current += 1
+    const meiner = lauf.current
+    const gilt = () => lauf.current === meiner
+
+    const starte = () => {
+      if (!gilt()) return
+      ortungsId.current = navigator.geolocation.watchPosition(
+        ({ coords }) => {
+          if (!gilt()) return
+          setOrtung("aktiv")
+          const position = { lng: coords.longitude, lat: coords.latitude, accuracy: coords.accuracy }
+          // Punkt und Genauigkeitskreis, wo der Adapter es kann; sonst bleibt
+          // es beim Hinfahren — eine Karte ohne die Faehigkeit soll nicht
+          // weniger koennen als vorher.
+          if (hasUserPosition(adapter)) adapter.setUserPosition(position)
+          if (!folgt.current) return
+          // Waehrend eine Fahrt laeuft, wandert nur der Punkt: Der Fix wird
+          // gemerkt und danach EINMAL nachgeholt, damit die Kamera nicht auf
+          // einer alten Position endet.
+          if (kameraFaehrt.current) {
+            offenerFix.current = position
+            return
+          }
+          fahreZu(position)
+        },
+        () => {
+          if (!gilt()) return
+          // Kein Konsolen-Rauschen: Eine Ablehnung ist keine Stoerung, sondern
+          // eine Antwort — sie gehoert dorthin, wo gefragt wurde.
+          beendeOrtung()
+          setStandortFehler("Standort nicht verfügbar")
+        },
+        { enableHighAccuracy: true, timeout: 10_000 },
+      )
+    }
+
+    // Vorher fragen, wo der Browser es anbietet: Eine abgelehnte Berechtigung
+    // beantwortet sich sonst nur ueber den Fehlerpfad — mit Wartezeit. Ein
+    // Browser, der die Abfrage kennt, aber diesen Namen nicht, wirft dabei
+    // synchron; das ist kein Grund, gar nicht erst zu orten.
+    let berechtigung: Promise<{ state: string }> | undefined
+    try {
+      berechtigung = navigator.permissions?.query?.({ name: "geolocation" as PermissionName })
+    } catch {
+      berechtigung = undefined
+    }
+    if (!berechtigung) {
+      starte()
+      return
+    }
+    void berechtigung.then(
+      (stand) => {
+        if (!gilt()) return
+        if (stand.state === "denied") {
+          setOrtung("aus")
+          folgt.current = false
+          setStandortFehler("Standort nicht verfügbar")
+          return
+        }
+        starte()
+      },
+      () => starte(),
+    )
+  }, [adapter, beendeOrtung, fahreZu, ortung])
+
+  // Eine Geste beendet das Nachziehen, nicht die Ortung (siehe `folgt`).
+  useEffect(() => {
+    if (!adapter || !hasUserGesture(adapter)) return
+    return adapter.observeUserGesture(() => {
+      folgt.current = false
+    })
+  }, [adapter])
+
+  // Die Karte wird gehalten (`keepMounted`), die Ortung laeuft beim
+  // Modulwechsel also weiter — beim Abbau der Flaeche endet sie.
+  useEffect(() => () => {
+    // Wie beim Stop: Was jetzt noch antwortet, gehoert zu einem Lauf, den es
+    // nicht mehr gibt.
+    lauf.current += 1
+    if (ortungsId.current !== null) navigator.geolocation?.clearWatch(ortungsId.current)
+  }, [])
+
   const markerGroupColor = useCallback((item: Item) => item.id === PICK_MARKER_ID
     ? PICK_MARKER_COLOR
     : resolveGroupColor?.(item) ?? getSpacePrimaryColor("map"), [resolveGroupColor])
@@ -391,7 +655,7 @@ function MapViewInner({
     {/* Der Beitrag der Karte zur Steuerung ihrer Flaeche — WO er steht,
         entscheidet die Flaeche (Suche und Chips schwebend oben, Pille unten).
         `clearsTopLeft`: links oben sitzen die Zoom-Knoepfe. */}
-    <ModuleToolbar searchLabel="Karte durchsuchen" clearsTopLeft availableTags={availableTags} availableTypes={MAP_TYPES} trailingActions={adapter && hasGlobe(adapter) && !isPicking ? <Button size="icon-sm" variant={projection === "globe" ? "default" : "outline"} {...mapViewProjectionToggleA11y(projection)} onClick={toggleProjection}><Globe className="h-4 w-4" /></Button> : undefined} />
+    <ModuleToolbar searchLabel="Karte durchsuchen" clearsTopLeft availableTags={availableTags} availableTypes={MAP_TYPES} trailingActions={hasGeolocation() && !isPicking ? <div className="flex flex-col items-end gap-1"><Button size="icon-sm" variant="outline" aria-label={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} title={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} aria-pressed={ortung === "aktiv"} aria-busy={ortung === "suchend"} onClick={zeigeStandort} className="bg-card!">{ortung === "suchend" ? <Loader2 className="h-4 w-4 animate-spin" /> : <StandortIcon className={cn(ortung === "aktiv" && "text-primary")} />}</Button>{standortFehler && <span role="status" className="rounded-full border bg-card/95 px-2 py-0.5 text-xs text-muted-foreground shadow-sm">{standortFehler}</span>}</div> : undefined} />
     {!isPicking && canCreate && <CreateFab onClick={onCreate!} label="Ort erstellen" />}
   </div>
 }
