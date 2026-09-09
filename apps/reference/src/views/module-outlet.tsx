@@ -45,7 +45,9 @@ export interface ModuleOutletProps {
 export function moduleContainerClass(id: string): string | undefined {
   const mod = getModule(id)
   if (mod?.fill === "bleed") return undefined
-  return `container mx-auto px-4 pt-4 ${mod?.maxWidth ?? "max-w-3xl"}`
+  // `pb-4` als Gegenstueck zum `pt-4`: Ohne Polster unten endete die Seite
+  // exakt mit der letzten Karte — am Desktop ohne untere Navigation sichtbar.
+  return `container mx-auto px-4 pt-4 pb-4 ${mod?.maxWidth ?? "max-w-3xl"}`
 }
 
 export function ModuleOutlet({
