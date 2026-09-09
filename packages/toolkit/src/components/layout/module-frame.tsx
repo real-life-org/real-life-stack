@@ -189,7 +189,10 @@ export function ModuleFrame({ moduleId, children, ...vorgaben }: ModuleFrameProp
               // um die Zeile wirkte wie ein Fremdkoerper (Anton, 09.09.).
               className={cn(
                 "[&_input]:bg-card!",
-                "[&_[data-filter-chips]]:mt-2 [&_[data-filter-chips]]:w-fit",
+                // Kein eigener Abstand nach oben: Den gibt die Spalte (`gap-2`) schon,
+                // genau wie im Kopf der Container-Module. Ein zweiter Rand
+                // machte ihn ueber der Karte doppelt so gross (Anton, 10.09.).
+                "[&_[data-filter-chips]]:w-fit",
               )}
             >
               {kopfSlot()}
