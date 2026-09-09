@@ -38,6 +38,9 @@ export interface ItemDetailViewProps {
   composerProps?: Partial<ContentComposerProps>
   /** Passthrough to ItemDetailPanel (reaction bars on comments). */
   renderCommentReactions?: (commentId: string) => ReactNode
+  /** Cursor gleich ins Kommentarfeld — siehe {@link ItemDetailPanelProps}. */
+  focusComposer?: boolean
+  onComposerFocused?: () => void
   /** Close the panel — after a delete, or to clear the URL focus. */
   onClose: () => void
   /** Share/copy a link to the item. */
@@ -64,6 +67,8 @@ export function ItemDetailView({
   editInitialData,
   composerProps,
   renderCommentReactions,
+  focusComposer,
+  onComposerFocused,
   onClose,
   onShare,
   mode: modeProp,
@@ -118,7 +123,12 @@ export function ItemDetailView({
   )
 
   return (
-    <ItemDetailPanel itemId={item.id} renderCommentReactions={renderCommentReactions}>
+    <ItemDetailPanel
+      itemId={item.id}
+      renderCommentReactions={renderCommentReactions}
+      focusComposer={focusComposer}
+      onComposerFocused={onComposerFocused}
+    >
       {mode === "read" ? (
         renderRead(item, actions)
       ) : (

@@ -82,3 +82,42 @@ describe("Fokus mit Zielmodul", () => {
     expect(pfad).toBe("/network/calendar/event-1?connector=mock")
   })
 })
+
+/**
+ * Wer den Kommentar-Hinweis antippt, will schreiben. Der Weg dorthin führt
+ * über die URL — dasselbe Muster wie `?edit`, das den Lesemodus in den
+ * Bearbeitenmodus dreht. So überlebt die Absicht den Modulwechsel und den
+ * Rücksprung im Verlauf.
+ */
+describe("Kommentieren als Ziel", () => {
+  it("öffnet das Item und merkt sich die Absicht in der URL", async () => {
+    await laufe("/network/feed", (focus) => focus.commentOnItem("event-1"))
+    expect(pfad).toBe("/network/feed/event-1?comment=1")
+  })
+
+  it("wechselt dabei auch das Modul, wenn eines genannt wird", async () => {
+    await laufe("/network/feed", (focus) => focus.commentOnItem("event-1", "calendar"))
+    expect(pfad).toBe("/network/calendar/event-1?comment=1")
+  })
+
+  it("wirft eine offene Bearbeitung weg — man tut eines von beidem", async () => {
+    await laufe("/network/feed/event-9?edit=1", (focus) => focus.commentOnItem("event-1"))
+    expect(pfad).toBe("/network/feed/event-1?comment=1")
+  })
+
+  /**
+   * Die Absicht gilt einmal. Bliebe sie in der URL stehen, spränge der Cursor
+   * bei jedem Rerender zurück ins Feld — und ein Zurück im Verlauf führte in
+   * ein Kommentarfeld, das niemand geöffnet hat.
+   */
+  it("räumt die Absicht weg, sobald sie erfüllt ist", async () => {
+    await laufe("/network/feed/event-1?comment=1", (focus) => focus.stopCommenting())
+    expect(pfad).toBe("/network/feed/event-1")
+  })
+
+  it("meldet die Absicht, solange sie gilt", async () => {
+    let gemeldet: boolean | null = null
+    await laufe("/network/feed/event-1?comment=1", (focus) => { gemeldet = focus.isCommenting })
+    expect(gemeldet).toBe(true)
+  })
+})

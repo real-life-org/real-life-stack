@@ -11,6 +11,7 @@ import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
 import { useUserNameResolver } from "../../hooks/use-user-names"
 import { useCommentCount } from "../../hooks/use-comment-count"
+import { useCommentLink } from "../navigation/comment-navigation"
 import { MessageSquare } from "lucide-react"
 
 /**
@@ -129,6 +130,46 @@ export interface ItemPreviewProps {
   style?: CSSProperties
 }
 
+/**
+ * Der Hinweis auf die Diskussion — und, wo es einen Weg gibt, zugleich der Weg
+ * hinein. Die Zahl erscheint nur, wenn es etwas zu zaehlen gibt: „0
+ * Kommentare" sagt dasselbe wie nichts und kostet eine Zeile.
+ */
+function KommentarHinweis({
+  anzahl,
+  kompakt,
+  onClick,
+}: {
+  anzahl: number
+  kompakt: boolean
+  onClick: (() => void) | null
+}) {
+  const inhalt = (
+    <>
+      <MessageSquare className="h-3.5 w-3.5" aria-hidden />
+      {anzahl > 0 && <span className="tabular-nums">{anzahl}</span>}
+      {/* In einer Kanban-Spalte ist fuer das Wort kein Platz. */}
+      {!kompakt && <span>Kommentieren</span>}
+    </>
+  )
+  const klassen = "flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"
+  if (!onClick) return <span className={klassen}>{inhalt}</span>
+  return (
+    <button
+      type="button"
+      // Der Klick gehoert dem Hinweis, nicht der Karte darunter: Beides oeffnet
+      // dasselbe Item, aber nur dieser Weg setzt den Cursor ins Feld.
+      onClick={(event) => {
+        event.stopPropagation()
+        onClick()
+      }}
+      className={cn(klassen, "rounded-full px-2 py-0.5 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40")}
+    >
+      {inhalt}
+    </button>
+  )
+}
+
 function getInitials(name: string): string {
   if (!name) return "?"
   return name
@@ -169,7 +210,13 @@ export function ItemPreview({
   // A card should reveal that a discussion exists — otherwise comments are
   // invisible until the item is opened. The panel lists them anyway.
   const commentCount = useCommentCount(item.id)
-  const showCommentHint = !isPanel && commentCount > 0
+  // Fuehrt der Hinweis irgendwohin? Das weiss die App (Route, Panel,
+  // Eingabefeld), nicht diese Karte.
+  const zumKommentieren = useCommentLink(item)
+  // Ohne Kommentare steht dort keine Null, sondern eine Einladung — aber nur,
+  // wenn man ihr auch folgen kann. Sonst bliebe „Kommentieren" ein Versprechen
+  // ohne Deckung.
+  const showCommentHint = !isPanel && (commentCount > 0 || zumKommentieren !== null)
 
   const authorName = author?.displayName ?? item.createdBy
   const authorAvatar = author?.avatarUrl
@@ -283,7 +330,12 @@ export function ItemPreview({
             </div>
           )}
           {author !== null && (
-            <div className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
+            /* Der Name kuerzt, das Datum nicht: Ein langer Anzeigename — oder
+               die rohe Id, wenn niemand ihn aufloest — schoebe die Tags sonst
+               ganz aus der Zeile, und Datum und Bearbeitungshinweis
+               verschwaenden im `overflow-hidden` darum herum. Derselbe Fehler
+               stand schon einmal in ItemDetailBody (#307). */
+            <div className="ml-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               <ProfileLink userId={authorId} label={`Profil von ${authorName} öffnen`}>
                 {/* In der dichten Ansicht traegt das Bild den Namen: In einer
                     Kanban-Spalte ist fuer beides kein Platz. */}
@@ -296,12 +348,14 @@ export function ItemPreview({
               </ProfileLink>
               {!isCompact && (
                 <>
-                  <span>{authorName}</span>
-                  <span aria-hidden>·</span>
-                  <RelativeTime date={item.createdAt} className="text-xs" />
-                  {/* Mitglieder duerfen fremde Items aendern; ohne diesen
-                      Hinweis waere eine fremde Aenderung unsichtbar. */}
-                  {item.updatedAt && <span title={editedTitle}>· bearbeitet</span>}
+                  <span className="truncate" title={authorName}>{authorName}</span>
+                  <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                    <span aria-hidden>·</span>
+                    <RelativeTime date={item.createdAt} className="text-xs" />
+                    {/* Mitglieder duerfen fremde Items aendern; ohne diesen
+                        Hinweis waere eine fremde Aenderung unsichtbar. */}
+                    {item.updatedAt && <span title={editedTitle}>· bearbeitet</span>}
+                  </span>
                 </>
               )}
             </div>
@@ -316,12 +370,11 @@ export function ItemPreview({
       {(footerAdornment || showCommentHint) && (
         <div className={cn("flex items-center justify-between gap-3 border-t", isCompact ? "-mx-3 mt-0.5 px-3 pt-1.5" : "-mx-4 mt-1 px-4 pt-2")}>
           <div className="flex min-w-0 items-center gap-3">{footerAdornment}</div>
-          {showCommentHint && (
-            <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-              <MessageSquare className="h-3.5 w-3.5" aria-hidden />
-              {isCompact ? commentCount : commentCount === 1 ? "1 Kommentar" : `${commentCount} Kommentare`}
-            </span>
-          )}
+          {showCommentHint && <KommentarHinweis
+            anzahl={commentCount}
+            kompakt={isCompact}
+            onClick={zumKommentieren}
+          />}
         </div>
       )}
     </article>
