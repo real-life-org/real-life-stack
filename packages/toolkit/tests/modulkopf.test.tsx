@@ -42,3 +42,27 @@ describe("Die Steuerleiste bleibt oben", () => {
     expect(html).not.toMatch(/max-w-/)
   })
 })
+
+/**
+ * Der Abstand nach unten gehört der Leiste allein.
+ *
+ * Vorher trugen ihn zwei: die eigene Polsterung und der Container
+ * (`space-y-*`). Im Ruhezustand zählten beide, beim Kleben nur die eigene —
+ * der Inhalt rückte beim Scrollen also näher heran. Gemessen sprang er im Feed
+ * von 28 auf 12 Pixel. Dazu kam, dass die Module unterschiedliche
+ * Container-Abstände haben (`space-y-4` im Feed, `space-y-3` im Kalender), die
+ * Leiste also je nach Modul anders stand.
+ */
+describe("Der Abstand der Steuerleiste", () => {
+  const html = renderToStaticMarkup(<ModuleToolbar>x</ModuleToolbar>)
+
+  it("bringt ihn selbst mit", () => {
+    expect(html).toContain("pb-7")
+  })
+
+  it("nimmt den Abstand des Containers weg, statt ihn zu addieren", () => {
+    // `space-y-*` setzt in Tailwind v4 ein margin-bottom auf jedes Kind außer
+    // dem letzten — es sitzt also an der Leiste selbst, nicht am Nachbarn.
+    expect(html).toContain("mb-0!")
+  })
+})
