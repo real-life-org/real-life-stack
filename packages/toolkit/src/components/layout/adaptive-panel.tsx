@@ -320,17 +320,6 @@ export function AdaptivePanel({
    * jedem Bild, und aendert sich nur, wenn sich das Fenster aendert.
    */
   const minYRef = useRef(0)
-  const messeSchutzzone = useCallback(() => {
-    minYRef.current = drawerMinY(readSafeAreaTop(), window.innerHeight)
-  }, [])
-  useEffect(() => {
-    // Auch beim Oeffnen neu messen: Auf Android meldet Capacitor die Zone erst,
-    // wenn die Fenster-Insets das erste Mal ankommen — beim Start kann sie also
-    // noch 0 gewesen sein.
-    messeSchutzzone()
-    window.addEventListener("resize", messeSchutzzone)
-    return () => window.removeEventListener("resize", messeSchutzzone)
-  }, [messeSchutzzone, open])
 
   // Helper to update drawerY state + ref synchronously
   const updateDrawerY = useCallback((y: number) => {
@@ -341,6 +330,23 @@ export function AdaptivePanel({
     drawerYRef.current = geklemmt
     setDrawerYState(geklemmt)
   }, [])
+
+  const messeSchutzzone = useCallback(() => {
+    minYRef.current = drawerMinY(readSafeAreaTop(), window.innerHeight)
+    // Die Zone ist in Pixeln, das Blatt rechnet in Prozent: Wird das Fenster
+    // niedriger oder die Zone hoeher, wandert die Kante als Prozentwert nach
+    // unten — ein bereits maximiertes Blatt stuende dann wieder hinter der
+    // Statusleiste (#333). Darum das offene Blatt gleich mit nachklemmen.
+    if (drawerYRef.current < minYRef.current) updateDrawerY(minYRef.current)
+  }, [updateDrawerY])
+  useEffect(() => {
+    // Auch beim Oeffnen neu messen: Auf Android meldet Capacitor die Zone erst,
+    // wenn die Fenster-Insets das erste Mal ankommen — beim Start kann sie also
+    // noch 0 gewesen sein.
+    messeSchutzzone()
+    window.addEventListener("resize", messeSchutzzone)
+    return () => window.removeEventListener("resize", messeSchutzzone)
+  }, [messeSchutzzone, open])
 
   const reportDrawerHeight = useCallback(() => {
     onDrawerHeightChange?.(
