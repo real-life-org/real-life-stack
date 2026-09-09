@@ -22,6 +22,7 @@
  *   consumers without it installed see no TS errors.
  */
 
+import { focusOffsetFor } from "../focus-offset"
 import type {
   Map as MlMap,
   MapOptions,
@@ -886,15 +887,21 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
 
   focusOn(
     center: LngLat,
-    options?: { bottomInset?: number; animate?: boolean; zoom?: number; duration?: number },
+    options?: {
+      bottomInset?: number
+      rightInset?: number
+      leftInset?: number
+      animate?: boolean
+      zoom?: number
+      duration?: number
+    },
   ): void {
     const map = this.mapInstance as MlMap | null
     if (!map) return
-    const bottomInset = options?.bottomInset ?? 0
-    // Offset the target up by half the obscured strip so it ends up centred in
-    // the visible map area above a bottom sheet. Negative y = up (maplibre uses
-    // a per-move `offset` so no persistent camera padding is left behind).
-    const offset: [number, number] = [0, -bottomInset / 2]
+    // Halbe verdeckte Strecke je Seite, damit der Punkt in der Mitte des
+    // SICHTBAREN Bereichs landet (maplibre nimmt einen `offset` pro Bewegung,
+    // es bleibt also keine dauerhafte Kamera-Polsterung zurueck).
+    const offset = focusOffsetFor(options ?? {})
     const animate = options?.animate !== false
     if (options?.zoom != null) {
       // A zoom change is a "fly to this place" gesture: flyTo's eased, curved

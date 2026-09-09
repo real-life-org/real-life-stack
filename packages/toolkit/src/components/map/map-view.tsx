@@ -5,7 +5,10 @@ import { Calendar, Globe, Loader2, MapPin, Search } from "lucide-react"
 import { latLngFromPoint } from "../../lib/geo"
 import { emptyFilterBarValue, FilterBar, type FilterBarValue, type FilterTypeOption } from "../filter"
 import { CreateFab } from "../create-fab"
+import { PanelSafeArea } from "../layout/panel-safe-area"
 import { Button, Input } from "../primitives"
+import { focusNeedsRecentering, focusOffsetFor, type MapFocusInsets } from "./focus-offset"
+import { usePanelInsets, type PanelInsets } from "../layout/panel-insets"
 import { MapLens } from "../lens/map-lens"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { getSpacePrimaryColor } from "../../lib/utils"
@@ -185,8 +188,22 @@ export function filterMapViewItems(items: readonly Item[], filter: FilterBarValu
   })
 }
 
-export function mapViewRevealOptions(fromMarkerClick: boolean, isCompact: boolean) {
-  return { animate: !fromMarkerClick, ...(isCompact ? { bottomInset: window.innerHeight * MAP_SHEET_FRACTION } : {}) }
+/**
+ * Die Raender, die gerade Karte verdecken: unten das Blatt auf schmalen
+ * Geraeten, links/rechts ein schwebendes Panel. Beides zusammen, damit ein
+ * angeklickter Marker im sichtbaren Rest landet und nicht hinter dem Panel.
+ */
+export function mapViewFocusInsets(isCompact: boolean, panelInsets: PanelInsets): MapFocusInsets {
+  const bottomInset = isCompact ? window.innerHeight * MAP_SHEET_FRACTION : 0
+  return { bottomInset, ...panelInsets }
+}
+
+export function mapViewRevealOptions(
+  fromMarkerClick: boolean,
+  isCompact: boolean,
+  panelInsets: PanelInsets = { leftInset: 0, rightInset: 0 },
+) {
+  return { animate: !fromMarkerClick, ...mapViewFocusInsets(isCompact, panelInsets) }
 }
 
 /** Full Map module: filter/create/bbox behaviour around the filterless MapLens core. */
@@ -212,6 +229,10 @@ export function MapView({
   const markerClick = useRef<string | null>(null)
   const settledReveal = useRef<string | null>(null)
   const approachedReveal = useRef<string | null>(null)
+  // Mit welcher Verschiebung der aktuell gezeigte Punkt zuletzt zentriert
+  // wurde. Aendert sich die Verdeckung danach, muss er nachgeholt werden.
+  const revealOffset = useRef<[number, number] | null>(null)
+  const panelInsets = usePanelInsets()
 
   useEffect(() => {
     const keyChanged = accumulatedKey.current !== inventoryKey
@@ -234,32 +255,47 @@ export function MapView({
   }, [adapter, onViewportBoundsChange, viewportMode])
   useEffect(() => { if (adapter && hasGlobe(adapter)) adapter.setProjection(projection) }, [adapter, projection])
   useEffect(() => {
-    if (!active) { settledReveal.current = null; approachedReveal.current = null; return }
-    if (!focusedItem) { settledReveal.current = null; approachedReveal.current = null; return }
+    if (!active) { settledReveal.current = null; approachedReveal.current = null; revealOffset.current = null; return }
+    if (!focusedItem) { settledReveal.current = null; approachedReveal.current = null; revealOffset.current = null; return }
     if (!adapter || viewportMode !== "bbox-module") return
     const point = latLngFromPoint(focusedItem.data.position)
     if (!point) return
-    const bottomInset = isCompact ? window.innerHeight * MAP_SHEET_FRACTION : 0
+    const insets = mapViewFocusInsets(isCompact, panelInsets)
+    const offset = focusOffsetFor(insets)
     const fromClick = markerClick.current === focusedItem.id
     markerClick.current = null
     if (fromClick) {
+      const nachholen = focusNeedsRecentering(null, offset)
       settledReveal.current = focusedItem.id
       approachedReveal.current = focusedItem.id
-      if (bottomInset) adapter.focusOn([point.lng, point.lat], { bottomInset, animate: true })
+      revealOffset.current = offset
+      if (nachholen) adapter.focusOn([point.lng, point.lat], { ...insets, animate: true })
       return
     }
-    if (settledReveal.current === focusedItem.id) return
+    if (settledReveal.current === focusedItem.id) {
+      // Der Punkt ist schon im Blick — aber vielleicht hat sich seither ein
+      // Panel darueber gelegt. Das Panel oeffnet in einem eigenen Effekt, also
+      // erst NACH dem Klick, der es ausgeloest hat; ohne diesen Nachlauf legt
+      // sich die Detailkarte genau auf den Marker, den sie beschreibt.
+      if (focusNeedsRecentering(revealOffset.current, offset)) {
+        revealOffset.current = offset
+        adapter.focusOn([point.lng, point.lat], { ...insets, animate: true })
+      }
+      return
+    }
     if (items.some((item) => item.id === focusedItem.id)) {
       settledReveal.current = focusedItem.id
-      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, mapViewSeparationZoom(focusedItem, items)), bottomInset, animate: true })
+      revealOffset.current = offset
+      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, mapViewSeparationZoom(focusedItem, items)), ...insets, animate: true })
       return
     }
     if (bounds.current && inBounds(focusedItem, bounds.current)) return
     if (approachedReveal.current !== focusedItem.id && bounds.current && !itemsLoading) {
       approachedReveal.current = focusedItem.id
-      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, MIN_REVEAL_ZOOM), bottomInset, animate: true })
+      revealOffset.current = offset
+      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, MIN_REVEAL_ZOOM), ...insets, animate: true })
     }
-  }, [active, adapter, focusedItem, isCompact, items, itemsLoading, viewportMode])
+  }, [active, adapter, focusedItem, isCompact, items, itemsLoading, panelInsets, viewportMode])
   useEffect(() => {
     if (!adapter || !isPicking) return
     return adapter.observeClicks(({ position: [lng, lat] }) => {
@@ -304,9 +340,9 @@ export function MapView({
       nonClickableItemIds={draftItem && !isPicking ? [draftItem.id] : []}
       containerClassName={projection === "globe" ? "rls-globe-sky" : undefined}
       mountKey={mountAttempt} onMountError={() => setMountError(true)} />
-    {!adapter && <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 text-muted-foreground">{mountError ? <div className="flex flex-col items-center gap-3"><span>Karte konnte nicht geladen werden.</span><Button variant="outline" size="sm" onClick={() => { setMountError(false); setMountAttempt((value) => value + 1) }}>Erneut versuchen</Button></div> : <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Karte wird geladen…</>}</div>}
-    {isPicking && <div className="absolute inset-x-0 top-0 z-30 flex justify-center p-3"><div className="flex items-center gap-2 rounded-full border bg-background/95 px-3 py-2 text-sm shadow-md"><MapPin className="h-4 w-4" /><span>{pickPosition ? "Position gewählt." : "Tippe auf die Karte, um die Position zu setzen."}</span>{isCompact && pickPosition && <Button size="sm" onClick={confirmPick}>Übernehmen</Button>}<Button size="sm" variant="ghost" onClick={cancelPick}>Abbrechen</Button></div></div>}
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 py-4 pl-16 pr-4 **:pointer-events-auto"><FilterBar value={filter} onChange={setFilter} availableTags={availableTags} availableTypes={MAP_TYPES} className="[&_[data-slot=button][data-variant=outline]]:bg-background!" leadingActions={<div className="relative min-w-0 flex-1 sm:flex-none"><Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2" /><Input aria-label="Karte durchsuchen" placeholder="Suche…" value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full pl-7 text-xs bg-background! sm:w-40" /></div>} trailingActions={adapter && hasGlobe(adapter) && !isPicking ? <Button size="icon-sm" variant={projection === "globe" ? "default" : "outline"} {...mapViewProjectionToggleA11y(projection)} onClick={toggleProjection}><Globe className="h-4 w-4" /></Button> : undefined} /></div>
+    {!adapter && <div className="absolute inset-0 z-10 bg-background/80"><PanelSafeArea className="flex items-center justify-center text-muted-foreground">{mountError ? <div className="flex flex-col items-center gap-3"><span>Karte konnte nicht geladen werden.</span><Button variant="outline" size="sm" onClick={() => { setMountError(false); setMountAttempt((value) => value + 1) }}>Erneut versuchen</Button></div> : <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Karte wird geladen…</>}</PanelSafeArea></div>}
+    {isPicking && <PanelSafeArea className="z-30 flex items-start justify-center p-3"><div className="flex items-center gap-2 rounded-full border bg-background/95 px-3 py-2 text-sm shadow-md"><MapPin className="h-4 w-4" /><span>{pickPosition ? "Position gewählt." : "Tippe auf die Karte, um die Position zu setzen."}</span>{isCompact && pickPosition && <Button size="sm" onClick={confirmPick}>Übernehmen</Button>}<Button size="sm" variant="ghost" onClick={cancelPick}>Abbrechen</Button></div></PanelSafeArea>}
+    <PanelSafeArea className="z-20 py-4 pl-16 pr-4"><FilterBar value={filter} onChange={setFilter} availableTags={availableTags} availableTypes={MAP_TYPES} className="[&_[data-slot=button][data-variant=outline]]:bg-background!" leadingActions={<div className="relative min-w-0 flex-1 sm:flex-none"><Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2" /><Input aria-label="Karte durchsuchen" placeholder="Suche…" value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full pl-7 text-xs bg-background! sm:w-40" /></div>} trailingActions={adapter && hasGlobe(adapter) && !isPicking ? <Button size="icon-sm" variant={projection === "globe" ? "default" : "outline"} {...mapViewProjectionToggleA11y(projection)} onClick={toggleProjection}><Globe className="h-4 w-4" /></Button> : undefined} /></PanelSafeArea>
     {!isPicking && canCreate && <CreateFab onClick={onCreate!} label="Ort erstellen" />}
   </div>
 }

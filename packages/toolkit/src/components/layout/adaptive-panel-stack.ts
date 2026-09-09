@@ -1,8 +1,14 @@
-export type AdaptivePanelStackMode = "modal" | "sidebar" | "drawer"
+export type AdaptivePanelStackMode = "modal" | "sidebar" | "drawer" | "floating"
 
 export interface AdaptivePanelStackEntry {
   mode: AdaptivePanelStackMode
   side: "left" | "right"
+  /**
+   * Breite, die dieses Panel dem Inhalt wegnimmt. Bei `sidebar` ist das ihre
+   * eigene Breite, bei `floating` ihre Breite plus die Raender links und
+   * rechts daneben — die Karte schwebt zwar ueber dem Inhalt, aber er soll
+   * nicht unter ihr verschwinden.
+   */
   sidebarWidth: number
   insetActive?: boolean
 }
@@ -25,7 +31,8 @@ export function getAdaptivePanelZIndex(order: number, stackSize: number): number
 
 /**
  * Tracks open panels in presentation order. Modal and drawer overlays must not
- * erase the layout inset owned by an open sidebar underneath them.
+ * erase the layout inset owned by an open sidebar or floating card underneath
+ * them.
  */
 export class AdaptivePanelStack {
   private entries: Array<AdaptivePanelStackEntry & {
@@ -79,7 +86,10 @@ export class AdaptivePanelStack {
     let right = 0
 
     for (const entry of this.entries) {
-      if (entry.mode !== "sidebar" || entry.insetActive === false) continue
+      // `sidebar` und `floating` verdraengen beide den Inhalt; `modal` und
+      // `drawer` legen sich darueber, ohne Platz zu beanspruchen.
+      const verdraengt = entry.mode === "sidebar" || entry.mode === "floating"
+      if (!verdraengt || entry.insetActive === false) continue
       if (entry.side === "left") left = entry.sidebarWidth
       else right = entry.sidebarWidth
     }

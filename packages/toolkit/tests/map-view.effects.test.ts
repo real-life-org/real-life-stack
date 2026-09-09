@@ -46,7 +46,11 @@ class ProbeAdapter implements MapAdapter {
   getView() { return { center: [13.4, 52.5] as [number, number], zoom: 6, bounds: { west: 13, south: 52, east: 14, north: 53 } } }
   observeView() { return () => undefined }
   observeClicks() { return () => undefined }
-  observeMarkerClicks() { return () => undefined }
+  markerClickHandler: ((id: string) => void) | null = null
+  observeMarkerClicks(handler: (id: string) => void) {
+    this.markerClickHandler = handler
+    return () => { this.markerClickHandler = null }
+  }
 }
 
 interface MountedMap {
@@ -76,6 +80,8 @@ async function mountMap(createAdapter: () => MapAdapter, props: Partial<MapViewP
 
 afterEach(async () => {
   await act(async () => { document.body.replaceChildren() })
+  document.documentElement.style.removeProperty("--adaptive-panel-margin-right")
+  document.documentElement.style.removeProperty("--adaptive-panel-margin-left")
 })
 
 describe("MapView effect parity — mounted module with fake-adapter probes", () => {
@@ -113,6 +119,53 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
     expect(adapter.focusOn).toHaveBeenCalledWith([13.4, 52.5], { animate: false })
     expect(adapter.focusOn.mock.calls.every(([, options]) => options?.zoom === undefined)).toBe(true)
     await act(async () => { mounted.root.unmount() })
+  })
+
+
+  /**
+   * Das Panel oeffnet erst NACH dem Klick, in einem eigenen Effekt. Liest die
+   * Karte die verdeckten Raender nur einmal im Fokus-Effekt, sieht sie beim
+   * ersten Klick noch 0px — und die Detailkarte legt sich genau auf den Marker,
+   * den sie beschreibt. Die Raender muessen also reaktiv eingehen.
+   */
+  it("holt den angeklickten Marker nach, wenn das Panel erst danach aufgeht", async () => {
+    const live = new Set<ProbeAdapter>()
+    const geklickt = point("a")
+    const mounted = await mountMap(() => new ProbeAdapter(live), { items: [geklickt] })
+    const adapter = [...live][0]!
+
+    // Panel zu: der Klick allein verlangt keine Verschiebung.
+    await act(async () => { adapter.markerClickHandler?.(geklickt.id) })
+    await mounted.render({ items: [geklickt], focusedItem: geklickt, activeItemId: geklickt.id })
+    expect(adapter.focusOn).not.toHaveBeenCalled()
+
+    // Jetzt oeffnet das Panel und veroeffentlicht seinen Platzbedarf.
+    await act(async () => {
+      document.documentElement.style.setProperty("--adaptive-panel-margin-right", "392px")
+      await Promise.resolve()
+    })
+    expect(adapter.focusOn).toHaveBeenLastCalledWith(
+      [13.4, 52.5],
+      expect.objectContaining({ rightInset: 392, animate: true }),
+    )
+  })
+
+  it("schwenkt beim Schliessen des Panels nicht zurueck", async () => {
+    const live = new Set<ProbeAdapter>()
+    const geklickt = point("a")
+    document.documentElement.style.setProperty("--adaptive-panel-margin-right", "392px")
+    const mounted = await mountMap(() => new ProbeAdapter(live), { items: [geklickt] })
+    const adapter = [...live][0]!
+
+    await act(async () => { adapter.markerClickHandler?.(geklickt.id) })
+    await mounted.render({ items: [geklickt], focusedItem: geklickt, activeItemId: geklickt.id })
+    const nachKlick = adapter.focusOn.mock.calls.length
+
+    await act(async () => {
+      document.documentElement.style.setProperty("--adaptive-panel-margin-right", "0px")
+      await Promise.resolve()
+    })
+    expect(adapter.focusOn.mock.calls.length).toBe(nachKlick)
   })
 
   it("mount failure: the rendered retry button creates a fresh adapter and re-mounts it", async () => {

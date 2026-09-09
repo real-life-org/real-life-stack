@@ -31,6 +31,20 @@ import {
 export type ModuleFill = "container" | "bleed"
 
 /**
+ * Was mit der Flaeche geschieht, wenn ein Panel offen ist.
+ *
+ * `inset` (Standard): die Flaeche rueckt zur Seite, das Panel steht daneben.
+ * `overlay`: die Flaeche bleibt stehen, das Panel legt sich darueber.
+ *
+ * Nicht dasselbe wie `fill`: die Liste ist `bleed`, soll aber ausweichen —
+ * sonst verdeckt das Panel Eintraege. Die Karte dagegen IST ihre Flaeche;
+ * wuerde sie beim Oeffnen eines Details schmaler, zeigte sie weniger Welt.
+ * Die schwebenden Controls ruecken in beiden Faellen ein, denn sie lesen
+ * `--adaptive-panel-margin-right` selbst.
+ */
+export type ModulePanelFit = "inset" | "overlay"
+
+/**
  * Props, die jede Modul-Flaeche entgegennimmt. Das Outlet reicht alle durch;
  * ein Modul nimmt, was es braucht. Bewusst ein gemeinsamer Vertrag statt
  * Sonderfaellen im Dispatch — sonst waere der Dispatch wieder eine Liste,
@@ -58,6 +72,8 @@ export interface ModuleEntry {
   fill?: ModuleFill
   /** Container-Breite; nur bei fill "container" wirksam. */
   maxWidth?: string
+  /** Standard: "inset". */
+  panelFit?: ModulePanelFit
   /**
    * Flaeche im Baum halten statt beim Modulwechsel abzubauen. Fuer Module,
    * deren Aufbau teuer ist — die Karte braucht WebGL-Kontext, Worker und
@@ -78,11 +94,11 @@ export const CORE_MODULES: readonly ModuleEntry[] = Object.freeze([
   { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl" },
   { id: "kanban", label: "Kanban", icon: Columns3, enabledByDefault: true, maxWidth: "max-w-5xl" },
   { id: "calendar", label: "Kalender", icon: Calendar, enabledByDefault: true, maxWidth: "max-w-5xl" },
-  { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true },
+  { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay" },
   // Opt-in — spec: docs/spec/modules/resonance.md
   { id: "resonance", label: "Resonanz", icon: Waves, maxWidth: "max-w-3xl" },
   { id: "collection", label: "Liste", icon: List, fill: "bleed" },
-  { id: "graph", label: "Graph", icon: Share2, fill: "bleed" },
+  { id: "graph", label: "Graph", icon: Share2, fill: "bleed", panelFit: "overlay" },
 ])
 
 /**

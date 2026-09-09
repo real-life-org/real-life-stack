@@ -177,6 +177,30 @@ describe("Das Register ist unveraenderlich (Review #277)", () => {
   })
 })
 
+describe("Ausweichen vor einem offenen Panel", () => {
+  // Ein Modul, dessen Flaeche der Inhalt IST, darf nicht schmaler werden, wenn
+  // ein Detail aufgeht — eine halbierte Karte zeigt halb so viel Welt. Alle
+  // anderen muessen ausweichen, sonst verdeckt das Panel Inhalte.
+  it("laesst Karte und Graph stehen, das Panel legt sich darueber", () => {
+    for (const id of ["map", "graph"]) {
+      expect(getModule(id)?.panelFit, `${id} soll overlay sein`).toBe("overlay")
+    }
+  })
+
+  it("laesst alle uebrigen Module ausweichen", () => {
+    for (const id of ["feed", "kanban", "calendar", "collection", "resonance"]) {
+      expect(getModule(id)?.panelFit ?? "inset", `${id} soll ausweichen`).toBe("inset")
+    }
+  })
+
+  // Der Unterschied faellt NICHT mit `fill` zusammen: die Liste ist bleed und
+  // weicht trotzdem aus. Wer beides gleichsetzt, verdeckt ihre Eintraege.
+  it("faellt nicht mit fill zusammen", () => {
+    expect(getModule("collection")?.fill).toBe("bleed")
+    expect(getModule("collection")?.panelFit ?? "inset").toBe("inset")
+  })
+})
+
 describe("displayableModules", () => {
   beforeEach(() => resetModuleRegistryForTests())
 
