@@ -1,4 +1,16 @@
 :root {
+  /*
+   * Sagt dem Browser, in welchem Modus er SEINE eigenen Flaechen malt:
+   * Scrollleisten, Auswahlfelder, Datumswaehler, ausgefuellte Formularfelder.
+   *
+   * Ohne diese Angabe bleiben sie hell, auch wenn die Seite dunkel ist — in
+   * Chrome faellt vor allem die Scrollleiste auf, ein heller Balken quer durch
+   * ein dunkles Fenster. Unsere Tokens erreichen diese Flaechen nicht; sie
+   * gehoeren dem Browser, und das hier ist die einzige Stelle, an der man mit
+   * ihm darueber spricht.
+   */
+  color-scheme: light;
+
   /* Background & Foreground
    *
    * Die Seitenflaeche ist leicht getoent, erhabene Flaechen (--card,
@@ -128,6 +140,8 @@
 }
 
 .dark {
+  color-scheme: dark;
+
   /* Background & Foreground - Dark slate */
   --background: oklch(0.15 0.02 265);
   --foreground: oklch(0.95 0.01 247);
