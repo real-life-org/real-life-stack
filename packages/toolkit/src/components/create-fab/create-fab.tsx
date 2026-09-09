@@ -90,11 +90,17 @@ export function CreateFab({ onClick, label = "Erstellen", hideWhileVisible, clas
       className={cn(
         // Desktop offset is 1rem on both axes so it matches the right inline
         // offset (1rem) and lines up with the other module/map corner controls.
-        "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-300 ease-out in-[.adaptive-panel-resizing]:transition-none hover:scale-105 hover:shadow-xl active:scale-95 md:bottom-[calc(1rem+env(safe-area-inset-bottom))]",
+        "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-center rounded-full transition-[right] duration-300 ease-out in-[.adaptive-panel-resizing]:transition-none md:bottom-[calc(1rem+env(safe-area-inset-bottom))]",
+        // Weiss mit Rand und Karten-Schatten, 48px am Desktop, 52px am
+        // Telefon (Design-Board 1.3). Vorher: 56px, primaerfarben, mit
+        // Hover-Lift — er schrie lauter als alles andere auf der Flaeche und
+        // stand als einziges Element auf der Primaerfarbe. Kein Lift: Der
+        // Design Guide gibt Knoepfen keinen (`Buttons: none`).
+        "h-13 w-13 border border-border bg-card text-foreground shadow-lg md:h-12 md:w-12",
         className,
       )}
     >
-      <Plus className="h-6 w-6" />
+      <Plus className="h-[22px] w-[22px]" />
     </button>
   )
 }

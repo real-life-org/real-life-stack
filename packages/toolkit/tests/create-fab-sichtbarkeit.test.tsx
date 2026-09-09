@@ -128,3 +128,33 @@ describe("Der CreateFab mit beobachtetem Einstieg", () => {
     stubbeBeobachter()
   })
 })
+
+/**
+ * Der Erstellen-Knopf steht auf derselben Ebene wie die Filter-Pille und
+ * sieht aus wie sie: weiss mit Rand, 48px, derselbe Schatten (Design-Board
+ * 1.3). Vorher war er 56px und primaerfarben und schrie lauter als alles
+ * andere auf der Flaeche.
+ */
+describe("Die Anatomie des Erstellen-Knopfes", () => {
+  it("ist eine weisse Flaeche mit Rand statt eines primaerfarbenen Klotzes", () => {
+    act(() => root.render(createElement(CreateFab, { onClick: () => {} })))
+    const knopf = host.querySelector("button")!
+    const klassen = knopf.className.split(/\s+/)
+    expect(klassen).toContain("bg-card")
+    expect(klassen).toContain("border")
+    expect(klassen).toContain("shadow-lg")
+    expect(klassen).not.toContain("bg-primary")
+  })
+
+  it("misst 48px am Desktop und 52px am Telefon", () => {
+    act(() => root.render(createElement(CreateFab, { onClick: () => {} })))
+    const klassen = host.querySelector("button")!.className
+    expect(klassen).toContain("h-13")
+    expect(klassen).toContain("md:h-12")
+  })
+
+  it("hebt sich beim Zeigen nicht an (Design Guide: Buttons ohne Lift)", () => {
+    act(() => root.render(createElement(CreateFab, { onClick: () => {} })))
+    expect(host.querySelector("button")!.className).not.toContain("hover:scale-105")
+  })
+})
