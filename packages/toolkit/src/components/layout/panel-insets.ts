@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 
 /**
- * Die Raender, die offene Panels dem Inhalt gerade wegnehmen, in CSS-Pixeln.
+ * Die Raender, die offene Panels gerade UEBERDECKEN, in CSS-Pixeln — also bis
+ * zur Panelkante, nicht bis zum eingerueckten Inhalt.
  */
 export interface PanelInsets {
   leftInset: number
@@ -18,18 +19,19 @@ function pixelWert(roh: string): number {
 }
 
 /**
- * `AdaptivePanel` veroeffentlicht seinen Platzbedarf an genau einer Stelle: den
- * CSS-Variablen `--adaptive-panel-margin-left/right`. Flaechen, die sich
- * einruecken lassen, konsumieren sie als Padding; wer sie in JavaScript braucht
- * — etwa eine Karte, die ihr Zentrum korrigieren muss —, liest sie hier, statt
- * Panelbreiten selbst zu kennen.
+ * `AdaptivePanel` veroeffentlicht zwei Groessen: `--adaptive-panel-margin-*`
+ * (wieviel Platz dem Inhalt genommen wird, Luft eingerechnet) und
+ * `--adaptive-panel-edge-*` (wo die Kante liegt). Hier zaehlt die Kante: Wer
+ * fragt, was verdeckt ist — eine Karte, die ihr Zentrum korrigiert, eine
+ * Schutzzone fuer schwebende Bedienelemente —, meint den Bereich hinter dem
+ * Panel, nicht den Abstand, den eingerueckter Inhalt haelt.
  */
 export function readPanelInsets(): PanelInsets {
   if (typeof window === "undefined" || typeof document === "undefined") return KEINE
   const stil = window.getComputedStyle(document.documentElement)
   return {
-    leftInset: pixelWert(stil.getPropertyValue("--adaptive-panel-margin-left")),
-    rightInset: pixelWert(stil.getPropertyValue("--adaptive-panel-margin-right")),
+    leftInset: pixelWert(stil.getPropertyValue("--adaptive-panel-edge-left")),
+    rightInset: pixelWert(stil.getPropertyValue("--adaptive-panel-edge-right")),
   }
 }
 

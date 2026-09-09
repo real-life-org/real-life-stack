@@ -36,7 +36,7 @@ export function CreateFab({ onClick, label = "Erstellen", className }: CreateFab
       // Right edge tracks the shared panel's inset: when a sidebar panel
       // opens, AdaptivePanel publishes its width as --adaptive-panel-margin-right,
       // so the FAB slides left to sit beside the panel instead of being overlaid.
-      style={{ right: "calc(1rem + var(--adaptive-panel-margin-right, 0px))" }}
+      style={{ right: "calc(1rem + var(--adaptive-panel-edge-right, 0px))" }}
       className={cn(
         // Desktop offset is 1rem on both axes so it matches the right inline
         // offset (1rem) and lines up with the other module/map corner controls.

@@ -10,6 +10,18 @@ export interface AdaptivePanelStackEntry {
    * nicht unter ihr verschwinden.
    */
   sidebarWidth: number
+  /**
+   * Wo die Kante des Panels liegt, gemessen vom Fensterrand.
+   *
+   * Fuer ein Panel, das am Rand klebt (`sidebar`), ist das seine Breite — der
+   * Vorgabewert. Eine schwebende Karte steht dagegen eingerueckt: ihre Kante
+   * liegt naeher am Rand als der Platz, den sie dem Inhalt wegnimmt.
+   *
+   * Schwebende Bedienelemente richten sich hieran aus, nicht an
+   * {@link sidebarWidth} — sie bringen ihren eigenen Rand mit, und der zaehlte
+   * sonst doppelt.
+   */
+  edgeOffset?: number
   insetActive?: boolean
 }
 
@@ -81,7 +93,21 @@ export class AdaptivePanelStack {
     return this.entries.at(-1)?.id === id
   }
 
+  /** Wieviel Platz die offenen Panels dem Inhalt wegnehmen. */
   getInsets(): { left: number; right: number } {
+    return this.sammle((entry) => entry.sidebarWidth)
+  }
+
+  /**
+   * Wo die Kanten der offenen Panels liegen — der Bereich, den sie wirklich
+   * ueberdecken. Schwebende Bedienelemente setzen ihren eigenen Rand hierauf,
+   * genau wie sie es am Fensterrand tun.
+   */
+  getEdges(): { left: number; right: number } {
+    return this.sammle((entry) => entry.edgeOffset ?? entry.sidebarWidth)
+  }
+
+  private sammle(breite: (entry: AdaptivePanelStackEntry) => number): { left: number; right: number } {
     let left = 0
     let right = 0
 
@@ -90,8 +116,8 @@ export class AdaptivePanelStack {
       // `drawer` legen sich darueber, ohne Platz zu beanspruchen.
       const verdraengt = entry.mode === "sidebar" || entry.mode === "floating"
       if (!verdraengt || entry.insetActive === false) continue
-      if (entry.side === "left") left = entry.sidebarWidth
-      else right = entry.sidebarWidth
+      if (entry.side === "left") left = breite(entry)
+      else right = breite(entry)
     }
 
     return { left, right }

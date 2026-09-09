@@ -80,8 +80,8 @@ async function mountMap(createAdapter: () => MapAdapter, props: Partial<MapViewP
 
 afterEach(async () => {
   await act(async () => { document.body.replaceChildren() })
-  document.documentElement.style.removeProperty("--adaptive-panel-margin-right")
-  document.documentElement.style.removeProperty("--adaptive-panel-margin-left")
+  document.documentElement.style.removeProperty("--adaptive-panel-edge-right")
+  document.documentElement.style.removeProperty("--adaptive-panel-edge-left")
 })
 
 describe("MapView effect parity — mounted module with fake-adapter probes", () => {
@@ -141,7 +141,7 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
 
     // Jetzt oeffnet das Panel und veroeffentlicht seinen Platzbedarf.
     await act(async () => {
-      document.documentElement.style.setProperty("--adaptive-panel-margin-right", "392px")
+      document.documentElement.style.setProperty("--adaptive-panel-edge-right", "392px")
       await Promise.resolve()
     })
     expect(adapter.focusOn).toHaveBeenLastCalledWith(
@@ -153,7 +153,7 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
   it("schwenkt beim Schliessen des Panels nicht zurueck", async () => {
     const live = new Set<ProbeAdapter>()
     const geklickt = point("a")
-    document.documentElement.style.setProperty("--adaptive-panel-margin-right", "392px")
+    document.documentElement.style.setProperty("--adaptive-panel-edge-right", "392px")
     const mounted = await mountMap(() => new ProbeAdapter(live), { items: [geklickt] })
     const adapter = [...live][0]!
 
@@ -162,7 +162,7 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
     const nachKlick = adapter.focusOn.mock.calls.length
 
     await act(async () => {
-      document.documentElement.style.setProperty("--adaptive-panel-margin-right", "0px")
+      document.documentElement.style.setProperty("--adaptive-panel-edge-right", "0px")
       await Promise.resolve()
     })
     expect(adapter.focusOn.mock.calls.length).toBe(nachKlick)

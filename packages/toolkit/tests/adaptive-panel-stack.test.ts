@@ -185,3 +185,41 @@ describe("AdaptivePanelScrollLock", () => {
     expect(target.style.overflow).toBe("")
   })
 })
+
+/**
+ * Zwei Fragen, die man leicht verwechselt — ich habe sie verwechselt:
+ *
+ *   Wieviel Platz nimmt das Panel dem INHALT weg? Bei einer schwebenden Karte
+ *   ihre Breite PLUS die Luft links und rechts daneben. Eine Flaeche, die sich
+ *   darauf einrueckt, endet dann mit Abstand zum Panel.
+ *
+ *   Wo liegt die KANTE des Panels? Daran richten sich schwebende Bedienelemente
+ *   aus, die ihren eigenen Rand schon mitbringen. Nehmen sie den Inhalts-Wert,
+ *   zaehlt der Rand doppelt: gemessen 32px Luft statt 16px.
+ */
+describe("AdaptivePanelStack: Inhalts-Inset und Panelkante", () => {
+  it("unterscheidet beides bei einer schwebenden Karte", () => {
+    const stack = new AdaptivePanelStack()
+    stack.upsert(Symbol("detail"), {
+      mode: "floating", side: "right", sidebarWidth: 392, edgeOffset: 376,
+    })
+
+    expect(stack.getInsets()).toEqual({ left: 0, right: 392 })
+    expect(stack.getEdges()).toEqual({ left: 0, right: 376 })
+  })
+
+  it("laesst beide zusammenfallen, wo das Panel am Rand klebt", () => {
+    const stack = new AdaptivePanelStack()
+    stack.upsert(Symbol("sidebar"), { mode: "sidebar", side: "right", sidebarWidth: 420 })
+
+    expect(stack.getInsets()).toEqual({ left: 0, right: 420 })
+    expect(stack.getEdges()).toEqual({ left: 0, right: 420 })
+  })
+
+  it("meldet ohne verdraengendes Panel keine Kante", () => {
+    const stack = new AdaptivePanelStack()
+    stack.upsert(Symbol("drawer"), { mode: "drawer", side: "right", sidebarWidth: 420 })
+
+    expect(stack.getEdges()).toEqual({ left: 0, right: 0 })
+  })
+})

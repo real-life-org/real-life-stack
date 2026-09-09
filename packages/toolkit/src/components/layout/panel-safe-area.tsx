@@ -38,8 +38,8 @@ export function PanelSafeArea({ children, className, style }: PanelSafeAreaProps
     <div
       className={cn("pointer-events-none absolute inset-y-0 **:pointer-events-auto", className)}
       style={{
-        left: "var(--adaptive-panel-margin-left, 0px)",
-        right: "var(--adaptive-panel-margin-right, 0px)",
+        left: "var(--adaptive-panel-edge-left, 0px)",
+        right: "var(--adaptive-panel-edge-right, 0px)",
         // Dieselbe Dauer wie das Einruecken des Inhalts in AppShellMain, damit
         // Flaeche und Overlays sich gemeinsam bewegen statt nacheinander.
         transition: "left 300ms ease-out, right 300ms ease-out",

@@ -9,19 +9,19 @@ import { readPanelInsets } from "../src/components/layout/panel-insets"
  * kennen und mit jeder Aenderung stillschweigend falsch zu liegen.
  */
 afterEach(() => {
-  document.documentElement.style.removeProperty("--adaptive-panel-margin-left")
-  document.documentElement.style.removeProperty("--adaptive-panel-margin-right")
+  document.documentElement.style.removeProperty("--adaptive-panel-edge-left")
+  document.documentElement.style.removeProperty("--adaptive-panel-edge-right")
 })
 
 describe("readPanelInsets", () => {
   it("liest den Rand, den ein offenes Panel veroeffentlicht", () => {
-    document.documentElement.style.setProperty("--adaptive-panel-margin-right", "392px")
+    document.documentElement.style.setProperty("--adaptive-panel-edge-right", "392px")
     expect(readPanelInsets()).toEqual({ leftInset: 0, rightInset: 392 })
   })
 
   it("liest beide Seiten", () => {
-    document.documentElement.style.setProperty("--adaptive-panel-margin-left", "280px")
-    document.documentElement.style.setProperty("--adaptive-panel-margin-right", "392px")
+    document.documentElement.style.setProperty("--adaptive-panel-edge-left", "280px")
+    document.documentElement.style.setProperty("--adaptive-panel-edge-right", "392px")
     expect(readPanelInsets()).toEqual({ leftInset: 280, rightInset: 392 })
   })
 
@@ -30,7 +30,7 @@ describe("readPanelInsets", () => {
   })
 
   it("verwirft unsinnige Werte, statt sie durchzureichen", () => {
-    document.documentElement.style.setProperty("--adaptive-panel-margin-right", "auto")
+    document.documentElement.style.setProperty("--adaptive-panel-edge-right", "auto")
     expect(readPanelInsets().rightInset).toBe(0)
   })
 })
