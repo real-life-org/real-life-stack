@@ -32,8 +32,10 @@ describe("Der Browser malt seine eigenen Flächen mit", () => {
    * die dem Inhalt gehört.
    */
   it("lässt die Spur der Scrollleiste durchsichtig", () => {
-    expect(blockVon(":root")).toMatch(/scrollbar-width:\s*thin/)
+    // `scrollbar-color` vererbt sich, `scrollbar-width` nicht — sonst bleibt
+    // jeder innere Scrollbereich bei der breiten Voreinstellung.
     expect(blockVon(":root")).toMatch(/scrollbar-color:[^;]*transparent/)
+    expect(blockVon("*")).toMatch(/scrollbar-width:\s*thin/)
     expect(blockVon(".dark")).toMatch(/scrollbar-color:[^;]*transparent/)
   })
 })

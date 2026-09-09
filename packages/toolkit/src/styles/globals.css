@@ -17,7 +17,6 @@
    * die dem Inhalt gehoert. `transparent` als zweiter Wert laesst die Spur
    * weg — der Daumen schwebt dann ueber dem, was ohnehin da ist.
    */
-  scrollbar-width: thin;
   scrollbar-color: oklch(0.00 0 0 / 0.22) transparent;
 
   /* Background & Foreground
@@ -129,6 +128,16 @@
    */
   --shadow-chip: 0 2px 6px oklch(0.00 0 0 / 0.28), 0 1px 2px oklch(0.00 0 0 / 0.16);
   --shadow-navbar: var(--shadow-md);
+}
+
+/*
+ * `scrollbar-color` vererbt sich, `scrollbar-width` nicht: Auf der Wurzel
+ * gesetzt bliebe jeder innere Scrollbereich bei der breiten Voreinstellung —
+ * nachgemessen stand `main` weiter auf `auto` (15px). Darum hier fuer alle;
+ * Elemente ohne Scrollbereich beruehrt es nicht.
+ */
+* {
+  scrollbar-width: thin;
 }
 
 /* Transparent globe canvases need a toolkit-owned backdrop around the planet. */
