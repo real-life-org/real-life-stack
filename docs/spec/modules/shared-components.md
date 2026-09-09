@@ -542,7 +542,7 @@ Regeln:
 2. **Typ-Chips sind alle aktiv, solange `types` leer ist.** Der leere Wert heißt „kein Filter", also wird alles gezeigt — die Card malt das ehrlich. Ein Chip abzuwählen setzt `types` auf den **Rest**; den letzten verbliebenen abzuwählen fällt auf leer (= wieder alles) zurück, weil eine Auswahl, die nichts zeigt, eine Sackgasse wäre. Der Vertrag von `FilterBarValue` bleibt unberührt: leer ist und bleibt leer.
 3. Die Farbe eines Typ-Chips ist die seines **Typ-Abzeichens** und kommt vom Aufrufer (`FilterTypeOption.badgeClassName`); die Filter-Schicht liest das Typ-Register nicht.
 4. **Der Inhalt erscheint erst, wenn die Form steht.** Form und Inhalt DÜRFEN NICHT gleichzeitig animieren — der Kartentext im schmalen Pillen-Umriss liest sich als Fehler. Entweder die Form wandert und der Inhalt blendet danach ein, oder die Form springt und nur der Inhalt blendet kurz über (so umgesetzt); nie länger als 300ms, bei `prefers-reduced-motion` sofort.
-5. Module mit `panelFit: "overlay"` (Karte, Graph) führen die Pille in ihrer eigenen `PanelSafeArea`, zusammen mit ihrem schwebenden Suchfeld.
+5. Module mit `panelFit: "overlay"` (Karte, Graph) reichen ihren Beitrag genauso über `ModuleToolbar` ein wie alle anderen; die **Fläche** hostet ihn dort schwebend (Suche und Chips oben links, Pille unten links). Sie bauen sich weder Suche noch Pille selbst — siehe [01-app-composition.md → Die Modulfläche ist eine Spalte, Regel 5](../01-app-composition.md).
 
 **Code:** `packages/toolkit/src/components/filter/filter-pill.tsx`, Sektionen in `filter-card.tsx` (geteilt mit dem Popover der `FilterBar`).
 

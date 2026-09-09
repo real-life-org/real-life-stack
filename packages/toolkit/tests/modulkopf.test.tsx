@@ -3,7 +3,7 @@ import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { FilterProvider } from "../src/components/filter/filter-store"
+import { FilterProvider, useSharedFilter } from "../src/components/filter/filter-store"
 import { ModuleFrame, moduleContainerClass } from "../src/components/layout/module-frame"
 import { ModuleToolbar } from "../src/components/layout/module-toolbar"
 
@@ -112,12 +112,53 @@ describe("Der Modulkopf", () => {
     expect(leiste!.querySelector("[data-filter-pill-trigger]")).not.toBeNull()
   })
 
-  it("gibt es fuer ueberlagerte Flaechen gar nicht", () => {
-    // `panelFit: "overlay"` (Karte, Graph): Die Steuerung schwebt ueber der
-    // Flaeche, ein Kopf wuerde sie beschneiden (Spec 01, Regel 5).
-    rendere(createElement(ModuleFrame, { moduleId: "map" }, "KARTE"))
-    expect(kopf()).toBeNull()
+  it("schwebt bei ueberlagerten Flaechen, statt zu verschwinden", () => {
+    // `panelFit: "overlay"` (Karte, Graph): Die Flaeche IST der Inhalt, ein
+    // Kopf im Fluss wuerde ihr Welt wegnehmen. Dieselben Bausteine schweben
+    // deshalb darueber — gehostet von derselben Flaeche (Spec 01, Regel 5).
+    rendere(
+      createElement(
+        ModuleFrame,
+        { moduleId: "map" },
+        "KARTE",
+        createElement(ModuleToolbar, { availableTags: ["garten"] }),
+      ),
+    )
     expect(host.textContent).toContain("KARTE")
+    expect(kopf()!.hasAttribute("hidden")).toBe(false)
+    expect(kopfInhalt()!.querySelector("input")).not.toBeNull()
+    expect(host.querySelector("[data-module-controls] [data-filter-pill-trigger]")).not.toBeNull()
+    // Kein zweiter Wirt: Suche und Pille gibt es genau einmal.
+    expect(host.querySelectorAll("input").length).toBe(1)
+    expect(host.querySelectorAll("[data-filter-pill]").length).toBe(1)
+  })
+
+  it("zeigt auch ueber einer Karte die aktiven Filter", () => {
+    // Der Befund, der dazu fuehrte: Im Graphen fehlte die Chip-Zeile, weil
+    // ueberlagerte Module ihre Steuerung selbst rendern mussten.
+    function Aktiv() {
+      const { value, setValue } = useSharedFilter()
+      return createElement("button", {
+        "data-setzen": true,
+        onClick: () => setValue({ ...value, tags: ["garten"] }),
+      })
+    }
+    rendere(
+      createElement(
+        ModuleFrame,
+        { moduleId: "map" },
+        createElement(Aktiv),
+        createElement(ModuleToolbar, { availableTags: ["garten"] }),
+      ),
+    )
+    act(() => {
+      host.querySelector<HTMLButtonElement>("[data-setzen]")!.dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      )
+    })
+    const chips = kopfInhalt()!.querySelector("[data-filter-chips]")
+    expect(chips).not.toBeNull()
+    expect(chips!.textContent).toContain("garten")
   })
 })
 

@@ -79,12 +79,18 @@ export function ModuleOutlet({
             className="h-full w-full"
             style={isActive ? undefined : { display: "none" }}
           >
-            <View
-              groupId={groupId}
-              active={isActive}
-              groups={groups}
-              selectionFocusVisibleArea={selectionFocusVisibleArea}
-            />
+            {/* Auch die dauerhaft gehaltenen Flaechen bekommen ihren Frame:
+                Er ist der eine Wirt der Steuerung — ohne ihn baute die Karte
+                Suche, Chips und Pille wieder selbst. */}
+            {wrap(
+              mod.id,
+              <View
+                groupId={groupId}
+                active={isActive}
+                groups={groups}
+                selectionFocusVisibleArea={selectionFocusVisibleArea}
+              />,
+            )}
           </div>
         )
       })}

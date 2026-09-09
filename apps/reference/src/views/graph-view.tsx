@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import {
   GraphView,
-  FilterPill,
-  ModuleSearchBar,
-  PanelSafeArea,
+  ModuleToolbar,
   resolveTypePresentation,
   useItems,
   useModuleFilteredItems,
@@ -301,14 +299,13 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
       ariaLabel="Beziehungsgraph des Space"
       selectionFocusBottomInset={modulePanel.current ? 200 : 0}
       />
-      {/* Suche oben, Filter-Pille unten links — schwebend wie auf der Karte,
-          weil die Flaeche hier der Inhalt ist (Spec 01, Regel 5). */}
-      <PanelSafeArea className="z-20 p-4">
-        <ModuleSearchBar searchLabel="Graph durchsuchen" className="[&_input]:bg-card!" />
-      </PanelSafeArea>
-      <PanelSafeArea className="z-20 flex items-end p-4">
-        <FilterPill availableTags={availableTags} availableTypes={availableTypes} />
-      </PanelSafeArea>
+      {/* Wie in jedem anderen Modul: EIN Beitrag, verteilt wird er von der
+          Flaeche (hier schwebend, weil der Graph seine Flaeche ist). */}
+      <ModuleToolbar
+        searchLabel="Graph durchsuchen"
+        availableTags={availableTags}
+        availableTypes={availableTypes}
+      />
     </div>
   )
 }

@@ -65,8 +65,15 @@ interface ModuleHeadValue {
   element: HTMLElement | null
   /** Die schwebende Ecke unten links. */
   controlsElement: HTMLElement | null
-  /** Meldet einen Kopf-Beitrag an; die Rueckgabe meldet ihn wieder ab. */
-  anmelden(): () => void
+  /**
+   * Meldet einen Kopf-Beitrag an; die Rueckgabe meldet ihn wieder ab.
+   *
+   * `raeumtObenLinks`: Das Modul hat dort eigene Bedienelemente (die
+   * Zoom-Knoepfe der Karte). Die schwebende Kopfzeile rueckt dann daneben,
+   * statt sie zu verdecken — als Angabe des Moduls, nicht als zweite Fassung
+   * des Kopfes.
+   */
+  anmelden(optionen?: { raeumtObenLinks?: boolean }): () => void
 }
 
 const ModuleHeadContext = createContext<ModuleHeadValue | null>(null)
@@ -109,25 +116,62 @@ export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
   const [kopfElement, setKopfElement] = useState<HTMLElement | null>(null)
   const [controlsElement, setControlsElement] = useState<HTMLElement | null>(null)
   const [leisten, setLeisten] = useState(0)
+  const [raeumtObenLinks, setRaeumtObenLinks] = useState(false)
   const kopf = useMemo<ModuleHeadValue>(
     () => ({
       element: kopfElement,
       controlsElement,
-      anmelden() {
+      anmelden(optionen) {
         setLeisten((n) => n + 1)
+        if (optionen?.raeumtObenLinks) setRaeumtObenLinks(true)
         return () => setLeisten((n) => n - 1)
       },
     }),
     [kopfElement, controlsElement],
   )
 
-  // Ueberlagerte Flaechen haben keinen Kopf (Spec 01, Regel 5): Die Steuerung
-  // schwebt dort ueber der Karte bzw. dem Graphen, weil die Flaeche der Inhalt
-  // IST. Ohne Kopf-Kontext faellt eine `ModuleToolbar` darin an ihren Ort
-  // zurueck — was hier niemand tut, aber nicht still danebengehen soll.
-  if (overlay) return <>{children}</>
-
   const hatKopf = leisten > 0
+
+  const kopfSlot = (klasse?: string) => (
+    <div data-module-head-slot ref={setKopfElement} className={cn(klasse)} />
+  )
+  const controlsSlot = <div data-module-controls ref={setControlsElement} />
+
+  // Ueberlagerte Flaechen tragen DIESELBE Steuerung, nur schwebend (Spec 01,
+  // Regel 5): Die Flaeche IST hier der Inhalt — ein Kopf im Fluss naehme der
+  // Karte Welt weg. Gehostet wird sie trotzdem hier: Zwei Wirte fuer dieselben
+  // Bausteine liefen auseinander, und genau das ist passiert (im Graphen fehlte
+  // die Chip-Zeile, weil das Modul sie selbst haette bauen muessen).
+  if (overlay) {
+    return (
+      <ModuleHeadContext.Provider value={kopf}>
+        <div data-module-frame className="relative h-full w-full">
+          {children}
+          <PanelSafeArea
+            className={cn("z-20 flex items-start p-4", raeumtObenLinks && "pl-16")}
+          >
+            <div
+              data-module-head
+              hidden={!hatKopf}
+              // Eigene Flaeche fuer Feld und Chips: Auf einer Karte gibt es
+              // keinen ruhigen Untergrund, gegen den sie sich lesen liessen.
+              className={cn(
+                "[&_input]:bg-card!",
+                "[&_[data-filter-chips]]:mt-2 [&_[data-filter-chips]]:w-fit [&_[data-filter-chips]]:rounded-full",
+                "[&_[data-filter-chips]]:border [&_[data-filter-chips]]:bg-card/95",
+                "[&_[data-filter-chips]]:px-2 [&_[data-filter-chips]]:py-1 [&_[data-filter-chips]]:shadow-sm",
+              )}
+            >
+              {kopfSlot()}
+            </div>
+          </PanelSafeArea>
+          <ModuleControls className={cn(raeumtObenLinks && "pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-4")}>
+            {controlsSlot}
+          </ModuleControls>
+        </div>
+      </ModuleHeadContext.Provider>
+    )
+  }
 
   return (
     <ModuleHeadContext.Provider value={kopf}>
@@ -145,7 +189,7 @@ export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
           // Kartenkante.
           className="shrink-0 overflow-hidden bg-background [scrollbar-gutter:stable]"
         >
-          <div data-module-head-slot ref={setKopfElement} className={cn(moduleHeadClass(moduleId), "py-4")} />
+          {kopfSlot(cn(moduleHeadClass(moduleId), "py-4"))}
         </div>
 
         {bleed ? (
@@ -169,9 +213,7 @@ export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
             weicht dem Panel aus (PanelSafeArea) und liegt ueber dem Inhalt,
             statt ihm eine Zeile wegzunehmen. Unten polstert sie so weit wie
             der Erstellen-Knopf gegenueber. */}
-        <ModuleControls>
-          <div data-module-controls ref={setControlsElement} />
-        </ModuleControls>
+        <ModuleControls>{controlsSlot}</ModuleControls>
       </div>
     </ModuleHeadContext.Provider>
   )

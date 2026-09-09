@@ -22,6 +22,15 @@ export interface ModuleToolbarProps {
   chipsExtra?: ReactNode
   /** Rechtsbuendige Modul-Aktionen im Kopf (Ansicht, Einstellungen, „Heute"). */
   trailingActions?: ReactNode
+  /** Beschriftung des Suchfelds — benennt die Flaeche, die es durchsucht. */
+  searchLabel?: string
+  /**
+   * Hat dieses Modul oben links eigene Bedienelemente (Zoom der Karte)?
+   *
+   * Dann rueckt die schwebende Kopfzeile daneben. Eine Angabe des Moduls, kein
+   * zweiter Kopf: Die Flaeche bleibt der einzige Wirt.
+   */
+  clearsTopLeft?: boolean
   /**
    * Sucht dieses Modul? Standard ja.
    *
@@ -59,7 +68,9 @@ export function ModuleToolbar({
   drawerExtra,
   chipsExtra,
   trailingActions,
+  searchLabel,
   search = true,
+  clearsTopLeft = false,
   className,
 }: ModuleToolbarProps) {
   const kopf = useOptionalModuleHead()
@@ -74,12 +85,12 @@ export function ModuleToolbar({
   const anmelden = kopf?.anmelden
   useEffect(() => {
     if (!hatKopfInhalt) return
-    return anmelden?.()
-  }, [anmelden, hatKopfInhalt])
+    return anmelden?.({ raeumtObenLinks: clearsTopLeft })
+  }, [anmelden, hatKopfInhalt, clearsTopLeft])
 
   const kopfinhalt = hatKopfInhalt ? (
     <div className="flex flex-col gap-2">
-      {hatZeile && <ModuleSearchBar trailingActions={trailingActions} />}
+      {hatZeile && <ModuleSearchBar searchLabel={searchLabel} trailingActions={trailingActions} />}
       <ModuleFilterChips availableTypes={availableTypes} chipsExtra={chipsExtra} />
     </div>
   ) : null
