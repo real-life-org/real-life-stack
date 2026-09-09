@@ -6,6 +6,7 @@ import {
   type SelectionFocusVisibleArea,
 } from "../../lib/selection-focus"
 import { Inbox } from "lucide-react"
+import { useModuleContentClass } from "../layout/module-frame"
 import { EmptyState } from "../primitives/empty-state"
 import { getItemPreviewAdornments, ItemPreview } from "../preview"
 import { lensItems } from "./list-view"
@@ -30,6 +31,9 @@ function gridColumnsForWidth(width: number): number {
 
 /** A read-only grid composed from comfortable ItemPreview cards. */
 export function GridView({ items, activeItemId, selectionFocusVisibleArea, selectionFocusGateKey, onItemClick }: GridViewProps) {
+  // Die Breite gehoert der Flaeche, nicht der Lens: So stehen Kopf und
+  // Eintraege auf derselben Kante, auch wenn ein Modul eine andere waehlt.
+  const inhaltsbreite = useModuleContentClass()
   const visibleItems = lensItems(items)
   const lastFocusedItemIdRef = useRef<string | null>(null)
   const scrollElementRef = useRef<HTMLDivElement>(null)
@@ -148,7 +152,7 @@ export function GridView({ items, activeItemId, selectionFocusVisibleArea, selec
 
   return (
     <div ref={scrollElementRef} onScroll={updateViewport} aria-label="Rasteransicht" data-virtualizer-item-count={visibleItems.length} className="h-full overflow-y-auto [scrollbar-gutter:stable]">
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+      <div className={inhaltsbreite}>
         <section className="relative" style={{ height: layout.totalSize }}>
           {virtualItems.map((placement) => {
             const item = visibleItems[placement.index]

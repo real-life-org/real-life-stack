@@ -65,17 +65,49 @@ export function moduleContainerClass(layout: ModuleLayout): string | undefined {
 }
 
 /**
+ * Die Breite des Inhalts einer randlosen Flaeche (`fill: "bleed"`).
+ *
+ * Es gibt dort keinen Container, aber sehr wohl eine Breite: Die Liste
+ * zentriert ihre Eintraege. Die stand frueher fuenfmal im Code — in der Lens,
+ * im Raster, in der Kopfzeile, im Register und in der Netzwerk-App —, und wer
+ * eine davon anfasste, rueckte Kopf und Eintraege gegeneinander. Jetzt sagt
+ * sie der Registereintrag (`maxWidth`), und alle lesen DIESE Funktion.
+ */
+export function moduleBleedContentClass(layout: Partial<ModuleLayout>): string {
+  return `mx-auto w-full px-4 sm:px-6 ${layout.maxWidth ?? "max-w-6xl"}`
+}
+
+/**
  * Die Geometrie des Kopfes.
  *
  * Fuer Module mit Container ist es dieselbe wie fuer den Inhalt — genau darum
- * geht es (siehe oben). Randlose Module (`fill: "bleed"`) haben keinen
- * Container, aber ihr Inhalt hat trotzdem eine Breite: Die Liste zentriert bei
- * `max-w-6xl`. Woher der Kopf sie nimmt, sagt der Registereintrag
- * (`maxWidth`) — nicht der Frame, der sonst wuesste, was die Liste tut.
+ * geht es (siehe oben). Randlose Module nehmen die Breite ihres Inhalts, aus
+ * derselben Funktion wie der Inhalt selbst.
  */
 function moduleHeadClass(layout: ModuleLayout): string {
   if (layout.fill !== "bleed") return moduleContainerClass(layout) ?? "px-4"
-  return `mx-auto w-full px-4 sm:px-6 ${layout.maxWidth ?? "max-w-6xl"}`
+  return moduleBleedContentClass(layout)
+}
+
+/**
+ * Das aufgeloeste Layout der umgebenden Modulflaeche — `null`, wenn es keine
+ * gibt (Story, Test, eingebettete Ansicht ohne Huelle).
+ */
+const ModuleLayoutContext = createContext<ModuleLayout | null>(null)
+
+export function useModuleLayout(): ModuleLayout | null {
+  return useContext(ModuleLayoutContext)
+}
+
+/**
+ * Die Breite, in der der Inhalt dieser Flaeche steht.
+ *
+ * Fuer Lenses: Sie zentrieren ihre Eintraege damit auf dieselbe Kante wie der
+ * Kopf darueber. Ohne Flaeche gilt die Vorgabe — dann bestimmt die Lens ihre
+ * Breite selbst, weil niemand sonst es tut.
+ */
+export function useModuleContentClass(): string {
+  return moduleBleedContentClass(useModuleLayout() ?? {})
 }
 
 /**
@@ -174,6 +206,7 @@ export function ModuleFrame({ moduleId, children, ...vorgaben }: ModuleFrameProp
   // die Chip-Zeile, weil das Modul sie selbst haette bauen muessen).
   if (overlay) {
     return (
+      <ModuleLayoutContext.Provider value={layout}>
       <ModuleHeadContext.Provider value={kopf}>
         <div data-module-frame className="relative h-full w-full">
           {children}
@@ -203,10 +236,12 @@ export function ModuleFrame({ moduleId, children, ...vorgaben }: ModuleFrameProp
           </ModuleControls>
         </div>
       </ModuleHeadContext.Provider>
+      </ModuleLayoutContext.Provider>
     )
   }
 
   return (
+    <ModuleLayoutContext.Provider value={layout}>
     <ModuleHeadContext.Provider value={kopf}>
       {/* `relative`: Die schwebende Ecke unten links misst sich an der
           Modulflaeche, nicht am Fenster (Board, Abschnitt „Positionen"). */}
@@ -249,6 +284,7 @@ export function ModuleFrame({ moduleId, children, ...vorgaben }: ModuleFrameProp
         <ModuleControls>{controlsSlot}</ModuleControls>
       </div>
     </ModuleHeadContext.Provider>
+    </ModuleLayoutContext.Provider>
   )
 }
 

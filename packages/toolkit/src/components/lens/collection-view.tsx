@@ -4,6 +4,8 @@ import type { Item } from "@real-life-stack/data-interface"
 
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { cn } from "../../lib/utils"
+import { ModuleSurfaceScope } from "../layout/module-surface-scope"
+import { useModuleContentClass } from "../layout/module-frame"
 import { Button } from "../primitives/button"
 import { GridView } from "./grid-view"
 import { ListView } from "./list-view"
@@ -76,7 +78,21 @@ export interface CollectionViewProps {
  * composition intentionally remounts the selected density, re-arming its
  * one-time active-item focus gate after a layout change.
  */
-export function CollectionView({
+/**
+ * Die Lens laeuft auch ausserhalb der App (Story, Test, apps/network). Die
+ * Huelle bringt dort mit, was sonst die Flaeche stellt — samt der Breite, in
+ * der ihre Eintraege stehen. Unter der App reicht sie den vorhandenen
+ * Registereintrag durch: Dann ist `collection.maxWidth` die einzige Quelle.
+ */
+export function CollectionView(props: CollectionViewProps) {
+  return (
+    <ModuleSurfaceScope fill="bleed" maxWidth="max-w-6xl">
+      <CollectionViewInner {...props} />
+    </ModuleSurfaceScope>
+  )
+}
+
+function CollectionViewInner({
   items,
   activeItemId,
   onItemClick,
@@ -86,6 +102,7 @@ export function CollectionView({
   selectionFocusVisibleArea,
   className,
 }: CollectionViewProps) {
+  const inhaltsbreite = useModuleContentClass()
   const [eigenes, setEigenes] = useState<CollectionLayout>(defaultLayout)
   const gesteuert = layoutProp !== undefined
   const layout = layoutProp ?? eigenes
@@ -97,7 +114,7 @@ export function CollectionView({
   return (
     <section aria-label="Sammlungsansicht" className={cn("flex h-full min-h-0 flex-col gap-4", className)}>
       {!gesteuert && (
-        <div className="mx-auto flex w-full max-w-6xl justify-end px-4 pt-4 sm:px-6 sm:pt-6">
+        <div className={cn(inhaltsbreite, "flex justify-end pt-4 sm:pt-6")}>
           <CollectionLayoutToggle layout={layout} onChange={setLayout} />
         </div>
       )}
