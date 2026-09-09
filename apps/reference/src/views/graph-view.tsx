@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import {
   GraphView,
-  ModuleFilterBar,
+  FilterPill,
+  ModuleSearchBar,
   PanelSafeArea,
   resolveTypePresentation,
   useItems,
@@ -239,7 +240,10 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
     const systemTypes = new Set<string>(SYSTEM_ITEM_TYPES)
     const present = new Set(alleItems.map(({ type }) => type).filter((type) => !systemTypes.has(type)))
     return Array.from(present)
-      .map((id) => ({ id, label: resolveTypePresentation(id).label }))
+      .map((id) => {
+        const presentation = resolveTypePresentation(id)
+        return { id, label: presentation.label, badgeClassName: presentation.badge?.className }
+      })
       .sort((a, b) => a.label.localeCompare(b.label, "de"))
   }, [alleItems])
 
@@ -297,13 +301,13 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
       ariaLabel="Beziehungsgraph des Space"
       selectionFocusBottomInset={modulePanel.current ? 200 : 0}
       />
+      {/* Suche oben, Filter-Pille unten links — schwebend wie auf der Karte,
+          weil die Flaeche hier der Inhalt ist (Spec 01, Regel 5). */}
       <PanelSafeArea className="z-20 p-4">
-        <ModuleFilterBar
-          availableTags={availableTags}
-          availableTypes={availableTypes}
-          searchLabel="Graph durchsuchen"
-          className="[&_[data-slot=button][data-variant=outline]]:bg-background! [&_input]:bg-background!"
-        />
+        <ModuleSearchBar searchLabel="Graph durchsuchen" className="[&_input]:bg-card!" />
+      </PanelSafeArea>
+      <PanelSafeArea className="z-20 flex items-end p-4">
+        <FilterPill availableTags={availableTags} availableTypes={availableTypes} />
       </PanelSafeArea>
     </div>
   )

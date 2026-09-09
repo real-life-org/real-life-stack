@@ -3,7 +3,7 @@ import type { Item } from "@real-life-stack/data-interface"
 import { Calendar, Globe, Loader2, MapPin } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"
-import { FilterScope, ModuleFilterBar, useSharedFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
+import { FilterPill, FilterScope, ModuleSearchBar, useSharedFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
 import { CreateFab } from "../create-fab"
 import { PanelSafeArea } from "../layout/panel-safe-area"
 import { Button } from "../primitives"
@@ -385,7 +385,11 @@ function MapViewInner({
       mountKey={mountAttempt} onMountError={() => setMountError(true)} />
     {!adapter && <div className="absolute inset-0 z-10 bg-background/80"><PanelSafeArea className="flex items-center justify-center text-muted-foreground">{mountError ? <div className="flex flex-col items-center gap-3"><span>Karte konnte nicht geladen werden.</span><Button variant="outline" size="sm" onClick={() => { setMountError(false); setMountAttempt((value) => value + 1) }}>Erneut versuchen</Button></div> : <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Karte wird geladen…</>}</PanelSafeArea></div>}
     {isPicking && <PanelSafeArea className="z-30 flex items-start justify-center p-3"><div className="flex items-center gap-2 rounded-full border bg-background/95 px-3 py-2 text-sm shadow-md"><MapPin className="h-4 w-4" /><span>{pickPosition ? "Position gewählt." : "Tippe auf die Karte, um die Position zu setzen."}</span>{isCompact && pickPosition && <Button size="sm" onClick={confirmPick}>Übernehmen</Button>}<Button size="sm" variant="ghost" onClick={cancelPick}>Abbrechen</Button></div></PanelSafeArea>}
-    <PanelSafeArea className="z-20 py-4 pl-16 pr-4"><ModuleFilterBar availableTags={availableTags} availableTypes={MAP_TYPES} searchLabel="Karte durchsuchen" className="[&_[data-slot=button][data-variant=outline]]:bg-background! [&_input]:bg-background!" trailingActions={adapter && hasGlobe(adapter) && !isPicking ? <Button size="icon-sm" variant={projection === "globe" ? "default" : "outline"} {...mapViewProjectionToggleA11y(projection)} onClick={toggleProjection}><Globe className="h-4 w-4" /></Button> : undefined} /></PanelSafeArea>
+    {/* Suche oben links, Filter-Pille unten links — wie auf jeder anderen
+        Modulflaeche, nur schwebend: Die Karte IST ihr Inhalt, ein Kopf wuerde
+        ihr Welt wegnehmen (Spec 01, Regel 5). `pl-16` haelt die Zoom-Knoepfe frei. */}
+    <PanelSafeArea className="z-20 py-4 pl-16 pr-4"><ModuleSearchBar searchLabel="Karte durchsuchen" className="[&_input]:bg-card!" trailingActions={adapter && hasGlobe(adapter) && !isPicking ? <Button size="icon-sm" variant={projection === "globe" ? "default" : "outline"} {...mapViewProjectionToggleA11y(projection)} onClick={toggleProjection}><Globe className="h-4 w-4" /></Button> : undefined} /></PanelSafeArea>
+    <PanelSafeArea className="z-20 flex items-end p-4 pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-4"><FilterPill availableTags={availableTags} availableTypes={MAP_TYPES} /></PanelSafeArea>
     {!isPicking && canCreate && <CreateFab onClick={onCreate!} label="Ort erstellen" />}
   </div>
 }

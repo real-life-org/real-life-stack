@@ -66,7 +66,14 @@ export function CollectionView({
     return Array.from(present)
       .map((id) => {
         const presentation = resolveTypePresentation(id)
-        return { id, label: presentation.label, icon: presentation.badge?.icon }
+        // Farbe mitgeben: Der Chip im Filter sieht damit aus wie das Abzeichen
+        // auf der Karte, ohne dass die Filter-Schicht das Typ-Register kennt.
+        return {
+          id,
+          label: presentation.label,
+          icon: presentation.badge?.icon,
+          badgeClassName: presentation.badge?.className,
+        }
       })
       .sort((a, b) => a.label.localeCompare(b.label, "de"))
   }, [alleEintraege])
