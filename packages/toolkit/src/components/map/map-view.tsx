@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
-import { Calendar, Globe, Loader2, MapPin } from "lucide-react"
+import { Calendar, Loader2, LocateFixed, MapPin } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"
 import { FilterScope, useSharedFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
@@ -47,9 +47,6 @@ export interface MapViewProps {
   onCreate?: () => void
   clustering?: false | { radius?: number }
   resolveGroupColor?: (item: Item) => string | undefined
-  /** Controlled projection configuration; omitted keeps the established Mercator default. */
-  projection?: MapProjection
-  onProjectionChange?: (projection: MapProjection) => void
   /** A shell-owned composer draft is shown as a non-clickable marker when positioned. */
   draftItem?: Item | null
   isCompact?: boolean
@@ -126,15 +123,25 @@ export function observeMapViewBounds(
   return () => { if (timer) clearTimeout(timer); unsubscribe() }
 }
 
-export function toggleMapViewProjection(adapter: MapAdapter | null, projection: MapProjection): MapProjection {
-  const next = projection === "globe" ? "mercator" : "globe"
-  if (next === "globe" && adapter && adapter.getView().zoom > 2) adapter.setView({ zoom: 1 })
-  return next
+/**
+ * Die Projektion der Karte: Globus, wo der Adapter ihn kann.
+ *
+ * Frueher ein Umschalter in der Leiste. Er stellte eine Frage, auf die es nur
+ * eine Antwort gab — die Erde ist rund, und wer Mercator sah, sah ihn nicht
+ * aus Ueberzeugung, sondern weil der Knopf so stand. Adapter ohne die
+ * Faehigkeit (Leaflet) bleiben bei Mercator; ein Versprechen, das die Technik
+ * nicht halten kann, gibt die Oberflaeche nicht.
+ */
+export function mapViewProjection(adapter: MapAdapter | null): MapProjection {
+  return adapter && hasGlobe(adapter) ? "globe" : "mercator"
 }
 
-/** Projection is a state toggle, so its accessible name stays stable. */
-export function mapViewProjectionToggleA11y(projection: MapProjection) {
-  return { "aria-label": "Globusansicht", "aria-pressed": projection === "globe" }
+/** Zoomstufe, auf die der Standort-Knopf die Kamera bringt: Stadtteil. */
+export const LOCATE_ZOOM = 14
+
+/** Kennt dieser Browser ueberhaupt einen Standort? Sonst gibt es keinen Knopf. */
+export function hasGeolocation(): boolean {
+  return typeof navigator !== "undefined" && !!navigator.geolocation
 }
 
 function metersBetween(aLng: number, aLat: number, bLng: number, bLat: number): number {
@@ -243,8 +250,7 @@ export function MapView(props: MapViewProps) {
 function MapViewInner({
   items, itemsLoading, inventoryKey, focusedItem, createAdapter, initialView, viewportMode,
   onViewportBoundsChange, active = true, activeItemId, selectionFocusVisibleArea, onItemClick,
-  allowCreate, onCreate, clustering = false, resolveGroupColor, projection: projectionProp,
-  onProjectionChange, draftItem, isCompact = false,
+  allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false,
 }: MapViewProps) {
   const [adapter, setAdapter] = useState<MapAdapter | null>(null)
   const [mountError, setMountError] = useState(false)
@@ -254,8 +260,10 @@ function MapViewInner({
   // sich aber mit den anderen Modulen. Ein im Feed gesetztes Tag filtert die
   // Karte ohne Zutun mit.
   const { value: filter, searchText: search } = useSharedFilter()
-  const [uncontrolledProjection, setUncontrolledProjection] = useState<MapProjection>("mercator")
-  const projection = projectionProp ?? uncontrolledProjection
+  // Der Globus ist der Standard, wo der Adapter ihn kann — keine Wahl mehr.
+  const projection = mapViewProjection(adapter)
+  const [standortLaeuft, setStandortLaeuft] = useState(false)
+  const [standortFehler, setStandortFehler] = useState<string | null>(null)
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)
   const { isPicking, updatePick, confirmPick, cancelPick } = useLocationPick()
   const accumulated = useRef(new Map<string, Item>())
@@ -289,7 +297,7 @@ function MapViewInner({
       onViewportBoundsChange(nextBounds)
     })
   }, [adapter, onViewportBoundsChange, viewportMode])
-  useEffect(() => { if (adapter && hasGlobe(adapter)) adapter.setProjection(projection) }, [adapter, projection])
+  useEffect(() => { if (adapter && hasGlobe(adapter)) adapter.setProjection("globe") }, [adapter])
   // Der Karte einmal sagen, wo ihre Mitte liegt: Dann stimmt jede weitere
   // Bewegung von selbst — auch das Zoomen von Hand, bei dem der Globus sonst
   // um die Container-Mitte waechst und hinter dem Panel verschwindet.
@@ -367,11 +375,37 @@ function MapViewInner({
     if (viewportMode === "bbox-module") markerClick.current = item.id
     onItemClick?.(item)
   }, [confirmPick, isCompact, isPicking, onItemClick, updatePick, viewportMode])
-  const toggleProjection = useCallback(() => {
-    const next = toggleMapViewProjection(adapter, projection)
-    if (projectionProp === undefined) setUncontrolledProjection(next)
-    onProjectionChange?.(next)
-  }, [adapter, onProjectionChange, projection, projectionProp])
+  /**
+   * „Wo bin ich" — die Kamera faehrt hin, mehr passiert nicht.
+   *
+   * Bewusst ohne eigene Markierung: Ein blauer Punkt waere ein zweiter
+   * Marker-Vertrag mit eigenem Lebenszyklus, und die Frage ist mit dem
+   * Hinfahren beantwortet.
+   */
+  const zeigeStandort = useCallback(() => {
+    if (!adapter || !hasGeolocation()) return
+    setStandortFehler(null)
+    setStandortLaeuft(true)
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setStandortLaeuft(false)
+        adapter.focusOn([coords.longitude, coords.latitude], {
+          zoom: LOCATE_ZOOM,
+          animate: true,
+          // Dieselbe Polsterung wie bei jedem anderen Hinfahren: Der Standort
+          // gehoert in die Mitte des SICHTBAREN Rests, nicht hinter das Panel.
+          ...mapViewFocusInsets(isCompact, panelEdges, kameraKenntSeiten),
+        })
+      },
+      () => {
+        // Kein Konsolen-Rauschen: Eine Ablehnung ist keine Stoerung, sondern
+        // eine Antwort — sie gehoert dorthin, wo gefragt wurde.
+        setStandortLaeuft(false)
+        setStandortFehler("Standort nicht verfügbar")
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    )
+  }, [adapter, isCompact, kameraKenntSeiten, panelEdges])
   const markerGroupColor = useCallback((item: Item) => item.id === PICK_MARKER_ID
     ? PICK_MARKER_COLOR
     : resolveGroupColor?.(item) ?? getSpacePrimaryColor("map"), [resolveGroupColor])
@@ -391,7 +425,7 @@ function MapViewInner({
         IN der Schutzzone, damit er auch ohne Frame (Story, apps/network) dort
         landet, wo er hingehoert. `clearsTopLeft`: links oben sitzen die
         Zoom-Knoepfe. */}
-    <PanelSafeArea className="z-20 flex items-start p-4 pl-16"><ModuleToolbar searchLabel="Karte durchsuchen" clearsTopLeft availableTags={availableTags} availableTypes={MAP_TYPES} trailingActions={adapter && hasGlobe(adapter) && !isPicking ? <Button size="icon-sm" variant={projection === "globe" ? "default" : "outline"} {...mapViewProjectionToggleA11y(projection)} onClick={toggleProjection}><Globe className="h-4 w-4" /></Button> : undefined} className="[&_input]:bg-card!" /></PanelSafeArea>
+    <PanelSafeArea className="z-20 flex items-start p-4 pl-16"><ModuleToolbar searchLabel="Karte durchsuchen" clearsTopLeft availableTags={availableTags} availableTypes={MAP_TYPES} trailingActions={hasGeolocation() && !isPicking ? <div className="flex flex-col items-end gap-1"><Button size="icon-sm" variant="outline" aria-label="Meinen Standort anzeigen" title="Meinen Standort anzeigen" aria-busy={standortLaeuft} onClick={zeigeStandort} className="bg-card!">{standortLaeuft ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}</Button>{standortFehler && <span role="status" className="rounded-full border bg-card/95 px-2 py-0.5 text-xs text-muted-foreground shadow-sm">{standortFehler}</span>}</div> : undefined} className="[&_input]:bg-card!" /></PanelSafeArea>
     {!isPicking && canCreate && <CreateFab onClick={onCreate!} label="Ort erstellen" />}
   </div>
 }
