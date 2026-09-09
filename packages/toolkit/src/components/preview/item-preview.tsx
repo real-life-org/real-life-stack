@@ -5,7 +5,7 @@ import type { Item, User } from "@real-life-stack/data-interface"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { RelativeTime } from "../primitives/relative-time"
 import { ProfileLink } from "../profile/profile-link"
-import { TagChip } from "../tag/tag-chip"
+import { TagFilterChip } from "../tag/tag-filter-chip"
 import { MarkdownText } from "./markdown-text"
 import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
@@ -337,7 +337,7 @@ export function ItemPreview({
           {sichtbareTags.length > 0 && (
             <div className="flex min-w-0 shrink items-center gap-1.5 overflow-hidden">
               {sichtbareTags.map((tag) => (
-                <TagChip key={tag} tag={tag} />
+                <TagFilterChip key={tag} tag={tag} />
               ))}
               {verborgeneTags > 0 && (
                 <span

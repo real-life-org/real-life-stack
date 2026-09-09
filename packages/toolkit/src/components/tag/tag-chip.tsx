@@ -22,6 +22,15 @@ export interface TagChipProps {
    */
   selected?: boolean
   onToggle?: () => void
+  /**
+   * Klick-Modus (Tag auf einer Karte): Der Chip wird ein Knopf, der das Tag
+   * in den Filter nimmt bzw. wieder herausnimmt. `selected` sagt, ob es
+   * gerade filtert — vorgelesen als `aria-pressed`.
+   *
+   * Der Klick gilt dem Tag, nicht der Karte darunter: Der Chip haelt ihn
+   * selbst auf (`stopPropagation`), sonst filterte er UND oeffnete das Item.
+   */
+  onClick?: () => void
   /** Removable mode (active filter chip): renders an inline ✕ button. */
   onRemove?: () => void
   className?: string
@@ -40,12 +49,13 @@ const SIZES = {
  * `icon` renders a small glyph (shared with the marker layer via the icon
  * registry) before the label.
  *
- * Three modes, picked by props:
+ * Four modes, picked by props:
  * - static (default): a plain coloured label.
  * - toggle (`onToggle`): a pressable option for the filter picker.
+ * - klick (`onClick`): ein Tag auf einer Karte, das den Filter setzt.
  * - removable (`onRemove`): a coloured chip with a ✕ for active filters.
  */
-export function TagChip({ tag, icon, size = "sm", selected, onToggle, onRemove, className }: TagChipProps) {
+export function TagChip({ tag, icon, size = "sm", selected, onToggle, onClick, onRemove, className }: TagChipProps) {
   const base = cn(
     "inline-flex items-center gap-1 rounded-full font-medium",
     SIZES[size],
@@ -78,6 +88,29 @@ export function TagChip({ tag, icon, size = "sm", selected, onToggle, onRemove, 
           selected
             ? "opacity-100 ring-2 ring-inset ring-foreground/30"
             : "opacity-50 hover:opacity-80",
+        )}
+      >
+        {glyphEl}
+        {tag}
+      </button>
+    )
+  }
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          // Die Karte darunter hoert denselben Klick — ohne das hier filterte
+          // ein Tippen auf ein Tag und oeffnete zugleich das Item.
+          e.stopPropagation()
+          onClick()
+        }}
+        aria-pressed={selected === true}
+        className={cn(
+          base,
+          "transition-shadow hover:ring-2 hover:ring-inset hover:ring-foreground/20",
+          selected && "ring-2 ring-inset ring-foreground/30",
         )}
       >
         {glyphEl}

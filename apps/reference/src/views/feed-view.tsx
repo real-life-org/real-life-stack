@@ -11,6 +11,7 @@ import {
   ItemMetaRow,
   ItemCommentCount,
   FeedComposerTrigger,
+  CreateFab,
   ModuleToolbar,
   useModuleFilteredItems,
   useSharedFilter,
@@ -186,6 +187,10 @@ export function FeedView({ groupId }: { groupId: string }) {
   )
   useRegisterCreate("feed", createConfig)
 
+  // Die Pille ist der Einstieg ins Schreiben, solange sie im Bild ist; der
+  // FAB beobachtet sie und tritt an ihre Stelle, sobald sie weggescrollt ist.
+  const composerTrigger = useRef<HTMLDivElement | null>(null)
+
   const renderFeedFooter = useCallback(feedFooter, [])
 
   return (
@@ -193,12 +198,14 @@ export function FeedView({ groupId }: { groupId: string }) {
       <ModuleToolbar availableTags={availableTags} availableTypes={availableTypes} />
 
       {/* Composer trigger — hands off to the app-level create host (fullscreen). */}
-      <FeedComposerTrigger
-        placeholder="Was gibt's Neues?"
-        userName={currentUser?.displayName}
-        userAvatar={currentUser?.avatarUrl}
-        onCompose={(initialText) => startCreate("post", initialText ? { text: initialText } : undefined)}
-      />
+      <div ref={composerTrigger}>
+        <FeedComposerTrigger
+          placeholder="Was gibt's Neues?"
+          userName={currentUser?.displayName}
+          userAvatar={currentUser?.avatarUrl}
+          onCompose={(initialText) => startCreate("post", initialText ? { text: initialText } : undefined)}
+        />
+      </div>
 
       {/* Feed items — skeleton while loading, empty state once loaded with
           nothing, otherwise the list. */}
@@ -250,6 +257,14 @@ export function FeedView({ groupId }: { groupId: string }) {
         )}
       </div>
 
+      {/* Derselbe Einstieg wie in jedem anderen Modul — nur erscheint er hier
+          erst, wenn die Pille aus dem Bild ist (Spec shared-components →
+          „Feed-Sonderfall"). */}
+      <CreateFab
+        onClick={() => startCreate("post")}
+        label="Beitrag erstellen"
+        hideWhileVisible={composerTrigger}
+      />
     </div>
   )
 }
