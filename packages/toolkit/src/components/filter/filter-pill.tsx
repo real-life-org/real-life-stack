@@ -48,16 +48,31 @@ export function FilterPill({
   const { value, setValue } = useSharedFilter()
   const [offen, setOffen] = useState(false)
   const huelle = useRef<HTMLDivElement | null>(null)
+  const pille = useRef<HTMLButtonElement | null>(null)
+  /**
+   * Soll der Fokus beim Schliessen zurueck auf die Pille?
+   *
+   * Ja, wenn jemand die Karte selbst geschlossen hat (✕, Escape) — sie wird
+   * dabei abgebaut, und ohne Zutun landete der Fokus auf `document.body`, die
+   * naechste Tabulator-Taste also wieder ganz vorn. Nein bei einem Klick
+   * daneben: Dort will jemand etwas anderes anfassen, und der Fokus gehoert
+   * dorthin, nicht zurueck zu uns.
+   */
+  const fokusZurueck = useRef(false)
 
   // Escape und ein Klick daneben schliessen — beides, weil die Karte kein
   // Modal ist: Sie liegt ueber dem Inhalt, den man weiter bedienen darf.
   useEffect(() => {
     if (!offen) return
     const taste = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOffen(false)
+      if (e.key !== "Escape") return
+      fokusZurueck.current = true
+      setOffen(false)
     }
     const daneben = (e: Event) => {
-      if (!huelle.current?.contains(e.target as Node)) setOffen(false)
+      if (huelle.current?.contains(e.target as Node)) return
+      fokusZurueck.current = false
+      setOffen(false)
     }
     document.addEventListener("keydown", taste)
     document.addEventListener("pointerdown", daneben)
@@ -68,10 +83,16 @@ export function FilterPill({
   }, [offen])
 
   // Der Fokus geht in die Karte, sonst bliebe er auf einer Pille, die es
-  // gerade nicht mehr gibt — und Escape liefe ins Leere.
+  // gerade nicht mehr gibt — und Escape liefe ins Leere. Beim Schliessen den
+  // Weg zurueck, aber nur wenn das Schliessen von hier ausging (siehe oben).
   useEffect(() => {
-    if (!offen) return
-    huelle.current?.querySelector<HTMLElement>("[aria-label='Filter schließen']")?.focus()
+    if (offen) {
+      huelle.current?.querySelector<HTMLElement>("[aria-label='Filter schließen']")?.focus()
+      return
+    }
+    if (!fokusZurueck.current) return
+    fokusZurueck.current = false
+    pille.current?.focus()
   }, [offen])
 
   return (
@@ -98,11 +119,15 @@ export function FilterPill({
               availableTags={availableTags}
               availableTypes={availableTypes}
               extra={drawerExtra}
-              onClose={() => setOffen(false)}
+              onClose={() => {
+                fokusZurueck.current = true
+                setOffen(false)
+              }}
             />
           </div>
         ) : (
           <button
+            ref={pille}
             type="button"
             data-filter-pill-trigger
             onClick={() => setOffen(true)}

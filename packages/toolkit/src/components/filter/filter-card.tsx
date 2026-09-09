@@ -69,15 +69,27 @@ export function isTypeSelected(value: FilterBarValue, id: string): boolean {
  * sichtbare Sinn: Ein Typ wird ausgeblendet. Das Abwaehlen des letzten
  * uebrigen fuehrt zurueck auf leer, also wieder auf alles: Eine Auswahl, die
  * nichts zeigt, waere eine Sackgasse.
+ *
+ * Und wer wieder alle anwaehlt, landet ebenfalls bei leer: Ein Wert, der alle
+ * angebotenen Typen aufzaehlt, SIEHT aus wie „kein Filter", zaehlte aber als
+ * aktiver (Chip im Kopf) — und blendete stillschweigend Typen aus, die dieses
+ * Modul gar nicht anbietet, ein anderes aber schon.
  */
 export function toggleTypeSelection(
   value: FilterBarValue,
   id: string,
   alle: readonly FilterTypeOption[],
 ): string[] {
-  if (value.types.length === 0) return alle.map((t) => t.id).filter((t) => t !== id)
-  if (value.types.includes(id)) return value.types.filter((t) => t !== id)
-  return [...value.types, id]
+  const naechste =
+    value.types.length === 0
+      ? alle.map((t) => t.id).filter((t) => t !== id)
+      : value.types.includes(id)
+        ? value.types.filter((t) => t !== id)
+        : [...value.types, id]
+  const angeboten = new Set(alle.map((t) => t.id))
+  const alleGewaehlt =
+    angeboten.size > 0 && naechste.length >= angeboten.size && [...angeboten].every((t) => naechste.includes(t))
+  return alleGewaehlt ? [] : naechste
 }
 
 /**

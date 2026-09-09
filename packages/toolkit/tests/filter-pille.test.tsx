@@ -142,6 +142,18 @@ describe("Die Typ-Chips", () => {
     expect(typen()).toBe("task,place")
   })
 
+  it("normalisiert auf leer, sobald wieder alle gewaehlt sind", () => {
+    // Sonst stuenden alle Typen ausdruecklich im Wert: sieht aus wie „kein
+    // Filter", zaehlt aber als aktiver — mit Chip oben — und blendete Typen
+    // aus, die dieses Modul gar nicht anbietet (Copilot-Befund).
+    rendere()
+    klick(pille())
+    klick(typChip("Termin"))
+    expect(typen()).toBe("task,place")
+    klick(typChip("Termin"))
+    expect(typen()).toBe("")
+  })
+
   it("faellt beim Abwaehlen des letzten auf leer zurueck", () => {
     rendere()
     klick(pille())
@@ -150,6 +162,40 @@ describe("Die Typ-Chips", () => {
     expect(typen()).toBe("place")
     klick(typChip("Ort"))
     expect(typen()).toBe("")
+  })
+})
+
+/**
+ * Wer die Karte mit der Tastatur schliesst, muss weiterarbeiten koennen: Die
+ * Pille wird beim Schliessen neu montiert, und ohne Zutun landete der Fokus
+ * auf `document.body` — die naechste Tabulator-Taste begann wieder ganz vorn
+ * (#323).
+ */
+describe("Der Fokus beim Schliessen", () => {
+  it("kehrt nach dem ✕ auf die Pille zurueck", () => {
+    rendere()
+    klick(pille())
+    klick(host.querySelector("[data-filter-card] [aria-label='Filter schließen']"))
+    expect(document.activeElement).toBe(pille())
+  })
+
+  it("kehrt nach Escape auf die Pille zurueck", () => {
+    rendere()
+    klick(pille())
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))
+    })
+    expect(document.activeElement).toBe(pille())
+  })
+
+  it("stiehlt ihn NICHT, wenn jemand daneben klickt", () => {
+    // Dort will jemand etwas anderes anfassen — der Fokus gehoert dann dorthin.
+    rendere()
+    klick(pille())
+    act(() => {
+      document.body.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }))
+    })
+    expect(document.activeElement).not.toBe(pille())
   })
 })
 

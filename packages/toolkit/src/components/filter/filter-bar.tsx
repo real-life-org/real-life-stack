@@ -33,9 +33,12 @@ import type { FilterBarValue, FilterTypeOption } from "./types"
  * Module-specific filters compose via two slots:
  * - `chipsExtra`: shown after the common chips. Reuse `<FilterChip>`
  *   for visual consistency.
- * - `drawerExtra`: shown after the common filter sections inside the
- *   popover. Reuse `<FilterSection>` + `<FilterMultiSelect>` /
- *   `<FilterToggle>` for visual consistency.
+ * - `drawerExtra`: beliebiger Inhalt unter den gemeinsamen Sektionen des
+ *   Popovers. Die Bausteine `<FilterSection>` + `<FilterMultiSelect>` /
+ *   `<FilterToggle>` gelten dort weiter — die Sektionen der Karte tragen
+ *   dieselbe Anatomie (Label 11px, gesperrt, Grossbuchstaben; Optionen als
+ *   umbrechende Chips), also fuegt sich ein damit gebautes Extra ein, statt
+ *   daneben zu stehen.
  */
 export interface FilterBarProps {
   value: FilterBarValue
@@ -46,7 +49,7 @@ export interface FilterBarProps {
   availableTypes?: readonly FilterTypeOption[]
   /** Optional active-state chips for module-specific filters. */
   chipsExtra?: ReactNode
-  /** Optional popover content for module-specific filters. */
+  /** Modul-eigene Sektionen im Popover (siehe Kopfkommentar). */
   drawerExtra?: ReactNode
   /**
    * Optional actions directly next to the Filter button (left side).
