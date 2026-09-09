@@ -4,7 +4,11 @@ import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { FilterProvider, useSharedFilter } from "../src/components/filter/filter-store"
-import { ModuleFrame, moduleContainerClass } from "../src/components/layout/module-frame"
+import {
+  ModuleFrame,
+  moduleContainerClass,
+  resolveModuleLayout,
+} from "../src/components/layout/module-frame"
 import { ModuleToolbar } from "../src/components/layout/module-toolbar"
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -220,7 +224,7 @@ describe("Der Modulkopf", () => {
 describe("Die Geometrie der Spalte", () => {
   it("kommt fuer Kopf und Inhalt aus einer Funktion", () => {
     rendere(createElement(ModuleFrame, { moduleId: "feed" }, "INHALT"))
-    const geometrie = moduleContainerClass("feed")!
+    const geometrie = moduleContainerClass(resolveModuleLayout({ moduleId: "feed" }))!
     for (const klasse of geometrie.split(/\s+/)) {
       expect(kopfInhalt()!.className).toContain(klasse)
       expect(scrollbereich()!.firstElementChild!.className).toContain(klasse)
@@ -229,7 +233,7 @@ describe("Die Geometrie der Spalte", () => {
 
   it("traegt kein vertikales Polster — das gehoert Kopf und Scrollbereich", () => {
     // Sonst polsterte der Kopf oben UND der Inhalt darunter nochmal.
-    expect(moduleContainerClass("feed")).not.toMatch(/\bp[ty]-/)
+    expect(moduleContainerClass(resolveModuleLayout({ moduleId: "feed" }))).not.toMatch(/\bp[ty]-/)
   })
 
   it("haelt in beiden dieselbe Scrollleistenbreite frei", () => {
@@ -242,7 +246,7 @@ describe("Die Geometrie der Spalte", () => {
 
   it("laesst randlose Module ohne Container fuellen", () => {
     // `fill: "bleed"` (Liste, Karte): kein Container, das Modul scrollt selbst.
-    expect(moduleContainerClass("collection")).toBeUndefined()
+    expect(moduleContainerClass(resolveModuleLayout({ moduleId: "collection" }))).toBeUndefined()
     rendere(createElement(ModuleFrame, { moduleId: "collection" }, "LISTE"))
     expect(scrollbereich()).toBeNull()
     expect(host.querySelector("[data-module-fill]")).not.toBeNull()

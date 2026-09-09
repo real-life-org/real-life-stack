@@ -793,15 +793,16 @@ function NetworkShell() {
               />
             )}
             {deferredLens === "calendar" && (
-              <div className="h-full overflow-y-auto p-4 sm:p-6">
-                <div className="mx-auto max-w-6xl">
-                  <CalendarView
-                    events={domainItems}
-                    initialVisibleDate="2026-07-08T12:00:00+02:00"
-                    activeItemId={selectedNodeId ?? undefined}
-                    onEventClick={(item) => selectItem(item.id)}
-                  />
-                </div>
+              // Volle Hoehe, kein eigener Scroller: Der Kalender bringt seine
+              // Modulflaeche selbst mit (Kopf oben, Scrollbereich darunter),
+              // und die braucht eine bestimmte Hoehe, um sie zu teilen.
+              <div className="h-full min-h-0">
+                <CalendarView
+                  events={domainItems}
+                  initialVisibleDate="2026-07-08T12:00:00+02:00"
+                  activeItemId={selectedNodeId ?? undefined}
+                  onEventClick={(item) => selectItem(item.id)}
+                />
               </div>
             )}
             {deferredLens === "marketplace" && (

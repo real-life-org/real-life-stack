@@ -67,8 +67,11 @@ export interface ModuleToolbarProps {
  * als Datenpaket nach oben gegeben. Ein Ansichtswechsel im Kopf schaltet
  * damit weiter den State des Moduls, das ihn besitzt.
  *
- * Ohne Flaeche darueber (Story, Test, eingebettete Ansicht) rendert sie beides
- * an Ort und Stelle, statt spurlos zu verschwinden (Spec 01, Regel 3).
+ * Ohne Flaeche darueber rendert sie beides an Ort und Stelle, statt spurlos zu
+ * verschwinden (Spec 01, Regel 3). Das ist der Notausgang fuer die NACKTE
+ * Leiste in Story und Test: Eine eingebettete Modulflaeche (Karte, Kalender in
+ * apps/network) bringt ihre Flaeche mit `ModuleSurfaceScope` selbst mit — dort
+ * stuende die Pille sonst oben unter der Suche statt unten links.
  */
 export function ModuleToolbar({
   availableTags,

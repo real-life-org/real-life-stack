@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react"
 
-import { getModule } from "../../lib/module-register"
+import { getModule, type ModuleFill, type ModulePanelFit } from "../../lib/module-register"
 import { cn } from "../../lib/utils"
 import { PanelSafeArea } from "./panel-safe-area"
 
@@ -31,10 +31,37 @@ import { PanelSafeArea } from "./panel-safe-area"
  * `undefined` fuer randlose Module (`fill: "bleed"`) — dort gibt es keinen
  * Container, das Modul fuellt die Flaeche.
  */
-export function moduleContainerClass(id: string): string | undefined {
-  const mod = getModule(id)
-  if (mod?.fill === "bleed") return undefined
-  return `container mx-auto px-4 ${mod?.maxWidth ?? "max-w-3xl"}`
+export interface ModuleLayout {
+  /** Standard "container". */
+  fill: ModuleFill
+  /** Standard "inset". */
+  panelFit: ModulePanelFit
+  /** Breite des Inhalts; ohne Angabe je nach Fuellmodus die Vorgabe unten. */
+  maxWidth?: string
+}
+
+/**
+ * Das Layout einer Flaeche: aus dem Register, wenn eine Id vorliegt, sonst aus
+ * dem, was der Aufrufer mitbringt.
+ *
+ * Zwei Wege, ein Ergebnis: In der App entscheidet der Registereintrag (Spec 01,
+ * Regel 1 — es gibt keine zweite Modul-Liste). Eine Flaeche, die AUSSERHALB
+ * der App laeuft, hat keine Id und sagt es darum selbst.
+ */
+export function resolveModuleLayout(
+  quelle: { moduleId?: string } & Partial<ModuleLayout>,
+): ModuleLayout {
+  const eintrag = quelle.moduleId ? getModule(quelle.moduleId) : undefined
+  return {
+    fill: quelle.fill ?? eintrag?.fill ?? "container",
+    panelFit: quelle.panelFit ?? eintrag?.panelFit ?? "inset",
+    maxWidth: quelle.maxWidth ?? eintrag?.maxWidth,
+  }
+}
+
+export function moduleContainerClass(layout: ModuleLayout): string | undefined {
+  if (layout.fill === "bleed") return undefined
+  return `container mx-auto px-4 ${layout.maxWidth ?? "max-w-3xl"}`
 }
 
 /**
@@ -46,10 +73,9 @@ export function moduleContainerClass(id: string): string | undefined {
  * `max-w-6xl`. Woher der Kopf sie nimmt, sagt der Registereintrag
  * (`maxWidth`) — nicht der Frame, der sonst wuesste, was die Liste tut.
  */
-function moduleHeadClass(id: string): string {
-  const mod = getModule(id)
-  if (mod?.fill !== "bleed") return moduleContainerClass(id) ?? "px-4"
-  return `mx-auto w-full px-4 sm:px-6 ${mod.maxWidth ?? "max-w-6xl"}`
+function moduleHeadClass(layout: ModuleLayout): string {
+  if (layout.fill !== "bleed") return moduleContainerClass(layout) ?? "px-4"
+  return `mx-auto w-full px-4 sm:px-6 ${layout.maxWidth ?? "max-w-6xl"}`
 }
 
 /**
@@ -83,9 +109,13 @@ export function useOptionalModuleHead(): ModuleHeadValue | null {
   return useContext(ModuleHeadContext)
 }
 
-export interface ModuleFrameProps {
-  /** Id im Modul-Register — sie entscheidet Geometrie, Fuellmodus, Panel-Regel. */
-  moduleId: string
+export interface ModuleFrameProps extends Partial<ModuleLayout> {
+  /**
+   * Id im Modul-Register — sie entscheidet Geometrie, Fuellmodus und
+   * Panel-Regel. In der App der Normalfall; eine eingebettete Flaeche hat
+   * keine Id und gibt `fill`/`panelFit`/`maxWidth` direkt an.
+   */
+  moduleId?: string
   children: ReactNode
 }
 
@@ -107,11 +137,11 @@ export interface ModuleFrameProps {
  * die volle Breite und der Inhalt auf die um die Leiste verminderte — die
  * halbe Leistenbreite Versatz, sichtbar an jeder Kartenkante.
  */
-export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
-  const mod = getModule(moduleId)
-  const bleed = mod?.fill === "bleed"
-  const overlay = mod?.panelFit === "overlay"
-  const geometrie = moduleContainerClass(moduleId)
+export function ModuleFrame({ moduleId, children, ...vorgaben }: ModuleFrameProps) {
+  const layout = resolveModuleLayout({ moduleId, ...vorgaben })
+  const bleed = layout.fill === "bleed"
+  const overlay = layout.panelFit === "overlay"
+  const geometrie = moduleContainerClass(layout)
 
   const [kopfElement, setKopfElement] = useState<HTMLElement | null>(null)
   const [controlsElement, setControlsElement] = useState<HTMLElement | null>(null)
@@ -189,7 +219,7 @@ export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
           // Kartenkante.
           className="shrink-0 overflow-hidden bg-background [scrollbar-gutter:stable]"
         >
-          {kopfSlot(cn(moduleHeadClass(moduleId), "py-4"))}
+          {kopfSlot(cn(moduleHeadClass(layout), "py-4"))}
         </div>
 
         {bleed ? (
