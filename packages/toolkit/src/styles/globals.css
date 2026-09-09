@@ -1,6 +1,16 @@
 :root {
-  /* Background & Foreground */
-  --background: oklch(1.00 0 0);
+  /* Background & Foreground
+   *
+   * Die Seitenflaeche ist leicht getoent, erhabene Flaechen (--card,
+   * --popover) sind weiss. Erst dieser Unterschied laesst eine schwebende
+   * Karte als schwebend lesen; auf gleichem Weiss traegt allein der Schatten
+   * die Tiefe, und der verschwindet auf hellen Bildschirmen.
+   *
+   * Der Wert stammt aus den Entwuerfen (Claude Design, „RLS System Design“):
+   * Modulflaeche getoent, Cards und Panel weiss. Bewusst eine Spur dunkler als
+   * --muted, damit muted-Flaechen darauf noch als eigene Flaeche lesbar sind.
+   */
+  --background: oklch(0.97 0.005 247);
   --foreground: oklch(0.28 0.02 265);
   --card: oklch(1.00 0 0);
   --card-foreground: oklch(0.28 0.02 265);
@@ -231,14 +241,13 @@
 }
 
 /* Glass effect for navbar */
+/* Die Navbar liegt UEBER dem Inhalt, traegt also die erhabene Flaeche und
+   nicht die getoente Seitenflaeche — sonst verschwimmt sie mit dem Modul
+   darunter, sobald der Hintergrund getoent ist. */
 .glass-navbar {
-  background-color: oklch(from var(--background) l c h / 0.8);
+  background-color: oklch(from var(--card) l c h / 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-}
-
-.dark .glass-navbar {
-  background-color: oklch(from var(--background) l c h / 0.8);
 }
 
 /* Drop shadow under map markers (the rendered pin SVG is an <img>; a CSS

@@ -98,6 +98,19 @@ describe("ItemDetailBody: die Ordnung der Detailansicht", () => {
     expect(html).not.toContain("bg-muted")
   })
 
+  /**
+   * Der Fall aus der laufenden App: Ein Task ohne Datum, Ort und Beziehungen
+   * bekam einen leeren grauen Kasten. Ein Element ist immer „vorhanden", auch
+   * wenn es `null` rendert — ein `if` sieht das nicht.
+   */
+  it("blendet die Meta-Box aus, wenn der Slot nichts rendert", () => {
+    const Leer = () => null
+    const html = markup({ meta: <Leer /> })
+    expect(html).toContain("empty:hidden")
+    // Der Kasten steht im Markup, ist aber leer — und damit unsichtbar.
+    expect(html).toMatch(/<div class="[^"]*empty:hidden[^"]*"><\/div>/)
+  })
+
   it("kommt ohne Titel, Text und Tags aus", () => {
     const html = markup({
       item: item({ data: {}, tags: undefined }),

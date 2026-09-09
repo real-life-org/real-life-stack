@@ -83,7 +83,7 @@ export function CommentInput({
   if (disabled) return null
 
   return (
-    <div className={cn("border-t bg-background", className)}>
+    <div className={cn("border-t bg-card", className)}>
       {/* Quote preview when replying */}
       {replyTo && (
         <div className="flex items-start gap-2 px-3 pt-2 pb-1">

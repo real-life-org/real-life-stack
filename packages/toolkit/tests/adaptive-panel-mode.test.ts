@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { resolveAdaptivePanelMode } from "../src/components/layout/adaptive-panel"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 
 // Welche Darstellung ein Panel waehlt, haengt an zwei Dingen: was die Anwendung
 // erlaubt und ob der Schirm schmal ist. Auf schmalen Schirmen gewinnt immer der
@@ -31,5 +33,31 @@ describe("Darstellung eines AdaptivePanels", () => {
 
   it("nimmt den ersten erlaubten Modus, wenn nichts Bevorzugtes dabei ist", () => {
     expect(resolveAdaptivePanelMode(["drawer"], false)).toBe("drawer")
+  })
+})
+
+/**
+ * Die Breite der schwebenden Karte stand einmal an zwei Stellen: als Konstante
+ * und als Tailwind-Klasse `w-[360px]`. Wer nur die Konstante aendert, bekommt
+ * ein Panel, das anders breit ist als der Platz, den es sich nimmt — und die
+ * Bedienelemente daneben stehen falsch.
+ */
+describe("Breite der schwebenden Karte", () => {
+  const quelle = readFileSync(
+    join(__dirname, "../src/components/layout/adaptive-panel.tsx"),
+    "utf8",
+  )
+
+  it("steht nur in der Konstante, nicht zusaetzlich als Klasse", () => {
+    const breite = quelle.match(/const FLOATING_WIDTH = (\d+)/)?.[1]
+    expect(breite).toBeDefined()
+    // Nur diese eine Zahl darf nicht doppelt stehen; schmale Hilfsmasse wie
+    // der 2px-Ziehgriff sind kein Widerspruch.
+    expect(quelle).not.toContain(`w-[${breite}px]`)
+  })
+
+  it("nimmt sich diese Breite plus die Luft links und rechts", () => {
+    expect(quelle).toContain("const FLOATING_INSET = FLOATING_WIDTH + FLOATING_GAP * 2")
+    expect(quelle).toContain("FLOATING_WIDTH + FLOATING_GAP")
   })
 })

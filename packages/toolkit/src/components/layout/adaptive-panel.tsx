@@ -76,7 +76,10 @@ export interface AdaptivePanelProps {
 const VELOCITY_THRESHOLD = 0.15
 
 /** Breite der schwebenden Karte und ihr Abstand zum Rand. */
-const FLOATING_WIDTH = 360
+/* Der Entwurf sah 360 vor; im Betrieb war das fuer Titel, Meta-Box und
+   Diskussion zu schmal — Anton beim Ausprobieren. 420 ist zugleich die
+   Breite, die die Sidebar-Variante seit jeher hat. */
+const FLOATING_WIDTH = 420
 const FLOATING_GAP = 16
 /**
  * Was die Karte dem Inhalt wegnimmt: ihre Breite plus die Raender links und
@@ -684,19 +687,25 @@ export function AdaptivePanel({
         className={cn(
           mode === "modal" && "fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none",
           mode === "sidebar" && cn(
-            "fixed top-[var(--navbar-h)] bottom-0 bg-background shadow-xl flex overflow-hidden z-55",
+            "fixed top-[var(--navbar-h)] bottom-0 bg-card shadow-xl flex overflow-hidden z-55",
             isLeft ? "left-0" : "right-0",
           ),
           mode === "drawer" && "fixed inset-x-0 bottom-0 z-[60] pointer-events-auto",
           // Schwebende Karte: fest am Rand, unterhalb der Navbar, mit 16px Luft
           // ringsum. Der Inhalt darunter bleibt sichtbar und bedienbar.
           mode === "floating" && cn(
-            "fixed top-[calc(var(--navbar-h)+16px)] bottom-4 w-[360px] pointer-events-auto",
+            // Breite NICHT als Klasse: sie steht schon in FLOATING_WIDTH, und
+            // zwei Quellen fuer dieselbe Zahl driften auseinander.
+            "fixed top-[calc(var(--navbar-h)+16px)] bottom-4 pointer-events-auto",
             isLeft ? "left-4" : "right-4",
           ),
           suspended && mode !== "sidebar" && "invisible pointer-events-none",
         )}
-        style={{ ...(mode === "sidebar" ? outerStyle : {}), zIndex: panelZIndex }}
+        style={{
+          ...(mode === "sidebar" ? outerStyle : {}),
+          ...(mode === "floating" ? { width: FLOATING_WIDTH } : {}),
+          zIndex: panelZIndex,
+        }}
       >
         {/* Inner panel — single stable container for all modes */}
         <div
@@ -704,7 +713,7 @@ export function AdaptivePanel({
           className={cn(
             // Modal styling
             mode === "modal" && cn(
-              "relative bg-background rounded-lg border shadow-lg pointer-events-auto",
+              "relative bg-card rounded-lg border shadow-lg pointer-events-auto",
               "w-full max-w-lg max-h-[90dvh] overflow-hidden",
               "transition-all duration-200 flex flex-col",
               isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95",
@@ -716,11 +725,11 @@ export function AdaptivePanel({
               isLeft ? "border-r" : "border-l",
             ),
             // Drawer styling
-            mode === "drawer" && "bg-background rounded-t-xl shadow-xl flex flex-col",
+            mode === "drawer" && "bg-card rounded-t-xl shadow-xl flex flex-col",
             // Schwebende Karte: eigene Huelle mit Rand und Schatten; Kopf und
             // Fuss bleiben stehen, der Body scrollt darin (flex + overflow).
             mode === "floating" && cn(
-              "h-full bg-background border rounded-2xl shadow-xl overflow-hidden flex flex-col",
+              "h-full bg-card border rounded-2xl shadow-xl overflow-hidden flex flex-col",
               // Hereinfahren von der Seite. Bei reduzierter Bewegung bleibt die
               // Karte stehen und blendet nur ein.
               "transition-[transform,opacity] duration-300 ease-out",

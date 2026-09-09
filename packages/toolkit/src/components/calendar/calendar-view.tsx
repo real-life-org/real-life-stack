@@ -732,7 +732,10 @@ export function CalendarView({
         }
       />
 
-      <div className="-mx-4 sm:mx-0 sm:overflow-hidden sm:rounded-lg sm:border">
+      {/* Das Raster ist eine Flaeche, kein Loch in der Modulflaeche: mit
+          getoentem Seitenhintergrund muessen die Tage weiss stehen, sonst
+          liest sich der Kalender als transparent. */}
+      <div className="-mx-4 bg-card sm:mx-0 sm:overflow-hidden sm:rounded-lg sm:border">
       <div className="flex flex-col gap-3 border-b p-3 sm:gap-4 sm:p-4 md:flex-row md:items-center md:justify-between">
         {/* Title between the two arrows, hugging the text (no reserved width, so
             no floating gap). Centred on mobile to sit balanced above the
@@ -777,7 +780,7 @@ export function CalendarView({
                     "inline-flex h-8 min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-medium transition-colors sm:px-3",
                     selected
                       ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background hover:text-foreground",
+                      : "text-muted-foreground hover:bg-card hover:text-foreground",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -1137,7 +1140,7 @@ function WeekCalendar({
 
       {allDayBars.length > 0 && (
         <div
-          className={cn("grid gap-y-0.5 border-b bg-background py-0.5", WEEK_COLS)}
+          className={cn("grid gap-y-0.5 border-b bg-card py-0.5", WEEK_COLS)}
           style={{ gridTemplateRows: `repeat(${allDayLaneCount}, minmax(22px, auto))` }}
         >
           <div

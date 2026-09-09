@@ -46,9 +46,15 @@ export interface ItemDetailBodyProps {
    */
   actions?: ReactNode
   /**
-   * Die harten Fakten des Typs: Datum, Ort, Teilnehmer. Landen in der
-   * Meta-Box. Ohne Inhalt entfaellt die Box ganz — eine leere graue Flaeche
-   * behauptet, es gaebe etwas zu sehen.
+   * Die harten Fakten des Typs: Datum, Ort, Teilnehmer, Beziehungen. Landen in
+   * der Meta-Box.
+   *
+   * Ohne Inhalt entfaellt die Box — eine leere graue Flaeche behauptet, es
+   * gaebe etwas zu sehen. Das kann hier nicht per `if` entschieden werden: Was
+   * hereinkommt, ist ein Element und damit immer „vorhanden", auch wenn es
+   * `null` rendert. Die Box blendet sich darum selbst aus, wenn sie leer
+   * bleibt. Ein Slot, der nichts zu sagen hat, MUSS `null` rendern, nicht eine
+   * leere Huelle.
    */
   meta?: ReactNode
   /** Typ-Fusszeile (Zusagen, Stimmen) und Reaktionen, ueber dem Divider. */
@@ -102,9 +108,12 @@ export function ItemDetailBody({
       {title && <h2 className="text-xl font-semibold leading-snug text-foreground">{title}</h2>}
 
       {meta && (
-        // Die Fakten stehen zusammen auf eigener Flaeche, statt als lose
-        // Zeilen zwischen Titel und Text zu haengen.
-        <div className="rounded-lg border bg-muted px-3 py-2.5 text-sm text-muted-foreground">
+        // Die Fakten stehen zusammen auf eigener Flaeche, statt als lose Zeilen
+        // zwischen Titel und Text zu haengen. `empty:hidden`, weil ein
+        // Typ-Slot, der nichts beizutragen hat, `null` rendert — die Box waere
+        // sonst ein leerer grauer Kasten. Auch die Luecke davor faellt weg
+        // (`empty:hidden` nimmt das Element aus dem Flex-Fluss).
+        <div className="rounded-lg border bg-muted px-3 py-2.5 text-sm text-muted-foreground empty:hidden">
           {meta}
         </div>
       )}
