@@ -80,7 +80,10 @@ export function AppShellMain({
   return (
     <main
       className={cn(
-        "@container flex-1 overflow-y-auto",
+        // Die Flaeche scrollt NICHT selbst: Das tut der Scrollbereich des
+        // `ModuleFrame` darin, damit der Kopf des Moduls darueber stehen
+        // bleibt und die Scrollleiste dort endet, wo der Inhalt endet.
+        "@container flex-1 min-h-0 overflow-hidden",
         "transition-[margin] duration-300 ease-out [.adaptive-panel-resizing_&]:transition-none",
         springt && "transition-none",
         withBottomNav && "pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0",

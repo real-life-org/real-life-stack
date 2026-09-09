@@ -78,6 +78,15 @@ describe("AppShellMain: der Uebergang beim Verdraengen", () => {
     expect(klassen()).toContain("transition-[margin]")
   })
 
+  it("scrollt nicht selbst — das tut der Scrollbereich der Modulflaeche", () => {
+    // Solange die Flaeche selbst scrollte, konnte kein fester Kopf darueber
+    // stehen: Die Leiste musste im Scrollbereich kleben, und die Scrollleiste
+    // lief hinter ihr bis zur Navbar hoch.
+    render(true)
+    expect(klassen()).not.toContain("overflow-y-auto")
+    expect(klassen()).toContain("overflow-hidden")
+  })
+
   it("nimmt der Flaeche nur Platz, wenn sie einruecken soll", () => {
     render(true)
     expect(host.querySelector("main")?.style.marginRight).toBe("var(--adaptive-panel-margin-right, 0px)")

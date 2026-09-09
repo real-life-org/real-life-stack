@@ -70,7 +70,10 @@ export interface ModuleEntry {
   enabledByDefault?: boolean
   /** Standard: "container". */
   fill?: ModuleFill
-  /** Container-Breite; nur bei fill "container" wirksam. */
+  /**
+   * Breite des Inhalts. Bei `fill: "container"` die des Containers, bei
+   * `fill: "bleed"` die, an der sich der Kopf der Flaeche ausrichtet.
+   */
   maxWidth?: string
   /** Standard: "inset". */
   panelFit?: ModulePanelFit
@@ -112,7 +115,10 @@ export const CORE_MODULES: readonly ModuleEntry[] = Object.freeze([
   { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay", presents: ["position"] },
   // Opt-in — spec: docs/spec/modules/resonance.md
   { id: "resonance", label: "Resonanz", icon: Waves, maxWidth: "max-w-3xl" },
-  { id: "collection", label: "Liste", icon: List, fill: "bleed" },
+  // `maxWidth` auch ohne Container: Der Kopf der Flaeche richtet sich danach,
+  // damit die Steuerleiste ueber den Eintraegen steht und nicht daneben (die
+  // Lens zentriert ihre Eintraege bei `max-w-6xl`).
+  { id: "collection", label: "Liste", icon: List, fill: "bleed", maxWidth: "max-w-6xl" },
   { id: "graph", label: "Graph", icon: Share2, fill: "bleed", panelFit: "overlay" },
 ])
 
