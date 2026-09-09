@@ -18,7 +18,15 @@ export interface ModuleToolbarProps {
   availableTypes?: readonly FilterTypeOption[]
   /** Modul-eigene Abschnitte in der Filter-Karte. */
   drawerExtra?: ReactNode
-  /** Modul-eigene Chips in der Chip-Zeile des Kopfes. */
+  /**
+   * Modul-eigene Chips in der Chip-Zeile des Kopfes.
+   *
+   * **Nur uebergeben, wenn wirklich etwas aktiv ist** (`myItemsOnly ? <…/> :
+   * undefined`) — nie ein Fragment, das gerade nichts rendert. Daran haengt,
+   * ob der Kopf ueberhaupt eine Zeile bekommt (Spec 01, Regel 4); ein leeres
+   * Fragment liesse sich von aussen nicht von einem vollen unterscheiden und
+   * ergaebe eine unsichtbare Zeile mit sichtbarem Polster.
+   */
   chipsExtra?: ReactNode
   /** Rechtsbuendige Modul-Aktionen im Kopf (Ansicht, Einstellungen, „Heute"). */
   trailingActions?: ReactNode
@@ -82,6 +90,7 @@ export function ModuleToolbar({
   const hatZeile = search || !!trailingActions
   const hatChips = value.tags.length > 0 || value.types.length > 0 || !!chipsExtra
   const hatKopfInhalt = hatZeile || hatChips
+
   const anmelden = kopf?.anmelden
   useEffect(() => {
     if (!hatKopfInhalt) return
@@ -90,7 +99,9 @@ export function ModuleToolbar({
 
   const kopfinhalt = hatKopfInhalt ? (
     <div className="flex flex-col gap-2">
-      {hatZeile && <ModuleSearchBar searchLabel={searchLabel} trailingActions={trailingActions} />}
+      {hatZeile && (
+        <ModuleSearchBar search={search} searchLabel={searchLabel} trailingActions={trailingActions} />
+      )}
       <ModuleFilterChips availableTypes={availableTypes} chipsExtra={chipsExtra} />
     </div>
   ) : null
