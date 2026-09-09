@@ -358,12 +358,15 @@ Regeln:
 
 ## Standort („Wo bin ich")
 
-Die Karte führt neben ihrer Suche einen **Standort-Knopf** (32px, `LocateFixed`, `aria-label="Meinen Standort anzeigen"`).
+Die Karte führt neben ihrer Suche einen **Standort-Knopf** (32px, `LocateFixed`). Er ist ein **Umschalter**, keine einmalige Frage: Ein einzelner Fix veraltet, sobald man losgeht.
 
-1. Er **zentriert nur die Kamera** (`focusOn`, Zoom 14, animiert, mit derselben Polsterung wie jedes andere Hinfahren, damit der Punkt in der Mitte des *sichtbaren* Rests landet). Er setzt **keine Markierung**: Ein „blauer Punkt" wäre ein zweiter Marker-Vertrag mit eigenem Lebenszyklus, und die Frage ist mit dem Hinfahren beantwortet.
-2. Ohne `navigator.geolocation` erscheint der Knopf **nicht** — ein Knopf, der nur eine Fehlermeldung erzeugen kann, ist keiner.
-3. Während der Abfrage trägt er `aria-busy` und einen Spinner; eine Ablehnung oder ein Fehler wird **an der Karte** gemeldet (kurzer Hinweis, `role="status"`), nicht in der Konsole. Eine Ablehnung ist eine Antwort, keine Störung.
-4. Nur die Karte führt ihn. Andere Flächen ohne Ortsbezug (Graph) bekommen ihn nicht.
+1. Zustände: **aus** → **suchend** (`aria-busy`, Spinner) → **aktiv** (`aria-pressed`, Icon in der Primärfarbe) → aus. Der Name wechselt mit („Standort verfolgen" / „Standortverfolgung beenden"), weil ein Klick zwei verschiedene Dinge tut.
+2. Aktiv läuft eine **fortlaufende Ortung** (`watchPosition`). Der eigene Standort wird gezeigt, wo der Adapter es kann: ein Punkt plus **Genauigkeitskreis** (Radius in *Metern*, wächst beim Zoomen mit) über die optionale Fähigkeit `UserPositionCapable.setUserPosition`. Der Standort ist dabei **kein Item** — keine Id, kein Detail, kein Klick, keine Cluster-Rechnung. Ein Adapter ohne die Fähigkeit fährt trotzdem hin.
+3. **Die Kamera folgt, bis der Nutzer eingreift.** Der erste Fix fährt hin (Zoom 14, wenn die Karte weiter draußen steht — wer schon näher dran ist, wird nicht zurückgezogen), weitere ziehen nach. Schwenkt oder zoomt der Nutzer selbst, endet das Nachziehen; die Ortung läuft weiter und der Punkt wandert. Ihn dorthin zurückzuziehen wäre ein Kampf gegen seine eigene Geste. Die Geste kommt aus der optionalen Fähigkeit `UserGestureCapable` — `observeView` taugt nicht dafür, es feuert auch nach jeder eigenen Bewegung.
+4. Ohne `navigator.geolocation` erscheint der Knopf **nicht** — ein Knopf, der nur eine Fehlermeldung erzeugen kann, ist keiner. Wo `navigator.permissions` verfügbar ist, wird eine abgelehnte Berechtigung vorab erkannt, statt sie zu erwarten.
+5. Ablehnung oder Fehler: Die Ortung geht **aus**, und der Grund wird **an der Karte** gemeldet (kurzer Hinweis, `role="status"`), nicht in der Konsole. Eine Ablehnung ist eine Antwort, keine Störung.
+6. **Lebensdauer**: Beim Abbau der Karte endet die Ortung (`clearWatch`). Die Kartenfläche wird gehalten (`keepMounted`), ein Modulwechsel beendet sie also bewusst nicht — wer zurückkommt, findet seinen Standort noch.
+7. Nur die Karte führt ihn. Andere Flächen ohne Ortsbezug (Graph) bekommen ihn nicht.
 
 ## Datenquelle (viewport-begrenzt)
 
