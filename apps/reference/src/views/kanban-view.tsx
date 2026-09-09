@@ -21,14 +21,11 @@ import {
   CreateFab,
   Skeleton,
   ItemPreviewSkeleton,
-  FilterBar,
   ModuleToolbar,
   FilterSection,
   FilterToggle,
   FilterMultiSelect,
-  emptyFilterBarValue,
-  useFilterableItems,
-  type FilterBarValue,
+  useModuleFilteredItems,
   useItemsWithDraft,
   useUpdateItem,
   useMembers,
@@ -37,8 +34,7 @@ import {
   useItemGroupColorResolver,
   usePersonalGroupId,
 } from "@real-life-stack/toolkit"
-import { Input } from "@real-life-stack/toolkit"
-import { Search, Settings } from "lucide-react"
+import { Settings } from "lucide-react"
 import type { Item, User, Group } from "@real-life-stack/data-interface"
 import { hasItemGroups } from "@real-life-stack/data-interface"
 import { useItemFocus } from "../hooks/use-item-focus"
@@ -102,14 +98,11 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
   const { data: members } = useMembers(activeWorkspaceId === "__overview__" ? null : (activeWorkspaceId ?? "group-1"))
   const { data: currentUser } = useCurrentUser()
   const { mutate: updateItem } = useUpdateItem()
-  // Shared filter state for the top-of-board FilterBar (tags) plus
-  // kanban-specific extras (myItemsOnly + assignedTo + searchText).
-  // searchText stays a free text input in the trailing actions —
-  // FilterBar's controlled value covers the structured filters.
-  const [filterBarValue, setFilterBarValue] = useState<FilterBarValue>(emptyFilterBarValue)
+  // Tags, Typen und Suchtext kommen aus dem geteilten Zustand (Kopf der
+  // Modulflaeche); „Nur meine" und die Zuweisung bedeuten nur hier etwas und
+  // bleiben darum lokal (Spec shared-components → Filter-State, Regel 2).
   const [myItemsOnly, setMyItemsOnly] = useState(false)
   const [assignedTo, setAssignedTo] = useState<string[]>([])
-  const [searchText, setSearchText] = useState("")
   const modulePanel = useModulePanel()
   // The shared host owns the detail (read↔edit) for the focused item; a card
   // click just points the URL focus at it (like the other modules). The host
@@ -124,22 +117,13 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null)
 
-  // FilterBar covers tag (and type) — types is empty for the Kanban
-  // case since the board only renders status-bearing tasks.
-  const filteredByBar = useFilterableItems(tasks, filterBarValue)
+  // Tag-, Typ- und Textsuche der geteilten Leiste.
+  const filteredByBar = useModuleFilteredItems(tasks)
 
-  // Apply the kanban-specific extras on top: text search across title
-  // / description, assignee filter via relations, "nur meine" toggle.
+  // Darauf die Extras des Kanban: Zuweisung ueber Relationen, „Nur meine".
   const filteredTasks = useMemo(() => {
-    const needle = searchText.trim().toLowerCase()
     const assigneeSet = new Set(assignedTo)
     return filteredByBar.filter((task) => {
-      if (needle) {
-        const haystack = [task.data.title, task.data.description, task.data.content]
-          .map((v) => String(v ?? "").toLowerCase())
-          .join(" ")
-        if (!haystack.includes(needle)) return false
-      }
       const relations = task.relations ?? []
       const taskAssignees = relations
         .filter((r) => r.predicate === "assignedTo")
@@ -155,7 +139,7 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
       }
       return true
     })
-  }, [filteredByBar, searchText, assignedTo, myItemsOnly, currentUser?.id])
+  }, [filteredByBar, assignedTo, myItemsOnly, currentUser?.id])
 
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>()
@@ -339,85 +323,69 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
 
   return (
     <div className="space-y-4">
-      <ModuleToolbar>
-        <FilterBar
-          value={filterBarValue}
-          onChange={setFilterBarValue}
-          availableTags={availableTags}
-          drawerExtra={
-            <>
-              <FilterSection label="Schnellfilter">
-                <FilterToggle
-                  label="Nur meine Aufgaben"
-                  value={myItemsOnly}
-                  onChange={setMyItemsOnly}
+      <ModuleToolbar
+        availableTags={availableTags}
+        drawerExtra={
+          <>
+            <FilterSection label="Schnellfilter">
+              <FilterToggle
+                label="Nur meine Aufgaben"
+                value={myItemsOnly}
+                onChange={setMyItemsOnly}
+              />
+            </FilterSection>
+            {memberOptions.length > 0 && (
+              <FilterSection label="Zuweisung">
+                <FilterMultiSelect
+                  options={memberOptions}
+                  value={assignedTo}
+                  onChange={setAssignedTo}
                 />
               </FilterSection>
-              {memberOptions.length > 0 && (
-                <FilterSection label="Zuweisung">
-                  <FilterMultiSelect
-                    options={memberOptions}
-                    value={assignedTo}
-                    onChange={setAssignedTo}
-                  />
-                </FilterSection>
-              )}
-            </>
-          }
-          chipsExtra={
-            <>
-              {myItemsOnly && (
-                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
-                  Nur meine
-                  <button
-                    type="button"
-                    onClick={() => setMyItemsOnly(false)}
-                    className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                    aria-label="Filter entfernen"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-            </>
-          }
-          leadingActions={
-            <div className="relative min-w-0 flex-1 sm:flex-none">
-              <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Suche…"
-                aria-label="Aufgaben durchsuchen"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                className="h-8 w-full pl-7 text-xs sm:w-40"
-              />
-            </div>
-          }
-          trailingActions={
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  modulePanel.open({
-                    kind: "settings",
-                    content: (
-                      <ModuleSettingsPlaceholder
-                        moduleLabel="Kanban"
-                        plannedItems={["Spalten bearbeiten", "Standard-Gruppierung", "Sichtbarkeit der Spalten"]}
-                      />
-                    ),
-                  })
-                }
-                title="Moduleinstellungen"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-              {viewModeToggle}
-            </>
-          }
-        />
-      </ModuleToolbar>
+            )}
+          </>
+        }
+        chipsExtra={
+          <>
+            {myItemsOnly && (
+              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
+                Nur meine
+                <button
+                  type="button"
+                  onClick={() => setMyItemsOnly(false)}
+                  className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                  aria-label="Filter entfernen"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+          </>
+        }
+        trailingActions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                modulePanel.open({
+                  kind: "settings",
+                  content: (
+                    <ModuleSettingsPlaceholder
+                      moduleLabel="Kanban"
+                      plannedItems={["Spalten bearbeiten", "Standard-Gruppierung", "Sichtbarkeit der Spalten"]}
+                    />
+                  ),
+                })
+              }
+              title="Moduleinstellungen"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            {viewModeToggle}
+          </>
+        }
+      />
 
       {tasksLoading ? (
         // Loading: a board-shaped skeleton (columns with placeholder cards).

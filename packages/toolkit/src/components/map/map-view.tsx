@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
-import { Calendar, Globe, Loader2, MapPin, Search } from "lucide-react"
+import { Calendar, Globe, Loader2, MapPin } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"
-import { emptyFilterBarValue, FilterBar, type FilterBarValue, type FilterTypeOption } from "../filter"
+import { ModuleFilterBar, useModuleFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
 import { CreateFab } from "../create-fab"
 import { PanelSafeArea } from "../layout/panel-safe-area"
-import { Button, Input } from "../primitives"
+import { Button } from "../primitives"
 import { focusNeedsRecentering, focusOffsetFor, type MapFocusInsets } from "./focus-offset"
 import { usePanelEdges, type PanelEdges } from "../layout/panel-edges"
 import { MapLens } from "../lens/map-lens"
@@ -233,8 +233,11 @@ export function MapView({
   const [adapter, setAdapter] = useState<MapAdapter | null>(null)
   const [mountError, setMountError] = useState(false)
   const [mountAttempt, setMountAttempt] = useState(0)
-  const [filter, setFilter] = useState<FilterBarValue>(emptyFilterBarValue)
-  const [search, setSearch] = useState("")
+  // Die Karte traegt ihre Leiste selbst (`panelFit: "overlay"`: sie schwebt
+  // ueber der Flaeche, statt in einem Kopf zu sitzen) — den WERT teilt sie
+  // sich aber mit den anderen Modulen. Ein im Feed gesetztes Tag filtert die
+  // Karte ohne Zutun mit.
+  const { value: filter, searchText: search } = useModuleFilter()
   const [uncontrolledProjection, setUncontrolledProjection] = useState<MapProjection>("mercator")
   const projection = projectionProp ?? uncontrolledProjection
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)
@@ -367,7 +370,7 @@ export function MapView({
       mountKey={mountAttempt} onMountError={() => setMountError(true)} />
     {!adapter && <div className="absolute inset-0 z-10 bg-background/80"><PanelSafeArea className="flex items-center justify-center text-muted-foreground">{mountError ? <div className="flex flex-col items-center gap-3"><span>Karte konnte nicht geladen werden.</span><Button variant="outline" size="sm" onClick={() => { setMountError(false); setMountAttempt((value) => value + 1) }}>Erneut versuchen</Button></div> : <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Karte wird geladen…</>}</PanelSafeArea></div>}
     {isPicking && <PanelSafeArea className="z-30 flex items-start justify-center p-3"><div className="flex items-center gap-2 rounded-full border bg-background/95 px-3 py-2 text-sm shadow-md"><MapPin className="h-4 w-4" /><span>{pickPosition ? "Position gewählt." : "Tippe auf die Karte, um die Position zu setzen."}</span>{isCompact && pickPosition && <Button size="sm" onClick={confirmPick}>Übernehmen</Button>}<Button size="sm" variant="ghost" onClick={cancelPick}>Abbrechen</Button></div></PanelSafeArea>}
-    <PanelSafeArea className="z-20 py-4 pl-16 pr-4"><FilterBar value={filter} onChange={setFilter} availableTags={availableTags} availableTypes={MAP_TYPES} className="[&_[data-slot=button][data-variant=outline]]:bg-background!" leadingActions={<div className="relative min-w-0 flex-1 sm:flex-none"><Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2" /><Input aria-label="Karte durchsuchen" placeholder="Suche…" value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full pl-7 text-xs bg-background! sm:w-40" /></div>} trailingActions={adapter && hasGlobe(adapter) && !isPicking ? <Button size="icon-sm" variant={projection === "globe" ? "default" : "outline"} {...mapViewProjectionToggleA11y(projection)} onClick={toggleProjection}><Globe className="h-4 w-4" /></Button> : undefined} /></PanelSafeArea>
+    <PanelSafeArea className="z-20 py-4 pl-16 pr-4"><ModuleFilterBar availableTags={availableTags} availableTypes={MAP_TYPES} searchLabel="Karte durchsuchen" className="[&_[data-slot=button][data-variant=outline]]:bg-background! [&_input]:bg-background!" trailingActions={adapter && hasGlobe(adapter) && !isPicking ? <Button size="icon-sm" variant={projection === "globe" ? "default" : "outline"} {...mapViewProjectionToggleA11y(projection)} onClick={toggleProjection}><Globe className="h-4 w-4" /></Button> : undefined} /></PanelSafeArea>
     {!isPicking && canCreate && <CreateFab onClick={onCreate!} label="Ort erstellen" />}
   </div>
 }

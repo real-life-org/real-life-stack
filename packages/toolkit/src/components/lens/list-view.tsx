@@ -76,7 +76,7 @@ export function ListView({ items, activeItemId, selectionFocusVisibleArea, selec
   }
 
   return (
-    <div ref={scrollElementRef} aria-label="Listenansicht" data-virtualizer-item-count={visibleItems.length} className="h-full overflow-y-auto">
+    <div ref={scrollElementRef} aria-label="Listenansicht" data-virtualizer-item-count={visibleItems.length} className="h-full overflow-y-auto [scrollbar-gutter:stable]">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <section className="relative" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((virtualItem) => {

@@ -9,10 +9,8 @@ import {
   Columns,
   Grid3x3,
   List,
-  Search,
 } from "lucide-react"
 import { Button } from "../primitives/button"
-import { Input } from "../primitives/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,10 +37,9 @@ import { focusActiveItemOnce } from "../../lib/selection-focus"
 import { ItemPreview } from "../preview/item-preview"
 import { ItemTypeBadge } from "../preview/item-type-badge"
 import { ItemTimeRange } from "../preview/item-time-range"
-import { FilterBar } from "../filter/filter-bar"
 import { FilterSection, FilterToggle, FilterMultiSelect } from "../filter/filter-building-blocks"
-import { emptyFilterBarValue, type FilterBarValue, type FilterTypeOption } from "../filter/types"
-import { useFilterableItems } from "../../hooks/use-filterable-items"
+import type { FilterTypeOption } from "../filter/types"
+import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
 import type { Item } from "@real-life-stack/data-interface"
 
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
@@ -369,10 +366,11 @@ export function CalendarView({
   const [visibleDate, setVisibleDate] = useState(initialVisibleDateValue)
   const [selectedDate, setSelectedDate] = useState(today)
   const [viewMode, setViewMode] = useState<CalendarViewMode>(initialViewMode)
-  const [filterBarValue, setFilterBarValue] = useState<FilterBarValue>(emptyFilterBarValue)
+  // Tags, Typen und Suchtext teilt sich der Kalender mit den anderen Modulen
+  // (Kopf der Modulflaeche); Ort und „Nur meine" sind seine eigenen Extras und
+  // bleiben hier (Spec shared-components → Filter-State, Regel 2).
   const [locationFilter, setLocationFilter] = useState<LocationFilter>("all")
   const [myEventsOnly, setMyEventsOnly] = useState(false)
-  const [searchText, setSearchText] = useState("")
   const lastFocusedItemIdRef = useRef<string | null>(null)
 
   // One-way focus: jump the visible period to a date the parent asks to reveal
@@ -393,7 +391,7 @@ export function CalendarView({
   }, [focusDate])
 
   const calendarItems = useMemo(() => calendarFilterItems(events), [events])
-  const eventsAfterBar = useFilterableItems(calendarItems, filterBarValue)
+  const eventsAfterBar = useModuleFilteredItems(calendarItems)
 
   const calendarEvents = useMemo(
     () => toCalendarEvents(eventsAfterBar),
@@ -413,19 +411,15 @@ export function CalendarView({
   }, [calendarItems])
 
   const filteredEvents = useMemo(() => {
-    const needle = searchText.trim().toLowerCase()
+    // Nur noch die Extras des Kalenders: Tag-, Typ- und Textsuche haben die
+    // Items schon vor der Umwandlung passiert.
     return calendarEvents.filter((event) => {
       if (locationFilter === "with" && !event.location) return false
       if (locationFilter === "without" && event.location) return false
       if (myEventsOnly && currentUserId && event.item.createdBy !== currentUserId) return false
-      if (needle) {
-        const title = event.title.toLowerCase()
-        const description = (event.description ?? "").toLowerCase()
-        if (!title.includes(needle) && !description.includes(needle)) return false
-      }
       return true
     })
-  }, [calendarEvents, currentUserId, locationFilter, myEventsOnly, searchText])
+  }, [calendarEvents, currentUserId, locationFilter, myEventsOnly])
 
   // Keyed by EVERY day an event covers, not just its start — otherwise a
   // multi-day event vanishes from the day view and the month cell counts on
@@ -653,87 +647,71 @@ export function CalendarView({
     <CalendarGroupColorContext.Provider value={resolveGroupColor}>
     <CalendarActiveItemContext.Provider value={activeItemId}>
     <div className={cn("w-full space-y-3", className)}>
-      <ModuleToolbar>
-        <FilterBar
-          value={filterBarValue}
-          onChange={setFilterBarValue}
-          availableTags={availableTags}
-          availableTypes={availableTypes}
-          leadingActions={
-            <div className="relative min-w-0 flex-1 sm:flex-none">
-              <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Suche…"
-                aria-label="Kalender durchsuchen"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                className="h-8 w-full pl-7 text-xs sm:w-40"
+      <ModuleToolbar
+        availableTags={availableTags}
+        availableTypes={availableTypes}
+        trailingActions={
+          <Button variant="outline" size="sm" className="shrink-0" onClick={goToday}>
+            Heute
+          </Button>
+        }
+        drawerExtra={
+          <>
+            <FilterSection label="Ort">
+              <FilterMultiSelect
+                options={[
+                  { id: "with", label: "Mit Ort" },
+                  { id: "without", label: "Ohne Ort" },
+                ]}
+                value={locationFilter === "all" ? [] : [locationFilter]}
+                onChange={(next) => {
+                  if (next.length === 0) setLocationFilter("all")
+                  else setLocationFilter(next[next.length - 1] as LocationFilter)
+                }}
               />
-            </div>
-          }
-          trailingActions={
-            <Button variant="outline" size="sm" className="shrink-0" onClick={goToday}>
-              Heute
-            </Button>
-          }
-          drawerExtra={
-            <>
-              <FilterSection label="Ort">
-                <FilterMultiSelect
-                  options={[
-                    { id: "with", label: "Mit Ort" },
-                    { id: "without", label: "Ohne Ort" },
-                  ]}
-                  value={locationFilter === "all" ? [] : [locationFilter]}
-                  onChange={(next) => {
-                    if (next.length === 0) setLocationFilter("all")
-                    else setLocationFilter(next[next.length - 1] as LocationFilter)
-                  }}
+            </FilterSection>
+            {currentUserId && (
+              <FilterSection label="Zuweisung">
+                <FilterToggle
+                  label="Nur meine Events"
+                  value={myEventsOnly}
+                  onChange={setMyEventsOnly}
                 />
               </FilterSection>
-              {currentUserId && (
-                <FilterSection label="Zuweisung">
-                  <FilterToggle
-                    label="Nur meine Events"
-                    value={myEventsOnly}
-                    onChange={setMyEventsOnly}
-                  />
-                </FilterSection>
-              )}
-            </>
-          }
-          chipsExtra={
-            <>
-              {locationFilter !== "all" && (
-                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
-                  {locationFilter === "with" ? "Mit Ort" : "Ohne Ort"}
-                  <button
-                    type="button"
-                    onClick={() => setLocationFilter("all")}
-                    className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                    aria-label="Ortsfilter entfernen"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {myEventsOnly && currentUserId && (
-                <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
-                  Nur meine
-                  <button
-                    type="button"
-                    onClick={() => setMyEventsOnly(false)}
-                    className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                    aria-label="Filter entfernen"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-            </>
-          }
-        />
-      </ModuleToolbar>
+            )}
+          </>
+        }
+        chipsExtra={
+          <>
+            {locationFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
+                {locationFilter === "with" ? "Mit Ort" : "Ohne Ort"}
+                <button
+                  type="button"
+                  onClick={() => setLocationFilter("all")}
+                  className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                  aria-label="Ortsfilter entfernen"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {myEventsOnly && currentUserId && (
+              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
+                Nur meine
+                <button
+                  type="button"
+                  onClick={() => setMyEventsOnly(false)}
+                  className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                  aria-label="Filter entfernen"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+          </>
+        }
+      />
 
       {/* Das Raster ist eine Flaeche, kein Loch in der Modulflaeche: mit
           getoentem Seitenhintergrund muessen die Tage weiss stehen, sonst
