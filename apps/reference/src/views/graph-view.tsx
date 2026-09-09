@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import {
   GraphView,
+  ModuleFilterBar,
+  PanelSafeArea,
   resolveTypePresentation,
   useItems,
+  useModuleFilteredItems,
   useMembers,
   useRelationRecords,
   type GraphEdge,
   type GraphNode,
   type GraphTypeDescriptor,
   type GraphViewHandle,
+  type FilterTypeOption,
 } from "@real-life-stack/toolkit"
 import {
   SYSTEM_ITEM_TYPES,
@@ -179,7 +183,11 @@ export function projectSpaceGraph(
 }
 
 export function GraphViewWrapper({ groupId }: { groupId: string }) {
-  const { data: items } = useItems()
+  const { data: alleItems } = useItems()
+  // Der Graph filtert wie jedes andere Modul — nur schwebt seine Leiste ueber
+  // der Flaeche, statt in einem Kopf zu sitzen (`panelFit: "overlay"`,
+  // Spec 01, Regel 5). Der Wert ist derselbe wie im Feed daneben.
+  const items = useModuleFilteredItems(alleItems)
   const { data: records } = useRelationRecords()
   const { data: members } = useMembers(groupId === "__overview__" ? null : groupId)
   const { focusItem, itemId: focusedItemId, clearFocus } = useItemFocus()
@@ -218,6 +226,22 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
     () => projectSpaceGraph(items, records, members, resolveLabel, { resolveItemSpace }),
     [items, records, members, resolveLabel, resolveItemSpace],
   )
+
+  // Tags und Typen aus dem UNGEFILTERTEN Bestand: Sonst verschwaende die
+  // Auswahl mit dem, was sie gerade wegfiltert, und man koennte einen Filter
+  // nicht mehr gegen einen anderen tauschen.
+  const availableTags = useMemo(() => {
+    const seen = new Set<string>()
+    for (const item of alleItems) for (const tag of item.tags ?? []) seen.add(tag)
+    return Array.from(seen).sort()
+  }, [alleItems])
+  const availableTypes = useMemo<FilterTypeOption[]>(() => {
+    const systemTypes = new Set<string>(SYSTEM_ITEM_TYPES)
+    const present = new Set(alleItems.map(({ type }) => type).filter((type) => !systemTypes.has(type)))
+    return Array.from(present)
+      .map((id) => ({ id, label: resolveTypePresentation(id).label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "de"))
+  }, [alleItems])
 
   // Selection wires into the shared focus/detail flow: an ITEM node opens the
   // one detail panel every module shares; a PERSON node opens the profile
@@ -260,7 +284,8 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
   )
 
   return (
-    <GraphView
+    <div className="relative h-full w-full">
+      <GraphView
       ref={graphRef}
       nodes={projection.nodes}
       edges={projection.edges}
@@ -271,6 +296,15 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
       className="h-full w-full"
       ariaLabel="Beziehungsgraph des Space"
       selectionFocusBottomInset={modulePanel.current ? 200 : 0}
-    />
+      />
+      <PanelSafeArea className="z-20 p-4">
+        <ModuleFilterBar
+          availableTags={availableTags}
+          availableTypes={availableTypes}
+          searchLabel="Graph durchsuchen"
+          className="[&_[data-slot=button][data-variant=outline]]:bg-background! [&_input]:bg-background!"
+        />
+      </PanelSafeArea>
+    </div>
   )
 }

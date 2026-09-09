@@ -1,70 +1,126 @@
 // @vitest-environment jsdom
-import { renderToStaticMarkup } from "react-dom/server"
-import { describe, expect, it } from "vitest"
+import { act, createElement } from "react"
+import { createRoot, type Root } from "react-dom/client"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { FilterProvider } from "../src/components/filter/filter-store"
+import { ModuleFrame, moduleContainerClass } from "../src/components/layout/module-frame"
 import { ModuleToolbar } from "../src/components/layout/module-toolbar"
 
+;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+vi.stubGlobal("matchMedia", (query: string) => ({
+  matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {},
+  addListener: () => {}, removeListener: () => {}, onchange: null, dispatchEvent: () => false,
+}))
+
+let host: HTMLDivElement
+let root: Root
+
+beforeEach(() => {
+  host = document.createElement("div")
+  document.body.appendChild(host)
+  root = createRoot(host)
+})
+
+afterEach(() => {
+  act(() => root.unmount())
+  host.remove()
+})
+
 /**
- * Zwei Beobachtungen, eine Ursache: Die Scrollleiste klemmte im 16px-Spalt
- * rechts neben dem Panel, und die Modul-Steuerleiste scrollte mit weg.
- *
- * Die Leiste bleibt jetzt oben kleben — IM Container des Moduls, nicht in
- * einem eigenen Kopf darueber. Der erste Versuch tat Letzteres und handelte
- * sich damit eine zweite Geometrie ein: Die Leiste sass am Fensterrand,
- * waehrend die Karten zentriert standen.
+ * Der Filter hat einen Besitzer, und der steht ueber der Flaeche — in der App
+ * die Shell, hier der Test. Die Leiste bringt ihn NICHT selbst mit: Dann
+ * saehen Leiste und Inhalt verschiedene Werte.
  */
-describe("Die Steuerleiste bleibt oben", () => {
-  const html = renderToStaticMarkup(<ModuleToolbar>FILTERLEISTE</ModuleToolbar>)
+function rendere(node: React.ReactNode) {
+  act(() => root.render(createElement(FilterProvider, null, node)))
+}
 
-  it("klebt am oberen Rand des Scrollbereichs", () => {
-    expect(html).toContain("sticky")
-    expect(html).toContain("top-0")
+const kopf = () => host.querySelector("[data-module-head]")
+const kopfInhalt = () => host.querySelector("[data-module-head-slot]")
+const scrollbereich = () => host.querySelector("[data-module-scroll]")
+
+/**
+ * Die Modulflaeche ist eine Spalte: fester Kopf, darunter der Scrollbereich
+ * (Spec 01 → „Die Modulflaeche ist eine Spalte"). Der Kopf gehoert der
+ * Flaeche, das Modul reicht seine Steuerleiste hinein.
+ */
+describe("Der Modulkopf", () => {
+  it("bleibt leer, wenn das Modul nichts hineinreicht", () => {
+    rendere(createElement(ModuleFrame, { moduleId: "feed" }, "INHALT"))
+    // Der Kopf-Slot ist als Portal-Ziel immer da, aber ohne Beitrag leer —
+    // eine leere Zeile waere schlimmer als kein Kopf (Spec 01, Regel 4).
+    expect(kopfInhalt()).not.toBeNull()
+    expect(kopfInhalt()!.childNodes.length).toBe(0)
+    expect(kopf()!.hasAttribute("hidden")).toBe(true)
   })
 
-  it("deckt den durchscrollenden Inhalt ab", () => {
-    // Ohne eigene Flaeche schiene der Inhalt beim Scrollen durch die Leiste.
-    expect(html).toContain("bg-background")
-    expect(html).toContain("z-20")
+  it("nimmt die Steuerleiste des Moduls auf, statt sie im Scrollbereich zu lassen", () => {
+    rendere(
+      createElement(
+        ModuleFrame,
+        { moduleId: "feed" },
+        createElement(ModuleToolbar, { availableTags: ["garten"] }),
+        "INHALT",
+      ),
+    )
+    expect(kopf()!.hasAttribute("hidden")).toBe(false)
+    expect(kopfInhalt()!.querySelector("[data-filter-chips]")).not.toBeNull()
+    expect(scrollbereich()!.querySelector("[data-filter-chips]")).toBeNull()
   })
 
-  it("zieht ihre Flaeche ueber den Rand des Containers", () => {
-    // Der Container gibt 16px Rand; ohne das Herausziehen bliebe links und
-    // rechts ein Streifen, durch den der Inhalt sichtbar vorbeizieht.
-    expect(html).toContain("-mx-4")
-    expect(html).toContain("px-4")
+  it("faellt ohne Flaeche darueber an seinen Ort zurueck", () => {
+    // Story, Test, eingebettete Ansicht (Spec 01, Regel 3): Die Leiste
+    // verschwindet nicht spurlos, wenn es keinen Kopf gibt.
+    rendere(createElement(ModuleToolbar, { availableTags: ["garten"] }))
+    const leiste = host.querySelector("[data-module-toolbar]")
+    expect(leiste).not.toBeNull()
+    expect(leiste!.querySelector("[data-filter-chips]")).not.toBeNull()
   })
 
-  it("traegt keine eigene Geometrie", () => {
-    // Randabstand, Zentrierung und Hoechstbreite kommen vom Container des
-    // Moduls — eine zweite Angabe daneben driftet.
-    expect(html).not.toContain("container")
-    expect(html).not.toContain("mx-auto")
-    expect(html).not.toMatch(/max-w-/)
+  it("gibt es fuer ueberlagerte Flaechen gar nicht", () => {
+    // `panelFit: "overlay"` (Karte, Graph): Die Steuerung schwebt ueber der
+    // Flaeche, ein Kopf wuerde sie beschneiden (Spec 01, Regel 5).
+    rendere(createElement(ModuleFrame, { moduleId: "map" }, "KARTE"))
+    expect(kopf()).toBeNull()
+    expect(host.textContent).toContain("KARTE")
   })
 })
 
 /**
- * Der Abstand nach unten gehört der Leiste allein.
- *
- * Vorher trugen ihn zwei: die eigene Polsterung und der Container
- * (`space-y-*`). Im Ruhezustand zählten beide, beim Kleben nur die eigene —
- * der Inhalt rückte beim Scrollen also näher heran. Gemessen sprang er im Feed
- * von 28 auf 12 Pixel. Dazu kam, dass die Module unterschiedliche
- * Container-Abstände haben (`space-y-4` im Feed, `space-y-3` im Kalender), die
- * Leiste also je nach Modul anders stand.
+ * Der Punkt, an dem der erste Versuch scheiterte: Kopf und Scrollbereich
+ * trugen je eine eigene Geometrie. Die Leiste sass am Fensterrand, waehrend
+ * die Karten zentriert standen — und die Scrollleiste verschob die
+ * Zentrierung des Inhalts um weitere Pixel gegen den Kopf.
  */
-describe("Der Abstand der Steuerleiste", () => {
-  const html = renderToStaticMarkup(<ModuleToolbar>x</ModuleToolbar>)
-
-  it("bringt ihn selbst mit", () => {
-    // 16px — derselbe Abstand wie vor dem Umbau, als ihn allein `space-y-4`
-    // des Containers trug.
-    expect(html).toContain("pb-4")
+describe("Die Geometrie der Spalte", () => {
+  it("kommt fuer Kopf und Inhalt aus einer Funktion", () => {
+    rendere(createElement(ModuleFrame, { moduleId: "feed" }, "INHALT"))
+    const geometrie = moduleContainerClass("feed")!
+    for (const klasse of geometrie.split(/\s+/)) {
+      expect(kopfInhalt()!.className).toContain(klasse)
+      expect(scrollbereich()!.firstElementChild!.className).toContain(klasse)
+    }
   })
 
-  it("nimmt den Abstand des Containers weg, statt ihn zu addieren", () => {
-    // `space-y-*` setzt in Tailwind v4 ein margin-bottom auf jedes Kind außer
-    // dem letzten — es sitzt also an der Leiste selbst, nicht am Nachbarn.
-    expect(html).toContain("mb-0!")
+  it("traegt kein vertikales Polster — das gehoert Kopf und Scrollbereich", () => {
+    // Sonst polsterte der Kopf oben UND der Inhalt darunter nochmal.
+    expect(moduleContainerClass("feed")).not.toMatch(/\bp[ty]-/)
+  })
+
+  it("haelt in beiden dieselbe Scrollleistenbreite frei", () => {
+    rendere(createElement(ModuleFrame, { moduleId: "feed" }, "INHALT"))
+    expect(kopf()!.className).toContain("[scrollbar-gutter:stable]")
+    expect(scrollbereich()!.className).toContain("[scrollbar-gutter:stable]")
+    // Der Kopf scrollt nicht — er reserviert nur dieselbe Rinne.
+    expect(kopf()!.className).toContain("overflow-hidden")
+  })
+
+  it("laesst randlose Module ohne Container fuellen", () => {
+    // `fill: "bleed"` (Liste, Karte): kein Container, das Modul scrollt selbst.
+    expect(moduleContainerClass("collection")).toBeUndefined()
+    rendere(createElement(ModuleFrame, { moduleId: "collection" }, "LISTE"))
+    expect(scrollbereich()).toBeNull()
+    expect(host.querySelector("[data-module-fill]")).not.toBeNull()
   })
 })

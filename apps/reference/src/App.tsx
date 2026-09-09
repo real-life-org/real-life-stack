@@ -9,6 +9,7 @@ import {
 import {
   AppShell,
   AppShellMain,
+  FilterProvider,
   Navbar,
   NavbarStart,
   NavbarCenter,
@@ -699,6 +700,10 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       canOpenMap={modules.some((m) => m.id === "map")}
     >
     <CreateHostProvider>
+    {/* Der Filter lebt neben dem persistenten Panel: beides ueberdauert den
+        Modulwechsel (Spec shared-components → „Modul-uebergreifender
+        Filter-State", Regel 1). */}
+    <FilterProvider>
     <ModulePanelHost onDrawerHeightChange={setDrawerHeight}>
     <ActivityPanelController open={activityOpen} onClose={closeActivity} onOpenNotification={openNotification} onOpenEntryTarget={openEntryTarget} onOpenGroup={(groupId) => { const group = workspaces.find((workspace) => workspace.id === groupId); if (group) handleWorkspaceChange(group); closeActivity() }} />
     <CreateSheetController />
@@ -887,6 +892,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       )}
     </AppShell>
     </ModulePanelHost>
+    </FilterProvider>
     </CreateHostProvider>
     </LocationPickProvider>
     </DetailHostProvider>

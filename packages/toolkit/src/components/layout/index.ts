@@ -1,6 +1,12 @@
 export { AppShell, AppShellMain } from "./app-shell"
 export { PanelSafeArea, type PanelSafeAreaProps } from "./panel-safe-area"
 export { ModuleToolbar, type ModuleToolbarProps } from "./module-toolbar"
+export {
+  ModuleFrame,
+  moduleContainerClass,
+  useOptionalModuleHead,
+  type ModuleFrameProps,
+} from "./module-frame"
 export { PanelHeaderActions, PanelHeaderSlotContext, type PanelHeaderActionsProps } from "./panel-header-actions"
 export { readPanelEdges, usePanelEdges, type PanelEdges } from "./panel-edges"
 export { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"

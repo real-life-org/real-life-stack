@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Button,
+  ModuleFrame,
   getModule,
   getModules,
   type SelectionFocusVisibleArea,
@@ -28,28 +29,6 @@ export interface ModuleOutletProps {
  * Which modules exist, how each fills the space and which ones are expensive
  * enough to keep mounted all live in the register.
  */
-/**
- * Die Geometrie eines Moduls: Randabstand, Zentrierung, Hoechstbreite.
- *
- * Gilt fuer alles im Modul — auch fuer die Steuerleiste, die darin klebt
- * (`ModuleToolbar`). Genau deshalb steht sie IM Container und nicht in einem
- * eigenen Kopf darueber: Sonst gaebe es zwei Angaben derselben Geometrie, und
- * die driften, sobald jemand eine davon aendert.
- *
- * 16px Randabstand, wie das schwebende Panel: Ein Modul, das weiter vom Rand
- * steht als die Karte daneben, laesst das Fenster schief wirken.
- *
- * `null` fuer randlose Module (`fill: "bleed"`) — dort gibt es keinen
- * Container, die Karte fuellt die Flaeche.
- */
-export function moduleContainerClass(id: string): string | undefined {
-  const mod = getModule(id)
-  if (mod?.fill === "bleed") return undefined
-  // `pb-4` als Gegenstueck zum `pt-4`: Ohne Polster unten endete die Seite
-  // exakt mit der letzten Karte — am Desktop ohne untere Navigation sichtbar.
-  return `container mx-auto px-4 pt-4 pb-4 ${mod?.maxWidth ?? "max-w-3xl"}`
-}
-
 export function ModuleOutlet({
   activeWorkspace,
   activeModule,
@@ -77,11 +56,12 @@ export function ModuleOutlet({
   const active = getModule(activeModule)
   const activeIsPersistent = !!active?.keepMounted
 
-  const wrap = (id: string, node: React.ReactNode) => {
-    const mod = getModule(id)
-    if (mod?.fill === "bleed") return node
-    return <div className={moduleContainerClass(id)}>{node}</div>
-  }
+  // Die Flaeche ist eine Spalte: Kopf, darunter der Scrollbereich (Spec 01).
+  // Was Geometrie, Fuellmodus und Panel-Regel daraus machen, entscheidet der
+  // Frame anhand des Registereintrags — nicht dieser Dispatch.
+  const wrap = (id: string, node: React.ReactNode) => (
+    <ModuleFrame moduleId={id}>{node}</ModuleFrame>
+  )
 
   return (
     <>
@@ -110,7 +90,7 @@ export function ModuleOutlet({
       })}
 
       {noAccess ? (
-        <div className="container mx-auto px-4 pt-12 max-w-md text-center">
+        <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
           <p className="text-lg font-medium text-foreground">Du bist kein Mitglied dieses Spaces</p>
           <p className="text-sm text-muted-foreground mt-2">
             Der Space existiert nicht oder du hast keinen Zugang.
@@ -132,7 +112,7 @@ export function ModuleOutlet({
       ) : active ? (
         // Registered but no surface attached — say so instead of showing an
         // empty page (spec 01, rule 5).
-        <div className="container mx-auto px-4 pt-12 max-w-md text-center">
+        <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
           <p className="text-lg font-medium text-foreground">{active.label}</p>
           <p className="text-sm text-muted-foreground mt-2">
             Für dieses Modul ist in dieser App keine Ansicht hinterlegt.

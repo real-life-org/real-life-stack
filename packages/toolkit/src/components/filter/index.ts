@@ -1,4 +1,12 @@
 export { FilterBar, type FilterBarProps } from "./filter-bar"
+export { ModuleFilterBar, type ModuleFilterBarProps } from "./module-filter-bar"
+export {
+  FilterProvider,
+  FilterScope,
+  useSharedFilter,
+  useOptionalSharedFilter,
+  type SharedFilterValue,
+} from "./filter-store"
 export {
   FilterChip,
   FilterMultiSelect,

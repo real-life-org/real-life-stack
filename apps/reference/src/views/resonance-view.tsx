@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import {
   CreateFab,
   EmptyState,
-  FilterBar,
   ModuleToolbar,
   ItemMetaRow,
   ItemPreview,
@@ -10,10 +9,10 @@ import {
   ItemTypeBadge,
   ReactionBar,
   renderTypeFooter,
-  emptyFilterBarValue,
   useCurrentUser,
   useItemGroupColorResolver,
-  useFilterableItems,
+  useModuleFilteredItems,
+  useSharedFilter,
   useGroups,
   useItems,
   useMembers,
@@ -22,7 +21,6 @@ import {
   useRelationRecords,
   useResolvedUsers,
   useVerifiedRelationRecords,
-  type FilterBarValue,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -84,10 +82,11 @@ export function ResonanceView({ groupId }: { groupId: string }) {
     [memberMap, currentUser, resolvedAuthors],
   )
 
-  // Filter (tags) → sort (mode-specific chains, resonance-sort.ts).
-  const [filterBarValue, setFilterBarValue] = useState<FilterBarValue>(emptyFilterBarValue)
+  // Filter und Suche kommen aus dem Kopf der Modulflaeche (geteilt), die
+  // Sortierung gehoert diesem Modul.
+  const { value: filterBarValue, searchText } = useSharedFilter()
   const [sortMode, setSortMode] = useState<ResonanceSortMode>("newest")
-  const filteredStatements = useFilterableItems(statements, filterBarValue)
+  const filteredStatements = useModuleFilteredItems(statements)
   const voteStats = useMemo(() => aggregateVoteStats(verifiedVoteRecords), [verifiedVoteRecords])
   const sortedStatements = useMemo(
     () => sortStatements(filteredStatements, voteStats, sortMode),
@@ -98,7 +97,8 @@ export function ResonanceView({ groupId }: { groupId: string }) {
     for (const item of statements) for (const tag of item.tags ?? []) seen.add(tag)
     return Array.from(seen).sort()
   }, [statements])
-  const filterActive = filterBarValue.tags.length > 0
+  const filterActive =
+    searchText.trim() !== "" || filterBarValue.tags.length > 0 || filterBarValue.types.length > 0
 
   // Detail: the read body is the host's shared, type-driven renderer (#203) —
   // the module only contributes the edit half + panel plumbing.
@@ -146,32 +146,30 @@ export function ResonanceView({ groupId }: { groupId: string }) {
 
   return (
     <div className="space-y-4">
-      <ModuleToolbar>
-        <FilterBar
-          value={filterBarValue}
-          onChange={setFilterBarValue}
-          availableTags={availableTags}
-          leadingActions={
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                  <ArrowUpDown className="h-3.5 w-3.5" />
-                  {SORT_LABELS[sortMode]}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuRadioGroup value={sortMode} onValueChange={(value) => setSortMode(value as ResonanceSortMode)}>
-                  {SORT_MODES.map((mode) => (
-                    <DropdownMenuRadioItem key={mode} value={mode}>
-                      {SORT_LABELS[mode]}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          }
-        />
-      </ModuleToolbar>
+      {/* Die Sortierung steht rechts: Links neben dem Filter-Knopf sitzt die
+          Suche, die alle Module teilen. */}
+      <ModuleToolbar
+        availableTags={availableTags}
+        trailingActions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                <ArrowUpDown className="h-3.5 w-3.5" />
+                {SORT_LABELS[sortMode]}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup value={sortMode} onValueChange={(value) => setSortMode(value as ResonanceSortMode)}>
+                {SORT_MODES.map((mode) => (
+                  <DropdownMenuRadioItem key={mode} value={mode}>
+                    {SORT_LABELS[mode]}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
 
       <div className="space-y-4">
         {isLoading ? (

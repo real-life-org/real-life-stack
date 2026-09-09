@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { useMemo, useCallback, useEffect, useRef } from "react"
 import {
   useModulePanel,
   ReactionBar,
@@ -11,11 +11,9 @@ import {
   ItemMetaRow,
   ItemCommentCount,
   FeedComposerTrigger,
-  FilterBar,
   ModuleToolbar,
-  emptyFilterBarValue,
-  useFilterableItems,
-  type FilterBarValue,
+  useModuleFilteredItems,
+  useSharedFilter,
   type FilterTypeOption,
   useItemsWithDraft,
   useMembers,
@@ -28,8 +26,8 @@ import {
   useItemPrivacyResolver,
   resolveTypePresentation,
 } from "@real-life-stack/toolkit"
-import { FileText, Search, SearchX } from "lucide-react"
-import { Input, renderTypeFooter } from "@real-life-stack/toolkit"
+import { FileText, SearchX } from "lucide-react"
+import { renderTypeFooter } from "@real-life-stack/toolkit"
 import { isAggregateVisibleItemType, type Item, type User } from "@real-life-stack/data-interface"
 import { useItemFocus } from "../hooks/use-item-focus"
 import { useRegisterDetail, type DetailConfig } from "../detail-host"
@@ -151,20 +149,10 @@ export function FeedView({ groupId }: { groupId: string }) {
     el.scrollIntoView({ behavior: "smooth", block: "center" })
   }, [focusedId, feedItems])
 
-  // FilterBar state — controlled, lives in the view
-  const [filterBarValue, setFilterBarValue] = useState<FilterBarValue>(emptyFilterBarValue)
-  const [searchText, setSearchText] = useState("")
-  const itemsAfterBar = useFilterableItems(feedItems, filterBarValue)
-  const filteredFeedItems = useMemo(() => {
-    const needle = searchText.trim().toLowerCase()
-    if (!needle) return itemsAfterBar
-    return itemsAfterBar.filter((item) => {
-      const haystack = [item.data.title, item.data.description, item.data.content]
-        .map((v) => String(v ?? "").toLowerCase())
-        .join(" ")
-      return haystack.includes(needle)
-    })
-  }, [itemsAfterBar, searchText])
+  // Filter und Suche gehoeren der App-Shell, nicht diesem View: Der Kopf der
+  // Modulflaeche zeigt sie, und beim Wechsel ins Kanban wirken sie weiter.
+  const { value: filterBarValue, searchText } = useSharedFilter()
+  const filteredFeedItems = useModuleFilteredItems(feedItems)
   const availableTags = useMemo(() => {
     const seen = new Set<string>()
     for (const item of feedItems) for (const tag of item.tags ?? []) seen.add(tag)
@@ -202,26 +190,7 @@ export function FeedView({ groupId }: { groupId: string }) {
 
   return (
     <div className="space-y-4">
-      <ModuleToolbar>
-        <FilterBar
-          value={filterBarValue}
-          onChange={setFilterBarValue}
-          availableTags={availableTags}
-          availableTypes={availableTypes}
-          leadingActions={
-            <div className="relative min-w-0 flex-1 sm:flex-none">
-              <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Suche…"
-                aria-label="Feed durchsuchen"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                className="h-8 w-full pl-7 text-xs sm:w-40"
-              />
-            </div>
-          }
-        />
-      </ModuleToolbar>
+      <ModuleToolbar availableTags={availableTags} availableTypes={availableTypes} />
 
       {/* Composer trigger — hands off to the app-level create host (fullscreen). */}
       <FeedComposerTrigger

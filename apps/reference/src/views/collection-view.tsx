@@ -1,8 +1,12 @@
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import {
   CollectionView as ToolkitCollectionView,
+  CollectionLayoutToggle,
   CreateFab,
+  ModuleToolbar,
   ReactionBar,
+  resolveTypePresentation,
+  useModuleFilteredItems,
   useCurrentUser,
   useGroups,
   useItemGroupColorResolver,
@@ -10,6 +14,8 @@ import {
   useMembers,
   useModulePanel,
   usePersonalGroupId,
+  type CollectionLayout,
+  type FilterTypeOption,
   type SelectionFocusVisibleArea,
 } from "@real-life-stack/toolkit"
 import { isAggregateVisibleItemType, type Item } from "@real-life-stack/data-interface"
@@ -46,7 +52,27 @@ export function CollectionView({
   selectionFocusVisibleArea?: SelectionFocusVisibleArea
 }) {
   const { data: allItems } = useItems()
-  const items = useMemo(() => selectCollectionItems(allItems), [allItems])
+  const alleEintraege = useMemo(() => selectCollectionItems(allItems), [allItems])
+  // Die Liste filtert jetzt mit: Vorher zeigte sie alles, waehrend Feed und
+  // Kanban daneben gefiltert waren — dieselbe Auswahl, zwei Ergebnisse.
+  const items = useModuleFilteredItems(alleEintraege)
+  const availableTags = useMemo(() => {
+    const seen = new Set<string>()
+    for (const item of alleEintraege) for (const tag of item.tags ?? []) seen.add(tag)
+    return Array.from(seen).sort()
+  }, [alleEintraege])
+  const availableTypes = useMemo<FilterTypeOption[]>(() => {
+    const present = new Set(alleEintraege.map(({ type }) => type))
+    return Array.from(present)
+      .map((id) => {
+        const presentation = resolveTypePresentation(id)
+        return { id, label: presentation.label, icon: presentation.badge?.icon }
+      })
+      .sort((a, b) => a.label.localeCompare(b.label, "de"))
+  }, [alleEintraege])
+  // Die Dichte gehoert dem Modul, ihr Umschalter aber in den Kopf der Flaeche
+  // (Spec 01, Regel 2) — deshalb haelt sie hier und nicht in der Lens.
+  const [layout, setLayout] = useState<CollectionLayout>("list")
   const { data: members } = useMembers(groupId === "__overview__" ? null : groupId)
   const { data: currentUser } = useCurrentUser()
   const { itemId: focusedId, focusItem } = useItemFocus()
@@ -85,8 +111,15 @@ export function CollectionView({
   const handleCreateItem = useCallback(() => startCreate(), [startCreate])
 
   return <>
+    <ModuleToolbar
+      availableTags={availableTags}
+      availableTypes={availableTypes}
+      trailingActions={<CollectionLayoutToggle layout={layout} onChange={setLayout} />}
+    />
     <ToolkitCollectionView
       className="h-full"
+      layout={layout}
+      onLayoutChange={setLayout}
       items={items}
       activeItemId={modulePanel.current?.itemId ?? focusedId}
       selectionFocusVisibleArea={selectionFocusVisibleArea}

@@ -15,11 +15,56 @@ export function collectionFocusGateKey(layout: CollectionLayout, activeItemId?: 
   return activeItemId ? `${layout}:${activeItemId}` : undefined
 }
 
+export interface CollectionLayoutToggleProps {
+  layout: CollectionLayout
+  onChange: (next: CollectionLayout) => void
+}
+
+/**
+ * Liste oder Raster — als eigene Komponente, damit der Umschalter dort stehen
+ * kann, wo die Steuerung eines Moduls hingehoert: im Kopf der Modulflaeche
+ * (Spec 01, Regel 2). Die Lens selbst zeigt ihn nur, solange sie ihre Dichte
+ * selbst verwaltet.
+ */
+export function CollectionLayoutToggle({ layout, onChange }: CollectionLayoutToggleProps) {
+  return (
+    <div role="group" aria-label="Darstellung" className="flex gap-1">
+      <Button
+        type="button"
+        variant={layout === "list" ? "secondary" : "ghost"}
+        size="icon"
+        aria-label="Listenansicht"
+        aria-pressed={layout === "list"}
+        onClick={() => onChange("list")}
+      >
+        <List className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        variant={layout === "grid" ? "secondary" : "ghost"}
+        size="icon"
+        aria-label="Rasteransicht"
+        aria-pressed={layout === "grid"}
+        onClick={() => onChange("grid")}
+      >
+        <Grid2X2 className="size-4" />
+      </Button>
+    </div>
+  )
+}
+
 export interface CollectionViewProps {
   items: readonly Item[]
   activeItemId?: string
   onItemClick?: (item: Item) => void
   defaultLayout?: CollectionLayout
+  /**
+   * Gesteuerte Dichte. Gesetzt heisst: Der Aufrufer haelt sie (und zeigt den
+   * Umschalter selbst, z.B. im Kopf der Modulflaeche); ohne sie verwaltet die
+   * Lens sie wie bisher und zeigt ihre eigene Umschaltzeile.
+   */
+  layout?: CollectionLayout
+  onLayoutChange?: (next: CollectionLayout) => void
   /** Lets an app give this self-scrolling lens the remaining available height. */
   className?: string
   /** Shell-owned obstruction below the scrollable lens, e.g. a mobile drawer. */
@@ -36,37 +81,26 @@ export function CollectionView({
   activeItemId,
   onItemClick,
   defaultLayout = "list",
+  layout: layoutProp,
+  onLayoutChange,
   selectionFocusVisibleArea,
   className,
 }: CollectionViewProps) {
-  const [layout, setLayout] = useState<CollectionLayout>(defaultLayout)
+  const [eigenes, setEigenes] = useState<CollectionLayout>(defaultLayout)
+  const gesteuert = layoutProp !== undefined
+  const layout = layoutProp ?? eigenes
+  const setLayout = (next: CollectionLayout) => {
+    if (!gesteuert) setEigenes(next)
+    onLayoutChange?.(next)
+  }
 
   return (
     <section aria-label="Sammlungsansicht" className={cn("flex h-full min-h-0 flex-col gap-4", className)}>
-      <div className="mx-auto flex w-full max-w-6xl justify-end px-4 pt-4 sm:px-6 sm:pt-6">
-        <div role="group" aria-label="Darstellung" className="flex gap-1">
-          <Button
-            type="button"
-            variant={layout === "list" ? "secondary" : "ghost"}
-            size="icon"
-            aria-label="Listenansicht"
-            aria-pressed={layout === "list"}
-            onClick={() => setLayout("list")}
-          >
-            <List className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant={layout === "grid" ? "secondary" : "ghost"}
-            size="icon"
-            aria-label="Rasteransicht"
-            aria-pressed={layout === "grid"}
-            onClick={() => setLayout("grid")}
-          >
-            <Grid2X2 className="size-4" />
-          </Button>
+      {!gesteuert && (
+        <div className="mx-auto flex w-full max-w-6xl justify-end px-4 pt-4 sm:px-6 sm:pt-6">
+          <CollectionLayoutToggle layout={layout} onChange={setLayout} />
         </div>
-      </div>
+      )}
       <div className="min-h-0 flex-1">
         {layout === "list" ? (
           <ListView

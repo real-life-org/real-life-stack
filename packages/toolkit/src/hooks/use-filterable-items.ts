@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import type { Item } from "@real-life-stack/data-interface"
+import { useSharedFilter } from "../components/filter/filter-store"
 import type { FilterBarValue } from "../components/filter/types"
 
 /**
@@ -53,4 +54,35 @@ export function useFilterableItems(items: readonly Item[], filter: FilterBarValu
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [items, tagsKey, typesKey],
   )
+}
+
+/**
+ * Freitextsuche ueber ein Item: Titel, Beschreibung, Inhalt.
+ *
+ * Eine Funktion statt fuenfmal derselbe `haystack`: Feed, Kanban, Kalender und
+ * Karte hatten je eine eigene Variante, und sie stimmten nicht ueberein — die
+ * einen suchten ueber `content` mit, die anderen nicht. Wer im Feed etwas
+ * fand, fand es im Kanban nicht.
+ */
+export function applyItemSearch(items: readonly Item[], search: string): Item[] {
+  const needle = search.trim().toLowerCase()
+  if (!needle) return [...items]
+  return items.filter((item) =>
+    [item.data.title, item.data.description, item.data.content].some((value) =>
+      String(value ?? "").toLowerCase().includes(needle),
+    ),
+  )
+}
+
+/**
+ * Die Items eines Moduls, gefiltert wie die Steuerleiste im Kopf es anzeigt:
+ * geteilte Tag-/Typ-Auswahl plus geteilter Suchtext.
+ *
+ * Module wenden damit genau das an, was der Nutzer im Kopf sieht — statt je
+ * eine eigene Reihenfolge aus Filter und Suche zu bauen.
+ */
+export function useModuleFilteredItems(items: readonly Item[]): Item[] {
+  const { value, searchText } = useSharedFilter()
+  const gefiltert = useFilterableItems(items, value)
+  return useMemo(() => applyItemSearch(gefiltert, searchText), [gefiltert, searchText])
 }

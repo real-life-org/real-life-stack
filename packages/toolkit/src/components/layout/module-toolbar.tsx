@@ -1,56 +1,55 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { useEffect } from "react"
+import { createPortal } from "react-dom"
 
+import { ModuleFilterBar, type ModuleFilterBarProps } from "../filter/module-filter-bar"
 import { cn } from "../../lib/utils"
+import { useOptionalModuleHead } from "./module-frame"
 
-export interface ModuleToolbarProps {
-  children: ReactNode
+export interface ModuleToolbarProps extends Omit<ModuleFilterBarProps, "searchLabel"> {
   className?: string
 }
 
 /**
- * Die Steuerleiste eines Moduls — Filter, Suche, Ansichtswechsel.
+ * Der Beitrag eines Moduls zum Kopf der Modulflaeche — Filter, Suche,
+ * Ansichtswechsel.
  *
- * **Sie bleibt oben stehen.** Mitscrollen hiess: Wer weit unten in einer langen
- * Liste filtern will, muss erst zurueck nach oben.
+ * **Warum Kopf und nicht mehr `sticky`.** Die Leiste klebte frueher IM
+ * Scrollbereich des Moduls. Sichtbar wurde das an der Scrollleiste: Sie lief
+ * hinter der Leiste bis zur Navbar hoch, obwohl dort nichts mehr scrollt. Und
+ * jedes Modul musste den Container-Abstand selbst ausgleichen
+ * (`-mx-4 -mt-4 pt-4 pb-4 mb-0!`) — vier Module, vier Rechnungen, die
+ * auseinanderlaufen (Spec 01, Regel 2: „die Flaeche besitzt den Kopf").
  *
- * **Warum klebend und nicht ausserhalb des Scrollbereichs.** Erst lag sie in
- * einem eigenen Kopf der Modulflaeche — dann aber ausserhalb des
- * Modul-Containers, der Randabstand, Zentrierung und Hoechstbreite setzt. Die
- * Leiste sass am Fensterrand, waehrend die Karten zentriert standen, und die
- * Scrollleiste verschob die Zentrierung des Inhalts um weitere Pixel gegen den
- * Kopf. Beides zu flicken hiesse, dieselbe Geometrie an zwei Orten zu pflegen.
+ * **Warum die Geometrie aus einer Funktion kommt.** Der erste Versuch mit
+ * eigenem Kopf scheiterte daran, dass Kopf und Inhalt je ihre eigene
+ * Zentrierung trugen. Beide holen sie jetzt aus `moduleContainerClass`, und
+ * beide reservieren dieselbe Scrollleistenrinne (siehe `ModuleFrame`).
  *
- * Hier steht sie im selben Container wie der Inhalt und erbt seine Geometrie —
- * es gibt keine zweite, die abweichen koennte.
+ * Der ZUSTAND bleibt beim Modul: Die Leiste wird per Portal in den Kopf
+ * gereicht, nicht als Datenpaket nach oben gegeben. Ein Ansichtswechsel im
+ * Kopf schaltet damit weiter den State des Moduls, das ihn besitzt.
  *
- * `-mx-4 px-4` zieht den Hintergrund ueber den Rand des Containers hinaus:
- * sonst schiene der Inhalt links und rechts daneben durch, waehrend er darunter
- * wegscrollt.
+ * Ohne Flaeche darueber (Story, Test, eingebettete Ansicht) rendert sie an
+ * Ort und Stelle, statt spurlos zu verschwinden (Spec 01, Regel 3).
  */
-export function ModuleToolbar({ children, className }: ModuleToolbarProps) {
+export function ModuleToolbar({ className, ...leiste }: ModuleToolbarProps) {
+  const kopf = useOptionalModuleHead()
+
+  // Nur die Anmeldung geht nach oben — ein Zaehler, kein Inhalt. Daran
+  // entscheidet die Flaeche, ob der Kopf ueberhaupt eine Zeile bekommt
+  // (Spec 01, Regel 4), ohne dass ein neu erzeugter ReactNode pro Render
+  // eine Endlosschleife aus Beitrag und Neu-Render ausloest.
+  const anmelden = kopf?.anmelden
+  useEffect(() => anmelden?.(), [anmelden])
+
+  const inhalt = <ModuleFilterBar {...leiste} />
+
+  if (kopf) return kopf.element ? createPortal(inhalt, kopf.element) : null
   return (
-    <div
-      data-module-toolbar
-      className={cn(
-        // Der Abstand nach unten gehoert der Leiste allein — `mb-0!` nimmt den
-        // Abstand weg, den der Container ihr sonst gibt (`space-y-*` setzt in
-        // Tailwind v4 ein `margin-bottom` auf jedes Kind ausser dem letzten).
-        //
-        // Warum: Im Ruhezustand zaehlten beide zusammen, beim Kleben nur die
-        // eigene Polsterung — der Inhalt rueckte also beim Scrollen naeher
-        // heran. Und weil die Module unterschiedliche Container-Abstaende
-        // haben (`space-y-4` im Feed, `space-y-3` im Kalender), waere jede
-        // Rechnung mit ihnen ohnehin eine, die driftet.
-        "sticky top-0 z-20 -mx-4 bg-background px-4 pb-4 mb-0!",
-        // Der Container gibt oben 16px; die uebernimmt die Leiste, damit beim
-        // Kleben kein Inhalt in dieser Luecke durchscheint.
-        "-mt-4 pt-4",
-        className,
-      )}
-    >
-      {children}
+    <div data-module-toolbar className={cn(className)}>
+      {inhalt}
     </div>
   )
 }

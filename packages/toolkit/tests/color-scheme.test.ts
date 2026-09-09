@@ -61,4 +61,15 @@ describe("Der Browser malt seine eigenen Flächen mit", () => {
     expect(blockVon("*")).toMatch(/scrollbar-width:\s*thin/)
     expect(blockVon(".dark")).toMatch(/scrollbar-color:[^;]*transparent/)
   })
+
+  /**
+   * `thin` ist ein Wort, keine Breite: Firefox zeichnet damit 6px, Chrome 10px
+   * (gemessen, Frame-Scrollbereich bei 1440px). Ein 6px-Daumen ohne Spur am
+   * Fensterrand ist kaum zu finden. Firefox bekommt darum `auto` (12px) — dann
+   * sind beide etwa gleich breit. `-moz-appearance` kennt nur Firefox; die
+   * Abfrage trifft genau den Browser, dessen `thin` zu schmal ist.
+   */
+  it("gibt Firefox die breitere Leiste, weil sein thin halb so breit ist", () => {
+    expect(blockVon("@supports (-moz-appearance: none)")).toMatch(/scrollbar-width:\s*auto/)
+  })
 })
