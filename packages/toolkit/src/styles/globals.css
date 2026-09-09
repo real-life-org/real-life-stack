@@ -247,6 +247,21 @@
   --shadow-navbar: var(--shadow-md);
 }
 
+/*
+ * Die Tag-Palette (`lib/utils.ts`, getTagColor) meldet ihre Klassen hier
+ * selbst an. Tailwind erzeugt nur, was es in gescannten Dateien sieht — die
+ * Apps scannen im Toolkit nur `.tsx`, und die Palette steht in einer `.ts`.
+ * Vier Farben kamen zufaellig anderswo vor, Rosa nirgends: Ein Fuenftel aller
+ * Tags war farblos. Diese Datei importiert jede App; damit haengt die Palette
+ * nicht mehr an der Scan-Konfiguration eines Aufrufers.
+ * Ein Test haelt Palette und Anmeldung deckungsgleich (tag-palette.test.ts).
+ */
+@source inline("bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300");
+@source inline("bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300");
+@source inline("bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300");
+@source inline("bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300");
+@source inline("bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300");
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
