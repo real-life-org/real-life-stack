@@ -653,13 +653,12 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
         // eine Auskunft und kein Weg. Ein Link, der nichts tut, ist schlimmer
         // als schlichter Text.
         if (!ziel || ziel.id === activeModule) return null
-        return () => {
-          handleModuleChange(ziel.id)
-          focusItem(item.id)
-        }
+        // Modul und Item in EINER Navigation: Nacheinander gesetzt, naehme der
+        // zweite Schritt den ersten zurueck (er liest das noch alte Modul).
+        return () => focusItem(item.id, ziel.id)
       },
     }),
-    [activeModule, focusItem, handleModuleChange, modules],
+    [activeModule, focusItem, modules],
   )
 
   // Die Klasse folgt dem Zustand, nicht dem Klick. Gespeichert wird hier
