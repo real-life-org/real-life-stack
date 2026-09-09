@@ -153,13 +153,13 @@ export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
             <div
               data-module-head
               hidden={!hatKopf}
-              // Eigene Flaeche fuer Feld und Chips: Auf einer Karte gibt es
-              // keinen ruhigen Untergrund, gegen den sie sich lesen liessen.
+              // Das Suchfeld bekommt eine deckende Flaeche: Auf einer Karte
+              // gibt es keinen ruhigen Untergrund. Die Chips brauchen keine
+              // zweite Huelle, sie sind selbst Pillen mit Flaeche; ein Rahmen
+              // um die Zeile wirkte wie ein Fremdkoerper (Anton, 09.09.).
               className={cn(
                 "[&_input]:bg-card!",
-                "[&_[data-filter-chips]]:mt-2 [&_[data-filter-chips]]:w-fit [&_[data-filter-chips]]:rounded-full",
-                "[&_[data-filter-chips]]:border [&_[data-filter-chips]]:bg-card/95",
-                "[&_[data-filter-chips]]:px-2 [&_[data-filter-chips]]:py-1 [&_[data-filter-chips]]:shadow-sm",
+                "[&_[data-filter-chips]]:mt-2 [&_[data-filter-chips]]:w-fit",
               )}
             >
               {kopfSlot()}
