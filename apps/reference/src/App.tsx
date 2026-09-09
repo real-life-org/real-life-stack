@@ -21,6 +21,7 @@ import {
   Button,
   GroupDialog,
   AdaptivePanel,
+  CommentNavigationProvider,
   FieldNavigationProvider,
   findModulePresenting,
   OpenProfileProvider,
@@ -629,7 +630,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   // Raw-history clicks escalate the module when the active one cannot show
   // the target (lens-active-item-escalates-view) — otherwise plain focus.
   const { data: allItems } = useItems()
-  const { focusItem } = useItemFocus()
+  const { itemId: offenesItem, focusItem, commentOnItem } = useItemFocus()
   const openEntryTarget = useCallback((targetId: string) => {
     const item = allItems.find(({ id }) => id === targetId)
     const hints = item ? moduleHintsFor(item) : undefined
@@ -645,6 +646,16 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   // Kalender, die Position auf die Karte. Drei Dinge kommen hier zusammen, und
   // nur hier liegen sie alle vor: WELCHES Modul ein Feld zeigt (Register),
   // WELCHE Module dieser Space fuehrt, und WIE man hinkommt.
+  // Der Kommentar-Hinweis einer Karte fuehrt ins Kommentarfeld des Panels.
+  // Steht das Item schon offen, fuehrt er nirgendwohin — man ist bereits da.
+  const kommentarNavigation = useMemo(
+    () => ({
+      openComments: (item: Item) =>
+        offenesItem === item.id ? null : () => commentOnItem(item.id),
+    }),
+    [commentOnItem, offenesItem],
+  )
+
   const feldNavigation = useMemo(
     () => ({
       openField: (field: string, item: Item) => {
@@ -676,6 +687,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   }
 
   return (
+    <CommentNavigationProvider value={kommentarNavigation}>
     <FieldNavigationProvider value={feldNavigation}>
     <OpenProfileProvider openProfile={openProfile}>
     <DraftItemProvider>
@@ -882,6 +894,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     </DraftItemProvider>
     </OpenProfileProvider>
     </FieldNavigationProvider>
+    </CommentNavigationProvider>
   )
 }
 

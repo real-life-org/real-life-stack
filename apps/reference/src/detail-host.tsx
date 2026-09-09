@@ -244,7 +244,7 @@ export function ItemDetailRead({
 }
 
 function DetailHostOutlet() {
-  const { itemId: focusedId, isEditing, clearFocus, editItem, stopEditing } = useItemFocus()
+  const { itemId: focusedId, isEditing, isCommenting, clearFocus, editItem, stopEditing, stopCommenting } = useItemFocus()
   const config = useActiveDetailConfig()
   const groupId = useActiveGroupId()
   if (!focusedId || !config) return null
@@ -263,6 +263,11 @@ function DetailHostOutlet() {
       editInitialData={config.editInitialData}
       composerProps={config.composerProps}
       renderCommentReactions={config.renderCommentReactions}
+      // Wer ueber den Kommentar-Hinweis einer Karte hierherkam, findet den
+      // Cursor im Feld. Danach faellt `?comment` weg — sonst spraenge er bei
+      // jedem Rerender zurueck.
+      focusComposer={isCommenting}
+      onComposerFocused={stopCommenting}
       onShare={config.onShare}
       onClose={clearFocus}
     />

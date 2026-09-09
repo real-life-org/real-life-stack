@@ -27,6 +27,10 @@ export interface ItemDetailPanelProps {
   children: ReactNode
   /** Optional reactions renderer for individual comments. */
   renderCommentReactions?: (commentId: string) => ReactNode
+  /** Cursor gleich ins Kommentarfeld — wer hierher kam, um zu schreiben. */
+  focusComposer?: boolean
+  /** Meldet, dass der Cursor steht; die Absicht ist damit erfuellt. */
+  onComposerFocused?: () => void
   /**
    * @deprecated Ohne Wirkung. Die Diskussion traegt keine Ueberschrift mehr —
    * Blasen unter einem Item sind als Kommentare erkennbar, und ohne Kommentare
@@ -40,6 +44,8 @@ export function ItemDetailPanel({
   itemId,
   children,
   renderCommentReactions,
+  focusComposer = false,
+  onComposerFocused,
   className,
 }: ItemDetailPanelProps) {
   // Reply wiring: CommentSection owns the comment tree and hands us its
@@ -93,6 +99,8 @@ export function ItemDetailPanel({
         onSubmit={submit ?? (async () => {})}
         replyTo={replyTo}
         onCancelReply={cancel ?? undefined}
+        autoFocus={focusComposer}
+        onAutoFocused={onComposerFocused}
       />
     </div>
   )

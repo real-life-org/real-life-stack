@@ -20,6 +20,10 @@ export interface CommentInputProps {
   onCancelReply?: () => void
   /** Placeholder text. */
   placeholder?: string
+  /** Cursor beim Erscheinen ins Feld setzen — fuer „hier will ich schreiben". */
+  autoFocus?: boolean
+  /** Meldet, dass der Fokus gesetzt wurde; die Absicht ist damit erfuellt. */
+  onAutoFocused?: () => void
   /** Whether the input is disabled (e.g. unauthenticated). */
   disabled?: boolean
   /** Additional CSS classes. */
@@ -36,6 +40,8 @@ export function CommentInput({
   replyTo,
   onCancelReply,
   placeholder = "Kommentar schreiben...",
+  autoFocus = false,
+  onAutoFocused,
   disabled = false,
   className,
 }: CommentInputProps) {
@@ -60,6 +66,18 @@ export function CommentInput({
       textareaRef.current?.focus()
     }
   }, [replyTo])
+
+  // Jemand ist hierhergekommen, UM zu schreiben (Klick auf den
+  // Kommentar-Hinweis einer Karte). Der Cursor steht dann gleich im Feld, und
+  // die Absicht wird gemeldet, damit sie danach aus der URL verschwindet —
+  // sonst spraenge der Cursor bei jedem Rerender zurueck.
+  const meldeFokus = useRef(onAutoFocused)
+  meldeFokus.current = onAutoFocused
+  useEffect(() => {
+    if (!autoFocus) return
+    textareaRef.current?.focus()
+    meldeFokus.current?.()
+  }, [autoFocus])
 
   const handleSubmit = useCallback(() => {
     const trimmed = text.trim()

@@ -15,6 +15,8 @@ export interface ItemFocus {
   itemId?: string
   /** Whether the focused item is in edit mode (URL carries `?edit`). */
   isEditing: boolean
+  /** Ist das Kommentarfeld das Ziel — steht der Cursor also dort? */
+  isCommenting: boolean
   /** Focus an item in the current module → writes `/{scope}/{module}/{id}` (read). */
   /**
    * Ein Item in den Blick nehmen. `module` wechselt dabei die Sicht — beides
@@ -29,6 +31,14 @@ export interface ItemFocus {
   editItem: () => void
   /** Leave edit → drops `?edit` (replaced, so back from read goes to the module). */
   stopEditing: () => void
+  /**
+   * Ein Item oeffnen, um dazu zu schreiben: wie {@link focusItem}, aber mit
+   * dem Cursor im Kommentarfeld. Ein optionales Zielmodul wechselt zugleich
+   * die Sicht.
+   */
+  commentOnItem: (id: string, module?: string) => void
+  /** Die Absicht ist erfuellt — der Cursor steht, `?comment` kann weg. */
+  stopCommenting: () => void
 }
 
 const ItemFocusContext = createContext<ItemFocus | null>(null)
@@ -49,11 +59,20 @@ export function parsePath(pathname: string): { scope?: string; module?: string; 
  * leaves edit). So clicking another item while creating works like it does while
  * editing.
  */
-export function buildUrl(pathname: string, search: string, opts: { edit: boolean }): string {
+export function buildUrl(
+  pathname: string,
+  search: string,
+  opts: { edit: boolean; comment?: boolean },
+): string {
   const params = new URLSearchParams(search)
   params.delete("compose")
   if (opts.edit) params.set("edit", "1")
   else params.delete("edit")
+  // Die Absicht „ich will hier schreiben" — wie `edit` ein Zustand des
+  // geoeffneten Items, nicht ein Ereignis. So ueberlebt sie den Modulwechsel,
+  // und ein Zurueck im Verlauf schaelt sie wieder ab.
+  if (opts.comment) params.set("comment", "1")
+  else params.delete("comment")
   const q = params.toString()
   return q ? `${pathname}?${q}` : pathname
 }
@@ -114,6 +133,25 @@ export function ItemFocusProvider({ children }: { children: ReactNode }) {
     navigate(buildUrl(`/${scope}/${module}/${itemId}`, searchRef.current, { edit: true }))
   }, [navigate])
 
+  const commentOnItem = useCallback((id: string, targetModule?: string) => {
+    if (id === DRAFT_ITEM_ID) return
+    const { scope, module } = parsePath(pathRef.current)
+    if (!scope || !module) return
+    const ziel = targetModule ?? module
+    // Schreiben statt bearbeiten: Man tut eines von beidem, nie beides.
+    navigate(buildUrl(`/${scope}/${ziel}/${id}`, searchRef.current, { edit: false, comment: true }))
+  }, [navigate])
+
+  const stopCommenting = useCallback(() => {
+    const { scope, module, itemId } = parsePath(pathRef.current)
+    if (!scope || !module || !itemId) return
+    // Ersetzt, nicht gepusht: Die erfuellte Absicht gehoert nicht in den
+    // Verlauf — ein Zurueck fuehrte sonst in ein Feld, das niemand oeffnete.
+    navigate(buildUrl(`/${scope}/${module}/${itemId}`, searchRef.current, { edit: false }), {
+      replace: true,
+    })
+  }, [navigate])
+
   const stopEditing = useCallback(() => {
     const { scope, module, itemId } = parsePath(pathRef.current)
     if (!scope || !module || !itemId) return
@@ -125,9 +163,10 @@ export function ItemFocusProvider({ children }: { children: ReactNode }) {
 
   const { itemId } = parsePath(location.pathname)
   const isEditing = !!itemId && new URLSearchParams(location.search).has("edit")
+  const isCommenting = !!itemId && new URLSearchParams(location.search).has("comment")
   const value = useMemo<ItemFocus>(
-    () => ({ itemId, isEditing, focusItem, clearFocus, editItem, stopEditing }),
-    [itemId, isEditing, focusItem, clearFocus, editItem, stopEditing],
+    () => ({ itemId, isEditing, isCommenting, focusItem, clearFocus, editItem, stopEditing, commentOnItem, stopCommenting }),
+    [itemId, isEditing, isCommenting, focusItem, clearFocus, editItem, stopEditing, commentOnItem, stopCommenting],
   )
   return <ItemFocusContext.Provider value={value}>{children}</ItemFocusContext.Provider>
 }

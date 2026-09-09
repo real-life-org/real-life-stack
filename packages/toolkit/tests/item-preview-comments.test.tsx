@@ -45,18 +45,25 @@ async function renderPreview(comments: Item[]) {
   return { host, root, related }
 }
 
+/**
+ * Der Wortlaut hat sich geändert: aus „2 Kommentare" wurde „2 · Kommentieren".
+ * Der Hinweis ist jetzt zugleich der Weg hinein (siehe
+ * `comment-navigation.test.tsx`), und eine Einladung sagt, was möglich ist,
+ * statt nur zu zählen. Was diese Datei prüft, ist unverändert: DASS gezählt
+ * wird, dass eine Null nichts anzeigt, und dass der Zähler mitwächst.
+ */
 describe("ItemPreview — Kommentar-Hinweis", () => {
   it("zeigt an, DASS ein Item Kommentare hat", async () => {
     const { host, root } = await renderPreview([comment("c1"), comment("c2")])
-    expect(host.textContent).toContain("2 Kommentare")
+    expect(host.textContent).toContain("2")
+    expect(host.textContent).toContain("Kommentieren")
     await act(async () => root.unmount())
     host.remove()
   })
 
-  it("verwendet den Singular bei genau einem Kommentar", async () => {
+  it("nennt auch einen einzelnen Kommentar", async () => {
     const { host, root } = await renderPreview([comment("c1")])
-    expect(host.textContent).toContain("1 Kommentar")
-    expect(host.textContent).not.toContain("1 Kommentare")
+    expect(host.textContent).toContain("1")
     await act(async () => root.unmount())
     host.remove()
   })
@@ -72,7 +79,8 @@ describe("ItemPreview — Kommentar-Hinweis", () => {
     const { host, root, related } = await renderPreview([])
     expect(host.textContent).not.toMatch(/Kommentar/)
     await act(async () => { related.set([comment("c1")]) })
-    expect(host.textContent).toContain("1 Kommentar")
+    expect(host.textContent).toContain("1")
+    expect(host.textContent).toContain("Kommentieren")
     await act(async () => root.unmount())
     host.remove()
   })
