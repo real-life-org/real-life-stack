@@ -59,6 +59,9 @@ export type ItemPreviewSurface = "card" | "panel"
 
 /** Neutral toolkit default; apps may supply an origin-group colour instead. */
 /** Rand der aktiven Karte, wenn kein Space eine Farbe beisteuert. */
+/** Tags, die eine Karte zeigt, bevor sie den Rest zu „+N" zusammenfasst. */
+const MAX_SICHTBARE_TAGS = 3
+
 export const DEFAULT_ACTIVE_ITEM_COLOR = "#64748b"
 /** @deprecated Frueherer Name von {@link DEFAULT_ACTIVE_ITEM_COLOR}. */
 export const DEFAULT_ACTIVE_ITEM_GLOW_COLOR = DEFAULT_ACTIVE_ITEM_COLOR
@@ -194,6 +197,12 @@ export function ItemPreview({
       }
     : undefined
 
+  // Wieviele Tags die Zeile traegt, ohne den Urheber zu verdraengen. Fest
+  // statt gemessen: Eine Messung waere erst nach dem ersten Bild da und
+  // liesse die Karte sichtbar springen. In der dichten Ansicht bleibt einer.
+  const sichtbareTags = tags.slice(0, isCompact ? 1 : MAX_SICHTBARE_TAGS)
+  const verborgeneTags = tags.length - sichtbareTags.length
+
   // Alter Prop-Name gilt weiter: das Toolkit ist veroeffentlicht.
   const aktivFarbe = activeColor ?? activeGlowColor ?? DEFAULT_ACTIVE_ITEM_COLOR
   // Dieselbe Zurueckhaltung wie beim Ueberfahren (`hover:border-primary/30`):
@@ -206,7 +215,8 @@ export function ItemPreview({
       data-preview-density={density}
       data-active-preview={active ? "true" : undefined}
       className={cn(
-        "rounded-lg border bg-card transition-all",
+        "flex flex-col rounded-lg border bg-card transition-all",
+        isCompact ? "gap-1.5 p-3" : "gap-2 p-4",
         interactive &&
           "cursor-pointer hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
         // Derselbe Schatten wie die schwebende Karte: die ausgewaehlte Karte
@@ -220,116 +230,96 @@ export function ItemPreview({
       tabIndex={interactive ? 0 : undefined}
       onKeyDown={handleKeyDown}
     >
-      {author !== null && (
-        <div className={cn("flex items-start gap-3", isCompact ? "p-3 pb-1" : "p-4 pb-2")}>
-          <ProfileLink userId={authorId} label={`Profil von ${authorName} öffnen`}>
-            <Avatar className={cn("shrink-0", isCompact ? "h-6 w-6" : "h-10 w-10")}>
-              <AvatarImage src={authorAvatar} alt={authorName} />
-              <AvatarFallback className={cn("bg-primary/10 text-primary font-medium", isCompact ? "text-[10px]" : "text-sm")}>
-                {getInitials(authorName)}
-              </AvatarFallback>
-            </Avatar>
-          </ProfileLink>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={cn("font-semibold text-foreground", isCompact ? "text-xs" : "text-sm")}>{authorName}</span>
-              {headerAdornment}
-            </div>
-            {!isCompact && (
-              <span className="flex items-center gap-1.5">
-                <RelativeTime date={item.createdAt} className="text-xs" />
-                {/* Members may edit each other's items — without this the
-                    card would still show only the original author, and a
-                    foreign change would be invisible. Deliberately terse:
-                    WHAT changed needs a version history (rls#263). */}
-                {item.updatedAt && (
-                  <span
-                    className="text-xs text-muted-foreground"
-                    title={editedTitle}
-                  >
-                    · bearbeitet
-                  </span>
-                )}
-              </span>
-            )}
-          </div>
-          {actions && <div className="-mr-1 shrink-0">{actions}</div>}
-        </div>
-      )}
-
-      {/* Header-only block — when the author row is suppressed. The adornment
-          (e.g. a scope badge on a kanban card) sits on its OWN row only when
-          there's no title to share a row with; with a title it renders inline
-          next to it (below). Actions always get this row when present. */}
-      {author === null && (actions || (headerAdornment && !title)) && (
-        <div className={cn("flex items-center gap-2", isCompact ? "px-3 pt-2 pb-0.5" : "px-4 pt-3 pb-1")}>
-          {!title && <div className="flex flex-1 flex-wrap items-center gap-2">{headerAdornment}</div>}
-          {actions && <div className="-mr-1 shrink-0">{actions}</div>}
-        </div>
-      )}
-
-      {(title || description) && (
-        <div className={cn(isCompact ? "px-3 pb-2 pt-1.5" : "px-4 pb-3 pt-2")}>
-          {title &&
-            (author === null ? (
-              // No author row → the scope badge shares the title's row, to its right.
-              <div className="flex items-start justify-between gap-2">
-                <h3 className={cn("min-w-0 text-foreground font-semibold text-base", isCompact ? "leading-snug" : "mb-1")}>
-                  {title}
-                </h3>
-                {headerAdornment && <div className="shrink-0">{headerAdornment}</div>}
-              </div>
-            ) : (
-              <h3 className={cn("text-foreground font-semibold text-base", isCompact ? "leading-snug" : "mb-1")}>
+      {/* Kopfzeile: Was ist das, und was kann ich damit tun. Der Titel fuehrt,
+          der Typ steht daneben. Ohne Titel entfaellt die Zeile — ein Badge
+          allein ueber einer kurzen Notiz waere eine leere Behauptung; die
+          Verzierungen ruecken dann zum Inhalt. */}
+      {(title || actions) && (
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-1">
+            {title && (
+              <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground">
                 {title}
               </h3>
-            ))}
-          {description && (
-            // The composer writes Markdown, so the body is rendered as
-            // Markdown everywhere it is shown. Clamping happens on the
-            // wrapper: with block content there is no single <p> to clamp.
-            <MarkdownText className={cn("mt-1 text-sm text-foreground", !isPanel && "line-clamp-4")}>
-              {description}
-            </MarkdownText>
+            )}
+            {headerAdornment && <div className="flex shrink-0 items-center gap-1.5">{headerAdornment}</div>}
+          </div>
+          {actions && <div className="-mr-1 -mt-1 shrink-0">{actions}</div>}
+        </div>
+      )}
+
+      {!title && headerAdornment && !actions && (
+        <div className="flex flex-wrap items-center gap-1.5">{headerAdornment}</div>
+      )}
+
+      {/* Die harten Fakten des Typs: wann, wo, mit wem. */}
+      {metaAdornment && <div className="text-xs text-muted-foreground">{metaAdornment}</div>}
+
+      {description && (
+        // Der Composer schreibt Markdown, also wird ueberall Markdown
+        // gerendert. Auf einer Karte gekuerzt, damit ein langer Text die
+        // Nachbarn nicht vom Schirm schiebt.
+        <MarkdownText className={cn("text-sm text-foreground", !isPanel && "line-clamp-4")}>
+          {description}
+        </MarkdownText>
+      )}
+
+      {/* Tags und Urheber teilen eine Zeile. Die Tags kappen, der Urheber
+          bleibt: Wer etwas geschrieben hat, ist die verlaesslichere Auskunft
+          als der fuenfte Tag. Umbrechen darf hier nichts — sonst waechst die
+          Karte je nach Anzahl der Tags unterschiedlich hoch. */}
+      {(sichtbareTags.length > 0 || author !== null) && (
+        <div className="flex items-center gap-x-3 overflow-hidden">
+          {sichtbareTags.length > 0 && (
+            <div className="flex min-w-0 shrink items-center gap-1.5 overflow-hidden">
+              {sichtbareTags.map((tag) => (
+                <TagChip key={tag} tag={tag} />
+              ))}
+              {verborgeneTags > 0 && (
+                <span className="shrink-0 rounded-full border border-border bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  +{verborgeneTags}
+                </span>
+              )}
+            </div>
+          )}
+          {author !== null && (
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
+              <ProfileLink userId={authorId} label={`Profil von ${authorName} öffnen`}>
+                {/* In der dichten Ansicht traegt das Bild den Namen: In einer
+                    Kanban-Spalte ist fuer beides kein Platz. */}
+                <Avatar className="h-5 w-5 shrink-0" title={isCompact ? authorName : undefined}>
+                  <AvatarImage src={authorAvatar} alt={authorName} />
+                  <AvatarFallback className="bg-primary/10 text-[9px] font-medium text-primary">
+                    {getInitials(authorName)}
+                  </AvatarFallback>
+                </Avatar>
+              </ProfileLink>
+              {!isCompact && (
+                <>
+                  <span>{authorName}</span>
+                  <span aria-hidden>·</span>
+                  <RelativeTime date={item.createdAt} className="text-xs" />
+                  {/* Mitglieder duerfen fremde Items aendern; ohne diesen
+                      Hinweis waere eine fremde Aenderung unsichtbar. */}
+                  {item.updatedAt && <span title={editedTitle}>· bearbeitet</span>}
+                </>
+              )}
+            </div>
           )}
         </div>
       )}
 
-      {/* Meta adornment is its own row, independent of the title/description
-          block. This way a card with date+address but no title still gets
-          the meta hint rendered. */}
-      {metaAdornment && (
-        <div className={cn("text-xs text-muted-foreground", isCompact ? "px-3 pb-2" : "px-4 pb-3")}>{metaAdornment}</div>
-      )}
-
-      {tags.length > 0 && (
-        <div className={cn("flex flex-wrap gap-1", isCompact ? "px-3 pb-2" : "px-4 pb-3 gap-1.5")}>
-          {tags.map((tag) => (
-            <TagChip key={tag} tag={tag} />
-          ))}
-        </div>
-      )}
-
-
-      {/* Footer row: whatever the surface contributes on the left (reactions,
-          type footer), the comment hint on the right — the conventional
-          split, and it saves the card a row of its own. The row also renders
-          with an EMPTY slot, so a lens without a footer still shows the hint.
-          Not a slot itself: "this item has comments" is a property of the
-          item, not of the surface — via a slot every surface would have to
-          add it separately and they would drift apart again. */}
+      {/* Aktionszeile: der einzige Trenner der Karte. Links, was die Flaeche
+          beitraegt (Reaktionen, Typ-Fusszeile), rechts der Hinweis auf die
+          Diskussion. Ohne Kommentare steht dort keine Null — sie sagte
+          dasselbe wie nichts und kostete eine Zeile. */}
       {(footerAdornment || showCommentHint) && (
-        <div
-          className={cn(
-            "flex items-center justify-between gap-3",
-            isCompact ? "px-3 py-1.5" : "border-t px-4 py-2",
-          )}
-        >
+        <div className={cn("flex items-center justify-between gap-3 border-t", isCompact ? "-mx-3 mt-0.5 px-3 pt-1.5" : "-mx-4 mt-1 px-4 pt-2")}>
           <div className="flex min-w-0 items-center gap-3">{footerAdornment}</div>
           {showCommentHint && (
             <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
               <MessageSquare className="h-3.5 w-3.5" aria-hidden />
-              {commentCount === 1 ? "1 Kommentar" : `${commentCount} Kommentare`}
+              {isCompact ? commentCount : commentCount === 1 ? "1 Kommentar" : `${commentCount} Kommentare`}
             </span>
           )}
         </div>
