@@ -15,7 +15,7 @@
    * Marke. Die Saettigung ist dabei sehr gering — bei 0.007 Chroma las sich
    * die Flaeche bereits als beige statt als neutraler Grund.
    */
-  --background: oklch(0.965 0.003 70);
+  --background: oklch(0.975 0.003 70);
   --foreground: oklch(0.28 0.02 265);
   --card: oklch(1.00 0 0);
   --card-foreground: oklch(0.28 0.02 265);
@@ -32,7 +32,7 @@
 
   /* Muted - warm light (Farbton wie --background, sonst steht die Meta-Box
      kalt auf warmem Grund) */
-  --muted: oklch(0.98 0.0025 70);
+  --muted: oklch(0.985 0.0025 70);
   --muted-foreground: oklch(0.45 0.02 265);
 
   /* Accent - Light orange (for hover states, from primary family) */

@@ -260,6 +260,7 @@ export function FeedView({ groupId }: { groupId: string }) {
                 item={item}
                 author={resolveAuthor(item.createdBy)}
                 active={modulePanel.current?.itemId === item.id}
+                activeColor={resolveItemGroupColor(item)}
                 onClick={() => focusItem(item.id)}
                 headerAdornment={
                   <>

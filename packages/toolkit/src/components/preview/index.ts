@@ -1,5 +1,6 @@
 export {
   ItemPreview,
+  DEFAULT_ACTIVE_ITEM_COLOR,
   DEFAULT_ACTIVE_ITEM_GLOW_COLOR,
   type ItemPreviewProps,
 } from "./item-preview"

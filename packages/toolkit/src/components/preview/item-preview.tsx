@@ -58,7 +58,10 @@ export type ItemPreviewDensity = "comfortable" | "compact"
 export type ItemPreviewSurface = "card" | "panel"
 
 /** Neutral toolkit default; apps may supply an origin-group colour instead. */
-export const DEFAULT_ACTIVE_ITEM_GLOW_COLOR = "#64748b"
+/** Rand der aktiven Karte, wenn kein Space eine Farbe beisteuert. */
+export const DEFAULT_ACTIVE_ITEM_COLOR = "#64748b"
+/** @deprecated Frueherer Name von {@link DEFAULT_ACTIVE_ITEM_COLOR}. */
+export const DEFAULT_ACTIVE_ITEM_GLOW_COLOR = DEFAULT_ACTIVE_ITEM_COLOR
 
 export interface ItemPreviewProps {
   item: Item
@@ -105,19 +108,18 @@ export interface ItemPreviewProps {
    */
   surface?: ItemPreviewSurface
   /**
-   * Hebt die ausgewaehlte Karte hervor — mit demselben Schatten, den das
-   * schwebende Panel traegt (`shadow-xl`), und neutralem Rahmen.
+   * Hebt die ausgewaehlte Karte hervor: derselbe Schatten, den das schwebende
+   * Panel traegt (`shadow-xl`), plus ein duenner Rand in der Space-Farbe.
    *
-   * Frueher war das ein farbiger Schein in der Space-Farbe. Neben einer
-   * schwebenden Karte auf getoentem Grund liest sich derselbe Schatten als
-   * „diese Karte gehoert zu dem, was rechts offen ist"; ein bunter Rand
-   * behauptet stattdessen eine eigene Bedeutung, die es nicht gibt.
+   * Frueher lag darunter zusaetzlich ein breiter farbiger Schein. Neben einer
+   * schwebenden Karte auf getoentem Grund trug der zu dick auf — der Schatten
+   * sagt „gehoert zu dem, was rechts offen ist", der Rand sagt, zu welchem
+   * Space. Zwei Aussagen, nicht drei.
    */
   active?: boolean
-  /**
-   * @deprecated Ohne Wirkung. Die aktive Karte hebt sich ueber ihren Schatten
-   * ab, nicht ueber eine Farbe — siehe {@link active}.
-   */
+  /** Farbe des Rands der aktiven Karte (`#rrggbb`), meist die Space-Farbe. */
+  activeColor?: string
+  /** @deprecated Frueherer Name von {@link activeColor}. */
   activeGlowColor?: string
   className?: string
   /** Inline style on the card root — e.g. the active-item glow (box-shadow). */
@@ -146,6 +148,8 @@ export function ItemPreview({
   density = "comfortable",
   surface = "card",
   active = false,
+  activeColor,
+  activeGlowColor,
   className,
   style,
 }: ItemPreviewProps) {
@@ -190,6 +194,13 @@ export function ItemPreview({
       }
     : undefined
 
+  // Alter Prop-Name gilt weiter: das Toolkit ist veroeffentlicht.
+  const aktivFarbe = activeColor ?? activeGlowColor ?? DEFAULT_ACTIVE_ITEM_COLOR
+  // Dieselbe Zurueckhaltung wie beim Ueberfahren (`hover:border-primary/30`):
+  // Der Rand soll den Space andeuten, nicht die Karte umranden. Bei voller
+  // Deckkraft traegt er sichtbar dicker auf, obwohl er gleich breit ist.
+  const aktivRand = /^#[0-9a-f]{6}$/i.test(aktivFarbe) ? `${aktivFarbe}4d` : aktivFarbe
+
   return (
     <article
       data-preview-density={density}
@@ -199,11 +210,11 @@ export function ItemPreview({
         interactive &&
           "cursor-pointer hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
         // Derselbe Schatten wie die schwebende Karte: die ausgewaehlte Karte
-        // hebt sich vom Grund ab, statt sich einzufaerben.
+        // hebt sich vom Grund ab. Die Farbe steckt nur noch im Rand.
         active && "shadow-xl",
         className,
       )}
-      style={style}
+      style={{ ...(active ? { borderColor: aktivRand } : {}), ...style }}
       onClick={onClick}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}

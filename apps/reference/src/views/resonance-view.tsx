@@ -11,6 +11,7 @@ import {
   renderTypeFooter,
   emptyFilterBarValue,
   useCurrentUser,
+  useItemGroupColorResolver,
   useFilterableItems,
   useGroups,
   useItems,
@@ -65,6 +66,7 @@ export function ResonanceView({ groupId }: { groupId: string }) {
   const { data: members } = useMembers(groupId === "__overview__" ? null : groupId)
   const { data: currentUser } = useCurrentUser()
   const modulePanel = useModulePanel()
+  const resolveGroupColor = useItemGroupColorResolver(groupId === "__overview__" ? undefined : groupId)
   const { itemId: focusedId, focusItem } = useItemFocus()
 
   // Author resolution: members first, then the connector cascade (contacts),
@@ -194,6 +196,7 @@ export function ResonanceView({ groupId }: { groupId: string }) {
                 item={item}
                 author={resolveAuthor(item.createdBy)}
                 active={modulePanel.current?.itemId === item.id}
+                activeColor={resolveGroupColor(item)}
                 onClick={() => focusItem(item.id)}
                 headerAdornment={<ItemTypeBadge type={item.type} />}
                 metaAdornment={<ItemMetaRow item={item} />}
