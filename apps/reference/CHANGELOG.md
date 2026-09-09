@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.2.9](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.8...app-v0.2.9) (2026-09-09)
+
+
+### Features
+
+* **toolkit:** AdaptivePanel-Variante "floating" ([#304](https://github.com/real-life-org/real-life-stack/issues/304)) ([d49c5b1](https://github.com/real-life-org/real-life-stack/commit/d49c5b1890e05fa7d3307d23d761924910720d6b))
+* **toolkit:** eigene Anatomie für die Detailansicht (PR 4) ([#307](https://github.com/real-life-org/real-life-stack/issues/307)) ([6d6976d](https://github.com/real-life-org/real-life-stack/commit/6d6976d7ee0cd600bf1a0884be439d0c1e65d507))
+* **toolkit:** ein Feld führt zu der Sicht, die es darstellt ([#309](https://github.com/real-life-org/real-life-stack/issues/309)) ([6088c52](https://github.com/real-life-org/real-life-stack/commit/6088c5247e1090ac0bbb359f5d3f3cf0e6021cc5))
+* **toolkit:** ItemPreview führt mit dem Titel (PR 1) ([#311](https://github.com/real-life-org/real-life-stack/issues/311)) ([82f8de9](https://github.com/real-life-org/real-life-stack/commit/82f8de92718aed4c7e57705907efc10cc8ec4bb6))
+
+
+### Bug Fixes
+
+* **toolkit:** dem Browser das Farbschema nennen ([#310](https://github.com/real-life-org/real-life-stack/issues/310)) ([d189e97](https://github.com/real-life-org/real-life-stack/commit/d189e970791a82b3bc3180bafe1c936d3fca06b5))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/toolkit bumped to 0.1.5
+    * @real-life-stack/wot-connector bumped to 0.1.5
+
 ## [0.2.8](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.7...app-v0.2.8) (2026-09-08)
 
 
