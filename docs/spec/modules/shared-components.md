@@ -532,9 +532,25 @@ Regeln:
 
 **Code:** `packages/toolkit/src/components/filter/`. Stories: `filter-bar.stories.tsx` zeigt Default, Pre-Selected, Kanban-Toggle-Extras, Calendar-Location-Extras, Empty-State.
 
+### `FilterPill` + Filter-Card
+
+**Zweck:** Die Filter-Fläche eines *Space Module*. Eine Pille unten links der Modulfläche (48px, Trichter + „Filter", `bg-card`, 1px Border, `shadow-lg`, radius voll), die bei einem Klick an derselben Stelle zur **Filter-Card** wird (232px, radius `xl`, `shadow-xl`). Geschlossen wird über das kleine ✕ neben der ersten Sektion, mit Escape oder einem Klick daneben; es gibt keinen Header und keinen Bestätigen-Knopf.
+
+Regeln:
+
+1. Die Pille **öffnet nur**. Die aktiven Filter stehen als entfernbare Chips im **Kopf** der Modulfläche (`ModuleFilterChips`, Zeile unter Suche und Modul-Aktionen, `empty:hidden`); in der offenen Card sind dieselben Filter zusätzlich als gewählte Chips zu sehen. Eine zweite Chip-Fläche neben der Pille wäre dieselbe Auskunft an zwei Orten.
+2. **Typ-Chips sind alle aktiv, solange `types` leer ist.** Der leere Wert heißt „kein Filter", also wird alles gezeigt — die Card malt das ehrlich. Ein Chip abzuwählen setzt `types` auf den **Rest**; den letzten verbliebenen abzuwählen fällt auf leer (= wieder alles) zurück, weil eine Auswahl, die nichts zeigt, eine Sackgasse wäre. Der Vertrag von `FilterBarValue` bleibt unberührt: leer ist und bleibt leer.
+3. Die Farbe eines Typ-Chips ist die seines **Typ-Abzeichens** und kommt vom Aufrufer (`FilterTypeOption.badgeClassName`); die Filter-Schicht liest das Typ-Register nicht.
+4. **Der Inhalt erscheint erst, wenn die Form steht.** Form und Inhalt DÜRFEN NICHT gleichzeitig animieren — der Kartentext im schmalen Pillen-Umriss liest sich als Fehler. Entweder die Form wandert und der Inhalt blendet danach ein, oder die Form springt und nur der Inhalt blendet kurz über (so umgesetzt); nie länger als 300ms, bei `prefers-reduced-motion` sofort.
+5. Module mit `panelFit: "overlay"` (Karte, Graph) führen die Pille in ihrer eigenen `PanelSafeArea`, zusammen mit ihrem schwebenden Suchfeld.
+
+**Code:** `packages/toolkit/src/components/filter/filter-pill.tsx`, Sektionen in `filter-card.tsx` (geteilt mit dem Popover der `FilterBar`).
+
 ### `CreateFab`
 
 Einheitlicher Floating-Action-Button für „neues Item erstellen", fixed unten-rechts in der Modul-Surface. Jedes Space-Modul (Feed, Kanban, Calendar, Map) hat damit denselben Create-Entry-Point an derselben Bildschirm-Position.
+
+**Anatomie:** 48×48 (mobil 52), `bg-card` mit 1px Border und `shadow-lg`, „+" 22px — dieselbe Fläche wie die Filter-Pille gegenüber, mit der er eine Zeile bildet. **Kein Hover-Lift** (Design Guide: Buttons tragen keinen Schatten-Sprung).
 
 ```ts
 interface CreateFabProps {

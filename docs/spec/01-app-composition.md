@@ -117,10 +117,11 @@ Ein fester **Kopf**, darunter der **Scrollbereich**. Was scrollt, ist der Inhalt
 Regeln:
 
 1. Die Fläche weicht dem Panel per **Margin** aus, nicht per Padding. Nur so endet der Scrollbereich dort, wo der Platz endet, und die Leiste sitzt links vom Panel.
-2. Die **Steuerleiste eines Moduls** (Filter, Suche, Ansichtswechsel) gehört in den Kopf, nicht in den Scrollbereich. Module reichen sie über `ModuleToolbar` hinein; die Fläche besitzt den Kopf. Es `sticky` im Modul zu lösen wäre billiger — dann löst es aber jedes Modul selbst, und die Lösungen driften auseinander.
+2. Die **Steuerleiste eines Moduls** (Suche, Ansichtswechsel, aktive Filter) gehört in den Kopf, nicht in den Scrollbereich. Module reichen sie über `ModuleToolbar` hinein; die Fläche besitzt den Kopf. Es `sticky` im Modul zu lösen wäre billiger — dann löst es aber jedes Modul selbst, und die Lösungen driften auseinander.
 3. Ohne Fläche darüber (Story, Test, eingebettete Ansicht) bleibt die Leiste an Ort und Stelle, statt spurlos zu verschwinden.
 4. Ein Modul ohne Steuerleiste bekommt **keine leere Zeile**: Der Kopf verschwindet, wenn nichts darin landet.
 5. Für `panelFit: "overlay"` gilt das nicht — dort schwebt die Steuerung bewusst über der Fläche (siehe Content-Bereich).
+6. Das **Öffnen des Filters** gehört NICHT in den Kopf, sondern zu den schwebenden Bedienelementen: eine Pille unten links der Fläche (`FilterPill` in der `PanelSafeArea`, siehe [modules/shared-components.md → `FilterPill`](modules/shared-components.md)). Sie ist ein Werkzeug, kein Zustand, und nimmt der Fläche darum eine Ecke statt einer Zeile. Was gerade **filtert**, bleibt oben im Kopf — in Blickrichtung des Inhalts, den es beschneidet. Auch überlagerte Module führen die Pille, dort ohne Kopf.
 
 ### Verworfene Alternativen
 
