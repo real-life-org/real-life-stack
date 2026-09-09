@@ -261,8 +261,15 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
   // appearance. `markersVersion` ignores stale setData after async image loads.
   private markerLayersReady = false
   private gestureListeners = new Set<() => void>()
-  /** Standort, der vor dem fertigen Style kam — nach dem Laden nachgeholt. */
-  private pendingUserPosition: UserPosition | null = null
+  /**
+   * Was der Adapter GERADE ZEIGT, nicht was zuletzt hereinkam.
+   *
+   * Der Unterschied traegt drei Faelle auf einmal: den Standort, der vor dem
+   * fertigen Style ankommt (nachholen), den Stilwechsel (`setStyle` raeumt
+   * Quellen und Ebenen ab — hinterher neu zeichnen) und den Remount (der alte
+   * Zustand gehoert nicht auf die neue Karte).
+   */
+  private userPosition: UserPosition | null = null
   private addedImages = new Set<string>()
   private markersVersion = 0
   // Clustering config (null = off). Read when the source is created; a radius/
@@ -376,7 +383,7 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     map.on("load", () => {
       // Ein Standort, der vor dem fertigen Style kam, wird jetzt gezeichnet:
       // Vorher gibt es weder Quelle noch Ebene, in die er koennte.
-      if (this.pendingUserPosition) this.setUserPosition(this.pendingUserPosition)
+      this.zeichneUserPosition()
     })
 
     map.on("moveend", () => {
@@ -504,6 +511,10 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
       // `setViewportPadding`: Der vergleicht mit dem Gemerkten und faende
       // „nichts geaendert".
       if (this.viewportPadding) map.setPadding(this.viewportPadding)
+      // Der Standort ist wie die Marker eine eigene Quelle und ging mit dem
+      // alten Style; er kommt aus dem gehaltenen Zustand zurueck, ohne auf
+      // einen neuen Fix zu warten.
+      this.zeichneUserPosition()
       this.reapplyMarkersSafely(this.lastMarkers)
     }
     map.on("styledata", onSettled)
@@ -534,6 +545,10 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     this.addedImages.clear()
     this.renderedMarkers.clear()
     this.lastMarkers = []
+    // Auch die Ortung endet mit der Karte: Der gehaltene Standort gehoert
+    // nicht auf die naechste, und die Gesten-Hoerer haengen an der alten.
+    this.userPosition = null
+    this.gestureListeners.clear()
     map.remove()
     this.mapInstance = null
     this.viewListeners.clear()
@@ -916,12 +931,21 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
    * Cluster-Rechnung der Marker nicht mitmachen.
    */
   setUserPosition(position: UserPosition | null): void {
+    this.userPosition = position
+    this.zeichneUserPosition()
+  }
+
+  /**
+   * Zeichnet den gehaltenen Standort — oder raeumt ihn weg.
+   *
+   * Aufgerufen bei jeder Aenderung UND nach jedem Ereignis, das den Style neu
+   * baut. Vor dem fertigen Style tut sie nichts: Es gaebe keine Quelle, in die
+   * sie schreiben koennte, und der Zustand holt es danach nach.
+   */
+  private zeichneUserPosition(): void {
     const map = this.mapInstance as MlMap | null
-    if (!map || !map.isStyleLoaded?.()) {
-      this.pendingUserPosition = position
-      return
-    }
-    this.pendingUserPosition = null
+    if (!map || !map.isStyleLoaded?.()) return
+    const position = this.userPosition
     if (!position) {
       for (const id of [USER_POSITION_DOT_LAYER, USER_POSITION_ACCURACY_LAYER]) {
         if (map.getLayer(id)) map.removeLayer(id)

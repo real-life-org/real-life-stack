@@ -136,6 +136,8 @@ export class LeafletMapAdapter implements MapAdapter, UserPositionCapable, UserG
   private gestureListeners = new Set<() => void>()
   /** Punkt und Genauigkeitskreis des eigenen Standorts, solange geortet wird. */
   private userPositionLayers: { punkt: unknown; kreis: unknown } | null = null
+  /** Nimmt den Rad-Hoerer vom Container, wenn die Karte geht. */
+  private stopGestenListener: (() => void) | null = null
   private clickListeners = new Set<(event: MapClickEvent) => void>()
   private markerClickListeners = new Set<(markerId: string) => void>()
 
@@ -164,13 +166,7 @@ export class LeafletMapAdapter implements MapAdapter, UserPositionCapable, UserG
       this.viewListeners.forEach((cb) => cb(view))
     })
 
-    // Nur Gesten, keine programmatischen Bewegungen: `dragstart` feuert allein
-    // beim Ziehen, `wheel` beim Zoomen von Hand. `zoomstart` waere falsch — es
-    // feuert auch bei jedem `setView`/`focusOn`, und die laufende Ortung
-    // schaltete ihr eigenes Nachziehen ab.
-    const geste = () => this.gestureListeners.forEach((cb) => cb())
-    map.on("dragstart", geste)
-    map.on("wheel", geste)
+    this.verdrahteGesten(map)
 
     map.on("click", (event: L.LeafletMouseEvent) => {
       const evt: MapClickEvent = {
@@ -183,6 +179,24 @@ export class LeafletMapAdapter implements MapAdapter, UserPositionCapable, UserG
     this.mapInstance = map
   }
 
+  /**
+   * Was zaehlt als Geste des Nutzers?
+   *
+   * `dragstart` feuert allein beim Ziehen — das kommt von der Karte. Das Rad
+   * dagegen kommt am CONTAINER an: Leaflets ScrollWheelZoom haengt dort, und
+   * `map.on("wheel", …)` bekam nie ein Ereignis; nach einem Zoom von Hand zog
+   * die Ortung darum stur weiter. `zoomstart` waere falsch — es feuert auch
+   * bei jedem `setView`/`fitBounds`, und die laufende Ortung schaltete ihr
+   * eigenes Nachziehen ab.
+   */
+  private verdrahteGesten(map: L.Map): void {
+    const geste = () => this.gestureListeners.forEach((cb) => cb())
+    map.on("dragstart", geste)
+    const container = map.getContainer()
+    container.addEventListener("wheel", geste, { passive: true })
+    this.stopGestenListener = () => container.removeEventListener("wheel", geste)
+  }
+
   async unmount(): Promise<void> {
     const map = this.mapInstance as L.Map | null
     if (!map) return
@@ -190,6 +204,13 @@ export class LeafletMapAdapter implements MapAdapter, UserPositionCapable, UserG
     this.markers.clear()
     this.markerLabels.clear()
     this.markerAppearance.clear()
+    // Die Ortung endet mit der Karte: Die Ebenen des Standorts gehoeren zu
+    // IHR — beim naechsten Mount wuerde der Adapter sonst abgeloeste Ebenen
+    // auf einer toten Karte aktualisieren, statt neue anzulegen.
+    this.stopGestenListener?.()
+    this.stopGestenListener = null
+    this.userPositionLayers = null
+    this.gestureListeners.clear()
     map.remove()
     this.mapInstance = null
     this.leafletInstance = null

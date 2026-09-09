@@ -419,3 +419,39 @@ describe("MapLibre: der eigene Standort", () => {
     await adapter.unmount()
   })
 })
+
+/**
+ * Der Adapter haelt „was ich gerade zeige" als Zustand — sonst ueberlebt der
+ * eigene Standort weder einen Stilwechsel (der Style raeumt Quellen und Ebenen
+ * ab) noch einen Remount (die alten Referenzen zeigten auf eine tote Karte).
+ * Ein Grund, zwei Symptome.
+ */
+describe("MapLibre: der Standort ueberlebt Stilwechsel und Remount", () => {
+  it("zeichnet ihn nach dem Themewechsel erneut, ohne neuen Fix", async () => {
+    const adapter = new MapLibreMapAdapter()
+    await adapter.mount(document.createElement("div"), { center: [0, 0], zoom: 5 })
+    adapter.setUserPosition({ lng: 8.6, lat: 50.1, accuracy: 25 })
+
+    adapter.setColorScheme("dark")
+    lastMap!.completeStyleLoad()
+    await settle()
+
+    expect(lastMap!.sources.has("rls-user-position")).toBe(true)
+    expect(lastMap!.layers.has("rls-user-dot")).toBe(true)
+    await adapter.unmount()
+  })
+
+  it("legt ihn nach einem Remount auf der neuen Karte an", async () => {
+    const adapter = new MapLibreMapAdapter()
+    await adapter.mount(document.createElement("div"), { center: [0, 0], zoom: 5 })
+    adapter.setUserPosition({ lng: 8.6, lat: 50.1, accuracy: 25 })
+    await adapter.unmount()
+
+    await adapter.mount(document.createElement("div"), { center: [0, 0], zoom: 5 })
+    const neue = lastMap!
+    expect(neue.sources.has("rls-user-position")).toBe(false)
+    adapter.setUserPosition({ lng: 8.7, lat: 50.2, accuracy: 30 })
+    expect(neue.sources.has("rls-user-position")).toBe(true)
+    await adapter.unmount()
+  })
+})

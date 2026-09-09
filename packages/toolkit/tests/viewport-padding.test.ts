@@ -326,7 +326,9 @@ describe("Keine Kamerabewegung ohne Polsterung", () => {
       "utf8",
     )
     expect(leaflet).toContain('map.on("dragstart", geste)')
-    expect(leaflet).toContain('map.on("wheel", geste)')
+    // Das Rad kommt am Container an, nicht an der Karte: Leaflets
+    // ScrollWheelZoom haengt dort, `map.on("wheel", …)` bekam nie eines.
+    expect(leaflet).toContain('container.addEventListener("wheel", geste')
     expect(leaflet).not.toContain('map.on("zoomstart", geste)')
   })
 
