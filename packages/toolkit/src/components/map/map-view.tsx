@@ -13,8 +13,8 @@ import { focusNeedsRecentering, focusOffsetFor, type MapFocusInsets } from "./fo
 import { usePanelEdges, type PanelEdges } from "../layout/panel-edges"
 import { MapLens } from "../lens/map-lens"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
-import { getSpacePrimaryColor } from "../../lib/utils"
-import { hasViewportPadding, hasGlobe, type MapAdapter, type MapMountOptions, type MapProjection } from "./adapter"
+import { cn, getSpacePrimaryColor } from "../../lib/utils"
+import { hasViewportPadding, hasGlobe, hasUserPosition, hasUserGesture, type MapAdapter, type MapMountOptions, type MapProjection } from "./adapter"
 import { useLocationPick } from "./location-pick"
 
 const MAP_TYPES: FilterTypeOption[] = [
@@ -137,8 +137,11 @@ export function mapViewProjection(adapter: MapAdapter | null): MapProjection {
   return adapter && hasGlobe(adapter) ? "globe" : "mercator"
 }
 
-/** Zoomstufe, auf die der Standort-Knopf die Kamera bringt: Stadtteil. */
+/** Zoomstufe, auf die die Ortung heranfaehrt, wenn die Karte weiter draussen steht. */
 export const LOCATE_ZOOM = 14
+
+/** Aus, suchend, aktiv — mehr Zustaende hat die Ortung nicht. */
+export type LocateState = "aus" | "suchend" | "aktiv"
 
 /** Kennt dieser Browser ueberhaupt einen Standort? Sonst gibt es keinen Knopf. */
 export function hasGeolocation(): boolean {
@@ -264,8 +267,20 @@ function MapViewInner({
   const { value: filter, searchText: search } = useSharedFilter()
   // Der Globus ist der Standard, wo der Adapter ihn kann — keine Wahl mehr.
   const projection = mapViewProjection(adapter)
-  const [standortLaeuft, setStandortLaeuft] = useState(false)
+  const [ortung, setOrtung] = useState<LocateState>("aus")
   const [standortFehler, setStandortFehler] = useState<string | null>(null)
+  /** Laufende Beobachtung (`watchPosition`), solange die Ortung an ist. */
+  const ortungsId = useRef<number | null>(null)
+  /**
+   * Zieht die Kamera noch mit?
+   *
+   * Wie `setView: "untilPanOrZoom"` im Vorbild: Der erste Fix faehrt hin,
+   * weitere ziehen nach — bis jemand selbst schwenkt. Danach laeuft die
+   * Ortung weiter (der Punkt wandert), aber die Kamera bleibt, wo der Nutzer
+   * sie hingestellt hat. Ihn dorthin zurueckzuziehen waere ein Kampf gegen
+   * seine eigene Geste.
+   */
+  const folgt = useRef(false)
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)
   const { isPicking, updatePick, confirmPick, cancelPick } = useLocationPick()
   const accumulated = useRef(new Map<string, Item>())
@@ -377,37 +392,100 @@ function MapViewInner({
     if (viewportMode === "bbox-module") markerClick.current = item.id
     onItemClick?.(item)
   }, [confirmPick, isCompact, isPicking, onItemClick, updatePick, viewportMode])
+  /** Beendet eine laufende Ortung und raeumt Punkt und Kreis weg. */
+  const beendeOrtung = useCallback(() => {
+    if (ortungsId.current !== null) {
+      navigator.geolocation?.clearWatch(ortungsId.current)
+      ortungsId.current = null
+    }
+    folgt.current = false
+    setOrtung("aus")
+    if (adapter && hasUserPosition(adapter)) adapter.setUserPosition(null)
+  }, [adapter])
+
   /**
-   * „Wo bin ich" — die Kamera faehrt hin, mehr passiert nicht.
+   * „Wo bin ich" — ein Umschalter, keine einmalige Frage.
    *
-   * Bewusst ohne eigene Markierung: Ein blauer Punkt waere ein zweiter
-   * Marker-Vertrag mit eigenem Lebenszyklus, und die Frage ist mit dem
-   * Hinfahren beantwortet.
+   * Vorbild ist der Standort-Knopf der Utopia Map (leaflet.locatecontrol):
+   * Er beantwortet die Frage nicht einmal, er haelt die Antwort aktuell,
+   * solange sie gebraucht wird. Ein einzelner Fix veraltet, sobald man
+   * losgeht.
    */
   const zeigeStandort = useCallback(() => {
     if (!adapter || !hasGeolocation()) return
+    if (ortung !== "aus") {
+      beendeOrtung()
+      return
+    }
     setStandortFehler(null)
-    setStandortLaeuft(true)
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        setStandortLaeuft(false)
-        adapter.focusOn([coords.longitude, coords.latitude], {
-          zoom: LOCATE_ZOOM,
-          animate: true,
-          // Dieselbe Polsterung wie bei jedem anderen Hinfahren: Der Standort
-          // gehoert in die Mitte des SICHTBAREN Rests, nicht hinter das Panel.
-          ...mapViewFocusInsets(isCompact, panelEdges, kameraKenntSeiten),
-        })
+    setOrtung("suchend")
+    folgt.current = true
+
+    const starte = () => {
+      ortungsId.current = navigator.geolocation.watchPosition(
+        ({ coords }) => {
+          setOrtung("aktiv")
+          const position = { lng: coords.longitude, lat: coords.latitude, accuracy: coords.accuracy }
+          // Punkt und Genauigkeitskreis, wo der Adapter es kann; sonst bleibt
+          // es beim Hinfahren — eine Karte ohne die Faehigkeit soll nicht
+          // weniger koennen als vorher.
+          if (hasUserPosition(adapter)) adapter.setUserPosition(position)
+          if (!folgt.current) return
+          adapter.focusOn([position.lng, position.lat], {
+            // Heranfahren nur, wenn die Karte weiter draussen steht: Wer schon
+            // naeher dran ist, will nicht zurueckgezogen werden.
+            ...(adapter.getView().zoom < LOCATE_ZOOM ? { zoom: LOCATE_ZOOM } : {}),
+            animate: true,
+            // Dieselbe Polsterung wie bei jedem anderen Hinfahren: Der Standort
+            // gehoert in die Mitte des SICHTBAREN Rests, nicht hinter das Panel.
+            ...mapViewFocusInsets(isCompact, panelEdges, kameraKenntSeiten),
+          })
+        },
+        () => {
+          // Kein Konsolen-Rauschen: Eine Ablehnung ist keine Stoerung, sondern
+          // eine Antwort — sie gehoert dorthin, wo gefragt wurde.
+          beendeOrtung()
+          setStandortFehler("Standort nicht verfügbar")
+        },
+        { enableHighAccuracy: true, timeout: 10_000 },
+      )
+    }
+
+    // Vorher fragen, wo der Browser es anbietet: Eine abgelehnte Berechtigung
+    // beantwortet sich sonst nur ueber den Fehlerpfad — mit Wartezeit.
+    const berechtigung = navigator.permissions?.query?.({ name: "geolocation" as PermissionName })
+    if (!berechtigung) {
+      starte()
+      return
+    }
+    void berechtigung.then(
+      (stand) => {
+        if (stand.state === "denied") {
+          setOrtung("aus")
+          folgt.current = false
+          setStandortFehler("Standort nicht verfügbar")
+          return
+        }
+        starte()
       },
-      () => {
-        // Kein Konsolen-Rauschen: Eine Ablehnung ist keine Stoerung, sondern
-        // eine Antwort — sie gehoert dorthin, wo gefragt wurde.
-        setStandortLaeuft(false)
-        setStandortFehler("Standort nicht verfügbar")
-      },
-      { enableHighAccuracy: true, timeout: 10_000 },
+      () => starte(),
     )
-  }, [adapter, isCompact, kameraKenntSeiten, panelEdges])
+  }, [adapter, beendeOrtung, isCompact, kameraKenntSeiten, ortung, panelEdges])
+
+  // Eine Geste beendet das Nachziehen, nicht die Ortung (siehe `folgt`).
+  useEffect(() => {
+    if (!adapter || !hasUserGesture(adapter)) return
+    return adapter.observeUserGesture(() => {
+      folgt.current = false
+    })
+  }, [adapter])
+
+  // Die Karte wird gehalten (`keepMounted`), die Ortung laeuft beim
+  // Modulwechsel also weiter — beim Abbau der Flaeche endet sie.
+  useEffect(() => () => {
+    if (ortungsId.current !== null) navigator.geolocation?.clearWatch(ortungsId.current)
+  }, [])
+
   const markerGroupColor = useCallback((item: Item) => item.id === PICK_MARKER_ID
     ? PICK_MARKER_COLOR
     : resolveGroupColor?.(item) ?? getSpacePrimaryColor("map"), [resolveGroupColor])
@@ -425,7 +503,7 @@ function MapViewInner({
     {/* Der Beitrag der Karte zur Steuerung ihrer Flaeche — WO er steht,
         entscheidet die Flaeche (Suche und Chips schwebend oben, Pille unten).
         `clearsTopLeft`: links oben sitzen die Zoom-Knoepfe. */}
-    <ModuleToolbar searchLabel="Karte durchsuchen" clearsTopLeft availableTags={availableTags} availableTypes={MAP_TYPES} trailingActions={hasGeolocation() && !isPicking ? <div className="flex flex-col items-end gap-1"><Button size="icon-sm" variant="outline" aria-label="Meinen Standort anzeigen" title="Meinen Standort anzeigen" aria-busy={standortLaeuft} onClick={zeigeStandort} className="bg-card!">{standortLaeuft ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}</Button>{standortFehler && <span role="status" className="rounded-full border bg-card/95 px-2 py-0.5 text-xs text-muted-foreground shadow-sm">{standortFehler}</span>}</div> : undefined} />
+    <ModuleToolbar searchLabel="Karte durchsuchen" clearsTopLeft availableTags={availableTags} availableTypes={MAP_TYPES} trailingActions={hasGeolocation() && !isPicking ? <div className="flex flex-col items-end gap-1"><Button size="icon-sm" variant="outline" aria-label={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} title={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} aria-pressed={ortung === "aktiv"} aria-busy={ortung === "suchend"} onClick={zeigeStandort} className="bg-card!">{ortung === "suchend" ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className={cn("h-4 w-4", ortung === "aktiv" && "text-primary")} />}</Button>{standortFehler && <span role="status" className="rounded-full border bg-card/95 px-2 py-0.5 text-xs text-muted-foreground shadow-sm">{standortFehler}</span>}</div> : undefined} />
     {!isPicking && canCreate && <CreateFab onClick={onCreate!} label="Ort erstellen" />}
   </div>
 }

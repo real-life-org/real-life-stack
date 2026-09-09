@@ -5,7 +5,14 @@ import type { Item } from "@real-life-stack/data-interface"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MapView, type MapViewProps } from "../src/components/map/map-view"
-import type { GlobeCapable, MapAdapter, MapMountOptions } from "../src/components/map/adapter"
+import type {
+  GlobeCapable,
+  MapAdapter,
+  MapMountOptions,
+  UserGestureCapable,
+  UserPosition,
+  UserPositionCapable,
+} from "../src/components/map/adapter"
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 Object.defineProperty(window, "matchMedia", {
@@ -47,6 +54,43 @@ class GlobusAdapter extends ProbeAdapter implements GlobeCapable {
   setProjection = vi.fn()
 }
 
+/** Adapter, der die eigene Position zeigen und Gesten melden kann. */
+class OrtungsAdapter extends ProbeAdapter implements UserPositionCapable, UserGestureCapable {
+  setUserPosition = vi.fn<(position: UserPosition | null) => void>()
+  geste: (() => void) | null = null
+  observeUserGesture(callback: () => void) {
+    this.geste = callback
+    return () => {
+      this.geste = null
+    }
+  }
+}
+
+/** Ein gestubbtes `watchPosition`, das der Test von Hand weiterlaufen laesst. */
+function stubbeOrtung() {
+  const clearWatch = vi.fn()
+  let melde: ((position: GeolocationPosition) => void) | null = null
+  let scheitere: ((fehler: GeolocationPositionError) => void) | null = null
+  const watchPosition = vi.fn((erfolg: PositionCallback, fehler?: PositionErrorCallback) => {
+    melde = erfolg as (position: GeolocationPosition) => void
+    scheitere = fehler as ((fehler: GeolocationPositionError) => void) | null
+    return 7
+  })
+  vi.stubGlobal("navigator", { ...navigator, geolocation: { watchPosition, clearWatch }, permissions: undefined })
+  return {
+    watchPosition,
+    clearWatch,
+    fix: (lng: number, lat: number, accuracy = 25) =>
+      act(() => {
+        melde?.({ coords: { longitude: lng, latitude: lat, accuracy } } as GeolocationPosition)
+      }),
+    fehler: () =>
+      act(() => {
+        scheitere?.({ code: 1, message: "denied" } as GeolocationPositionError)
+      }),
+  }
+}
+
 let host: HTMLDivElement
 let root: Root
 
@@ -80,8 +124,11 @@ async function rendereKarte(adapter: MapAdapter, props: Partial<MapViewProps> = 
   })
 }
 
+/** Der Knopf traegt zwei Namen — je nachdem, was ein Klick jetzt tut. */
 const locateKnopf = () =>
-  host.querySelector<HTMLButtonElement>("[aria-label='Meinen Standort anzeigen']")
+  host.querySelector<HTMLButtonElement>(
+    "[aria-label='Standort verfolgen'], [aria-label='Standortverfolgung beenden']",
+  )
 
 /**
  * Der Globus ist keine Ansichtssache mehr, sondern die Karte: Wo der Adapter
@@ -117,35 +164,99 @@ describe("Der Standort-Knopf", () => {
     expect(locateKnopf()).toBeNull()
   })
 
-  it("zentriert die Kamera auf die gemeldete Position", async () => {
-    const getCurrentPosition = vi.fn((erfolg: PositionCallback) =>
-      erfolg({ coords: { latitude: 50.1, longitude: 8.6 } } as GeolocationPosition),
-    )
-    vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition } })
-    const adapter = new ProbeAdapter()
+  it("startet eine laufende Ortung, zeigt die Position und faehrt hin", async () => {
+    const ortung = stubbeOrtung()
+    const adapter = new OrtungsAdapter()
     await rendereKarte(adapter)
 
     await act(async () => {
       locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
     })
-    expect(getCurrentPosition).toHaveBeenCalled()
+    expect(ortung.watchPosition).toHaveBeenCalled()
+    expect(locateKnopf()!.getAttribute("aria-busy")).toBe("true")
+
+    ortung.fix(8.6, 50.1)
+    expect(adapter.setUserPosition).toHaveBeenLastCalledWith({ lng: 8.6, lat: 50.1, accuracy: 25 })
     expect(adapter.focusOn).toHaveBeenLastCalledWith(
       [8.6, 50.1],
       expect.objectContaining({ zoom: 14, animate: true }),
     )
+    expect(locateKnopf()!.getAttribute("aria-pressed")).toBe("true")
+    expect(locateKnopf()!.getAttribute("aria-busy")).toBe("false")
   })
 
-  it("sagt es, wenn der Standort verweigert wird", async () => {
-    const getCurrentPosition = vi.fn((_erfolg: PositionCallback, fehler?: PositionErrorCallback) =>
-      fehler?.({ code: 1, message: "denied" } as GeolocationPositionError),
-    )
-    vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition } })
-    await rendereKarte(new ProbeAdapter())
+  it("zieht die Kamera nach — bis der Nutzer selbst schwenkt", async () => {
+    const ortung = stubbeOrtung()
+    const adapter = new OrtungsAdapter()
+    await rendereKarte(adapter)
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+
+    ortung.fix(8.6, 50.1)
+    ortung.fix(8.7, 50.2)
+    expect(adapter.focusOn).toHaveBeenLastCalledWith([8.7, 50.2], expect.objectContaining({ animate: true }))
+
+    // Wer selbst schwenkt, will bleiben, wo er hinschaut.
+    act(() => adapter.geste?.())
+    const vorher = adapter.focusOn.mock.calls.length
+    ortung.fix(8.8, 50.3)
+    expect(adapter.focusOn.mock.calls.length).toBe(vorher)
+    // Der Marker wandert trotzdem weiter.
+    expect(adapter.setUserPosition).toHaveBeenLastCalledWith({ lng: 8.8, lat: 50.3, accuracy: 25 })
+  })
+
+  it("beendet die Ortung beim zweiten Klick und raeumt die Markierung weg", async () => {
+    const ortung = stubbeOrtung()
+    const adapter = new OrtungsAdapter()
+    await rendereKarte(adapter)
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    ortung.fix(8.6, 50.1)
 
     await act(async () => {
       locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
     })
+    expect(ortung.clearWatch).toHaveBeenCalledWith(7)
+    expect(adapter.setUserPosition).toHaveBeenLastCalledWith(null)
+    expect(locateKnopf()!.getAttribute("aria-pressed")).toBe("false")
+  })
+
+  it("beendet sie auch, wenn die Karte verschwindet", async () => {
+    const ortung = stubbeOrtung()
+    await rendereKarte(new OrtungsAdapter())
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    await act(async () => root.unmount())
+    expect(ortung.clearWatch).toHaveBeenCalledWith(7)
+    // Der zweite Abbau im afterEach darf nicht scheitern.
+    root = createRoot(host)
+  })
+
+  it("sagt es, wenn der Standort verweigert wird, und geht wieder aus", async () => {
+    const ortung = stubbeOrtung()
+    await rendereKarte(new OrtungsAdapter())
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    ortung.fehler()
+
     expect(host.textContent).toContain("Standort")
+    expect(locateKnopf()!.getAttribute("aria-pressed")).toBe("false")
     expect(locateKnopf()!.getAttribute("aria-busy")).toBe("false")
+  })
+
+  it("zentriert auch ohne Positions-Faehigkeit des Adapters", async () => {
+    // Leaflet zeigt keinen eigenen Punkt — hinfahren tut die Karte trotzdem.
+    const ortung = stubbeOrtung()
+    const adapter = new ProbeAdapter()
+    await rendereKarte(adapter)
+    await act(async () => {
+      locateKnopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    ortung.fix(8.6, 50.1)
+    expect(adapter.focusOn).toHaveBeenLastCalledWith([8.6, 50.1], expect.objectContaining({ zoom: 14 }))
   })
 })
