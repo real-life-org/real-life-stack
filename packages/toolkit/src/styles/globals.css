@@ -1,4 +1,24 @@
 :root {
+  /*
+   * Sagt dem Browser, in welchem Modus er SEINE eigenen Flaechen malt:
+   * Scrollleisten, Auswahlfelder, Datumswaehler, ausgefuellte Formularfelder.
+   *
+   * Ohne diese Angabe bleiben sie hell, auch wenn die Seite dunkel ist — in
+   * Chrome faellt vor allem die Scrollleiste auf, ein heller Balken quer durch
+   * ein dunkles Fenster. Unsere Tokens erreichen diese Flaechen nicht; sie
+   * gehoeren dem Browser, und das hier ist die einzige Stelle, an der man mit
+   * ihm darueber spricht.
+   */
+  color-scheme: light;
+
+  /*
+   * Schmal und ohne eigene Spur: Die Leiste ist eine Ortsangabe, keine
+   * Flaeche. Ein grauer Kanal neben dem Inhalt zieht Aufmerksamkeit auf sich,
+   * die dem Inhalt gehoert. `transparent` als zweiter Wert laesst die Spur
+   * weg — der Daumen schwebt dann ueber dem, was ohnehin da ist.
+   */
+  scrollbar-color: oklch(0.00 0 0 / 0.22) transparent;
+
   /* Background & Foreground
    *
    * Die Seitenflaeche ist leicht getoent, erhabene Flaechen (--card,
@@ -110,6 +130,16 @@
   --shadow-navbar: var(--shadow-md);
 }
 
+/*
+ * `scrollbar-color` vererbt sich, `scrollbar-width` nicht: Auf der Wurzel
+ * gesetzt bliebe jeder innere Scrollbereich bei der breiten Voreinstellung —
+ * nachgemessen stand `main` weiter auf `auto` (15px). Darum hier fuer alle;
+ * Elemente ohne Scrollbereich beruehrt es nicht.
+ */
+* {
+  scrollbar-width: thin;
+}
+
 /* Transparent globe canvases need a toolkit-owned backdrop around the planet. */
 .rls-globe-sky {
   background: radial-gradient(circle at 50% 44%, #ffffff 24%, #e2f0fc 40%, #93bce4 64%, #4b82bd 86%, #2f679f 100%);
@@ -128,6 +158,9 @@
 }
 
 .dark {
+  color-scheme: dark;
+  scrollbar-color: oklch(1.00 0 0 / 0.24) transparent;
+
   /* Background & Foreground - Dark slate */
   --background: oklch(0.15 0.02 265);
   --foreground: oklch(0.95 0.01 247);
