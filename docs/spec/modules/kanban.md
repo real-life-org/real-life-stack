@@ -137,20 +137,19 @@ Die konkrete Navigation ist App- oder Shell-Verantwortung.
 
 Eine Spalte ist kein Gegenstand, sondern der **Platz**, an dem Karten liegen. Als Card mit weißer Fläche und Rahmen sah sie aus wie eine große Karte, in der kleine stecken — dieselbe Verdopplung, die die Detailansicht vor [#307](https://github.com/real-life-org/real-life-stack/pull/307) hatte.
 
-Darum drei Ebenen, die sich unterscheiden **müssen**:
+Darum hat die Spalte **keine eigene Fläche**: Sie hebt sich nicht vom Grund der Seite ab. Auch die vertiefte Tönung aus [#314](https://github.com/real-life-org/real-life-stack/pull/314) war eine Fläche zu viel (zurückgenommen 10.09.2026). Zwei Ebenen bleiben, die sich unterscheiden **müssen**:
 
 | Ebene | Token | Wofür |
 |---|---|---|
-| vertieft | `--sunken` | der Ort: Kanban-Spalte, Ablagebereich |
-| Grund | `--background` | die Modulfläche |
+| Grund | `--background` | die Modulfläche, und damit auch die Spalte |
 | erhaben | `--card` | was darauf liegt: Karten, Panel, Dialog |
 
 Regeln:
 
-1. Die Spalte trägt die **vertiefte** Fläche und **keinen Rahmen**. Ein Rahmen macht sie wieder zum Gegenstand.
-2. Erhaben ist, was darin liegt — die Karten. Ihr Rahmen grenzt sie gegen die vertiefte Fläche ab.
-3. Beim Ziehen färbt sich die **Fläche**, nicht ihr Rand: Es geht um den Ort, auf dem die Karte landet.
-4. Die **Richtung der Helligkeit** ist in beiden Themes dieselbe: tiefer heißt dunkler, also `--sunken` < `--background` < `--card`. Ein Test hält das fest, weil die Staffelung sonst bei einer Token-Änderung lautlos kippt.
+1. Die Spalte trägt **keine Fläche und keinen Rahmen**. Beides macht sie zum Gegenstand.
+2. Erhaben ist, was darin liegt — die Karten. Ihr Rahmen grenzt sie gegen den Grund ab.
+3. Beim Ziehen färbt sich die **Fläche der Spalte**, nicht ihr Rand: Es geht um den Ort, auf dem die Karte landet. Nur dann hat die Spalte eine sichtbare Fläche.
+4. Die **Richtung der Helligkeit** ist in beiden Themes dieselbe: `--background` < `--card`. Ein Test hält das fest.
 
 ## Komponenten
 

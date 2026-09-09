@@ -468,12 +468,14 @@ export function KanbanBoard({
             // Eine Spalte ist kein Gegenstand, sondern ein ORT: der Platz, an
             // dem Karten liegen. Als Card mit Rahmen sah sie aus wie eine
             // grosse Karte, in der kleine stecken — dieselbe Verdopplung wie im
-            // Detail-Panel vor #307. Darum eine vertiefte Flaeche ohne Rahmen;
-            // erhaben sind die Karten darin.
+            // Detail-Panel vor #307. Auch die vertiefte Toenung (#314) war noch
+            // eine Flaeche zu viel: Die Spalte hebt sich gar nicht vom Grund
+            // der Seite ab; erhaben sind allein die Karten darin.
             <div
               key={column.id}
+              data-kanban-column
               className={cn(
-                "flex flex-col rounded-xl bg-sunken transition-colors gap-0 pt-2",
+                "flex flex-col rounded-xl transition-colors gap-0 pt-2",
                 isCollapsed ? "pb-0 @3xl:pb-2" : "pb-2",
                 isHiddenDesktop && "@3xl:hidden",
                 // Beim Ziehen faerbt sich der Ort, nicht sein Rand: Es geht um
