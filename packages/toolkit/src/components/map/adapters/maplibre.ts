@@ -363,6 +363,11 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     })
 
     map.on("moveend", () => {
+      // Eine Geste bricht die laufende Bewegung ab — auch die, die gerade die
+      // Polsterung setzt. Sie stuende dann auf halbem Weg still, und kein
+      // Mitfuehren in Optionen hilft dagegen: Die Geste ist keine Bewegung,
+      // die wir ausloesen. Also nachsehen, sobald etwas zur Ruhe kommt.
+      this.polsterungWiederherstellen()
       const view = this.getView()
       this.viewListeners.forEach((cb) => cb(view))
     })
@@ -735,7 +740,7 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
             // stays merged. Mercator is exact.
             const target =
               this.currentProjection === "globe" ? zoom + CLUSTER_EXPANSION_GLOBE_BUFFER : zoom
-            map.easeTo({ center: position, zoom: target })
+            map.easeTo(this.mitPolsterung({ center: position, zoom: target }))
           })
           .catch(() => {})
       }
@@ -891,6 +896,27 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
    * erneuter Aufruf mit demselben Wert raeumt es nicht auf, weil er als
    * „nichts geaendert" durchfaellt. Also traegt jede Bewegung sie mit.
    */
+  /**
+   * Steht die Kamera-Polsterung noch auf dem gewuenschten Wert? Wenn nicht,
+   * ohne Animation nachsetzen — an dieser Stelle ist nichts mehr in Bewegung,
+   * eine zweite Animation waere nur ein Nachruckeln.
+   */
+  private polsterungWiederherstellen(): void {
+    const soll = this.viewportPadding
+    if (!soll) return
+    const map = this.mapInstance as MlMap | null
+    if (!map) return
+    const ist = map.getPadding()
+    if (
+      ist &&
+      ist.left === soll.left && ist.right === soll.right &&
+      ist.top === soll.top && ist.bottom === soll.bottom
+    ) {
+      return
+    }
+    map.setPadding(soll)
+  }
+
   private mitPolsterung<T extends Record<string, unknown>>(optionen: T): T {
     return this.viewportPadding ? { ...optionen, padding: this.viewportPadding } : optionen
   }

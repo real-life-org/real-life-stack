@@ -209,3 +209,117 @@ describe("Die Polsterung überlebt den Themenwechsel", () => {
     expect(bisMarker).toContain("setPadding(this.viewportPadding)")
   })
 })
+
+/**
+ * Eine Animation lässt sich immer unterbrechen — auch von Gesten, die wir nie
+ * zu sehen bekommen: Zieht oder zoomt jemand während der 300ms, stoppt
+ * MapLibre die laufende Bewegung, und die Polsterung bleibt auf halbem Weg
+ * stehen. Kein Mitführen in den Optionen hilft dagegen, denn die Geste ist
+ * keine Bewegung, die wir auslösen.
+ *
+ * Also prüft die Karte nach jeder abgeschlossenen Bewegung, ob die Polsterung
+ * noch stimmt, und setzt sie sonst nach — ohne Animation, denn dann ist
+ * nichts mehr in Bewegung.
+ */
+describe("Die Polsterung übersteht eine Unterbrechung", () => {
+  it("wird geprüft, sobald eine Bewegung zur Ruhe kommt", () => {
+    const quelle = readFileSync(
+      join(__dirname, "../src/components/map/adapters/maplibre.ts"),
+      "utf8",
+    )
+    // Im vorhandenen `moveend`-Listener, nicht in einem zweiten daneben.
+    const beiMoveend = quelle.slice(quelle.indexOf('map.on("moveend"'))
+    expect(beiMoveend.slice(0, beiMoveend.indexOf("viewListeners"))).toContain(
+      "polsterungWiederherstellen()",
+    )
+  })
+
+  it("holt sie zurück, wenn eine Geste sie auf halbem Weg stehen lässt", () => {
+    let padding = { left: 0, right: 0, top: 0, bottom: 0 }
+    const karte = {
+      easeTo: () => {},
+      getPadding: () => padding,
+      setPadding: (p: typeof padding) => { padding = p },
+    }
+    const adapter = mitFakeKarte(new MapLibreMapAdapter(), karte)
+    adapter.setViewportPadding({ right: 436 })
+
+    // Mitten in der Animation zieht jemand die Karte: MapLibre stoppt, die
+    // Polsterung steht bei 200 statt 436.
+    padding = { left: 0, right: 200, top: 0, bottom: 0 }
+    ;(adapter as unknown as { polsterungWiederherstellen(): void }).polsterungWiederherstellen()
+
+    expect(padding).toEqual({ left: 0, right: 436, top: 0, bottom: 0 })
+  })
+
+  it("lässt eine stimmige Kamera in Ruhe", () => {
+    let gesetzt = 0
+    const soll = { left: 0, right: 436, top: 0, bottom: 0 }
+    const karte = {
+      easeTo: () => {},
+      getPadding: () => soll,
+      setPadding: () => { gesetzt++ },
+    }
+    const adapter = mitFakeKarte(new MapLibreMapAdapter(), karte)
+    adapter.setViewportPadding({ right: 436 })
+    ;(adapter as unknown as { polsterungWiederherstellen(): void }).polsterungWiederherstellen()
+
+    expect(gesetzt).toBe(0)
+  })
+
+  it("mischt sich nicht ein, wo keine Polsterung gilt", () => {
+    let gesetzt = 0
+    const karte = {
+      easeTo: () => {},
+      getPadding: () => ({ left: 0, right: 12, top: 0, bottom: 0 }),
+      setPadding: () => { gesetzt++ },
+    }
+    const adapter = mitFakeKarte(new MapLibreMapAdapter(), karte)
+    ;(adapter as unknown as { polsterungWiederherstellen(): void }).polsterungWiederherstellen()
+
+    expect(gesetzt).toBe(0)
+  })
+})
+
+/** Auch der Sprung beim Cluster-Klick darf die Polsterung nicht abwerfen. */
+describe("Cluster-Klick", () => {
+  it("führt die Polsterung mit", () => {
+    const quelle = readFileSync(
+      join(__dirname, "../src/components/map/adapters/maplibre.ts"),
+      "utf8",
+    )
+    const beiExpansion = quelle.slice(quelle.indexOf("getClusterExpansionZoom"))
+    const bisEaseTo = beiExpansion.slice(0, beiExpansion.indexOf("catch"))
+    expect(bisEaseTo).toContain("mitPolsterung")
+  })
+})
+
+/**
+ * Zweimal wurde eine Bewegung übersehen — erst `setView`/`fitBounds`, dann der
+ * Cluster-Klick. Jede einzeln zu finden ist eine Kaskade ohne Ende; also
+ * prüft dieser Test, dass gar keine übrig bleibt.
+ *
+ * Der Fehler dahinter ist unsichtbar: Eine Bewegung ohne Polsterung wirft sie
+ * ab, und man sieht es erst, wenn der Globus hinter dem Panel steht.
+ */
+describe("Keine Kamerabewegung ohne Polsterung", () => {
+  const quelle = readFileSync(
+    join(__dirname, "../src/components/map/adapters/maplibre.ts"),
+    "utf8",
+  )
+
+  it("führt sie bei jedem easeTo, flyTo und jumpTo mit", () => {
+    const ohne = [...quelle.matchAll(/map\.(easeTo|flyTo|jumpTo)\((.{0,40})/g)]
+      .filter(([, , anfang]) => !anfang.includes("mitPolsterung") && !anfang.includes("padding"))
+      .map(([treffer]) => treffer.trim())
+
+    expect(ohne, `Diese Bewegungen werfen die Polsterung ab:\n${ohne.join("\n")}`).toEqual([])
+  })
+
+  it("kennt beim Einpassen von Grenzen beide Fälle bewusst", () => {
+    // Mit Polsterung: mitgeben. Ohne: unverändert lassen, ein leeres
+    // Optionsobjekt wäre Rauschen.
+    expect(quelle).toContain("map.fitBounds(box, { padding: this.viewportPadding })")
+    expect(quelle).toContain("else map.fitBounds(box)")
+  })
+})
