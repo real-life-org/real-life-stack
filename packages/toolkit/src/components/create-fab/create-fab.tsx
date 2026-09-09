@@ -21,8 +21,8 @@ export interface CreateFabProps {
  * the gap stays consistent on notched devices (the nav height is not fixed —
  * it's content + that inset). From `md` up there is no BottomNav, so it
  * drops back to a normal corner offset. Its right edge follows the shared
- * panel via the `--adaptive-panel-margin-right` CSS variable, so an open
- * sidebar panel pushes the FAB left to sit beside it instead of covering it.
+ * panel via the `--adaptive-panel-edge-right` CSS variable, so an open panel
+ * pushes the FAB left to sit beside it instead of being covered by it.
  * Use inside a relative or full-screen container; the z-index keeps it above
  * Leaflet panes but below modal sheets / drawers.
  */
@@ -33,9 +33,11 @@ export function CreateFab({ onClick, label = "Erstellen", className }: CreateFab
       onClick={onClick}
       aria-label={label}
       title={label}
-      // Right edge tracks the shared panel's inset: when a sidebar panel
-      // opens, AdaptivePanel publishes its width as --adaptive-panel-margin-right,
-      // so the FAB slides left to sit beside the panel instead of being overlaid.
+      // Right edge tracks the panel's EDGE, not the larger content inset:
+      // that inset already contains the gap beside a floating panel, so adding
+      // the FAB's own 1rem on top of it would count the gap twice (measured:
+      // 32px of air instead of 16px). Against the edge the FAB keeps exactly
+      // the offset it has against the window border.
       style={{ right: "calc(1rem + var(--adaptive-panel-edge-right, 0px))" }}
       className={cn(
         // Desktop offset is 1rem on both axes so it matches the right inline

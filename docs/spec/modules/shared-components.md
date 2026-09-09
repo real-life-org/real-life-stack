@@ -495,7 +495,7 @@ interface CreateFabProps {
 }
 ```
 
-**Positionierung:** `fixed` unten-rechts, mit Safe-Area- und BottomNav-Abstand auf Mobile. Der rechte Rand **folgt dem Panel-Inset**: öffnet eine rechte Sidebar, wandert der FAB um deren Breite nach links — er liest dieselbe `--adaptive-panel-margin-right`-CSS-Variable, die der Content fürs Einrücken nutzt, und sitzt so **neben** dem Panel statt darunter.
+**Positionierung:** `fixed` unten-rechts, mit Safe-Area- und BottomNav-Abstand auf Mobile. Der rechte Rand **folgt der Panelkante** (`--adaptive-panel-edge-right`): öffnet ein rechtes Panel, wandert der FAB daneben statt darunter — und hält dabei denselben Abstand wie sonst zum Fensterrand. Nicht die Inhalts-Variable (`--adaptive-panel-margin-right`) nehmen: die enthält die Luft neben einem schwebenden Panel bereits, der eigene Rand käme doppelt dazu.
 
 **Beziehung zu `useItemEditor`:** Der FAB ist nur das visuelle Trigger-Element. Der Caller wired `onClick` so, dass der Composer in die passende **Hülle** öffnet (siehe `ContentComposer` → Präsentation je Modul): Calendar/Map/Kanban über das Content-Panel (`useModulePanel().open({ kind: "composer", … })`), Feed über den `FeedComposerTrigger`. `onSubmit` ruft `await editor.submit(data)` und schließt auf Erfolg — das verhindert Mehrfach-Submits durch wiederholtes Klicken.
 
