@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
 import { hasViewportPadding } from "../src/components/map/adapter"
@@ -120,5 +122,90 @@ describe("Ein Weg, nicht zwei", () => {
     expect(insets.leftInset).toBe(0)
     expect(insets.rightInset).toBe(0)
     expect(insets.bottomInset).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * Eine Kamerabewegung überschreibt die Polsterung, wenn sie keine mitbringt:
+ * MapLibre nimmt bei `easeTo`/`flyTo` das Padding aus den Optionen und lässt
+ * sonst die Voreinstellung gelten. Passiert das mitten in der laufenden
+ * Polsterungs-Animation, bleibt die Kamera falsch zentriert — und ein zweiter
+ * Aufruf mit demselben Wert räumt es nicht auf, weil er als „nichts geändert"
+ * durchfällt.
+ *
+ * Also führt JEDE Bewegung des Adapters die Polsterung mit. Dann kann sie
+ * nicht verlorengehen, egal was dazwischenkommt.
+ */
+describe("Die Polsterung überlebt jede Bewegung", () => {
+  function fake() {
+    const rufe: Array<{ art: string; optionen: Record<string, unknown> }> = []
+    return {
+      rufe,
+      easeTo: (o: Record<string, unknown>) => rufe.push({ art: "easeTo", optionen: o }),
+      flyTo: (o: Record<string, unknown>) => rufe.push({ art: "flyTo", optionen: o }),
+      jumpTo: (o: Record<string, unknown>) => rufe.push({ art: "jumpTo", optionen: o }),
+      fitBounds: (_b: unknown, o: Record<string, unknown>) => rufe.push({ art: "fitBounds", optionen: o }),
+      getBounds: () => ({ getWest: () => 0, getSouth: () => 0, getEast: () => 1, getNorth: () => 1 }),
+      getCenter: () => ({ lng: 0, lat: 0 }),
+      getZoom: () => 5,
+    }
+  }
+
+  function mitPolsterung() {
+    const karte = fake()
+    const adapter = mitFakeKarte(new MapLibreMapAdapter(), karte)
+    adapter.setViewportPadding({ right: 436 })
+    karte.rufe.length = 0
+    return { karte, adapter }
+  }
+
+  const erwartet = { left: 0, right: 436, top: 0, bottom: 0 }
+
+  it("beim Zentrieren auf einen Punkt", () => {
+    const { karte, adapter } = mitPolsterung()
+    adapter.focusOn([8, 50])
+    expect(karte.rufe[0]!.optionen.padding).toEqual(erwartet)
+  })
+
+  it("beim Zentrieren mit Zoom", () => {
+    const { karte, adapter } = mitPolsterung()
+    adapter.focusOn([8, 50], { zoom: 12 })
+    expect(karte.rufe[0]!.optionen.padding).toEqual(erwartet)
+  })
+
+  it("beim Setzen eines Ausschnitts", () => {
+    const { karte, adapter } = mitPolsterung()
+    adapter.setView({ center: [8, 50], zoom: 9 })
+    expect(karte.rufe[0]!.optionen.padding).toEqual(erwartet)
+  })
+
+  it("beim Einpassen von Grenzen", () => {
+    const { karte, adapter } = mitPolsterung()
+    adapter.fitBounds({ west: 0, south: 0, east: 1, north: 1 })
+    expect(karte.rufe[0]!.optionen.padding).toMatchObject(erwartet)
+  })
+
+  it("bringt keine Polsterung ins Spiel, wo keine gesetzt ist", () => {
+    const karte = fake()
+    mitFakeKarte(new MapLibreMapAdapter(), karte).focusOn([8, 50])
+    expect(karte.rufe[0]!.optionen.padding).toBeUndefined()
+  })
+})
+
+/**
+ * Ein Themenwechsel tauscht den ganzen Karten-Style aus. Projektion und Marker
+ * werden danach wiederhergestellt — die Polsterung gehört dazu. Über den
+ * gemerkten Wert und nicht über `setViewportPadding`: Der vergleicht mit dem
+ * Gemerkten und fände „nichts geändert", also bliebe die Kamera falsch.
+ */
+describe("Die Polsterung überlebt den Themenwechsel", () => {
+  it("wird nach dem Style-Wechsel ohne Animation wiederhergestellt", () => {
+    const quelle = readFileSync(
+      join(__dirname, "../src/components/map/adapters/maplibre.ts"),
+      "utf8",
+    )
+    const nachDemStyle = quelle.slice(quelle.indexOf("Projection is a style property"))
+    const bisMarker = nachDemStyle.slice(0, nachDemStyle.indexOf("reapplyMarkersSafely"))
+    expect(bisMarker).toContain("setPadding(this.viewportPadding)")
   })
 })

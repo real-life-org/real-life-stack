@@ -465,6 +465,12 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
       this.renderedMarkers.clear()
       // Projection is a style property, so it reset along with the style.
       map.setProjection({ type: this.currentProjection })
+      // Die Kamera-Polsterung ebenso wiederherstellen — ohne Animation, denn
+      // hier ist nichts in Bewegung, es wird nur der alte Zustand
+      // wiedergefunden. Ueber den gemerkten Wert und nicht ueber
+      // `setViewportPadding`: Der vergleicht mit dem Gemerkten und faende
+      // „nichts geaendert".
+      if (this.viewportPadding) map.setPadding(this.viewportPadding)
       this.reapplyMarkersSafely(this.lastMarkers)
     }
     map.on("styledata", onSettled)
@@ -875,21 +881,39 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     })
   }
 
+  /**
+   * Ergaenzt die Kamera-Polsterung in den Optionen einer Bewegung.
+   *
+   * **Warum jede Bewegung sie mitfuehren muss.** MapLibre nimmt das Padding
+   * aus den Optionen der Bewegung; fehlt es, gilt wieder die Voreinstellung.
+   * Eine Bewegung ohne Polsterung bricht damit nicht nur die laufende
+   * Polsterungs-Animation ab, sie hebt die Polsterung ganz auf — und ein
+   * erneuter Aufruf mit demselben Wert raeumt es nicht auf, weil er als
+   * „nichts geaendert" durchfaellt. Also traegt jede Bewegung sie mit.
+   */
+  private mitPolsterung<T extends Record<string, unknown>>(optionen: T): T {
+    return this.viewportPadding ? { ...optionen, padding: this.viewportPadding } : optionen
+  }
+
   setView(view: MapViewPatch): void {
     const map = this.mapInstance as MlMap | null
     if (!map) return
     const center = view.center ?? this.lngLatTuple(map.getCenter())
     const zoom = view.zoom ?? map.getZoom()
-    map.jumpTo({ center, zoom })
+    map.jumpTo(this.mitPolsterung({ center, zoom }))
   }
 
   fitBounds(bounds: MapBounds): void {
     const map = this.mapInstance as MlMap | null
     if (!map) return
-    map.fitBounds([
+    const box: [[number, number], [number, number]] = [
       [bounds.west, bounds.south],
       [bounds.east, bounds.north],
-    ])
+    ]
+    // Ohne Polsterung bleibt der Aufruf, wie er war — ein leeres
+    // Optionsobjekt waere Rauschen.
+    if (this.viewportPadding) map.fitBounds(box, { padding: this.viewportPadding })
+    else map.fitBounds(box)
   }
 
   focusOn(
@@ -914,7 +938,7 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
       // A zoom change is a "fly to this place" gesture: flyTo's eased, curved
       // zoom+pan stays smooth even over a big delta and lets tiles load, where a
       // fast easeTo would visibly race in. Calm default duration.
-      map.flyTo({
+      map.flyTo(this.mitPolsterung({
         center,
         zoom: options.zoom,
         offset,
@@ -922,9 +946,9 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
         // `essential` so the reveal still animates (and honours `duration`) under
         // an OS "reduce motion" setting, which maplibre otherwise snaps instant.
         essential: true,
-      })
+      }))
     } else {
-      map.easeTo({ center, offset, duration: animate ? options?.duration ?? 500 : 0, essential: true })
+      map.easeTo(this.mitPolsterung({ center, offset, duration: animate ? options?.duration ?? 500 : 0, essential: true }))
     }
   }
 
