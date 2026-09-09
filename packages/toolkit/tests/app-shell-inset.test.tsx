@@ -12,6 +12,11 @@ import { AppShellMain } from "../src/components/layout/app-shell"
  * springt die Regel (`inset`) um, ohne dass am Panel etwas passiert waere —
  * dann darf nichts animieren, sonst schnurrt der neue Kalender sichtbar
  * zusammen bzw. streckt sich die neue Karte auf die volle Breite.
+ *
+ * Gemessen wird das am MARGIN. Frueher war es ein Padding, das nur den Inhalt
+ * einrueckte, waehrend die Flaeche bis zum Fensterrand reichte — und mit ihr
+ * die Scrollleiste. Seit sie an der Panelkante endet, ist es ein Margin; die
+ * Aussage dieser Tests bleibt dieselbe.
  */
 let host: HTMLDivElement
 let root: Root
@@ -42,10 +47,10 @@ afterEach(() => {
   host.remove()
 })
 
-describe("AppShellMain: Padding-Uebergang", () => {
+describe("AppShellMain: der Uebergang beim Verdraengen", () => {
   it("animiert im Ruhezustand, damit ein Panel die Flaeche weich verdraengt", () => {
     render(true)
-    expect(klassen()).toContain("transition-[padding]")
+    expect(klassen()).toContain("transition-[margin]")
     expect(klassen()).not.toContain("transition-none")
   })
 
@@ -70,13 +75,13 @@ describe("AppShellMain: Padding-Uebergang", () => {
       await new Promise((fertig) => setTimeout(fertig, 0))
     })
     expect(klassen()).not.toContain("transition-none")
-    expect(klassen()).toContain("transition-[padding]")
+    expect(klassen()).toContain("transition-[margin]")
   })
 
-  it("ruehrt das Padding nur an, wenn die Flaeche einruecken soll", () => {
+  it("nimmt der Flaeche nur Platz, wenn sie einruecken soll", () => {
     render(true)
-    expect(host.querySelector("main")?.style.paddingRight).toBe("var(--adaptive-panel-margin-right, 0px)")
+    expect(host.querySelector("main")?.style.marginRight).toBe("var(--adaptive-panel-margin-right, 0px)")
     render(false)
-    expect(host.querySelector("main")?.style.paddingRight).toBe("")
+    expect(host.querySelector("main")?.style.marginRight).toBe("")
   })
 })

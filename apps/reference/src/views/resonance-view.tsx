@@ -3,6 +3,7 @@ import {
   CreateFab,
   EmptyState,
   FilterBar,
+  ModuleToolbar,
   ItemMetaRow,
   ItemPreview,
   ItemPreviewSkeleton,
@@ -145,30 +146,32 @@ export function ResonanceView({ groupId }: { groupId: string }) {
 
   return (
     <div className="space-y-4">
-      <FilterBar
-        value={filterBarValue}
-        onChange={setFilterBarValue}
-        availableTags={availableTags}
-        leadingActions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                <ArrowUpDown className="h-3.5 w-3.5" />
-                {SORT_LABELS[sortMode]}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuRadioGroup value={sortMode} onValueChange={(value) => setSortMode(value as ResonanceSortMode)}>
-                {SORT_MODES.map((mode) => (
-                  <DropdownMenuRadioItem key={mode} value={mode}>
-                    {SORT_LABELS[mode]}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
-      />
+      <ModuleToolbar>
+        <FilterBar
+          value={filterBarValue}
+          onChange={setFilterBarValue}
+          availableTags={availableTags}
+          leadingActions={
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                  <ArrowUpDown className="h-3.5 w-3.5" />
+                  {SORT_LABELS[sortMode]}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuRadioGroup value={sortMode} onValueChange={(value) => setSortMode(value as ResonanceSortMode)}>
+                  {SORT_MODES.map((mode) => (
+                    <DropdownMenuRadioItem key={mode} value={mode}>
+                      {SORT_LABELS[mode]}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          }
+        />
+      </ModuleToolbar>
 
       <div className="space-y-4">
         {isLoading ? (
