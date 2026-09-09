@@ -82,6 +82,8 @@ Overlays folgen einem Drei-Ebenen-Modell. Pro Ebene gibt es höchstens **eine** 
 | Ebene | Fläche | Form | Inhalt |
 |---|---|---|---|
 | 1 Content-Panel | eine app-weite Instanz | Sidebar (Desktop) ↔ Drawer (Mobile) | Item-Detail, Composer, Filter — Content wird getauscht, nie gestapelt |
+
+Der **Drawer endet oben an der Schutzzone** des Geräts (Statusleiste, Notch): Ganz aufgezogen reicht er bis an sie heran, nicht bis an den Fensterrand, und ein Zug darüber hinaus wird geklemmt. Sonst liegen Griff und Schließen darunter, und das Blatt lässt sich nicht mehr verkleinern (randlose Android-Geräte). Die Zone hat **eine Quelle** (`--safe-top`): Was die Plattform meldet, gilt — auf Android schreibt Capacitor sie in die Wurzel, weil `env()` dort nichts liefert; sonst löst `env(safe-area-inset-top)` sie auf. Ein fester Wert wäre auf dem nächsten Gerät falsch.
 | 2 Dialog | eine Instanz | zentriertes Modal + Backdrop (Desktop) / Sheet (Mobile) | fokussierte Tasks: Kontakte, Verifizieren, Gruppe, Profil |
 | 3 Notification | nicht-destruktiver Hinweis | Banner / Toast | zeitkritische Interrupts: eingehende Verifizierung, Space-Einladung |
 

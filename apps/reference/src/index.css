@@ -20,6 +20,18 @@
   body {
     @apply bg-background text-foreground;
   }
+  /*
+   * Die obere Schutzzone — EINE Quelle fuer alle, die sie brauchen.
+   *
+   * Zwei Plattformen, zwei Wege: Auf Android schreibt Capacitor sie seit
+   * Android 15 selbst in die Wurzel (`--safe-area-inset-top`), weil `env()`
+   * im dortigen WebView nichts liefert, obwohl die Statusleiste die Seite
+   * ueberlagert. Auf iOS und im Web loest `env()` sie auf. Wer die Zone
+   * braucht, liest `--safe-top` und nicht eines von beiden.
+   */
+  :root {
+    --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  }
   /* Fixed bar behind iOS status bar so scrolling content doesn't overlap */
   body::before {
     content: '';
@@ -28,12 +40,12 @@
     top: 0;
     left: 0;
     right: 0;
-    height: env(safe-area-inset-top);
+    height: var(--safe-top);
     background: var(--background);
     z-index: 9999;
   }
   #root {
-    padding-top: env(safe-area-inset-top);
+    padding-top: var(--safe-top);
     height: 100%;
     overflow: hidden;
     display: flex;
