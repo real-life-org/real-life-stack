@@ -52,5 +52,10 @@ export {
   type ItemEditorMapper,
   type ItemEditorPayload,
 } from "./use-item-editor"
-export { useFilterableItems, applyFilterBarValue } from "./use-filterable-items"
+export {
+  useFilterableItems,
+  useModuleFilteredItems,
+  applyFilterBarValue,
+  applyItemSearch,
+} from "./use-filterable-items"
 export { useResolvedUsers } from "./use-resolved-users"
