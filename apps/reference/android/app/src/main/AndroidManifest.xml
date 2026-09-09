@@ -45,6 +45,16 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
+    <!-- Standort fuer den Standort-Knopf der Karte (navigator.geolocation im
+         WebView). Capacitor fragt die Berechtigung zur Laufzeit an — aber nur,
+         wenn sie hier deklariert ist; sonst lehnt der WebView jede Ortung
+         sofort ab („Standort nicht verfuegbar"). required=false: die App bleibt
+         auf Geraeten ohne Ortung installierbar, der Knopf erscheint dort nicht. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
     <!-- Biometric/device-credential unlock of the WoT identity passphrase.
          The androidx.biometric library also merges this in, but declaring it
          explicitly documents the requirement for reviewers (e.g. F-Droid). -->

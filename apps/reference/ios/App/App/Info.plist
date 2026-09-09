@@ -24,6 +24,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Die Kamera wird zum Scannen von QR-Codes bei der Verifizierung verwendet.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Zeigt deinen Standort auf der Karte, wenn du den Standort-Knopf antippst.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
