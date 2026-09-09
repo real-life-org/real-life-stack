@@ -71,7 +71,35 @@ describe("ItemDetailBody: die Ordnung der Detailansicht", () => {
     const html = markup()
     expect(vorher(html, "repair", "Erstellt von")).toBe(true)
     expect(html).toContain("ml-auto")
-    expect(html).toContain("whitespace-nowrap")
+  })
+
+  /**
+   * Ein langer Anzeigename — oder die rohe Id, wenn niemand ihn auflöst —
+   * schob die Zeile aus der Karte: Umbruch und Kürzung waren beide gesperrt.
+   * Der Name kürzt jetzt, das Datum bleibt vollständig.
+   */
+  it("kürzt den Namen, hält aber das Datum zusammen", () => {
+    const html = markup({
+      author: { id: "u1", displayName: "did:key:z6MkiA5JHrmkT9pR7vLcQx2FnB3wYsE4uZ" } as User,
+    })
+    // Der Name kuerzt …
+    expect(html).toContain("truncate")
+    // … der Zeitteil steht in einem eigenen Block, der weder schrumpft noch
+    // umbricht.
+    const zeitBlock = html.slice(html.indexOf("truncate"))
+    expect(zeitBlock).toMatch(/<span class="[^"]*shrink-0[^"]*whitespace-nowrap[^"]*"/)
+  })
+
+  /**
+   * Ohne Panel darüber bleiben die Aktionen in dieser Ansicht — dann gehören
+   * sie in DIE Kopfzeile, nicht in eine eigene Zeile davor.
+   */
+  it("teilt die Kopfzeile mit den Aktionen, wenn kein Panel sie aufnimmt", () => {
+    const html = markup()
+    // Eine Zeile, die beides verteilt — statt zweier Bloecke untereinander.
+    expect(html).toContain("justify-between")
+    expect(vorher(html, "justify-between", "EVENT-BADGE")).toBe(true)
+    expect(vorher(html, "EVENT-BADGE", "MENUE")).toBe(true)
   })
 
   it("setzt den einzigen Trenner vor die Aktionszeile", () => {

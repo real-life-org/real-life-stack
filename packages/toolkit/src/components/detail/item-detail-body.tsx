@@ -99,10 +99,17 @@ export function ItemDetailBody({
 
   return (
     <article className={cn("flex flex-col gap-3 p-4", className)}>
-      {actions && <PanelHeaderActions>{actions}</PanelHeaderActions>}
-
-      {headerAdornment && (
-        <div className="flex min-w-0 flex-wrap items-center gap-2">{headerAdornment}</div>
+      {/* Eine Kopfzeile fuer beides: Liegt ein Panel darueber, wandern die
+          Aktionen in dessen Leiste und die Zeile traegt nur die Badges. Ohne
+          Panel stehen sie hier rechts — nicht als eigene Zeile davor. Bleibt
+          beides leer (Aktionen portiert, keine Badges), faellt die Zeile weg. */}
+      {(headerAdornment || actions) && (
+        <div className="flex items-start justify-between gap-2 empty:hidden">
+          {headerAdornment && (
+            <div className="flex min-w-0 flex-wrap items-center gap-2">{headerAdornment}</div>
+          )}
+          {actions && <PanelHeaderActions>{actions}</PanelHeaderActions>}
+        </div>
       )}
 
       {title && <h2 className="text-xl font-semibold leading-snug text-foreground">{title}</h2>}
@@ -136,7 +143,11 @@ export function ItemDetailBody({
             ))}
           </div>
         )}
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
+        {/* Der Name kuerzt, das Datum nicht: Ein langer Anzeigename — oder die
+            rohe Id, wenn niemand ihn aufloesen kann — wuerde die Zeile sonst
+            aus der Karte schieben. Was rechts steht, ist die kuerzere und
+            verlaesslichere Auskunft. */}
+        <div className="ml-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
           <ProfileLink userId={authorId} label={`Profil von ${authorName} öffnen`}>
             <Avatar className="h-5 w-5 shrink-0">
               <AvatarImage src={author?.avatarUrl} alt={authorName} />
@@ -145,15 +156,17 @@ export function ItemDetailBody({
               </AvatarFallback>
             </Avatar>
           </ProfileLink>
-          <span>
+          <span className="truncate" title={authorName}>
             Erstellt von <span className="text-foreground">{authorName}</span>
           </span>
-          <span aria-hidden>·</span>
-          <RelativeTime date={item.createdAt} className="text-xs" />
-          {/* Mitglieder duerfen fremde Items aendern; ohne diesen Hinweis
-              waere eine fremde Aenderung unsichtbar. Bewusst knapp: WAS sich
-              geaendert hat, braucht eine Versionshistorie (rls#263). */}
-          {item.updatedAt && <span title={editedTitle}>· bearbeitet</span>}
+          <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+            <span aria-hidden>·</span>
+            <RelativeTime date={item.createdAt} className="text-xs" />
+            {/* Mitglieder duerfen fremde Items aendern; ohne diesen Hinweis
+                waere eine fremde Aenderung unsichtbar. Bewusst knapp: WAS sich
+                geaendert hat, braucht eine Versionshistorie (rls#263). */}
+            {item.updatedAt && <span title={editedTitle}>· bearbeitet</span>}
+          </span>
         </div>
       </div>
 

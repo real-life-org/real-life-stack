@@ -27,6 +27,12 @@ export interface ItemDetailPanelProps {
   children: ReactNode
   /** Optional reactions renderer for individual comments. */
   renderCommentReactions?: (commentId: string) => ReactNode
+  /**
+   * @deprecated Ohne Wirkung. Die Diskussion traegt keine Ueberschrift mehr —
+   * Blasen unter einem Item sind als Kommentare erkennbar, und ohne Kommentare
+   * stuende dort eine Ueberschrift ohne Inhalt.
+   */
+  commentsLabel?: string
   className?: string
 }
 
