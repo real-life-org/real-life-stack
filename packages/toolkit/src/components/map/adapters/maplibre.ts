@@ -57,6 +57,9 @@ import type {
   MapViewPatch,
   MapViewState,
   Unsubscribe,
+  UserGestureCapable,
+  UserPosition,
+  UserPositionCapable,
 } from "../adapter"
 import { markerDataUrl } from "../markers/render-marker-svg"
 import { PIN_SIZE } from "../markers/marker-shapes"
@@ -81,6 +84,11 @@ const DEFAULT_MARKER_COLOR = "#2563eb"
  *  call for the whole set, so it scales to tens of thousands of pins and gets
  *  globe back-side occlusion for free — unlike per-marker DOM elements). */
 const MARKER_SOURCE = "rls-markers"
+const USER_POSITION_SOURCE = "rls-user-position"
+const USER_POSITION_ACCURACY_LAYER = "rls-user-accuracy"
+const USER_POSITION_DOT_LAYER = "rls-user-dot"
+/** Farbe des eigenen Standorts — dieselbe wie die Primaerfarbe der Oberflaeche. */
+const USER_POSITION_COLOR = "#2563eb"
 const MARKER_SYMBOL_LAYER = "rls-marker-symbols"
 const MARKER_GLOW_LAYER = "rls-marker-glow"
 const CLUSTER_CIRCLE_LAYER = "rls-marker-clusters"
@@ -243,7 +251,7 @@ function dominantColorFromList(list: unknown): string | null {
   return best
 }
 
-export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapable {
+export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapable, UserPositionCapable, UserGestureCapable {
   // Internal MapLibre handles are held as `unknown` so the generated `.d.ts`
   // does not reference `maplibre-gl`. Consumers without it installed can
   // import the toolkit without TS errors.
@@ -252,6 +260,9 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
   // WebGL markers: a GeoJSON source + symbol layer, plus an image atlas keyed by
   // appearance. `markersVersion` ignores stale setData after async image loads.
   private markerLayersReady = false
+  private gestureListeners = new Set<() => void>()
+  /** Standort, der vor dem fertigen Style kam — nach dem Laden nachgeholt. */
+  private pendingUserPosition: UserPosition | null = null
   private addedImages = new Set<string>()
   private markersVersion = 0
   // Clustering config (null = off). Read when the source is created; a radius/
@@ -362,6 +373,12 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
       map.on("error", onError)
     })
 
+    map.on("load", () => {
+      // Ein Standort, der vor dem fertigen Style kam, wird jetzt gezeichnet:
+      // Vorher gibt es weder Quelle noch Ebene, in die er koennte.
+      if (this.pendingUserPosition) this.setUserPosition(this.pendingUserPosition)
+    })
+
     map.on("moveend", () => {
       // Eine Geste bricht die laufende Bewegung ab — auch die, die gerade die
       // Polsterung setzt. Sie stuende dann auf halbem Weg still, und kein
@@ -371,6 +388,17 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
       const view = this.getView()
       this.viewListeners.forEach((cb) => cb(view))
     })
+
+    // Nur Gesten: `dragstart` und `zoomstart` tragen bei einer Nutzer-Aktion
+    // ein `originalEvent`. Ohne diese Pruefung meldete jede eigene Bewegung
+    // (`focusOn` der laufenden Ortung) eine „Geste" und schaltete ihr eigenes
+    // Nachziehen ab.
+    const geste = (event: { originalEvent?: unknown }) => {
+      if (!event?.originalEvent) return
+      this.gestureListeners.forEach((cb) => cb())
+    }
+    map.on("dragstart", geste)
+    map.on("zoomstart", geste)
 
     map.on("click", (event: MapMouseEvent) => {
       // A click that hit a marker is a marker click, not a map click — it goes
@@ -863,6 +891,95 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     // it, so the map visibly flashed away while the panel opened or closed.
     // A synchronous redraw refills the buffer before the browser paints.
     map.redraw()
+  }
+
+  // --- UserGestureCapable ---
+  observeUserGesture(callback: () => void): Unsubscribe {
+    this.gestureListeners.add(callback)
+    return () => {
+      this.gestureListeners.delete(callback)
+    }
+  }
+
+  // --- UserPositionCapable ---
+  /**
+   * Der eigene Standort als eigene Quelle mit zwei Ebenen: der
+   * Genauigkeitskreis und der Punkt darin.
+   *
+   * Der Kreis traegt seinen Radius in METERN
+   * (`circle-radius` waechst per Zoom-Interpolation mit), denn Genauigkeit ist
+   * eine Groesse auf der Welt und keine auf dem Bildschirm. Der Punkt bleibt
+   * dagegen in jeder Zoomstufe gleich gross.
+   *
+   * Eigene Quelle statt eines Markers in der Marker-Quelle: Der Standort ist
+   * kein Item — er hat keine Id, kein Detail, keinen Klick, und er soll die
+   * Cluster-Rechnung der Marker nicht mitmachen.
+   */
+  setUserPosition(position: UserPosition | null): void {
+    const map = this.mapInstance as MlMap | null
+    if (!map || !map.isStyleLoaded?.()) {
+      this.pendingUserPosition = position
+      return
+    }
+    this.pendingUserPosition = null
+    if (!position) {
+      for (const id of [USER_POSITION_DOT_LAYER, USER_POSITION_ACCURACY_LAYER]) {
+        if (map.getLayer(id)) map.removeLayer(id)
+      }
+      if (map.getSource(USER_POSITION_SOURCE)) map.removeSource(USER_POSITION_SOURCE)
+      return
+    }
+    const daten = {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          properties: { accuracy: position.accuracy },
+          geometry: { type: "Point" as const, coordinates: [position.lng, position.lat] },
+        },
+      ],
+    }
+    const quelle = map.getSource(USER_POSITION_SOURCE) as GeoJSONSource | undefined
+    if (quelle) {
+      quelle.setData(daten)
+      return
+    }
+    map.addSource(USER_POSITION_SOURCE, { type: "geojson", data: daten })
+    map.addLayer({
+      id: USER_POSITION_ACCURACY_LAYER,
+      type: "circle",
+      source: USER_POSITION_SOURCE,
+      paint: {
+        // Meter → Pixel: Der Radius haengt am Zoom, sonst bliebe der Kreis
+        // beim Hineinzoomen gleich gross und behauptete eine Genauigkeit, die
+        // er nicht meint.
+        "circle-radius": [
+          "interpolate",
+          ["exponential", 2],
+          ["zoom"],
+          0,
+          0,
+          22,
+          ["/", ["get", "accuracy"], 0.0373],
+        ],
+        "circle-color": USER_POSITION_COLOR,
+        "circle-opacity": 0.15,
+        "circle-stroke-color": USER_POSITION_COLOR,
+        "circle-stroke-width": 1,
+        "circle-stroke-opacity": 0.4,
+      },
+    })
+    map.addLayer({
+      id: USER_POSITION_DOT_LAYER,
+      type: "circle",
+      source: USER_POSITION_SOURCE,
+      paint: {
+        "circle-radius": 6,
+        "circle-color": USER_POSITION_COLOR,
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 2,
+      },
+    })
   }
 
   // --- GlobeCapable ---

@@ -32,7 +32,13 @@ import type {
   MapViewPatch,
   MapViewState,
   Unsubscribe,
+  UserGestureCapable,
+  UserPosition,
+  UserPositionCapable,
 } from "../adapter"
+
+/** Farbe des eigenen Standorts — dieselbe wie die Primaerfarbe der Oberflaeche. */
+const USER_POSITION_COLOR = "#2563eb"
 import { markerDataUrl } from "../markers/render-marker-svg"
 import { PIN_SIZE, PIN_ANCHOR } from "../markers/marker-shapes"
 import { iconRegistryVersion } from "../../../lib/icons/icon-registry"
@@ -117,7 +123,7 @@ function applyMarkerGlow(marker: L.Marker, spec: MapMarkerSpec): void {
   if (el) el.style.filter = selectedGlowFilter(spec)
 }
 
-export class LeafletMapAdapter implements MapAdapter {
+export class LeafletMapAdapter implements MapAdapter, UserPositionCapable, UserGestureCapable {
   // Internal Leaflet handles are held as `unknown` so the generated `.d.ts`
   // does not reference `leaflet` types. Consumers without `@types/leaflet`
   // installed can import the toolkit without TS errors.
@@ -127,6 +133,9 @@ export class LeafletMapAdapter implements MapAdapter {
   private markerLabels = new Map<string, string | undefined>()
   private markerAppearance = new Map<string, string>()
   private viewListeners = new Set<(view: MapViewState) => void>()
+  private gestureListeners = new Set<() => void>()
+  /** Punkt und Genauigkeitskreis des eigenen Standorts, solange geortet wird. */
+  private userPositionLayers: { punkt: unknown; kreis: unknown } | null = null
   private clickListeners = new Set<(event: MapClickEvent) => void>()
   private markerClickListeners = new Set<(markerId: string) => void>()
 
@@ -154,6 +163,14 @@ export class LeafletMapAdapter implements MapAdapter {
       const view = this.getView()
       this.viewListeners.forEach((cb) => cb(view))
     })
+
+    // Nur Gesten, keine programmatischen Bewegungen: `dragstart` feuert allein
+    // beim Ziehen, `wheel` beim Zoomen von Hand. `zoomstart` waere falsch — es
+    // feuert auch bei jedem `setView`/`focusOn`, und die laufende Ortung
+    // schaltete ihr eigenes Nachziehen ab.
+    const geste = () => this.gestureListeners.forEach((cb) => cb())
+    map.on("dragstart", geste)
+    map.on("wheel", geste)
 
     map.on("click", (event: L.LeafletMouseEvent) => {
       const evt: MapClickEvent = {
@@ -341,5 +358,64 @@ export class LeafletMapAdapter implements MapAdapter {
     return () => {
       this.markerClickListeners.delete(callback)
     }
+  }
+
+  // --- UserGestureCapable ---
+  observeUserGesture(callback: () => void): Unsubscribe {
+    this.gestureListeners.add(callback)
+    return () => {
+      this.gestureListeners.delete(callback)
+    }
+  }
+
+  // --- UserPositionCapable ---
+  /**
+   * Punkt und Genauigkeitskreis des eigenen Standorts.
+   *
+   * `circle` (nicht `circleMarker`) fuer den Kreis: Sein Radius steht in
+   * METERN und waechst beim Zoomen mit — Genauigkeit ist eine Groesse auf der
+   * Welt, keine auf dem Bildschirm. Der Punkt darin ist umgekehrt ein
+   * `circleMarker`: Er soll in jeder Zoomstufe gleich gross bleiben.
+   */
+  setUserPosition(position: UserPosition | null): void {
+    const map = this.mapInstance as L.Map | null
+    const leaflet = this.leafletInstance as typeof L | null
+    if (!map || !leaflet) return
+    if (!position) {
+      if (this.userPositionLayers) {
+        map.removeLayer(this.userPositionLayers.kreis as L.Layer)
+        map.removeLayer(this.userPositionLayers.punkt as L.Layer)
+        this.userPositionLayers = null
+      }
+      return
+    }
+    const mitte: L.LatLngExpression = [position.lat, position.lng]
+    if (this.userPositionLayers) {
+      ;(this.userPositionLayers.kreis as L.Circle).setLatLng(mitte)
+      ;(this.userPositionLayers.kreis as L.Circle).setRadius(position.accuracy)
+      ;(this.userPositionLayers.punkt as L.CircleMarker).setLatLng(mitte)
+      return
+    }
+    const kreis = leaflet
+      .circle(mitte, {
+        radius: position.accuracy,
+        color: USER_POSITION_COLOR,
+        fillColor: USER_POSITION_COLOR,
+        fillOpacity: 0.15,
+        weight: 1,
+        interactive: false,
+      })
+      .addTo(map)
+    const punkt = leaflet
+      .circleMarker(mitte, {
+        radius: 6,
+        color: "#ffffff",
+        weight: 2,
+        fillColor: USER_POSITION_COLOR,
+        fillOpacity: 1,
+        interactive: false,
+      })
+      .addTo(map)
+    this.userPositionLayers = { punkt, kreis }
   }
 }
