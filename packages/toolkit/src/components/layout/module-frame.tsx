@@ -8,8 +8,9 @@ import {
   type ReactNode,
 } from "react"
 
-import { getModule } from "../../lib/module-register"
+import { getModule, type ModuleFill, type ModulePanelFit } from "../../lib/module-register"
 import { cn } from "../../lib/utils"
+import { PanelSafeArea } from "./panel-safe-area"
 
 /**
  * Die Geometrie eines Moduls: Randabstand, Zentrierung, Hoechstbreite.
@@ -30,10 +31,37 @@ import { cn } from "../../lib/utils"
  * `undefined` fuer randlose Module (`fill: "bleed"`) — dort gibt es keinen
  * Container, das Modul fuellt die Flaeche.
  */
-export function moduleContainerClass(id: string): string | undefined {
-  const mod = getModule(id)
-  if (mod?.fill === "bleed") return undefined
-  return `container mx-auto px-4 ${mod?.maxWidth ?? "max-w-3xl"}`
+export interface ModuleLayout {
+  /** Standard "container". */
+  fill: ModuleFill
+  /** Standard "inset". */
+  panelFit: ModulePanelFit
+  /** Breite des Inhalts; ohne Angabe je nach Fuellmodus die Vorgabe unten. */
+  maxWidth?: string
+}
+
+/**
+ * Das Layout einer Flaeche: aus dem Register, wenn eine Id vorliegt, sonst aus
+ * dem, was der Aufrufer mitbringt.
+ *
+ * Zwei Wege, ein Ergebnis: In der App entscheidet der Registereintrag (Spec 01,
+ * Regel 1 — es gibt keine zweite Modul-Liste). Eine Flaeche, die AUSSERHALB
+ * der App laeuft, hat keine Id und sagt es darum selbst.
+ */
+export function resolveModuleLayout(
+  quelle: { moduleId?: string } & Partial<ModuleLayout>,
+): ModuleLayout {
+  const eintrag = quelle.moduleId ? getModule(quelle.moduleId) : undefined
+  return {
+    fill: quelle.fill ?? eintrag?.fill ?? "container",
+    panelFit: quelle.panelFit ?? eintrag?.panelFit ?? "inset",
+    maxWidth: quelle.maxWidth ?? eintrag?.maxWidth,
+  }
+}
+
+export function moduleContainerClass(layout: ModuleLayout): string | undefined {
+  if (layout.fill === "bleed") return undefined
+  return `container mx-auto px-4 ${layout.maxWidth ?? "max-w-3xl"}`
 }
 
 /**
@@ -45,23 +73,33 @@ export function moduleContainerClass(id: string): string | undefined {
  * `max-w-6xl`. Woher der Kopf sie nimmt, sagt der Registereintrag
  * (`maxWidth`) — nicht der Frame, der sonst wuesste, was die Liste tut.
  */
-function moduleHeadClass(id: string): string {
-  const mod = getModule(id)
-  if (mod?.fill !== "bleed") return moduleContainerClass(id) ?? "px-4"
-  return `mx-auto w-full px-4 sm:px-6 ${mod.maxWidth ?? "max-w-6xl"}`
+function moduleHeadClass(layout: ModuleLayout): string {
+  if (layout.fill !== "bleed") return moduleContainerClass(layout) ?? "px-4"
+  return `mx-auto w-full px-4 sm:px-6 ${layout.maxWidth ?? "max-w-6xl"}`
 }
 
 /**
- * Der Kopf-Slot, in den ein Modul seine Steuerleiste reicht.
+ * Die zwei Slots, in die ein Modul seine Steuerung reicht: die Zeile OBEN
+ * (Suche, Modul-Aktionen) und die schwebende Ecke UNTEN LINKS (Filter-Pille).
  *
- * Das Element wird immer gerendert, auch leer: Es ist das Portal-Ziel, und ein
- * Ziel, das erst entsteht, wenn jemand hineinportalt, gibt es nie. Sichtbar
- * ist der Kopf nur mit Beitrag (Spec 01, Regel 4).
+ * Beide Elemente werden immer gerendert, auch leer: Sie sind die Portal-Ziele,
+ * und ein Ziel, das erst entsteht, wenn jemand hineinportalt, gibt es nie.
+ * Sichtbar ist der Kopf nur mit Beitrag (Spec 01, Regel 4) — die Pille haengt
+ * nicht daran, sie steht auch ueber einer Flaeche ohne Kopf.
  */
 interface ModuleHeadValue {
   element: HTMLElement | null
-  /** Meldet eine Leiste an; die Rueckgabe meldet sie wieder ab. */
-  anmelden(): () => void
+  /** Die schwebende Ecke unten links. */
+  controlsElement: HTMLElement | null
+  /**
+   * Meldet einen Kopf-Beitrag an; die Rueckgabe meldet ihn wieder ab.
+   *
+   * `raeumtObenLinks`: Das Modul hat dort eigene Bedienelemente (die
+   * Zoom-Knoepfe der Karte). Die schwebende Kopfzeile rueckt dann daneben,
+   * statt sie zu verdecken — als Angabe des Moduls, nicht als zweite Fassung
+   * des Kopfes.
+   */
+  anmelden(optionen?: { raeumtObenLinks?: boolean }): () => void
 }
 
 const ModuleHeadContext = createContext<ModuleHeadValue | null>(null)
@@ -71,9 +109,13 @@ export function useOptionalModuleHead(): ModuleHeadValue | null {
   return useContext(ModuleHeadContext)
 }
 
-export interface ModuleFrameProps {
-  /** Id im Modul-Register — sie entscheidet Geometrie, Fuellmodus, Panel-Regel. */
-  moduleId: string
+export interface ModuleFrameProps extends Partial<ModuleLayout> {
+  /**
+   * Id im Modul-Register — sie entscheidet Geometrie, Fuellmodus und
+   * Panel-Regel. In der App der Normalfall; eine eingebettete Flaeche hat
+   * keine Id und gibt `fill`/`panelFit`/`maxWidth` direkt an.
+   */
+  moduleId?: string
   children: ReactNode
 }
 
@@ -95,36 +137,80 @@ export interface ModuleFrameProps {
  * die volle Breite und der Inhalt auf die um die Leiste verminderte — die
  * halbe Leistenbreite Versatz, sichtbar an jeder Kartenkante.
  */
-export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
-  const mod = getModule(moduleId)
-  const bleed = mod?.fill === "bleed"
-  const overlay = mod?.panelFit === "overlay"
-  const geometrie = moduleContainerClass(moduleId)
+export function ModuleFrame({ moduleId, children, ...vorgaben }: ModuleFrameProps) {
+  const layout = resolveModuleLayout({ moduleId, ...vorgaben })
+  const bleed = layout.fill === "bleed"
+  const overlay = layout.panelFit === "overlay"
+  const geometrie = moduleContainerClass(layout)
 
   const [kopfElement, setKopfElement] = useState<HTMLElement | null>(null)
+  const [controlsElement, setControlsElement] = useState<HTMLElement | null>(null)
   const [leisten, setLeisten] = useState(0)
+  const [raeumtObenLinks, setRaeumtObenLinks] = useState(false)
   const kopf = useMemo<ModuleHeadValue>(
     () => ({
       element: kopfElement,
-      anmelden() {
+      controlsElement,
+      anmelden(optionen) {
         setLeisten((n) => n + 1)
+        if (optionen?.raeumtObenLinks) setRaeumtObenLinks(true)
         return () => setLeisten((n) => n - 1)
       },
     }),
-    [kopfElement],
+    [kopfElement, controlsElement],
   )
-
-  // Ueberlagerte Flaechen haben keinen Kopf (Spec 01, Regel 5): Die Steuerung
-  // schwebt dort ueber der Karte bzw. dem Graphen, weil die Flaeche der Inhalt
-  // IST. Ohne Kopf-Kontext faellt eine `ModuleToolbar` darin an ihren Ort
-  // zurueck — was hier niemand tut, aber nicht still danebengehen soll.
-  if (overlay) return <>{children}</>
 
   const hatKopf = leisten > 0
 
+  const kopfSlot = (klasse?: string) => (
+    <div data-module-head-slot ref={setKopfElement} className={cn(klasse)} />
+  )
+  const controlsSlot = <div data-module-controls ref={setControlsElement} />
+
+  // Ueberlagerte Flaechen tragen DIESELBE Steuerung, nur schwebend (Spec 01,
+  // Regel 5): Die Flaeche IST hier der Inhalt — ein Kopf im Fluss naehme der
+  // Karte Welt weg. Gehostet wird sie trotzdem hier: Zwei Wirte fuer dieselben
+  // Bausteine liefen auseinander, und genau das ist passiert (im Graphen fehlte
+  // die Chip-Zeile, weil das Modul sie selbst haette bauen muessen).
+  if (overlay) {
+    return (
+      <ModuleHeadContext.Provider value={kopf}>
+        <div data-module-frame className="relative h-full w-full">
+          {children}
+          <PanelSafeArea
+            className={cn("z-20 flex items-start p-4", raeumtObenLinks && "pl-16")}
+          >
+            <div
+              data-module-head
+              hidden={!hatKopf}
+              // Das Suchfeld bekommt eine deckende Flaeche: Auf einer Karte
+              // gibt es keinen ruhigen Untergrund. Die Chips brauchen keine
+              // zweite Huelle, sie sind selbst Pillen mit Flaeche; ein Rahmen
+              // um die Zeile wirkte wie ein Fremdkoerper (Anton, 09.09.).
+              className={cn(
+                "[&_input]:bg-card!",
+                // Kein eigener Abstand nach oben: Den gibt die Spalte (`gap-2`) schon,
+                // genau wie im Kopf der Container-Module. Ein zweiter Rand
+                // machte ihn ueber der Karte doppelt so gross (Anton, 10.09.).
+                "[&_[data-filter-chips]]:w-fit",
+              )}
+            >
+              {kopfSlot()}
+            </div>
+          </PanelSafeArea>
+          <ModuleControls className={cn(raeumtObenLinks && "pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-4")}>
+            {controlsSlot}
+          </ModuleControls>
+        </div>
+      </ModuleHeadContext.Provider>
+    )
+  }
+
   return (
     <ModuleHeadContext.Provider value={kopf}>
-      <div data-module-frame className="flex h-full min-h-0 flex-col">
+      {/* `relative`: Die schwebende Ecke unten links misst sich an der
+          Modulflaeche, nicht am Fenster (Board, Abschnitt „Positionen"). */}
+      <div data-module-frame className="relative flex h-full min-h-0 flex-col">
         <div
           data-module-head
           hidden={!hatKopf}
@@ -136,7 +222,7 @@ export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
           // Kartenkante.
           className="shrink-0 overflow-hidden bg-background [scrollbar-gutter:stable]"
         >
-          <div data-module-head-slot ref={setKopfElement} className={cn(moduleHeadClass(moduleId), "py-4")} />
+          {kopfSlot(cn(moduleHeadClass(layout), "py-4"))}
         </div>
 
         {bleed ? (
@@ -155,7 +241,33 @@ export function ModuleFrame({ moduleId, children }: ModuleFrameProps) {
             <div className={cn(geometrie, hatKopf ? "pb-4" : "py-4")}>{children}</div>
           </div>
         )}
+
+        {/* Die schwebende Steuerung gehoert der Flaeche wie der Kopf: Sie
+            weicht dem Panel aus (PanelSafeArea) und liegt ueber dem Inhalt,
+            statt ihm eine Zeile wegzunehmen. Unten polstert sie so weit wie
+            der Erstellen-Knopf gegenueber. */}
+        <ModuleControls>{controlsSlot}</ModuleControls>
       </div>
     </ModuleHeadContext.Provider>
+  )
+}
+
+export interface ModuleControlsProps {
+  children: ReactNode
+  className?: string
+}
+
+/**
+ * Die schwebende Ecke unten links einer Modulflaeche — Heimat der
+ * Filter-Pille (Design-Board: `bottom:16px; left:16px`).
+ *
+ * Sie liegt in einer `PanelSafeArea`, damit sie wie jedes schwebende
+ * Bedienelement dem offenen Panel ausweicht (Spec 01 → Content-Bereich,
+ * Pflicht 2). Ueberlagerte Module (Karte, Graph) setzen sie selbst, weil ihre
+ * Flaeche der Inhalt ist und sie ohnehin schon eine Schutzzone fuehren.
+ */
+export function ModuleControls({ children, className }: ModuleControlsProps) {
+  return (
+    <PanelSafeArea className={cn("z-30 flex items-end p-4", className)}>{children}</PanelSafeArea>
   )
 }

@@ -19,24 +19,27 @@ const aufgabe = (id: string, status = "open"): Item =>
  * kleine Karten stecken — Card in Card, dieselbe Verdopplung wie im
  * Detail-Panel vor #307.
  *
- * Im Entwurf ist sie darum eine vertiefte Fläche: getönt, ohne Rahmen. Die
- * Karten darin sind das Erhabene.
+ * Darum hat sie gar keine eigene Fläche: Sie hebt sich nicht vom Grund der
+ * Seite ab (Anton, 10.09.; die vertiefte Tönung aus #314 ist zurückgenommen).
+ * Die Karten darin sind das Erhabene.
  */
-describe("Kanban: die Spalte ist eine Fläche, keine Karte", () => {
+describe("Kanban: die Spalte ist ein Ort, keine Karte", () => {
   const html = renderToStaticMarkup(
     <KanbanBoard items={[aufgabe("t1"), aufgabe("t2", "in-progress")]} readOnly />,
   )
 
-  /** Die Spalte selbst — über ihre Fläche gefunden, nicht über ihre Nachbarn. */
+  /** Die Spalte selbst — über ihre Marke gefunden, nicht über ihre Nachbarn. */
   function spaltenElement(): HTMLElement {
     const doc = new DOMParser().parseFromString(html, "text/html")
-    const spalte = doc.querySelector<HTMLElement>(".bg-sunken")
-    expect(spalte, "keine Spalte mit vertiefter Fläche gefunden").not.toBeNull()
+    const spalte = doc.querySelector<HTMLElement>("[data-kanban-column]")
+    expect(spalte, "keine Spalte gefunden").not.toBeNull()
     return spalte!
   }
 
-  it("legt die Spalte tiefer als den Grund, nicht darüber", () => {
-    expect(html).toContain("bg-sunken")
+  it("hebt die Spalte nicht vom Grund der Seite ab", () => {
+    const klassen = spaltenElement().className.split(/\s+/)
+    expect(klassen.filter((k) => k.startsWith("bg-"))).toEqual([])
+    expect(html).not.toContain("bg-sunken")
   })
 
   it("gibt der Spalte keinen Rahmen und keine Card-Fläche", () => {
@@ -60,16 +63,14 @@ describe("Kanban: die Spalte ist eine Fläche, keine Karte", () => {
 })
 
 /**
- * Drei Ebenen, die sich unterscheiden MÜSSEN, sonst verschwindet die
- * Staffelung: vertieft < Grund < erhaben.
+ * Zwei Ebenen, die sich unterscheiden MÜSSEN: Grund < erhaben. Die Karten
+ * liegen auf der Seite, nicht in einer eigenen Mulde.
  */
-describe("Die drei Flächenebenen", () => {
+describe("Die zwei Flächenebenen", () => {
   const css = readFileSync(join(__dirname, "../src/styles/globals.css"), "utf8")
 
   function wert(block: string, token: string): number {
     const start = css.indexOf(`${block} {`)
-    // Ohne diese Prüfung liefe `slice(-1)` und meldete „Token nicht gefunden",
-    // obwohl in Wahrheit der ganze Block fehlt.
     expect(start, `Block ${block} nicht gefunden`).toBeGreaterThan(-1)
     const ende = css.indexOf("\n}", start)
     expect(ende, `Block ${block} wird nicht geschlossen`).toBeGreaterThan(start)
@@ -80,12 +81,14 @@ describe("Die drei Flächenebenen", () => {
   }
 
   it("staffelt sie im hellen Modus", () => {
-    expect(wert(":root", "sunken")).toBeLessThan(wert(":root", "background"))
     expect(wert(":root", "background")).toBeLessThan(wert(":root", "card"))
   })
 
   it("staffelt sie im dunklen Modus in derselben Richtung", () => {
-    expect(wert(".dark", "sunken")).toBeLessThan(wert(".dark", "background"))
     expect(wert(".dark", "background")).toBeLessThan(wert(".dark", "card"))
+  })
+
+  it("kennt keine vertiefte Fläche mehr", () => {
+    expect(css).not.toContain("--sunken")
   })
 })

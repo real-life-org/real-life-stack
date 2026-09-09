@@ -1,18 +1,12 @@
 "use client"
 
-import { useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Filter, Layers } from "lucide-react"
 import { Button } from "../primitives/button"
-import { AdaptivePanel } from "../layout/adaptive-panel"
-import { useOptionalModulePanel } from "../module-panel"
 import { cn } from "../../lib/utils"
 import { TagChip } from "../tag/tag-chip"
-import {
-  FilterChip,
-  FilterMultiSelect,
-  FilterSection,
-  type FilterMultiSelectOption,
-} from "./filter-building-blocks"
+import { FilterChip } from "./filter-building-blocks"
+import { FilterCardSections } from "./filter-card"
 import type { FilterBarValue, FilterTypeOption } from "./types"
 
 /**
@@ -20,12 +14,17 @@ import type { FilterBarValue, FilterTypeOption } from "./types"
  *
  * Spec: `docs/spec/modules/shared-components.md` → `FilterBar`.
  *
+ * **Nicht die Steuerung einer Modulflaeche** — die ist seit dem Design-Board
+ * die schwebende `FilterPill` unten links. Diese Leiste bleibt fuer Flaechen,
+ * die ihren Filterwert selbst halten (Stories, eingebettete Ansichten,
+ * apps/network): Knopf + Auswahl als Popover darunter, aktive Chips in einer
+ * eigenen Zeile.
+ *
  * Layout pattern (chosen with Anton on 11.06.2026):
- * - A sticky row of active-filter chips with `✕` to remove individually.
+ * - A row of active-filter chips with `✕` to remove individually.
  *   When no filter is active the row collapses.
- * - A trigger button on the right opens a `Sheet` with the available
- *   common filters (tags, types) plus an optional caller-supplied
- *   `drawerExtra` for module-specific filters.
+ * - A trigger button opens the filter sections in a popover below it —
+ *   denselben Inhalt wie die Filter-Karte (`FilterCardSections`).
  *
  * Controlled component: `value` lives in the caller, the bar emits
  * partial updates via `onChange`. View-specific persistence (URL
@@ -34,9 +33,12 @@ import type { FilterBarValue, FilterTypeOption } from "./types"
  * Module-specific filters compose via two slots:
  * - `chipsExtra`: shown after the common chips. Reuse `<FilterChip>`
  *   for visual consistency.
- * - `drawerExtra`: shown after the common filter sections inside the
- *   Sheet. Reuse `<FilterSection>` + `<FilterMultiSelect>` /
- *   `<FilterToggle>` for visual consistency.
+ * - `drawerExtra`: beliebiger Inhalt unter den gemeinsamen Sektionen des
+ *   Popovers. Die Bausteine `<FilterSection>` + `<FilterMultiSelect>` /
+ *   `<FilterToggle>` gelten dort weiter — die Sektionen der Karte tragen
+ *   dieselbe Anatomie (Label 11px, gesperrt, Grossbuchstaben; Optionen als
+ *   umbrechende Chips), also fuegt sich ein damit gebautes Extra ein, statt
+ *   daneben zu stehen.
  */
 export interface FilterBarProps {
   value: FilterBarValue
@@ -47,7 +49,7 @@ export interface FilterBarProps {
   availableTypes?: readonly FilterTypeOption[]
   /** Optional active-state chips for module-specific filters. */
   chipsExtra?: ReactNode
-  /** Optional drawer content for module-specific filters. */
+  /** Modul-eigene Sektionen im Popover (siehe Kopfkommentar). */
   drawerExtra?: ReactNode
   /**
    * Optional actions directly next to the Filter button (left side).
@@ -71,25 +73,26 @@ export function FilterBar({
   trailingActions,
   className,
 }: FilterBarProps) {
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [offen, setOffen] = useState(false)
+  const huelle = useRef<HTMLDivElement | null>(null)
 
-  // Sorted, deduplicated tag list — accept either the caller's curated
-  // list or fall back to nothing (the drawer's tag section then shows
-  // its empty state).
-  const tagOptions = useMemo<FilterMultiSelectOption[]>(() => {
-    const set = new Set<string>(availableTags ?? [])
-    return [...set].sort().map((tag) => ({ id: tag, label: tag }))
-  }, [availableTags])
-
-  const typeOptions = useMemo<FilterMultiSelectOption[]>(
-    () =>
-      (availableTypes ?? []).map((opt) => ({
-        id: opt.id,
-        label: opt.label,
-        icon: opt.icon ? <opt.icon className="h-3 w-3" /> : undefined,
-      })),
-    [availableTypes],
-  )
+  // Escape und Klick daneben schliessen — die Auswahl ist ein Popover, kein
+  // Modal: Der Inhalt darunter bleibt bedienbar.
+  useEffect(() => {
+    if (!offen) return
+    const taste = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOffen(false)
+    }
+    const daneben = (e: Event) => {
+      if (!huelle.current?.contains(e.target as Node)) setOffen(false)
+    }
+    document.addEventListener("keydown", taste)
+    document.addEventListener("pointerdown", daneben)
+    return () => {
+      document.removeEventListener("keydown", taste)
+      document.removeEventListener("pointerdown", daneben)
+    }
+  }, [offen])
 
   const typeLabelById = useMemo(() => {
     const map = new Map<string, string>()
@@ -125,64 +128,6 @@ export function FilterBar({
     />
   ))
 
-  const modulePanel = useOptionalModulePanel()
-
-  const drawerContent = (
-    <div className="flex h-full flex-col">
-      <div className="border-b p-4 pr-12">
-        <h2 className="text-lg font-semibold">Filter</h2>
-      </div>
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
-        <FilterSection label="Tags">
-          {tagOptions.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Keine Tags verfügbar</p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {tagOptions.map((opt) => {
-                const isOn = value.tags.includes(opt.id)
-                return (
-                  <TagChip
-                    key={opt.id}
-                    tag={opt.id}
-                    size="md"
-                    selected={isOn}
-                    onToggle={() =>
-                      updateTags(
-                        isOn
-                          ? value.tags.filter((t) => t !== opt.id)
-                          : [...value.tags, opt.id],
-                      )
-                    }
-                  />
-                )
-              })}
-            </div>
-          )}
-        </FilterSection>
-
-        {typeOptions.length > 0 && (
-          <FilterSection label="Typ">
-            <FilterMultiSelect
-              options={typeOptions}
-              value={value.types}
-              onChange={updateTypes}
-            />
-          </FilterSection>
-        )}
-
-        {drawerExtra}
-      </div>
-    </div>
-  )
-
-  const openFilter = () => {
-    if (modulePanel) {
-      modulePanel.open({ kind: "filter", content: drawerContent })
-    } else {
-      setDrawerOpen(true)
-    }
-  }
-
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       {/* Controls — one row that never wraps: the Filter button and the
@@ -190,15 +135,37 @@ export function FilterBar({
           flex to fill the remaining width on mobile, so the trailing buttons
           can't get pushed onto a second line. */}
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="shrink-0"
-          onClick={openFilter}
-        >
-          <Filter className="h-4 w-4 mr-1.5" />
-          Filter
-        </Button>
+        {/* Die Auswahl haengt unter ihrem Knopf, statt das app-weite Panel zu
+            belegen: Diese Leiste laeuft auch dort, wo es keins gibt (Story,
+            eingebettete Ansicht) — und ein Filter, der die Detailflaeche
+            verdraengt, kostet mehr, als er zeigt. Denselben Inhalt zeigt die
+            Filter-Karte der Modulflaeche (`FilterCardSections`). */}
+        <div ref={huelle} className="relative shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            aria-expanded={offen}
+            onClick={() => setOffen((war) => !war)}
+          >
+            <Filter className="h-4 w-4 mr-1.5" />
+            Filter
+          </Button>
+          {offen && (
+            <div
+              data-filter-card
+              className="absolute left-0 top-full z-40 mt-2 flex w-[232px] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
+            >
+              <FilterCardSections
+                value={value}
+                onChange={onChange}
+                availableTags={availableTags}
+                availableTypes={availableTypes}
+                extra={drawerExtra}
+                onClose={() => setOffen(false)}
+              />
+            </div>
+          )}
+        </div>
 
         {leadingActions && (
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">{leadingActions}</div>
@@ -223,20 +190,6 @@ export function FilterBar({
         {chipsExtra}
       </div>
 
-      {/* Fallback own AdaptivePanel — used in Storybook / standalone
-          render where no ModulePanelProvider exists. Inside a module
-          surface the shared provider's single panel takes over and this
-          one stays closed. */}
-      {!modulePanel && (
-        <AdaptivePanel
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          allowedModes={["sidebar", "drawer"]}
-          sidebarWidth="380px"
-        >
-          {drawerContent}
-        </AdaptivePanel>
-      )}
     </div>
   )
 }

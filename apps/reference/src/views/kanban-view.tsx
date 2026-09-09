@@ -345,22 +345,22 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
             )}
           </>
         }
+        // `undefined`, wenn nichts aktiv ist — nicht ein Fragment, das gerade
+        // nichts rendert: Daran haengt, ob der Kopf eine Zeile bekommt.
         chipsExtra={
-          <>
-            {myItemsOnly && (
-              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
-                Nur meine
-                <button
-                  type="button"
-                  onClick={() => setMyItemsOnly(false)}
-                  className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                  aria-label="Filter entfernen"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-          </>
+          myItemsOnly ? (
+            <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
+              Nur meine
+              <button
+                type="button"
+                onClick={() => setMyItemsOnly(false)}
+                className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                aria-label="Filter entfernen"
+              >
+                ×
+              </button>
+            </span>
+          ) : undefined
         }
         trailingActions={
           <>

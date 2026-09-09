@@ -3,9 +3,11 @@ import type { Item } from "@real-life-stack/data-interface"
 import { Calendar, Globe, Loader2, MapPin } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"
-import { FilterScope, ModuleFilterBar, useSharedFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
+import { useSharedFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
 import { CreateFab } from "../create-fab"
 import { PanelSafeArea } from "../layout/panel-safe-area"
+import { ModuleToolbar } from "../layout/module-toolbar"
+import { ModuleSurfaceScope } from "../layout/module-surface-scope"
 import { Button } from "../primitives"
 import { focusNeedsRecentering, focusOffsetFor, type MapFocusInsets } from "./focus-offset"
 import { usePanelEdges, type PanelEdges } from "../layout/panel-edges"
@@ -226,16 +228,17 @@ export function mapViewRevealOptions(
 /**
  * Full Map module: filter/create/bbox behaviour around the filterless MapLens core.
  *
- * Der `FilterScope` an der Wurzel: Die Karte laeuft auch ohne App-Shell
- * (Story, Test, apps/network) und braucht dort einen Besitzer fuer den Filter,
- * den ihre schwebende Leiste UND ihre Marker teilen. Unter der App reicht er
- * den vorhandenen Zustand durch.
+ * Die Huelle an der Wurzel: Die Karte laeuft auch ohne App-Shell (Story,
+ * Test, apps/network) und braucht dort beides selbst — einen Besitzer fuer den
+ * Filter, den ihre Leiste und ihre Marker teilen, und die Modulflaeche, die
+ * Kopf und schwebende Ecke platziert. Unter der App reicht die Huelle beides
+ * durch.
  */
 export function MapView(props: MapViewProps) {
   return (
-    <FilterScope>
+    <ModuleSurfaceScope fill="bleed" panelFit="overlay">
       <MapViewInner {...props} />
-    </FilterScope>
+    </ModuleSurfaceScope>
   )
 }
 
@@ -385,7 +388,10 @@ function MapViewInner({
       mountKey={mountAttempt} onMountError={() => setMountError(true)} />
     {!adapter && <div className="absolute inset-0 z-10 bg-background/80"><PanelSafeArea className="flex items-center justify-center text-muted-foreground">{mountError ? <div className="flex flex-col items-center gap-3"><span>Karte konnte nicht geladen werden.</span><Button variant="outline" size="sm" onClick={() => { setMountError(false); setMountAttempt((value) => value + 1) }}>Erneut versuchen</Button></div> : <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Karte wird geladen…</>}</PanelSafeArea></div>}
     {isPicking && <PanelSafeArea className="z-30 flex items-start justify-center p-3"><div className="flex items-center gap-2 rounded-full border bg-background/95 px-3 py-2 text-sm shadow-md"><MapPin className="h-4 w-4" /><span>{pickPosition ? "Position gewählt." : "Tippe auf die Karte, um die Position zu setzen."}</span>{isCompact && pickPosition && <Button size="sm" onClick={confirmPick}>Übernehmen</Button>}<Button size="sm" variant="ghost" onClick={cancelPick}>Abbrechen</Button></div></PanelSafeArea>}
-    <PanelSafeArea className="z-20 py-4 pl-16 pr-4"><ModuleFilterBar availableTags={availableTags} availableTypes={MAP_TYPES} searchLabel="Karte durchsuchen" className="[&_[data-slot=button][data-variant=outline]]:bg-background! [&_input]:bg-background!" trailingActions={adapter && hasGlobe(adapter) && !isPicking ? <Button size="icon-sm" variant={projection === "globe" ? "default" : "outline"} {...mapViewProjectionToggleA11y(projection)} onClick={toggleProjection}><Globe className="h-4 w-4" /></Button> : undefined} /></PanelSafeArea>
+    {/* Der Beitrag der Karte zur Steuerung ihrer Flaeche — WO er steht,
+        entscheidet die Flaeche (Suche und Chips schwebend oben, Pille unten).
+        `clearsTopLeft`: links oben sitzen die Zoom-Knoepfe. */}
+    <ModuleToolbar searchLabel="Karte durchsuchen" clearsTopLeft availableTags={availableTags} availableTypes={MAP_TYPES} trailingActions={adapter && hasGlobe(adapter) && !isPicking ? <Button size="icon-sm" variant={projection === "globe" ? "default" : "outline"} {...mapViewProjectionToggleA11y(projection)} onClick={toggleProjection}><Globe className="h-4 w-4" /></Button> : undefined} />
     {!isPicking && canCreate && <CreateFab onClick={onCreate!} label="Ort erstellen" />}
   </div>
 }

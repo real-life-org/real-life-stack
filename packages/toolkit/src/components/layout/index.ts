@@ -3,10 +3,14 @@ export { PanelSafeArea, type PanelSafeAreaProps } from "./panel-safe-area"
 export { ModuleToolbar, type ModuleToolbarProps } from "./module-toolbar"
 export {
   ModuleFrame,
+  ModuleControls,
   moduleContainerClass,
+  resolveModuleLayout,
   useOptionalModuleHead,
   type ModuleFrameProps,
+  type ModuleLayout,
 } from "./module-frame"
+export { ModuleSurfaceScope, type ModuleSurfaceScopeProps } from "./module-surface-scope"
 export { PanelHeaderActions, PanelHeaderSlotContext, type PanelHeaderActionsProps } from "./panel-header-actions"
 export { readPanelEdges, usePanelEdges, type PanelEdges } from "./panel-edges"
 export { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"
