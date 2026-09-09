@@ -39,12 +39,23 @@ class ProbeAdapter implements MapAdapter {
   readonly containers: HTMLElement[] = []
   readonly markerSets: MapMarkerSpec[][] = []
 
-  constructor(private readonly live: Set<ProbeAdapter>, private readonly failMount = false) {
+  constructor(
+    private readonly live: Set<ProbeAdapter>,
+    private readonly failMount = false,
+    /**
+     * Ohne Kamera-Polsterung — so verhaelt sich Leaflet. Dann muss die Karte
+     * jede Bewegung selbst ausgleichen, statt der Kamera einmal zu sagen, wo
+     * ihre Mitte liegt.
+     */
+    ohnePolsterung = false,
+  ) {
     if (failMount) this.mount.mockImplementation(async () => { throw new Error("style unavailable") })
+    if (ohnePolsterung) delete (this as Partial<ProbeAdapter>).setViewportPadding
   }
 
   getView() { return { center: [13.4, 52.5] as [number, number], zoom: 6, bounds: { west: 13, south: 52, east: 14, north: 53 } } }
   observeView() { return () => undefined }
+  readonly setViewportPadding = vi.fn()
   observeClicks() { return () => undefined }
   markerClickHandler: ((id: string) => void) | null = null
   observeMarkerClicks(handler: (id: string) => void) {
@@ -131,7 +142,10 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
   it("holt den angeklickten Marker nach, wenn das Panel erst danach aufgeht", async () => {
     const live = new Set<ProbeAdapter>()
     const geklickt = point("a")
-    const mounted = await mountMap(() => new ProbeAdapter(live), { items: [geklickt] })
+    // Ohne Kamera-Polsterung (Leaflet): Hier muss die Karte selbst nachhelfen.
+    // Wo die Kamera gepolstert ist, wandert der Marker beim Oeffnen des Panels
+    // ohnehin mit — siehe den Polsterungs-Test weiter unten.
+    const mounted = await mountMap(() => new ProbeAdapter(live, false, true), { items: [geklickt] })
     const adapter = [...live][0]!
 
     // Panel zu: der Klick allein verlangt keine Verschiebung.
@@ -154,7 +168,7 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
     const live = new Set<ProbeAdapter>()
     const geklickt = point("a")
     document.documentElement.style.setProperty("--adaptive-panel-edge-right", "392px")
-    const mounted = await mountMap(() => new ProbeAdapter(live), { items: [geklickt] })
+    const mounted = await mountMap(() => new ProbeAdapter(live, false, true), { items: [geklickt] })
     const adapter = [...live][0]!
 
     await act(async () => { adapter.markerClickHandler?.(geklickt.id) })
@@ -166,6 +180,51 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
       await Promise.resolve()
     })
     expect(adapter.focusOn.mock.calls.length).toBe(nachKlick)
+  })
+
+  /**
+   * Ein offenes Panel verdeckt einen Teil der Karte. Statt jede Bewegung
+   * einzeln nachzurechnen, sagt die Karte ihrer Kamera EINMAL, wo die Mitte
+   * liegt — sonst waechst der Globus beim Zoomen von Hand weiter um die
+   * Container-Mitte und wandert hinter das Panel.
+   */
+  it("sagt der Kamera, wo ihre Mitte liegt, sobald ein Panel Platz nimmt", async () => {
+    const live = new Set<ProbeAdapter>()
+    await mountMap(() => new ProbeAdapter(live))
+    const adapter = [...live][0]!
+
+    expect(adapter.setViewportPadding).toHaveBeenLastCalledWith({ left: 0, right: 0 })
+
+    await act(async () => {
+      document.documentElement.style.setProperty("--adaptive-panel-edge-right", "436px")
+      await Promise.resolve()
+    })
+
+    expect(adapter.setViewportPadding).toHaveBeenLastCalledWith({ left: 0, right: 436 })
+  })
+
+  /**
+   * Mit Kamera-Polsterung braucht es den Nachlauf nicht mehr: Geht das Panel
+   * auf, verschiebt sich die Mitte der Kamera — und der gezeigte Punkt wandert
+   * mit, ohne dass die Karte eine zweite Bewegung ausloest.
+   */
+  it("laesst die Kamera nachziehen, statt den Marker ein zweites Mal zu bewegen", async () => {
+    const live = new Set<ProbeAdapter>()
+    const geklickt = point("a")
+    const mounted = await mountMap(() => new ProbeAdapter(live), { items: [geklickt] })
+    const adapter = [...live][0]!
+
+    await act(async () => { adapter.markerClickHandler?.(geklickt.id) })
+    await mounted.render({ items: [geklickt], focusedItem: geklickt, activeItemId: geklickt.id })
+    const bewegungen = adapter.focusOn.mock.calls.length
+
+    await act(async () => {
+      document.documentElement.style.setProperty("--adaptive-panel-edge-right", "436px")
+      await Promise.resolve()
+    })
+
+    expect(adapter.setViewportPadding).toHaveBeenLastCalledWith({ left: 0, right: 436 })
+    expect(adapter.focusOn.mock.calls.length).toBe(bewegungen)
   })
 
   it("mount failure: the rendered retry button creates a fresh adapter and re-mounts it", async () => {

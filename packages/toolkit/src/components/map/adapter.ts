@@ -184,6 +184,42 @@ export function hasGlobe(adapter: MapAdapter): adapter is MapAdapter & GlobeCapa
   return typeof (adapter as Partial<GlobeCapable>).setProjection === "function"
 }
 
+/**
+ * Verdeckte Raender der Kartenflaeche, in CSS-Pixeln — etwa ein Panel, das
+ * ueber der Karte liegt.
+ */
+export interface MapViewportPadding {
+  left?: number
+  right?: number
+  top?: number
+  bottom?: number
+}
+
+/**
+ * Adapter, deren Kamera eine Polsterung kennt: Sie verschiebt, was die Karte
+ * als ihre MITTE behandelt.
+ *
+ * **Wofuer.** Ein offenes Panel verdeckt einen Teil der Flaeche. Ohne
+ * Polsterung muss jede einzelne Bewegung den sichtbaren Rest nachrechnen — was
+ * nur die Bewegungen erwischt, die das Toolkit selbst ausloest. Zoomt jemand
+ * von Hand heraus, waechst der Globus weiter um die Container-Mitte und wandert
+ * hinter das Panel. Mit Polsterung sagt man es der Kamera einmal, und alles
+ * Weitere stimmt von selbst.
+ *
+ * Nicht jede Bibliothek kann das: Leaflet hat kein Gegenstueck, dort bleibt es
+ * beim Weg ueber die einzelne Bewegung ({@link MapAdapter.focusOn}).
+ */
+export interface ViewportPaddingCapable {
+  setViewportPadding(padding: MapViewportPadding): void
+}
+
+/** True when `adapter` implements {@link ViewportPaddingCapable}. */
+export function hasViewportPadding(
+  adapter: MapAdapter,
+): adapter is MapAdapter & ViewportPaddingCapable {
+  return typeof (adapter as Partial<ViewportPaddingCapable>).setViewportPadding === "function"
+}
+
 /** A clicked marker cluster. */
 export interface MapCluster {
   id: string

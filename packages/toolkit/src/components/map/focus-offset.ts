@@ -16,6 +16,12 @@ function gueltig(wert: number | undefined): number {
  * Um wie viel der Zielpunkt verschoben wird, damit er in der Mitte des
  * SICHTBAREN Kartenbereichs landet statt in der Mitte der ganzen Flaeche.
  *
+ * **Nur fuer Adapter ohne Kamera-Polsterung** (`ViewportPaddingCapable`).
+ * Kennt die Kamera die verdeckten Raender selbst, ist diese Rechnung nicht
+ * bloss ueberfluessig, sondern falsch: Sie verschoebe den Punkt ein zweites
+ * Mal. Und sie erwischt ohnehin nur die Bewegungen, die das Modul ausloest —
+ * beim Zoomen von Hand hilft sie nicht.
+ *
  * Jeweils die halbe verdeckte Strecke, weil der Punkt sonst am Rand des
  * Sichtbaren klebt statt darin zu liegen. Waagerecht heben sich gleich breite
  * Raender auf.

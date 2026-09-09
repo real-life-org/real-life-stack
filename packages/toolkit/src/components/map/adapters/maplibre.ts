@@ -23,6 +23,11 @@
  */
 
 import { focusOffsetFor } from "../focus-offset"
+
+/** Eine Polsterung ist eine Strecke: negativ oder unsinnig gibt es nicht. */
+function gueltigePolsterung(wert: number | undefined): number {
+  return Number.isFinite(wert) && (wert as number) > 0 ? (wert as number) : 0
+}
 import type {
   Map as MlMap,
   MapOptions,
@@ -38,6 +43,7 @@ import type {
   AttributionControlOptions,
 } from "maplibre-gl"
 import type {
+  MapViewportPadding,
   ClusterCapable,
   GlobeCapable,
   LngLat,
@@ -242,6 +248,7 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
   // does not reference `maplibre-gl`. Consumers without it installed can
   // import the toolkit without TS errors.
   private mapInstance: unknown = null
+  private viewportPadding: Required<MapViewportPadding> | null = null
   // WebGL markers: a GeoJSON source + symbol layer, plus an image atlas keyed by
   // appearance. `markersVersion` ignores stale setData after async image loads.
   private markerLayersReady = false
@@ -356,6 +363,11 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     })
 
     map.on("moveend", () => {
+      // Eine Geste bricht die laufende Bewegung ab — auch die, die gerade die
+      // Polsterung setzt. Sie stuende dann auf halbem Weg still, und kein
+      // Mitfuehren in Optionen hilft dagegen: Die Geste ist keine Bewegung,
+      // die wir ausloesen. Also nachsehen, sobald etwas zur Ruhe kommt.
+      this.polsterungWiederherstellen()
       const view = this.getView()
       this.viewListeners.forEach((cb) => cb(view))
     })
@@ -458,6 +470,12 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
       this.renderedMarkers.clear()
       // Projection is a style property, so it reset along with the style.
       map.setProjection({ type: this.currentProjection })
+      // Die Kamera-Polsterung ebenso wiederherstellen — ohne Animation, denn
+      // hier ist nichts in Bewegung, es wird nur der alte Zustand
+      // wiedergefunden. Ueber den gemerkten Wert und nicht ueber
+      // `setViewportPadding`: Der vergleicht mit dem Gemerkten und faende
+      // „nichts geaendert".
+      if (this.viewportPadding) map.setPadding(this.viewportPadding)
       this.reapplyMarkersSafely(this.lastMarkers)
     }
     map.on("styledata", onSettled)
@@ -722,7 +740,7 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
             // stays merged. Mercator is exact.
             const target =
               this.currentProjection === "globe" ? zoom + CLUSTER_EXPANSION_GLOBE_BUFFER : zoom
-            map.easeTo({ center: position, zoom: target })
+            map.easeTo(this.mitPolsterung({ center: position, zoom: target }))
           })
           .catch(() => {})
       }
@@ -868,21 +886,60 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
     })
   }
 
+  /**
+   * Ergaenzt die Kamera-Polsterung in den Optionen einer Bewegung.
+   *
+   * **Warum jede Bewegung sie mitfuehren muss.** MapLibre nimmt das Padding
+   * aus den Optionen der Bewegung; fehlt es, gilt wieder die Voreinstellung.
+   * Eine Bewegung ohne Polsterung bricht damit nicht nur die laufende
+   * Polsterungs-Animation ab, sie hebt die Polsterung ganz auf — und ein
+   * erneuter Aufruf mit demselben Wert raeumt es nicht auf, weil er als
+   * „nichts geaendert" durchfaellt. Also traegt jede Bewegung sie mit.
+   */
+  /**
+   * Steht die Kamera-Polsterung noch auf dem gewuenschten Wert? Wenn nicht,
+   * ohne Animation nachsetzen — an dieser Stelle ist nichts mehr in Bewegung,
+   * eine zweite Animation waere nur ein Nachruckeln.
+   */
+  private polsterungWiederherstellen(): void {
+    const soll = this.viewportPadding
+    if (!soll) return
+    const map = this.mapInstance as MlMap | null
+    if (!map) return
+    const ist = map.getPadding()
+    if (
+      ist &&
+      ist.left === soll.left && ist.right === soll.right &&
+      ist.top === soll.top && ist.bottom === soll.bottom
+    ) {
+      return
+    }
+    map.setPadding(soll)
+  }
+
+  private mitPolsterung<T extends Record<string, unknown>>(optionen: T): T {
+    return this.viewportPadding ? { ...optionen, padding: this.viewportPadding } : optionen
+  }
+
   setView(view: MapViewPatch): void {
     const map = this.mapInstance as MlMap | null
     if (!map) return
     const center = view.center ?? this.lngLatTuple(map.getCenter())
     const zoom = view.zoom ?? map.getZoom()
-    map.jumpTo({ center, zoom })
+    map.jumpTo(this.mitPolsterung({ center, zoom }))
   }
 
   fitBounds(bounds: MapBounds): void {
     const map = this.mapInstance as MlMap | null
     if (!map) return
-    map.fitBounds([
+    const box: [[number, number], [number, number]] = [
       [bounds.west, bounds.south],
       [bounds.east, bounds.north],
-    ])
+    ]
+    // Ohne Polsterung bleibt der Aufruf, wie er war — ein leeres
+    // Optionsobjekt waere Rauschen.
+    if (this.viewportPadding) map.fitBounds(box, { padding: this.viewportPadding })
+    else map.fitBounds(box)
   }
 
   focusOn(
@@ -907,7 +964,7 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
       // A zoom change is a "fly to this place" gesture: flyTo's eased, curved
       // zoom+pan stays smooth even over a big delta and lets tiles load, where a
       // fast easeTo would visibly race in. Calm default duration.
-      map.flyTo({
+      map.flyTo(this.mitPolsterung({
         center,
         zoom: options.zoom,
         offset,
@@ -915,10 +972,39 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
         // `essential` so the reveal still animates (and honours `duration`) under
         // an OS "reduce motion" setting, which maplibre otherwise snaps instant.
         essential: true,
-      })
+      }))
     } else {
-      map.easeTo({ center, offset, duration: animate ? options?.duration ?? 500 : 0, essential: true })
+      map.easeTo(this.mitPolsterung({ center, offset, duration: animate ? options?.duration ?? 500 : 0, essential: true }))
     }
+  }
+
+  /**
+   * Wo die Karte ihre MITTE sieht. Einmal gesetzt, gilt es fuer jede weitere
+   * Bewegung — auch fuer die, die der Nutzer selbst ausloest: Beim Zoomen
+   * waechst der Globus dann in den sichtbaren Bereich statt hinter das Panel.
+   */
+  setViewportPadding(padding: MapViewportPadding): void {
+    const naechste = {
+      left: gueltigePolsterung(padding.left),
+      right: gueltigePolsterung(padding.right),
+      top: gueltigePolsterung(padding.top),
+      bottom: gueltigePolsterung(padding.bottom),
+    }
+    const bisher = this.viewportPadding
+    if (
+      bisher &&
+      bisher.left === naechste.left && bisher.right === naechste.right &&
+      bisher.top === naechste.top && bisher.bottom === naechste.bottom
+    ) {
+      // Eine Kamerabewegung pro Aenderung, nicht pro Render.
+      return
+    }
+    this.viewportPadding = naechste
+    const map = this.mapInstance as MlMap | null
+    if (!map) return
+    // Mitbewegen statt springen: dieselbe Dauer, mit der das Panel auf- und
+    // zugeht, sonst laufen Karte und Panel gegeneinander.
+    map.easeTo({ padding: naechste, duration: 300, essential: true })
   }
 
   getView(): MapViewState {
