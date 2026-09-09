@@ -31,4 +31,14 @@ export interface FilterTypeOption {
   label: string
   /** Optional lucide-react (or compatible) icon component for the row. */
   icon?: ComponentType<{ className?: string }>
+  /**
+   * Farbklassen des Typ-Abzeichens, damit der Chip im Filter aussieht wie das
+   * Abzeichen auf der Karte.
+   *
+   * Vom AUFRUFER, nicht aus dem Typ-Register gezogen: Die Filter-Schicht
+   * entscheidet so wenig ueber Typen wie bisher — sie kennt weder die Liste
+   * noch ihre Darstellung (`resolveTypePresentation(id).badge?.className`
+   * liefert den Wert dort, wo das Register ohnehin schon gelesen wird).
+   */
+  badgeClassName?: string
 }

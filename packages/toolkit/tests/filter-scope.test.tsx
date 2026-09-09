@@ -7,7 +7,7 @@ import type { Item } from "@real-life-stack/data-interface"
 import {
   FilterProvider,
   FilterScope,
-  ModuleFilterBar,
+  ModuleSearchBar,
   useSharedFilter,
 } from "../src/components/filter"
 import { CalendarView } from "../src/components/calendar/calendar-view"
@@ -114,10 +114,10 @@ describe("FilterScope", () => {
   })
 })
 
-describe("ModuleFilterBar ohne Besitzer", () => {
+describe("Die Suchzeile ohne Besitzer", () => {
   it("wirft, statt still in einen eigenen Zustand zu schreiben", () => {
     const stumm = vi.spyOn(console, "error").mockImplementation(() => {})
-    expect(() => rendere(createElement(ModuleFilterBar, {}))).toThrow(/FilterProvider/)
+    expect(() => rendere(createElement(ModuleSearchBar, {}))).toThrow(/FilterProvider/)
     stumm.mockRestore()
   })
 })
