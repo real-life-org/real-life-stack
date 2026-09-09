@@ -189,7 +189,7 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 | `icon` | Modul-Icon |
 | `enabledByDefault` | ob ein neu angelegter Space das Modul führt |
 | `fill` | wie das Modul den Content-Bereich füllt: `container` oder `bleed` |
-| `maxWidth` | Breite des Inhalts: bei `fill: "container"` die des Containers, bei `fill: "bleed"` die, an der sich der Kopf der Fläche ausrichtet |
+| `maxWidth` | Breite des Inhalts: bei `fill: "container"` die des Containers, bei `fill: "bleed"` die, an der sich **Kopf und Inhalt** ausrichten — die Lens liest sie aus der Fläche (`useModuleContentClass`), statt eine eigene zu führen, sonst stehen Kopf und Einträge nicht mehr bündig |
 | `keepMounted` | Fläche im Baum halten statt beim Wechsel abzubauen — für Module, deren Aufbau teuer ist (Map: WebGL-Kontext, Worker, entfernter Style) |
 | `panelFit` | ob ein offenes Panel die Fläche einrückt (`inset`, Standard) oder sich darüber legt (`overlay`) — siehe Content-Bereich |
 | `presents` | Item-Felder, die dieses Modul darstellen kann (Karte: `position`, Kalender: `start`) — siehe „Ein Feld führt zu seiner Sicht" |

@@ -72,7 +72,8 @@ export interface ModuleEntry {
   fill?: ModuleFill
   /**
    * Breite des Inhalts. Bei `fill: "container"` die des Containers, bei
-   * `fill: "bleed"` die, an der sich der Kopf der Flaeche ausrichtet.
+   * `fill: "bleed"` die, an der sich Kopf UND Inhalt der Flaeche ausrichten —
+   * die Lens liest sie aus der Flaeche, statt eine eigene zu fuehren.
    */
   maxWidth?: string
   /** Standard: "inset". */
@@ -115,9 +116,11 @@ export const CORE_MODULES: readonly ModuleEntry[] = Object.freeze([
   { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay", presents: ["position"] },
   // Opt-in — spec: docs/spec/modules/resonance.md
   { id: "resonance", label: "Resonanz", icon: Waves, maxWidth: "max-w-3xl" },
-  // `maxWidth` auch ohne Container: Der Kopf der Flaeche richtet sich danach,
-  // damit die Steuerleiste ueber den Eintraegen steht und nicht daneben (die
-  // Lens zentriert ihre Eintraege bei `max-w-6xl`).
+  // `maxWidth` auch ohne Container: Sie gilt fuer den Kopf der Flaeche UND
+  // fuer den Inhalt — die Lens liest sie aus der Flaeche
+  // (`useModuleContentClass`), statt eine eigene zu fuehren. Vorher stand die
+  // Zahl fuenfmal im Code, und wer eine davon anfasste, rueckte Kopf und
+  // Eintraege gegeneinander.
   { id: "collection", label: "Liste", icon: List, fill: "bleed", maxWidth: "max-w-6xl" },
   { id: "graph", label: "Graph", icon: Share2, fill: "bleed", panelFit: "overlay" },
 ])
