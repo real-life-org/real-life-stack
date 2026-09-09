@@ -37,6 +37,7 @@ export {
   moduleIds,
   defaultModuleIds,
   displayableModules,
+  findModulePresenting,
   type ModuleEntry,
   type ModuleFragment,
   type ModuleLayer,
@@ -70,3 +71,4 @@ export * from "./components"
 
 // Hooks
 export * from "./hooks"
+export * from "./components/navigation"

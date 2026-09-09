@@ -11,6 +11,7 @@ import {
   displayableModules,
   isKnownModule,
   resetModuleRegistryForTests,
+  findModulePresenting,
 } from "../src/lib/module-register"
 
 const Dummy = () => null
@@ -272,5 +273,41 @@ describe("Erneutes Binden derselben Quelle (Re-Review #277)", () => {
     setModuleRegistry([eintrag])
     eintrag.label = "Umbenannt"
     expect(getModule("garten")?.label).toBe("Garten")
+  })
+})
+
+/**
+ * Ein Feld weiss nicht, welches Modul es zeigen kann — und die Detailansicht
+ * soll es auch nicht wissen. Sonst steht in ihr eine Liste „Datum → Kalender,
+ * Ort → Karte", die driftet, sobald ein Modul dazukommt oder wegfaellt.
+ *
+ * Also sagt jedes Modul selbst, welche Felder es darstellt, und die Ansicht
+ * fragt nur nach.
+ */
+describe("Welches Modul stellt ein Feld dar", () => {
+  beforeEach(() => resetModuleRegistryForTests())
+
+  it("findet die Karte fuer eine Position und den Kalender fuer ein Datum", () => {
+    expect(findModulePresenting("position")?.id).toBe("map")
+    expect(findModulePresenting("start")?.id).toBe("calendar")
+  })
+
+  it("meldet nichts fuer ein Feld, das kein Modul zeigt", () => {
+    expect(findModulePresenting("titel")).toBeUndefined()
+  })
+
+  it("beruecksichtigt nur Module, die der Space fuehrt", () => {
+    // Ein Space ohne Karte: die Position bleibt Text, kein toter Link.
+    expect(findModulePresenting("position", ["feed", "calendar"])).toBeUndefined()
+    expect(findModulePresenting("start", ["feed", "calendar"])?.id).toBe("calendar")
+  })
+
+  it("laesst eine App-Schicht ein Feld nachtragen", () => {
+    setModuleRegistry(composeModules([
+      CORE_MODULE_LAYER,
+      { definitions: [{ id: "gallery", label: "Galerie", icon: Dummy, presents: ["image"] }] },
+    ]))
+
+    expect(findModulePresenting("image")?.id).toBe("gallery")
   })
 })
