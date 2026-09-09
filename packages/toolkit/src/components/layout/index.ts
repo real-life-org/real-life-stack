@@ -1,6 +1,6 @@
 export { AppShell, AppShellMain } from "./app-shell"
 export { PanelSafeArea, type PanelSafeAreaProps } from "./panel-safe-area"
-export { ModuleToolbar, type ModuleToolbarProps, type ModuleCreateAction } from "./module-toolbar"
+export { ModuleToolbar, type ModuleToolbarProps } from "./module-toolbar"
 export {
   ModuleFrame,
   moduleContainerClass,

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement, useRef } from "react"
+import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -116,105 +116,5 @@ describe("Die Geometrie der Spalte", () => {
     rendere(createElement(ModuleFrame, { moduleId: "collection" }, "LISTE"))
     expect(scrollbereich()).toBeNull()
     expect(host.querySelector("[data-module-fill]")).not.toBeNull()
-  })
-})
-
-/**
- * Der Feed ist das einzige Modul ohne CreateFab: Sein Einstieg ins Schreiben
- * ist die Composer-Pille oben im Scrollbereich (Spec shared-components →
- * „Feed-Sonderfall"). Scrollt sie weg, ist der Einstieg weg — also uebernimmt
- * ihn der Kopf, der ohnehin stehen bleibt.
- */
-describe("Der Erstellen-Knopf im Kopf", () => {
-  /** jsdom kennt keinen IntersectionObserver — hier einer zum Umlegen. */
-  let melde: ((sichtbar: boolean) => void) | null = null
-  let beobachtet: Element | null = null
-  let wurzel: Element | null | undefined
-
-  beforeEach(() => {
-    melde = null
-    beobachtet = null
-    wurzel = undefined
-    vi.stubGlobal(
-      "IntersectionObserver",
-      class {
-        constructor(
-          private rueckruf: (eintraege: { isIntersecting: boolean }[]) => void,
-          optionen?: { root?: Element | null },
-        ) {
-          wurzel = optionen?.root
-          melde = (sichtbar) => act(() => this.rueckruf([{ isIntersecting: sichtbar }]))
-        }
-        observe(el: Element) { beobachtet = el }
-        unobserve() {}
-        disconnect() {}
-      },
-    )
-  })
-
-  // Nur den Beobachter zuruecknehmen, nicht `matchMedia` — `unstubAllGlobals`
-  // naehme den Stub aus der Datei-Praeambel gleich mit.
-  afterEach(() => {
-    delete (globalThis as Record<string, unknown>).IntersectionObserver
-  })
-
-  function Flaeche({ onCreate, mitBeobachtung = true }: { onCreate: () => void; mitBeobachtung?: boolean }) {
-    const pille = useRef<HTMLDivElement | null>(null)
-    return createElement(
-      ModuleFrame,
-      { moduleId: "feed" },
-      createElement(ModuleToolbar, {
-        availableTags: [],
-        create: {
-          onCreate,
-          label: "Beitrag schreiben",
-          hideWhileVisible: mitBeobachtung ? pille : undefined,
-        },
-      }),
-      createElement("div", { ref: pille, "data-pille": true }, "PILLE"),
-    )
-  }
-
-  const knopf = () => host.querySelector<HTMLButtonElement>('[aria-label="Beitrag schreiben"]')
-
-  it("bleibt weg, solange die Pille im Bild ist", () => {
-    rendere(createElement(Flaeche, { onCreate: () => {} }))
-    expect(knopf()).toBeNull()
-    melde!(true)
-    expect(knopf()).toBeNull()
-  })
-
-  it("erscheint, sobald die Pille weggescrollt ist", () => {
-    const erstellen = vi.fn()
-    rendere(createElement(Flaeche, { onCreate: erstellen }))
-    melde!(false)
-    expect(knopf()).not.toBeNull()
-    act(() => knopf()!.dispatchEvent(new MouseEvent("click", { bubbles: true })))
-    expect(erstellen).toHaveBeenCalledTimes(1)
-  })
-
-  it("verschwindet wieder, wenn sie zurueckkommt", () => {
-    rendere(createElement(Flaeche, { onCreate: () => {} }))
-    melde!(false)
-    expect(knopf()).not.toBeNull()
-    melde!(true)
-    expect(knopf()).toBeNull()
-  })
-
-  /**
-   * Beobachtet wird gegen den Scrollbereich des Frames, nicht gegen das
-   * Fenster: Der Kopf steht ueber dem Scrollbereich, und was aus IHM
-   * herausgescrollt ist, entscheidet — nicht, was der Bildschirm zeigt.
-   */
-  it("misst gegen den Scrollbereich der Flaeche", () => {
-    rendere(createElement(Flaeche, { onCreate: () => {} }))
-    expect(beobachtet).toBe(host.querySelector("[data-pille]"))
-    expect(wurzel).toBe(host.querySelector("[data-module-scroll]"))
-  })
-
-  it("steht ohne Beobachtung dauerhaft im Kopf", () => {
-    // Module ohne FAB und ohne Pille koennen ihn ebenfalls nutzen.
-    rendere(createElement(Flaeche, { onCreate: () => {}, mitBeobachtung: false }))
-    expect(knopf()).not.toBeNull()
   })
 })

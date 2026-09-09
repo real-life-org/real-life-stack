@@ -510,8 +510,6 @@ interface FilterTypeOption {
 }
 ```
 
-**Erstellen-Knopf im Kopf:** Ein Modul KANN der `ModuleToolbar` ein `create = { onCreate, label, hideWhileVisible? }` mitgeben; der Knopf erscheint rechtsbündig in der Controls-Zeile (Icon-Button, `aria-label` aus `label`). Mit `hideWhileVisible` (Ref auf ein Element im Scrollbereich) bleibt er weg, solange dieses Element sichtbar ist — gemessen per `IntersectionObserver` gegen den Scrollbereich der Modulfläche, nicht gegen das Fenster. Ohne die Ref steht er dauerhaft. Gedacht für Module ohne `CreateFab` (siehe Feed-Sonderfall unten).
-
 **Controlled component:** der Filter-Wert lebt im Caller; das KANN View-State sein oder ein app-weiter, modulübergreifend geteilter Store (siehe „Modul-übergreifender Filter-State" unten). View-spezifische Persistierung (URL params, localStorage) bleibt Caller-Job.
 
 **Modul-spezifische Filter:** in den Slots `chipsExtra` (Active-Chip-Row) und `drawerExtra` (Auswahl-Drawer) zusammensetzen aus den exportierten Building-Blocks (`FilterSection` + `FilterMultiSelect` / `FilterToggle`). Damit sehen Modul-Extras automatisch konsistent mit den Common-Filtern aus.
@@ -540,7 +538,8 @@ Einheitlicher Floating-Action-Button für „neues Item erstellen", fixed unten-
 ```ts
 interface CreateFabProps {
   onClick: () => void
-  label?: string       // aria-label, Default „Erstellen"
+  label?: string                              // aria-label, Default „Erstellen"
+  hideWhileVisible?: RefObject<Element | null> // solange sichtbar, kein FAB
   className?: string
 }
 ```
@@ -549,7 +548,7 @@ interface CreateFabProps {
 
 **Beziehung zu `useItemEditor`:** Der FAB ist nur das visuelle Trigger-Element. Der Caller wired `onClick` so, dass der Composer in die passende **Hülle** öffnet (siehe `ContentComposer` → Präsentation je Modul): Calendar/Map/Kanban über das Content-Panel (`useModulePanel().open({ kind: "composer", … })`), Feed über den `FeedComposerTrigger`. `onSubmit` ruft `await editor.submit(data)` und schließt auf Erfolg — das verhindert Mehrfach-Submits durch wiederholtes Klicken.
 
-**Feed-Sonderfall:** Feed nutzt den `FeedComposerTrigger` (input-pill, morpht in Fullscreen-Composer) als primären Create-Entry — bewusst eine eigene Composer-Hülle, kein FAB. Die Pille scrollt mit; sobald sie aus dem Scrollbereich ist, MUSS der Kopf den Einstieg übernehmen (`ModuleToolbar`-`create` mit `hideWhileVisible` auf die Pille, siehe `FilterBar`), sonst hat der Feed weit unten gar keinen Create-Entry.
+**Feed-Sonderfall:** Feed nutzt den `FeedComposerTrigger` (input-pill, morpht in Fullscreen-Composer) als primären Create-Entry — bewusst eine eigene Composer-Hülle. Die Pille scrollt aber mit: Sobald sie aus dem Bild ist, MUSS derselbe `CreateFab` wie in allen anderen Modulen einspringen, sonst hat der Feed weit unten gar keinen Create-Entry. Dafür bekommt er `hideWhileVisible` mit einer Ref auf die Pille — er erscheint genau dann, wenn sie den Scrollbereich der Modulfläche verlassen hat (`IntersectionObserver` mit `[data-module-scroll]` als Root, nicht dem Fenster). Ohne die Prop verhält sich der FAB wie überall: dauerhaft sichtbar.
 
 **Code:** `packages/toolkit/src/components/create-fab/`.
 

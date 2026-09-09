@@ -1,12 +1,56 @@
 "use client"
 
+import { useEffect, useState, type RefObject } from "react"
 import { Plus } from "lucide-react"
 import { cn } from "../../lib/utils"
 
 export interface CreateFabProps {
   onClick: () => void
   label?: string
+  /**
+   * Solange dieses Element im Scrollbereich der Modulflaeche sichtbar ist,
+   * bleibt der FAB weg — zwei Einstiege nebeneinander waeren einer zu viel.
+   *
+   * Gedacht fuer den Feed: Dort ist die Composer-Pille der eigentliche
+   * Einstieg (Spec shared-components → „Feed-Sonderfall"), aber sie scrollt
+   * mit. Ohne die Angabe steht der FAB wie ueberall sonst dauerhaft.
+   */
+  hideWhileVisible?: RefObject<Element | null>
   className?: string
+}
+
+/**
+ * Ist das beobachtete Element gerade AUS dem Scrollbereich gescrollt?
+ *
+ * Gemessen wird gegen den Scrollbereich der Modulflaeche, nicht gegen das
+ * Fenster: Was aus IHM herausgescrollt ist, entscheidet — neben einem
+ * schwebenden Panel oder unter der Navbar deckt sich das nicht. Die Wurzel
+ * wird am beobachteten Element gesucht (`closest`), weil der FAB selbst
+ * `fixed` sitzt und den Scrollbereich von dort aus nicht sieht.
+ */
+function useAusDemBild(ziel: RefObject<Element | null> | undefined): boolean {
+  const [aus, setAus] = useState(false)
+  useEffect(() => {
+    const element = ziel?.current
+    // Kein Ziel: nichts zu beobachten — der Aufrufer will den FAB dauerhaft.
+    if (!element) return
+    // Umgebungen ohne IntersectionObserver (jsdom, aeltere WebViews) zeigen
+    // den FAB lieber, als den Einstieg unerreichbar zu verstecken.
+    if (typeof IntersectionObserver === "undefined") {
+      setAus(true)
+      return
+    }
+    const beobachter = new IntersectionObserver(
+      (eintraege) => {
+        const letzter = eintraege[eintraege.length - 1]
+        if (letzter) setAus(!letzter.isIntersecting)
+      },
+      { root: element.closest("[data-module-scroll]") },
+    )
+    beobachter.observe(element)
+    return () => beobachter.disconnect()
+  }, [ziel])
+  return aus
 }
 
 /**
@@ -26,7 +70,11 @@ export interface CreateFabProps {
  * Use inside a relative or full-screen container; the z-index keeps it above
  * Leaflet panes but below modal sheets / drawers.
  */
-export function CreateFab({ onClick, label = "Erstellen", className }: CreateFabProps) {
+export function CreateFab({ onClick, label = "Erstellen", hideWhileVisible, className }: CreateFabProps) {
+  const zielWeg = useAusDemBild(hideWhileVisible)
+  // Der FAB ist die Ausnahme, nicht die Regel: Nur wer ein Ziel nennt,
+  // bekommt ihn ueberhaupt versteckt.
+  if (hideWhileVisible && !zielWeg) return null
   return (
     <button
       type="button"

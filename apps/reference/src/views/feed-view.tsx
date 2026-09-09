@@ -11,6 +11,7 @@ import {
   ItemMetaRow,
   ItemCommentCount,
   FeedComposerTrigger,
+  CreateFab,
   ModuleToolbar,
   useModuleFilteredItems,
   useSharedFilter,
@@ -186,26 +187,15 @@ export function FeedView({ groupId }: { groupId: string }) {
   )
   useRegisterCreate("feed", createConfig)
 
-  // Die Pille ist der sichtbare Einstieg ins Schreiben; der Kopf beobachtet
-  // sie, um seinen „+"-Knopf nur zu zeigen, wenn sie weggescrollt ist.
+  // Die Pille ist der Einstieg ins Schreiben, solange sie im Bild ist; der
+  // FAB beobachtet sie und tritt an ihre Stelle, sobald sie weggescrollt ist.
   const composerTrigger = useRef<HTMLDivElement | null>(null)
 
   const renderFeedFooter = useCallback(feedFooter, [])
 
   return (
     <div className="space-y-4">
-      <ModuleToolbar
-        availableTags={availableTags}
-        availableTypes={availableTypes}
-        // Der Feed hat als einziges Modul keinen FAB, sondern die Pille — und
-        // die scrollt weg. Dann uebernimmt der Kopf den Einstieg, der ohnehin
-        // stehen bleibt (Spec shared-components → „Feed-Sonderfall").
-        create={{
-          onCreate: () => startCreate("post"),
-          label: "Beitrag schreiben",
-          hideWhileVisible: composerTrigger,
-        }}
-      />
+      <ModuleToolbar availableTags={availableTags} availableTypes={availableTypes} />
 
       {/* Composer trigger — hands off to the app-level create host (fullscreen). */}
       <div ref={composerTrigger}>
@@ -267,6 +257,14 @@ export function FeedView({ groupId }: { groupId: string }) {
         )}
       </div>
 
+      {/* Derselbe Einstieg wie in jedem anderen Modul — nur erscheint er hier
+          erst, wenn die Pille aus dem Bild ist (Spec shared-components →
+          „Feed-Sonderfall"). */}
+      <CreateFab
+        onClick={() => startCreate("post")}
+        label="Beitrag erstellen"
+        hideWhileVisible={composerTrigger}
+      />
     </div>
   )
 }
