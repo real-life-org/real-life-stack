@@ -34,6 +34,7 @@ import {
   useModulePanel,
   DebugDashboard,
   ProfilePanelContent,
+  nominatimGeocode,
   type ProfileData,
   ContactsDialog,
   VerificationDialog,
@@ -76,7 +77,7 @@ import {
   getModule,
 } from "@real-life-stack/toolkit"
 import { initialDarkMode, rememberColorScheme } from "./initial-color-scheme"
-import type { DataInterface, User } from "@real-life-stack/data-interface"
+import type { DataInterface, GeoJSONPoint, PublicProfileData, User } from "@real-life-stack/data-interface"
 import {
   type Item, isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
@@ -339,6 +340,19 @@ function IncomingEventDialogs({ onCloseVerifyDialog }: { onCloseVerifyDialog?: (
 }
 
 /**
+ * Was der Profil-Editor speichert. Position und Ortsname gehen MIT durch —
+ * auch als `undefined`: eine geleerte Position muss den Wert loeschen, nicht
+ * den alten stehen lassen (Spec 04 §Profile, Regel 4 — opt-in und global).
+ */
+type ProfilUpdates = {
+  name: string
+  bio: string
+  avatar?: string
+  position?: GeoJSONPoint
+  locationName?: string
+}
+
+/**
  * Single App-Shell-level profile surface. Holds one AdaptivePanel that
  * both the own-profile editor and read-only foreign profiles render
  * into — opened from anywhere via the OpenProfileProvider. Modal by
@@ -360,7 +374,7 @@ export function ProfilePanelHost({
   currentUser: User | null | undefined
   connector: DataInterface
   contactCount?: number
-  onSaveProfile: (updates: { name: string; bio: string; avatar?: string }) => Promise<void>
+  onSaveProfile: (updates: ProfilUpdates) => Promise<void>
   onClose: () => void
   onAddContact?: (id: string) => Promise<unknown>
   contactStatusFor?: (id: string) => "pending" | "active" | undefined
@@ -369,13 +383,19 @@ export function ProfilePanelHost({
   const isOwn = userId != null && userId === currentUser?.id
   const [foreign, setForeign] = useState<User | null>(null)
 
-  // Own bio lives in the connector's profile item (person/v1), not in the
-  // User object — without this the editor reopens with an empty bio even
-  // though updateMyProfile persisted it (applies to WoT and Supabase alike).
-  const [myBio, setMyBio] = useState("")
+  // Own bio and position live in the connector's profile item (person/v1),
+  // not in the User object — without this the editor reopens with an empty
+  // bio even though updateMyProfile persisted it (applies to WoT and Supabase
+  // alike). Die Position kommt aus derselben Quelle: sie ist global und
+  // gehoert dem Profil, nicht einem Space (Spec 04 §Profile, Regel 4).
+  const [myProfile, setMyProfile] = useState<{
+    bio: string
+    position?: GeoJSONPoint
+    locationName?: string
+  }>({ bio: "" })
   useEffect(() => {
     if (!isOwn || !hasProfile(connector)) {
-      setMyBio("")
+      setMyProfile({ bio: "" })
       return
     }
     // Stale/error guard: a resolve after the effect re-ran (connector or
@@ -385,7 +405,12 @@ export function ProfilePanelHost({
     const observable = connector.observeMyProfile()
     const apply = (item: import("@real-life-stack/data-interface").Item | null) => {
       if (cancelled) return
-      setMyBio(typeof item?.data.bio === "string" ? item.data.bio : "")
+      const data = (item?.data ?? {}) as Record<string, unknown>
+      setMyProfile({
+        bio: typeof data.bio === "string" ? data.bio : "",
+        ...(data.position ? { position: data.position as GeoJSONPoint } : {}),
+        ...(typeof data.locationName === "string" ? { locationName: data.locationName } : {}),
+      })
     }
     apply(observable.current)
     connector.getMyProfile().then(apply).catch((error) => {
@@ -394,6 +419,20 @@ export function ProfilePanelHost({
     const unsubscribe = observable.subscribe(apply)
     return () => { cancelled = true; unsubscribe() }
   }, [isOwn, connector])
+
+  // Fremde Profile: der Ort steht im oeffentlichen Profil, nicht im User.
+  // Fuer Mitglieder fuehrt der Autor-Klick ohnehin ins person-Item; dieser
+  // Weg bleibt fuer alle anderen (Kontakte, Autoren aus fremden Spaces).
+  const [foreignProfile, setForeignProfile] = useState<PublicProfileData | null>(null)
+  useEffect(() => {
+    setForeignProfile(null)
+    if (userId == null || isOwn || !hasProfile(connector)) return
+    let cancelled = false
+    connector.getPublicProfile(userId)
+      .then((profile) => { if (!cancelled) setForeignProfile(profile) })
+      .catch(() => { if (!cancelled) setForeignProfile(null) })
+    return () => { cancelled = true }
+  }, [userId, isOwn, connector])
 
   useEffect(() => {
     // Clear any previously loaded user first, so switching from one
@@ -415,8 +454,10 @@ export function ProfilePanelHost({
       return {
         did: currentUser?.id ?? "",
         name: currentUser?.displayName ?? "",
-        bio: myBio,
+        bio: myProfile.bio,
         avatar: currentUser?.avatarUrl,
+        ...(myProfile.position ? { position: myProfile.position } : {}),
+        ...(myProfile.locationName ? { locationName: myProfile.locationName } : {}),
       }
     }
     // Foreign profile: use the loaded user, fall back to the bare id
@@ -426,8 +467,11 @@ export function ProfilePanelHost({
       did: foreign?.id ?? userId,
       name: foreign?.displayName ?? userId,
       avatar: foreign?.avatarUrl,
+      ...(foreignProfile?.bio ? { bio: foreignProfile.bio } : {}),
+      ...(foreignProfile?.position ? { position: foreignProfile.position } : {}),
+      ...(foreignProfile?.locationName ? { locationName: foreignProfile.locationName } : {}),
     }
-  }, [userId, isOwn, currentUser, foreign, myBio])
+  }, [userId, isOwn, currentUser, foreign, foreignProfile, myProfile])
 
   return (
     <AdaptivePanel
@@ -448,6 +492,11 @@ export function ProfilePanelHost({
             onSave={onSaveProfile}
             onClose={onClose}
             profileUrl={`${window.location.origin}${window.location.pathname}?profile=${encodeURIComponent(profile.did)}`}
+            // Nur die Adresssuche, kein Karten-Pick: Dieses Panel ist ein
+            // Modal mit Backdrop; ein Pick muesste es waehrend der Karten-
+            // Auswahl beiseite treten lassen — ein eigener Schnitt. Die
+            // Adresssuche setzt die Position, das Feld ist vollstaendig.
+            geocode={nominatimGeocode}
           />
         ) : (
           <ProfilePanelContent
@@ -587,9 +636,14 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     }
   }, [location.state, navigate, searchParams, setSearchParams])
 
-  const handleSaveProfile = useCallback(async (updates: { name: string; bio: string; avatar?: string }) => {
+  const handleSaveProfile = useCallback(async (updates: ProfilUpdates) => {
     if (hasProfile(connector)) {
+      // Position und Ortsname gehen ausdruecklich MIT durch — auch als
+      // `undefined`: das ist die geleerte Position und muss den Wert loeschen,
+      // nicht den alten stehen lassen (Spec 04 §Profile, Regel 4: opt-in).
       await connector.updateMyProfile(updates)
+      // Die Projektion im Item-Strom zieht damit sofort nach; die Connectoren
+      // stossen sie ueber ihre eigene Profil-Quelle an (invalidateProfile).
     }
   }, [connector])
 

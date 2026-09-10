@@ -34,6 +34,7 @@ import type {
   InitialSyncCapable,
   InitialSyncState,
   PersonProfileInput,
+  GeoJSONPoint,
 } from "@real-life-stack/data-interface"
 import {
   deriveActivitySummary,
@@ -221,6 +222,22 @@ function compareActivity(a: ActivityEntry, b: ActivityEntry): number {
   return b.ts.localeCompare(a.ts) || b.actor.localeCompare(a.actor) || b.id.localeCompare(a.id)
 }
 
+/**
+ * Die Position im Persoenlichen Dokument liegt als JSON-Zeichenkette
+ * (`positionJson`), wie offers/needs — ein Yjs-Dokumentfeld haelt so einen
+ * zusammengesetzten Wert am sichersten. Kaputtes JSON heisst „keine
+ * Position": ein unlesbares Feld darf den Profil-Strom nicht anhalten.
+ */
+function parsePositionJson(raw: unknown): GeoJSONPoint | undefined {
+  if (typeof raw !== "string" || raw.length === 0) return undefined
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === "object" ? (parsed as GeoJSONPoint) : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** Eigenes Profil → person-Item, ueber den gemeinsamen Baustein
  *  (Spec 04 §Profile) — damit die Projektion hier und im Item-Strom
  *  dieselbe Form hat. */
@@ -230,10 +247,20 @@ function projectOwnPersonItem(
   displayName: string,
   bio?: string | null,
   avatar?: string | null,
+  position?: GeoJSONPoint,
+  locationName?: string | null,
 ): Item {
   return projectPersonItem(
     { id, displayName, avatarUrl: avatar ?? undefined },
-    { did: id, displayName, bio: bio ?? undefined, avatarUrl: avatar ?? undefined, createdAt },
+    {
+      did: id,
+      displayName,
+      bio: bio ?? undefined,
+      avatarUrl: avatar ?? undefined,
+      createdAt,
+      ...(position ? { position } : {}),
+      ...(locationName ? { locationName } : {}),
+    },
   )
 }
 
@@ -828,8 +855,21 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     }
   }
 
-  /** Update the local profile in PersonalDoc */
-  async updateProfile(updates: { name?: string; bio?: string; avatar?: string }): Promise<User> {
+  /**
+   * Update the local profile in PersonalDoc.
+   *
+   * `position` und `locationName` sind ausdruecklich dreiwertig: `undefined`
+   * ruehrt das Feld nicht an, `null` loescht es. Die Position ist opt-in
+   * (Spec 04 §Profile, Regel 4) — wer sein Ortsfeld raeumt, hat keine mehr,
+   * und das muss vom „gar nicht mitgeschickt" unterscheidbar bleiben.
+   */
+  async updateProfile(updates: {
+    name?: string
+    bio?: string
+    avatar?: string
+    position?: GeoJSONPoint | null
+    locationName?: string | null
+  }): Promise<User> {
     const did = this.identity.getDid()
     const now = new Date().toISOString()
     changeYjsPersonalDoc((doc: any) => {
@@ -841,6 +881,8 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
           avatar: null,
           offersJson: null,
           needsJson: null,
+          positionJson: null,
+          locationName: null,
           createdAt: now,
           updatedAt: now,
         }
@@ -848,8 +890,22 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       if (updates.name !== undefined) doc.profile.name = updates.name || null
       if (updates.bio !== undefined) doc.profile.bio = updates.bio || null
       if (updates.avatar !== undefined) doc.profile.avatar = updates.avatar || null
+      // Additiv: ein Dokument ohne diese Felder ist ein gueltiges Profil ohne
+      // Position — es wird NICHT migriert, es bekommt sie beim ersten
+      // Speichern oder nie.
+      if (updates.position !== undefined) {
+        doc.profile.positionJson = updates.position ? JSON.stringify(updates.position) : null
+      }
+      if (updates.locationName !== undefined) {
+        doc.profile.locationName = updates.locationName || null
+      }
       doc.profile.updatedAt = now
     })
+    // Der eigene Schreibvorgang meldet sich SELBST: sonst haengt das eigene
+    // person-Item am Yjs-Ereignis, und bis das eintrifft zeigt der Item-Strom
+    // den alten Stand. Der Schluesselvergleich darin macht die spaetere
+    // Ereignis-Meldung zum Nichts-Tun — kein doppeltes Setzen.
+    this.handlePersonalDocProfileChange()
     // OfflineFirstDiscoveryAdapter turns network failure into a dirty profile
     // that syncPending() retries on init/online/visibility. Awaiting here makes
     // sure the dirty marker exists before the UI considers the update complete.
@@ -863,6 +919,11 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       name: updates.name as string | undefined,
       bio: updates.bio as string | undefined,
       avatar: updates.avatar as string | undefined,
+      // Nur was der Aufrufer wirklich nennt, wird verwaltet — `null` loescht.
+      ...("position" in updates ? { position: (updates.position as GeoJSONPoint | null) ?? null } : {}),
+      ...("locationName" in updates
+        ? { locationName: (updates.locationName as string | null) ?? null }
+        : {}),
     })
     return (await this.getMyProfile()) ?? projectOwnPersonItem(
       user.id,
@@ -1216,8 +1277,10 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * fremde aus dem Profilverzeichnis. Faellt eine Quelle aus, bleibt es beim
    * minimalen Item aus `User` — der Item-Strom wartet nie auf das Netz.
    *
-   * `doc.profile` hat heute kein Ortsfeld; `position` bleibt darum undefined
-   * (der Profil-Editor bekommt sie im naechsten Schnitt).
+   * Die Position steht NUR im Persoenlichen Dokument: das Profilverzeichnis
+   * kennt sie nicht (wot-core filtert beim Signieren auf name/bio/avatar/
+   * offers/needs/protocols). Das eigene person-Item traegt sie also, fremde
+   * bleiben ohne Ort, bis das Verzeichnis das Feld kennt.
    */
   private async loadPersonProfile(userId: string): Promise<PersonProfileInput | null> {
     let ownDid: string | null = null
@@ -1225,12 +1288,16 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     if (userId === ownDid) {
       const profile = getYjsPersonalDoc()?.profile
       if (!profile) return null
+      const position = parsePositionJson((profile as { positionJson?: unknown }).positionJson)
+      const locationName = (profile as { locationName?: string | null }).locationName
       return {
         did: userId,
         displayName: profile.name ?? undefined,
         bio: profile.bio ?? undefined,
         avatarUrl: profile.avatar ?? undefined,
         createdAt: profile.createdAt ?? undefined,
+        ...(position ? { position } : {}),
+        ...(locationName ? { locationName } : {}),
       }
     }
     const resolved = await this.discovery.resolveProfile(userId)
@@ -4231,6 +4298,8 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         name,
         profile?.bio,
         avatar,
+        parsePositionJson((profile as { positionJson?: unknown } | undefined)?.positionJson),
+        (profile as { locationName?: string | null } | undefined)?.locationName,
       ))
       this.currentUserObs.set({ id: did, displayName: name, avatarUrl: avatar })
       // Das eigene Profil ist die Quelle der eigenen Projektion — ohne diesen

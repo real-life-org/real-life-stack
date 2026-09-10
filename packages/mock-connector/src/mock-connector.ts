@@ -25,6 +25,8 @@ import type {
   RelationRecordWriterCapable,
   Source,
   PersonProfileInput,
+  PublicProfileData,
+  GeoJSONPoint,
 } from "@real-life-stack/data-interface"
 import {
   applyGroupDataPatch,
@@ -44,6 +46,7 @@ import {
   matchesFilter,
   assertNotPersonProjection,
   mergePersonProjections,
+  projectPersonItem,
   PersonProjectionStore,
 } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems, demoProfiles } from "@real-life-stack/data-interface/demo-data"
@@ -315,6 +318,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
   // --- Profile als person-Items (Spec 04 §Profile) ---
 
   private personProjectionStore: PersonProjectionStore | null = null
+  private profileObs: ReturnType<typeof createObservable<Item | null>> | null = null
 
   /**
    * Die Projektionen des aktiven Space. Lazy: der Baustein haengt sich erst
@@ -329,6 +333,61 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
       onChange: () => this.notifyObservers(),
     })
     return this.personProjectionStore.current
+  }
+
+  // --- ProfileCapable: der Profil-Editor, sinngemaess ---
+  //
+  // Die Profil-Tabelle des Mock IST `this.profiles` — dieselbe Quelle, aus
+  // der die Projektion entsteht. So verhaelt sich der Mock wie WoT und
+  // Supabase: gespeichert wird einmal, und alle Spaces zeigen es.
+
+  private ownProfileItem(): Item | null {
+    const id = this.currentUser?.id
+    if (!id) return null
+    return projectPersonItem(this.currentUser!, this.profiles[id] ?? null)
+  }
+
+  async getMyProfile(): Promise<Item | null> {
+    return this.ownProfileItem()
+  }
+
+  observeMyProfile(): Observable<Item | null> {
+    this.profileObs ??= createObservable<Item | null>(this.ownProfileItem())
+    return this.profileObs
+  }
+
+  async updateMyProfile(updates: Partial<Record<string, unknown>>): Promise<Item> {
+    const id = this.currentUser?.id
+    if (!id) throw new Error("[MockConnector] updateMyProfile requires an authenticated user")
+    const vorher = this.profiles[id] ?? {}
+    const naechstes: PersonProfileInput = { ...vorher, did: vorher.did ?? id }
+    if (updates.name !== undefined) naechstes.displayName = (updates.name as string) || undefined
+    if (updates.bio !== undefined) naechstes.bio = (updates.bio as string) || undefined
+    if (updates.avatar !== undefined) naechstes.avatarUrl = (updates.avatar as string) || undefined
+    // Genannt heisst verwaltet, leer heisst geloescht — sonst liesse sich eine
+    // gesetzte Position nie wieder entfernen (Spec 04 §Profile, Regel 4).
+    if ("position" in updates) naechstes.position = updates.position ?? undefined
+    if ("locationName" in updates) naechstes.locationName = (updates.locationName as string) || undefined
+    this.profiles[id] = naechstes
+    // Ohne diesen Anstoss zeigte der Item-Strom den alten Stand weiter.
+    this.personProjectionStore?.invalidateProfile(id)
+    const item = this.ownProfileItem()!
+    this.profileObs?.set(item)
+    this.notifyObservers()
+    return item
+  }
+
+  async getPublicProfile(id: string): Promise<PublicProfileData | null> {
+    const profile = this.profiles[id]
+    if (!profile) return null
+    return {
+      id,
+      ...(profile.displayName ? { name: profile.displayName } : {}),
+      ...(profile.bio ? { bio: profile.bio } : {}),
+      ...(profile.avatarUrl ? { avatar: profile.avatarUrl } : {}),
+      ...(profile.position ? { position: profile.position as GeoJSONPoint } : {}),
+      ...(profile.locationName ? { locationName: profile.locationName } : {}),
+    }
   }
 
   private getScopedItems(): Item[] {

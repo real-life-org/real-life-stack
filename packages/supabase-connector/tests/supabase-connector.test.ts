@@ -1221,3 +1221,59 @@ describe("SupabaseConnector — Profile als person-Items (Spec 04 §Profile)", (
     expect(await connector.getItem(placeholder.id)).toBeNull()
   })
 })
+
+describe("SupabaseConnector — Position im Profil (Spec 04 §Profile, Regel 4)", () => {
+  async function waitFor(check: () => Promise<boolean>): Promise<void> {
+    for (let attempt = 0; attempt < 50; attempt++) {
+      if (await check()) return
+      await flush()
+    }
+  }
+
+  const kassel = { type: "Point", coordinates: [9.4797, 51.3127] }
+
+  it("speichert Position und Ortsnamen in der profiles-Row", async () => {
+    const { client, connector, userId } = await makeConnector()
+    await connector.updateMyProfile({ name: "Anton", position: kassel, locationName: "Kassel" })
+    const row = client.tables.get("profiles")!.find((r) => r.id === userId)!
+    expect(row.position).toEqual(kassel)
+    expect(row.location_name).toBe("Kassel")
+  })
+
+  it("zeigt sie in der Projektion des Space — dieselbe Position ueberall", async () => {
+    const { connector, userId } = await makeConnector()
+    const group = await connector.createGroup("Brunnenrunde")
+    connector.setCurrentGroup(group.id)
+    await connector.updateMyProfile({ name: "Anton", position: kassel, locationName: "Kassel" })
+
+    await waitFor(async () => (await connector.getItems({ type: "person" }))[0]?.data.locationName === "Kassel")
+    const [projektion] = await connector.getItems({ type: "person" })
+    expect(projektion!.id).toBe(userId)
+    expect(projektion!.data.position).toEqual(kassel)
+  })
+
+  it("loescht sie, wenn das Ortsfeld geleert wird — opt-in heisst auch opt-out", async () => {
+    const { client, connector, userId } = await makeConnector()
+    await connector.updateMyProfile({ name: "Anton", position: kassel, locationName: "Kassel" })
+    await connector.updateMyProfile({ name: "Anton", position: undefined, locationName: undefined })
+    const row = client.tables.get("profiles")!.find((r) => r.id === userId)!
+    expect(row.position).toBeNull()
+    expect(row.location_name).toBeNull()
+  })
+
+  it("laesst sie in Ruhe, wenn der Aufrufer sie gar nicht nennt", async () => {
+    const { client, connector, userId } = await makeConnector()
+    await connector.updateMyProfile({ name: "Anton", position: kassel, locationName: "Kassel" })
+    await connector.updateMyProfile({ bio: "Baut am Brunnen." })
+    const row = client.tables.get("profiles")!.find((r) => r.id === userId)!
+    expect(row.position).toEqual(kassel)
+    expect(row.location_name).toBe("Kassel")
+  })
+
+  it("gibt sie im oeffentlichen Profil mit heraus", async () => {
+    const { connector, userId } = await makeConnector()
+    await connector.updateMyProfile({ name: "Anton", position: kassel, locationName: "Kassel" })
+    const oeffentlich = await connector.getPublicProfile(userId)
+    expect(oeffentlich).toMatchObject({ position: kassel, locationName: "Kassel" })
+  })
+})

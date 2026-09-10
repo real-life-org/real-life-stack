@@ -5,15 +5,33 @@ import { Input } from "../primitives/input"
 import { Avatar, AvatarImage, AvatarFallback } from "../primitives/avatar"
 import { resolveAssetUrl } from "../../lib/utils"
 import { Label } from "../primitives/label"
+import { LocationWidget } from "../composer/widgets/location-widget"
+import { latLngFromPoint, pointFromLatLng, type GeoJSONPoint } from "../../lib/geo"
+import type { Geocoder } from "../../lib/geocode"
 
 export interface ProfileData {
   did: string
   name: string
   bio?: string
   avatar?: string
+  /**
+   * Wo die Person sich verortet — opt-in und GLOBAL: gesetzt wird sie hier,
+   * gezeigt in jedem Space, dessen Mitglied sie ist (Spec 04 §Profile,
+   * Regel 4). Eine Position je Space gibt es nicht. Leer = keine Position.
+   */
+  position?: GeoJSONPoint
+  /** Der menschliche Name der Position („Frankfurt am Main"). */
+  locationName?: string
 }
 
-type ProfileSaveHandler = (updates: { name: string; bio: string; avatar?: string }) => Promise<void>
+type ProfileSaveHandler = (updates: {
+  name: string
+  bio: string
+  avatar?: string
+  /** `undefined` = die Person hat keine Position gesetzt (oder sie geleert). */
+  position?: GeoJSONPoint
+  locationName?: string
+}) => Promise<void>
 
 /**
  * `edit` renders the own-profile form (avatar upload, name/bio inputs,
@@ -34,6 +52,10 @@ export type ProfilePanelContentProps =
       onAddContact?: never
       contactStatus?: never
       contactDirection?: never
+      /** Adress-Geocoder für das Ort-Widget; fehlt er, bleibt der Ort Freitext. */
+      geocode?: Geocoder
+      /** Übergabe an den Karten-Pick der App; fehlt sie, gibt es keinen Knopf. */
+      onPickOnMap?: () => void
     }
   | {
       mode: "view"
@@ -50,6 +72,8 @@ export type ProfilePanelContentProps =
       /** Richtung einer offenen Anfrage: bei "incoming" bestätigt der Button
           (die Gegenseite hat angefragt), bei "outgoing" wartet er. */
       contactDirection?: "incoming" | "outgoing"
+      geocode?: never
+      onPickOnMap?: never
     }
 
 function getInitials(name: string): string {
@@ -75,10 +99,19 @@ export function ProfilePanelContent({
   onAddContact,
   contactStatus,
   contactDirection,
+  geocode,
+  onPickOnMap,
 }: ProfilePanelContentProps) {
   const [name, setName] = useState(profile.name)
   const [bio, setBio] = useState(profile.bio ?? "")
   const [avatar, setAvatar] = useState(profile.avatar ?? "")
+  // Das Ort-Widget rechnet in lat/lng, gespeichert wird ein GeoJSON-Point —
+  // umgerechnet wird an genau diesen zwei Stellen (hier rein, beim Speichern
+  // wieder raus), nicht verstreut im Formular.
+  const [ort, setOrt] = useState<{ address?: string; position?: { lat: number; lng: number } }>({
+    address: profile.locationName ?? "",
+    ...(latLngFromPoint(profile.position) ? { position: latLngFromPoint(profile.position)! } : {}),
+  })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -92,7 +125,9 @@ export function ProfilePanelContent({
     setName(profile.name)
     setBio(profile.bio ?? "")
     setAvatar(profile.avatar ?? "")
-  }, [profile.name, profile.bio, profile.avatar])
+    const latLng = latLngFromPoint(profile.position)
+    setOrt({ address: profile.locationName ?? "", ...(latLng ? { position: latLng } : {}) })
+  }, [profile.name, profile.bio, profile.avatar, profile.position, profile.locationName])
 
   const isEdit = mode === "edit"
 
@@ -115,7 +150,16 @@ export function ProfilePanelContent({
     setSaving(true)
     setError(null)
     try {
-      await onSave({ name: name.trim(), bio: bio.trim(), avatar })
+      const ortsname = ort.address?.trim()
+      await onSave({
+        name: name.trim(),
+        bio: bio.trim(),
+        avatar,
+        // Leer heißt leer: wer sein Ortsfeld räumt, hat keine Position mehr.
+        // Der Connector löscht das Feld dann, statt den alten Wert zu halten.
+        position: ort.position ? pointFromLatLng(ort.position.lat, ort.position.lng) : undefined,
+        locationName: ortsname ? ortsname : undefined,
+      })
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fehler beim Speichern")
@@ -308,6 +352,29 @@ export function ProfilePanelContent({
               <p className="text-sm">{bio}</p>
             </div>
           )
+        )}
+
+        {/* Der Ort einer FREMDEN Person: nur Auskunft, kein Formular. */}
+        {!isEdit && profile.locationName && (
+          <div className="space-y-1.5">
+            <p className="text-xs text-muted-foreground">Position</p>
+            <p className="text-sm">{profile.locationName}</p>
+          </div>
+        )}
+
+        {isEdit && (
+          <div className="space-y-1.5">
+            <LocationWidget
+              value={ort}
+              onChange={setOrt}
+              label="Position"
+              geocode={geocode}
+              onPickOnMap={onPickOnMap}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Deine Position gilt in allen Spaces, in denen du Mitglied bist.
+            </p>
+          </div>
         )}
 
         {error && (

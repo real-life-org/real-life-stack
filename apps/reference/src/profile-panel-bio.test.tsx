@@ -21,19 +21,19 @@ import { ProfilePanelHost } from "./App"
 
 const ME: User = { id: "user-me", displayName: "Anton" }
 
-function personItem(bio: string): Item {
+function personItem(bio: string, ort?: { position: unknown; locationName: string }): Item {
   return {
     id: ME.id,
     type: "person",
     createdAt: "2026-08-05T10:00:00.000Z",
     createdBy: ME.id,
-    data: { displayName: "Anton", bio },
+    data: { displayName: "Anton", bio, ...(ort ?? {}) },
   }
 }
 
 /** ProfileCapable-Fake: die Bio lebt im Profil-Item, nicht im User-Objekt. */
-function makeConnector(bio: string) {
-  const item = personItem(bio)
+function makeConnector(bio: string, ort?: { position: unknown; locationName: string }) {
+  const item = personItem(bio, ort)
   return {
     getMyProfile: async () => item,
     observeMyProfile: () => ({ current: item, subscribe: () => () => {} }),
@@ -114,5 +114,59 @@ describe("ProfilePanelHost — eigene Bio kommt aus dem Profil-Item", () => {
     // kommt aus dem User-Objekt (der rejectende Read wird nur geloggt).
     expect(document.body.textContent).toContain("Ueber mich")
     expect([...document.querySelectorAll("input")].some((el) => el.value === "Anton")).toBe(true)
+  })
+})
+
+describe("ProfilePanelHost — Position kommt aus dem Profil-Item (Spec 04 §Profile, Regel 4)", () => {
+  const kassel = { type: "Point", coordinates: [9.4797, 51.3127] }
+
+  async function zeige(
+    connector: DataInterface,
+    onSaveProfile: (updates: Record<string, unknown>) => Promise<void> = async () => {},
+  ) {
+    host = document.createElement("div")
+    document.body.appendChild(host)
+    root = createRoot(host)
+    await act(async () => {
+      root!.render(
+        <ProfilePanelHost
+          userId={ME.id}
+          currentUser={ME}
+          connector={connector}
+          onSaveProfile={onSaveProfile as never}
+          onClose={() => {}}
+        />,
+      )
+    })
+    await act(async () => { await Promise.resolve() })
+  }
+
+  it("füllt das Ortsfeld aus der gespeicherten Position und nennt ihre Reichweite", async () => {
+    await zeige(makeConnector("egal", { position: kassel, locationName: "Kassel" }))
+    const ortsfeld = document.querySelector('input[role="combobox"]') as HTMLInputElement | null
+    expect(ortsfeld?.value).toBe("Kassel")
+    expect(document.body.textContent).toContain("Deine Position gilt in allen Spaces")
+  })
+
+  it("reicht Position und Ortsnamen beim Speichern an den Connector durch", async () => {
+    const gespeichert: Record<string, unknown>[] = []
+    await zeige(
+      makeConnector("egal", { position: kassel, locationName: "Kassel" }),
+      async (updates) => { gespeichert.push(updates) },
+    )
+    const knopf = [...document.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Speichern")
+    await act(async () => { knopf!.click() })
+    await act(async () => { await Promise.resolve() })
+    expect(gespeichert[0]).toMatchObject({ locationName: "Kassel", position: kassel })
+  })
+
+  it("schickt die Position auch dann MIT, wenn sie leer ist — sonst ließe sie sich nie räumen", async () => {
+    const gespeichert: Record<string, unknown>[] = []
+    await zeige(makeConnector("egal"), async (updates) => { gespeichert.push(updates) })
+    const knopf = [...document.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Speichern")
+    await act(async () => { knopf!.click() })
+    await act(async () => { await Promise.resolve() })
+    expect("position" in gespeichert[0]).toBe(true)
+    expect(gespeichert[0].position).toBeUndefined()
   })
 })

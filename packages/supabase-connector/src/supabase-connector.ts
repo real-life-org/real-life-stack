@@ -19,7 +19,7 @@ import type {
   Source,
   User,
 } from "@real-life-stack/data-interface"
-import type { PublicProfileData } from "@real-life-stack/data-interface"
+import type { GeoJSONPoint, PublicProfileData } from "@real-life-stack/data-interface"
 import {
   createDefaultRelationStore,
   createObservable,
@@ -313,6 +313,9 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
           bio: (row.bio as string | null) ?? undefined,
           avatarUrl: (row.avatar_url as string | null) ?? undefined,
           createdAt: typeof row.created_at === "string" ? new Date(row.created_at).toISOString() : undefined,
+          // Opt-in und global (Spec 04 §Profile, Regel 4) — Migration 0012.
+          ...(row.position ? { position: row.position } : {}),
+          ...(row.location_name ? { locationName: row.location_name as string } : {}),
         }
       },
       onChange: () => this.scheduleItemsRefresh(),
@@ -781,6 +784,8 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
       displayName: (row.display_name as string | null) ?? id,
       ...(row.bio ? { bio: row.bio } : {}),
       ...(row.avatar_url ? { avatarUrl: row.avatar_url } : {}),
+      ...(row.position ? { position: row.position } : {}),
+      ...(row.location_name ? { locationName: row.location_name } : {}),
     }
     return {
       id,
@@ -860,6 +865,11 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
       ...(updates.name !== undefined ? { display_name: (updates.name as string) || null } : {}),
       ...(updates.bio !== undefined ? { bio: (updates.bio as string) || null } : {}),
       ...(updates.avatar !== undefined ? { avatar_url: (updates.avatar as string) || null } : {}),
+      // Nur was der Aufrufer NENNT, wird verwaltet — und ein genannter leerer
+      // Wert loescht. Sonst liesse sich eine gesetzte Position nie wieder
+      // entfernen (Spec 04 §Profile, Regel 4: opt-in).
+      ...("position" in updates ? { position: updates.position ?? null } : {}),
+      ...("locationName" in updates ? { location_name: (updates.locationName as string) || null } : {}),
     }
     // Empty patch: a no-op, never an empty PostgREST body (400).
     if (Object.keys(patch).length === 0) {
@@ -889,6 +899,8 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
       ...(row.display_name ? { name: row.display_name as string } : {}),
       ...(row.bio ? { bio: row.bio as string } : {}),
       ...(row.avatar_url ? { avatar: row.avatar_url as string } : {}),
+      ...(row.position ? { position: row.position as GeoJSONPoint } : {}),
+      ...(row.location_name ? { locationName: row.location_name as string } : {}),
     }
   }
 
