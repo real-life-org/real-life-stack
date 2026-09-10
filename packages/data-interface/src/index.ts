@@ -17,10 +17,21 @@ export {
 } from "./relation-records.js"
 export * from "./item-types.js"
 import { SYSTEM_ITEM_TYPES } from "./item-types.js"
+import type { GeoJSONPoint } from "./item-types.js"
 export * from "./votes.js"
 export * from "./claims.js"
 export * from "./vocab.js"
 export * from "./type-manifest.js"
+export {
+  PERSON_PROJECTION_CREATED_AT,
+  PersonProjectionStore,
+  assertNotPersonProjection,
+  isPersonProjection,
+  mergePersonProjections,
+  projectPersonItem,
+  type PersonProfileInput,
+  type PersonProjectionStoreOptions,
+} from "./person-projection.js"
 export { EMPTY_NOTIFICATION_STATE, cloneNotificationState, applyNotificationStatePatch, maxTs, pruneReadEntryKeys } from "./notification-state.js"
 
 // --- Core Types ---
@@ -647,6 +658,13 @@ export interface PublicProfileData {
   avatar?: string
   offers?: string[]
   needs?: string[]
+  /**
+   * Opt-in und global: die Person setzt sie im Profil, sie gilt in allen
+   * Spaces gleich (Spec 04 §Profile, Regel 4). Quellen ohne Ortsfeld lassen
+   * sie weg — die Projektion zeigt dann keinen Ort.
+   */
+  position?: GeoJSONPoint
+  locationName?: string
 }
 
 export interface ProfileCapable {
