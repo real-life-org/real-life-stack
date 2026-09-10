@@ -60,11 +60,11 @@ Typische map-fähige Item-Typen:
 place, event, person, project, resource, task, quest, campaign-stop
 ```
 
-Diese Liste ist offen. Entscheidend ist, ob ein Item räumlich darstellbar ist — siehe [06-schema-composition.md](../06-schema-composition.md).
+Diese Liste ist offen. Entscheidend ist, ob ein Item räumlich darstellbar ist — siehe [06-schema-composition.md](../06-schema-composition.md). Bei `person` ist die Position **opt-in und global**: sie steht im Profil der Person und gilt in allen Spaces gleich, nie je Space (siehe [04-items-relations-groups-spaces.md](../04-items-relations-groups-spaces.md) §Profile, Regel 4).
 
 | Feld | Bedeutung im Map |
 |---|---|
-| `data.title` / `data.name` | Marker-Label und Popup-Titel |
+| `data.title` / `data.name` / `data.displayName` | Marker-Label und Popup-Titel (`itemDisplayTitle`) |
 | `data.position` | GeoJSON-Geometry (mindestens `Point`); macht ein Item map-fähig |
 | `data.address` | optionaler menschlicher Adresstext |
 | `data.locationName` | optionaler benannter Ort (z.B. „Markthalle 7") |

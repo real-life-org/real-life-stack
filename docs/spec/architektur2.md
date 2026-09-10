@@ -967,6 +967,8 @@ interface User {
 
 ### Profil
 
+> **Überholt, normativ ist [04-items-relations-groups-spaces.md](04-items-relations-groups-spaces.md) §Profile.** Der Typ heißt `person` (Vokabular `person/v1`), nicht `profile`, und das Item ist in jedem Space, dessen Mitglied die Person ist, eine **Projektion** des einen Profils — nicht gespeichert. Ein `person`-Item *ohne* `data.did` ist ein gewöhnlicher Platzhalter. Der Abschnitt unten bleibt als Beschluss vom 7. März erhalten.
+
 Ein Profil ist ein generisches Item (`type: "profile"`), das öffentliche oder private Daten über einen User enthält. Es gibt zwei Stufen:
 
 ```typescript
@@ -1123,7 +1125,7 @@ Diese Aspekte werden in der Implementierung geklärt:
 - **Schema-Versionierung** → Optionale Felder `schema` und `schemaVersion` am Item. *(Entschieden: 5. März 2026)*
 - **Kein separater Data Layer** → Der Connector ist vollständig verantwortlich für Caching, Optimistic Updates und Reaktivität. Die Hooks sind dünn — sie übersetzen nur Observable → React State und Mutations → `Promise<Item>`. Server-Connectors können intern TanStack Query nutzen. Bei Local-First ist Caching/Optimistic Update unnötig, da Writes instant sind. *(Entschieden: 6. März 2026)*
 - **Mutations-Vertrag** → Wenn ein Connector `ItemWriter` unterstützt, geben `createItem()` und `updateItem()` `Promise<Item>` zurück — ein vollständiges Item mit ID und allen Feldern, sofort nutzbar. Der Connector garantiert die Zustände. *(Entschieden: 6. März 2026; Capability-Zuschnitt aktualisiert)*
-- **User vs. Profil** → User = Identität (nur ID, mit gecachtem displayName/avatarUrl aus dem Profil-Item). Profil = Item (`type: "profile"`) mit zwei Sichtbarkeitsstufen: öffentlich (jeder) und privat (nur Kontakte). User ist kein Item, Profil ist ein Item. *(Entschieden: 7. März 2026)*
+- **User vs. Profil** → User = Identität (nur ID, mit gecachtem displayName/avatarUrl aus dem Profil-Item). Profil = Item (`type: "profile"`) mit zwei Sichtbarkeitsstufen: öffentlich (jeder) und privat (nur Kontakte). User ist kein Item, Profil ist ein Item. *(Entschieden: 7. März 2026; überholt — normativ ist 04 §Profile: der Typ heißt `person`, das Item ist eine Projektion.)*
 - **Auth-Abstraktion** → Connector liefert nur Daten (`getAuthMethods()` → Strings), Frontend besitzt die Auth-UI-Komponenten in einer Registry. `AuthState` als Observable. Plattformbetreiber kann Auth-Methoden über Connector-Konfiguration einschränken. *(Entschieden: 6. März 2026)*
 - **FeatureInterface gestrichen** → Kein separates Interface. Feature-Erkennung über ein generisches Item (`type: "feature"`) mit verschachteltem Objektbaum in `data`. Truthy = unterstützt, falsy = nicht unterstützt. Alles läuft über das DataInterface. *(Entschieden: 6. März 2026)*
 - **Lifecycle** → `init()` und `dispose()` im DataInterface. App ruft `init()` beim Start, `dispose()` beim Unmount. Connector nutzt `init()` für Setup (Connections, CRDT laden, Sync starten) und `dispose()` für Cleanup. *(Entschieden: 7. März 2026)*

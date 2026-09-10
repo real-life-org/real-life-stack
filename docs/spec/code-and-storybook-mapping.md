@@ -106,7 +106,7 @@ Mutations-Callbacks ein.
 |---|---|---|---|
 | Generische Sammlungs-Linse | `components/lens/collection-view.tsx` | `RLS/Module Components/Lenses/CollectionView` | alle Nicht-Relation-Items; session-lokaler Listen-/Raster-Toggle; `activeItemId?` und optionaler Sichtbereichs-Inset aus der Shell |
 | Generische Listen-Projektion | `components/lens/list-view.tsx` | `RLS/Module Components/Lenses/ListView` | Baustein der CollectionView: kompakte Dichte ohne lokalen Filter |
-| Generische Linsen-Karte | `components/preview/item-preview.tsx` + `preview/item-type-meta.tsx` | Linsen-Stories | ItemPreview: List kompakt, Grid komfortabel; `active` nutzt den geteilten Glow; Typ-Meta für Person, Projekt, Ressource und Event sowie Typ-Badge-Fallback |
+| Generische Linsen-Karte | `components/preview/item-preview.tsx` + `preview/item-type-meta.tsx` | Linsen-Stories | ItemPreview: List kompakt, Grid komfortabel; `active` nutzt den geteilten Glow; Typ-Meta für Person (Bild + Ort; Name als Titel), Projekt, Ressource und Event, Typ-Badge daneben sowie Typ-Badge-Fallback |
 | Typspezifische Raster-Projektion | `components/lens/grid-view.tsx` | `RLS/Module Components/Lenses/GridView` | Baustein der CollectionView: komfortable Dichte mit geteilten Preview-Adornments |
 | Read-only Karten-Linse | `components/lens/map-lens.tsx` | `RLS/Module Components/Lenses/MapLens` | Nicht-Relation-Items mit gültigem GeoJSON-`Point`; `createAdapter` erzeugt pro Mount eine frische Engine; ein Marker zentriert im Shell-Sichtbereich bei Zoom 16, mehrere nutzen `fitBounds`; `viewportResetKey` re-armt beim Bestandswechsel; kein lokaler Filter |
 

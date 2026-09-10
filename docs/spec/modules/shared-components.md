@@ -386,13 +386,15 @@ interface ItemMetaRowProps {
 generischen ItemPreview-Body gehören. Sie liegen im `preview/`-Ordner, damit
 List-, Grid-, Feed- und Board-Caller keine eigene Kartenfläche bauen.
 
-- `ItemProfileMeta` — Avatar + `displayName` für `person`.
+- `ItemProfileMeta` — Avatar und Ort für `person`; der Name steht im Titel der Karte (`ItemPreview` liest `data.displayName`, wenn `data.title` fehlt, und `data.bio` als Inhalt — siehe [04-items-relations-groups-spaces.md](../04-items-relations-groups-spaces.md) §Profile).
+- `ItemPersonDetailMeta` — der Ort einer Person in der Meta-Box der Detailansicht.
 - `ItemProjectMeta` — `website` und `repo` für `project`.
 - `ItemResourceMeta` — `kind` und `availability` für `resource`.
 - Events verwenden den bestehenden `ItemMetaRow` für `start`/`end`.
 
 `getItemPreviewAdornments(item)` ordnet diese Bausteine den
-`ItemPreview`-Slots zu und verwendet für sonstige Typen `ItemTypeBadge` mit
+`ItemPreview`-Slots zu — das Typ-Abzeichen in `headerAdornment`, die
+Typ-Meta-Zeile in `metaAdornment` — und verwendet für sonstige Typen `ItemTypeBadge` mit
 `fallback`. Read-only-Linsen komponieren ausschließlich diese Slots und
 `ItemPreview`; sie führen kein eigenes Card-Markup.
 
