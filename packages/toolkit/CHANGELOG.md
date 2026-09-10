@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.6](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.1.5...toolkit-v0.1.6) (2026-09-09)
+
+
+### Features
+
+* **toolkit:** der Globus ist der Standard, dafür kommt der Standort-Knopf ([#324](https://github.com/real-life-org/real-life-stack/issues/324)) ([e0941f7](https://github.com/real-life-org/real-life-stack/commit/e0941f736cd65902ee72bf30690527e3fa13541b))
+* **toolkit:** die Adress-Suche speichert die kurze Form ([#330](https://github.com/real-life-org/real-life-stack/issues/330)) ([415f428](https://github.com/real-life-org/real-life-stack/commit/415f428c875ccc9e51bcd7c8e16156cdca4f140f))
+* **toolkit:** die Modulfläche besitzt den Kopf, der Filter gehört der App ([#318](https://github.com/real-life-org/real-life-stack/issues/318)) ([305451d](https://github.com/real-life-org/real-life-stack/commit/305451d3d54c00e9754e6a86ac114e2ec111412c))
+* **toolkit:** die Modulfläche wird eine Spalte ([#315](https://github.com/real-life-org/real-life-stack/issues/315)) ([41f2456](https://github.com/real-life-org/real-life-stack/commit/41f2456f0508d8806942cc7cbb74a8d21e6436ec))
+* **toolkit:** Filter-Pille und weißer Erstellen-Knopf wie im Design-Board ([#321](https://github.com/real-life-org/real-life-stack/issues/321)) ([5e26dc2](https://github.com/real-life-org/real-life-stack/commit/5e26dc2e57776624d88abb02416e50cfc43f9b0d))
+* **toolkit:** Kanban-Spalte ist ein Ort, keine Karte ([#314](https://github.com/real-life-org/real-life-stack/issues/314)) ([058ad99](https://github.com/real-life-org/real-life-stack/commit/058ad996c9b8fa940615fa63eef26cb6140ffae2))
+* **toolkit:** Tag-Klick filtert, der Feed-Kopf bekommt einen Erstellen-Knopf ([#319](https://github.com/real-life-org/real-life-stack/issues/319)) ([8d0f8ec](https://github.com/real-life-org/real-life-stack/commit/8d0f8ec7443dc10a0eb4c7e7080fac8a30c121e1))
+
+
+### Bug Fixes
+
+* **toolkit:** der Drawer endet oben an der Schutzzone des Geräts ([#332](https://github.com/real-life-org/real-life-stack/issues/332)) ([fc96f76](https://github.com/real-life-org/real-life-stack/commit/fc96f768e4c1a41d3a033e6e64e27f9173a6ed5b))
+* **toolkit:** die Breite der Liste gehört der Fläche ([#336](https://github.com/real-life-org/real-life-stack/issues/336)) ([8d96eb8](https://github.com/real-life-org/real-life-stack/commit/8d96eb8d20cd7bb205a60c3105b761c3eff0b9ae))
+* **toolkit:** die Tag-Palette meldet ihre Klassen selbst an ([#334](https://github.com/real-life-org/real-life-stack/issues/334)) ([e43919d](https://github.com/real-life-org/real-life-stack/commit/e43919dc201af72a6016476109c4d52657f2471c))
+
 ## [0.1.5](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.1.4...toolkit-v0.1.5) (2026-09-09)
 
 
