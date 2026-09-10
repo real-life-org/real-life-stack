@@ -1169,3 +1169,55 @@ describe("SupabaseConnector — item queries against the fake store", () => {
     expect(await connector.getItem(created.id)).toBeNull()
   })
 })
+
+describe("SupabaseConnector — Profile als person-Items (Spec 04 §Profile)", () => {
+  /** Warten statt einmal schauen: die profiles-Row wird nachgeladen. */
+  async function waitFor(check: () => Promise<boolean>): Promise<void> {
+    for (let attempt = 0; attempt < 50; attempt++) {
+      if (await check()) return
+      await flush()
+    }
+  }
+
+  it("mischt die Mitglieder des aktiven Space als person-Items in den Strom", async () => {
+    const { client, connector, userId } = await makeConnector()
+    const group = await connector.createGroup("Brunnenrunde")
+    connector.setCurrentGroup(group.id)
+    const row = client.tables.get("profiles")!.find((r) => r.id === userId)!
+    row.display_name = "Anton"
+    row.bio = "Baut am Brunnen."
+
+    await waitFor(async () => (await connector.getItems({ type: "person" })).length > 0)
+    const [projection] = await connector.getItems({ type: "person" })
+    expect(projection!.id).toBe(userId)
+    expect(projection!.createdBy).toBe(userId)
+    expect(projection!.data.did).toBe(userId)
+    await waitFor(async () => (await connector.getItems({ type: "person" }))[0]!.data.bio === "Baut am Brunnen.")
+    expect((await connector.getItem(userId))!.type).toBe("person")
+  })
+
+  it("lehnt Schreibzugriffe auf eine Projektion ab", async () => {
+    const { connector, userId } = await makeConnector()
+    const group = await connector.createGroup("Brunnenrunde")
+    connector.setCurrentGroup(group.id)
+    await waitFor(async () => (await connector.getItems({ type: "person" })).length > 0)
+
+    await expect(connector.updateItem(userId, { data: { displayName: "gekapert" } })).rejects.toThrow(/Projektion/)
+    await expect(connector.deleteItem(userId)).rejects.toThrow(/Projektion/)
+  })
+
+  it("laesst einen Platzhalter ohne did ein gewoehnliches Item bleiben", async () => {
+    const { connector, userId } = await makeConnector()
+    const group = await connector.createGroup("Kontaktbuch")
+    connector.setCurrentGroup(group.id)
+    const placeholder = await connector.createItem({
+      type: "person",
+      createdBy: userId,
+      data: { displayName: "Oma Erna" },
+    })
+    const updated = await connector.updateItem(placeholder.id, { data: { displayName: "Erna" } })
+    expect(updated.data.displayName).toBe("Erna")
+    await connector.deleteItem(placeholder.id)
+    expect(await connector.getItem(placeholder.id)).toBeNull()
+  })
+})

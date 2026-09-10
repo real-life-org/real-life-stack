@@ -24,6 +24,7 @@ import type {
   RelationRecordUpdate,
   RelationRecordWriterCapable,
   Source,
+  PersonProfileInput,
 } from "@real-life-stack/data-interface"
 import {
   applyGroupDataPatch,
@@ -41,8 +42,11 @@ import {
   cloneNotificationState,
   findRelatedItems,
   matchesFilter,
+  assertNotPersonProjection,
+  mergePersonProjections,
+  PersonProjectionStore,
 } from "@real-life-stack/data-interface"
-import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
+import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems, demoProfiles } from "@real-life-stack/data-interface/demo-data"
 
 export interface MockConnectorSeed {
   items: Item[]
@@ -50,6 +54,8 @@ export interface MockConnectorSeed {
   users: User[]
   groupMembers: Record<string, string[]>
   groupItems?: Record<string, string[]>
+  /** Profile je Nutzer-Id — Quelle der person-Projektion (Spec 04 §Profile). */
+  profiles?: Record<string, PersonProfileInput>
 }
 
 export interface MockConnectorOptions {
@@ -89,6 +95,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
   private users: User[]
   private groupMembers: Record<string, string[]>
   private groupItems: Record<string, string[]>
+  private profiles: Record<string, PersonProfileInput>
   private currentGroup: Group | null
   private currentUser: User | null
   private currentUserObs: ReturnType<typeof createObservable<User | null>>
@@ -123,12 +130,14 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
       users: demoUsers,
       groupMembers: demoGroupMembers,
       groupItems: demoGroupItems,
+      profiles: demoProfiles,
     }
 
     this.groups = data.groups.filter((g) => (g.data?.scope as string) !== "aggregate")
     this.users = [...data.users]
     this.groupMembers = { ...data.groupMembers }
     this.groupItems = copyGroupItems(data.groupItems)
+    this.profiles = { ...(data.profiles ?? {}) }
     for (const item of deduplicateItems(data.items)) {
       if (item.type === "feature") {
         this.storeItem(null, item)
@@ -188,6 +197,8 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     this.authState.destroy()
     this.groupsObs.destroy()
     this.currentGroupObs.destroy()
+    this.personProjectionStore?.dispose()
+    this.personProjectionStore = null
   }
 
   // --- Groups ---
@@ -301,6 +312,25 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
 
   // --- Items ---
 
+  // --- Profile als person-Items (Spec 04 §Profile) ---
+
+  private personProjectionStore: PersonProjectionStore | null = null
+
+  /**
+   * Die Projektionen des aktiven Space. Lazy: der Baustein haengt sich erst
+   * an Space und Mitgliederliste, wenn wirklich Items gelesen werden — ein
+   * Connector, den niemand liest, abonniert auch nichts.
+   */
+  private personProjections(): readonly Item[] {
+    this.personProjectionStore ??= new PersonProjectionStore({
+      observeCurrentGroup: () => this.observeCurrentGroup(),
+      observeMembers: (groupId) => this.observeMembers(groupId),
+      loadProfile: async (userId) => this.profiles[userId] ?? null,
+      onChange: () => this.notifyObservers(),
+    })
+    return this.personProjectionStore.current
+  }
+
   private getScopedItems(): Item[] {
     const groupId = this.currentGroup?.id
     const scope = (this.currentGroup?.data?.scope as string) ?? "group"
@@ -308,17 +338,18 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     if (!groupId || scope === "aggregate") {
       const idCounts = new Map<string, number>()
       for (const { id } of this.itemOrder) idCounts.set(id, (idCounts.get(id) ?? 0) + 1)
-      return this.itemOrder.flatMap(({ scopeId, id }) => {
+      const unique = this.itemOrder.flatMap(({ scopeId, id }) => {
         if (idCounts.get(id) !== 1) return []
         const item = this.itemsByScope.get(scopeId)?.get(id)
         return item ? [item] : []
       })
+      return mergePersonProjections(unique, this.personProjections())
     }
 
     const scopedItems = [...(this.itemsByScope.get(groupId)?.values() ?? [])]
     const globalFeatures = [...(this.itemsByScope.get(null)?.values() ?? [])]
       .filter((item) => item.type === "feature")
-    return [...scopedItems, ...globalFeatures]
+    return mergePersonProjections([...scopedItems, ...globalFeatures], this.personProjections())
   }
 
   async getItems(filter?: ItemFilter): Promise<Item[]> {
@@ -384,6 +415,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
 
   async updateItem(id: string, updates: Partial<Item>): Promise<Item> {
     const actor = this.requireCurrentUser()
+    assertNotPersonProjection(this.personProjections().find((item) => item.id === id), "update")
     // Authoritative ingress binding also on UPDATE: createdBy is immutable
     // through the regular path (spec 08); fixture mode keeps old behaviour.
     if (!this.allowFixtureAuthors && "createdBy" in updates) {
@@ -426,6 +458,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
 
   async deleteItem(id: string): Promise<void> {
     const actor = this.requireCurrentUser()
+    assertNotPersonProjection(this.personProjections().find((item) => item.id === id), "delete")
     const location = this.findVisibleItemLocation(id)
     if (!location) return
     assertMayMutateAuthoredItem(location.item, actor.id, "delete")
@@ -799,6 +832,9 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
 
   private findVisibleItem(id: string): Item | undefined {
     return this.findVisibleItemLocation(id)?.item
+      // Projektionen liegen in keinem Scope-Store — das Detail-Panel liest
+      // sie ueber dieselbe Id wie jedes andere Item.
+      ?? this.personProjections().find((item) => item.id === id)
   }
 
   private allocateItemId(scopeId: string | null, type: string): string {

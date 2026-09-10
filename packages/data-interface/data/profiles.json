@@ -1,0 +1,46 @@
+{
+  "user-1": {
+    "displayName": "Anton",
+    "bio": "Baut am Web of Trust und am Real Life Stack. Am liebsten draußen.",
+    "avatarUrl": "/personas/anton.png",
+    "position": { "type": "Point", "coordinates": [8.6821, 50.1109] },
+    "locationName": "Frankfurt am Main",
+    "createdAt": "2025-11-02T09:00:00.000Z"
+  },
+  "user-2": {
+    "displayName": "Timo",
+    "bio": "Server, Netze, Selbsthosting. Hält die Infrastruktur am Laufen.",
+    "avatarUrl": "/personas/timo.png",
+    "position": { "type": "Point", "coordinates": [13.4050, 52.5200] },
+    "locationName": "Berlin",
+    "createdAt": "2025-11-04T09:00:00.000Z"
+  },
+  "user-3": {
+    "displayName": "Sebastian",
+    "bio": "Interface und Erlebnis — vom Wireframe bis zur letzten Kante.",
+    "avatarUrl": "/personas/sebastian.jpg",
+    "position": { "type": "Point", "coordinates": [9.9937, 53.5511] },
+    "locationName": "Hamburg",
+    "createdAt": "2025-11-06T09:00:00.000Z"
+  },
+  "user-4": {
+    "displayName": "Ulf",
+    "bio": "Gartenbau, Werkzeugverleih, Nachbarschaft.",
+    "avatarUrl": "https://randomuser.me/api/portraits/men/52.jpg",
+    "createdAt": "2025-11-08T09:00:00.000Z"
+  },
+  "user-5": {
+    "displayName": "Lena",
+    "bio": "Yoga-Lehrerin und Community-Gärtnerin, baut an einem Permakultur-Garten.",
+    "avatarUrl": "https://randomuser.me/api/portraits/women/44.jpg",
+    "position": { "type": "Point", "coordinates": [13.4132, 52.5420] },
+    "locationName": "Prenzlauer Berg, Berlin",
+    "createdAt": "2025-11-10T09:00:00.000Z"
+  },
+  "user-6": {
+    "displayName": "Emily Lane",
+    "bio": "Organisiert Nachbarschaftsfeste und den Bücherschrank.",
+    "avatarUrl": "https://randomuser.me/api/portraits/women/28.jpg",
+    "createdAt": "2025-11-12T09:00:00.000Z"
+  }
+}

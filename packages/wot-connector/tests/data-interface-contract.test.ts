@@ -66,6 +66,20 @@ describeDataInterfaceContract("WotConnector", {
     value.relatedObservables = new Map()
     value.relatedObservableParams = new Map()
     value.notifyAllObservers = vi.fn(() => { value.itemCache = null })
+    // Quellen der person-Projektion (Spec 04 §Profile): aktiver Space,
+    // Mitgliederliste und Profilverzeichnis — als Attrappen, damit der
+    // Vertrag auch hier gegen die echten Connector-Methoden laeuft.
+    value.memberObservables = new Map()
+    value.currentGroupObservable = createObservable({ id: "space", name: "Contract Space" })
+    value.groupsCache = [{ id: "space", name: "Contract Space" }]
+    value.replication = {
+      openSpace: async () => current,
+      getSpace: async (id: string) => ({ id, type: "shared", members: [identity.did], admins: [identity.did] }),
+      getSpaces: async () => [{ id: "space", type: "shared", members: [identity.did], admins: [identity.did] }],
+    }
+    value.discovery = {
+      resolveProfile: async (did: string) => ({ profile: { did, name: "Contract User", bio: "aus dem Verzeichnis" } }),
+    }
     return { connector: value as WotConnector, currentUserId: identity.did }
   },
   // Der Move-Guard laeuft ueber das QUELL-Dokument; dafuer genuegt eine

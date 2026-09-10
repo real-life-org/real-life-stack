@@ -772,6 +772,10 @@ describe("WotConnector person/v1 item projection", () => {
 
       expect(item["@context"]).toEqual([VOCAB_BASE, VOCAB_PERSON])
       expect(item.data).toEqual({
+        // Das eigene Profil-Item IST eine Projektion — es traegt die did,
+        // an der Module Projektion und Platzhalter unterscheiden
+        // (Spec 04 §Profile, Regel 5).
+        did,
         displayName: "Alice",
         bio: "Builder",
         avatarUrl: avatar,

@@ -569,5 +569,79 @@ export function describeDataInterfaceContract(name: string, harness: ContractHar
         })
       })
     })
+
+    // Spec 04 §Profile: das Profil jedes Mitglieds erscheint im Item-Strom
+    // des Space als person-Item. Der Connector liefert es, damit Module
+    // keine Sonderbehandlung brauchen — deshalb steht die Regel hier und
+    // nicht in einem Connector-Test.
+    describe("Profile als person-Items", () => {
+      /**
+       * Die Projektion darf asynchron eintreffen (netzgestuetzte Mitglieder-
+       * und Profilquellen laden nach) — sie MUSS aber kommen, ohne dass
+       * jemand nachfragt. Deshalb warten statt einmal zu schauen.
+       */
+      async function waitForItems(
+        context: ContractContext,
+        ready: (items: Item[]) => boolean,
+      ): Promise<Item[]> {
+        let items: Item[] = []
+        for (let attempt = 0; attempt < 50; attempt++) {
+          items = await context.connector.getItems({ type: "person" })
+          if (ready(items)) return items
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        return items
+      }
+
+      /** Mitglieder des aktiven Space, oder null wenn der Harness keine hat. */
+      async function activeMembers(context: ContractContext) {
+        const { connector } = context
+        if (!hasGroups(connector)) return null
+        const members = await connector.getMembers(connector.getCurrentGroup()?.id ?? null)
+        return members.length > 0 ? members : null
+      }
+
+      it("mischt jedes Mitglied als person-Item mit did in den Strom", async () => {
+        await withConnector(async (context) => {
+          const members = await activeMembers(context)
+          if (!members) return
+          const projected = await waitForItems(context, (items) =>
+            members.every((member) => items.some((item) => item.id === member.id)))
+          for (const member of members) {
+            const item = projected.find((candidate) => candidate.id === member.id)
+            expect(item, `Mitglied ${member.id} fehlt als person-Item`).toBeDefined()
+            expect(typeof item!.data.did).toBe("string")
+            expect(item!.createdBy).toBe(member.id)
+            expect(item!["@context"]).toContain("https://real-life-stack.org/vocab/person/v1")
+            // Ohne Profil bleibt mindestens der Name aus `User` — der Strom
+            // wartet nie auf das Netz.
+            expect(item!.data.displayName).toBeTruthy()
+          }
+        })
+      })
+
+      it("findet die Projektion auch einzeln (Detail-Panel)", async () => {
+        await withConnector(async (context) => {
+          const members = await activeMembers(context)
+          if (!members) return
+          await waitForItems(context, (items) => items.some((item) => item.id === members[0]!.id))
+          const item = await context.connector.getItem(members[0]!.id)
+          expect(item?.type).toBe("person")
+        })
+      })
+
+      it("lehnt Schreibzugriffe auf eine Projektion ab", async () => {
+        await withConnector(async (context) => {
+          const members = await activeMembers(context)
+          if (!members || !isWritable(context.connector)) return
+          const id = members[0]!.id
+          await waitForItems(context, (items) => items.some((item) => item.id === id))
+          await expect(context.connector.updateItem(id, { data: { displayName: "gekapert" } }))
+            .rejects.toThrow(/Projektion/)
+          await expect(context.connector.deleteItem(id)).rejects.toThrow(/Projektion/)
+          expect(await context.connector.getItem(id)).not.toBeNull()
+        })
+      })
+    })
   })
 }

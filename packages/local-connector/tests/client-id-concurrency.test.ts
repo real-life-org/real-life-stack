@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
+import { isPersonProjection } from "@real-life-stack/data-interface"
+
+/** Nur die gespeicherten Items — der Strom traegt zusaetzlich die
+ *  person-Projektionen der Mitglieder (Spec 04 §Profile). */
+const stored = (items: Item[]): Item[] => items.filter((item) => !isPersonProjection(item))
 
 const idb = vi.hoisted(() => {
   let state: unknown
@@ -88,7 +93,7 @@ describe("LocalConnector item transaction concurrency", () => {
     expect(await second.getItem("shared-id")).toEqual(firstResult)
 
     const reader = await initializedConnector()
-    expect(await reader.getItems()).toEqual([firstResult])
+    expect(stored(await reader.getItems())).toEqual([firstResult])
     expect(reader.getItemGroupId("shared-id")).toBe("g1")
   })
 
@@ -104,14 +109,14 @@ describe("LocalConnector item transaction concurrency", () => {
     expect(firstResult.id).toBe("item-100")
     expect(secondResult.id).toBe("item-101")
     const reader = await initializedConnector()
-    expect((await reader.getItems()).map(({ id }) => id)).toEqual(["item-100", "item-101"])
+    expect(stored(await reader.getItems()).map(({ id }) => id)).toEqual(["item-100", "item-101"])
   })
 
   it("does not let a stale non-item persistence overwrite a committed item", async () => {
     const writer = await initializedConnector()
     const staleInstance = await initializedConnector()
     const staleItems = staleInstance.observe({})
-    expect(staleItems.current).toEqual([])
+    expect(stored(staleItems.current)).toEqual([])
 
     const created = await writer.createItem({
       id: "durable-id",
@@ -122,7 +127,7 @@ describe("LocalConnector item transaction concurrency", () => {
     await staleInstance.logout()
 
     expect(await staleInstance.getItem("durable-id")).toEqual(created)
-    expect(staleItems.current).toEqual([created])
+    expect(stored(staleItems.current)).toEqual([created])
     const reader = await initializedConnector()
     expect(await reader.getItem("durable-id")).toEqual(created)
   })

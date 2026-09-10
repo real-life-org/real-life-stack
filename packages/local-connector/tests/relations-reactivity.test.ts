@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
+import { isPersonProjection } from "@real-life-stack/data-interface"
 
 // Mock idb-keyval (no IndexedDB in Node)
 vi.mock("idb-keyval", () => ({
@@ -56,7 +57,7 @@ describe("LocalConnector — Relations Reactivity", () => {
 
     expect(created.id).toBe("client-id")
     expect(duplicate).toEqual(created)
-    expect(await connector.getItems()).toEqual([created])
+    expect((await connector.getItems()).filter((item) => !isPersonProjection(item))).toEqual([created])
   })
 
   it("skips occupied generated IDs", async () => {

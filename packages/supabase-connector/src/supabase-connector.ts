@@ -25,6 +25,10 @@ import {
   createObservable,
   createRelationRecordWith,
   deriveContext,
+  assertNotPersonProjection,
+  matchesFilter,
+  mergePersonProjections,
+  PersonProjectionStore,
 } from "@real-life-stack/data-interface"
 import type {
   AuthSessionLike,
@@ -219,6 +223,8 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
     this.authState.destroy()
     this.currentUserObs.destroy()
     this.currentGroupObs.destroy()
+    this.personProjectionStore?.dispose()
+    this.personProjectionStore = null
     this.profileObs.destroy()
     this.profileSyncPendingObs.destroy()
     this.contactsObs?.destroy()
@@ -280,12 +286,45 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
       if (rows.length < window) break
       offset += rows.length
     }
-    return results
+    // Die Projektionen liegen in keiner Tabelle — sie kommen nach der
+    // Serverabfrage dazu und werden hier gefiltert (Spec 04 §Profile).
+    return mergePersonProjections(
+      results,
+      filter ? this.personProjections().filter((item) => matchesFilter(item, filter)) : this.personProjections(),
+    )
+  }
+
+  // --- Profile als person-Items (Spec 04 §Profile) ---
+
+  private personProjectionStore: PersonProjectionStore | null = null
+
+  /** Lazy: erst beim ersten Item-Lesen haengt sich der Baustein an Space
+   *  und Mitgliederliste. Quelle der Profile ist die profiles-Tabelle. */
+  private personProjections(): readonly Item[] {
+    this.personProjectionStore ??= new PersonProjectionStore({
+      observeCurrentGroup: () => this.observeCurrentGroup(),
+      observeMembers: (groupId) => this.observeMembers(groupId),
+      loadProfile: async (userId) => {
+        const row = await this.fetchProfileRow(userId)
+        if (!row) return null
+        return {
+          did: userId,
+          displayName: (row.display_name as string | null) ?? undefined,
+          bio: (row.bio as string | null) ?? undefined,
+          avatarUrl: (row.avatar_url as string | null) ?? undefined,
+          createdAt: typeof row.created_at === "string" ? new Date(row.created_at).toISOString() : undefined,
+        }
+      },
+      onChange: () => this.scheduleItemsRefresh(),
+    })
+    return this.personProjectionStore.current
   }
 
   async getItem(id: string): Promise<Item | null> {
     const row = await this.getItemRowUnscoped(id)
-    if (!row) return null
+    // Projektionen stehen in keiner Zeile — das Detail-Panel liest sie ueber
+    // dieselbe Id wie jedes andere Item.
+    if (!row) return this.personProjections().find((item) => item.id === id) ?? null
     const scopeGroupId = this.currentReadScopeGroupId()
     if (scopeGroupId !== null && row.group_id !== scopeGroupId
       && !(row.type === "feature" && row.group_id === null)) return null
@@ -374,6 +413,7 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
   }
 
   async updateItem(id: string, updates: Partial<Item>): Promise<Item> {
+    assertNotPersonProjection(this.personProjections().find((item) => item.id === id), "update")
     // Identity fields are stripped client-side (fail closed) and immutable
     // server-side (trigger) — updates carry content only.
     const patch = itemUpdateToRowPatch(updates)
@@ -389,6 +429,7 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
   }
 
   async deleteItem(id: string): Promise<void> {
+    assertNotPersonProjection(this.personProjections().find((item) => item.id === id), "delete")
     // Returning delete: RLS silently matches 0 rows — distinguish "already
     // gone" (idempotent ok) from "denied" (row still visible → error).
     const deleted = throwOnError(await this.client.from("items").delete().eq("id", id).select(), "deleteItem")
@@ -727,6 +768,9 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
       this.authState.set({ status: "authenticated", user: next })
     }
     this.profileRevision += 1
+    // Das Profil ist die Quelle der eigenen Projektion — ohne diesen Anstoss
+    // zeigte der Item-Strom den alten Stand weiter.
+    this.personProjectionStore?.invalidateProfile(userId)
     return true
   }
 

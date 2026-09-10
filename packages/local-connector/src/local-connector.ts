@@ -23,7 +23,7 @@ import type {
   RelationRecordUpdate,
   Source,
 } from "@real-life-stack/data-interface"
-import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, createObservable, createDefaultRelationStore, createRelationRecordWith, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState } from "@real-life-stack/data-interface"
+import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, createObservable, createDefaultRelationStore, createRelationRecordWith, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState, assertNotPersonProjection, mergePersonProjections, PersonProjectionStore } from "@real-life-stack/data-interface"
 import { get, set, del, createStore, update as updateStoredValue } from "idb-keyval"
 
 // --- Types ---
@@ -256,6 +256,8 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
   async dispose(): Promise<void> {
     this.channel?.close()
     this.channel = null
+    this.personProjectionStore?.dispose()
+    this.personProjectionStore = null
     for (const obs of this.itemObservables.values()) obs.destroy()
     for (const obs of this.singleItemObservables.values()) obs.destroy()
     for (const obs of this.relatedObservables.values()) obs.destroy()
@@ -418,17 +420,38 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
 
   // --- Items ---
 
+  // --- Profile als person-Items (Spec 04 §Profile) ---
+
+  private personProjectionStore: PersonProjectionStore | null = null
+
+  /**
+   * Die Projektionen des aktiven Space. Lazy, damit ein ungelesener
+   * Connector nichts abonniert. Der lokale Speicher kennt keine
+   * Profil-Quelle — es bleibt beim minimalen Item aus `User`, genau der
+   * Fall, den Spec 04 §Profile ausdruecklich zulaesst.
+   */
+  private personProjections(): readonly Item[] {
+    this.personProjectionStore ??= new PersonProjectionStore({
+      observeCurrentGroup: () => this.observeCurrentGroup(),
+      observeMembers: (groupId) => this.observeMembers(groupId),
+      onChange: () => this.notifyObservers(),
+    })
+    return this.personProjectionStore.current
+  }
+
   private getScopedItems(): Item[] {
     const groupId = this.currentGroup?.id
     const scope = (this.currentGroup?.data?.scope as string) ?? "group"
 
     if (!groupId || scope === "aggregate") {
-      return this.items
+      return mergePersonProjections(this.items, this.personProjections())
     }
 
     const itemIds = this.groupItems[groupId]
-    if (!itemIds) return this.items.filter((i) => i.type === "feature")
-    return this.items.filter((i) => itemIds.includes(i.id) || i.type === "feature")
+    const scoped = itemIds
+      ? this.items.filter((i) => itemIds.includes(i.id) || i.type === "feature")
+      : this.items.filter((i) => i.type === "feature")
+    return mergePersonProjections(scoped, this.personProjections())
   }
 
   async getItems(filter?: ItemFilter): Promise<Item[]> {
@@ -530,6 +553,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
 
   async updateItem(id: string, updates: Partial<Item>): Promise<Item> {
     const actor = this.requireCurrentUser().id
+    assertNotPersonProjection(this.personProjections().find((item) => item.id === id), "update")
     // Authoritative ingress binding also on UPDATE: createdBy is immutable
     // through the regular path (spec 08 — trusted requires it on EVERY
     // ingress); the marked fixture mode keeps the old behaviour.
@@ -572,6 +596,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
 
   async deleteItem(id: string): Promise<void> {
     const actor = this.requireCurrentUser().id
+    assertNotPersonProjection(this.personProjections().find((item) => item.id === id), "delete")
     let committedState: StoredState | undefined
     await updateStoredValue<StoredState>("state", (stored) => {
       const current = stored ?? this.createStoredState()

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
+import { isPersonProjection } from "@real-life-stack/data-interface"
 import { MockConnector, type MockConnectorSeed } from "../src/index"
 
 const CREATED_AT = "2026-07-16T00:00:00.000Z"
@@ -33,6 +34,13 @@ function seed(items: Item[] = []): MockConnectorSeed {
   }
 }
 
+/** Nur die GESPEICHERTEN Items: der Strom enthaelt zusaetzlich die
+ *  person-Projektionen der Mitglieder (Spec 04 §Profile) — die haben mit
+ *  Id-Vergabe und Scopes nichts zu tun. */
+async function storedItems(connector: MockConnector): Promise<Item[]> {
+  return (await connector.getItems()).filter((item) => !isPersonProjection(item))
+}
+
 async function flushNotifications(): Promise<void> {
   await Promise.resolve()
   await Promise.resolve()
@@ -45,7 +53,7 @@ describe("MockConnector item IDs", () => {
       item("duplicate", "second"),
     ]), { allowFixtureAuthors: true })
 
-    expect(await connector.getItems()).toEqual([item("duplicate", "first")])
+    expect(await storedItems(connector)).toEqual([item("duplicate", "first")])
   })
 
   it("preserves a supplied ID and returns an existing item unchanged", async () => {
@@ -68,7 +76,7 @@ describe("MockConnector item IDs", () => {
     expect(created.id).toBe("client-id")
     expect(created.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     expect(duplicate).toBe(created)
-    expect(await connector.getItems()).toEqual([created])
+    expect(await storedItems(connector)).toEqual([created])
   })
 
   it("skips collisions when allocating generated IDs", async () => {
@@ -104,9 +112,9 @@ describe("MockConnector item IDs", () => {
     })
 
     connector.setCurrentGroup("group-a")
-    expect(await connector.getItems()).toEqual([])
+    expect(await storedItems(connector)).toEqual([])
     connector.setCurrentGroup("group-b")
-    expect((await connector.getItems()).map(({ id }) => id)).toEqual(["reusable"])
+    expect((await storedItems(connector)).map(({ id }) => id)).toEqual(["reusable"])
   })
 
   it("does not move over an existing space-local ID", async () => {
@@ -274,7 +282,7 @@ describe("MockConnector fixture injection", () => {
 
     expect(second).toEqual(first)
     expect(second[0]).toBe(first[0])
-    expect(await connector.getItems()).toEqual(firstSeed)
+    expect(await storedItems(connector)).toEqual(firstSeed)
     expect(listener).toHaveBeenCalledTimes(1)
   })
 
@@ -287,7 +295,7 @@ describe("MockConnector fixture injection", () => {
     ], "group-a")
     connector.setCurrentGroup("group-a")
 
-    expect(await connector.getItems()).toEqual([item("seed-a", "first")])
+    expect(await storedItems(connector)).toEqual([item("seed-a", "first")])
   })
 
   it("deduplicates fixture IDs independently in each space", async () => {

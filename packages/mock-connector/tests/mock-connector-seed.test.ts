@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Group, Item, User } from "@real-life-stack/data-interface"
+import { isPersonProjection } from "@real-life-stack/data-interface"
 import {
   demoGroupItems,
   demoGroups,
@@ -46,6 +47,12 @@ const seed: MockConnectorSeed = {
   },
 }
 
+/** Nur die gespeicherten Items — die person-Projektionen der Mitglieder
+ *  (Spec 04 §Profile) pruefen die Faelle darunter eigens. */
+async function storedItems(connector: MockConnector): Promise<Item[]> {
+  return (await connector.getItems()).filter((item) => !isPersonProjection(item))
+}
+
 describe("MockConnector seed injection", () => {
   it("uses injected items, groups, users, memberships, and group scopes", async () => {
     const connector = new MockConnector(seed)
@@ -55,10 +62,23 @@ describe("MockConnector seed injection", () => {
     expect(await connector.getMembers("dwebcamp")).toEqual(users)
 
     connector.setCurrentGroup("dwebcamp")
-    expect(await connector.getItems()).toEqual(items)
+    expect(await storedItems(connector)).toEqual(items)
 
     connector.setCurrentGroup("my-network")
-    expect(await connector.getItems()).toEqual([])
+    expect(await storedItems(connector)).toEqual([])
+  })
+
+  it("projiziert die Mitglieder des aktiven Space als person-Items", async () => {
+    const connector = new MockConnector(seed)
+
+    connector.setCurrentGroup("dwebcamp")
+    const projected = (await connector.getItems()).filter(isPersonProjection)
+    expect(projected.map((item) => item.id)).toEqual(["user-1"])
+    expect(projected[0]!.data.displayName).toBe("Test User")
+
+    // Ein Space ohne Mitglieder projiziert nichts.
+    connector.setCurrentGroup("my-network")
+    expect((await connector.getItems()).filter(isPersonProjection)).toEqual([])
   })
 
   it("keeps the parameterless demo-data behavior unchanged", async () => {
@@ -69,11 +89,11 @@ describe("MockConnector seed injection", () => {
     expect(await connector.getGroups()).toEqual(
       demoGroups.filter((group) => group.data?.scope !== "aggregate"),
     )
-    expect(await connector.getItems()).toEqual(demoItems)
+    expect(await storedItems(connector)).toEqual(demoItems)
 
     const [groupId, groupItemIds] = Object.entries(demoGroupItems)[0]
     connector.setCurrentGroup(groupId)
-    expect((await connector.getItems()).map((item) => item.id)).toEqual(
+    expect((await storedItems(connector)).map((item) => item.id)).toEqual(
       demoItems
         .filter((item) => groupItemIds.includes(item.id) || item.type === "feature")
         .map((item) => item.id),

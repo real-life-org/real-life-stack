@@ -134,9 +134,12 @@ export class PersonProjectionStore {
 
   constructor(options: PersonProjectionStoreOptions) {
     this.options = options
-    const groupObs = options.observeCurrentGroup()
-    this.groupId = groupObs.current?.id ?? null
-    this.groupUnsubscribe = groupObs.subscribe((group) => this.setGroup(group?.id ?? null))
+    // Defensiv gegen Connectoren ohne Gruppenquelle (Test-Harnesse, die nur
+    // Teile verdrahten): ohne Space gibt es schlicht keine Mitglieder und
+    // damit keine Projektion — das darf den Item-Strom nicht sprengen.
+    const groupObs = options.observeCurrentGroup() as Observable<Group | null> | undefined
+    this.groupId = groupObs?.current?.id ?? null
+    this.groupUnsubscribe = groupObs?.subscribe((group) => this.setGroup(group?.id ?? null)) ?? null
     this.subscribeMembers()
   }
 
@@ -179,13 +182,13 @@ export class PersonProjectionStore {
 
   private subscribeMembers(): void {
     this.membersUnsubscribe?.()
-    const observable = this.options.observeMembers(this.groupId)
-    this.members = observable.current ?? []
-    this.membersUnsubscribe = observable.subscribe((members) => {
+    const observable = this.options.observeMembers(this.groupId) as Observable<User[]> | undefined
+    this.members = observable?.current ?? []
+    this.membersUnsubscribe = observable?.subscribe((members) => {
       if (this.disposed) return
       this.members = members ?? []
       this.rebuild()
-    })
+    }) ?? null
     this.rebuildItems()
   }
 

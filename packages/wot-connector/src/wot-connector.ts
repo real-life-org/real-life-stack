@@ -33,6 +33,7 @@ import type {
   NotificationStatePatch,
   InitialSyncCapable,
   InitialSyncState,
+  PersonProfileInput,
 } from "@real-life-stack/data-interface"
 import {
   deriveActivitySummary,
@@ -43,7 +44,6 @@ import {
   relationAuthorialPayload,
   verifyRelationClaim,
   createObservable,
-  deriveContext,
   matchesFilter,
   findRelatedItems,
   applyPagination,
@@ -55,6 +55,10 @@ import {
   moduleHintsFor,
   maxTs,
   pruneReadEntryKeys,
+  assertNotPersonProjection,
+  mergePersonProjections,
+  projectPersonItem,
+  PersonProjectionStore,
   type ReactiveObservable,
 } from "@real-life-stack/data-interface"
 
@@ -217,26 +221,20 @@ function compareActivity(a: ActivityEntry, b: ActivityEntry): number {
   return b.ts.localeCompare(a.ts) || b.actor.localeCompare(a.actor) || b.id.localeCompare(a.id)
 }
 
-function projectPersonItem(
+/** Eigenes Profil → person-Item, ueber den gemeinsamen Baustein
+ *  (Spec 04 §Profile) — damit die Projektion hier und im Item-Strom
+ *  dieselbe Form hat. */
+function projectOwnPersonItem(
   id: string,
   createdAt: string,
   displayName: string,
   bio?: string | null,
   avatar?: string | null,
 ): Item {
-  const data: Record<string, unknown> = {
-    displayName,
-    ...(bio !== undefined && bio !== null ? { bio } : {}),
-    ...(avatar ? { avatarUrl: avatar } : {}),
-  }
-  return {
-    id,
-    "@context": deriveContext("person", data),
-    type: "person",
-    createdAt,
-    createdBy: id,
-    data,
-  }
+  return projectPersonItem(
+    { id, displayName, avatarUrl: avatar ?? undefined },
+    { did: id, displayName, bio: bio ?? undefined, avatarUrl: avatar ?? undefined, createdAt },
+  )
 }
 
 class WorkflowBackedIdentity implements PublicIdentitySession {
@@ -562,6 +560,8 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.discoveryRetryCleanup?.()
     this.discoveryRetryCleanup = null
     this.stopContactProfileRefresh()
+    this.personProjectionStore?.dispose()
+    this.personProjectionStore = null
     this.stopWorkQueueTimer?.()
     try { this.inboxReception?.stop() } catch { /* best-effort teardown */ }
     // Jeder awaited Schritt einzeln geguardet (CodeRabbit #143): ein
@@ -864,7 +864,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       bio: updates.bio as string | undefined,
       avatar: updates.avatar as string | undefined,
     })
-    return (await this.getMyProfile()) ?? projectPersonItem(
+    return (await this.getMyProfile()) ?? projectOwnPersonItem(
       user.id,
       new Date().toISOString(),
       user.displayName || getDefaultDisplayName(user.id),
@@ -1189,6 +1189,61 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     void this.notifyMemberObservers(groupId)
   }
 
+  // ==================== Profile als person-Items (Spec 04 §Profile) ====================
+
+  private personProjectionStore: PersonProjectionStore | null = null
+
+  /**
+   * Die Projektionen des aktiven Space. Lazy: erst wenn Items gelesen
+   * werden, haengt sich der Baustein an Space und Mitgliederliste.
+   */
+  private personProjections(): readonly Item[] {
+    // Ohne Space- und Mitgliederquelle gibt es nichts zu projizieren. Der
+    // Guard haelt die leichten Test-Harnesse am Leben, die nur Teile des
+    // Connectors verdrahten (Object.create statt Konstruktor).
+    if (!this.memberObservables || !this.currentGroupObservable) return []
+    this.personProjectionStore ??= new PersonProjectionStore({
+      observeCurrentGroup: () => this.observeCurrentGroup(),
+      observeMembers: (groupId) => this.observeMembers(groupId),
+      loadProfile: (userId) => this.loadPersonProfile(userId),
+      onChange: () => this.notifyAllObservers(),
+    })
+    return this.personProjectionStore.current
+  }
+
+  /**
+   * Das eigene Profil kommt aus dem Persoenlichen Dokument (dem Besitzer),
+   * fremde aus dem Profilverzeichnis. Faellt eine Quelle aus, bleibt es beim
+   * minimalen Item aus `User` — der Item-Strom wartet nie auf das Netz.
+   *
+   * `doc.profile` hat heute kein Ortsfeld; `position` bleibt darum undefined
+   * (der Profil-Editor bekommt sie im naechsten Schnitt).
+   */
+  private async loadPersonProfile(userId: string): Promise<PersonProfileInput | null> {
+    let ownDid: string | null = null
+    try { ownDid = this.identity.getDid() } catch { ownDid = null }
+    if (userId === ownDid) {
+      const profile = getYjsPersonalDoc()?.profile
+      if (!profile) return null
+      return {
+        did: userId,
+        displayName: profile.name ?? undefined,
+        bio: profile.bio ?? undefined,
+        avatarUrl: profile.avatar ?? undefined,
+        createdAt: profile.createdAt ?? undefined,
+      }
+    }
+    const resolved = await this.discovery.resolveProfile(userId)
+    const profile = resolved?.profile
+    if (!profile) return null
+    return {
+      did: userId,
+      displayName: profile.name ?? undefined,
+      bio: profile.bio ?? undefined,
+      avatarUrl: profile.avatar ?? undefined,
+    }
+  }
+
   // ==================== Items ====================
 
   override async getItems(filter?: ItemFilter): Promise<Item[]> {
@@ -1202,15 +1257,18 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
   override async getItem(id: string): Promise<Item | null> {
     await this.handleReady
+    // Projektionen liegen in keinem Dokument — das Detail-Panel liest sie
+    // ueber dieselbe Id wie jedes andere Item.
+    const projected = this.personProjections().find((item) => item.id === id)
     if (this.currentGroupId === null && this.crossGroupIndex) {
       const entry = this.crossGroupIndex.getUniqueById(id)
-      return entry?.item ?? null
+      return entry?.item ?? projected ?? null
     }
     const doc = this.getCurrentDoc()
-    if (!doc) return null
+    if (!doc) return projected ?? null
 
     const serialized = doc.items?.[id]
-    if (!serialized) return null
+    if (!serialized) return projected ?? null
     return deserializeItem(serialized)
   }
 
@@ -1330,6 +1388,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
   override async updateItem(id: string, updates: Partial<Item>): Promise<Item> {
     await this.handleReady
+    assertNotPersonProjection(this.personProjections().find((item) => item.id === id), "update")
 
     const handle = await this.resolveHandleForItem(id)
     this.applyItemUpdate(handle, id, updates)
@@ -1349,6 +1408,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
   override async deleteItem(id: string): Promise<void> {
     await this.handleReady
+    assertNotPersonProjection(this.personProjections().find((item) => item.id === id), "delete")
 
     const handle = await this.resolveHandleForItem(id)
 
@@ -2796,7 +2856,10 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         this.itemCache = doc ? Object.values(doc.items ?? {}).map(deserializeItem) : []
       }
     }
-    return this.itemCache
+    // Projektionen bleiben AUSSERHALB des Caches: sie haben ihren eigenen
+    // Lebenszyklus (Mitglieder + Profile) und wuerden sonst beim naechsten
+    // Item-Schreibvorgang mit invalidiert.
+    return mergePersonProjections(this.itemCache, this.personProjections())
   }
 
   private notifyAllObserversNow(): void {
@@ -4162,7 +4225,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       const profile = doc?.profile
       const name = profile?.name || getDefaultDisplayName(did)
       const avatar = profile?.avatar ?? undefined
-      this.profileObs.set(projectPersonItem(
+      this.profileObs.set(projectOwnPersonItem(
         did,
         profile?.createdAt ?? new Date().toISOString(),
         name,
@@ -4170,6 +4233,9 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         avatar,
       ))
       this.currentUserObs.set({ id: did, displayName: name, avatarUrl: avatar })
+      // Das eigene Profil ist die Quelle der eigenen Projektion — ohne diesen
+      // Anstoss zeigte der Item-Strom den alten Stand weiter.
+      this.personProjectionStore?.invalidateProfile(did)
       // Own profile changed → refresh member observables (own displayName in member lists)
       for (const groupId of this.memberObservables.keys()) {
         void this.notifyMemberObservers(groupId)
