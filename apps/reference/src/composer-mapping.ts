@@ -2,11 +2,21 @@ import type { Item, Relation } from "@real-life-stack/data-interface"
 import type { ContentTypeConfig, ItemEditorMapper, WidgetData } from "@real-life-stack/toolkit"
 import { resolveContentType } from "./content-types"
 
-// The composer surfaces free text as `data.text`, but the spec stores it as
-// `content` for posts (base/v1) and `description` for everything else (events,
-// places, …). One rule, keyed by the item type — shared across all modules.
-function textFieldFor(type: string): "content" | "description" {
-  return type === "post" ? "content" : "description"
+// Der Composer kennt zwei Freitextfelder — Titel und Text. Wo sie landen,
+// sagt der Typ: ein Post schreibt `content` (base/v1), alles andere
+// `description`; eine Person heisst mit Namen `displayName` und beschreibt
+// sich in `bio` (person/v1, Spec 04 §Profile). EINE Regel, geteilt von allen
+// Modulen — und die Umkehrung in `itemToComposerData` liest dieselbe.
+interface FreitextFelder {
+  /** Zielfeld des Titel-Widgets. */
+  title: string
+  /** Zielfeld des Text-Widgets. */
+  text: string
+}
+
+function freitextFelderFor(type: string): FreitextFelder {
+  if (type === "person") return { title: "displayName", text: "bio" }
+  return { title: "title", text: type === "post" ? "content" : "description" }
 }
 
 function isEmptyValue(v: unknown): boolean {
@@ -21,13 +31,13 @@ function isEmptyValue(v: unknown): boolean {
  * For these, an empty value in an EDIT submission is an intentional clear, so we
  * drop the field from the saved item. Fields NOT listed here (e.g. `meetingLink`,
  * `rrule`) aren't loaded back into the form, so an empty value just means "not
- * shown" and the existing value must be preserved. `text`, `tags` and `people`
- * are clearable too but handled separately below.
+ * shown" and the existing value must be preserved. `title`, `text`, `tags` and
+ * `people` are clearable too but handled separately below — Titel und Text
+ * ueber die typabhaengigen Zielfelder aus {@link freitextFelderFor}.
  *
  * Keep this in sync with the fields `itemToComposerData` produces.
  */
 const CLEARABLE_DATA_FIELDS = new Set([
-  "title",
   "start",
   "end",
   "address",
@@ -54,9 +64,13 @@ export const mapComposerSubmission: ItemEditorMapper = (submission, { existingIt
   // `group` is the item's group/space association, persisted via the connector
   // (moveItemToGroup in useItemEditor) — never written into item.data.
   // `people` becomes relations (below), not item.data. `tags` is top-level.
-  const { text, tags: submittedTags, group: _group, people, ...rest } = submission.data
+  // `did` wird NIE aus einem Formular gesetzt: es ist das Merkmal der
+  // Projektion (Spec 04 §Profile, Regel 5). Ein von Hand angelegtes
+  // person-Item ist ein Platzhalter und bleibt einer.
+  const { text, title, tags: submittedTags, group: _group, people, did: _did, ...rest } = submission.data
   const type = existingItem?.type ?? submission.contentType
   const typeConfig = resolveContentType(type)
+  const freitext = freitextFelderFor(type)
 
   // Base on the existing data so unmanaged fields survive an edit; empty on create.
   const itemData: Record<string, unknown> = { ...(existingItem?.data ?? {}) }
@@ -71,11 +85,13 @@ export const mapComposerSubmission: ItemEditorMapper = (submission, { existingIt
     // field on edit (e.g. media) whose existing value must be preserved.
   }
 
-  // Free text maps to content/description by type. Clearing it in edit removes
-  // the stored field; an empty text on create writes nothing.
-  const textField = textFieldFor(type)
-  if (text) itemData[textField] = text
-  else if (existingItem) delete itemData[textField]
+  // Titel und Freitext gehen in die Felder, die der Typ dafuer fuehrt. Beim
+  // Bearbeiten raeumt ein geleertes Feld den gespeicherten Wert weg; beim
+  // Anlegen schreibt ein leeres Feld nichts.
+  if (title) itemData[freitext.title] = title
+  else if (existingItem) delete itemData[freitext.title]
+  if (text) itemData[freitext.text] = text
+  else if (existingItem) delete itemData[freitext.text]
 
   // Tags live top-level (spec 07-tags.md); drop any legacy data.tags so a
   // migrated item doesn't keep a stale copy in its data.
@@ -161,7 +177,9 @@ export function withGroupOptions(
 /** Pre-fill the edit composer from an item's stored data (inverse of the mapper). */
 export function itemToComposerData(item: Item): Partial<WidgetData> {
   const d = item.data as Record<string, unknown>
-  const text = d[textFieldFor(item.type)]
+  const freitext = freitextFelderFor(item.type)
+  const title = d[freitext.title]
+  const text = d[freitext.text]
   // People come from the type's relation predicate (assignedTo / invited / …).
   const predicate = resolveContentType(item.type)?.peopleRelation?.predicate
   const people = predicate
@@ -170,7 +188,7 @@ export function itemToComposerData(item: Item): Partial<WidgetData> {
         .map((r) => r.target.replace(/^global:/, ""))
     : []
   return {
-    ...(typeof d.title === "string" ? { title: d.title } : {}),
+    ...(typeof title === "string" ? { title } : {}),
     ...(typeof text === "string" ? { text } : {}),
     ...(typeof d.start === "string" ? { start: d.start } : {}),
     ...(typeof d.end === "string" ? { end: d.end } : {}),

@@ -117,6 +117,18 @@ export interface ContentTypeConfig {
   defaultGroup?: string
   groupRequired?: boolean
   /**
+   * Ein Satz unter der Typ-Wahl, der sagt, wofuer dieser Typ da ist. Die
+   * Pille traegt nur den Namen; wer zwischen „Post" und „Person" waehlt,
+   * braucht aber den Unterschied, bevor er tippt.
+   */
+  hint?: string
+  /**
+   * Der Titel ist fuer diesen Typ ein Pflichtfeld (person: `displayName`).
+   * Sonst genuegt dem Composer irgendein Inhalt — ein Beitrag darf aus
+   * einem Satz bestehen, eine Person nicht aus einer Bio ohne Namen.
+   */
+  titleRequired?: boolean
+  /**
    * How this type links people: the relation predicate the `people` widget
    * maps to (task → `assignedTo`, event → `invited`, …). Declared per type so
    * the shared submission mapper / pre-fill stay type-driven instead of
@@ -538,8 +550,11 @@ export function ContentComposer({
     }
   }
 
-  // Submit
-  const canSubmit = !!(data.title?.trim() || data.text?.trim() || (data.media && data.media.length > 0))
+  // Submit. Ein Typ mit Pflichttitel (person → displayName) haengt allein am
+  // Titel: ohne Namen entstuende ein Item, das person/v1 verletzt.
+  const canSubmit = currentConfig.titleRequired
+    ? !!data.title?.trim()
+    : !!(data.title?.trim() || data.text?.trim() || (data.media && data.media.length > 0))
 
   const [submitting, setSubmitting] = React.useState(false)
   const [submitError, setSubmitError] = React.useState<string | null>(null)
@@ -589,6 +604,11 @@ export function ContentComposer({
             )
           })}
         </div>
+      )}
+      {/* Wofuer der gewaehlte Typ da ist — steht unter der Wahl, nicht in der
+          Pille: der Name gehoert auf den Knopf, die Erklaerung darunter. */}
+      {!isSingleTypeMode && contentTypes.length > 1 && currentConfig.hint && (
+        <p className="-mt-2 text-xs text-muted-foreground">{currentConfig.hint}</p>
       )}
 
       {/* Preview or Edit mode */}

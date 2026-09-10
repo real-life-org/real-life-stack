@@ -75,6 +75,12 @@ interface ContentComposerSubmitData {
 
 **Slot-Konvention:** `contentTypes[].defaultWidgets` listet die Widgets, die der Composer für einen Typ rendert (`title`, `text`, `date`, `location`, `status`, `people`, `tags`, `media`, `group`). Modul-spezifische Widgets können per `widgets?: CustomWidgetDefinition[]` ergänzt werden.
 
+**Typ-Wahl mit Hinweis:** Bietet ein Modul mehrere Typen an, steht der Name auf der Pille; ein optionaler `hint` des gewählten Typs steht als ein Satz darunter. Ein Typ mit `titleRequired` gibt den Absenden-Knopf erst frei, wenn der Titel gefüllt ist — sonst genügt dem Composer irgendein Inhalt.
+
+**Typ `person` (Platzhalter):** `person` ist ein gewöhnlicher Composer-Typ mit den Widgets `title` (Name → `data.displayName`, Pflicht), `text` (→ `data.bio`), `location` (→ `data.position`/`data.address`) und `tags`. Der Hinweis lautet „Für Menschen, die noch nicht im Netz sind." Ein `did`-Feld gibt es NICHT und der Mapper entfernt ein eingeschleustes: `data.did` ist das Merkmal der Projektion ([04 §Profile](../04-items-relations-groups-spaces.md), Regel 5), ein von Hand angelegtes person-Item bleibt ein Platzhalter. Angelegt, bearbeitet und gelöscht wird er wie jedes Item; die Projektion dagegen weist der Connector ab.
+
+**Titel und Freitext je Typ:** Die beiden Freitext-Widgets landen in den Feldern, die der Typ dafür führt: `post` schreibt `content`, `person` schreibt `displayName`/`bio`, alle übrigen `title`/`description`. Diese Zuordnung lebt an EINER Stelle und wird von der Vorfüllung des Bearbeiten-Formulars in umgekehrter Richtung gelesen.
+
 **Edit vs. Create:** Der Composer entscheidet via `editMode ?? !!onDelete` — explizit gesetzter `editMode` gewinnt; ansonsten signalisiert das Vorhandensein von `onDelete` Edit-Modus (Delete-Button erscheint, Submit-Label wechselt zu „Speichern"). Caller ohne beides sind im Create-Modus.
 
 **Präsentation je Modul (Hülle):** Die `ContentComposer`-Form ist geteilt; *wie* sie eingeblendet wird, wählt das Modul — es gibt mehrere Hüllen, nicht eine für alle. Heute: **Fullscreen-Morph** (Feed, `FeedComposerTrigger`) und **Content-Panel** (Calendar/Map/Kanban, [Ebene 1](../01-app-composition.md): Sidebar auf Desktop / Drawer auf Mobile). Vereinheitlicht wird nur, was tatsächlich falsch liegt (z.B. ein Composer, der auf Mobile fälschlich Sidebar bleibt), nicht per Brechstange alles gleichgemacht.

@@ -190,6 +190,11 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     id: "person",
     label: "Person",
     badge: { icon: UserIcon, className: "bg-violet-50 text-violet-700 border-violet-200" },
+    // Der Platzhalter wird wie jeder Beitrag angelegt (Spec 04 §Profile,
+    // Regel 5): Name als Titel, Bio als Freitext, Ort ueber das vorhandene
+    // Ort-Widget. Ein did-Feld gibt es NICHT — es ist das Merkmal der
+    // Projektion und wird nie von Hand gesetzt.
+    composerWidgets: ["title", "text", "location", "tags"],
     preview: ItemProfileMeta,
     detail: ItemPersonDetailMeta,
   },

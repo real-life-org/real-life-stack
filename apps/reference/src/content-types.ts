@@ -21,6 +21,14 @@ const APP_EXTRAS: Record<string, Partial<ContentTypeConfig>> = {
     widgetLabels: { title: "Aussage", text: "Kontext" },
     submitLabel: "Einbringen",
   },
+  person: {
+    // Der Titel IST der Name (person/v1 `displayName`), der Freitext die Bio.
+    // Beschriftet wie das, was drinsteht — „Titel"/„Text" wäre hier falsch.
+    widgetLabels: { title: "Name", text: "Über die Person", location: "Ort" },
+    submitLabel: "Anlegen",
+    titleRequired: true,
+    hint: "Für Menschen, die noch nicht im Netz sind.",
+  },
   task: {
     widgetLabels: { text: "Beschreibung", people: "Zugewiesen" },
     statusOptions: defaultColumns.map((col) => ({ id: col.id, label: col.label })),
@@ -31,7 +39,7 @@ const APP_EXTRAS: Record<string, Partial<ContentTypeConfig>> = {
 
 /** Which types the composer offers, in menu order. Every id must exist in the
  *  manifest — resolution throws otherwise, which is the point. */
-const COMPOSER_TYPE_IDS = ["post", "event", "place", "statement", "task"] as const
+const COMPOSER_TYPE_IDS = ["post", "event", "place", "person", "statement", "task"] as const
 
 function contentTypeFromRegister(id: string): ContentTypeConfig {
   if (!TYPE_MANIFEST.has(id)) {
@@ -65,8 +73,8 @@ export function pickContentTypes(...ids: string[]): ContentTypeConfig[] {
 
 /** Per-module create menus (which types each module's "+" offers). Edit always
  *  uses the full registry, locked to the item's own type. */
-export const FEED_CREATE_TYPES = pickContentTypes("post", "event")
+export const FEED_CREATE_TYPES = pickContentTypes("post", "event", "person")
 export const CALENDAR_CREATE_TYPES = pickContentTypes("event")
-export const MAP_CREATE_TYPES = pickContentTypes("place", "event")
+export const MAP_CREATE_TYPES = pickContentTypes("place", "event", "person")
 export const KANBAN_CREATE_TYPES = pickContentTypes("task")
 export const RESONANCE_CREATE_TYPES = pickContentTypes("statement")
