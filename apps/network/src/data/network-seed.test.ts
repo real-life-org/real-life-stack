@@ -1,4 +1,5 @@
 import {
+  isPersonProjection,
   relationRecordFromItem,
   VOCAB_BASE,
   VOCAB_EVENT,
@@ -75,14 +76,18 @@ describe("DWebCamp seed importer", () => {
     connector.injectSeedItems(await buildDwebCampSeedItems(), "dwebcamp")
 
     connector.setCurrentGroup("dwebcamp")
-    const importedItems = await connector.getItems()
+    // Nur die GESPEICHERTEN Items zaehlen: der Strom fuehrt zusaetzlich die
+    // person-Projektion jedes Mitglieds (Spec 04 §Profile) — die kommt aus
+    // Mitgliedschaft und Profil, nicht aus dem Import, und hat mit
+    // Doppel-Ids nichts zu tun.
+    const importedItems = (await connector.getItems()).filter((item) => !isPersonProjection(item))
     expect(importedItems).toHaveLength(836)
     expect(new Set(importedItems.map(({ id }) => id)).size).toBe(836)
     expect(importedItems.filter(({ type }) => type !== "relation")).toHaveLength(339)
     expect(importedItems.filter(({ type }) => type === "relation")).toHaveLength(497)
 
     connector.setCurrentGroup("my-network")
-    expect(await connector.getItems()).toEqual([])
+    expect((await connector.getItems()).filter((item) => !isPersonProjection(item))).toEqual([])
     await connector.dispose()
   })
 

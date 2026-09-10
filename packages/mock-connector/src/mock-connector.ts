@@ -319,6 +319,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
 
   private personProjectionStore: PersonProjectionStore | null = null
   private profileObs: ReturnType<typeof createObservable<Item | null>> | null = null
+  private profileSyncPendingObs: ReturnType<typeof createObservable<boolean>> | null = null
 
   /**
    * Die Projektionen des aktiven Space. Lazy: der Baustein haengt sich erst
@@ -375,6 +376,18 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     this.profileObs?.set(item)
     this.notifyObservers()
     return item
+  }
+
+  /** Es gibt kein Verzeichnis und keinen Server — hier ist alles schon da.
+   *  Die beiden Methoden gehoeren trotzdem dazu: `hasProfile()` fragt nach
+   *  `syncProfile`, und ohne sie gaelte der Mock als profil-los. */
+  async syncProfile(): Promise<void> {}
+
+  async setFieldVisibility(_field: string, _isPublic: boolean): Promise<void> {}
+
+  isProfileSyncPending(): Observable<boolean> {
+    this.profileSyncPendingObs ??= createObservable(false)
+    return this.profileSyncPendingObs
   }
 
   async getPublicProfile(id: string): Promise<PublicProfileData | null> {

@@ -21,8 +21,11 @@ export interface ItemTypeMetaProps {
   className?: string
 }
 
-function initials(name: string): string {
-  return name
+/** Der Name kann fehlen: die Live-Vorschau eines noch leeren Composers
+ *  liefert ein person-Item ohne `displayName`. Eine Karte darf daran nicht
+ *  zerbrechen — sie zeigt dann eben kein Kuerzel. */
+function initials(name: string | undefined): string {
+  return (name ?? "")
     .split(/\s+/)
     .filter(Boolean)
     .map((part) => part[0]!)

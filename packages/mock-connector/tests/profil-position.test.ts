@@ -87,3 +87,10 @@ describe("MockConnector — Position im Profil", () => {
     expect(eigenes!.data.did).toBe("user-1")
   })
 })
+
+describe("MockConnector — ProfileCapable vollstaendig", () => {
+  it("wird von hasProfile() erkannt — sonst blieb der Profil-Editor leer", async () => {
+    const { hasProfile } = await import("@real-life-stack/data-interface")
+    expect(hasProfile(new MockConnector(seed()) as never)).toBe(true)
+  })
+})

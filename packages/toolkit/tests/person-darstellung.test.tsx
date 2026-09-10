@@ -50,6 +50,15 @@ describe("person im Typ-Register", () => {
   })
 })
 
+describe("person-Karte ohne Namen — die Live-Vorschau eines leeren Composers", () => {
+  it("zerbricht nicht, sondern zeigt eine Karte ohne Kürzel", () => {
+    const entwurf = { ...person(), data: { } } as Item
+    const adornments = getItemPreviewAdornments(entwurf)
+    const meta = renderToStaticMarkup(<div>{adornments.metaAdornment}</div>)
+    expect(meta).toContain("?")
+  })
+})
+
 describe("ItemPreview für person", () => {
   it("nimmt displayName als Titel und bio als Inhalt", () => {
     const html = renderToStaticMarkup(<ItemPreview item={person()} author={null} />)
