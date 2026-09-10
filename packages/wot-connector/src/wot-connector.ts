@@ -1152,11 +1152,21 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     return this.memberObservables.get(groupId)!
   }
 
+  /**
+   * Mitgliederliste eines Space nachziehen. Jeder Aufrufer startet das
+   * fire-and-forget (`void`), deshalb faengt die Auffrischung ihren Fehler
+   * SELBST: scheitert die Quelle, bleibt die zuletzt bekannte Liste stehen
+   * und der Grund steht im Log — wie bei der Erstladung in observeMembers.
+   * Ohne diesen Fang wurde aus einer nicht antwortenden Replikation eine
+   * unbehandelte Rejection, die den ganzen Lauf verdaechtig macht.
+   */
   private async notifyMemberObservers(groupId: string | null): Promise<void> {
     const obs = this.memberObservables.get(groupId)
-    if (obs) {
-      const members = await this.getMembers(groupId)
-      obs.set(members)
+    if (!obs) return
+    try {
+      obs.set(await this.getMembers(groupId))
+    } catch (err) {
+      console.error("[WotConnector] members refresh failed", err)
     }
   }
 
