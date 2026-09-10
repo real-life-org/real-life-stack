@@ -57,7 +57,7 @@ Play-Auslieferung.
 | **Merge der Release-PR** | Tags entstehen → `publish.yml` (npm) + `build-on-tag` (App) per Dispatch |
 | **`<paket>-v*`-Tag** | `publish.yml` (Dispatch aus release-please) → tgz + npm |
 | **`app-v*`-Tag** | `build-on-tag` → APK + AAB als CI-Artefakt |
-| **`build-on-tag` grün** | `repository_dispatch` (`app-release`) an `real-life-org/wot-release` → Server signiert & liefert F-Droid + GitHub-Release aus |
+| **Ende des `build`-Jobs** | `repository_dispatch` (`app-release`, mit `run_id`) an `real-life-org/wot-release` → dort wird auf den Abschluss des Laufs gewartet, dann signiert & F-Droid + GitHub-Release ausgeliefert |
 
 > **GITHUB_TOKEN-Tags triggern keine Workflows** (GitHub-Rekursionsschutz).
 > Deshalb stößt `release-please.yml` `publish.yml` **und** `build-on-tag`
@@ -177,10 +177,18 @@ darf.
 
 **Das läuft seit v2 automatisch.** Am Ende des `build`-Jobs schickt
 `build-on-tag` ein `repository_dispatch` (`event_type: app-release`, Payload
-`{app: "rls", tag: "app-vX.Y.Z"}`) an `real-life-org/wot-release`. Dort nimmt ein
-self-hosted Runner auf dem Server das Event an und startet denselben
-`signer`-Container wie der Handgriff. Ergebnis: signiertes APK im F-Droid-Repo
-und am GitHub-Release (für Obtainium) — ohne SSH-Sitzung.
+`{app: "rls", tag: "app-vX.Y.Z", run_id: <dieser Lauf>}`) an
+`real-life-org/wot-release`. Dort nimmt ein self-hosted Runner auf dem Server das
+Event an und startet denselben `signer`-Container wie der Handgriff. Ergebnis:
+signiertes APK im F-Droid-Repo und am GitHub-Release (für Obtainium) — ohne
+SSH-Sitzung.
+
+**Warum `run_id` mitgeht:** Der Dispatch verlässt den Job, während der Workflow
+noch läuft — ein hochgeladenes Artefakt ist kein grüner Workflow. Der Signer
+verlangt aber einen abgeschlossenen, erfolgreichen Lauf und hat keinen Retry.
+Also wartet der Signierjob drüben zuerst auf genau diesen Lauf
+(`gh run watch --exit-status`, Timeout 30 min) und signiert erst danach. Roter
+Build oder Timeout → kein Signieren.
 
 **Warum das Event und nicht ein Runner hier:** Ein self-hosted Runner führt
 Workflow-Code auf der Maschine mit dem Schlüssel aus. An diesem **öffentlichen**

@@ -62,9 +62,14 @@ jobs:
           if-no-files-found: error
 
       # Signierdienst anstossen (v2). Bis hierher ist das unsignierte Artefakt
-      # hochgeladen — erst danach darf der Server es ziehen wollen. Die
-      # Job-Reihenfolge ist die ganze Bedingung: schlaegt ein Schritt davor
-      # fehl, laeuft dieser nie.
+      # hochgeladen; schlaegt ein Schritt davor fehl, laeuft dieser nie.
+      #
+      # Der Lauf ist zu diesem Zeitpunkt aber noch NICHT abgeschlossen — ein
+      # hochgeladenes Artefakt ist kein gruener Workflow. Deshalb geht die
+      # `run_id` mit ins Payload: der Signierjob wartet drueben auf den
+      # Abschluss dieses Laufs, bevor er signiert (real-life-stack#338). Die
+      # Alternative, den Dispatch in einen Folge-Job zu schieben, haette
+      # dasselbe Problem eine Ebene hoeher (auch der Folge-Job laeuft noch).
       #
       # WARUM ein Event und kein Runner hier: der Server haelt den nicht
       # rotierbaren F-Droid-Schluessel. Ein self-hosted Runner an DIESEM
@@ -77,6 +82,13 @@ jobs:
           # NIE nach `run:` interpolieren — `${{ }}` wird vor der Shell ersetzt.
           # Ueber env ist der Tag ein inertes Datum.
           TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          # Der Lauf, der gerade dispatcht. Er ist JETZT noch `in_progress` —
+          # das Artefakt liegt oben, der Workflow ist aber nicht abgeschlossen.
+          # Der Signierjob drueben wartet damit auf genau diesen Lauf, statt
+          # sofort einen gruenen Lauf zu verlangen und abzubrechen
+          # (real-life-stack#338). Ohne run_id faellt er auf den langsameren
+          # Handstart-Pfad zurueck.
+          RUN_ID: ${{ github.run_id }}
           # Fine-grained PAT, Owner real-life-org, nur Repo wot-release,
           # Contents: read and write (repository_dispatch verlangt
           # contents:write). Bewusst NICHT der GITHUB_TOKEN: der gilt nur fuer
@@ -89,8 +101,11 @@ jobs:
             echo "Der Handgriff bleibt der Weg:  docker compose run --rm signer rls $TAG  (auf dem Server)"
             exit 0
           fi
-          if ! printf '%s' "$TAG" | grep -Eq '^app-v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::notice::Tag '$TAG' ist kein app-vX.Y.Z — kein Dispatch."
+          # Bash-`[[ =~ ]]` statt `grep -E`: grep prueft ZEILENWEISE, ein Tag
+          # mit Zeilenumbruch kaeme sonst durch (wot-release#5). `$` ist hier
+          # Stringende, nicht Zeilenende.
+          if [[ ! "$TAG" =~ ^app-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::notice::Tag ist kein app-vX.Y.Z — kein Dispatch."
             exit 0
           fi
           # Ein Fehler HIER faellt auf (roter Job), kostet aber nichts: das
@@ -100,5 +115,6 @@ jobs:
           gh api -X POST repos/real-life-org/wot-release/dispatches \
             -f event_type=app-release \
             -f 'client_payload[app]=rls' \
-            -f "client_payload[tag]=$TAG"
-          echo "Dispatch app-release gesendet: rls $TAG"
+            -f "client_payload[tag]=$TAG" \
+            -f "client_payload[run_id]=$RUN_ID"
+          echo "Dispatch app-release gesendet: rls $TAG (Lauf $RUN_ID)"
