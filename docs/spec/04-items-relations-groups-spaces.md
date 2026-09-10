@@ -185,7 +185,7 @@ Jede Person hat **ein** persönliches Profil (`ProfileCapable`), unabhängig von
 
 Regeln:
 
-1. Das `person`-Item einer Person ist eine **Projektion**: abgeleitet aus Mitgliedschaft und Profil, nicht gespeichert. Sein `id` ist die Nutzer-Id, `data.did` bindet es an die WoT-Identität. `createdBy` ist die Person selbst.
+1. Das `person`-Item einer Person ist eine **Projektion**: abgeleitet aus Mitgliedschaft und Profil, nicht gespeichert. Sein `id` ist die Nutzer-Id, `data.did` trägt die stabile Identität der Person: bei WoT die DID, bei Connectoren ohne DID die Nutzer-Id. `createdBy` ist die Person selbst.
 2. **Ein Besitzer.** Änderungen laufen über `ProfileCapable`; Module lesen nur die Projektion. Im WoT-Connector ist das Persönliche Dokument der Besitzer des eigenen Profils, das Profilverzeichnis die Quelle für die Profile der anderen. Wer sein Profil bearbeitet, tut das an einer Stelle, und alle Spaces zeigen es.
 3. Die Projektion liefert der **Connector** im Item-Strom des Space (`getItems`/`observeItems`), damit Module keine Sonderbehandlung brauchen. Typ-Filter auf `person` greifen wie bei jedem Typ.
 4. **Position ist opt-in** und global: `data.position` erscheint nur, wenn die Person sie in ihrem Profil gesetzt hat, und dann in allen Spaces gleich. Eine Position je Space gibt es nicht.
