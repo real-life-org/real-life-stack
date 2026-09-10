@@ -60,3 +60,45 @@ jobs:
           path: out/release/
           retention-days: 30
           if-no-files-found: error
+
+      # Signierdienst anstossen (v2). Bis hierher ist das unsignierte Artefakt
+      # hochgeladen — erst danach darf der Server es ziehen wollen. Die
+      # Job-Reihenfolge ist die ganze Bedingung: schlaegt ein Schritt davor
+      # fehl, laeuft dieser nie.
+      #
+      # WARUM ein Event und kein Runner hier: der Server haelt den nicht
+      # rotierbaren F-Droid-Schluessel. Ein self-hosted Runner an DIESEM
+      # oeffentlichen Repo waere ueber Fork-PRs angreifbar. Also schickt dieses
+      # Repo nur ein Datenpaket an das PRIVATE `wot-release`, das selbst
+      # entscheidet, was damit passiert (siehe dessen README, "Runner-
+      # Installation").
+      - name: Signierdienst anstossen
+        env:
+          # NIE nach `run:` interpolieren — `${{ }}` wird vor der Shell ersetzt.
+          # Ueber env ist der Tag ein inertes Datum.
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          # Fine-grained PAT, Owner real-life-org, nur Repo wot-release,
+          # Contents: read and write (repository_dispatch verlangt
+          # contents:write). Bewusst NICHT der GITHUB_TOKEN: der gilt nur fuer
+          # dieses Repo.
+          GH_TOKEN: ${{ secrets.WOT_RELEASE_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::notice::Secret WOT_RELEASE_DISPATCH_TOKEN fehlt — Signierdienst nicht angestossen."
+            echo "Der Handgriff bleibt der Weg:  docker compose run --rm signer rls $TAG  (auf dem Server)"
+            exit 0
+          fi
+          if ! printf '%s' "$TAG" | grep -Eq '^app-v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::notice::Tag '$TAG' ist kein app-vX.Y.Z — kein Dispatch."
+            exit 0
+          fi
+          # Ein Fehler HIER faellt auf (roter Job), kostet aber nichts: das
+          # Artefakt liegt schon oben, und der Handstart im wot-release
+          # (`gh workflow run sign-on-dispatch.yml -f app=rls -f tag=…`)
+          # holt das Signieren jederzeit nach.
+          gh api -X POST repos/real-life-org/wot-release/dispatches \
+            -f event_type=app-release \
+            -f 'client_payload[app]=rls' \
+            -f "client_payload[tag]=$TAG"
+          echo "Dispatch app-release gesendet: rls $TAG"

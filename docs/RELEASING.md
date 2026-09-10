@@ -57,6 +57,7 @@ Play-Auslieferung.
 | **Merge der Release-PR** | Tags entstehen → `publish.yml` (npm) + `build-on-tag` (App) per Dispatch |
 | **`<paket>-v*`-Tag** | `publish.yml` (Dispatch aus release-please) → tgz + npm |
 | **`app-v*`-Tag** | `build-on-tag` → APK + AAB als CI-Artefakt |
+| **`build-on-tag` grün** | `repository_dispatch` (`app-release`) an `real-life-org/wot-release` → Server signiert & liefert F-Droid + GitHub-Release aus |
 
 > **GITHUB_TOKEN-Tags triggern keine Workflows** (GitHub-Rekursionsschutz).
 > Deshalb stößt `release-please.yml` `publish.yml` **und** `build-on-tag`
@@ -170,8 +171,45 @@ weg, daher prüft der Sentinel nur `android-foss`.
 
 ### Signieren & Ausliefern (Server, `wot-release`)
 
-`build-on-tag` produziert **unsignierte** Artefakte. Signiert wird auf dem Server
-(Schlüssel-Verwahrung):
+`build-on-tag` produziert **unsignierte** Artefakte. Signiert wird auf dem Server,
+weil der F-Droid-Schlüssel nicht rotierbar ist und die Maschine nicht verlassen
+darf.
+
+**Das läuft seit v2 automatisch.** Am Ende des `build`-Jobs schickt
+`build-on-tag` ein `repository_dispatch` (`event_type: app-release`, Payload
+`{app: "rls", tag: "app-vX.Y.Z"}`) an `real-life-org/wot-release`. Dort nimmt ein
+self-hosted Runner auf dem Server das Event an und startet denselben
+`signer`-Container wie der Handgriff. Ergebnis: signiertes APK im F-Droid-Repo
+und am GitHub-Release (für Obtainium) — ohne SSH-Sitzung.
+
+**Warum das Event und nicht ein Runner hier:** Ein self-hosted Runner führt
+Workflow-Code auf der Maschine mit dem Schlüssel aus. An diesem **öffentlichen**
+Repo könnte ein Fork-PR das ausnutzen. Also hängt der Runner am **privaten**
+`wot-release`; dieses Repo schickt nur ein Datenpaket, das dort gegen eine
+Whitelist geprüft wird.
+
+**Voraussetzung — Repo-Secret `WOT_RELEASE_DISPATCH_TOKEN`:** fine-grained PAT,
+Owner `real-life-org`, nur Repo `wot-release`, **Contents: read and write**
+(`repository_dispatch` verlangt `contents:write`). Fehlt das Secret,
+**überspringt** sich der Schritt mit einer Notiz — der Build bleibt grün und der
+Handgriff bleibt der Weg.
+
+**Play bleibt Handgriff.** Der Dispatch-Pfad liefert ausschließlich F-Droid +
+GitHub-Release. Der Play-Track ist eine menschliche Entscheidung (Googles
+Gatekeeping, internal/beta/production), also läuft `play-publish` nie
+automatisch.
+
+**Fallback (Handstart).** Nach einem Abbruch oder wenn der Runner steht — von
+überall, kein SSH nötig:
+
+```bash
+gh workflow run sign-on-dispatch.yml -R real-life-org/wot-release \
+  -f app=rls -f tag=app-vX.Y.Z
+gh workflow run sign-on-dispatch.yml -R real-life-org/wot-release \
+  -f app=rls -f tag=app-vX.Y.Z -f play=true    # zusätzlich Play internal
+```
+
+Und weiterhin direkt auf dem Server:
 
 ```bash
 cd ~/wot-release
@@ -180,7 +218,9 @@ docker compose run --rm play-publish rls app-vX.Y.Z   # Play internal
 ```
 
 Beide prüfen die **Provenienz** vor dem Signieren (kanonischer build-on-tag-Lauf,
-Tag-Commit, exakter Hash, OTA-Zustand). Details im `wot-release`-README.
+Tag-Commit, exakter Hash, OTA-Zustand) und brechen ab, statt einen schlechten
+Stand auszuliefern. Ein zweiter Lauf zum selben Tag ist deshalb gefahrlos.
+Details im `wot-release`-README.
 
 ---
 
