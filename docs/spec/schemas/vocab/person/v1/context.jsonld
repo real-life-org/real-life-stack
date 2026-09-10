@@ -3,10 +3,12 @@
     "@version": 1.1,
     "rls": "https://real-life-stack.org/vocab/person/v1#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "geo": "https://purl.org/geojson/vocab#",
 
     "displayName": { "@id": "rls:displayName", "@type": "xsd:string" },
     "avatarUrl": { "@id": "rls:avatarUrl", "@type": "@id" },
     "bio": { "@id": "rls:bio", "@type": "xsd:string" },
-    "did": { "@id": "rls:did", "@type": "@id" }
+    "did": { "@id": "rls:did", "@type": "@id" },
+    "position": { "@id": "geo:geometry" }
   }
 }

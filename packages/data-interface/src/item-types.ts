@@ -310,6 +310,15 @@ export interface ProfileItemData {
   offers?: string[]
   /** What the person is looking for. */
   needs?: string[]
+  /**
+   * Where the person places herself (person/v1 `position`). Opt-in and
+   * global: set once in the profile, shown in every space alike — there is
+   * no position per space (spec 04 §Profile, rule 4). A point; the richer
+   * geometries belong to place/v1.
+   */
+  position?: GeoJSONPoint
+  /** Named location for the position, e.g. "Prenzlauer Berg, Berlin". */
+  locationName?: string
 }
 
 // Canonical type string is "person" — matches the person/v1 vocab and

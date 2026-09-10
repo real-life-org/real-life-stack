@@ -1,0 +1,22 @@
+{
+  "id": "did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp",
+  "@context": [
+    "https://real-life-stack.org/vocab/base/v1",
+    "https://real-life-stack.org/vocab/person/v1",
+    "https://real-life-stack.org/vocab/place/v1"
+  ],
+  "type": "person",
+  "createdAt": "2026-02-01T09:30:00Z",
+  "createdBy": "did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp",
+  "data": {
+    "did": "did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp",
+    "displayName": "Anton",
+    "bio": "Baut am Web of Trust.",
+    "avatarUrl": "/personas/anton.png",
+    "position": {
+      "type": "Point",
+      "coordinates": [8.6821, 50.1109]
+    },
+    "locationName": "Frankfurt am Main"
+  }
+}

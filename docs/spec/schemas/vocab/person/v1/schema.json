@@ -26,10 +26,36 @@
         "did": {
           "type": "string",
           "minLength": 1,
-          "description": "Optional stable identity used to bind person items to confirmations."
+          "description": "Optional stable identity used to bind person items to confirmations. A person item WITH a did is the projection of a profile; without one it is a stored placeholder (spec 04 §Profile, rule 5)."
+        },
+        "position": {
+          "$ref": "#/$defs/GeoJSONPoint",
+          "description": "Where the person places herself. Opt-in and global: set in the profile, shown in every space alike (spec 04 §Profile, rule 4). A point — richer geometries belong to place/v1."
         }
       }
     }
   },
-  "required": ["data"]
+  "required": ["data"],
+  "$defs": {
+    "Longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+    "Latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+    "Position": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 3,
+      "prefixItems": [
+        { "$ref": "#/$defs/Longitude" },
+        { "$ref": "#/$defs/Latitude" }
+      ],
+      "items": { "type": "number" }
+    },
+    "GeoJSONPoint": {
+      "type": "object",
+      "required": ["type", "coordinates"],
+      "properties": {
+        "type": { "const": "Point" },
+        "coordinates": { "$ref": "#/$defs/Position" }
+      }
+    }
+  }
 }
