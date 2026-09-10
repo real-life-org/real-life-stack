@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
+import { itemDisplayTitle } from "@real-life-stack/data-interface"
 
 import { latLngFromPoint } from "../../lib/geo"
 import { getItemColor, getSpacePrimaryColor } from "../../lib/utils"
@@ -66,7 +67,10 @@ export function mapLensMarkers(
     markers.push({
       id: item.id,
       position: [lng, lat],
-      label: typeof item.data.title === "string" ? item.data.title : item.id,
+      // Der Marker traegt den Namen, den das Item hat — bei einer Person ihr
+      // displayName, nicht die rohe Id (itemDisplayTitle, dieselbe Aufloesung
+      // wie im Verlauf und in den Benachrichtigungen).
+      label: itemDisplayTitle(item) ?? item.id,
       color: getItemColor(item, { groupColor: resolveGroupColor?.(item) ?? getSpacePrimaryColor("map") }),
       icon: typeof item.data.icon === "string" ? item.data.icon : item.tags?.[0],
       selected: item.id === activeItemId || highlightedItemIds.includes(item.id),

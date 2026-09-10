@@ -160,10 +160,18 @@ describe("type presentation registry", () => {
     expect(resolved.detail).toBeTruthy()
   })
 
-  it("routes getItemPreviewAdornments through the registry (person keeps its profile meta)", () => {
-    const adornments = getItemPreviewAdornments(item("person", { displayName: "Ada Lovelace" }))
+  it("routes getItemPreviewAdornments through the registry (person: Badge + eigene Meta-Zeile)", () => {
+    // Der Name steht seit Spec 04 §Profile im Titel der Karte; die Meta-Zeile
+    // traegt Bild und Ort, das Badge den Typ.
+    const adornments = getItemPreviewAdornments(
+      item("person", { displayName: "Ada Lovelace", locationName: "London" }),
+    )
+    expect(renderToStaticMarkup(createElement("div", null, adornments.headerAdornment))).toContain("Person")
     const markup = renderToStaticMarkup(createElement("div", null, adornments.metaAdornment))
-    expect(markup).toContain("Ada Lovelace")
+    expect(markup).toContain("London")
+    // Initialen statt Name: das Bild vertritt die Person, der Name fuehrt
+    // als Titel der Karte.
+    expect(markup).toContain("AL")
   })
 
   it("renders the task footer with resolved assignees on any surface", async () => {

@@ -83,10 +83,17 @@ export function ItemDetailBody({
   className,
 }: ItemDetailBodyProps) {
   const data = item.data as Record<string, unknown>
-  const title = typeof data.title === "string" ? data.title : undefined
+  // Wie auf der Karte: `title` ist der gewoehnliche Fall, `displayName` traegt
+  // den Namen bei allem, was eine Person ist (person/v1) — und die Bio steht
+  // da, wo sonst der Inhalt steht (Spec 04 §Profile).
+  const title =
+    (typeof data.title === "string" && data.title) ||
+    (typeof data.displayName === "string" && data.displayName) ||
+    undefined
   const description =
     (typeof data.content === "string" && data.content) ||
     (typeof data.description === "string" && data.description) ||
+    (typeof data.bio === "string" && data.bio) ||
     ""
   const tags = useItemTags(item)
 

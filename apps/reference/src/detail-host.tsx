@@ -14,7 +14,9 @@ import {
   ItemScopeBadge,
   ItemTypeBadge,
   ReactionBar,
+  Button,
   useCurrentUser,
+  useOpenProfile,
   useMembers,
   useModulePanel,
   type ContentComposerProps,
@@ -23,6 +25,8 @@ import {
   type WidgetData,
 } from "@real-life-stack/toolkit"
 import type { Item, User } from "@real-life-stack/data-interface"
+import { isPersonProjection } from "@real-life-stack/data-interface"
+import { UserCog } from "lucide-react"
 import { moduleIds } from "@real-life-stack/toolkit"
 import { useItemFocus } from "./hooks/use-item-focus"
 
@@ -213,6 +217,14 @@ export function ItemDetailRead({
   // same resolution path the list and grid lenses use.
   const presentation = resolveTypePresentation(item.type)
 
+  // Das eigene projizierte Profil ist das einzige person-Item, an dem es hier
+  // etwas zu tun gibt: bearbeitet wird es NICHT im Item-Editor, sondern dort,
+  // wo es hergestellt wird — im Profil-Editor (Spec 04 §Profile, Regel 2).
+  // Fremde Projektionen bekommen keine Aktion; Kontakt und Verifikation
+  // bleiben, wo sie sind (Profil-Panel).
+  const openProfile = useOpenProfile()
+  const istEigeneProjektion = isPersonProjection(item) && item.id === currentUser?.id
+
   return (
     <ItemDetailBody
       item={item}
@@ -236,6 +248,14 @@ export function ItemDetailRead({
               register (spec 06, rule 3) - no type branching here. Reactions
               are surface convention and never type-bound. */}
           {renderTypeFooter(item)}
+          {istEigeneProjektion && (
+            <div>
+              <Button variant="outline" size="sm" onClick={() => openProfile(item.id)}>
+                <UserCog className="h-4 w-4" />
+                Profil bearbeiten
+              </Button>
+            </div>
+          )}
           <ReactionBar itemId={item.id} />
         </div>
       }

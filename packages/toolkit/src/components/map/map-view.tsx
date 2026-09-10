@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
-import { Calendar, Loader2, MapPin } from "lucide-react"
+import { Calendar, Loader2, MapPin, User } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"
 import { useSharedFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
@@ -21,6 +21,10 @@ import { useLocationPick } from "./location-pick"
 const MAP_TYPES: FilterTypeOption[] = [
   { id: "event", label: "Events", icon: Calendar },
   { id: "place", label: "Orte", icon: MapPin },
+  // Wer eine Position in seinem Profil gesetzt hat, steht als person-Item auf
+  // der Karte (Spec 04 §Profile, Regel 4) — dann muss der Filter ihn auch
+  // kennen.
+  { id: "person", label: "Personen", icon: User },
 ]
 const PICK_MARKER_ID = "__rls_pick__"
 const PICK_MARKER_COLOR = "#ef4444"

@@ -52,3 +52,38 @@ describe("resolveItemPermissions — Mitglieder duerfen Inhalte bearbeiten (rls#
     })
   })
 })
+
+describe("resolveItemPermissions — Projektionen sind nicht schreibbar (Spec 04 §Profile)", () => {
+  const projektion = (author: string) => ({
+    id: author,
+    type: "person",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    createdBy: author,
+    data: { did: author, displayName: "Anton" },
+  })
+
+  it("verweigert Bearbeiten und Loeschen — auch am eigenen Profil", () => {
+    expect(resolveItemPermissions(writable, projektion(ME) as never, ME)).toEqual({
+      canEdit: false,
+      canDelete: false,
+    })
+    expect(resolveItemPermissions(writable, projektion(OTHER) as never, ME)).toEqual({
+      canEdit: false,
+      canDelete: false,
+    })
+  })
+
+  it("laesst einen Platzhalter ohne did ein gewoehnliches Item bleiben", () => {
+    const platzhalter = {
+      id: "item-1",
+      type: "person",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      createdBy: OTHER,
+      data: { displayName: "Oma Erna" },
+    }
+    expect(resolveItemPermissions(writable, platzhalter as never, ME)).toEqual({
+      canEdit: true,
+      canDelete: true,
+    })
+  })
+})

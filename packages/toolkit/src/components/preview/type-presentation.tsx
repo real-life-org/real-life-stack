@@ -50,7 +50,7 @@ import { useMembers } from "../../hooks/use-groups"
 import { useCurrentUser } from "../../hooks/use-auth"
 import { ItemAssignees } from "./item-assignees"
 import { ItemMetaRow } from "./item-meta-row"
-import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
+import { ItemPersonDetailMeta, ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
 
 /** Every slot receives the item — nothing else. Data resolution (members,
  *  votes, …) happens inside the slot component via hooks, so a slot works on
@@ -185,10 +185,13 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     footer: TaskAssigneesFooter,
   },
   {
+    // „Person", nicht „Profil": auf der Karte steht ein Mensch, nicht das
+    // Formular, in dem er sich beschreibt (Spec 04 §Profile).
     id: "person",
-    label: "Profil",
+    label: "Person",
     badge: { icon: UserIcon, className: "bg-violet-50 text-violet-700 border-violet-200" },
     preview: ItemProfileMeta,
+    detail: ItemPersonDetailMeta,
   },
   { id: "project", label: "Projekt", preview: ItemProjectMeta },
   { id: "resource", label: "Ressource", preview: ItemResourceMeta },

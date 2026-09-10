@@ -9,6 +9,7 @@ import {
   ItemGroupBadge,
   ItemPrivateBadge,
   ItemMetaRow,
+  getItemPreviewAdornments,
   ItemCommentCount,
   FeedComposerTrigger,
   CreateFab,
@@ -29,7 +30,7 @@ import {
 } from "@real-life-stack/toolkit"
 import { FileText, SearchX } from "lucide-react"
 import { renderTypeFooter } from "@real-life-stack/toolkit"
-import { isAggregateVisibleItemType, type Item, type User } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType, isPersonProjection, type Item, type User } from "@real-life-stack/data-interface"
 import { useItemFocus } from "../hooks/use-item-focus"
 import { useRegisterDetail, type DetailConfig } from "../detail-host"
 import { mapComposerSubmission, withGroupOptions } from "../composer-mapping"
@@ -244,7 +245,13 @@ export function FeedView({ groupId }: { groupId: string }) {
             >
               <ItemPreview
                 item={item}
-                author={resolveAuthor(item.createdBy)}
+                // Eine projizierte Person ist selbst der Inhalt: Bild und Name
+                // fuehren die Karte, ein „erstellt von X vor N Jahren" waere
+                // eine Dopplung — und die Projektion hat gar kein
+                // Anlege-Ereignis (Spec 04 §Profile, Regel 1). Ein Platzhalter
+                // behaelt seinen Urheber: dort sagt er, wer den Kontakt
+                // eingetragen hat.
+                author={isPersonProjection(item) ? null : resolveAuthor(item.createdBy)}
                 active={modulePanel.current?.itemId === item.id}
                 activeColor={resolveItemGroupColor(item)}
                 onClick={() => focusItem(item.id)}
@@ -255,7 +262,11 @@ export function FeedView({ groupId }: { groupId: string }) {
                     {isOverview && isItemPrivate(item) && <ItemPrivateBadge />}
                   </>
                 }
-                metaAdornment={<ItemMetaRow item={item} />}
+                // Was in der Meta-Zeile steht, sagt der TYP (Spec 06,
+                // Typ-Register) — bei einer Person ihr Bild und ihr Ort, bei
+                // allem anderen die Zeit-/Ort-Zeile. Vorher stand hier fest
+                // ItemMetaRow; damit fehlte dem person-Item sein Gesicht.
+                metaAdornment={getItemPreviewAdornments(item).metaAdornment ?? <ItemMetaRow item={item} />}
                 footerAdornment={renderFeedFooter(item, () => focusItem(item.id))}
               />
             </div>

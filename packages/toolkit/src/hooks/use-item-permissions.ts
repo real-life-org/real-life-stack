@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import type { DataInterface, Item } from "@real-life-stack/data-interface"
-import { SYSTEM_ITEM_TYPES, hasAuthorization, isWritable } from "@real-life-stack/data-interface"
+import { SYSTEM_ITEM_TYPES, hasAuthorization, isPersonProjection, isWritable } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 import { useCurrentUser } from "./use-auth"
 
@@ -40,6 +40,12 @@ export function resolveItemPermissions(
   currentUserId: string | undefined,
 ): ItemPermissions {
   if (!item || !isWritable(connector)) return NONE
+  // Eine person-Projektion ist abgeleitet, nicht gespeichert: sie hat genau
+  // einen Besitzer, den Profil-Editor (Spec 04 §Profile, Regel 2). Der
+  // Connector lehnt Schreibzugriffe ohnehin ab — hier faellt der Knopf weg,
+  // der das Versprechen gar nicht erst gibt. Ein Platzhalter ohne did bleibt
+  // ein gewoehnliches Item.
+  if (isPersonProjection(item)) return NONE
   if (hasAuthorization(connector)) {
     return {
       canEdit: connector.can("item/edit", item),

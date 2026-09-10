@@ -6,6 +6,7 @@ import { BadgeCheck, Globe, Wrench } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
+import { ItemMetaRow } from "./item-meta-row"
 import { ItemTypeBadge } from "./item-type-badge"
 import { resolveTypePresentation } from "./type-presentation"
 
@@ -30,7 +31,13 @@ function initials(name: string): string {
     .slice(0, 2) || "?"
 }
 
-/** Avatar and display name for a canonical `person` item. */
+/**
+ * Bild und Ort einer Person (`person`-Item, Projektion wie Platzhalter).
+ *
+ * Der Name steht seit Spec 04 §Profile im Titel der Karte — hier stuende er
+ * ein zweites Mal. Was bleibt, ist das Gesicht und, wenn die Person einen
+ * Ort gesetzt hat, wo sie sich verortet.
+ */
 export function ItemProfileMeta({ item, className }: ItemTypeMetaProps) {
   if (!isProfileItem(item)) return null
 
@@ -42,9 +49,16 @@ export function ItemProfileMeta({ item, className }: ItemTypeMetaProps) {
           {initials(item.data.displayName)}
         </AvatarFallback>
       </Avatar>
-      <span className="font-medium text-foreground">{item.data.displayName}</span>
+      <ItemMetaRow item={item} />
     </div>
   )
+}
+
+/** Ort einer Person in der Meta-Box der Detailansicht — ohne das Bild, das
+ *  die Detailansicht bereits in der Urheberzeile fuehrt. */
+export function ItemPersonDetailMeta({ item, className }: ItemTypeMetaProps) {
+  if (!isProfileItem(item)) return null
+  return <ItemMetaRow item={item} className={className} />
 }
 
 /** Website and repository hints for a canonical `project` item. */
@@ -108,7 +122,14 @@ export interface ItemPreviewAdornments {
 export function getItemPreviewAdornments(item: Item): ItemPreviewAdornments {
   const resolved = resolveTypePresentation(item.type)
   if (resolved.preview) {
-    return { metaAdornment: createElement(resolved.preview, { item }) }
+    return {
+      // Das Badge sagt, WAS die Karte zeigt — auch dann, wenn der Typ
+      // zusaetzlich eine eigene Meta-Zeile mitbringt. Ohne diese Zeile
+      // verschwand die Typfarbe genau bei den Typen, die eine haben (event,
+      // person), waehrend die Filter-Card sie als Chip weiterfuehrte.
+      headerAdornment: createElement(ItemTypeBadge, { type: item.type }),
+      metaAdornment: createElement(resolved.preview, { item }),
+    }
   }
   // No meta slot -> the badge is the type cue, exactly as before the register:
   // registered types show THEIR badge (task, place, statement), unknown types

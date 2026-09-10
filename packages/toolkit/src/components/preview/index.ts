@@ -19,6 +19,7 @@ export { ItemCommentCount, type ItemCommentCountProps } from "./item-comment-cou
 export { ItemAssignees, type ItemAssigneesProps } from "./item-assignees"
 export { ItemTimeRange, formatTimeRange, type ItemTimeRangeProps } from "./item-time-range"
 export {
+  ItemPersonDetailMeta,
   ItemProfileMeta,
   ItemProjectMeta,
   ItemResourceMeta,

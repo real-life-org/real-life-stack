@@ -3,7 +3,7 @@ import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
 import { beforeEach, describe, expect, it } from "vitest"
 import { MockConnector } from "@real-life-stack/mock-connector"
-import { ConnectorProvider } from "@real-life-stack/toolkit"
+import { ConnectorProvider, OpenProfileProvider } from "@real-life-stack/toolkit"
 
 import { ItemDetailRead } from "./detail-host"
 import { feedFooter, selectFeedItems } from "./views/feed-view"
@@ -233,3 +233,60 @@ describe("feed selection", () => {
   })
 })
 
+
+describe("Detail einer person-Projektion (Spec 04 §Profile)", () => {
+  const projektion = (userId: string) => ({
+    id: userId,
+    type: "person",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    createdBy: userId,
+    data: { did: userId, displayName: userId === ME ? "Ich" : "Kollegin", bio: "Baut am Brunnen.", locationName: "Kassel" },
+  })
+
+  /** Rendert die Leseansicht MIT Profil-Öffner und meldet, wen er bekam. */
+  async function readWithProfileOpener(connector: MockConnector, item: Record<string, unknown>) {
+    const container = document.createElement("div")
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    const geoeffnet: string[] = []
+    await act(async () => {
+      root.render(
+        createElement(ConnectorProvider, {
+          connector: connector as never,
+          children: createElement(OpenProfileProvider, {
+            openProfile: (userId: string) => { geoeffnet.push(userId) },
+            children: createElement(ItemDetailRead, { item: item as never, actions: null, groupId: SPACE_A }),
+          }),
+        }),
+      )
+    })
+    await act(async () => { await Promise.resolve() })
+    const knopf = [...container.querySelectorAll("button")].find((b) => b.textContent?.includes("Profil bearbeiten"))
+    if (knopf) await act(async () => { knopf.click() })
+    const text = container.textContent ?? ""
+    await act(async () => { root.unmount() })
+    container.remove()
+    return { text, hatKnopf: !!knopf, geoeffnet }
+  }
+
+  it("zeigt Bio und Ort wie bei jedem anderen Item", async () => {
+    const { connector } = await connectorWith({})
+    const { text } = await readWithProfileOpener(connector, projektion(MATE))
+    expect(text).toContain("Baut am Brunnen.")
+    expect(text).toContain("Kassel")
+  })
+
+  it("bietet am eigenen Profil „Profil bearbeiten“ und öffnet den Profil-Editor", async () => {
+    const { connector } = await connectorWith({})
+    // Der Mock meldet den ersten Nutzer als angemeldet — das ist hier ME.
+    const { hatKnopf, geoeffnet } = await readWithProfileOpener(connector, projektion(ME))
+    expect(hatKnopf).toBe(true)
+    expect(geoeffnet).toEqual([ME])
+  })
+
+  it("bietet an einer fremden Projektion keine Bearbeiten-Aktion", async () => {
+    const { connector } = await connectorWith({})
+    const { hatKnopf } = await readWithProfileOpener(connector, projektion(MATE))
+    expect(hatKnopf).toBe(false)
+  })
+})
