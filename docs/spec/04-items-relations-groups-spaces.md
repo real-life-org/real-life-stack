@@ -181,14 +181,18 @@ Regeln:
 
 ## Profile
 
-Ein Profil kann als `type: "profile"`-Item erscheinen. Gleichzeitig gibt es `ProfileCapable` für eigenes Profil, öffentliche Profile und Sync.
+Jede Person hat **ein** persönliches Profil (`ProfileCapable`), unabhängig von Spaces. In jedem Space, dessen Mitglied sie ist, erscheint es als `person`-Item (`person/v1`), das Module wie jedes andere Item zeigen: in Feed, Karte, Liste und im Detail-Panel.
 
 Regeln:
 
-1. Profil-Items sind darstellbare Projektionen.
-2. `ProfileCapable` beschreibt technische Profiloperationen.
-3. Kontakte und Verifikationen sind nicht dasselbe wie Profile.
-4. WoT-Identität und Attestations werden nicht im RLS-Item-Modell neu definiert.
+1. Das `person`-Item einer Person ist eine **Projektion**: abgeleitet aus Mitgliedschaft und Profil, nicht gespeichert. Sein `id` ist die Nutzer-Id, `data.did` bindet es an die WoT-Identität. `createdBy` ist die Person selbst.
+2. **Ein Besitzer.** Änderungen laufen über `ProfileCapable`; Module lesen nur die Projektion. Im WoT-Connector ist das Persönliche Dokument der Besitzer des eigenen Profils, das Profilverzeichnis die Quelle für die Profile der anderen. Wer sein Profil bearbeitet, tut das an einer Stelle, und alle Spaces zeigen es.
+3. Die Projektion liefert der **Connector** im Item-Strom des Space (`getItems`/`observeItems`), damit Module keine Sonderbehandlung brauchen. Typ-Filter auf `person` greifen wie bei jedem Typ.
+4. **Position ist opt-in** und global: `data.position` erscheint nur, wenn die Person sie in ihrem Profil gesetzt hat, und dann in allen Spaces gleich. Eine Position je Space gibt es nicht.
+5. **Platzhalter.** Ein `person`-Item **ohne** `data.did` ist ein gewöhnliches gespeichertes Item: angelegt von einem Mitglied, mit dessen `createdBy`, bearbeitbar wie jeder Beitrag. So lassen sich Dritte führen, die noch nicht im Netz sind (Kontaktbuch). Module unterscheiden Projektion und Platzhalter **nur** am Vorhandensein von `data.did`.
+6. Kontakte, Verifikationen und Attestations bleiben außerhalb des Item-Modells; WoT-Identität und Attestations werden hier nicht neu definiert.
+
+Ausblick, nicht normativ: Sobald RLS auf RLTP steht, entscheidet die Person pro Space, ob und welches Profil sie zeigt, dann auch mehrere Personas. Regeln 1 bis 5 bleiben; nur die Quelle der Projektion wechselt vom einen Profil zur gewählten Persona. Tritt eine als Platzhalter geführte Person später bei, verbindet eine noch zu definierende Relation Platzhalter und Profil; der Platzhalter bleibt als Item bestehen, das Profil bleibt Projektion.
 
 ## RLNP und Real Life Game
 
