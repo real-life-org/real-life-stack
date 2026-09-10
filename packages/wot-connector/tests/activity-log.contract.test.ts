@@ -212,13 +212,19 @@ describe("Activity log — WoT transaction boundaries", () => {
     const background = handle()
     const personal = handle()
     let spaces = [
-      { id: "background", type: "shared" as const },
-      { id: "personal", type: "shared" as const, appTag: "rls-private" },
+      // `members` gehoert zum Space-Vertrag: getMembers() liest es, sobald
+      // irgendetwas die Mitglieder eines Space beobachtet (seit Spec 04
+      // §Profile tut das die person-Projektion). Ohne die Liste — und ohne
+      // getSpace/getSpaces — brach die Auffrischung im Hintergrund ab.
+      { id: "background", type: "shared" as const, members: [] as string[] },
+      { id: "personal", type: "shared" as const, appTag: "rls-private", members: [] as string[] },
     ]
     const spaceSubscribers = new Set<(value: typeof spaces) => void>()
     const replication = {
       watchSpaces: () => ({ getValue: () => spaces, subscribe: (callback: (value: typeof spaces) => void) => { spaceSubscribers.add(callback); return () => { spaceSubscribers.delete(callback) } } }),
       openSpace: vi.fn(async (id: string) => id === "background" ? background : id === "personal" ? personal : active),
+      getSpace: async (id: string) => spaces.find((space) => space.id === id) ?? null,
+      getSpaces: async () => spaces,
       onSpaceInvite: () => () => {},
       start: async () => {},
     }
