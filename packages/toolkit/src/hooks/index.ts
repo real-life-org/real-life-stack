@@ -44,7 +44,7 @@ export { useItemTags } from "./use-item-tags"
 export { useItemDateHint, formatItemDateHint, type ItemDateHint } from "./use-item-date-hint"
 export { useItemPosition, type ItemPosition } from "./use-item-position"
 export { useItemGroupColorResolver, useItemGroupResolver, useItemPrivacyResolver } from "./use-item-group-color"
-export { useOpenProfile, OpenProfileProvider, type OpenProfile, type OpenProfileProviderProps } from "./use-open-profile"
+export { useOpenProfile, OpenProfileProvider, type OpenProfile, type OpenProfileOptions, type OpenProfileProviderProps } from "./use-open-profile"
 export {
   useItemEditor,
   type UseItemEditorOptions,

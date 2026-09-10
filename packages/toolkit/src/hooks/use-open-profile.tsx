@@ -1,5 +1,20 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react"
 
+/** Wohin ein Profil-Klick führen soll. */
+export interface OpenProfileOptions {
+  /**
+   * `auto` (Vorgabe) überlässt der App Shell die Wahl der Fläche: seit
+   * Spec 04 §Profile erscheint ein Mitglied als `person`-Item, und dann
+   * gehört der Klick dorthin, wo die Person ohnehin steht — ins Detail.
+   *
+   * `dialog` verlangt ausdrücklich das Profil-Panel. Das brauchen die
+   * Flächen, die es NUR dort gibt: der eigene Profil-Editor und die
+   * Kontakt-/Verifikationsaktionen. Ohne diesen Weg drehte sich der Klick
+   * aus dem person-Detail heraus im Kreis zurück ins person-Detail.
+   */
+  surface?: "auto" | "dialog"
+}
+
 /**
  * Imperative handle to open a profile view for a user. The actual
  * implementation lives in the App Shell — depending on the host app it
@@ -9,7 +24,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react"
  * The toolkit ships only the contract: a hook + a provider. App Shells
  * decide what "open profile" means and wire the dialog/route there.
  */
-export type OpenProfile = (userId: string) => void
+export type OpenProfile = (userId: string, options?: OpenProfileOptions) => void
 
 const OpenProfileContext = createContext<OpenProfile | null>(null)
 

@@ -26,7 +26,7 @@ import {
 } from "@real-life-stack/toolkit"
 import type { Item, User } from "@real-life-stack/data-interface"
 import { isPersonProjection } from "@real-life-stack/data-interface"
-import { UserCog } from "lucide-react"
+import { UserCog, UserRound } from "lucide-react"
 import { moduleIds } from "@real-life-stack/toolkit"
 import { useItemFocus } from "./hooks/use-item-focus"
 
@@ -217,13 +217,17 @@ export function ItemDetailRead({
   // same resolution path the list and grid lenses use.
   const presentation = resolveTypePresentation(item.type)
 
-  // Das eigene projizierte Profil ist das einzige person-Item, an dem es hier
-  // etwas zu tun gibt: bearbeitet wird es NICHT im Item-Editor, sondern dort,
-  // wo es hergestellt wird — im Profil-Editor (Spec 04 §Profile, Regel 2).
-  // Fremde Projektionen bekommen keine Aktion; Kontakt und Verifikation
-  // bleiben, wo sie sind (Profil-Panel).
+  // An einer person-Projektion führt genau eine Aktion aus dem Item heraus,
+  // und sie führt immer ins Profil-Panel (Spec 04 §Profile, Regel 2): am
+  // EIGENEN Profil in den Editor — bearbeitet wird es nicht im Item-Editor,
+  // sondern dort, wo es hergestellt wird. An einer FREMDEN Projektion dorthin,
+  // wo Kontakt und Verifikation liegen; abgerissen wird davon nichts.
+  // `surface: "dialog"` ist hier Pflicht: ohne das führte der Klick über den
+  // Autor-Weg zurück in genau dieses Detail.
   const openProfile = useOpenProfile()
-  const istEigeneProjektion = isPersonProjection(item) && item.id === currentUser?.id
+  const istProjektion = isPersonProjection(item)
+  const istEigeneProjektion = istProjektion && item.id === currentUser?.id
+  const istFremdeProjektion = istProjektion && !istEigeneProjektion
 
   return (
     <ItemDetailBody
@@ -248,11 +252,15 @@ export function ItemDetailRead({
               register (spec 06, rule 3) - no type branching here. Reactions
               are surface convention and never type-bound. */}
           {renderTypeFooter(item)}
-          {istEigeneProjektion && (
+          {(istEigeneProjektion || istFremdeProjektion) && (
             <div>
-              <Button variant="outline" size="sm" onClick={() => openProfile(item.id)}>
-                <UserCog className="h-4 w-4" />
-                Profil bearbeiten
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openProfile(item.id, { surface: "dialog" })}
+              >
+                {istEigeneProjektion ? <UserCog className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
+                {istEigeneProjektion ? "Profil bearbeiten" : "Profil öffnen"}
               </Button>
             </div>
           )}

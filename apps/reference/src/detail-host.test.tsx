@@ -243,25 +243,32 @@ describe("Detail einer person-Projektion (Spec 04 §Profile)", () => {
     data: { did: userId, displayName: userId === ME ? "Ich" : "Kollegin", bio: "Baut am Brunnen.", locationName: "Kassel" },
   })
 
-  /** Rendert die Leseansicht MIT Profil-Öffner und meldet, wen er bekam. */
-  async function readWithProfileOpener(connector: MockConnector, item: Record<string, unknown>) {
+  /** Rendert die Leseansicht MIT Profil-Öffner und meldet, wen er bekam.
+   *  `knopfText` sagt, welche Aktion gedrückt werden soll. */
+  async function readWithProfileOpener(
+    connector: MockConnector,
+    item: Record<string, unknown>,
+    knopfText = "Profil bearbeiten",
+  ) {
     const container = document.createElement("div")
     document.body.appendChild(container)
     const root = createRoot(container)
-    const geoeffnet: string[] = []
+    const geoeffnet: { userId: string; surface?: string }[] = []
     await act(async () => {
       root.render(
         createElement(ConnectorProvider, {
           connector: connector as never,
           children: createElement(OpenProfileProvider, {
-            openProfile: (userId: string) => { geoeffnet.push(userId) },
+            openProfile: (userId: string, options?: { surface?: string }) => {
+              geoeffnet.push({ userId, surface: options?.surface })
+            },
             children: createElement(ItemDetailRead, { item: item as never, actions: null, groupId: SPACE_A }),
           }),
         }),
       )
     })
     await act(async () => { await Promise.resolve() })
-    const knopf = [...container.querySelectorAll("button")].find((b) => b.textContent?.includes("Profil bearbeiten"))
+    const knopf = [...container.querySelectorAll("button")].find((b) => b.textContent?.includes(knopfText))
     if (knopf) await act(async () => { knopf.click() })
     const text = container.textContent ?? ""
     await act(async () => { root.unmount() })
@@ -281,12 +288,37 @@ describe("Detail einer person-Projektion (Spec 04 §Profile)", () => {
     // Der Mock meldet den ersten Nutzer als angemeldet — das ist hier ME.
     const { hatKnopf, geoeffnet } = await readWithProfileOpener(connector, projektion(ME))
     expect(hatKnopf).toBe(true)
-    expect(geoeffnet).toEqual([ME])
+    // Ausdrücklich das Panel: sonst führte der Klick zurück in dieses Detail.
+    expect(geoeffnet).toEqual([{ userId: ME, surface: "dialog" }])
   })
 
   it("bietet an einer fremden Projektion keine Bearbeiten-Aktion", async () => {
     const { connector } = await connectorWith({})
     const { hatKnopf } = await readWithProfileOpener(connector, projektion(MATE))
     expect(hatKnopf).toBe(false)
+  })
+
+  it("führt von einer fremden Projektion ins Profil-Panel — Kontakt und Verifikation bleiben erreichbar", async () => {
+    const { connector } = await connectorWith({})
+    const { hatKnopf, geoeffnet } = await readWithProfileOpener(
+      connector,
+      projektion(MATE),
+      "Profil öffnen",
+    )
+    expect(hatKnopf).toBe(true)
+    expect(geoeffnet).toEqual([{ userId: MATE, surface: "dialog" }])
+  })
+
+  it("hängt einem Platzhalter keine Profil-Aktion an — er hat kein Profil", async () => {
+    const { connector } = await connectorWith({})
+    const platzhalter = {
+      id: "platzhalter-1",
+      type: "person",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      createdBy: ME,
+      data: { displayName: "Ulf" },
+    }
+    expect((await readWithProfileOpener(connector, platzhalter, "Profil öffnen")).hatKnopf).toBe(false)
+    expect((await readWithProfileOpener(connector, platzhalter)).hatKnopf).toBe(false)
   })
 })

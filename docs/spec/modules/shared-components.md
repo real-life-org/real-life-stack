@@ -662,13 +662,21 @@ Plus der Default-Formatter `formatItemDateHint(hint)` für eine kompakte Date-An
 **Vertrag:**
 
 ```ts
-type OpenProfile = (userId: string) => void
+interface OpenProfileOptions {
+  /** `auto` (Vorgabe) = App Shell wählt die Fläche; `dialog` = ausdrücklich das Profil-Panel. */
+  surface?: "auto" | "dialog"
+}
+type OpenProfile = (userId: string, options?: OpenProfileOptions) => void
 interface OpenProfileProviderProps {
   openProfile: OpenProfile
   children: ReactNode
 }
 function useOpenProfile(): OpenProfile  // no-op fallback ohne Provider
 ```
+
+**Ein Weg für Mitglieder, der Dialog für den Rest:** Seit [04 §Profile](../04-items-relations-groups-spaces.md) erscheint jedes Mitglied des aktiven Space als `person`-Item mit der Nutzer-Id als Item-Id. Ein Klick auf einen Autor-Avatar SOLL deshalb im geteilten Detail-Panel landen, wenn der Item-Strom die Projektion dieser Person führt — dieselbe Fläche, dieselbe Eskalation ins darstellende Modul wie bei jedem anderen Ziel. Führt er sie nicht (Autor aus einem anderen Space, Kontakt aus der Kontaktliste), bleibt es beim Profil-Panel. Unterschieden wird an `data.did`: ein Platzhalter ist keine Projektion und ist nie das Ziel eines Autor-Klicks.
+
+`surface: "dialog"` verlangt das Panel ausdrücklich und ist für die Flächen reserviert, die es nur dort gibt: den eigenen Profil-Editor und die Kontakt-/Verifikationsaktionen. Das Detail einer Projektion führt genau dorthin — am eigenen Profil als „Profil bearbeiten", an einer fremden als „Profil öffnen". Ohne diesen Weg drehte sich der Klick aus dem person-Detail heraus im Kreis zurück ins person-Detail.
 
 **Fallback-Semantik:** Ohne Provider liefert `useOpenProfile()` einen No-op. Avatar-Klick-Stellen können den Hook unbedingt aufrufen, ohne Stories oder Test-Harnesses zu brechen.
 

@@ -27,6 +27,7 @@ import {
   TagNavigationProvider,
   findModulePresenting,
   OpenProfileProvider,
+  type OpenProfile,
   DraftItemProvider,
   UnsavedChangesProvider,
   ModulePanelProvider,
@@ -84,6 +85,7 @@ import { LocalConnector } from "@real-life-stack/local-connector"
 import { ModuleOutlet } from "./views/module-outlet"
 import { useWorkspaceRouting, STORAGE_KEY_GROUP } from "./hooks/use-workspace-routing"
 import { buildNotificationRoute, moduleCanDisplay } from "./notification-navigation"
+import { waehleProfilZiel } from "./profil-ziel"
 import { ItemFocusProvider } from "./hooks/use-item-focus"
 import { LocationPickProvider, useLocationPick } from "./location-pick"
 import { CreateHostProvider, CreateSheetController } from "./create-host"
@@ -565,7 +567,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   // pops it. The own profile (id === currentUser.id) opens the editor, any
   // other id a read-only view.
   const profileUserId = searchParams.get("profile")
-  const openProfile = useCallback((userId: string) => {
+  const openProfileDialog = useCallback((userId: string) => {
     const params = new URLSearchParams(searchParams)
     params.set("profile", userId)
     const prev = (typeof location.state === "object" && location.state) || {}
@@ -642,6 +644,18 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     }
     focusItem(targetId)
   }, [activeModule, activeWorkspace, allItems, focusItem, groups, navigate])
+
+  // Ein Klick auf einen Autor-Avatar geht dorthin, wo die Person steht: Ist
+  // sie Mitglied dieses Space, trägt der Item-Strom ihre Projektion (Spec 04
+  // §Profile) und das geteilte Detail-Panel zeigt sie wie jedes andere Item —
+  // dieselbe Eskalation wie bei jedem anderen Ziel, falls das aktive Modul
+  // sie nicht darstellen kann. Für alle anderen (und für die Flächen, die es
+  // nur dort gibt) bleibt es beim Profil-Panel.
+  const openProfile = useCallback<OpenProfile>((userId, options) => {
+    const ziel = waehleProfilZiel(userId, allItems, options)
+    if (ziel.flaeche === "item") openEntryTarget(ziel.itemId)
+    else openProfileDialog(userId)
+  }, [allItems, openEntryTarget, openProfileDialog])
   const supportsMessaging = hasMessaging(connector)
 
   // Ein Feld fuehrt zu der Sicht, die es darstellen kann — das Datum in den
@@ -764,7 +778,10 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           </Button>
           <UserMenu
             user={userData}
-            onProfile={() => { if (currentUser?.id) openProfile(currentUser.id) }}
+            // Das Benutzermenü führt in den EDITOR, nicht auf die eigene Karte:
+          // wer hier klickt, will sein Profil ändern (Spec 04 §Profile,
+          // Regel 2 — Änderungen laufen über ProfileCapable).
+          onProfile={() => { if (currentUser?.id) openProfileDialog(currentUser.id) }}
             onContacts={supportsContacts ? () => openDialog("contacts") : undefined}
             contactCount={activeContacts.length}
             onVerify={hasEncounterVerification(connector) ? () => openDialog("verify") : undefined}
