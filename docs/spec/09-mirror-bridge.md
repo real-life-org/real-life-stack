@@ -231,10 +231,15 @@ DID; wot-core `resolveAdmission`). Sie ist auf allen Geräten gleich,
 wird nirgends gespeichert; Schlüsselrotation und erneut zugestellte
 Einladungen ändern sie nicht, erst ein `removed` schneidet den Lauf.
 Ordnung: nach `keyGeneration`; **keine Kennung (`undefined`) liegt unter
-jeder Kennung**. Ein Registry-Eintrag ohne Kennung (angelegt, bevor der
-Ziel-Space Ereignisse hatte) übernimmt beim Abgleich die erste Kennung
-des Ziel-Space als einmalige Nachführung ohne Statuswechsel; danach gilt
-die Ordnung. Die Lesesicht wird deterministisch abgeleitet: Position =
+jeder Kennung**. `undefined` entsteht in zwei Fällen, die beide „keine
+gültige Aufnahme" bedeuten: der Ziel-Space hat noch keine Ereignisse
+(Alt-Space), oder das Gewinner-Ereignis der eigenen DID ist `removed`.
+Ein Gerätebeitrag setzt seine `admission` ausschließlich beim Schreiben
+eines Statuswechsels (`shareItem`, Annahme, Widerruf) auf die dann
+aktuelle Kennung des Ziel-Space; eine stille Nachführung gibt es NICHT.
+Jeder Anstieg der Ziel-Kennung über die des Eintrags, auch von
+`undefined` auf eine Kennung, ist eine Wiederaufnahme (Abgleich unten).
+Die Lesesicht wird deterministisch abgeleitet: Position =
 Maximum aller Geräte-Positionen in der Ordnung
 `(seq, deviceId, tiebreak)`, `publishedHash` der gewinnenden Position
 (leer, wenn die gewinnende Publikation ein Tombstone war); Status nach
@@ -255,10 +260,17 @@ Der Abgleich ist ein Zielzustand, je Eintrag:
   Ziel einer mit Version ≥ Registry-Position liegt; der Eintrag bleibt
   `accepted`, `publishedHash` ist leer. Nur der Autor signiert
   (Invariante 5); ein zurückkehrendes Autor-Gerät holt das nach.
-- `accepted` und Kennung des Ziel-Space > `admission` (Wiederaufnahme):
-  der Eintrag wird `revoked`; eine neue Freigabe braucht `shareItem`.
-  Anwendungen KÖNNEN stattdessen einen Zwischenstatus führen
-  ([12-profile.md](12-profile.md): `pending`).
+- `accepted` und Kennung des Ziel-Space > `admission` (Wiederaufnahme,
+  einschließlich `undefined` → Kennung): das Gerät schreibt seinen
+  Beitrag als `revoked` mit der neuen Kennung; eine neue Freigabe
+  braucht `shareItem`. Anwendungen KÖNNEN stattdessen einen
+  Zwischenstatus führen ([12-profile.md](12-profile.md): `pending`).
+  Der Preis: ein Alt-Space ohne Ereignisse verlangt beim ersten
+  Auftauchen von Ereignissen eine neue Freigabe. Das ist gewollt, weil
+  nicht entscheidbar ist, ob dazwischen eine Entfernung lag.
+- `accepted` und Kennung des Ziel-Space < `admission` oder `undefined`
+  bei gesetztem `admission` (Mitgliedschaft verloren): keine
+  Publikation; der Beitrag wird `revoked` (Invariante 11).
 - `revoked`: solange der Autor Mitglied des Ziel-Space ist, wird ein
   Tombstone publiziert, bis im Ziel einer mit Version ≥ Registry-Position
   liegt. Ist er kein Mitglied mehr oder existiert der Ziel-Space nicht
@@ -277,6 +289,17 @@ gewöhnliche, read-only Items, annotiert mit der Relation
 `{ predicate: "mirrorOf", target: "space:{homeSpaceId}/item:{itemId}", meta: { ts } }`
 (Target-Konvention aus [04](04-items-relations-groups-spaces.md); erfüllt
 Invariante 7 ohne neues Item-Feld). Bearbeiten öffnet immer das Home.
+**Einzeladressierung:** weil ein Ziel-Space ein lokales Item `x` und
+Mirrors `(homeA, x)`, `(homeB, x)` zugleich enthalten kann (Invariante 1;
+deterministische Relation-IDs nach 08), akzeptieren `getItem` und
+`observeItem` neben der nackten `id` die qualifizierte Form
+`space:{homeSpaceId}/item:{itemId}` und liefern dann genau diese
+Mirror-Instanz. Die nackte `id` liefert das lokale Item; fehlt es, die
+Mirror-Instanz mit der höchsten Version. Home-relative Endpunkte eines
+Mirrors (Invariante 10) werden vom Connector in die qualifizierte Form
+seines `homeSpaceId` überführt, bevor sie aufgelöst werden. Listen
+(`getItems`, `observe`) enthalten alle Instanzen; Flächen MÜSSEN als
+Schlüssel `mirrorOf.target ?? id` verwenden, nie `id` allein.
 Aggregierende Sichten über mehrere Spaces zeigen je logischem Schlüssel
 `(homeSpaceId, itemId)` einen Eintrag: das Home, falls sichtbar, sonst
 die Mirror-Instanz mit der höchsten Version.

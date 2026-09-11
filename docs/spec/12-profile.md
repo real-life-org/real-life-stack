@@ -95,9 +95,10 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    erneut zugestellte Einladung an ein bestehendes Mitglied verändert
    sie; erst ein `removed` schneidet den Lauf, das nächste `active`
    danach ist die Wiederaufnahme. Alt-Spaces ohne Ereignisse haben keine
-   Kennung; Ordnung und einmalige Nachführung eines Eintrags ohne
-   Kennung folgen 09 §Ablage und Registry (keine Kennung liegt unter
-   jeder Kennung; Nachführung ohne Statuswechsel).
+   Kennung; die Ordnung folgt 09 §Ablage und Registry (keine Kennung
+   liegt unter jeder Kennung, keine stille Nachführung; jeder Anstieg,
+   auch von keiner Kennung auf eine, ist eine Wiederaufnahme und führt
+   zu `pending`).
    Der Registry-Eintrag (Regel 9) entsteht mit Status `pending` und der
    Kennung, sobald der Space auf einem Gerät der Person erscheint; die
    Annahme setzt ihn auf `accepted`, das Ablehnen auf `revoked`. Steigt
