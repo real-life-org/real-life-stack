@@ -38,7 +38,7 @@ interface ActivityEntry {
   action: "create" | "update" | "delete"
   /** gesetzt, wenn der Eintrag aus der Anwendung eines Mirror-Snapshots stammt (Regel 10) */
   origin?: "mirror"
-  /** lokale Item-id; bei origin "mirror" voll qualifiziert
+  /** lokale Item-id; bei Mirror-Instanzen (origin "mirror" oder Entfernung nach 12 Regel 7) voll qualifiziert
       `space:{homeSpaceId}/item:{itemId}` (Target-Konvention 04) —
       kollisionsfrei zu lokalen ids */
   targetId: string
@@ -125,6 +125,12 @@ interface ActivityEntry {
     Mirror-Einträgen ist die voll qualifizierte Form
     `space:{homeSpaceId}/item:{itemId}` (Target-Konvention 04) — nie die
     nackte `itemId`, die mit einem lokalen Item kollidieren könnte.
+    Entfernt ein anderes Mitglied eine Mirror-Instanz direkt aus dem
+    Space-Doc, ohne Snapshot ([12-profile.md](12-profile.md) Regel 7,
+    Admin-Entfernung), ist das ein gewöhnlicher `delete` nach Regel 1
+    (`actor` = ausführende Identität, kein `origin`), aber mit derselben
+    qualifizierten `targetId` — sonst bezeichnen Anlage und Löschung
+    desselben Mirrors verschiedene Ziele.
 
 ## Lese-Vertrag
 

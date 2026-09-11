@@ -9,9 +9,10 @@ implementiert wird.
 
 Code-Referenzen:
 
-- `packages/wot-connector/src/CrossGroupIndex.ts` (heutiger Index, nackte `item.id`)
+- `packages/wot-connector/src/CrossGroupIndex.ts` (heutiger Index, Schlüssel `(groupId, itemId)`, kein Tripel)
 - `packages/wot-connector/src/types.ts` (`RlsSpaceDoc`, `SerializedItem`)
 - [04-items-relations-groups-spaces.md](04-items-relations-groups-spaces.md) (Target-Konvention `space:{id}/item:`)
+- [12-profile.md](12-profile.md) (erste Anwendung: Profil-Mirrors; konkretisiert Doc-Map `mirrors` im Ziel-Space und `mirrorRegistry` im Home-Doc)
 
 ## Begriffe
 
@@ -61,7 +62,8 @@ Außenfelder.
 1. Die Identität eines gespiegelten Items ist der zusammengesetzte Schlüssel
    `(homeSpaceId, itemId)`. Kein Index DARF Mirror-Instanzen unter nacktem
    `itemId` mit Home-Instanzen zusammenführen. Der heutige `CrossGroupIndex`
-   erfüllt das nicht und DARF deshalb keine Mirrors führen. Zu trennen
+   schlüsselt kanonisch nach `(groupId, itemId)`, kennt aber keinen
+   Tripel-Schlüssel und DARF deshalb keine Mirrors führen. Zu trennen
    sind dabei logische und physische Identität: logisch ist das
    gespiegelte Item `(homeSpaceId, itemId)`, eine konkrete
    Mirror-Instanz ist `(targetSpaceId, homeSpaceId, itemId)` — Indizes

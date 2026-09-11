@@ -36,7 +36,7 @@ if (isWritable(connector)) {
 | `ConfirmationCapable` | `hasConfirmations()` | Confirmations lesen und beobachten |
 | `ConfirmationWriterCapable` | `hasConfirmationWriter()` | Confirmations ausstellen und Annahmestatus setzen |
 | `EncounterVerificationCapable` | `hasEncounterVerification()` | QR-/Begegnungsverifikation als eigenen Ablauf bereitstellen |
-| `ProfileCapable` | `hasProfile()` | eigenes Profil, öffentliche Profile und Profil-Sync |
+| `ProfileCapable` | `hasProfile()` | eigenes Profil, öffentliche Profile, Profil-Sync und Profil-Freigaben je Space (`observeProfileShares`, `acceptSpace`, `declineSpace`, `shareProfile`, `revokeProfileShare`; [12-profile.md](12-profile.md) Regel 14) |
 | `EventListenerCapable` | `hasEventListener()` | eingehende Connector-Ereignisse abonnieren |
 | `ItemGroupCapable` | `hasItemGroups()` | Item-zu-Group-Zuordnung lesen oder verschieben |
 | `AuthorizationCapable` | `hasAuthorization()` | per-Resource-Autorisierung (UCAN/RLS) für Create/Edit/Delete |

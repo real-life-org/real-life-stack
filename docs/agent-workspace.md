@@ -126,7 +126,7 @@ Relation-Targets nutzen Scope-Prefixe:
 ### User vs. Profil
 
 - **User** = Identity (nur id + cached displayName/avatarUrl). User ist KEIN Item.
-- **Profil** = Item (`type: "profile"`) mit zwei Sichtbarkeitsstufen (public + contacts-only). Profil IST ein Item.
+- **Profil** = Item (`type: "person"`, `data.did` = eigene DID), lebt im persönlichen Space und wird je freigegebenem Space gespiegelt (`docs/spec/12-profile.md`). Profil IST ein Item.
 
 ## Packages
 

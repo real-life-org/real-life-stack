@@ -126,9 +126,9 @@ Spec: [02-data-interface.md → §Observable](02-data-interface.md)
 
 ## Profile
 
-*Item* mit `@context: [..., person/v1]`. Trägt mindestens `data.displayName`, optional `data.bio`, `data.avatarUrl`, `data.position`. Wird in RLNP als sozialer Knoten gelesen.
+*Item* mit `type: "person"`, `@context: [..., person/v1]` und `data.did` = `createdBy` = `id`. Trägt mindestens `data.displayName`, optional `data.bio`, `data.avatarUrl`; ein Ort kommt über `place/v1` (`data.position`), nie über `person/v1`. Lebt einmal im persönlichen *Space* und erscheint in Gruppen-Spaces als *Mirror*. Wird in RLNP als sozialer Knoten gelesen.
 
-Spec: [04-items-relations-groups-spaces.md → §Profile](04-items-relations-groups-spaces.md), [schemas/vocab/person/v1/](schemas/vocab/person/v1/)
+Spec: [12-profile.md](12-profile.md), [04-items-relations-groups-spaces.md → §Profile](04-items-relations-groups-spaces.md), [schemas/vocab/person/v1/](schemas/vocab/person/v1/)
 
 ## Relation
 

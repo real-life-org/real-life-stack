@@ -43,7 +43,7 @@ Regeln:
 1. `createdAt` ist ein ISO-8601-String, kein `Date`-Objekt.
 2. Fachliche Felder liegen in `data`, nicht top-level. Ausnahmen: `@context`, `tags`, `relations` — orthogonale Achsen, nicht Inhalt.
 3. `tags` ist eine top-level Liste von String- oder URN-Identifiern. Siehe [07-tags.md](07-tags.md).
-4. `type` ist offen. RLS kennt Beispiele wie `task`, `event`, `post`, `place`, `profile`, `comment` oder `reaction`, aber Connectoren dürfen weitere Typen liefern.
+4. `type` ist offen. RLS kennt Beispiele wie `task`, `event`, `post`, `place`, `person`, `comment` oder `reaction`, aber Connectoren dürfen weitere Typen liefern.
 5. `@context` deklariert die aktiven Vocabularies. Siehe [06-schema-composition.md](06-schema-composition.md).
 6. `schema` und `schemaVersion` können maschinenlesbare Schemata anzeigen, sind aber nicht erforderlich.
 7. `_source` ist ein optionaler Hinweis auf die Datenquelle; UI darf daraus keine Trust-Aussage ableiten.
