@@ -44,7 +44,7 @@ Die Kern-Dokumente bauen in dieser Reihenfolge aufeinander auf:
 | [06-schema-composition.md](06-schema-composition.md) | Normativer Entwurf | Schema-Komposition über `@context`, Standardvokabulare, `type`-Hint, Typ-Register |
 | [07-tags.md](07-tags.md) | Normativer Entwurf | Tags als Kategorisierungs-Achse: einfache Strings + strukturierte URN-Tags |
 | [08-relation-records.md](08-relation-records.md) | Normativer Entwurf | Relationen als eigenständige Items (`type: "relation"`), `RelationStoreCapable`, Trust-Bindung an Confirmations |
-| [09-mirror-bridge.md](09-mirror-bridge.md) | Normativer Entwurf (Implementierung ab Netzwerk-App P2) | Items in mehreren Spaces: Canonical Home, read-only Mirror-Snapshots, Brücken-Clients |
+| [09-mirror-bridge.md](09-mirror-bridge.md) | Normativer Entwurf (Implementierung ab Netzwerk-App P2) | Items in mehreren Spaces: Canonical Home, read-only Mirror-Snapshots, Brücken-Clients; Mitgliedschaftsbindung, Ablage/Registry, `MirrorCapable` |
 | [10-activity-log.md](10-activity-log.md) | Normativer Entwurf | CRUD-Historie pro Space: Collection-Form, ID-/Merge-Ordnung, Retention, Atomarität |
 | [11-runtime-config-und-branding.md](11-runtime-config-und-branding.md) | Normativer Entwurf | Ein Artefakt, viele Instanzen: Endpunkte und Identität zur Laufzeit statt zur Build-Zeit |
 | [12-profile.md](12-profile.md) | Normativer Entwurf (erste Anwendung von 09) | Profil = person-Item im persönlichen Space, Mirror je freigegebenem Gruppen-Space; Freigabe, Widerruf, Ablage |

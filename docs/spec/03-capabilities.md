@@ -40,6 +40,7 @@ if (isWritable(connector)) {
 | `EventListenerCapable` | `hasEventListener()` | eingehende Connector-Ereignisse abonnieren |
 | `ItemGroupCapable` | `hasItemGroups()` | Item-zu-Group-Zuordnung lesen oder verschieben |
 | `AuthorizationCapable` | `hasAuthorization()` | per-Resource-Autorisierung (UCAN/RLS) für Create/Edit/Delete |
+| `MirrorCapable` | `hasMirrors()` | Items in weitere Spaces freigeben und Freigaben beobachten/widerrufen ([09-mirror-bridge.md → §Capability-Vertrag](09-mirror-bridge.md)) |
 | `ActivityLogCapable` | `hasActivityLog()` | best-effort Änderungsverlauf eines Space lesen und beobachten |
 | `ScopedActivityLogCapable` | `hasScopedActivityLog()` | additive Union des Verlaufs aller sichtbaren Spaces lesen und beobachten |
 | `NotificationStateCapable` | `hasNotificationState()` | gefalteten Benachrichtigungs-Lese-, Gesehen- und Mute-Zustand lesen und ändern |

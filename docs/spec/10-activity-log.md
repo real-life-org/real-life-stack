@@ -126,7 +126,7 @@ interface ActivityEntry {
     `space:{homeSpaceId}/item:{itemId}` (Target-Konvention 04) — nie die
     nackte `itemId`, die mit einem lokalen Item kollidieren könnte.
     Entfernt ein anderes Mitglied eine Mirror-Instanz direkt aus dem
-    Space-Doc, ohne Snapshot ([12-profile.md](12-profile.md) Regel 7,
+    Space-Doc, ohne Snapshot ([09-mirror-bridge.md](09-mirror-bridge.md) Invariante 11,
     Admin-Entfernung), ist das ein gewöhnlicher `delete` nach Regel 1
     (`actor` = ausführende Identität, kein `origin`), aber mit derselben
     qualifizierten `targetId` — sonst bezeichnen Anlage und Löschung

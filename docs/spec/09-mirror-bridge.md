@@ -169,6 +169,86 @@ Außenfelder.
     `item:`-Targets eines Mirrors MÜSSEN im Kontext seines `homeSpaceId`
     interpretiert werden (`item:x` ⇒ Mirror-Instanz
     `(targetSpaceId, homeSpaceId, x)`), NIE gegen den lokalen Space.
+11. **Mitgliedschaftsbindung.** Ein Mirror ist nur sichtbar, solange sein
+    Autor Mitglied des Ziel-Space ist; Empfänger MÜSSEN Mirrors von
+    Nicht-Mitgliedern ausblenden. Die Freigabe (Invariante 3) gilt den
+    Mitgliedern eines Space; wer nicht mehr Mitglied ist, kann sie weder
+    pflegen noch widerrufen, und sein Inhalt darf nicht ohne ihn im Space
+    stehen bleiben. Verlässt der Autor den Space, publiziert er VORHER
+    Tombstones für alle dort freigegebenen Items (absturzsicher: Tombstone
+    in die dauerhafte Outbox, dann Registry-Status, dann verlassen;
+    Zustellung eventual). Wird er entfernt, kann er keinen Tombstone
+    senden; deshalb entfernt der ausführende Client ERST die
+    Mirror-Inhalte des Autors aus `mirrors` (Activity `delete`, `actor` =
+    ausführende Identität, kein `origin: "mirror"`, qualifizierte
+    `targetId`; [10-activity-log.md](10-activity-log.md) Regel 10) und
+    ruft DANN `removeMember`. Schlägt `removeMember` fehl, ist der Autor
+    noch Mitglied, und sein Abgleich stellt die Mirrors wieder her. Die
+    High-Water-Marken bleiben (Invariante 8). Verliert der Autor die
+    Mitgliedschaft, setzt sein Connector die Registry-Einträge dieses
+    Ziels auf `revoked`; eine spätere Wiederaufnahme ist eine neue
+    Aufnahme (Kennung aus dem `_members`-Ereignis-Set des Space, siehe
+    [12-profile.md](12-profile.md) Regel 4) und braucht eine neue
+    Freigabe.
+
+## Ablage und Registry
+
+Mirrors liegen im Ziel-Space-Doc in einer eigenen Map `mirrors`, Schlüssel
+`JSON.stringify([homeSpaceId, itemId])`, Wert die Compact-JWS. Sie liegen
+NICHT in `items`: der heutige `CrossGroupIndex` schlüsselt kanonisch nach
+`(groupId, itemId)`, kennt aber keinen Tripel-Schlüssel (Invariante 1).
+Je Schlüssel wird nur ein Schnappschuss gehalten. Ein Empfänger MUSS vor
+Materialisierung prüfen, dass der Map-Schlüssel gleich
+`JSON.stringify([payload.homeSpaceId, payload.itemId])` und
+`payload.targetSpaceId` der eigene Space ist (Invariante 4); ein
+Schnappschuss unter fremdem Schlüssel gilt als ungültiger Slot und setzt
+keine Marke. Weil der Slot ein CRDT-Register ist, kann er nach
+nebenläufigen Schreibvorgängen oder durch ein Mitglied, das einen alten
+gültigen Schnappschuss zurückschreibt, eine niedrigere Version tragen als
+die höchste je akzeptierte. High-Water-Marken und Bindung (Invariante 6
+und 8) hält jedes Empfängergerät lokal und dauerhaft; die
+Resurrection-Garantie gilt für Geräte mit diesen Marken. Ein frisches
+Gerät ohne Marken übernimmt den vorgefundenen Slot nach Prüfung; das
+Maximum stellt der Autor-Abgleich durch Neupublikation mit höherer `seq`
+wieder her.
+
+Die Registry der Freigaben (Invariante 6) liegt im Home-Doc des Items:
+`mirrorRegistry`, Schlüssel `JSON.stringify([itemId, targetSpaceId])`.
+Jedes Gerät schreibt nur unter seinem eigenen `deviceId`-Schlüssel
+(`byDevice[deviceId] = { statusSeq, status, seq, tiebreak, publishedHash?, updatedAt }`,
+Status `accepted | revoked`); die Lesesicht wird deterministisch
+abgeleitet: Position = Maximum aller Geräte-Positionen in der Ordnung
+`(seq, deviceId, tiebreak)`, `publishedHash` der gewinnenden Position,
+Status nach höchstem `statusSeq` (Lamport-Zähler der Statuswechsel,
+`statusSeq = 1 + max(beobachtet)`), bei Gleichstand `revoked` vor
+`accepted`. Einträge werden NIE gelöscht. Jede Publikation, Live wie
+Tombstone, trägt `seq = 1 + max(seq aller Einträge dieses itemId)`, den
+home-weiten Zähler pro Item. Der Abgleich ist ein Zielzustand:
+`accepted` publiziert, wenn `sha256(kanonisches Item)` vom
+`publishedHash` abweicht oder der Slot im Ziel fehlt, ungültig ist oder
+eine niedrigere Version trägt; `revoked` publiziert einen Tombstone,
+solange im Ziel keiner mit Version ≥ Registry-Position liegt. Auslöser:
+Erstsync des Home, Änderung des Items, Änderung der Registry (auch von
+einem anderen Gerät), Änderung der Mitgliedschaft, Änderung des eigenen
+Slots im Ziel-Space. Widerruf, absturzsicher: ERST Tombstone signieren
+und in die dauerhafte Outbox, DANN Status `revoked`; bis zur Zustellung
+bleibt der Mirror lesbar. Anwendungen KÖNNEN die Registry um Felder
+erweitern ([12-profile.md](12-profile.md): `pending`, `admission`).
+
+## Capability-Vertrag
+
+`MirrorCapable` (Type Guard `hasMirrors()`):
+`observeItemShares(itemId): Observable<Record<targetSpaceId, "accepted" | "revoked">>`,
+`shareItem(itemId, targetSpaceId)`, `revokeItemShare(itemId, targetSpaceId)`.
+`shareItem` ist die bewusste, zielgebundene Freigabe (Invariante 3 und 4)
+und nur dem Autor (`createdBy`) erlaubt. Die UI bietet sie im ItemDetail
+des Autors an („in weiteren Spaces veröffentlichen": Auswahl der
+Ziel-Spaces, Liste der Freigaben mit Widerruf); Mirrors sind read-only,
+Bearbeiten öffnet das Home. Connectoren ohne Signaturidentität liefern
+dieselbe Item-Form und die `mirrorOf`-Annotation ohne JWS (eine
+Vertrauensdomäne). Die Profil-Operationen aus 12 Regel 14 setzen auf
+diesem Vertrag auf. [03-capabilities.md](03-capabilities.md) führt die
+Capability.
 
 ## Nicht-Ziele
 
