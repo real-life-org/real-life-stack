@@ -241,7 +241,15 @@ export interface MirrorMarkStore {
     itemId: string,
     authorDid: string,
   ): Promise<MirrorHighWaterMark | null>
-  putMark(mark: MirrorHighWaterMark): Promise<void>
+  /**
+   * Monotone Maximum-Operation (Spec 09 Invariante 6/8): die gespeicherte
+   * Marke wird nur ersetzt, wenn die neue in der vollen Ordnung
+   * `(seq, deviceId, tiebreak)` STRIKT größer ist. Ein verspäteter Write
+   * einer älteren Position darf die Marke nie senken — sonst ließe sich ein
+   * bereits abgewiesener Replay danach wieder einspielen. Atomar je Marke.
+   * Liefert `raised`, wenn die Marke angehoben wurde, sonst `kept`.
+   */
+  putMark(mark: MirrorHighWaterMark): Promise<"raised" | "kept">
   /** Alle Marken eines logischen Schlüssels, auch die ungebundenen. */
   listMarks(homeSpaceId: string, itemId: string): Promise<MirrorHighWaterMark[]>
   getBinding(homeSpaceId: string, itemId: string): Promise<MirrorBinding | null>

@@ -1,6 +1,7 @@
 import type { MirrorBinding, MirrorHighWaterMark, MirrorMarkStore } from "../types.js"
 
 import { mirrorMapKey } from "./keys.js"
+import { compareVersion } from "./version.js"
 
 /**
  * Prozesslokale Implementierung des {@link MirrorMarkStore} für Tests und
@@ -20,8 +21,18 @@ export class InMemoryMirrorMarkStore implements MirrorMarkStore {
     return this.marks.get(markKey(homeSpaceId, itemId, authorDid)) ?? null
   }
 
-  async putMark(mark: MirrorHighWaterMark): Promise<void> {
-    this.marks.set(markKey(mark.homeSpaceId, mark.itemId, mark.authorDid), { ...mark })
+  /**
+   * Maximum in der vollen Ordnung, synchron je Marke: zwei Auswertungen, die
+   * denselben alten Stand gelesen und Live seq=5 wie Tombstone seq=6 akzeptiert
+   * haben, dürfen die Marke in der Reihenfolge 6, 5 schreiben — gespeichert
+   * bleibt 6 (#349).
+   */
+  async putMark(mark: MirrorHighWaterMark): Promise<"raised" | "kept"> {
+    const key = markKey(mark.homeSpaceId, mark.itemId, mark.authorDid)
+    const current = this.marks.get(key)
+    if (current && compareVersion(mark, current) <= 0) return "kept"
+    this.marks.set(key, { ...mark })
+    return "raised"
   }
 
   async listMarks(homeSpaceId: string, itemId: string): Promise<MirrorHighWaterMark[]> {

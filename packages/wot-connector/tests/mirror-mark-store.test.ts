@@ -26,6 +26,32 @@ describe("InMemoryMirrorMarkStore", () => {
     expect(await store.getMark(HOME, "task-2", AUTHOR)).toBeNull()
   })
 
+  // #349 / Spec 09 Invariante 8: die Marke ist eine Maximum-Operation über die
+  // volle Ordnung. Ein verspäteter Write einer älteren Position senkt sie nie.
+  it("senkt die High-Water-Mark nie: verspäteter Write 6 → 5 bleibt bei 6", async () => {
+    const store = new InMemoryMirrorMarkStore()
+    expect(await store.putMark(mark(AUTHOR, 6))).toBe("raised")
+    expect(await store.putMark(mark(AUTHOR, 5))).toBe("kept")
+    expect((await store.getMark(HOME, "task-1", AUTHOR))?.seq).toBe(6)
+  })
+
+  it("hält die Marke auch bei gleicher seq mit kleinerem deviceId oder tiebreak", async () => {
+    const store = new InMemoryMirrorMarkStore()
+    await store.putMark({ ...mark(AUTHOR, 6), deviceId: "dev-b", tiebreak: "cc" })
+    expect(await store.putMark({ ...mark(AUTHOR, 6), deviceId: "dev-a", tiebreak: "ff" })).toBe("kept")
+    expect(await store.putMark({ ...mark(AUTHOR, 6), deviceId: "dev-b", tiebreak: "bb" })).toBe("kept")
+    expect(await store.putMark({ ...mark(AUTHOR, 6), deviceId: "dev-b", tiebreak: "cc" })).toBe("kept")
+    expect(await store.getMark(HOME, "task-1", AUTHOR)).toEqual({ ...mark(AUTHOR, 6), deviceId: "dev-b", tiebreak: "cc" })
+  })
+
+  it("hebt die Marke bei gleicher seq mit größerem deviceId oder tiebreak an", async () => {
+    const store = new InMemoryMirrorMarkStore()
+    await store.putMark({ ...mark(AUTHOR, 6), deviceId: "dev-a", tiebreak: "aa" })
+    expect(await store.putMark({ ...mark(AUTHOR, 6), deviceId: "dev-a", tiebreak: "ab" })).toBe("raised")
+    expect(await store.putMark({ ...mark(AUTHOR, 6), deviceId: "dev-b", tiebreak: "00" })).toBe("raised")
+    expect((await store.getMark(HOME, "task-1", AUTHOR))?.deviceId).toBe("dev-b")
+  })
+
   it("listet alle Marken eines logischen Schlüssels, auch die ungebundenen", async () => {
     const store = new InMemoryMirrorMarkStore()
     await store.putMark(mark(AUTHOR, 4))
