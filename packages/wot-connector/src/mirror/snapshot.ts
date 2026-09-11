@@ -105,6 +105,27 @@ export type MirrorVerifyReason =
   | "bad-signature"
   | "hash-failed"
 
+/**
+ * Vorübergehende Ablehnungen: der Schnappschuss selbst ist nicht als ungültig
+ * erwiesen, nur die Prüfung konnte nicht abgeschlossen werden (Schlüssel nicht
+ * auflösbar, Crypto-Laufzeitfehler). Der Empfänger prüft beim nächsten Abgleich
+ * erneut und setzt KEINE Marke. Alle anderen Gründe sind dauerhaft: der Slot
+ * ist ungültig (Spec 09 §Ablage), die Reparatur ist Sache des Autors.
+ *
+ * `bad-signature` ist bewusst dauerhaft: `verifyJwsWithPublicKey` unterscheidet
+ * nicht zwischen falscher Signatur und Crypto-Fehler; im Zweifel gilt der Slot
+ * als ungültig, der Autor publiziert ohnehin neu (Regel 5, Reparatur).
+ */
+export const TRANSIENT_VERIFY_REASONS: ReadonlySet<MirrorVerifyReason> = new Set<MirrorVerifyReason>([
+  "unknown-signer",
+  "key-resolution-failed",
+  "hash-failed",
+])
+
+export function isTransientVerifyReason(reason: MirrorVerifyReason): boolean {
+  return TRANSIENT_VERIFY_REASONS.has(reason)
+}
+
 export type MirrorVerifyResult =
   | { ok: true; payload: MirrorSnapshotPayload; tiebreak: string }
   | { ok: false; reason: MirrorVerifyReason }

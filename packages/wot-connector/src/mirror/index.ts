@@ -27,6 +27,8 @@ export {
   buildSnapshotPayload,
   isProfileSnapshot,
   isPublishableSeq,
+  isTransientVerifyReason,
+  TRANSIENT_VERIFY_REASONS,
   signSnapshot,
   verifySnapshot,
 } from "./snapshot.js"

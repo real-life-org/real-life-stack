@@ -7,6 +7,7 @@ import {
   MIRROR_SNAPSHOT_JWS_TYP,
   buildSnapshotPayload,
   isProfileSnapshot,
+  isTransientVerifyReason,
   signSnapshot,
   verifySnapshot,
 } from "../src/mirror/snapshot.js"
@@ -501,5 +502,25 @@ describe("verifySnapshot — Kanonisierung im Detail", () => {
     const padded = `${toBase64Url(bytes)}${"=".repeat((4 - (toBase64Url(bytes).length % 4)) % 4)}`
     const jws = await signRawParts(defaultHeader(), padded, author)
     expect(await verify(jws)).toEqual({ ok: false, reason: "non-canonical-payload" })
+  })
+})
+
+describe("verifySnapshot — Einordnung der Ablehnungsgründe", () => {
+  it("nur Auflösungs- und Crypto-Laufzeitfehler sind vorübergehend", () => {
+    expect(isTransientVerifyReason("unknown-signer")).toBe(true)
+    expect(isTransientVerifyReason("key-resolution-failed")).toBe(true)
+    expect(isTransientVerifyReason("hash-failed")).toBe(true)
+    for (const permanent of [
+      "malformed-jws",
+      "non-canonical-payload",
+      "foreign-map-key",
+      "foreign-target-space",
+      "item-id-mismatch",
+      "profile-id-mismatch",
+      "invalid-profile-marker",
+      "bad-signature",
+    ] as const) {
+      expect(isTransientVerifyReason(permanent)).toBe(false)
+    }
   })
 })
