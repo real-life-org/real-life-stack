@@ -81,10 +81,21 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    Mirror-Registry des persönlichen Space ein und publiziert den
    Schnappschuss. Die Freigabe umfasst alle späteren Änderungen des
    Profils, bis sie widerrufen wird (Regel 6). Ein Profil in N Spaces
-   sind N signierte Schnappschüsse. Der Registry-Eintrag (Regel 9)
-   entsteht mit Status `pending`, sobald der Space auf einem Gerät der
-   Person erscheint; die Annahme setzt ihn auf `accepted`, das Ablehnen
-   auf `revoked`. `pending` publiziert NIE, und `pending`-Spaces werden
+   sind N signierte Schnappschüsse. Jede Aufnahme in einen Space ist
+   durch ihre Einladung identifiziert (im heutigen Protokoll: die mit
+   der Einladung ausgestellte Space-Capability samt
+   `currentKeyGeneration`; eine Wiederaufnahme ist eine neue Einladung
+   mit neuer Capability). Der Registry-Eintrag (Regel 9) entsteht mit
+   Status `pending` und der Aufnahme-Kennung `admission` der Einladung,
+   sobald diese auf einem Gerät der Person eintrifft; die Annahme setzt
+   ihn auf `accepted`, das Ablehnen auf `revoked`. Trifft für einen
+   Space eine Einladung mit anderer Aufnahme-Kennung ein, wird der
+   Eintrag `pending` mit der neuen Kennung, unabhängig davon, ob das
+   Gerät die vorherige Entfernung gesehen hat; publiziert wird nur, wenn
+   die Aufnahme-Kennung des Space der Registry entspricht (Regel 5).
+   Code-Lücke: `IncomingSpaceInvite` führt die Kennung heute nicht, der
+   Adapter muss sie durchreichen. `pending` publiziert NIE, und
+   `pending`-Spaces werden
    aus Gruppenliste, Cross-Group-Lesepfad und Übersicht gefiltert; sie
    erscheinen nur in der Annahme-Fläche. Die Annahme-Fläche ist eine
    Toolkit-Komponente, keine App-Logik (00 Regel 9). Die Annahme ist
@@ -93,21 +104,28 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    ihr zusammen.
 5. **Abgleich und Bestand.** Der Connector führt den Ziel-Zustand aus
    der Registry (Regel 9) herbei, je Eintrag:
-   - `accepted`: weicht `sha256(kanonisches Profil-Item)` vom
-     gespeicherten `publishedHash` ab, wird ein neuer Schnappschuss mit
-     `seq = 1 + registry.seq` publiziert. Liegt im Ziel-Space ein Slot
-     mit niedrigerer Version als `(registry.seq, registry.deviceId,
-     registry.tiebreak)`, schreibt der Autor seinen letzten Schnappschuss
-     erneut (Reparatur, Regel 9).
+   - `accepted` (und Aufnahme-Kennung des Space = `admission`): weicht
+     `sha256(kanonisches Profil-Item)` vom gespeicherten `publishedHash`
+     ab, wird ein neuer Schnappschuss publiziert. Fehlt der Slot im
+     Ziel-Space, ist er ungültig (Signatur, Regel 8) oder trägt er eine
+     niedrigere Version als die Registry-Position, wird ebenfalls neu
+     publiziert (Reparatur, Regel 9); eine Ablage der alten JWS ist dafür
+     nicht nötig.
    - `revoked`: liegt im Ziel-Space kein Tombstone mit Version ≥ der
-     Registry-Version, wird ein Tombstone mit `seq = 1 + registry.seq`
-     publiziert, sofern die Person noch Mitglied ist.
-   - `pending`: nichts.
-   Auslöser: Start nach dem Erstsync-Signal des persönlichen Space,
-   Änderung des Profil-Items, Änderung der Registry (auch von einem
-   anderen Gerät), Änderung der Mitgliedschaften. `seq` folgt 09
-   Invariante 6 (Lamport, Registry im Home-Doc, alle Autor-Geräte sehen
-   sie); der Hash folgt der kanonischen Serialisierung aus 09 (RFC 8785).
+     Registry-Position, wird ein Tombstone publiziert, sofern die Person
+     noch Mitglied ist.
+   - `pending`, oder Aufnahme-Kennung ≠ `admission`: nichts.
+   Jede Publikation, Live wie Tombstone, trägt
+   `seq = 1 + max(seq aller Registry-Einträge dieses itemId)`, also den
+   home-weiten Zähler pro Item aus 09 Invariante 6, nicht den des
+   einzelnen Ziels; die Registry hält je Ziel nur die Position der
+   letzten dortigen Publikation. Auslöser: Start nach dem
+   Erstsync-Signal des persönlichen Space, Änderung des Profil-Items,
+   Änderung der Registry (auch von einem anderen Gerät), Änderung der
+   Mitgliedschaften oder Aufnahme-Kennung, Änderung des eigenen Slots
+   in einem Ziel-Space (der Autor ist dort Mitglied und beobachtet das
+   Doc). Der Hash folgt der kanonischen Serialisierung aus 09
+   (RFC 8785).
    **Übergangsregel:** Mitgliedschaften, die VOR Einführung dieser Spec
    bestanden, gelten als freigegeben. Der Connector legt für sie
    `accepted`-Einträge an und setzt im Home-Doc die Marke
@@ -130,21 +148,25 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    nach 09; nach dem Merge der Registry gilt der Status `revoked`, und
    der Abgleich (Regel 5) publiziert den Tombstone mit höherer `seq`
    nach, falls ein Live-Schnappschuss gewonnen hatte. Eine erneute
-   Freigabe setzt `accepted` und publiziert mit `seq = 1 + registry.seq`,
-   also oberhalb des Tombstones.
+   Freigabe setzt `accepted` und publiziert mit dem home-weiten Zähler
+   (Regel 5), also oberhalb des Tombstones.
 7. **Mitgliedschaftsbindung.** Ein Profil-Mirror ist nur sichtbar,
    solange `authorDid` Mitglied des Ziel-Space ist; alle Empfänger
    MÜSSEN Mirrors von Nicht-Mitgliedern ausblenden. Verliert die Person
    die Mitgliedschaft (der Space verschwindet aus ihrer Space-Liste),
    setzt ihr Connector den Registry-Eintrag auf `revoked`; eine erneute
-   Aufnahme läuft immer über Regel 4 (`pending`), publiziert also nie mit
-   der alten Freigabe. Entfernt ein Admin eine Person, kann diese keinen
+   Aufnahme ist eine neue Einladung mit neuer Aufnahme-Kennung und läuft
+   immer über Regel 4 (`pending`), publiziert also nie mit der alten
+   Freigabe, auch wenn ein Gerät Entfernung und Wiederaufnahme offline
+   verpasst hat. Entfernt ein Admin eine Person, kann diese keinen
    Tombstone senden; deshalb entfernt der ausführende Client ERST den
-   Mirror-Inhalt aus `mirrors` (Activity-Eintrag `delete`, `actor` =
-   Admin-DID, ohne `origin: "mirror"`, weil kein Schnappschuss
-   angewendet wird; 10 Regel 10 bleibt auf Schnappschüsse beschränkt)
-   und ruft DANN `removeMember`. Schlägt das Entfernen fehl, ist die
-   Person noch Mitglied und ihr Abgleich (Regel 5) stellt den Mirror
+   Mirror-Inhalt aus `mirrors` und ruft DANN `removeMember`. Der
+   Activity-Eintrag dazu ist `delete` mit `actor` = Admin-DID, ohne
+   `origin: "mirror"` (kein Schnappschuss wird angewendet) und mit
+   qualifizierter `targetId` `space:{homeSpaceId}/item:{did}`, derselben
+   Adresse wie bei Anlage und Aktualisierung des Mirrors (10 Regel 10).
+   Schlägt `removeMember` fehl, ist die Person noch Mitglied; ihr
+   Abgleich (Regel 5) sieht den fehlenden Slot und stellt den Mirror
    selbst wieder her. Die High-Water-Marken bleiben (09 Invariante 8).
    Restrisiko: ein vor der Entfernung signierter, noch ungesehener
    Schnappschuss kann nach einer Wiederaufnahme eintreffen und liegt
@@ -176,15 +198,17 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    Resurrection-Garantie aus 09 Invariante 8 gilt für Geräte mit diesen
    Marken. Ein frisches Gerät ohne Marken übernimmt den vorgefundenen
    Slot nach Signaturprüfung; das Maximum stellt der Autor-Abgleich
-   wieder her (Regel 5, Reparatur). Die Registry der Freigaben liegt im
-   Home-Doc: `mirrorRegistry`, Schlüssel
-   `JSON.stringify([itemId, targetSpaceId])`, Wert
-   `{ status: "pending" | "accepted" | "revoked", seq, deviceId, tiebreak, publishedHash?, updatedAt }`;
-   `seq`, `deviceId` und `tiebreak` sind die volle Ordnungsposition des
-   zuletzt publizierten Schnappschusses (09 Invariante 6),
-   `publishedHash` der Hash des zuletzt publizierten Items (bei
-   Tombstone leer). Einträge werden NIE gelöscht. Beide Felder sind
-   additiv; alte Clients ignorieren sie.
+   durch Neupublikation mit höherer `seq` wieder her (Regel 5,
+   Reparatur). Die Registry der Freigaben liegt im Home-Doc:
+   `mirrorRegistry`, Schlüssel `JSON.stringify([itemId, targetSpaceId])`,
+   Wert
+   `{ status: "pending" | "accepted" | "revoked", admission, seq, deviceId, tiebreak, publishedHash?, updatedAt }`;
+   `admission` ist die Aufnahme-Kennung der Einladung, auf die sich der
+   Status bezieht (Regel 4); `seq`, `deviceId` und `tiebreak` sind die
+   volle Ordnungsposition der letzten Publikation in diesen Ziel-Space
+   (09 Invariante 6), `publishedHash` der Hash des zuletzt publizierten
+   Items (bei Tombstone leer). Einträge werden NIE gelöscht. Beide
+   Felder sind additiv; alte Clients ignorieren sie.
 10. **Lesemodell.** Verifizierte Mirrors erscheinen über `getItems`,
     `getItem`, `observe` und `observeItem` des Ziel-Space als gewöhnliche
     Items (Feed, Karte, Liste, AdaptivePanel, Kontakte via
