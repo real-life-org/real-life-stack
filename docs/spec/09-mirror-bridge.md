@@ -135,7 +135,10 @@ Außenfelder.
    gespiegeltem Item: die Freigabe samt letzter publizierter `seq` liegt
    als Registry im Home-Doc (dadurch sehen alle Autor-Geräte Freigabe und
    Zählerstand), und beim Publizieren gilt
-   `seq = 1 + max(im Home beobachtete seq)`. Ein Gerät, das den gemergten
+   `seq = 1 + max(im Home beobachtete seq)`. `seq` ist eine nichtnegative
+   sichere Ganzzahl (unter 2^53 − 1); Empfänger lehnen Schnappschüsse
+   darüber ab, ein Publisher bricht bei Erschöpfung ab statt zu
+   stagnieren. Ein Gerät, das den gemergten
    Home-Stand publiziert, liegt damit immer über allen ihm bekannten
    Snapshots — getrennte lokale Zähler würden neuere Inhalte dauerhaft
    verwerfen lassen. Die totale Ordnung ist `(seq, deviceId, tiebreak)`
