@@ -101,6 +101,7 @@ export type MirrorVerifyReason =
   | "profile-did-mismatch"
   | "invalid-profile-marker"
   | "unknown-signer"
+  | "key-resolution-failed"
   | "bad-signature"
 
 export type MirrorVerifyResult =
@@ -189,7 +190,15 @@ export async function verifySnapshot(options: VerifySnapshotOptions): Promise<Mi
   const profileReason = profileViolation(payload)
   if (profileReason) return { ok: false, reason: profileReason }
 
-  const publicKey = await options.resolvePublicKey(payload.authorDid)
+  // Die Schlüsselauflösung ist fremder Code (Discovery, Cache) und darf die
+  // Prüfung nicht sprengen: synchrones Werfen wie Rejection → Ablehnung, kein
+  // Slot-Zustand, den der Aufrufer nicht als „ungültig" behandeln könnte.
+  let publicKey: Uint8Array | null
+  try {
+    publicKey = await options.resolvePublicKey(payload.authorDid)
+  } catch {
+    return { ok: false, reason: "key-resolution-failed" }
+  }
   if (!publicKey) return { ok: false, reason: "unknown-signer" }
   try {
     await verifyJwsWithPublicKey(options.jws, { publicKey, crypto: options.crypto })

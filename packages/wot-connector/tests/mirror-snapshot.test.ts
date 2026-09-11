@@ -316,6 +316,34 @@ describe("verifySnapshot — Profil-Overlay (Spec 12 Regel 8)", () => {
  * vergifteter Slot legte alle übrigen Mirrors des Space mit lahm.
  */
 describe("verifySnapshot — Totalität", () => {
+  // Die Schlüsselauflösung ist fremder Code (Discovery, Cache): sowohl ein
+  // synchroner Wurf als auch eine Rejection MÜSSEN als Ablehnung zurückkommen.
+  it("lehnt ab, wenn die Schlüsselauflösung synchron wirft", async () => {
+    const jws = await signCanonical(payloadFor(taskItem()), author)
+    const result = verifySnapshot({
+      jws,
+      mapKey: mirrorMapKey(HOME, "task-1"),
+      ownSpaceId: TARGET,
+      resolvePublicKey: () => {
+        throw new Error("discovery down")
+      },
+      crypto: protocolCrypto,
+    })
+    await expect(result).resolves.toEqual({ ok: false, reason: "key-resolution-failed" })
+  })
+
+  it("lehnt ab, wenn die Schlüsselauflösung eine Rejection liefert", async () => {
+    const jws = await signCanonical(payloadFor(taskItem()), author)
+    const result = verifySnapshot({
+      jws,
+      mapKey: mirrorMapKey(HOME, "task-1"),
+      ownSpaceId: TARGET,
+      resolvePublicKey: () => Promise.reject(new Error("discovery down")),
+      crypto: protocolCrypto,
+    })
+    await expect(result).resolves.toEqual({ ok: false, reason: "key-resolution-failed" })
+  })
+
   it("lehnt einen JSON-null-Header ab, statt zu werfen", async () => {
     const jws = await signRawParts("null", toBase64Url(canonicalSnapshotBytes(payloadFor(taskItem()))), author)
     await expect(verify(jws)).resolves.toEqual({ ok: false, reason: "malformed-jws" })

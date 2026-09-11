@@ -199,13 +199,20 @@ describe("planReconcile — pending", () => {
     expect(actionOf({ view: view({ status: "pending", admission: gen(1) }), targetAdmission: gen(1) })).toBe("none")
   })
 
-  // Mitgliedschaft verloren: die Registry hat nichts zu widerrufen, es gab nie
-  // eine Freigabe. Die Sichtbarkeit regelt Invariante 11 beim Empfänger.
-  it("bleibt untätig, wenn die Kennung wegfällt", () => {
-    expect(actionOf({ view: view({ status: "pending", admission: gen(1) }), targetAdmission: undefined })).toBe("none")
+  // Spec 12 Regel 7 / 09 Invariante 11: Mitgliedschaftsverlust widerruft
+  // JEDEN Status, auch einen ausstehenden Eintrag — sonst bliebe die
+  // Annahme-Fläche für eine Aufnahme offen, die es nicht mehr gibt.
+  it("widerruft bei Mitgliedschaftsverlust, unabhängig von der Kennung", () => {
     expect(
       actionOf({ view: view({ status: "pending", admission: gen(3) }), targetAdmission: gen(1), isMember: false }),
-    ).toBe("none")
+    ).toBe("mark-revoked")
+    expect(
+      actionOf({ view: view({ status: "pending", admission: gen(1) }), targetAdmission: undefined, isMember: false }),
+    ).toBe("mark-revoked")
+  })
+
+  it("bleibt untätig, wenn nur die Kennung fehlt, die Mitgliedschaft aber besteht", () => {
+    expect(actionOf({ view: view({ status: "pending", admission: gen(1) }), targetAdmission: undefined })).toBe("none")
   })
 })
 

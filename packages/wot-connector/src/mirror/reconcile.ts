@@ -82,15 +82,15 @@ function actionFor(entry: MirrorReconcileEntry, readmission: MirrorReconcileActi
   // Spec 12 Regel 5: `pending` publiziert NIE. Der Space ist noch nicht
   // angenommen — die Freigabe nach Invariante 3 fehlt schlicht.
   if (entry.view.status === "pending") {
+    // Spec 12 Regel 7 / 09 Invariante 11: Mitgliedschaftsverlust setzt den
+    // Eintrag auf `revoked`, für JEDEN Status — sonst bliebe eine Annahme-
+    // Fläche für eine Aufnahme offen, die es nicht mehr gibt.
+    if (!entry.isMember) return "mark-revoked"
     // Regel 4: steigt die Kennung über die des Eintrags, wird er `pending` mit
-    // der NEUEN Kennung — sonst stünde die Annahme-Fläche für eine Aufnahme
-    // offen, die es nicht mehr gibt, und die Annahme trüge eine veraltete
-    // Kennung, mit der Regel 5 nie publizieren würde. Die `readmission`-Option
-    // greift hier NICHT: ein `pending` kippt nie in `revoked`, weil es nie
-    // eine Freigabe gab, die zu widerrufen wäre.
+    // der NEUEN Kennung — sonst trüge die Annahme eine veraltete Kennung, mit
+    // der Regel 5 nie publizieren würde. Die `readmission`-Option greift hier
+    // NICHT: es gab nie eine Freigabe, die in `revoked` zu kippen wäre.
     if (drift > 0) return "mark-pending"
-    // Gesunkene oder fehlende Kennung: die Registry hat nichts zu widerrufen.
-    // Invariante 11 regelt die Sichtbarkeit, nicht den Registry-Bestand.
     return "none"
   }
 
