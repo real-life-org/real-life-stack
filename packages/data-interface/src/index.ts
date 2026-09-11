@@ -16,6 +16,7 @@ export {
   type RelationRecordCreateConnector,
 } from "./relation-records.js"
 export * from "./item-types.js"
+export * from "./mirror.js"
 import { SYSTEM_ITEM_TYPES } from "./item-types.js"
 export * from "./votes.js"
 export * from "./claims.js"
@@ -663,6 +664,125 @@ export interface ProfileCapable {
    * `getOutboxPendingCount()`). See docs/spec/02-data-interface.md → Readiness vs. Sync.
    */
   isProfileSyncPending(): Observable<boolean>
+
+  /**
+   * Freigabe-Status des eigenen Profils je Space, aus der Mirror-Registry des
+   * persönlichen Space (Spec 12 Regel 9 und 14). Schlüssel = Space-Id.
+   *
+   * `pending` ist der Zustand aus Regel 4: Mitgliedschaft entsteht heute ohne
+   * Zutun der Person, deshalb ist ein neu hinzugekommener Space zunächst
+   * ausstehend und publiziert NIE. Connectoren ohne Freigaben (Regel 13)
+   * liefern `accepted` für jede Mitgliedschaft.
+   */
+  observeProfileShares(): Observable<Record<string, ProfileShareStatus>>
+
+  /**
+   * Nimmt eine ausstehende Einladung an (Spec 12 Regel 4): die Annahme IST die
+   * Freigabe nach 09 Invariante 3 und 4 — bewusst und zielgebunden. Setzt den
+   * Registry-Eintrag auf `accepted` und stoesst den Abgleich an
+   * (= `shareItem(persönlicherSpaceId, did, spaceId)` aus 09).
+   */
+  acceptSpace(spaceId: string): Promise<void>
+
+  /** Lehnt eine ausstehende Einladung ab (Spec 12 Regel 4): Eintrag `revoked`,
+   *  die Person verlässt den Space. */
+  declineSpace(spaceId: string): Promise<void>
+
+  /**
+   * Gibt das Profil nachträglich für einen Space frei (Spec 12 Regel 14) —
+   * der Profil-Fall von `shareItem(persönlicherSpaceId, did, spaceId)`
+   * (09 §Capability-Vertrag), mit dem Annahme-Status aus Regel 4 davor.
+   */
+  shareProfile(spaceId: string): Promise<void>
+
+  /**
+   * Nimmt die Freigabe zurück, ohne den Space zu verlassen (Spec 12 Regel 6):
+   * ERST Tombstone signieren und in die dauerhafte Outbox, DANN Eintrag auf
+   * `revoked` — der Profil-Fall von `revokeItemShare` aus 09.
+   */
+  revokeProfileShare(spaceId: string): Promise<void>
+}
+
+/**
+ * Freigabe-Status des Profils je Space (Spec 12 Regel 9 und 14).
+ *
+ * `pending` ist profil-spezifisch: es ist der Zwischenstatus aus Regel 4, den
+ * 09 §Ablage und Registry Anwendungen ausdrücklich erlaubt. `pending`
+ * publiziert nie, und `pending`-Spaces erscheinen nur in der Annahme-Fläche.
+ */
+export type ProfileShareStatus = "pending" | "accepted" | "revoked"
+
+// --- Mirrors (Spec 09) ---
+
+/**
+ * Freigabe-Status eines gespiegelten Items je Ziel-Space (Spec 09
+ * §Ablage und Registry). Die Registry kennt nur diese beiden Werte; den
+ * Zwischenstatus `pending` fuehrt allein die Profil-Anwendung (12 Regel 4).
+ */
+export type MirrorShareStatus = "accepted" | "revoked"
+
+/**
+ * Ein Herkunftskonflikt aus Spec 09 Invariante 5: ein gültig signierter
+ * Schnappschuss eines ANDEREN Signers als der gebundenen DID. Er wird nie
+ * materialisiert und bindet nie um, wird aber als eigene High-Water-Marke
+ * geführt (Invariante 6) und MUSS sichtbar gemacht werden — keine stille
+ * Verwerfung, keine automatische Umbindung.
+ */
+export interface MirrorConflict {
+  /** Der behauptete Home-Space des gespiegelten Items. */
+  homeSpaceId: string
+  itemId: string
+  /** Die durch die Erst-Annahme gebundene Signer-DID (Invariante 5). */
+  boundAuthorDid: string
+  /** Die DID, unter der der abgewiesene Schnappschuss signiert war. */
+  foreignAuthorDid: string
+  /** `seq`: home-weit replizierter Lamport-Zähler; `ts`: reine Anzeigezeit,
+   *  NICHT Teil der Ordnung (Invariante 6). */
+  version: { seq: number; deviceId: string; ts: string }
+}
+
+/**
+ * Items in weitere Spaces freigeben, Freigaben beobachten und widerrufen
+ * (Spec 09 §Capability-Vertrag, Type Guard {@link hasMirrors}).
+ *
+ * Alle Autor-Operationen adressieren das Item ueber sein HOME, weil `itemId`
+ * allein nicht eindeutig ist (Invariante 1): RelationRecords desselben Autors
+ * können in zwei Spaces dieselbe deterministische `id` tragen (Spec 08).
+ *
+ * Connectoren ohne Signaturidentität liefern dieselbe Item-Form und die
+ * `mirrorOf`-Annotation ohne JWS (eine Vertrauensdomäne) und melden keine
+ * Konflikte.
+ */
+export interface MirrorCapable {
+  /**
+   * Die Freigaben eines Items je Ziel-Space, aus der Lesesicht der
+   * Mirror-Registry im Home-Doc (Spec 09 §Ablage und Registry).
+   * Schlüssel = `targetSpaceId`.
+   */
+  observeItemShares(homeSpaceId: string, itemId: string): Observable<Record<string, MirrorShareStatus>>
+
+  /**
+   * Die bewusste, zielgebundene Freigabe (Spec 09 Invariante 3 und 4), nur dem
+   * Autor (`createdBy`) erlaubt. Legt oder erneuert den Registry-Eintrag mit
+   * der aktuellen Aufnahme-Kennung. Spiegeln in N Spaces bedeutet N signierte
+   * Schnappschüsse — eine Freigabe ist NICHT in andere Spaces weiterkopierbar
+   * (Invariante 4, Empfängerprinzip).
+   */
+  shareItem(homeSpaceId: string, itemId: string, targetSpaceId: string): Promise<void>
+
+  /**
+   * Nimmt eine Freigabe zurück (Spec 09 §Ablage und Registry, Widerruf):
+   * ERST Tombstone signieren und in die dauerhafte Outbox, DANN Status
+   * `revoked`; bis zur Zustellung bleibt der Mirror lesbar. Eintraege werden
+   * NIE gelöscht, die High-Water-Marken bleiben (Invariante 8).
+   */
+  revokeItemShare(homeSpaceId: string, itemId: string, targetSpaceId: string): Promise<void>
+
+  /**
+   * Empfängerseite: die Herkunftskonflikte aus Spec 09 Invariante 5 für
+   * einen Ziel-Space, damit UI-Flächen sie sichtbar machen können.
+   */
+  observeMirrorConflicts(targetSpaceId: string): Observable<MirrorConflict[]>
 }
 
 // --- Incoming Events ---
@@ -874,6 +994,24 @@ export function hasEncounterVerification(c: DataInterface): c is DataInterface &
 
 export function hasProfile(c: DataInterface): c is DataInterface & ProfileCapable {
   return "getMyProfile" in c && "observeMyProfile" in c && "syncProfile" in c
+}
+
+/**
+ * Spec 09 §Capability-Vertrag. `MirrorCapable` bekommt bewusst KEINE
+ * `BaseConnector`-Defaults: solange kein Connector Mirrors erzeugt, darf der
+ * Guard auch nichts melden (03 → BaseConnector: „Ein Default darf nicht
+ * automatisch bedeuten, dass die Capability fachlich unterstützt wird").
+ * Eine Override-Prüfung wie bei Confirmations ist deshalb nicht nötig —
+ * es gibt nichts zu überschreiben.
+ */
+export function hasMirrors(c: DataInterface): c is DataInterface & MirrorCapable {
+  const candidate = c as DataInterface & Partial<MirrorCapable>
+  return (
+    typeof candidate.observeItemShares === "function" &&
+    typeof candidate.shareItem === "function" &&
+    typeof candidate.revokeItemShare === "function" &&
+    typeof candidate.observeMirrorConflicts === "function"
+  )
 }
 
 export function hasEventListener(c: DataInterface): c is DataInterface & EventListenerCapable {

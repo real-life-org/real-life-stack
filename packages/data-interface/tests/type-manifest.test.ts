@@ -6,6 +6,7 @@ import {
   CORE_TYPE_MANIFEST,
   type TypeManifestLayer,
 } from "../src/type-manifest"
+import { VOCAB_EVENT, VOCAB_PERSON, VOCAB_PLACE } from "../src/vocab"
 
 /**
  * Spec 06 → "Typ-Register" → "Erweiterung und Merge". Each test pins one
@@ -16,6 +17,28 @@ import {
 const app = (layer: Partial<TypeManifestLayer>): TypeManifestLayer => ({
   name: "app",
   ...layer,
+})
+
+/**
+ * Spec 06 → "Verhältnis zu den Schemas": `vocabularies` benennt, welche
+ * Schemas der Composer BEIM ERSTELLEN setzt. Ein OPTIONALES Vokabular steht
+ * deshalb nicht in der Bindung — es wird feldgetrieben aktiv (`deriveContext`,
+ * `place/v1` bei vorhandener `position`). `event` drückt "optional place" seit
+ * jeher durch Weglassen aus; `person` (Spec 12 Regel 2: "person/v1 hat KEIN
+ * Positionsfeld; ein Profil MIT Ort deklariert zusätzlich place/v1") folgt
+ * derselben Form.
+ */
+describe("vocabulary binding: optional vocabularies are expressed by omission", () => {
+  const manifest = composeTypeManifest([CORE_TYPE_LAYER])
+
+  it("binds event to event/v1 only — place/v1 stays optional", () => {
+    expect(manifest.get("event")?.vocabularies).toEqual([VOCAB_EVENT])
+  })
+
+  it("binds person to person/v1 only — place/v1 stays optional (spec 12 Regel 2)", () => {
+    expect(manifest.get("person")?.vocabularies).toEqual([VOCAB_PERSON])
+    expect(manifest.get("person")?.vocabularies).not.toContain(VOCAB_PLACE)
+  })
 })
 
 describe("type manifest composition", () => {
