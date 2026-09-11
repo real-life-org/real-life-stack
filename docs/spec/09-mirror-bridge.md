@@ -12,6 +12,7 @@ Code-Referenzen:
 - `packages/wot-connector/src/CrossGroupIndex.ts` (heutiger Index, nackte `item.id`)
 - `packages/wot-connector/src/types.ts` (`RlsSpaceDoc`, `SerializedItem`)
 - [04-items-relations-groups-spaces.md](04-items-relations-groups-spaces.md) (Target-Konvention `space:{id}/item:`)
+- [12-profile.md](12-profile.md) (erste Anwendung: Profil-Mirrors; konkretisiert Doc-Map `mirrors` im Ziel-Space und `mirrorRegistry` im Home-Doc)
 
 ## Begriffe
 

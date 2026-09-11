@@ -35,7 +35,7 @@ Diese Liste ist offen. RLS reserviert nur den technischen Vertrag, nicht die fac
 `type` steuert, wie UI-Flächen ein Item interpretieren können. Bekannte Typen im Code sind aktuell:
 
 ```text
-task, event, post, place, feature, profile, reaction, comment
+task, event, post, place, feature, person, reaction, comment
 ```
 
 Regeln:
@@ -181,14 +181,7 @@ Regeln:
 
 ## Profile
 
-Ein Profil kann als `type: "profile"`-Item erscheinen. Gleichzeitig gibt es `ProfileCapable` für eigenes Profil, öffentliche Profile und Sync.
-
-Regeln:
-
-1. Profil-Items sind darstellbare Projektionen.
-2. `ProfileCapable` beschreibt technische Profiloperationen.
-3. Kontakte und Verifikationen sind nicht dasselbe wie Profile.
-4. WoT-Identität und Attestations werden nicht im RLS-Item-Modell neu definiert.
+Ein Profil ist das person-Item einer Person mit DID. Es lebt genau einmal im persönlichen Space und erscheint in Gruppen-Spaces als Mirror nach [09-mirror-bridge.md](09-mirror-bridge.md). Form, Freigabe, Widerruf und Ablage definiert [12-profile.md](12-profile.md). `ProfileCapable` bleibt der technische Vertrag; Kontakte und Verifikationen sind nicht dasselbe wie Profile; WoT-Identität und Attestations werden im RLS-Item-Modell nicht neu definiert.
 
 ## RLNP und Real Life Game
 
