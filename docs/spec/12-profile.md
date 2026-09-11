@@ -85,19 +85,28 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    Schnappschuss. Die Freigabe umfasst alle späteren Änderungen des
    Profils, bis sie widerrufen wird (Regel 6). Ein Profil in N Spaces
    entspricht N signierten Schnappschüssen. Jede Aufnahme in einen Space ist
-   durch ihre Einladung identifiziert (im heutigen Protokoll: die mit
-   der Einladung ausgestellte Space-Capability samt
-   `currentKeyGeneration`; eine Wiederaufnahme ist eine neue Einladung
-   mit neuer Capability). Der Registry-Eintrag (Regel 9) entsteht mit
-   Status `pending` und der Aufnahme-Kennung `admission` der Einladung,
-   sobald diese auf einem Gerät der Person eintrifft; die Annahme setzt
-   ihn auf `accepted`, das Ablehnen auf `revoked`. Trifft für einen
-   Space eine Einladung mit anderer Aufnahme-Kennung ein, wird der
+   durch ihre **Aufnahme-Kennung** identifiziert: `SpaceInfo.admission =
+   { keyGeneration }`, abgeleitet aus dem synchronisierten
+   Mitgliedschafts-Ereignis-Set `_members` des Space als die niedrigste
+   `active`-Generation nach dem letzten `removed` der eigenen DID, also
+   der Beginn des aktuellen ununterbrochenen Mitgliedschaftslaufs (wot-core
+   `resolveAdmission`). Sie ist damit auf allen Geräten der Person gleich,
+   wird nirgends gespeichert, und weder eine Schlüsselrotation noch eine
+   erneut zugestellte Einladung an ein bestehendes Mitglied verändert
+   sie; erst ein `removed` schneidet den Lauf, das nächste `active`
+   danach ist die Wiederaufnahme. Alt-Spaces ohne Ereignisse haben keine
+   Kennung; die Ordnung folgt 09 §Ablage und Registry (keine Kennung
+   liegt unter jeder Kennung, keine stille Nachführung; jeder Anstieg,
+   auch von keiner Kennung auf eine, ist eine Wiederaufnahme und führt
+   zu `pending`).
+   Der Registry-Eintrag (Regel 9) entsteht mit Status `pending` und der
+   Kennung, sobald der Space auf einem Gerät der Person erscheint; die
+   Annahme setzt ihn auf `accepted`, das Ablehnen auf `revoked`. Steigt
+   die Kennung des Space über die des Eintrags (Wiederaufnahme), wird der
    Eintrag `pending` mit der neuen Kennung, unabhängig davon, ob das
-   Gerät die vorherige Entfernung gesehen hat; publiziert wird nur, wenn
-   die Aufnahme-Kennung des Space der Registry entspricht (Regel 5).
-   Code-Lücke: `IncomingSpaceInvite` führt die Kennung heute nicht, der
-   Adapter muss sie durchreichen. `pending` publiziert NIE, und
+   Gerät die Entfernung gesehen hat; publiziert wird nur, wenn die
+   Kennung des Space der Registry entspricht (Regel 5). `pending`
+   publiziert NIE, und
    `pending`-Spaces werden
    aus Gruppenliste, Cross-Group-Lesepfad und Übersicht gefiltert; sie
    erscheinen nur in der Annahme-Fläche. Die Annahme-Fläche ist eine
@@ -157,25 +166,16 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    nach, falls ein Live-Schnappschuss gewonnen hatte. Eine erneute
    Freigabe setzt `accepted` und publiziert mit dem home-weiten Zähler
    (Regel 5), also oberhalb des Tombstones.
-7. **Mitgliedschaftsbindung.** Ein Profil-Mirror ist nur sichtbar,
-   solange `authorDid` Mitglied des Ziel-Space ist; alle Empfänger
-   MÜSSEN Mirrors von Nicht-Mitgliedern ausblenden. Verliert die Person
-   die Mitgliedschaft (der Space verschwindet aus ihrer Space-Liste),
-   setzt ihr Connector den Registry-Eintrag auf `revoked`; eine erneute
-   Aufnahme ist eine neue Einladung mit neuer Aufnahme-Kennung und läuft
-   immer über Regel 4 (`pending`), publiziert also nie mit der alten
+7. **Mitgliedschaftsbindung.** Es gilt 09 Invariante 11: ein
+   Profil-Mirror ist nur sichtbar, solange `authorDid` Mitglied des
+   Ziel-Space ist; Verlassen mit Tombstone vorher, Admin-Entfernung mit
+   Mirror-Löschung vor `removeMember`, Selbstheilung bei Fehlschlag,
+   Marken bleiben. Profil-spezifisch: verliert die Person die
+   Mitgliedschaft, setzt ihr Connector den Registry-Eintrag auf `revoked`;
+   eine erneute Aufnahme hat eine höhere Aufnahme-Kennung (Regel 4) und
+   läuft immer über `pending`, publiziert also nie mit der alten
    Freigabe, auch wenn ein Gerät Entfernung und Wiederaufnahme offline
-   verpasst hat. Entfernt ein Admin eine Person, kann diese keinen
-   Tombstone senden; deshalb entfernt der ausführende Client ERST den
-   Mirror-Inhalt aus `mirrors` und ruft DANN `removeMember`. Der
-   Activity-Eintrag dazu ist `delete` mit `actor` = Admin-DID, ohne
-   `origin: "mirror"` (kein Schnappschuss wird angewendet) und mit
-   qualifizierter `targetId` `space:{homeSpaceId}/item:{did}`, derselben
-   Adresse wie bei Anlage und Aktualisierung des Mirrors (10 Regel 10).
-   Schlägt `removeMember` fehl, ist die Person noch Mitglied; ihr
-   Abgleich (Regel 5) sieht den fehlenden Slot und stellt den Mirror
-   selbst wieder her. Die High-Water-Marken bleiben (09 Invariante 8).
-   Restrisiko: ein vor der Entfernung signierter, noch ungesehener
+   verpasst hat. Restrisiko: ein vor der Entfernung signierter, noch ungesehener
    Schnappschuss kann nach einer Wiederaufnahme eintreffen und liegt
    über den Marken; er ist Inhalt, den die Person damals freigegeben
    hatte, und der Abgleich nach der neuen Annahme überschreibt ihn mit
@@ -198,48 +198,20 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    Behauptung (die Private-Space-ID ist aus dem Seed abgeleitet und für
    Empfänger nicht nachrechenbar); sie trägt für Profile keine
    Sicherheitslast.
-9. **Ablage und Registry.** Mirrors liegen NICHT in `items` des
-   Space-Doc: der heutige `CrossGroupIndex` schlüsselt kanonisch nach
-   `(groupId, itemId)`, kennt aber keinen Tripel-Schlüssel
-   `(targetSpaceId, homeSpaceId, itemId)` (09 Invariante 1) und DARF
-   deshalb keine Mirrors führen. `RlsSpaceDoc` erhält eine eigene Map
-   `mirrors`, Schlüssel `JSON.stringify([homeSpaceId, itemId])`, Wert
-   die Compact-JWS (09: Wire-Format = nur die JWS). Je Schlüssel wird
-   nur ein Schnappschuss gehalten. Weil der Slot ein CRDT-Register ist,
-   kann er nach nebenläufigen Schreibvorgängen oder durch ein Mitglied,
-   das einen alten gültigen Schnappschuss zurückschreibt, eine niedrigere
-   Version tragen als die höchste je akzeptierte. High-Water-Marken und
-   Bindung hält jedes Empfängergerät lokal und dauerhaft; die
-   Resurrection-Garantie aus 09 Invariante 8 gilt für Geräte mit diesen
-   Marken. Ein frisches Gerät ohne Marken übernimmt den vorgefundenen
-   Slot nach Signaturprüfung; das Maximum stellt der Autor-Abgleich
-   durch Neupublikation mit höherer `seq` wieder her (Regel 5,
-   Reparatur). Die Registry der Freigaben liegt im Home-Doc:
-   `mirrorRegistry`, Schlüssel `JSON.stringify([itemId, targetSpaceId])`,
-   Wert
-   `{ status: "pending" | "accepted" | "revoked", admission, seq, deviceId, tiebreak, publishedHash?, updatedAt }`
-   als Lesesicht. `admission` ist die Aufnahme-Kennung der Einladung,
-   auf die sich der Status bezieht (Regel 4); `seq`, `deviceId` und
-   `tiebreak` sind die volle Ordnungsposition der letzten Publikation in
-   diesen Ziel-Space (09 Invariante 6), `publishedHash` der Hash des
-   zuletzt publizierten Items (bei Tombstone leer). Einträge werden NIE
-   gelöscht. **Merge-Vertrag:** die Lesesicht ist ein Ergebnis, kein
-   überschreibbarer Wert. Ein Registry-Eintrag darf beim Merge nie
-   zurückfallen; deshalb schreibt jedes Gerät nur unter seinem eigenen
-   `deviceId`-Schlüssel (`byDevice[deviceId] = { statusSeq, status,
-   admission, seq, tiebreak, publishedHash?, updatedAt }`), und die
-   Lesesicht wird deterministisch abgeleitet: die Position ist das
-   Maximum aller Geräte-Positionen in der Ordnung
-   `(seq, deviceId, tiebreak)`, `publishedHash` ist der Hash dieser
-   gewinnenden Position; der Status folgt der höchsten `admission`
-   (Aufnahme-Kennungen sind über `currentKeyGeneration` geordnet) und
-   innerhalb derselben `admission` dem höchsten `statusSeq`
-   (Lamport-Zähler der Statuswechsel, `statusSeq = 1 + max(beobachtet)`),
-   bei Gleichstand `revoked` vor `pending` vor `accepted`. So gewinnt
-   ein Widerruf nie gegen eine nebenläufige Live-Publikation nur
-   deshalb, weil deren Wert zuletzt geschrieben wurde, und
-   `max(seq aller Einträge dieses itemId)` in Regel 5 ist monoton. Beide
-   Felder sind additiv; alte Clients ignorieren sie.
+9. **Ablage und Registry.** Es gilt 09 §Ablage und Registry (Map
+   `mirrors` im Ziel-Space, Registry `mirrorRegistry` je Gerät mit
+   deterministischer Lesesicht, Merge-Vertrag, home-weiter Zähler,
+   Abgleich als Zielzustand, Reparatur). Profil-spezifisch: die Registry
+   liegt im persönlichen Space; der Eintrag trägt zusätzlich den Status
+   `pending` und die Aufnahme-Kennung `admission` (Regel 4); der Status
+   folgt der höchsten `admission` (nach `keyGeneration` geordnet) und
+   innerhalb derselben `admission` der Widerrufs-Kausalität aus 09:
+   `revoked`, wenn ein Widerruf existiert, den keine Annahme per
+   `supersedes` abdeckt; sonst `pending`, wenn ein `pending`-Beitrag
+   existiert, den keine Annahme abdeckt; sonst `accepted`. So gewinnt ein
+   Widerruf nie gegen eine nebenläufige Annahme nur deshalb, weil deren
+   Wert zuletzt geschrieben wurde, und
+   `max(seq aller Einträge dieses itemId)` in Regel 5 bleibt monoton.
 10. **Lesemodell.** Verifizierte Mirrors erscheinen über `getItems`,
     `getItem`, `observe` und `observeItem` des Ziel-Space als gewöhnliche
     Items (Feed, Karte, Liste, AdaptivePanel, Kontakte via
@@ -295,7 +267,9 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
     `revokeProfileShare(spaceId)` setzen die Freigabe nachträglich oder
     nehmen sie zurück (Regel 6). Der Type Guard bleibt `hasProfile()`;
     Connectoren ohne Freigaben (Regel 13) liefern `accepted` für jede
-    Mitgliedschaft. 03 führt die Erweiterung. Kontakte und
+    Mitgliedschaft. Diese Operationen setzen auf `MirrorCapable` aus 09
+    §Capability-Vertrag auf (Profil = `shareItem(persönlicherSpaceId, did,
+    spaceId)` mit Annahme-Status davor). 03 führt beide. Kontakte und
     Verifikationen sind nicht dasselbe wie Profile; WoT-Identität und
     Attestations werden hier nicht neu definiert.
 
