@@ -220,7 +220,7 @@ wieder her.
 Die Registry der Freigaben (Invariante 6) liegt im Home-Doc des Items:
 `mirrorRegistry`, Schlüssel `JSON.stringify([itemId, targetSpaceId])`.
 Jedes Gerät schreibt nur unter seinem eigenen `deviceId`-Schlüssel
-(`byDevice[deviceId] = { statusSeq, status, admission, seq, tiebreak, publishedHash?, updatedAt }`,
+(`byDevice[deviceId] = { statusSeq, status, admission, supersedes?, seq, tiebreak, publishedHash?, updatedAt }`,
 Status `accepted | revoked`). `admission` ist die **Aufnahme-Kennung**
 des Autors im Ziel-Space zum Zeitpunkt der Freigabe:
 `SpaceInfo.admission = { keyGeneration }`, abgeleitet aus dem
@@ -249,10 +249,17 @@ Die Lesesicht wird deterministisch abgeleitet: Position =
 Maximum aller Geräte-Positionen in der Ordnung
 `(seq, deviceId, tiebreak)`, `publishedHash` der gewinnenden Position
 (leer, wenn die gewinnende Publikation ein Tombstone war); Status nach
-höchster `admission`, innerhalb derselben `admission` nach höchstem
-`statusSeq` (Lamport-Zähler der Statuswechsel,
-`statusSeq = 1 + max(beobachtet)`), bei Gleichstand `revoked` vor
-`accepted`. Einträge werden NIE gelöscht. Jede Publikation, Live wie
+höchster `admission`; innerhalb derselben `admission` gilt
+**Widerrufs-Kausalität** statt bloßer Ordnung: `statusSeq` ist ein
+Lamport-Zähler der Statuswechsel (`statusSeq = 1 + max(beobachtet)`),
+und eine Freigabe (`accepted`) trägt in `supersedes` die
+`(deviceId, statusSeq)` aller `revoked`-Beiträge, die sie beim Schreiben
+beobachtet hat. Der Status ist `revoked`, sobald ein `revoked`-Beitrag
+existiert, den kein `accepted`-Beitrag per `supersedes` abdeckt; sonst
+`accepted`. Ein Widerruf, den keine spätere Freigabe gesehen hat,
+gewinnt also immer, auch gegen eine nebenläufige Freigabe mit höherem
+`statusSeq`; erst eine Freigabe, die ihn beobachtet hat, löst ihn ab.
+Einträge werden NIE gelöscht. Jede Publikation, Live wie
 Tombstone, trägt `seq = 1 + max(seq aller Einträge dieses itemId)`, den
 home-weiten Zähler pro Item.
 

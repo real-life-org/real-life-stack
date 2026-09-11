@@ -205,10 +205,12 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    liegt im persönlichen Space; der Eintrag trägt zusätzlich den Status
    `pending` und die Aufnahme-Kennung `admission` (Regel 4); der Status
    folgt der höchsten `admission` (nach `keyGeneration` geordnet) und
-   innerhalb derselben `admission` dem höchsten `statusSeq`, bei
-   Gleichstand `revoked` vor `pending` vor `accepted`. So gewinnt ein
-   Widerruf nie gegen eine nebenläufige Live-Publikation nur deshalb,
-   weil deren Wert zuletzt geschrieben wurde, und
+   innerhalb derselben `admission` der Widerrufs-Kausalität aus 09:
+   `revoked`, wenn ein Widerruf existiert, den keine Annahme per
+   `supersedes` abdeckt; sonst `pending`, wenn ein `pending`-Beitrag
+   existiert, den keine Annahme abdeckt; sonst `accepted`. So gewinnt ein
+   Widerruf nie gegen eine nebenläufige Annahme nur deshalb, weil deren
+   Wert zuletzt geschrieben wurde, und
    `max(seq aller Einträge dieses itemId)` in Regel 5 bleibt monoton.
 10. **Lesemodell.** Verifizierte Mirrors erscheinen über `getItems`,
     `getItem`, `observe` und `observeItem` des Ziel-Space als gewöhnliche
