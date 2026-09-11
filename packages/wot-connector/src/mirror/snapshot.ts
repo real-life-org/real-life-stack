@@ -103,6 +103,7 @@ export type MirrorVerifyReason =
   | "unknown-signer"
   | "key-resolution-failed"
   | "bad-signature"
+  | "hash-failed"
 
 export type MirrorVerifyResult =
   | { ok: true; payload: MirrorSnapshotPayload; tiebreak: string }
@@ -206,7 +207,14 @@ export async function verifySnapshot(options: VerifySnapshotOptions): Promise<Mi
     return { ok: false, reason: "bad-signature" }
   }
 
-  return { ok: true, payload, tiebreak: await tiebreakOf(canonicalBytes) }
+  // Auch der Tiebreak-Hash ist Laufzeit-Crypto und darf die Prüfung nicht
+  // sprengen: ohne Tiebreak ist die Version nicht vergleichbar, der Slot gilt
+  // dann als (vorerst) ungültig und wird beim nächsten Abgleich erneut geprüft.
+  try {
+    return { ok: true, payload, tiebreak: await tiebreakOf(canonicalBytes) }
+  } catch {
+    return { ok: false, reason: "hash-failed" }
+  }
 }
 
 /**

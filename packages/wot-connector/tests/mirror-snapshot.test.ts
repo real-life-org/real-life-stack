@@ -1,5 +1,5 @@
 import { WebCryptoProtocolCryptoAdapter } from "@real-life/wot-core"
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it, vi } from "vitest"
 
 import { canonicalSnapshotBytes } from "../src/mirror/canonical.js"
 import { mirrorMapKey } from "../src/mirror/keys.js"
@@ -342,6 +342,28 @@ describe("verifySnapshot — Totalität", () => {
       crypto: protocolCrypto,
     })
     await expect(result).resolves.toEqual({ ok: false, reason: "key-resolution-failed" })
+  })
+
+  // Crypto-Laufzeitfehler beim Tiebreak-Hash (kein Angriff, aber eine Exception
+  // wäre ein Slot-Zustand, den der Aufrufer nicht als „ungültig" behandeln kann).
+  it("lehnt ab, wenn der Tiebreak-Hash fehlschlägt", async () => {
+    const payload = payloadFor(taskItem())
+    const jws = await signCanonical(payload, author)
+    const canonical = canonicalSnapshotBytes(payload)
+    const digest = globalThis.crypto.subtle.digest.bind(globalThis.crypto.subtle)
+    const spy = vi.spyOn(globalThis.crypto.subtle, "digest").mockImplementation(async (algorithm, data) => {
+      // Nur der Tiebreak-Hash über die kanonischen Bytes fällt aus; die
+      // Signaturprüfung davor hasht anderes und läuft normal weiter.
+      const bytes = data instanceof Uint8Array ? data : new Uint8Array(data as ArrayBuffer)
+      const isTiebreak = bytes.length === canonical.length && bytes.every((b, i) => b === canonical[i])
+      if (algorithm === "SHA-256" && isTiebreak) throw new Error("digest unavailable")
+      return digest(algorithm, data)
+    })
+    try {
+      await expect(verify(jws)).resolves.toEqual({ ok: false, reason: "hash-failed" })
+    } finally {
+      spy.mockRestore()
+    }
   })
 
   it("lehnt einen JSON-null-Header ab, statt zu werfen", async () => {
