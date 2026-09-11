@@ -235,10 +235,16 @@ jeder Kennung**. `undefined` entsteht in zwei Fällen, die beide „keine
 gültige Aufnahme" bedeuten: der Ziel-Space hat noch keine Ereignisse
 (Alt-Space), oder das Gewinner-Ereignis der eigenen DID ist `removed`.
 Ein Gerätebeitrag setzt seine `admission` ausschließlich beim Schreiben
-eines Statuswechsels (`shareItem`, Annahme, Widerruf) auf die dann
-aktuelle Kennung des Ziel-Space; eine stille Nachführung gibt es NICHT.
-Jeder Anstieg der Ziel-Kennung über die des Eintrags, auch von
-`undefined` auf eine Kennung, ist eine Wiederaufnahme (Abgleich unten).
+eines Statuswechsels; eine stille Nachführung gibt es NICHT. Eine neue
+Freigabe (`shareItem`, Annahme) trägt die dann aktuelle Kennung des
+Ziel-Space und setzt eine gültige Kennung voraus (bei `undefined` wird
+sie abgelehnt). Ein Widerruf, explizit oder durch Mitgliedschaftsverlust,
+trägt `max(admission der Lesesicht, aktuelle Kennung des Ziel-Space)`,
+also nie eine niedrigere Kennung als die Freigabe, die er widerruft;
+sonst verlöre er in der Lesesicht gegen den alten `accepted`-Beitrag
+eines Offline-Geräts. Jeder Anstieg der Ziel-Kennung über die des
+Eintrags, auch von `undefined` auf eine Kennung, ist eine Wiederaufnahme
+(Abgleich unten).
 Die Lesesicht wird deterministisch abgeleitet: Position =
 Maximum aller Geräte-Positionen in der Ordnung
 `(seq, deviceId, tiebreak)`, `publishedHash` der gewinnenden Position
@@ -270,7 +276,9 @@ Der Abgleich ist ein Zielzustand, je Eintrag:
   nicht entscheidbar ist, ob dazwischen eine Entfernung lag.
 - `accepted` und Kennung des Ziel-Space < `admission` oder `undefined`
   bei gesetztem `admission` (Mitgliedschaft verloren): keine
-  Publikation; der Beitrag wird `revoked` (Invariante 11).
+  Publikation; der Beitrag wird `revoked` mit der `admission` der
+  Lesesicht (Invariante 11), damit der Widerruf in der Faltung gegen
+  jeden alten `accepted`-Beitrag derselben Aufnahme gewinnt.
 - `revoked`: solange der Autor Mitglied des Ziel-Space ist, wird ein
   Tombstone publiziert, bis im Ziel einer mit Version ≥ Registry-Position
   liegt. Ist er kein Mitglied mehr oder existiert der Ziel-Space nicht
