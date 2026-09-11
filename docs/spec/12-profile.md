@@ -176,7 +176,15 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
 8. **Empfängerprüfung, verschärft.** Zusätzlich zu 09 Invariante 6 MUSS
    ein Empfänger bei jedem Profil-Schnappschuss, Live wie Tombstone,
    `itemId === authorDid` prüfen und bei Live-Schnappschüssen
-   (`item ≠ null`) zusätzlich `item.data.did === authorDid`. Damit ist
+   (`item ≠ null`) zusätzlich `item.data.did === authorDid`. Außerdem
+   MUSS der Schlüssel der `mirrors`-Map, unter dem die JWS liegt, gleich
+   `JSON.stringify([payload.homeSpaceId, payload.itemId])` sein, und
+   `payload.targetSpaceId` gleich dem eigenen Space (09 Invariante 4).
+   Ein gültig signierter Schnappschuss unter fremdem Schlüssel wird
+   nicht materialisiert, setzt keine Marke und gilt als ungültiger Slot;
+   sonst könnte ein Mitglied mit seinem eigenen Profil-Schnappschuss den
+   Slot einer anderen Person besetzen, ohne dass deren Reparatur
+   (Regel 5) anspringt. Damit ist
    ein Profil-Schlüssel nicht besetzbar (das Home-Origin-TOFU-Restrisiko
    aus 09 Invariante 5 entfällt für Profile): nur die Inhaberin der DID
    kann unter diesem Schlüssel signieren. `homeSpaceId` bleibt eine
@@ -202,12 +210,28 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    Reparatur). Die Registry der Freigaben liegt im Home-Doc:
    `mirrorRegistry`, Schlüssel `JSON.stringify([itemId, targetSpaceId])`,
    Wert
-   `{ status: "pending" | "accepted" | "revoked", admission, seq, deviceId, tiebreak, publishedHash?, updatedAt }`;
-   `admission` ist die Aufnahme-Kennung der Einladung, auf die sich der
-   Status bezieht (Regel 4); `seq`, `deviceId` und `tiebreak` sind die
-   volle Ordnungsposition der letzten Publikation in diesen Ziel-Space
-   (09 Invariante 6), `publishedHash` der Hash des zuletzt publizierten
-   Items (bei Tombstone leer). Einträge werden NIE gelöscht. Beide
+   `{ status: "pending" | "accepted" | "revoked", admission, seq, deviceId, tiebreak, publishedHash?, updatedAt }`
+   als Lesesicht. `admission` ist die Aufnahme-Kennung der Einladung,
+   auf die sich der Status bezieht (Regel 4); `seq`, `deviceId` und
+   `tiebreak` sind die volle Ordnungsposition der letzten Publikation in
+   diesen Ziel-Space (09 Invariante 6), `publishedHash` der Hash des
+   zuletzt publizierten Items (bei Tombstone leer). Einträge werden NIE
+   gelöscht. **Merge-Vertrag:** die Lesesicht ist ein Ergebnis, kein
+   überschreibbarer Wert. Ein Registry-Eintrag darf beim Merge nie
+   zurückfallen; deshalb schreibt jedes Gerät nur unter seinem eigenen
+   `deviceId`-Schlüssel (`byDevice[deviceId] = { statusSeq, status,
+   admission, seq, tiebreak, publishedHash?, updatedAt }`), und die
+   Lesesicht wird deterministisch abgeleitet: die Position ist das
+   Maximum aller Geräte-Positionen in der Ordnung
+   `(seq, deviceId, tiebreak)`, `publishedHash` ist der Hash dieser
+   gewinnenden Position; der Status folgt der höchsten `admission`
+   (Aufnahme-Kennungen sind über `currentKeyGeneration` geordnet) und
+   innerhalb derselben `admission` dem höchsten `statusSeq`
+   (Lamport-Zähler der Statuswechsel, `statusSeq = 1 + max(beobachtet)`),
+   bei Gleichstand `revoked` vor `pending` vor `accepted`. So gewinnt
+   ein Widerruf nie gegen eine nebenläufige Live-Publikation nur
+   deshalb, weil deren Wert zuletzt geschrieben wurde, und
+   `max(seq aller Einträge dieses itemId)` in Regel 5 ist monoton. Beide
    Felder sind additiv; alte Clients ignorieren sie.
 10. **Lesemodell.** Verifizierte Mirrors erscheinen über `getItems`,
     `getItem`, `observe` und `observeItem` des Ziel-Space als gewöhnliche
