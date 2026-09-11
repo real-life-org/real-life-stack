@@ -24,7 +24,7 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
 
 | Rolle aus 09 | Beim Profil |
 |---|---|
-| Canonical Home | persönlicher Space der Person (`rls-private`) |
+| Canonical Home | persönlicher Space der Person (appTag `rls-private`; `homeSpaceId` ist dessen deterministische, identitätsgebundene Space-ID, nicht das Tag) |
 | Item | `type: "person"`, `@context` mit `person/v1`, optional `place/v1` |
 | Autor / Signer | die Person (`createdBy` = DID) |
 | Freigabe | Annahme der Einladung oder Erstellen des Space; Bestand einmalig pauschal (Regel 5) |
@@ -38,6 +38,7 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
   "id": "did:key:z6Mk…",            // = createdBy = data.did
   "type": "person",
   "@context": ["…/base/v1", "…/person/v1", "…/place/v1"],
+  "createdAt": "2026-09-11T08:00:00.000Z",
   "createdBy": "did:key:z6Mk…",
   "data": {
     "displayName": "Anton",
@@ -65,8 +66,10 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    gespeichertes Item, das ein Mitglied für eine dritte Person anlegt
    (Kontaktbuch). Es hat eine zufällige `id`, `createdBy` ist das
    Mitglied, und es wird nicht gespiegelt. Die Unterscheidung
-   Profil/Platzhalter läuft ausschließlich über `data.did`. Ein Item mit
-   `data.did ≠ createdBy` ist ungültig. Eine Relation
+   Profil/Platzhalter läuft ausschließlich über das Vorhandensein von
+   `data.did`: fehlt es, ist das Item ein Platzhalter; ist es vorhanden,
+   MUSS es gleich `createdBy` sein. `data.did: null` ist ungültig (das
+   Schema verlangt einen nicht-leeren String). Eine Relation
    Platzhalter↔Profil beim Beitritt der Person ist nicht Teil dieser Spec.
 4. **Freigabe = Annahme der Einladung.** Mitgliedschaft entsteht im
    heutigen Protokoll ohne Zutun der Person (ein Mitglied fügt sie
@@ -81,7 +84,7 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    Mirror-Registry des persönlichen Space ein und publiziert den
    Schnappschuss. Die Freigabe umfasst alle späteren Änderungen des
    Profils, bis sie widerrufen wird (Regel 6). Ein Profil in N Spaces
-   sind N signierte Schnappschüsse. Jede Aufnahme in einen Space ist
+   entspricht N signierten Schnappschüssen. Jede Aufnahme in einen Space ist
    durch ihre Einladung identifiziert (im heutigen Protokoll: die mit
    der Einladung ausgestellte Space-Capability samt
    `currentKeyGeneration`; eine Wiederaufnahme ist eine neue Einladung
@@ -139,11 +142,15 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    Mit der RLTP-Umstellung (abgestuftes Vertrauen) entfällt die
    Grundlage; die Regel wird dann gestrichen.
 6. **Widerruf.** Die Person kann die Freigabe jederzeit zurücknehmen,
-   auch ohne den Space zu verlassen: der Eintrag wird `revoked` (nie
-   gelöscht, `seq` bleibt), ein Tombstone wird publiziert (09
-   Invariante 8). Verlässt sie den Space, geschieht dasselbe VOR dem
-   Verlassen; ist das Gerät offline, geht der Tombstone in die Outbox,
-   dann wird verlassen; Zustellung best-effort. Konkurrenz zwischen
+   auch ohne den Space zu verlassen. Reihenfolge, absturzsicher: ERST
+   wird der Tombstone signiert und in die dauerhafte Outbox gelegt, DANN
+   der Registry-Eintrag auf `revoked` gesetzt (nie gelöscht, `seq`
+   bleibt). Die Zustellung ist eventual: bis der Tombstone im Ziel-Space
+   angekommen ist, bleibt der Mirror für Mitglieder lesbar; die Outbox
+   wiederholt, und der Abgleich (Regel 5, Fall `revoked`) publiziert
+   erneut, solange im Ziel-Space kein Tombstone liegt. Verlässt sie den
+   Space, geschieht dasselbe VOR dem Verlassen, auch offline (Outbox,
+   dann verlassen). Konkurrenz zwischen
    Widerruf auf Gerät A und Publizieren auf Gerät B: beide erhöhen `seq`
    nach 09; nach dem Merge der Registry gilt der Status `revoked`, und
    der Abgleich (Regel 5) publiziert den Tombstone mit höherer `seq`
@@ -264,20 +271,33 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
     Übergangsprojektion für den Verzeichnisdienst und die Kontakt-Anzeige
     bestehen. Migration: erst nach dem Erstsync-Signal des persönlichen
     Space und nur, wenn das Item dann fehlt und `doc.profile` existiert,
-    legt der Connector das Item aus `doc.profile` an. Trifft
+    legt der Connector das Item aus `doc.profile` an; Migration wie
+    jede Projektion des eigenen Profils setzt `id`, `createdBy` und
+    `data.did` auf die DID (Regel 1). Trifft
     `doc.profile` später ein (Wiederherstellung) und das Item existiert,
     gilt das Item; fehlt es noch, wird dann migriert. Die Gegenrichtung
     `doc.profile` → Item gibt es außerhalb dieser Migration nicht.
 13. **Connectoren ohne Signaturidentität** (Mock, Local, Supabase)
     liefern dieselbe Item-Form (Regel 1 bis 3) und dieselbe
     `mirrorOf`-Annotation, führen das Profil aber als gewöhnliches Item
-    je Space, ohne JWS; sie sind eine Vertrauensdomäne. Die
-    JWS-Sicherung ist Teil des WoT-Connectors. UI-Flächen sehen keinen
-    Unterschied.
-14. `ProfileCapable` bleibt der technische Vertrag (eigenes Profil lesen,
-    schreiben, Sync-Status). Kontakte und Verifikationen sind nicht
-    dasselbe wie Profile; WoT-Identität und Attestations werden hier
-    nicht neu definiert.
+    je Space, ohne JWS; sie sind eine Vertrauensdomäne. Ihre
+    Ersatzidentität ist die Nutzer-ID des Connectors: `id`, `createdBy`
+    und `data.did` tragen diese ID statt einer DID. Regel 8 (Signatur-
+    und Schlüsselprüfung) gilt nur für den WoT-Connector. UI-Flächen
+    sehen keinen Unterschied.
+14. **Capability-Vertrag.** `ProfileCapable` bleibt der technische
+    Vertrag für das eigene Profil (lesen, schreiben, Sync-Status) und
+    wird um die Freigaben erweitert, damit die Annahme-Fläche (Regel 4)
+    keine App-Logik braucht: `observeProfileShares()` liefert je Space
+    den Status `pending | accepted | revoked` aus der Registry;
+    `acceptSpace(spaceId)` und `declineSpace(spaceId)` beantworten eine
+    ausstehende Einladung (Regel 4); `shareProfile(spaceId)` und
+    `revokeProfileShare(spaceId)` setzen die Freigabe nachträglich oder
+    nehmen sie zurück (Regel 6). Der Type Guard bleibt `hasProfile()`;
+    Connectoren ohne Freigaben (Regel 13) liefern `accepted` für jede
+    Mitgliedschaft. 03 führt die Erweiterung. Kontakte und
+    Verifikationen sind nicht dasselbe wie Profile; WoT-Identität und
+    Attestations werden hier nicht neu definiert.
 
 ## Nicht-Ziele
 
