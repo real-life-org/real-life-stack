@@ -174,6 +174,21 @@ describe("nextSeq", () => {
     expect(nextSeq([])).toBe(1)
     expect(nextSeq([{ byDevice: {} }])).toBe(1)
   })
+
+  // Ohne Grenze gäbe `max + 1` wieder `max` zurück: jeder neue Schnappschuss
+  // trüge dieselbe Position und fiele beim Empfänger unter die
+  // Strikt-größer-Regel — der Mirror fröre still ein.
+  it("scheitert laut, statt am Rand des sicheren Ganzzahlbereichs zu stagnieren", () => {
+    expect(() => nextSeq([{ byDevice: { a: contribution({ seq: Number.MAX_SAFE_INTEGER }) } }])).toThrow(
+      /Ganzzahlbereich/,
+    )
+    expect(() => nextSeq([{ byDevice: { a: contribution({ seq: Number.MAX_SAFE_INTEGER - 1 }) } }])).toThrow(
+      /Ganzzahlbereich/,
+    )
+    expect(nextSeq([{ byDevice: { a: contribution({ seq: Number.MAX_SAFE_INTEGER - 2 }) } }])).toBe(
+      Number.MAX_SAFE_INTEGER - 1,
+    )
+  })
 })
 
 describe("nextStatusSeq", () => {

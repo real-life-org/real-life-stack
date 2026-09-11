@@ -120,6 +120,27 @@ describe("planReconcile — accepted, Mitgliedschaft verloren", () => {
   })
 })
 
+describe("planReconcile — Wiederaufnahme eines widerrufenen Eintrags", () => {
+  // Spec 12 Regel 4 und 7: eine erneute Aufnahme hat eine höhere Kennung und
+  // läuft immer über die Annahme — der alte Widerruf galt einer Aufnahme, die
+  // es nicht mehr gibt, und schuldet dem Ziel keinen Tombstone mehr.
+  const readmitted = {
+    view: view({ status: "revoked" as const, admission: gen(1) }),
+    targetAdmission: gen(3),
+    isMember: true,
+    slot: { kind: "missing" } as MirrorSlotState,
+  }
+
+  it("führt bei Annahme-Anwendungen in den Zwischenstatus statt in den Tombstone", () => {
+    const plan = planReconcile({ entries: [entry(readmitted)], readmission: "pending" })
+    expect(plan[0]?.action).toBe("mark-pending")
+  })
+
+  it("widerruft nach Spec 09 mit der neuen Kennung, ohne Zustellversuch", () => {
+    expect(planReconcile({ entries: [entry(readmitted)] })[0]?.action).toBe("mark-revoked")
+  })
+})
+
 describe("planReconcile — revoked", () => {
   it("publiziert einen Tombstone, solange der Autor Mitglied ist", () => {
     expect(actionOf({ view: view({ status: "revoked" }), slot: slotAt(5, false) })).toBe("publish-tombstone")
@@ -134,11 +155,57 @@ describe("planReconcile — revoked", () => {
   })
 })
 
+describe("planReconcile — Mitgliedschaft (Invariante 11)", () => {
+  it("widerruft eine Freigabe ohne Mitgliedschaft auch dann, wenn keine Seite eine Kennung trägt", () => {
+    expect(
+      actionOf({
+        view: view({ admission: undefined }),
+        targetAdmission: undefined,
+        isMember: false,
+        slot: { kind: "missing" },
+      }),
+    ).toBe("mark-revoked")
+  })
+
+  it("widerruft ohne Mitgliedschaft auch bei passender Kennung und offener Inhaltsänderung", () => {
+    expect(actionOf({ isMember: false, homeItemHash: OTHER_HASH })).toBe("mark-revoked")
+  })
+})
+
 describe("planReconcile — pending", () => {
   it("publiziert NIE (Spec 12 Regel 5)", () => {
     expect(actionOf({ view: view({ status: "pending" }), homeItemHash: OTHER_HASH, slot: { kind: "missing" } })).toBe(
       "none",
     )
+  })
+
+  // Spec 12 Regel 4: steigt die Kennung, wird der Eintrag `pending` mit der
+  // NEUEN Kennung — sonst wartet die Annahme-Fläche auf eine Aufnahme, die es
+  // nicht mehr gibt, und eine Annahme trüge eine Kennung, mit der Regel 5 nie
+  // publizieren würde.
+  const readmitted = { view: view({ status: "pending" as const, admission: gen(1) }), targetAdmission: gen(3) }
+
+  it("führt eine Wiederaufnahme in pending mit der neuen Kennung", () => {
+    expect(planReconcile({ entries: [entry(readmitted)] })[0]?.action).toBe("mark-pending")
+  })
+
+  it("tut das unabhängig von der readmission-Option — pending kippt nie in revoked", () => {
+    for (const readmission of ["revoked", "pending"] as const) {
+      expect(planReconcile({ entries: [entry(readmitted)], readmission })[0]?.action).toBe("mark-pending")
+    }
+  })
+
+  it("bleibt bei gleicher Kennung untätig", () => {
+    expect(actionOf({ view: view({ status: "pending", admission: gen(1) }), targetAdmission: gen(1) })).toBe("none")
+  })
+
+  // Mitgliedschaft verloren: die Registry hat nichts zu widerrufen, es gab nie
+  // eine Freigabe. Die Sichtbarkeit regelt Invariante 11 beim Empfänger.
+  it("bleibt untätig, wenn die Kennung wegfällt", () => {
+    expect(actionOf({ view: view({ status: "pending", admission: gen(1) }), targetAdmission: undefined })).toBe("none")
+    expect(
+      actionOf({ view: view({ status: "pending", admission: gen(3) }), targetAdmission: gen(1), isMember: false }),
+    ).toBe("none")
   })
 })
 

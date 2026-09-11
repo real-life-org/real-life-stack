@@ -36,6 +36,9 @@ export interface BuildSnapshotInput {
  * erst signiert werden.
  */
 export function buildSnapshotPayload(input: BuildSnapshotInput): MirrorSnapshotPayload {
+  if (!isPublishableSeq(input.seq)) {
+    throw new Error(`buildSnapshotPayload: seq ${input.seq} ist kein publizierbarer Zählerstand`)
+  }
   if (input.item) {
     if (input.item.id !== input.itemId) {
       throw new Error(
@@ -89,12 +92,14 @@ export type MirrorVerifyReason =
   | "unexpected-jws-header"
   | "malformed-payload"
   | "non-canonical-payload"
+  | "seq-out-of-range"
   | "foreign-map-key"
   | "foreign-target-space"
   | "item-id-mismatch"
   | "author-mismatch"
   | "profile-id-mismatch"
   | "profile-did-mismatch"
+  | "invalid-profile-marker"
   | "unknown-signer"
   | "bad-signature"
 
@@ -124,26 +129,47 @@ export interface VerifySnapshotOptions {
  * Signatur macht einen Schnappschuss unter fremdem Map-Schlüssel nicht gültig.
  */
 export async function verifySnapshot(options: VerifySnapshotOptions): Promise<MirrorVerifyResult> {
-  let decoded: { header: Record<string, unknown>; payload: Record<string, unknown> }
+  let decoded: { header: unknown; payload: unknown }
   try {
-    decoded = decodeJws(options.jws)
+    decoded = decodeJws(options.jws) as { header: unknown; payload: unknown }
   } catch {
     return { ok: false, reason: "malformed-jws" }
   }
 
-  const { header } = decoded
-  if (header.alg !== "EdDSA" || header.typ !== MIRROR_SNAPSHOT_JWS_TYP || typeof header.kid !== "string") {
+  // `decodeJws` gibt zurück, was im Segment stand — auch JSON-`null` oder einen
+  // Array. Der Header MUSS erst als Objekt feststehen, bevor auf ihm gelesen
+  // wird; sonst wirft die Prüfung statt abzulehnen.
+  if (!isRecord(decoded.header)) return { ok: false, reason: "malformed-jws" }
+  const header = decoded.header
+  if (header["alg"] !== "EdDSA" || header["typ"] !== MIRROR_SNAPSHOT_JWS_TYP || typeof header["kid"] !== "string") {
     return { ok: false, reason: "unexpected-jws-header" }
   }
 
+  if (!isRecord(decoded.payload)) return { ok: false, reason: "malformed-payload" }
   const payload = asSnapshotPayload(decoded.payload)
   if (!payload) return { ok: false, reason: "malformed-payload" }
+
+  // Der home-weite Lamport-Zähler muss weiter zählen können. Ab
+  // `MAX_SAFE_INTEGER` liefert `nextSeq` denselben Wert wie die Marke, und die
+  // Strikt-größer-Regel (Invariante 6) verwürfe ab da jeden neuen Stand.
+  if (!isPublishableSeq(payload.version.seq)) return { ok: false, reason: "seq-out-of-range" }
 
   // Der Gegencheck zur Kanonisierung: das Payload-Segment MUSS byte-genau die
   // kanonische Serialisierung der sechs Felder sein. Ohne ihn könnte eine
   // Payload zusätzliche, mitsignierte Felder tragen, die eine spätere
   // Implementierung ausliest — der Schmuggelweg, den Invariante 6 schließt.
-  if (options.jws.split(".")[1] !== base64Url(canonicalSnapshotBytes(payload))) {
+  //
+  // Die Kanonisierung WIRFT bei Werten, die nicht I-JSON sind (isoliertes
+  // Surrogat, `1e400` → Infinity). Genau das ist hier eine Ablehnung, keine
+  // Ausnahme: `verifySnapshot` ist total, damit der Aufrufer jeden kaputten
+  // Slot als ungültig behandeln und reparieren kann (09 §Ablage).
+  let canonicalBytes: Uint8Array
+  try {
+    canonicalBytes = canonicalSnapshotBytes(payload)
+  } catch {
+    return { ok: false, reason: "non-canonical-payload" }
+  }
+  if (options.jws.split(".")[1] !== base64Url(canonicalBytes)) {
     return { ok: false, reason: "non-canonical-payload" }
   }
 
@@ -171,17 +197,38 @@ export async function verifySnapshot(options: VerifySnapshotOptions): Promise<Mi
     return { ok: false, reason: "bad-signature" }
   }
 
-  return { ok: true, payload, tiebreak: await tiebreakOf(canonicalSnapshotBytes(payload)) }
+  return { ok: true, payload, tiebreak: await tiebreakOf(canonicalBytes) }
 }
 
 /**
- * Ein Profil ist ein `person`-Item MIT `data.did` (Spec 12 Regel 1 und 3): ein
- * person-Item ohne `data.did` ist ein Platzhalter aus dem Kontaktbuch und wird
- * nie gespiegelt.
+ * Der Profil-Marker eines Schnappschusses (Spec 12 Regel 3): die Unterscheidung
+ * Profil/Platzhalter läuft AUSSCHLIESSLICH über das Vorhandensein von
+ * `data.did` in einem `person`-Item.
+ *
+ * `absent` heißt Platzhalter (ein Mitglied hat das Item für eine dritte Person
+ * angelegt). `invalid` heißt: der Schlüssel ist da, der Wert taugt nicht —
+ * `null`, leer oder kein String. Das ist KEIN Platzhalter, sondern ein
+ * kaputtes Profil; Regel 3 sagt ausdrücklich, dass das Schema einen
+ * nicht-leeren String verlangt. Würde man es als Platzhalter durchwinken,
+ * ließe sich die verschärfte Profilprüfung aus Regel 8 einfach abschalten.
+ */
+type ProfileMarker = { kind: "absent" } | { kind: "invalid" } | { kind: "did"; did: string }
+
+function profileMarker(payload: MirrorSnapshotPayload): ProfileMarker {
+  const item = payload.item
+  if (!item || item.type !== "person" || !("did" in item.data)) return { kind: "absent" }
+  const did = item.data["did"]
+  if (typeof did !== "string" || did.length === 0) return { kind: "invalid" }
+  return { kind: "did", did }
+}
+
+/**
+ * Ein Profil ist ein `person`-Item MIT gültigem `data.did` (Spec 12 Regel 1
+ * und 3): ein person-Item ohne `data.did` ist ein Platzhalter aus dem
+ * Kontaktbuch und wird nie gespiegelt.
  */
 export function isProfileSnapshot(payload: MirrorSnapshotPayload): boolean {
-  const item = payload.item
-  return Boolean(item && item.type === "person" && typeof item.data?.["did"] === "string" && item.data["did"])
+  return profileMarker(payload).kind === "did"
 }
 
 /**
@@ -191,21 +238,33 @@ export function isProfileSnapshot(payload: MirrorSnapshotPayload): boolean {
  *
  * ENTSCHEIDUNG: erkannt wird der Profil-Schlüssel deshalb zusätzlich an der
  * DID-Form der `itemId`. Jede `itemId`, die mit `did:` beginnt, MUSS gleich
- * `authorDid` sein. Sonst könnte ein Mitglied unter dem Profil-Schlüssel einer
- * anderen Person einen Tombstone ablegen: er setzte dort eine ungebundene
- * Marke und sperrte die echten Schnappschüsse dieser Person mit niedrigerer
- * `seq` dauerhaft aus. Die Regel trifft nur Items, deren Id eine DID ist —
- * Platzhalter tragen zufällige Ids (Regel 3).
+ * `authorDid` sein. Regel 8 will, dass ein Profil-Schlüssel NICHT BESETZBAR
+ * ist: unter ihm soll ausschließlich die Inhaberin der DID signieren können.
+ * Ohne die Regel könnte ein Fremder unter dem Profil-Schlüssel einer anderen
+ * Person Schnappschüsse ablegen — sie würden zwar nie materialisiert und
+ * sperren nach Invariante 6 auch nur die eigene Autoren-Marke, erzeugten dort
+ * aber dauerhaft Marken und Herkunftskonflikte, die eine UI der Inhaberin
+ * zuschreibt. Die Regel trifft nur Items, deren Id eine DID ist — Platzhalter
+ * tragen zufällige Ids (Regel 3).
  */
 function profileViolation(payload: MirrorSnapshotPayload): MirrorVerifyReason | null {
+  const marker = profileMarker(payload)
+  if (marker.kind === "invalid") return "invalid-profile-marker"
   const claimsDidKey = payload.itemId.startsWith("did:")
-  if ((claimsDidKey || isProfileSnapshot(payload)) && payload.itemId !== payload.authorDid) {
+  if ((claimsDidKey || marker.kind === "did") && payload.itemId !== payload.authorDid) {
     return "profile-id-mismatch"
   }
-  if (isProfileSnapshot(payload) && payload.item?.data["did"] !== payload.authorDid) {
-    return "profile-did-mismatch"
-  }
+  if (marker.kind === "did" && marker.did !== payload.authorDid) return "profile-did-mismatch"
   return null
+}
+
+/**
+ * Ein publizierbarer Zählerstand: nichtnegative sichere Ganzzahl ECHT unter
+ * `MAX_SAFE_INTEGER`. Die obere Grenze ist hart, weil `nextSeq` sonst
+ * denselben Wert zurückgäbe und der Zähler still stehen bliebe.
+ */
+export function isPublishableSeq(seq: number): boolean {
+  return Number.isSafeInteger(seq) && seq >= 0 && seq < Number.MAX_SAFE_INTEGER
 }
 
 function asSnapshotPayload(value: Record<string, unknown>): MirrorSnapshotPayload | null {

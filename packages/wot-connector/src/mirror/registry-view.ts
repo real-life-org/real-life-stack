@@ -133,6 +133,14 @@ export function nextSeq(registryEntriesOfItem: Iterable<MirrorRegistryEntry>): n
       if (contribution && contribution.seq > max) max = contribution.seq
     }
   }
+  // Lieber laut scheitern als still stagnieren: jenseits von MAX_SAFE_INTEGER
+  // liefert `max + 1` wieder `max`, jeder neue Schnappschuss trüge dieselbe
+  // Position und fiele beim Empfänger unter die Strikt-größer-Regel
+  // (Invariante 6) — der Mirror würde einfrieren, ohne dass irgendwo ein
+  // Fehler sichtbar wird.
+  if (!Number.isSafeInteger(max) || max + 1 >= Number.MAX_SAFE_INTEGER) {
+    throw new Error(`nextSeq: Zählerstand ${max} erschöpft den sicheren Ganzzahlbereich`)
+  }
   return max + 1
 }
 

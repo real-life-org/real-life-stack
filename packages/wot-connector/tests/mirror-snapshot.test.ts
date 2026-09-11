@@ -43,16 +43,29 @@ const fromBase64Url = (value: string): Uint8Array => {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0))
 }
 
+async function signRawParts(
+  headerText: string,
+  payloadSegment: string,
+  identity: MirrorTestIdentity,
+): Promise<string> {
+  const signingInput = `${toBase64Url(new TextEncoder().encode(headerText))}.${payloadSegment}`
+  const signature = await identity.signEd25519(new TextEncoder().encode(signingInput))
+  return `${signingInput}.${toBase64Url(signature)}`
+}
+
 async function signRaw(
   payloadBytes: Uint8Array,
   identity: MirrorTestIdentity,
   header: Record<string, unknown> = { alg: "EdDSA", kid: identity.kid, typ: MIRROR_SNAPSHOT_JWS_TYP },
 ): Promise<string> {
-  const b64 = toBase64Url
-  const signingInput = `${b64(new TextEncoder().encode(JSON.stringify(header)))}.${b64(payloadBytes)}`
-  const signature = await identity.signEd25519(new TextEncoder().encode(signingInput))
-  return `${signingInput}.${b64(signature)}`
+  return signRawParts(JSON.stringify(header), toBase64Url(payloadBytes), identity)
 }
+
+const defaultHeader = () => JSON.stringify({ alg: "EdDSA", kid: author.kid, typ: MIRROR_SNAPSHOT_JWS_TYP })
+
+/** Signiert einen JSON-TEXT unverändert als Payload-Segment. */
+const signText = (text: string, identity: MirrorTestIdentity = author) =>
+  signRawParts(defaultHeader(), toBase64Url(new TextEncoder().encode(text)), identity)
 
 const signCanonical = (payload: MirrorSnapshotPayload, identity: MirrorTestIdentity) =>
   signRaw(canonicalSnapshotBytes(payload), identity)
@@ -292,5 +305,151 @@ describe("verifySnapshot — Profil-Overlay (Spec 12 Regel 8)", () => {
   it("erlaubt den Tombstone auf dem eigenen Profil-Schlüssel", async () => {
     const jws = await signSnapshot(payloadFor(null, { itemId: author.did }), author)
     expect((await verifyProfile(jws, author.did)).ok).toBe(true)
+  })
+})
+
+/**
+ * `verifySnapshot` ist TOTAL: jede fehlerhafte Eingabe wird zu
+ * `{ ok: false, reason }`, nie zu einer Exception. Der Aufrufer behandelt das
+ * als ungültigen Slot und repariert (Spec 09 §Ablage) — eine geworfene
+ * Ausnahme risse stattdessen den ganzen Empfangslauf ab, und ein einziger
+ * vergifteter Slot legte alle übrigen Mirrors des Space mit lahm.
+ */
+describe("verifySnapshot — Totalität", () => {
+  it("lehnt einen JSON-null-Header ab, statt zu werfen", async () => {
+    const jws = await signRawParts("null", toBase64Url(canonicalSnapshotBytes(payloadFor(taskItem()))), author)
+    await expect(verify(jws)).resolves.toEqual({ ok: false, reason: "malformed-jws" })
+  })
+
+  it("lehnt einen Array-Header ab, statt zu werfen", async () => {
+    const jws = await signRawParts("[1,2]", toBase64Url(canonicalSnapshotBytes(payloadFor(taskItem()))), author)
+    await expect(verify(jws)).resolves.toEqual({ ok: false, reason: "malformed-jws" })
+  })
+
+  it("lehnt eine JSON-null-Payload ab, statt zu werfen", async () => {
+    await expect(verify(await signText("null"))).resolves.toEqual({ ok: false, reason: "malformed-payload" })
+  })
+
+  // Ein isoliertes Surrogat ist nicht wohlgeformt; RFC 8785 verlangt Abbruch.
+  it("lehnt ein isoliertes Surrogat in item.data ab, statt zu werfen", async () => {
+    const text = JSON.stringify(payloadFor(taskItem({ data: { title: "x" } }))).replace('"x"', '"\\ud800"')
+    await expect(verify(await signText(text))).resolves.toEqual({ ok: false, reason: "non-canonical-payload" })
+  })
+
+  // `1e400` parst zu Infinity und ist damit kein I-JSON-Wert.
+  it("lehnt eine nicht-endliche Zahl in item.data ab, statt zu werfen", async () => {
+    const text = JSON.stringify(payloadFor(taskItem({ data: { menge: 1 } }))).replace('"menge":1', '"menge":1e400')
+    await expect(verify(await signText(text))).resolves.toEqual({ ok: false, reason: "non-canonical-payload" })
+  })
+})
+
+describe("verifySnapshot — Zählergrenze", () => {
+  it("lehnt eine seq am Rand des sicheren Ganzzahlbereichs ab", async () => {
+    const payload = payloadFor(taskItem(), {
+      version: { seq: Number.MAX_SAFE_INTEGER, deviceId: "dev-a", ts: "2026-01-02T00:00:00.000Z" },
+    })
+    expect(await verify(await signCanonical(payload, author))).toEqual({ ok: false, reason: "seq-out-of-range" })
+  })
+
+  it("lehnt eine negative seq ab", async () => {
+    const payload = payloadFor(taskItem(), {
+      version: { seq: -1, deviceId: "dev-a", ts: "2026-01-02T00:00:00.000Z" },
+    })
+    expect(await verify(await signCanonical(payload, author))).toEqual({ ok: false, reason: "seq-out-of-range" })
+  })
+
+  it("verweigert schon das Bauen eines Schnappschusses mit unbrauchbarer seq", () => {
+    expect(() =>
+      buildSnapshotPayload({
+        homeSpaceId: HOME,
+        itemId: "task-1",
+        targetSpaceId: TARGET,
+        item: null,
+        authorDid: author.did,
+        seq: Number.MAX_SAFE_INTEGER,
+        deviceId: "dev-a",
+        ts: "2026-01-02T00:00:00.000Z",
+      }),
+    ).toThrow(/seq/)
+  })
+})
+
+/**
+ * Spec 12 Regel 3: „`data.did: null` ist ungültig (das Schema verlangt einen
+ * nicht-leeren String)". Ein kaputter Marker darf NICHT als Platzhalter
+ * durchgehen — sonst schaltet er die verschärfte Profilprüfung aus Regel 8 ab.
+ */
+describe("verifySnapshot — ungültiger Profil-Marker", () => {
+  const verifyOwnKey = (jws: string) =>
+    verifySnapshot({
+      jws,
+      mapKey: mirrorMapKey(HOME, author.did),
+      ownSpaceId: TARGET,
+      resolvePublicKey: resolve,
+      crypto: protocolCrypto,
+    })
+
+  const withDid = (did: unknown) =>
+    payloadFor(profileItem({ data: { displayName: "Anton", did } as Record<string, unknown> }), {
+      itemId: author.did,
+    })
+
+  it.each([
+    ["null", null],
+    ["leerer String", ""],
+    ["Zahl", 123],
+  ])("lehnt data.did als %s ab", async (_name, did) => {
+    expect(await verifyOwnKey(await signCanonical(withDid(did), author))).toEqual({
+      ok: false,
+      reason: "invalid-profile-marker",
+    })
+    expect(isProfileSnapshot(withDid(did))).toBe(false)
+  })
+
+  it("behandelt ein person-Item OHNE did-Schlüssel weiter als Platzhalter", async () => {
+    const placeholder = payloadFor(
+      taskItem({ id: "platzhalter", type: "person", data: { displayName: "Dritte" } }),
+      { itemId: "platzhalter" },
+    )
+    const result = await verifySnapshot({
+      jws: await signSnapshot(placeholder, author),
+      mapKey: mirrorMapKey(HOME, "platzhalter"),
+      ownSpaceId: TARGET,
+      resolvePublicKey: resolve,
+      crypto: protocolCrypto,
+    })
+    expect(result.ok).toBe(true)
+  })
+})
+
+/**
+ * Kanonisierung trennt zwei Dinge, die beide als „non-canonical" enden, aber
+ * verschiedene Angriffe sind: FELDER außerhalb der signierten sechs und eine
+ * abweichende SERIALISIERUNG derselben Felder.
+ */
+describe("verifySnapshot — Kanonisierung im Detail", () => {
+  it("lehnt ein Feld außerhalb der sechs ab", async () => {
+    const text = JSON.stringify({ ...payloadFor(taskItem()), mirrorGrant: "gefälscht" })
+    expect(await verify(await signText(text))).toEqual({ ok: false, reason: "non-canonical-payload" })
+  })
+
+  it("lehnt eine Payload mit Whitespace ab", async () => {
+    const text = JSON.stringify(payloadFor(taskItem()), null, 2)
+    expect(await verify(await signText(text))).toEqual({ ok: false, reason: "non-canonical-payload" })
+  })
+
+  it("lehnt doppelte Schlüssel ab (der letzte gewinnt beim Parsen)", async () => {
+    const text = JSON.stringify(payloadFor(taskItem())).replace(
+      '"itemId":"task-1"',
+      '"itemId":"task-9","itemId":"task-1"',
+    )
+    expect(await verify(await signText(text))).toEqual({ ok: false, reason: "non-canonical-payload" })
+  })
+
+  it("lehnt ein base64url-Segment mit Padding ab", async () => {
+    const bytes = canonicalSnapshotBytes(payloadFor(taskItem()))
+    const padded = `${toBase64Url(bytes)}${"=".repeat((4 - (toBase64Url(bytes).length % 4)) % 4)}`
+    const jws = await signRawParts(defaultHeader(), padded, author)
+    expect(await verify(jws)).toEqual({ ok: false, reason: "non-canonical-payload" })
   })
 })

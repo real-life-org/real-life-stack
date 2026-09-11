@@ -26,6 +26,7 @@ export {
   MIRROR_SNAPSHOT_JWS_TYP,
   buildSnapshotPayload,
   isProfileSnapshot,
+  isPublishableSeq,
   signSnapshot,
   verifySnapshot,
 } from "./snapshot.js"

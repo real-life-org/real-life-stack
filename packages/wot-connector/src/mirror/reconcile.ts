@@ -77,9 +77,37 @@ export function planReconcile(input: MirrorReconcileInput): MirrorReconcilePlanE
 }
 
 function actionFor(entry: MirrorReconcileEntry, readmission: MirrorReconcileAction): MirrorReconcileAction {
+  const drift = compareAdmissionOrUndefined(entry.targetAdmission, entry.view.admission)
+
   // Spec 12 Regel 5: `pending` publiziert NIE. Der Space ist noch nicht
   // angenommen — die Freigabe nach Invariante 3 fehlt schlicht.
-  if (entry.view.status === "pending") return "none"
+  if (entry.view.status === "pending") {
+    // Regel 4: steigt die Kennung über die des Eintrags, wird er `pending` mit
+    // der NEUEN Kennung — sonst stünde die Annahme-Fläche für eine Aufnahme
+    // offen, die es nicht mehr gibt, und die Annahme trüge eine veraltete
+    // Kennung, mit der Regel 5 nie publizieren würde. Die `readmission`-Option
+    // greift hier NICHT: ein `pending` kippt nie in `revoked`, weil es nie
+    // eine Freigabe gab, die zu widerrufen wäre.
+    if (drift > 0) return "mark-pending"
+    // Gesunkene oder fehlende Kennung: die Registry hat nichts zu widerrufen.
+    // Invariante 11 regelt die Sichtbarkeit, nicht den Registry-Bestand.
+    return "none"
+  }
+
+  // Invariante 11: ohne Mitgliedschaft im Ziel kann der Autor die Freigabe
+  // weder pflegen noch widerrufen — sein Beitrag wird widerrufen, bevor
+  // irgendein Kennungsvergleich stattfindet. Die Kennung ist das ZWEITE
+  // Signal: ein Alt-Space ohne Ereignisse liefert beidseitig `undefined`, der
+  // Vergleich sagt „gleich", und ohne diese Regel publizierte der Abgleich
+  // munter in einen Space, aus dem der Autor entfernt wurde.
+  if (entry.view.status === "accepted" && !entry.isMember) return "mark-revoked"
+
+  // Jeder Anstieg der Ziel-Kennung, auch von `undefined` auf eine Kennung, ist
+  // eine Wiederaufnahme: die alte Freigabe galt einer anderen Aufnahme. Das
+  // gilt für `accepted` UND `revoked` (Spec 12 Regel 4 und 7) — ein
+  // widerrufener Eintrag aus einer ALTEN Aufnahme schuldet dem Ziel keinen
+  // Tombstone mehr, er braucht eine Entscheidung zur NEUEN Aufnahme.
+  if (drift > 0) return readmission
 
   if (entry.view.status === "revoked") {
     // Solange der Autor Mitglied ist, schuldet er dem Ziel den Tombstone.
@@ -88,10 +116,6 @@ function actionFor(entry: MirrorReconcileEntry, readmission: MirrorReconcileActi
     return entry.isMember && !tombstoneDelivered(entry) ? "publish-tombstone" : "none"
   }
 
-  const drift = compareAdmissionOrUndefined(entry.targetAdmission, entry.view.admission)
-  // Jeder Anstieg der Ziel-Kennung, auch von `undefined` auf eine Kennung, ist
-  // eine Wiederaufnahme: die alte Freigabe galt einer anderen Aufnahme.
-  if (drift > 0) return readmission
   // Mitgliedschaft verloren (Kennung gesunken oder weggefallen): kein
   // Publizieren mehr, der Beitrag wird widerrufen — mit der Kennung der
   // Lesesicht, damit er in der Faltung gegen jeden alten `accepted`-Beitrag
