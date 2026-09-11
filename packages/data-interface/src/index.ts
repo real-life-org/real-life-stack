@@ -992,8 +992,34 @@ export function hasEncounterVerification(c: DataInterface): c is DataInterface &
   return true
 }
 
+/**
+ * Spec 12 Regel 14: der Type Guard bleibt `hasProfile()`, aber der VERTRAG
+ * umfasst jetzt auch die Freigaben. Ein Guard, der nur das alte Dreier-Set
+ * prüft, würde einen Connector durchlassen, dessen `observeProfileShares`
+ * gar nicht existiert — die Annahme-Fläche liefe dann in einen TypeError.
+ * Deshalb wird die vollständige Oberfläche geprüft.
+ *
+ * Bewusst OHNE Override-Prüfung: die bestehende Übererkennung durch die
+ * `BaseConnector`-Lese-Defaults (getMyProfile/observeMyProfile/syncProfile)
+ * bleibt vertagt — sie zu schließen ist ein verhaltensändernder Eingriff in
+ * bestehende Aufrufer und gehört nicht in S1.
+ */
 export function hasProfile(c: DataInterface): c is DataInterface & ProfileCapable {
-  return "getMyProfile" in c && "observeMyProfile" in c && "syncProfile" in c
+  const candidate = c as DataInterface & Partial<ProfileCapable>
+  return (
+    typeof candidate.getMyProfile === "function" &&
+    typeof candidate.observeMyProfile === "function" &&
+    typeof candidate.updateMyProfile === "function" &&
+    typeof candidate.setFieldVisibility === "function" &&
+    typeof candidate.getPublicProfile === "function" &&
+    typeof candidate.syncProfile === "function" &&
+    typeof candidate.isProfileSyncPending === "function" &&
+    typeof candidate.observeProfileShares === "function" &&
+    typeof candidate.acceptSpace === "function" &&
+    typeof candidate.declineSpace === "function" &&
+    typeof candidate.shareProfile === "function" &&
+    typeof candidate.revokeProfileShare === "function"
+  )
 }
 
 /**

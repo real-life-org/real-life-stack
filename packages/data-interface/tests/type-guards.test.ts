@@ -184,11 +184,29 @@ describe("Type Guards", () => {
       expect(hasProfile(createStub())).toBe(false)
     })
 
-    it("returns true when profile methods present", () => {
+    it("returns false for the read/write/sync triple alone — the shares are part of the contract (spec 12 Regel 14)", () => {
       const connector = createStub({
         getMyProfile: async () => null,
         observeMyProfile: () => ({ current: null, subscribe: () => () => {} }),
         syncProfile: async () => {},
+      })
+      expect(hasProfile(connector)).toBe(false)
+    })
+
+    it("returns true when the full profile surface is present", () => {
+      const connector = createStub({
+        getMyProfile: async () => null,
+        observeMyProfile: () => ({ current: null, subscribe: () => () => {} }),
+        updateMyProfile: async () => ({}),
+        setFieldVisibility: async () => {},
+        getPublicProfile: async () => null,
+        syncProfile: async () => {},
+        isProfileSyncPending: () => ({ current: false, subscribe: () => () => {} }),
+        observeProfileShares: () => ({ current: {}, subscribe: () => () => {} }),
+        acceptSpace: async () => {},
+        declineSpace: async () => {},
+        shareProfile: async () => {},
+        revokeProfileShare: async () => {},
       })
       expect(hasProfile(connector)).toBe(true)
     })

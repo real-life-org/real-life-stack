@@ -11,12 +11,14 @@ import type {
   ItemFilter,
   ItemWriter,
   Observable,
+  ProfileShareStatus,
   RelationRecord,
   RelationRecordCreateConnector,
   RelationRecordFilter,
   RelationRecordInput,
   RelationRecordUpdate,
   Source,
+  Unsubscribe,
   User,
 } from "@real-life-stack/data-interface"
 import type { PublicProfileData } from "@real-life-stack/data-interface"
@@ -857,6 +859,57 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
 
   isProfileSyncPending(): Observable<boolean> {
     return this.profileSyncPendingObs
+  }
+
+  // --- Profil-Freigaben (spec 12 Regel 13/14) ---
+  //
+  // Supabase ist ein Connector OHNE Signaturidentität: das Profil liegt je
+  // Space als gewöhnliche Zeile, es gibt keine Mirror-Registry und nichts
+  // anzunehmen. Regel 13 schreibt dafür genau diese Antwort vor — `accepted`
+  // für jede Mitgliedschaft. Die Methoden stehen hier, weil `hasProfile()`
+  // den vollen Vertrag aus Regel 14 prüft und dieser Connector sonst aus
+  // `ProfileCapable` fiele (er erbt keine BaseConnector-Defaults).
+  // S8 liefert die echte Umsetzung.
+
+  observeProfileShares(): Observable<Record<string, ProfileShareStatus>> {
+    const groups = this.observeGroups()
+    const project = (list: Group[]): Record<string, ProfileShareStatus> => {
+      const shares: Record<string, ProfileShareStatus> = {}
+      for (const group of list) shares[group.id] = "accepted"
+      return shares
+    }
+    return {
+      get current() {
+        return project(groups.current)
+      },
+      get loaded() {
+        return groups.loaded
+      },
+      subscribe(callback: (value: Record<string, ProfileShareStatus>) => void): Unsubscribe {
+        return groups.subscribe((list) => callback(project(list)))
+      },
+    }
+  }
+
+  // Kein stiller No-op: bei diesem Connector ist jede Mitgliedschaft bereits
+  // `accepted`, ein wortloses Gelingen würde der Annahme-Fläche eine
+  // Zustandsänderung vortäuschen, die es nicht gibt. S8 liefert die echte
+  // Umsetzung.
+
+  async acceptSpace(_spaceId: string): Promise<void> {
+    throw new Error("[SupabaseConnector] acceptSpace not supported")
+  }
+
+  async declineSpace(_spaceId: string): Promise<void> {
+    throw new Error("[SupabaseConnector] declineSpace not supported")
+  }
+
+  async shareProfile(_spaceId: string): Promise<void> {
+    throw new Error("[SupabaseConnector] shareProfile not supported")
+  }
+
+  async revokeProfileShare(_spaceId: string): Promise<void> {
+    throw new Error("[SupabaseConnector] revokeProfileShare not supported")
   }
 
   // --- Contacts (ContactManager: Anfrage → Bestätigung, spec-08-konsistent

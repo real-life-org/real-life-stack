@@ -34,6 +34,18 @@ const ITEM_SEPARATOR = "/item:"
  * zugleich enthalten kann (Invariante 1).
  */
 export function qualifiedItemTarget(homeSpaceId: string, itemId: string): string {
+  // Eingabegrenze, damit die Form eindeutig bleibt: ohne sie ergäben
+  // ("home/item:a", "b") und ("home", "a/item:b") dasselbe Target, und zwei
+  // verschiedene logische Schlüssel (Invariante 1) kollidierten in einem
+  // Listen-Schlüssel. Spec 04 §Target-Konventionen: Space-IDs dürfen `/item:`
+  // nicht enthalten — hier durchgesetzt, statt es nur zu hoffen.
+  if (!homeSpaceId) throw new Error("qualifiedItemTarget: homeSpaceId darf nicht leer sein")
+  if (homeSpaceId.includes(ITEM_SEPARATOR)) {
+    throw new Error(
+      `qualifiedItemTarget: Space-Id darf "${ITEM_SEPARATOR}" nicht enthalten (Spec 04 §Target-Konventionen) — erhalten: "${homeSpaceId}"`,
+    )
+  }
+  if (!itemId) throw new Error("qualifiedItemTarget: itemId darf nicht leer sein")
   return `${SPACE_PREFIX}${homeSpaceId}${ITEM_SEPARATOR}${itemId}`
 }
 
@@ -42,9 +54,10 @@ export function qualifiedItemTarget(homeSpaceId: string, itemId: string): string
  * wenn `target` nicht exakt dieser Konvention folgt (`item:`-, `global:`- und
  * kaputte Targets).
  *
- * Getrennt wird am ERSTEN `/item:`: damit kann eine Space-Id kein `/item:`
- * enthalten, eine Item-Id dagegen schon — die Zerlegung bleibt damit für jedes
- * von {@link qualifiedItemTarget} erzeugte Target eindeutig umkehrbar.
+ * Getrennt wird am ERSTEN `/item:`. Space-IDs dürfen `/item:` nicht enthalten
+ * (Spec 04 §Target-Konventionen, von {@link qualifiedItemTarget} durchgesetzt),
+ * eine Item-Id dagegen schon — damit ist jedes gebaute Target eindeutig
+ * umkehrbar.
  */
 export function parseQualifiedItemTarget(
   target: string,

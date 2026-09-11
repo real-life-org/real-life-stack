@@ -64,6 +64,20 @@ describe("qualified item targets (spec 09 §Lesemodell, target convention from 0
     })
   })
 
+  it("refuses to build an ambiguous target (space id containing `/item:`)", () => {
+    // ("home/item:a", "b") and ("home", "a/item:b") would both render as
+    // `space:home/item:a/item:b` — the builder closes the collision at its
+    // input boundary (spec 04 §Target-Konventionen).
+    expect(() => qualifiedItemTarget("home/item:a", "b")).toThrow(/\/item:/)
+    expect(() => qualifiedItemTarget("", "task-1")).toThrow()
+    expect(() => qualifiedItemTarget("space-a", "")).toThrow()
+  })
+
+  it("keeps an item id containing `/item:` reversible", () => {
+    const target = qualifiedItemTarget("home", "a/item:b")
+    expect(parseQualifiedItemTarget(target)).toEqual({ homeSpaceId: "home", itemId: "a/item:b" })
+  })
+
   it("rejects every target that is not the qualified form", () => {
     const invalid = [
       "item:task-1",
@@ -112,6 +126,13 @@ describe("mirrorOf annotation (spec 09 §Lesemodell, 12 Regel 10)", () => {
 describe("list keys (spec 09 §Lesemodell: `mirrorOf.target ?? id`, never `id` alone)", () => {
   it("keys a local item by its bare id", () => {
     expect(itemInstanceKey(item())).toBe("task-1")
+  })
+
+  it("cannot collide across homes, because the target form is unambiguous", () => {
+    // The only way two different (home, id) pairs could share a key would be
+    // a space id carrying `/item:` — which the builder refuses.
+    expect(itemInstanceKey(mirrored("home", "a/item:b"))).toBe("space:home/item:a/item:b")
+    expect(() => mirrored("home/item:a", "b")).toThrow()
   })
 
   it("keys mirrors of the same id from two homes distinctly (Invariante 1)", () => {
@@ -170,6 +191,11 @@ describe("hasMirrors (spec 09 §Capability-Vertrag, 03 BaseConnector rule)", () 
       delete partial[key]
       expect(hasMirrors(createStub(partial)), key).toBe(false)
     }
+  })
+
+  it("is false when an operation is present but not callable", () => {
+    expect(hasMirrors(createStub({ ...mirrorMethods, shareItem: 1 }))).toBe(false)
+    expect(hasMirrors(createStub({ ...mirrorMethods, observeItemShares: null }))).toBe(false)
   })
 
   it("is true for a connector implementing all four operations", () => {
