@@ -23,6 +23,31 @@ export const MIRROR_OF_PREDICATE = "mirrorOf"
 
 const SPACE_PREFIX = "space:"
 const ITEM_SEPARATOR = "/item:"
+const LOCAL_ITEM_PREFIX = "item:"
+
+/**
+ * Die lokale Adressierung eines Items im eigenen Space: `item:{id}`
+ * (Target-Konvention aus Spec 04 §Relations).
+ *
+ * Die Gegenstelle zu {@link qualifiedItemTarget}: beide Formen bilden
+ * DISJUNKTE Namensräume (`item:` gegen `space:`), weil eine lokale Item-Id
+ * selbst wie ein qualifiziertes Target aussehen darf — Connectoren übernehmen
+ * explizit vorgegebene Ids ungeprüft.
+ */
+export function localItemTarget(id: string): string {
+  if (!id) throw new Error("localItemTarget: id darf nicht leer sein")
+  return `${LOCAL_ITEM_PREFIX}${id}`
+}
+
+/**
+ * Zerlegt die lokale Form wieder in die Item-Id; `null` für jedes Target, das
+ * nicht `item:` ist (qualifizierte und `global:`-Targets eingeschlossen).
+ */
+export function parseLocalItemTarget(target: string): string | null {
+  return target.startsWith(LOCAL_ITEM_PREFIX) && target.length > LOCAL_ITEM_PREFIX.length
+    ? target.slice(LOCAL_ITEM_PREFIX.length)
+    : null
+}
 
 /**
  * Die qualifizierte Einzeladressierung eines Items in seinem Home-Space:
@@ -100,13 +125,19 @@ export function getMirrorOrigin(item: Item): { homeSpaceId: string; itemId: stri
 }
 
 /**
- * Der Schlüssel, unter dem eine Fläche eine Item-Instanz führt:
- * `mirrorOf.target ?? id`.
+ * Der Schlüssel, unter dem eine Fläche eine Item-Instanz führt: das
+ * Relation-Target der Instanz — `item:{id}` lokal, `mirrorOf.target`
+ * (`space:{homeSpaceId}/item:{itemId}`) für Mirrors.
  *
- * Spec 09 §Lesemodell: „Flächen MÜSSEN als Schlüssel `mirrorOf.target ?? id`
- * verwenden, nie `id` allein" — sonst kollabieren das lokale Item `x` und die
- * Mirrors `(homeA, x)`, `(homeB, x)` in einen Eintrag (Invariante 1).
+ * Spec 09 §Lesemodell: Flächen MÜSSEN diesen Instanzschlüssel verwenden, nie
+ * `id` allein — sonst kollabieren das lokale Item `x` und die Mirrors
+ * `(homeA, x)`, `(homeB, x)` in einen Eintrag (Invariante 1).
+ *
+ * Die nackte `id` als lokaler Schlüssel reichte NICHT: lokale Ids sind nicht
+ * eingeschränkt (Connectoren übernehmen explizit vorgegebene Ids), ein Item
+ * mit der Id `space:a/item:b` würde den Mirror `(a, b)` verdecken (rls#345).
+ * Die Präfixe `item:` und `space:` machen die Namensräume disjunkt.
  */
 export function itemInstanceKey(item: Item): string {
-  return mirrorRelationTarget(item) ?? item.id
+  return mirrorRelationTarget(item) ?? localItemTarget(item.id)
 }

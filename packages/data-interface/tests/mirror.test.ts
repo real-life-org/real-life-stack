@@ -6,6 +6,8 @@ import {
   hasMirrors,
   isMirrorItem,
   itemInstanceKey,
+  localItemTarget,
+  parseLocalItemTarget,
   parseQualifiedItemTarget,
   qualifiedItemTarget,
   BaseConnector,
@@ -123,16 +125,42 @@ describe("mirrorOf annotation (spec 09 §Lesemodell, 12 Regel 10)", () => {
   })
 })
 
-describe("list keys (spec 09 §Lesemodell: `mirrorOf.target ?? id`, never `id` alone)", () => {
-  it("keys a local item by its bare id", () => {
-    expect(itemInstanceKey(item())).toBe("task-1")
+describe("local item targets (spec 04 §Target-Konventionen, prefix `item:`)", () => {
+  it("builds and parses the local form", () => {
+    expect(localItemTarget("task-1")).toBe("item:task-1")
+    expect(parseLocalItemTarget("item:task-1")).toBe("task-1")
   })
 
-  it("cannot collide across homes, because the target form is unambiguous", () => {
-    // The only way two different (home, id) pairs could share a key would be
-    // a space id carrying `/item:` — which the builder refuses.
-    expect(itemInstanceKey(mirrored("home", "a/item:b"))).toBe("space:home/item:a/item:b")
-    expect(() => mirrored("home/item:a", "b")).toThrow()
+  it("round-trips an id that itself looks like a qualified target", () => {
+    expect(parseLocalItemTarget(localItemTarget("space:a/item:b"))).toBe("space:a/item:b")
+  })
+
+  it("refuses an empty id and rejects non-local targets", () => {
+    expect(() => localItemTarget("")).toThrow()
+    expect(parseLocalItemTarget("space:a/item:b")).toBeNull()
+    expect(parseLocalItemTarget("global:did:key:z6Mk")).toBeNull()
+    expect(parseLocalItemTarget("item:")).toBeNull()
+  })
+})
+
+describe("list keys (spec 09 §Lesemodell: the instance's relation target, never `id` alone)", () => {
+  it("keys a local item by its `item:` target", () => {
+    expect(itemInstanceKey(item())).toBe("item:task-1")
+  })
+
+  it("keys a mirror by its `mirrorOf.target`", () => {
+    expect(itemInstanceKey(mirrored("home-a", "task-1"))).toBe("space:home-a/item:task-1")
+  })
+
+  it("keeps a local id that looks like a qualified target disjoint from the real mirror (rls#345)", () => {
+    // The namespaces are disjoint by prefix: local keys start with `item:`,
+    // mirror keys with `space:`. A local id `space:a/item:b` becomes
+    // `item:space:a/item:b` and can no longer shadow the mirror (a, b).
+    const localLookalike = itemInstanceKey(item({ id: "space:a/item:b" }))
+    const realMirror = itemInstanceKey(mirrored("a", "b"))
+    expect(localLookalike).not.toBe(realMirror)
+    expect(localLookalike).toBe("item:space:a/item:b")
+    expect(realMirror).toBe("space:a/item:b")
   })
 
   it("keys mirrors of the same id from two homes distinctly (Invariante 1)", () => {
@@ -140,6 +168,11 @@ describe("list keys (spec 09 §Lesemodell: `mirrorOf.target ?? id`, never `id` a
     const fromB = itemInstanceKey(mirrored("home-b", "task-1"))
     expect(fromA).not.toBe(fromB)
     expect(fromA).not.toBe(itemInstanceKey(item()))
+  })
+
+  it("cannot collide across homes, because the target form is unambiguous", () => {
+    expect(itemInstanceKey(mirrored("home", "a/item:b"))).toBe("space:home/item:a/item:b")
+    expect(() => mirrored("home/item:a", "b")).toThrow()
   })
 })
 
