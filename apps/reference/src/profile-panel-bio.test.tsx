@@ -42,6 +42,14 @@ function makeConnector(bio: string) {
     getPublicProfile: async () => null,
     syncProfile: async () => {},
     isProfileSyncPending: () => ({ current: false, subscribe: () => () => {} }),
+    // Freigaben gehören seit Spec 12 Regel 14 zum ProfileCapable-Vertrag und
+    // werden von hasProfile() geprüft — ein Fake ohne sie ist kein Fake dieses
+    // Vertrags mehr.
+    observeProfileShares: () => ({ current: {}, subscribe: () => () => {} }),
+    acceptSpace: async () => {},
+    declineSpace: async () => {},
+    shareProfile: async () => {},
+    revokeProfileShare: async () => {},
     getAuthState: () => ({ current: { status: "authenticated" as const, user: ME }, subscribe: () => () => {} }),
     getAuthMethods: () => [],
     authenticate: async () => ME,

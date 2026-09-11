@@ -314,7 +314,10 @@ Mirror-Instanz mit der höchsten Version. Home-relative Endpunkte eines
 Mirrors (Invariante 10) werden vom Connector in die qualifizierte Form
 seines `homeSpaceId` überführt, bevor sie aufgelöst werden. Listen
 (`getItems`, `observe`) enthalten alle Instanzen; Flächen MÜSSEN als
-Schlüssel `mirrorOf.target ?? id` verwenden, nie `id` allein.
+Instanzschlüssel das Relation-Target der Instanz verwenden (`item:{id}`
+lokal, `space:{homeSpaceId}/item:{itemId}` für Mirrors; Target-Konvention
+aus [04](04-items-relations-groups-spaces.md)), nie `id` allein; die
+Namensräume sind disjunkt.
 Aggregierende Sichten über mehrere Spaces zeigen je logischem Schlüssel
 `(homeSpaceId, itemId)` einen Eintrag: das Home, falls sichtbar, sonst
 die Mirror-Instanz mit der höchsten Version.

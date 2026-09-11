@@ -1,4 +1,5 @@
 import { deriveContext } from "./vocab.js"
+import { parseLocalItemTarget } from "./mirror.js"
 import { isAuthorialPredicate, signRelationClaim, verifyRelationClaim, type ClaimSigner } from "./claims.js"
 import type {
   Ability,
@@ -237,12 +238,6 @@ function combineItemObservables(
   }
 }
 
-function localTargetId(target: string): string | null {
-  return target.startsWith("item:") && target.length > "item:".length
-    ? target.slice("item:".length)
-    : null
-}
-
 function relationNeighbors(
   relationItems: Item[],
   allItems: Item[],
@@ -260,7 +255,7 @@ function relationNeighbors(
     if (record.to === endpoint) targets.push(record.from)
 
     for (const target of targets) {
-      const id = localTargetId(target)
+      const id = parseLocalItemTarget(target)
       const item = id ? itemsById.get(id) : undefined
       if (item && !seen.has(item.id)) {
         seen.add(item.id)

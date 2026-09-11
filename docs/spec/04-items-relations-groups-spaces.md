@@ -90,6 +90,7 @@ Regeln:
 2. `predicate` ist offen und darf domänenspezifisch sein.
 3. `meta` darf Zusatzinformationen tragen, ersetzt aber nicht das Ziel.
 4. Cross-Space-Relations müssen für UI und Connectoren als möglich behandelt werden, auch wenn nicht jeder Connector sie voll auflösen kann.
+5. Space-IDs DÜRFEN die Zeichenfolge `/item:` nicht enthalten; damit ist `space:{id}/item:{itemId}` am ersten `/item:` eindeutig zerlegbar, auch wenn `itemId` sie enthält.
 
 ## Forward und Reverse
 

@@ -19,6 +19,7 @@ import type {
   EncounterPeerInfo,
   VerificationChallenge,
   PublicProfileData,
+  ProfileShareStatus,
   IncomingEvent,
 } from "./index.js"
 
@@ -482,6 +483,56 @@ export abstract class BaseConnector implements FullConnector {
 
   isProfileSyncPending(): Observable<boolean> {
     return createObservable<boolean>(false)
+  }
+
+  /**
+   * Spec 12 Regel 13: Connectoren ohne Freigaben liefern `accepted` für jede
+   * Mitgliedschaft — es gibt bei ihnen nichts anzunehmen, das Profil liegt je
+   * Space als gewöhnliches Item. Abgeleitet aus {@link observeGroups}, damit
+   * ein Subclass-Override der Gruppenquelle automatisch durchschlägt; die
+   * Ableitung ist lazy (kein eigener State, keine offene Subscription).
+   */
+  observeProfileShares(): Observable<Record<string, ProfileShareStatus>> {
+    const groups = this.observeGroups()
+    const project = (list: Group[]): Record<string, ProfileShareStatus> => {
+      const shares: Record<string, ProfileShareStatus> = {}
+      for (const group of list) shares[group.id] = "accepted"
+      return shares
+    }
+    return {
+      get current() {
+        return project(groups.current)
+      },
+      get loaded() {
+        return groups.loaded
+      },
+      subscribe(callback: (value: Record<string, ProfileShareStatus>) => void): Unsubscribe {
+        return groups.subscribe((list) => callback(project(list)))
+      },
+    }
+  }
+
+  // Freigabe-Mutationen haben bewusst KEINEN stillen No-op-Default: ein
+  // Default darf nicht bedeuten, dass die Capability fachlich unterstützt
+  // wird (Spec 03 → BaseConnector). Für einen Connector ohne Freigaben
+  // (Spec 12 Regel 13) ist jede Mitgliedschaft bereits `accepted`; ein
+  // stilles Nichts würde der Annahme-Fläche Erfolg vortäuschen. Gleiches
+  // Muster wie `inviteMember` / `updateMyProfile`.
+
+  async acceptSpace(_spaceId: string): Promise<void> {
+    throw new Error("acceptSpace not supported")
+  }
+
+  async declineSpace(_spaceId: string): Promise<void> {
+    throw new Error("declineSpace not supported")
+  }
+
+  async shareProfile(_spaceId: string): Promise<void> {
+    throw new Error("shareProfile not supported")
+  }
+
+  async revokeProfileShare(_spaceId: string): Promise<void> {
+    throw new Error("revokeProfileShare not supported")
   }
 
   // --- Event Listener (Default: no-op) ---
