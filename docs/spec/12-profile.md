@@ -95,7 +95,9 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    erneut zugestellte Einladung an ein bestehendes Mitglied verändert
    sie; erst ein `removed` schneidet den Lauf, das nächste `active`
    danach ist die Wiederaufnahme. Alt-Spaces ohne Ereignisse haben keine
-   Kennung; `undefined` gilt im Vergleich mit `undefined` als gleich.
+   Kennung; Ordnung und einmalige Nachführung eines Eintrags ohne
+   Kennung folgen 09 §Ablage und Registry (keine Kennung liegt unter
+   jeder Kennung; Nachführung ohne Statuswechsel).
    Der Registry-Eintrag (Regel 9) entsteht mit Status `pending` und der
    Kennung, sobald der Space auf einem Gerät der Person erscheint; die
    Annahme setzt ihn auf `accepted`, das Ablehnen auf `revoked`. Steigt
@@ -263,8 +265,8 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
     nehmen sie zurück (Regel 6). Der Type Guard bleibt `hasProfile()`;
     Connectoren ohne Freigaben (Regel 13) liefern `accepted` für jede
     Mitgliedschaft. Diese Operationen setzen auf `MirrorCapable` aus 09
-    §Capability-Vertrag auf (Profil = `shareItem(did, spaceId)` mit
-    Annahme-Status davor). 03 führt beide. Kontakte und
+    §Capability-Vertrag auf (Profil = `shareItem(persönlicherSpaceId, did,
+    spaceId)` mit Annahme-Status davor). 03 führt beide. Kontakte und
     Verifikationen sind nicht dasselbe wie Profile; WoT-Identität und
     Attestations werden hier nicht neu definiert.
 
