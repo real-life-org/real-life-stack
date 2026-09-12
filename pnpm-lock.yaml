@@ -530,11 +530,11 @@ importers:
         specifier: workspace:*
         version: link:../toolkit
       '@real-life/adapter-yjs':
-        specifier: npm:@web_of_trust/adapter-yjs@^0.2.5
-        version: '@web_of_trust/adapter-yjs@0.2.6(@web_of_trust/core@0.5.6(react@19.2.3))'
+        specifier: npm:@web_of_trust/adapter-yjs@^0.2.8
+        version: '@web_of_trust/adapter-yjs@0.2.8(@web_of_trust/core@0.5.8(react@19.2.3))'
       '@real-life/wot-core':
-        specifier: npm:@web_of_trust/core@^0.5.5
-        version: '@web_of_trust/core@0.5.6(react@19.2.3)'
+        specifier: npm:@web_of_trust/core@^0.5.8
+        version: '@web_of_trust/core@0.5.8(react@19.2.3)'
       react:
         specifier: ^18 || ^19
         version: 19.2.3
@@ -2480,13 +2480,13 @@ packages:
   '@vue/shared@3.5.26':
     resolution: {integrity: sha512-7Z6/y3uFI5PRoKeorTOSXKcDj0MSasfNNltcslbFrPpcw6aXRUALq4IfJlaTRspiWIUOEZbrpM+iQGmCOiWe4A==}
 
-  '@web_of_trust/adapter-yjs@0.2.6':
-    resolution: {integrity: sha512-SHXiszdc/sFiDg64cEnxOjX3mi+AYseRYs3j/ICZYVGJ+kAF8eT1MpWs6mJidLFeioFye42CoBUNye+REVfjcw==}
+  '@web_of_trust/adapter-yjs@0.2.8':
+    resolution: {integrity: sha512-GzUNANpjtBuj6f+6INVrOY1XI9kAcqx0HTIJLIomyFZpMXrdogS9HF3NFHlmhpWAu1tEOFai34jKnyuWe/9n8g==}
     peerDependencies:
-      '@web_of_trust/core': ^0.5.6
+      '@web_of_trust/core': ^0.5.8
 
-  '@web_of_trust/core@0.5.6':
-    resolution: {integrity: sha512-gGG58rGLjdTWQ6vVFOq1sF1MuNW7cqD8lqoPZ/Y69zdvuODQc+1QjK0dkGyg/XsM7L6wMPc00htvKRcbmER1KA==}
+  '@web_of_trust/core@0.5.8':
+    resolution: {integrity: sha512-2RXut8ScY3c+1CgtdWYSBGKuGA/koUbQkoAzynQ/jcE2kym8NaSju6Acz/3fZStr+nrFAiFzOHeM6Pabosi18w==}
     peerDependencies:
       react: ^19.0.0
     peerDependenciesMeta:
@@ -6437,13 +6437,13 @@ snapshots:
 
   '@vue/shared@3.5.26': {}
 
-  '@web_of_trust/adapter-yjs@0.2.6(@web_of_trust/core@0.5.6(react@19.2.3))':
+  '@web_of_trust/adapter-yjs@0.2.8(@web_of_trust/core@0.5.8(react@19.2.3))':
     dependencies:
-      '@web_of_trust/core': 0.5.6(react@19.2.3)
+      '@web_of_trust/core': 0.5.8(react@19.2.3)
       y-protocols: 1.0.7(yjs@13.6.31)
       yjs: 13.6.31
 
-  '@web_of_trust/core@0.5.6(react@19.2.3)':
+  '@web_of_trust/core@0.5.8(react@19.2.3)':
     dependencies:
       '@noble/ed25519': 3.1.0
       '@scure/base': 2.3.0
