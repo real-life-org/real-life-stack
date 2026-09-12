@@ -155,4 +155,47 @@ describe("InitialSyncTracker", () => {
 
     expect(t.observe().current).toEqual(afterEnd)
   })
+
+  it("schliesst das Latch auch, wenn die Gruppenzahl NACH dem Catch-up aufholt", () => {
+    const t = tracker()
+    // Reihenfolge aus dem Betrieb: die Mitgliedschaftsliste kennt die Gruppe
+    // frueher als der lokale Lesevorgang sie liefert. Meldet der Adapter den
+    // Abschluss, waehrend noch 0 von 1 gelesen sind, und holt die Zahl erst
+    // danach auf, ist die Erstbefuellung trotzdem durch — sonst bliebe die
+    // Profil-Home-Pflege (Spec 12 Regel 12) dauerhaft gesperrt.
+    t.prepare()
+    t.begin({ expectRemoteData: true, localGroups: 0 })
+    t.setGroupCounts({ loaded: 0, expected: 1 })
+    t.setOutstanding(true)
+    t.setOutstanding(false)
+    expect(t.isFirstFillDone()).toBe(false)
+
+    t.setGroupCounts({ loaded: 1, expected: 1 })
+    expect(t.isFirstFillDone()).toBe(true)
+    expect(t.observe().current.active).toBe(false)
+  })
+
+  it("haelt „0 von 0 beim Login“ weiterhin NICHT fuer fertig", () => {
+    const t = tracker()
+    // Gegenprobe zur Nachbewertung in setGroupCounts: ohne einen vom Adapter
+    // gemeldeten abgeschlossenen Lauf bleibt „0 von 0" eine Wartesituation.
+    t.prepare()
+    t.setGroupCounts({ loaded: 0, expected: 0 })
+    t.begin({ expectRemoteData: true, localGroups: 0 })
+    expect(t.isFirstFillDone()).toBe(false)
+
+    t.setOutstanding(true)
+    expect(t.observe().current.active).toBe(true)
+    expect(t.isFirstFillDone()).toBe(false)
+  })
+
+  it("laesst die Gruppenzahl ohne gemeldeten Catch-up-Abschluss kein Latch setzen", () => {
+    const t = tracker()
+    // Der Adapter hat in dieser Runtime nichts gemeldet; allein „3 von 3
+    // gelesen" ist kein Beleg dafuer, dass der Catch-up durch ist.
+    t.prepare()
+    t.begin({ expectRemoteData: true, localGroups: 0 })
+    t.setGroupCounts({ loaded: 3, expected: 3 })
+    expect(t.isFirstFillDone()).toBe(false)
+  })
 })

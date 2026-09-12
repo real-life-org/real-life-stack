@@ -143,6 +143,32 @@ describe("WotConnector.logout() - auth-scoped observable reset", () => {
   })
 })
 
+describe("WotConnector.dispose() - Observable-Teardown", () => {
+  const dispose = sliceMethod(readConnectorSource(), "async dispose", "// ==================== Auth")
+
+  it("zerstoert jedes auth-gebundene Observable des Connectors", () => {
+    // Ein nicht zerstoertes Observable haelt die Abonnenten der vorigen
+    // Sitzung; profileSharesObs fehlte hier (Spec 12 Regel 14).
+    for (const name of [
+      "authStateObs",
+      "contactsObs",
+      "confirmationsObs",
+      "relayStateObs",
+      "outboxCountObs",
+      "syncStateObs",
+      "profileObs",
+      "profileSharesObs",
+      "syncPendingObs",
+    ]) {
+      expect(dispose).toMatch(new RegExp(`${name}\\.destroy\\(\\)`))
+    }
+  })
+
+  it("gibt den Home-Handle frei", () => {
+    expect(dispose).toMatch(/releaseHomeHandle\(\)/)
+  })
+})
+
 describe("WotConnector DID-store teardown contract", () => {
   it("requires a real close for every runtime DID store", () => {
     const close = sliceMethod(readConnectorSource(), "private async closeRuntimeStores", "private async cleanupOldIdentity")
@@ -368,9 +394,18 @@ function createFakeConnectorForLogout() {
     ["", createObservable([{ id: "old", ts: "2026-01-01T00:00:00.000Z", actor: "did:key:alice", action: "create" as const, targetId: "old", targetType: "task" }])],
     ["1", createObservable([{ id: "old", ts: "2026-01-01T00:00:00.000Z", actor: "did:key:alice", action: "create" as const, targetId: "old", targetType: "task" }])],
   ])
+  const homeHandle = {
+    id: "private-space",
+    closes: 0,
+    getDoc: () => ({ _type: "rls", items: {} }),
+    onRemoteUpdate: () => () => {},
+    close() { this.closes += 1 },
+  }
   const fake: any = {
     bufferedEvents: [] as unknown[],
     ...obs,
+    homeHandle,
+    homeHandleUnsub: vi.fn(),
     closeCurrentHandle: vi.fn(),
     crossGroupUnsub: vi.fn(),
     crossGroupIndex: { stop: vi.fn() },
@@ -399,6 +434,7 @@ function createFakeConnectorForLogout() {
     groupsCache: [{ id: "g1", name: "Crew" }],
     groupsObservable: obs.groupsObs,
     profileObs: createObservable<User | null>(user),
+    profileSharesObs: createObservable<Record<string, string>>({ g1: "accepted" }),
     syncPendingObs: createObservable<boolean>(true),
     identity: {
       getDid: vi.fn(() => "did:key:alice"),
@@ -416,6 +452,11 @@ function createFakeConnectorForLogout() {
   }
   fake.notifyAllObservers = (activityMayHaveChanged = false) =>
     Reflect.get(WotConnector.prototype, "notifyAllObservers").call(fake, activityMayHaveChanged)
+  // Echter Helfer, kein Mock: der Test soll belegen, dass der Home-Handle beim
+  // Abmelden wirklich geschlossen wird (eigenes Dokument-Abonnement).
+  fake.releaseHomeHandle = () => Reflect.get(WotConnector.prototype, "releaseHomeHandle").call(fake)
+  fake.closeHandleQuietly = (handle: any) =>
+    Reflect.get(WotConnector.prototype, "closeHandleQuietly").call(fake, handle)
   return fake
 }
 
@@ -426,6 +467,7 @@ describe("WotConnector.logout() - real method regression", () => {
 
   it("clears auth-scoped observables when the real logout method runs", async () => {
     const fake = createFakeConnectorForLogout()
+    const homeHandle = fake.homeHandle
     const contactsUnsub = fake.contactsUnsub
     const attestationsUnsub = fake.attestationsUnsub
     const profileUnsub = fake.profileUnsub
@@ -437,6 +479,18 @@ describe("WotConnector.logout() - real method regression", () => {
     expect(fake.outboxCountObs.current).toBe(0)
     expect(fake.relayStateObs.current).toBe("disconnected")
     expect(fake.profileObs.current).toBeNull()
+    // Freigaben sind auth-gebunden: sonst zeigte die Annahme-Flaeche nach einem
+    // Identitaetswechsel die Spaces der vorigen Person (Spec 12 Regel 14).
+    expect(fake.profileSharesObs.current).toEqual({})
+    // "Geladen, keine Freigaben" waere nach dem Abmelden eine Falschaussage:
+    // die Registry wurde nicht leer gelesen, sie wurde abgeraeumt.
+    expect(fake.profileSharesObs.loaded).toBe(false)
+    // Der Home-Handle ist sitzungsgebunden und traegt ein eigenes
+    // Dokument-Abonnement; ihn nur fallen zu lassen, liesse den Listener der
+    // vorigen Person am Dokument haengen.
+    expect(fake.homeHandle).toBeNull()
+    expect(homeHandle.closes).toBe(1)
+    expect(fake.homeHandleUnsub).toBeNull()
     expect(fake.syncPendingObs.current).toBe(false)
     expect(fake.syncStateObs.current).toEqual({ logPending: 0, outboxPending: 0 })
     expect(fake.currentGroupObservable.current).toBeNull()
@@ -486,11 +540,30 @@ describe("WotConnector profile publish and contact refresh", () => {
   it("publishes the updated profile through discovery before resolving updateProfile", async () => {
     const publishProfile = vi.fn(async () => {})
     const broadcastProfileUpdate = vi.fn(async () => {})
+    // S3: der Schreibpfad geht zuerst ins Profil-Item im persoenlichen Space
+    // (Spec 12 Regel 12), erst der Write-through fuettert den Verzeichnisdienst.
+    const doc: any = { _type: "rls", items: {} }
+    const handle = {
+      id: "home-space",
+      getDoc: () => doc,
+      transact: (fn: (d: any) => void) => { fn(doc) },
+      onRemoteUpdate: () => () => {},
+      close: () => {},
+    }
     const fake = {
       identity: { getDid: () => "did:key:alice" },
       discovery: { publishProfile },
       broadcastProfileUpdate,
       currentUserObs: createObservable<User | null>({ id: "did:key:alice", displayName: "Alice" }),
+      profileObs: createObservable<Item | null>(null),
+      memberObservables: new Map(),
+      privateSpaceId: "home-space",
+      homeHandle: handle,
+      runtimeGeneration: 1,
+      replication: { openSpace: async () => handle },
+      crossGroupIndex: { reindexGroup: vi.fn() },
+      notifyAllObservers: vi.fn(),
+      activityDirty: false,
     }
     Object.setPrototypeOf(fake, WotConnector.prototype)
 
@@ -498,6 +571,8 @@ describe("WotConnector profile publish and contact refresh", () => {
       name: "Alice Neu",
       avatar: "data:image/png;base64,new-avatar",
     })
+
+    expect(doc.items["did:key:alice"]).toBeDefined()
 
     expect(publishProfile).toHaveBeenCalledTimes(1)
     expect(publishProfile).toHaveBeenCalledWith(
@@ -509,6 +584,27 @@ describe("WotConnector profile publish and contact refresh", () => {
       fake.identity,
     )
     expect(broadcastProfileUpdate).toHaveBeenCalledTimes(1)
+  })
+
+  it("scheitert laut, wenn der persoenliche Space nicht erreichbar ist", async () => {
+    // Spec 12 Regel 12: „Alle Schreibpfade ... schreiben das Item." Ein stiller
+    // Teil-Erfolg verloere die Felder, die es in doc.profile gar nicht gibt.
+    const publishProfile = vi.fn(async () => {})
+    const fake = {
+      identity: { getDid: () => "did:key:alice" },
+      discovery: { publishProfile },
+      broadcastProfileUpdate: vi.fn(async () => {}),
+      currentUserObs: createObservable<User | null>({ id: "did:key:alice", displayName: "Alice" }),
+      privateSpaceId: null,
+      homeHandle: null,
+      replication: null,
+    }
+    Object.setPrototypeOf(fake, WotConnector.prototype)
+
+    await expect(
+      WotConnector.prototype.updateProfile.call(fake as any, { name: "Alice Neu" }),
+    ).rejects.toThrow(/persönliche Space/)
+    expect(publishProfile).not.toHaveBeenCalled()
   })
 
   it("skips discovery publishing when the PersonalDoc has no local profile name", async () => {
@@ -757,7 +853,12 @@ describe("WotConnector person/v1 item projection", () => {
       currentUserObs: createObservable<User | null>(null),
       memberObservables: new Map(),
       notifyMemberObservers: vi.fn(),
+      // S3: die Projektion liest jetzt zuerst das Profil-Item im persoenlichen
+      // Space (Spec 12 Regel 12). Ohne Home-Handle bleibt der Uebergangspfad.
+      homeHandle: null,
+      privateSpaceId: null,
     }
+    Object.setPrototypeOf(fake, WotConnector.prototype)
 
     ;(WotConnector.prototype as any).syncProfileObservable.call(fake)
     const item = await WotConnector.prototype.getMyProfile.call(fake as any)
