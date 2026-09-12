@@ -661,6 +661,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.outboxCountObs.destroy()
     this.syncStateObs.destroy()
     this.profileObs.destroy()
+    this.profileSharesObs.destroy()
     this.syncPendingObs.destroy()
     for (const obs of this.memberObservables.values()) obs.destroy()
     this.memberObservables.clear()
@@ -854,6 +855,10 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.relayStateObs.set("disconnected")
     this.profileObs.set(null)
     this.profileSharesObs.set({})
+    // Die Freigaben starten ungeladen und werden erst von refreshProfileShares
+    // als gelesen markiert. Nach der Sitzungsgrenze ist "geladen, keine
+    // Freigaben" falsch — die Registry wurde abgeraeumt, nicht leer gelesen.
+    this.profileSharesObs.markUnloaded()
     this.syncPendingObs.set(false)
 
     await guarded("personalDoc.reset", false, () => resetYjsPersonalDoc())

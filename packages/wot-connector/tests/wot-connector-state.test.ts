@@ -143,6 +143,32 @@ describe("WotConnector.logout() - auth-scoped observable reset", () => {
   })
 })
 
+describe("WotConnector.dispose() - Observable-Teardown", () => {
+  const dispose = sliceMethod(readConnectorSource(), "async dispose", "// ==================== Auth")
+
+  it("zerstoert jedes auth-gebundene Observable des Connectors", () => {
+    // Ein nicht zerstoertes Observable haelt die Abonnenten der vorigen
+    // Sitzung; profileSharesObs fehlte hier (Spec 12 Regel 14).
+    for (const name of [
+      "authStateObs",
+      "contactsObs",
+      "confirmationsObs",
+      "relayStateObs",
+      "outboxCountObs",
+      "syncStateObs",
+      "profileObs",
+      "profileSharesObs",
+      "syncPendingObs",
+    ]) {
+      expect(dispose).toMatch(new RegExp(`${name}\\.destroy\\(\\)`))
+    }
+  })
+
+  it("gibt den Home-Handle frei", () => {
+    expect(dispose).toMatch(/releaseHomeHandle\(\)/)
+  })
+})
+
 describe("WotConnector DID-store teardown contract", () => {
   it("requires a real close for every runtime DID store", () => {
     const close = sliceMethod(readConnectorSource(), "private async closeRuntimeStores", "private async cleanupOldIdentity")
@@ -456,6 +482,9 @@ describe("WotConnector.logout() - real method regression", () => {
     // Freigaben sind auth-gebunden: sonst zeigte die Annahme-Flaeche nach einem
     // Identitaetswechsel die Spaces der vorigen Person (Spec 12 Regel 14).
     expect(fake.profileSharesObs.current).toEqual({})
+    // "Geladen, keine Freigaben" waere nach dem Abmelden eine Falschaussage:
+    // die Registry wurde nicht leer gelesen, sie wurde abgeraeumt.
+    expect(fake.profileSharesObs.loaded).toBe(false)
     // Der Home-Handle ist sitzungsgebunden und traegt ein eigenes
     // Dokument-Abonnement; ihn nur fallen zu lassen, liesse den Listener der
     // vorigen Person am Dokument haengen.
