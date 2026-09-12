@@ -150,5 +150,11 @@ export function nextStatusSeq(byDevice: Record<string, MirrorRegistryContributio
   for (const contribution of Object.values(byDevice ?? {})) {
     if (contribution && contribution.statusSeq > max) max = contribution.statusSeq
   }
+  // Wie nextSeq (#351): jenseits des sicheren Bereichs liefert `max + 1`
+  // wieder `max`, eine alte supersedes-Abdeckung deckte dann einen späteren
+  // Widerruf desselben Geräts ab. Lieber laut scheitern.
+  if (!Number.isSafeInteger(max) || max + 1 >= Number.MAX_SAFE_INTEGER) {
+    throw new Error(`nextStatusSeq: Zählerstand ${max} erschöpft den sicheren Ganzzahlbereich`)
+  }
   return max + 1
 }

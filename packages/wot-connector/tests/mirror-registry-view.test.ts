@@ -192,6 +192,14 @@ describe("nextSeq", () => {
 })
 
 describe("nextStatusSeq", () => {
+  // #351: analog nextSeq — kein stilles Stagnieren am Ende des sicheren Bereichs.
+  it("wirft bei Erschöpfung des sicheren Ganzzahlbereichs", () => {
+    expect(() => nextStatusSeq({ a: contribution({ statusSeq: Number.MAX_SAFE_INTEGER }) })).toThrow(/erschöpft/)
+    expect(() => nextStatusSeq({ a: contribution({ statusSeq: Number.MAX_SAFE_INTEGER - 1 }) })).toThrow(/erschöpft/)
+    expect(() => nextStatusSeq({ a: contribution({ statusSeq: 2 ** 53 }) })).toThrow(/erschöpft/)
+    expect(nextStatusSeq({ a: contribution({ statusSeq: Number.MAX_SAFE_INTEGER - 2 }) })).toBe(Number.MAX_SAFE_INTEGER - 1)
+  })
+
   it("ist 1 + max(beobachtet)", () => {
     expect(nextStatusSeq({ a: contribution({ statusSeq: 4 }), b: contribution({ statusSeq: 9 }) })).toBe(10)
     expect(nextStatusSeq({})).toBe(1)

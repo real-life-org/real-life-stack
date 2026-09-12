@@ -52,6 +52,26 @@ describe("InMemoryMirrorMarkStore", () => {
     expect((await store.getMark(HOME, "task-1", AUTHOR))?.deviceId).toBe("dev-b")
   })
 
+  // #350: gelesene Objekte sind Kopien — Mutation umgeht weder Maximum noch Erstbindung.
+  it("liefert Kopien: Mutation einer gelesenen Marke senkt den Stand nicht", async () => {
+    const store = new InMemoryMirrorMarkStore()
+    await store.putMark(mark(AUTHOR, 6))
+    const read = await store.getMark(HOME, "task-1", AUTHOR)
+    read!.seq = 1
+    expect((await store.getMark(HOME, "task-1", AUTHOR))?.seq).toBe(6)
+    const listed = await store.listMarks(HOME, "task-1")
+    listed[0]!.seq = 1
+    expect((await store.getMark(HOME, "task-1", AUTHOR))?.seq).toBe(6)
+  })
+
+  it("liefert Kopien: Mutation einer gelesenen Bindung bindet nicht um", async () => {
+    const store = new InMemoryMirrorMarkStore()
+    await store.putBinding({ homeSpaceId: HOME, itemId: "task-1", boundAuthorDid: AUTHOR })
+    const read = await store.getBinding(HOME, "task-1")
+    read!.boundAuthorDid = FOREIGN
+    expect((await store.getBinding(HOME, "task-1"))?.boundAuthorDid).toBe(AUTHOR)
+  })
+
   it("listet alle Marken eines logischen Schlüssels, auch die ungebundenen", async () => {
     const store = new InMemoryMirrorMarkStore()
     await store.putMark(mark(AUTHOR, 4))

@@ -234,6 +234,11 @@ export interface MirrorBinding {
  *
  * Bewusst asynchron, weil die echte Implementierung IndexedDB ist.
  */
+/**
+ * Port für Marken und Bindung (Spec 09 Invariante 6/8). Lesepfade MÜSSEN
+ * Kopien liefern: der gespeicherte Stand ist ausschließlich über `putMark`
+ * (Maximum) und `putBinding` (Erstbindung) veränderbar (#350).
+ */
 export interface MirrorMarkStore {
   /** Die Marke des GENANNTEN Autors — Marken fremder DIDs sind eigene Marken. */
   getMark(
