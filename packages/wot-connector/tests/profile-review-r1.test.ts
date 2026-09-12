@@ -554,3 +554,28 @@ describe("R3-3 — das Item gewinnt auch, wenn es nach doc.profile eintrifft", (
     expect((await connector.getMyProfile())?.data.displayName).toBe("Neu")
   })
 })
+
+// --- Codex-Review, Runde 4 ---
+
+describe("R4-1 — auch der Startfall richtet die Uebergangsprojektion am Item aus", () => {
+  it("korrigiert ein aelteres doc.profile schon beim ersten Oeffnen des Home", async () => {
+    const doc: RlsSpaceDoc = {
+      _type: "rls",
+      items: {
+        [DID]: {
+          id: DID, type: "person", createdAt: "2026-01-01T00:00:00.000Z", createdBy: DID,
+          data: { displayName: "Canonical", did: DID },
+        } as never,
+      },
+      profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
+    }
+    // Das Item ist beim Oeffnen schon da; es gibt also kein Remote-Update.
+    personalDoc.value.profile = { did: DID, name: "Old projection", bio: null, avatar: null }
+    const { connector } = fakeConnector({ doc })
+
+    await connector.queueProfileHomeMaintenance()
+
+    expect((await connector.getMyProfile())?.data.displayName).toBe("Canonical")
+    expect(personalDoc.value.profile).toMatchObject({ name: "Canonical" })
+  })
+})

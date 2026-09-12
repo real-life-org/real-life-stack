@@ -1361,6 +1361,11 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.reconcileProfileRegistry(handle, did, deviceId)
 
     this.syncProfileObservable()
+    // Auch der STARTFALL braucht den Write-through: ist das kanonische Item
+    // beim Öffnen schon da und `doc.profile` älter, gibt es kein Remote-Update,
+    // an dem `onHomeDocChanged` hinge — die Projektion bliebe falsch und würde
+    // vom Verzeichnisdienst publiziert (Spec 12 Regel 12).
+    this.writeProfileThroughToPersonalDoc(this.readProfileItemFrom(handle))
     this.refreshProfileShares()
   }
 
