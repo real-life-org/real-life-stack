@@ -45,6 +45,19 @@ export class InitialSyncTracker {
     return this.obs
   }
 
+  /**
+   * Ist die Erstbefüllung dieses Geräts durch?
+   *
+   * Dieselbe Aussage, die `active` intern benutzt, nur ohne die Anzeigelogik
+   * darum herum. Die Home-Quelle des Profils (RLS-Spec 12 Regel 12) braucht
+   * sie: migriert werden darf erst, wenn die Mitgliedschaftsliste und der
+   * Catch-up zusammenpassen — sonst liefe die Bestandsregel über einen
+   * halb angekommenen Bestand.
+   */
+  isFirstFillDone(): boolean {
+    return this.firstFillDone
+  }
+
   /** Eine neue Runtime beginnt (Bootstrap, vor dem ersten Sync-Start). */
   prepare(): void {
     this.stopped = false

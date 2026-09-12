@@ -164,6 +164,7 @@ import {
   nextStatusSeq,
   normalizeProfileFields,
   parseMirrorRegistryKey,
+  planStockGrants,
   profileItemInput,
   supersedesOf,
   type ProfileItemFields,
@@ -427,6 +428,8 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   /** Home des Profils (Spec 12 Regel 12): der geöffnete persönliche Space. */
   private homeHandle: SpaceHandle<RlsSpaceDoc> | null = null
   private homeHandleUnsub: (() => void) | null = null
+  /** Migration, Bestand und Registry-Abgleich der Home-Quelle, serialisiert. */
+  private profileHomeMaintenance: Promise<void> = Promise.resolve()
   private contactsUnsub: (() => void) | null = null
   private attestationsUnsub: (() => void) | null = null
 
@@ -1112,6 +1115,104 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   private admissionOfSpace(spaceId: string): SpaceAdmission | undefined {
     const spaces = this.replication?.watchSpaces().getValue() ?? []
     return spaces.find((space) => space.id === spaceId)?.admission
+  }
+
+  /**
+   * Das Erstsync-Signal des persönlichen Space (Spec 12 Regel 12) — kein Timer
+   * und kein Zeitfenster, sondern der Catch-up-Zustand des Adapters.
+   *
+   * `Observable.loaded` reicht dafür nicht: es heißt nur „lokal gelesen". Der
+   * doc-genaue Teil ist, dass das Doc des persönlichen Space nicht in der
+   * Ausstehend-Liste steht. Die Liste allein genügt aber nicht, denn „nicht in
+   * der Liste" heißt auch „hat noch gar nicht gemeldet"; deshalb zusätzlich der
+   * Sitzungsstand (nichts steht mehr aus) UND die Erstbefüllung dieses Geräts
+   * (`InitialSyncTracker`, der die Mitgliedschaftsliste gegen die geladenen
+   * Gruppen hält). Erwartet eine gerade erzeugte Identität nichts von außen,
+   * gibt es nichts zu warten.
+   */
+  private isHomeCatchUpSettled(): boolean {
+    const homeSpaceId = this.privateSpaceId
+    if (!homeSpaceId) return false
+    const overview = this.catchUpRegistry?.getOverview()
+    if (!overview) return false
+    if (overview.outstanding.some((state) => state.docId === homeSpaceId)) return false
+    if (overview.syncing) return false
+    return !this.authExpectsRemoteData || this.initialSync.isFirstFillDone()
+  }
+
+  /**
+   * Migration, Bestandsregel und Registry-Abgleich laufen serialisiert: sie
+   * lesen und schreiben denselben Eintrag, und die Bestandsregel MUSS vor dem
+   * `pending`-Pfad liegen — sonst würden Bestands-Spaces ausstehend.
+   */
+  private queueProfileHomeMaintenance(): Promise<void> {
+    this.profileHomeMaintenance = this.profileHomeMaintenance
+      .catch(() => {})
+      .then(() => this.runProfileHomeMaintenance())
+    return this.profileHomeMaintenance
+  }
+
+  private async runProfileHomeMaintenance(): Promise<void> {
+    const generation = this.runtimeGeneration
+    if (!this.isHomeCatchUpSettled()) return
+    const handle = await this.ensureHomeHandle()
+    if (!handle || this.runtimeGeneration !== generation) return
+
+    this.migrateProfileItem(handle)
+    await this.grantStockMemberships(handle)
+    if (this.runtimeGeneration !== generation) return
+
+    this.syncProfileObservable()
+    this.refreshProfileShares()
+  }
+
+  /**
+   * Spec 12 Regel 12: „nur, wenn das Item dann fehlt und `doc.profile`
+   * existiert, legt der Connector das Item aus `doc.profile` an."
+   *
+   * Beide Richtungen der Verspätung sind damit abgedeckt: existiert das Item,
+   * gewinnt es gegen ein später eintreffendes `doc.profile`; fehlt es noch,
+   * wird beim nächsten Lauf migriert.
+   */
+  private migrateProfileItem(handle: SpaceHandle<RlsSpaceDoc>): void {
+    const did = this.identity.getDid()
+    if (handle.getDoc()?.items?.[did]) return
+    const profile = getYjsPersonalDoc()?.profile
+    if (!profile) return
+
+    this.createItemOnHandle(handle, profileItemInput(did, {
+      displayName: profile.name ?? null,
+      bio: profile.bio ?? null,
+      avatarUrl: profile.avatar ?? null,
+    }), handle.id)
+  }
+
+  /**
+   * Die Übergangsregel aus Spec 12 Regel 5: Mitgliedschaften, die vor dieser
+   * Spec bestanden, gelten als freigegeben.
+   *
+   * Die Marke liegt im Home-Doc, gilt also über alle Geräte der Person; ist sie
+   * gesetzt, läuft die Regel nirgends erneut — sonst stellte ein zweites Gerät
+   * inzwischen widerrufene Freigaben wieder her. Sie wird auch dann gesetzt,
+   * wenn es keine einzige Bestands-Mitgliedschaft gibt: sonst liefe die Regel
+   * später über Spaces, die nach Regel 4 ausstehend sein müssten.
+   */
+  private async grantStockMemberships(handle: SpaceHandle<RlsSpaceDoc>): Promise<void> {
+    if (handle.getDoc()?.profileMigration?.bestandAt) return
+
+    const spaces = this.replication?.watchSpaces().getValue() ?? []
+    for (const targetSpaceId of planStockGrants(spaces, handle.id)) {
+      await this.writeRegistryContribution(targetSpaceId, "accepted")
+    }
+
+    handle.transact((doc) => {
+      if (!doc.profileMigration) doc.profileMigration = {}
+      // Monoton: eine vorhandene Marke wird NIE überschrieben. Setzen zwei
+      // Geräte sie nebenläufig, schreibt jedes nur seine eigenen
+      // `byDevice`-Beiträge — die Faltung macht den doppelten Durchlauf
+      // harmlos.
+      if (!doc.profileMigration.bestandAt) doc.profileMigration.bestandAt = new Date().toISOString()
+    })
   }
 
   /** Wie die Benachrichtigungs-Slots: bewusst bei jeder Mutation aufgelöst — ein wiederhergestellter Klon bekommt einen neuen Schlüssel. */
@@ -2163,6 +2264,11 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.catchUpRegistry = new CatchUpRegistry()
     this.catchUpUnsub = this.catchUpRegistry.subscribe((overview) => {
       this.initialSync.setOutstanding(overview.syncing)
+      // Das Erstsync-Signal des persönlichen Space (Spec 12 Regel 12) kommt aus
+      // genau dieser Quelle — Migration und Bestandsregel hängen daran.
+      void this.queueProfileHomeMaintenance().catch((error) => {
+        console.warn("[WotConnector] Profil-Home-Pflege verschoben", error)
+      })
     })
 
     this.inboxReception = new InboxReceptionHost({
@@ -2394,6 +2500,14 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     // 12. Ensure private space exists (hidden space for personal items)
     await this.queuePrivateSpaceReconcile({ createIfMissing: true })
+
+    // 12b. Home-Quelle des Profils (Spec 12 Regel 12): Migration und
+    // Bestandsregel, sobald der persönliche Space seinen Catch-up hinter sich
+    // hat. Der Aufruf hier deckt den Fall ab, dass die Catch-up-Registry für
+    // diese Sitzung gar nichts mehr zu melden hat (frisch erzeugte Identität).
+    void this.queueProfileHomeMaintenance().catch((error) => {
+      console.warn("[WotConnector] Profil-Home-Pflege verschoben", error)
+    })
 
     // 13. Refresh contact summaries immediately and every 10s (the Demo
     // live-refresh cadence), with overlap protection and throttled full profiles.
