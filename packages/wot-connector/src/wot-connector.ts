@@ -239,7 +239,11 @@ function compareActivity(a: ActivityEntry, b: ActivityEntry): number {
  * MUSS, wenn vorhanden, gleich `createdBy` sein. `null`, leer oder ein
  * Nicht-String ist kein Platzhalter, sondern ungültig (Regel 8, rls#348).
  */
-function assertProfileDidBinding(data: Record<string, unknown> | undefined, createdBy: string): void {
+function assertProfileDidBinding(
+  data: Record<string, unknown> | undefined,
+  itemId: string,
+  createdBy: string,
+): void {
   if (!data || !("did" in data)) return
   const did = data.did
   if (typeof did !== "string" || did.length === 0) {
@@ -247,6 +251,12 @@ function assertProfileDidBinding(data: Record<string, unknown> | undefined, crea
   }
   if (did !== createdBy) {
     throw new Error(`data.did (${did}) muss gleich createdBy (${createdBy}) sein (Spec 12 Regel 1)`)
+  }
+  // Die Item-Id gehört zur selben Gleichung. Ohne sie entstünde über eine
+  // vorgegebene Id ein zweites Profil derselben Person, oder ein vorhandener
+  // Platzhalter mit beliebiger Id würde nachträglich zum Profil erklärt.
+  if (did !== itemId) {
+    throw new Error(`data.did (${did}) muss gleich der Item-Id (${itemId}) sein (Spec 12 Regel 1)`)
   }
 }
 
@@ -449,11 +459,15 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   /** Migration, Bestand und Registry-Abgleich der Home-Quelle, serialisiert. */
   private profileHomeMaintenance: Promise<void> = Promise.resolve()
   /**
-   * Der Adapter hat für das Doc des persönlichen Space in DIESER Sitzung einen
-   * Catch-up gemeldet (Spec 12 Regel 12). Nur dann ist „nichts steht mehr aus"
-   * ein Beweis und nicht bloß „hat noch nicht gemeldet".
+   * Der Adapter hat für das Doc des persönlichen Space einen Catch-up gemeldet
+   * (Spec 12 Regel 12). Nur dann ist „nichts steht mehr aus" ein Beweis und
+   * nicht bloß „hat noch nicht gemeldet".
+   *
+   * GEBUNDEN an Runtime-Generation und Home-Id: ein Nachweis aus einer
+   * vorigen Sitzung sagt nichts über diese, und nach einem Re-Login gäbe er
+   * eine noch nicht synchronisierte Lesesicht pauschal frei.
    */
-  private homeCatchUpReported = false
+  private homeCatchUpReported: { generation: number; spaceId: string } | null = null
   private contactsUnsub: (() => void) | null = null
   private attestationsUnsub: (() => void) | null = null
 
@@ -1073,6 +1087,12 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    */
   private onHomeDocChanged(): void {
     this.syncProfileObservable()
+    // Das Item ist die kanonische Quelle — auch wenn es NACH einem fremden
+    // `doc.profile` eintrifft (Spec 12 Regel 12). Ohne diesen Abgleich bliebe
+    // die Übergangsprojektion auf dem Stand stehen, den der PersonalDoc-Sync
+    // zuerst geliefert hat, und der Verzeichnisdienst publizierte ihn.
+    // Inhaltsgleich ist der Write-through ein No-op, daher keine Schleife.
+    this.writeProfileThroughToPersonalDoc(this.readProfileItem())
     this.refreshProfileShares()
     void this.queueProfileHomeMaintenance().catch((error) => {
       console.warn("[WotConnector] Profil-Home-Pflege verschoben", error)
@@ -1269,10 +1289,18 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * normaler Betrieb.
    */
   private noteHomeCatchUp(outstanding: ReadonlyArray<{ docId: string }>): void {
-    if (this.homeCatchUpReported || !this.privateSpaceId) return
-    if (outstanding.some((state) => state.docId === this.privateSpaceId)) {
-      this.homeCatchUpReported = true
+    const spaceId = this.privateSpaceId
+    if (!spaceId || this.hasHomeCatchUpReport()) return
+    if (outstanding.some((state) => state.docId === spaceId)) {
+      this.homeCatchUpReported = { generation: this.runtimeGeneration, spaceId }
     }
+  }
+
+  /** Gilt der Nachweis für DIESE Sitzung und DIESES Home? */
+  private hasHomeCatchUpReport(): boolean {
+    return this.homeCatchUpReported !== null
+      && this.homeCatchUpReported.generation === this.runtimeGeneration
+      && this.homeCatchUpReported.spaceId === this.privateSpaceId
   }
 
   private isHomeCatchUpSettled(): boolean {
@@ -1327,7 +1355,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     // zu lassen. Läuft sie deshalb auf diesem Gerät nie, ist das
     // fail-closed: ein anderes Gerät erledigt sie, und bis dahin bleiben die
     // Spaces ausstehend — in S3 wird ohnehin nichts publiziert.
-    if (this.homeCatchUpReported || !this.authExpectsRemoteData) {
+    if (this.hasHomeCatchUpReport() || !this.authExpectsRemoteData) {
       this.grantStockMemberships(handle, did, deviceId)
     }
     this.reconcileProfileRegistry(handle, did, deviceId)
@@ -1924,7 +1952,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         // invent a foreign author and then hide behind their protection.
         createdBy: author,
       } as Item
-      assertProfileDidBinding(newItem.data as Record<string, unknown> | undefined, author)
+      assertProfileDidBinding(newItem.data as Record<string, unknown> | undefined, id, author)
       doc.items[id] = serializeItem(newItem)
       this.appendActivity(doc, "create", newItem)
       result = newItem
@@ -1954,7 +1982,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       // `createdBy` sein. Ohne diese Schranke schriebe der GEWÖHNLICHE
       // Item-Schreibpfad das Profil einer Person auf eine fremde DID um — das
       // Profil ist seit diesem Schnitt ein gewöhnliches Item.
-      assertProfileDidBinding(updates.data as Record<string, unknown> | undefined, existing.createdBy)
+      assertProfileDidBinding(updates.data as Record<string, unknown> | undefined, id, existing.createdBy)
       // `updates.data` ERSETZT die Daten vollständig; ein Aufrufer, der `did`
       // nicht nennt, löschte sonst den Profil-Marker und machte aus dem Profil
       // einen Platzhalter (Regel 3). Der Marker gehört nicht dem Aufrufer.

@@ -80,7 +80,9 @@ function fakeConnector(options: {
   connector.profileHomeMaintenance = Promise.resolve()
   // Der Adapter hat den Catch-up des Home-Docs gemeldet (Spec 12 Regel 12) —
   // erst dann darf die pauschale Bestandsregel laufen.
-  connector.homeCatchUpReported = options.homeCatchUpReported ?? true
+  connector.homeCatchUpReported = (options.homeCatchUpReported ?? true)
+    ? { generation: connector.runtimeGeneration, spaceId: connector.privateSpaceId }
+    : null
   return { connector, doc, handle }
 }
 
@@ -347,17 +349,43 @@ describe("R2-2 — die pauschale Bestandsregel verlangt den beobachteten Catch-u
     expect(byDevice(doc, "garten")[DEVICE].status).toBe("accepted")
   })
 
-  it("noteHomeCatchUp merkt sich die Meldung des Home-Docs und nimmt sie nie zurueck", () => {
+  it("noteHomeCatchUp merkt sich nur die Meldung des Home-Docs und nimmt sie in der Sitzung nie zurueck", () => {
     const { connector } = fakeConnector({ homeCatchUpReported: false })
 
     connector.noteHomeCatchUp([{ docId: "garten" }])
-    expect(connector.homeCatchUpReported).toBe(false)
+    expect(connector.hasHomeCatchUpReport()).toBe(false)
 
     connector.noteHomeCatchUp([{ docId: "home-space" }])
-    expect(connector.homeCatchUpReported).toBe(true)
+    expect(connector.hasHomeCatchUpReport()).toBe(true)
 
     connector.noteHomeCatchUp([])
-    expect(connector.homeCatchUpReported).toBe(true)
+    expect(connector.hasHomeCatchUpReport()).toBe(true)
+  })
+
+  it("der Nachweis gilt nur fuer DIESE Sitzung und DIESES Home", () => {
+    const { connector } = fakeConnector({ homeCatchUpReported: false })
+    connector.noteHomeCatchUp([{ docId: "home-space" }])
+    expect(connector.hasHomeCatchUpReport()).toBe(true)
+
+    // Re-Login: neue Generation, der alte Nachweis sagt nichts ueber sie.
+    connector.runtimeGeneration = 2
+    expect(connector.hasHomeCatchUpReport()).toBe(false)
+
+    connector.runtimeGeneration = 1
+    // Anderer persoenlicher Space (Identitaetswechsel, Reconcile).
+    connector.privateSpaceId = "anderes-home"
+    expect(connector.hasHomeCatchUpReport()).toBe(false)
+  })
+
+  it("gibt nach einem Re-Login nichts pauschal frei, bevor das Home gemeldet hat", async () => {
+    const doc: RlsSpaceDoc = { _type: "rls", items: {} }
+    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    connector.runtimeGeneration = 2
+
+    await connector.queueProfileHomeMaintenance()
+
+    expect(byDevice(doc, "garten")[DEVICE].status).toBe("pending")
+    expect(doc.profileMigration?.bestandAt).toBeUndefined()
   })
 })
 
@@ -469,5 +497,60 @@ describe("R2-6 — ein abgelehnter Schreibversuch hinterlaesst keinen Eintrag", 
     await connector.queueProfileHomeMaintenance()
 
     expect(byDevice(doc, "garten")[DEVICE].status).toBe("accepted")
+  })
+})
+
+// --- Codex-Review, Runde 3 ---
+
+describe("R3-2 — id = createdBy = data.did gilt ohne Schlupfloch (Spec 12 Regel 1)", () => {
+  it("weist eine vorgegebene Id zurueck, die nicht die DID ist", async () => {
+    const { connector, doc, handle } = fakeConnector()
+
+    expect(() => connector.createItemOnHandle(handle, {
+      id: "zweites-profil",
+      type: "person",
+      data: { displayName: "Anton", did: DID },
+    }, "home-space")).toThrow(/Item-Id/)
+    expect(doc.items["zweites-profil"]).toBeUndefined()
+  })
+
+  it("erlaubt nicht, einem vorhandenen Platzhalter nachtraeglich die eigene DID zu geben", async () => {
+    const { connector, doc, handle } = fakeConnector()
+    doc.items["platzhalter"] = {
+      id: "platzhalter", type: "person", createdAt: "", createdBy: DID, data: { displayName: "Dritte Person" },
+    } as never
+
+    expect(() => connector.applyItemUpdate(handle, "platzhalter", {
+      data: { displayName: "Dritte Person", did: DID },
+    })).toThrow(/Item-Id/)
+    expect((doc.items["platzhalter"].data as Record<string, unknown>).did).toBeUndefined()
+  })
+
+  it("laesst die Anlage mit der DID als Id durch", async () => {
+    const { connector, doc, handle } = fakeConnector()
+
+    connector.createItemOnHandle(handle, { id: DID, type: "person", data: { displayName: "Anton", did: DID } }, "home-space")
+
+    expect(doc.items[DID]).toBeDefined()
+  })
+})
+
+describe("R3-3 — das Item gewinnt auch, wenn es nach doc.profile eintrifft", () => {
+  it("richtet die Uebergangsprojektion nach, sobald das Home-Doc sich aendert", async () => {
+    const { connector, doc } = fakeConnector()
+    await connector.updateMyProfile({ displayName: "Alt" })
+
+    // Ein fremdes PersonalDoc trifft zuerst ein und wird am alten Item ausgerichtet.
+    personalDoc.value.profile = { did: DID, name: "Zwischenstand", bio: null, avatar: null }
+    connector.lastObservedProfileKey = ""
+    connector.handlePersonalDocProfileChange()
+    expect(personalDoc.value.profile).toMatchObject({ name: "Alt" })
+
+    // Danach kommt das Item des anderen Geraets nach.
+    ;(doc.items[DID].data as Record<string, unknown>).displayName = "Neu"
+    connector.onHomeDocChanged()
+
+    expect(personalDoc.value.profile).toMatchObject({ name: "Neu" })
+    expect((await connector.getMyProfile())?.data.displayName).toBe("Neu")
   })
 })

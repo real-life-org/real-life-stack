@@ -61,7 +61,9 @@ function fakeConnector(options: {
   connector.profileHomeMaintenance = Promise.resolve()
   // Der Adapter hat den Catch-up des Home-Docs gemeldet (Spec 12 Regel 12) —
   // erst dann darf die pauschale Bestandsregel laufen.
-  connector.homeCatchUpReported = options.homeCatchUpReported ?? true
+  connector.homeCatchUpReported = (options.homeCatchUpReported ?? true)
+    ? { generation: connector.runtimeGeneration, spaceId: connector.privateSpaceId }
+    : null
   return { connector, doc, handle }
 }
 
