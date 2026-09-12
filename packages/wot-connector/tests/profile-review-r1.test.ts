@@ -563,3 +563,97 @@ describe("R4-1 — auch der Startfall richtet die Uebergangsprojektion am Item a
     expect(personalDoc.value.profile).toMatchObject({ name: "Canonical" })
   })
 })
+
+// --- Loop-Review Anton / CodeRabbit, Runde 6 ---
+
+describe("R6-1 — ein Profil entsteht nur im persoenlichen Space (Spec 12 Regel 12)", () => {
+  function sharedHandle(doc: RlsSpaceDoc = { _type: "rls", items: {} }) {
+    return {
+      id: "shared-space",
+      getDoc: () => doc,
+      transact: (fn: (d: RlsSpaceDoc) => void) => { fn(doc) },
+      onRemoteUpdate: () => () => {},
+      close: () => {},
+    }
+  }
+
+  it("weist die Anlage eines Profil-Items im ausgewaehlten gemeinsamen Space ab", async () => {
+    const { connector } = fakeConnector()
+    const shared = sharedHandle()
+    connector.currentGroupId = "shared-space"
+    connector.currentHandle = shared
+
+    await expect(connector.createItem({
+      type: "person",
+      data: { displayName: "Anton", did: DID },
+    })).rejects.toThrow(/persoenlichen Space|Regel 12/)
+    expect(shared.getDoc().items[DID]).toBeUndefined()
+  })
+
+  it("weist auch den direkten Handle-Pfad ab und schreibt nichts", () => {
+    const { connector } = fakeConnector()
+    const shared = sharedHandle()
+
+    expect(() => connector.createItemOnHandle(shared, {
+      id: DID, type: "person", data: { displayName: "Anton", did: DID },
+    }, "shared-space")).toThrow(/Regel 12/)
+    expect(Object.keys(shared.getDoc().items)).toHaveLength(0)
+  })
+
+  it("laesst ein Platzhalter-Item ohne data.did im gemeinsamen Space zu (Regel 3)", () => {
+    const { connector } = fakeConnector()
+    const shared = sharedHandle()
+
+    const item = connector.createItemOnHandle(shared, {
+      type: "person", data: { displayName: "Dritte Person" },
+    }, "shared-space")
+
+    expect(shared.getDoc().items[item.id]).toBeDefined()
+  })
+
+  it("macht aus einem Platzhalter im gemeinsamen Space kein Profil", () => {
+    const { connector } = fakeConnector()
+    const doc: RlsSpaceDoc = {
+      _type: "rls",
+      items: {
+        [DID]: {
+          id: DID, type: "person", createdAt: "", createdBy: DID, data: { displayName: "Platzhalter" },
+        } as never,
+      },
+    }
+    const shared = sharedHandle(doc)
+
+    expect(() => connector.applyItemUpdate(shared, DID, {
+      data: { displayName: "Platzhalter", did: DID },
+    })).toThrow(/Regel 12/)
+    expect((doc.items[DID].data as Record<string, unknown>).did).toBeUndefined()
+  })
+
+  it("weist das Update eines bereits im gemeinsamen Space liegenden Profil-Items ab, statt es still umzuschreiben", () => {
+    const { connector } = fakeConnector()
+    const doc: RlsSpaceDoc = {
+      _type: "rls",
+      items: {
+        [DID]: {
+          id: DID, type: "person", createdAt: "", createdBy: DID, data: { displayName: "Alt", did: DID },
+        } as never,
+      },
+    }
+    const shared = sharedHandle(doc)
+
+    expect(() => connector.applyItemUpdate(shared, DID, {
+      data: { displayName: "Neu", did: DID },
+    })).toThrow(/Regel 12/)
+    expect((doc.items[DID].data as Record<string, unknown>).displayName).toBe("Alt")
+  })
+
+  it("laesst Anlage und Update im persoenlichen Space unveraendert zu", async () => {
+    const { connector, doc, handle } = fakeConnector()
+
+    connector.createItemOnHandle(handle, { id: DID, type: "person", data: { displayName: "Anton", did: DID } }, "home-space")
+    connector.applyItemUpdate(handle, DID, { data: { displayName: "Anton Neu", did: DID } })
+
+    expect((doc.items[DID].data as Record<string, unknown>).displayName).toBe("Anton Neu")
+    expect((await connector.getMyProfile())?.data.displayName).toBe("Anton Neu")
+  })
+})

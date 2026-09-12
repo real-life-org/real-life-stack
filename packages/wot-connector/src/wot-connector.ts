@@ -263,6 +263,41 @@ function assertProfileDidBinding(
   }
 }
 
+/**
+ * Spec 12 Regel 12 (Home-Quelle): das Profil-Item liegt im deterministischen
+ * persoenlichen Space — nie in einem gemeinsamen. `data.did` IST der
+ * Profil-Marker (Regel 1 und 3), also entscheidet allein seine Anwesenheit,
+ * ob dieser Schreibvorgang ein Profil anlegt oder fortschreibt.
+ *
+ * Ohne diese Schranke reichte der oeffentliche `createItem`-Pfad den
+ * AUSGEWAEHLTEN Space durch, und ein person-Item mit der eigenen DID entstuende
+ * im gemeinsamen Space: die DID-Bindung allein prueft nur `did === createdBy ===
+ * id`, nicht den Ort. Ein Profil an zwei Orten waere ein zweites Profil
+ * derselben Person (Regel 1) und eine zweite Wahrheit neben dem Home.
+ *
+ * Ein bereits im gemeinsamen Space liegendes Profil-Item (aus frueherer
+ * Software) wird ABGEWIESEN, nicht still verschoben oder entmarkiert: sein
+ * Inhalt gehoert der Person, und ein stilles Umschreiben durch einen beliebigen
+ * Item-Schreibpfad waere ein Datenverlust ohne Entscheidung. Die Bereinigung
+ * solcher Altbestaende ist ein eigener Migrationsschritt, kein Seiteneffekt.
+ */
+function assertProfileLivesInHome(
+  data: Record<string, unknown> | undefined,
+  spaceId: string,
+  homeSpaceId: string | null,
+): void {
+  if (!data || !("did" in data)) return
+  if (homeSpaceId !== null && spaceId === homeSpaceId) return
+  // Ist der persoenliche Space unbekannt, ist der Ort nicht pruefbar — dann
+  // entsteht hier kein Profil. Ein „wahrscheinlich richtig" gibt es bei der
+  // Home-Quelle nicht.
+  throw new Error(
+    homeSpaceId === null
+      ? `Ein Profil-Item (data.did) kann nicht geschrieben werden: der persoenliche Space ist unbekannt (Spec 12 Regel 12)`
+      : `Ein Profil-Item (data.did) gehoert in den persoenlichen Space (${homeSpaceId}), nicht in ${spaceId} (Spec 12 Regel 12)`,
+  )
+}
+
 function projectPersonItem(
   id: string,
   createdAt: string,
@@ -1971,6 +2006,9 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     handle.transact((doc) => {
       if (!doc.items) doc.items = {}
+      // Vor der Idempotenz-Antwort: ein Profil-Marker ausserhalb des Home ist
+      // auch dann abzuweisen, wenn dort schon ein solches Item liegt.
+      assertProfileLivesInHome(item.data as Record<string, unknown> | undefined, spaceId, this.privateSpaceId)
       const declaredId = item.id ?? (typeof (item.data as Record<string, unknown> | undefined)?.did === "string"
         ? (item.data as Record<string, string>).did
         : undefined)
@@ -2038,6 +2076,15 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       if (updates.data && existing.data?.did && !("did" in updates.data)) {
         updates = { ...updates, data: { ...updates.data, did: existing.data.did } }
       }
+      // Der EFFEKTIVE Marker entscheidet: der mitgegebene, sonst der aus dem
+      // Bestand erhaltene. So wird weder aus einem Platzhalter im gemeinsamen
+      // Space ein Profil, noch ein dort liegendes Profil still fortgeschrieben
+      // (Spec 12 Regel 12).
+      assertProfileLivesInHome(
+        (updates.data ?? (existing.data?.did !== undefined ? { did: existing.data.did } : undefined)) as Record<string, unknown> | undefined,
+        handle.id,
+        this.privateSpaceId,
+      )
 
       if (updates.type) existing.type = updates.type
       if (updates.data) {
