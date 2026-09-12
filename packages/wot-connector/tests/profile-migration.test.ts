@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { createObservable } from "@real-life-stack/data-interface"
 
-import { mirrorRegistryKey } from "../src/mirror/index.js"
+import { byDeviceOf, hasEntry } from "./helpers/registry-fixtures.js"
 import type { RlsSpaceDoc } from "../src/types.js"
 
 /**
@@ -200,10 +200,10 @@ describe("Bestandsregel — Spec 12 Regel 5", () => {
 
     await connector.queueProfileHomeMaintenance()
 
-    const byDevice = (target: string) => doc.mirrorRegistry?.[mirrorRegistryKey(DID, target)]?.byDevice ?? {}
+    const byDevice = (target: string) => byDeviceOf(doc, DID, target)
     expect(byDevice("garten")["device-A"]).toMatchObject({ status: "accepted", admission: { keyGeneration: 2 } })
     expect(byDevice("werkstatt")["device-A"]).toMatchObject({ status: "accepted", admission: { keyGeneration: 5 } })
-    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "home-space")]).toBeUndefined()
+    expect(hasEntry(doc, DID, "home-space")).toBe(false)
     expect(doc.profileMigration?.bestandAt).toBeTruthy()
   })
 
@@ -212,7 +212,7 @@ describe("Bestandsregel — Spec 12 Regel 5", () => {
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "alt")]).toBeUndefined()
+    expect(hasEntry(doc, DID, "alt")).toBe(false)
     expect(doc.profileMigration?.bestandAt).toBeTruthy()
   })
 
@@ -235,7 +235,7 @@ describe("Bestandsregel — Spec 12 Regel 5", () => {
     await deviceB.connector.queueProfileHomeMaintenance()
 
     expect(doc.profileMigration?.bestandAt).toBe(markAfterA)
-    expect(Object.keys(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "garten")]?.byDevice ?? {})).toEqual(["device-A"])
+    expect(Object.keys(byDeviceOf(doc, DID, "garten"))).toEqual(["device-A"])
   })
 
   it("ueberschreibt eine vorhandene Marke nie", async () => {

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import { mirrorMapKey, mirrorRegistryKey, parseMirrorMapKey, parseMirrorRegistryKey } from "../src/mirror/keys.js"
+import {
+  mirrorMapKey,
+  mirrorRegistryEntryKey,
+  mirrorRegistryKey,
+  parseMirrorMapKey,
+  parseMirrorRegistryEntryKey,
+  parseMirrorRegistryKey,
+} from "../src/mirror/keys.js"
 
 /** Spec 09 §Ablage und Registry — die Schlüssel sind normativ. */
 describe("mirrorMapKey", () => {
@@ -20,11 +27,33 @@ describe("mirrorMapKey", () => {
 })
 
 describe("mirrorRegistryKey", () => {
-  it("ist JSON.stringify([itemId, targetSpaceId])", () => {
-    expect(mirrorRegistryKey("task-1", "garden")).toBe('["task-1","garden"]')
-    expect(parseMirrorRegistryKey(mirrorRegistryKey("task-1", "garden"))).toEqual({
+  // Physisch flach je Gerät: nur so legen zwei Geräte nie dieselbe Map an.
+  it("ist JSON.stringify([itemId, targetSpaceId, deviceId])", () => {
+    expect(mirrorRegistryKey("task-1", "garden", "device-A")).toBe('["task-1","garden","device-A"]')
+    expect(parseMirrorRegistryKey(mirrorRegistryKey("task-1", "garden", "device-A"))).toEqual({
+      itemId: "task-1",
+      targetSpaceId: "garden",
+      deviceId: "device-A",
+    })
+  })
+
+  it("nimmt den Eintrags-Schlüssel nicht als Beitrags-Schlüssel an", () => {
+    expect(parseMirrorRegistryKey(mirrorRegistryEntryKey("task-1", "garden"))).toBeNull()
+    expect(parseMirrorRegistryKey("kein json")).toBeNull()
+  })
+
+  it("trennt Geräte, die als nackte Verkettung kollidierten", () => {
+    expect(mirrorRegistryKey("a", "bc", "d")).not.toBe(mirrorRegistryKey("ab", "c", "d"))
+  })
+})
+
+describe("mirrorRegistryEntryKey", () => {
+  it("ist der logische Schlüssel des Eintrags und umkehrbar", () => {
+    expect(mirrorRegistryEntryKey("task-1", "garden")).toBe('["task-1","garden"]')
+    expect(parseMirrorRegistryEntryKey(mirrorRegistryEntryKey("task-1", "garden"))).toEqual({
       itemId: "task-1",
       targetSpaceId: "garden",
     })
+    expect(parseMirrorRegistryEntryKey(mirrorRegistryKey("task-1", "garden", "device-A"))).toBeNull()
   })
 })

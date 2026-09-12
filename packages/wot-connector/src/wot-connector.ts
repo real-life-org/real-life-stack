@@ -150,6 +150,7 @@ import type {
   WotConnectorConfig,
   WotConnectorRuntimeOverrides,
   WotSyncState,
+  MirrorRegistryContribution,
   RlsSpaceDoc,
   SerializedItem,
   ClosableOutboxStore,
@@ -158,12 +159,14 @@ import type {
 import { serializeItem, deserializeItem } from "./serialization.js"
 import {
   deriveRegistryView,
+  groupRegistryByEntry,
   maxAdmission,
   mergeProfileData,
+  mirrorRegistryEntryKey,
   mirrorRegistryKey,
   nextStatusSeq,
   normalizeProfileFields,
-  parseMirrorRegistryKey,
+  parseMirrorRegistryEntryKey,
   planMembershipTransition,
   planStockGrants,
   profileItemInput,
@@ -1117,10 +1120,11 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     const did = this.identity.getDid()
     const shares: Record<string, ProfileShareStatus> = {}
     try {
-      for (const [key, entry] of Object.entries(handle.getDoc()?.mirrorRegistry ?? {})) {
-        const parsed = parseMirrorRegistryKey(key)
+      // Physisch liegt je Gerät ein flacher Schlüssel; gefaltet wird je Eintrag.
+      for (const [entryKey, byDevice] of groupRegistryByEntry(handle.getDoc()?.mirrorRegistry ?? {})) {
+        const parsed = parseMirrorRegistryEntryKey(entryKey)
         if (!parsed || parsed.itemId !== did) continue
-        const view = deriveRegistryView(entry?.byDevice ?? {})
+        const view = deriveRegistryView(byDevice)
         if (view) shares[parsed.targetSpaceId] = view.status
       }
     } catch {
@@ -1198,6 +1202,21 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   }
 
   /**
+   * Das Lesemodell EINES Registry-Eintrags: die Beiträge aller Geräte zu
+   * `(did, targetSpaceId)`, aus der flachen Ablage umgruppiert.
+   *
+   * Jedes Lesen faltet frisch — der Status steht nirgends gespeichert, und ein
+   * Beitrag eines anderen Geräts darf ihn sofort verändern.
+   */
+  private registryByDevice(
+    doc: RlsSpaceDoc,
+    did: string,
+    targetSpaceId: string,
+  ): Record<string, MirrorRegistryContribution> {
+    return groupRegistryByEntry(doc.mirrorRegistry ?? {}).get(mirrorRegistryEntryKey(did, targetSpaceId)) ?? {}
+  }
+
+  /**
    * Der Beitrag dieses Geräts, IN der Transaktion angewandt.
    *
    * `expect` ist die Erwartung aus der Linse: eine Entscheidung, die vor der
@@ -1218,14 +1237,14 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     },
   ): boolean {
     const { did, deviceId, targetSpaceId, status, currentAdmission, expect } = params
-    const key = mirrorRegistryKey(did, targetSpaceId)
+    const key = mirrorRegistryKey(did, targetSpaceId, deviceId)
 
-    // ERST lesen und prüfen, DANN anlegen. Yjs rollt eine Transaktion beim Wurf
-    // nicht zurück: ein abgelehnter Schreibversuch hinterließe sonst einen
-    // leeren Eintrag `{ byDevice: {} }`, und der zählte später als bereits
-    // getroffene Entscheidung.
-    const existing = doc.mirrorRegistry?.[key]?.byDevice
-    const view = deriveRegistryView(existing ?? {})
+    // ERST lesen und prüfen, DANN schreiben. Geschrieben wird genau EIN
+    // flacher Schlüssel — der eigene. Eine gemeinsame Eltern-Map je Eintrag
+    // gibt es nicht: zwei Geräte, die sie nebenläufig anlegen, verlören einen
+    // der beiden Beiträge (Spec 09 §Ablage und Registry, konfliktfreier Merge).
+    const existing = this.registryByDevice(doc, did, targetSpaceId)
+    const view = deriveRegistryView(existing)
     if (expect && !expect(view)) return false
 
     const admission = status === "revoked"
@@ -1236,17 +1255,13 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         `writeRegistryContribution: ${status} für ${targetSpaceId} ohne gültige Aufnahme-Kennung`,
       )
     }
-    const nextStatus = nextStatusSeq(existing ?? {})
+    const nextStatus = nextStatusSeq(existing)
+
+    const own = existing[deviceId]
+    const supersedes = status === "accepted" ? supersedesOf(existing) : undefined
 
     if (!doc.mirrorRegistry) doc.mirrorRegistry = {}
-    if (!doc.mirrorRegistry[key]) doc.mirrorRegistry[key] = { byDevice: {} }
-    const entry = doc.mirrorRegistry[key]!
-    if (!entry.byDevice) entry.byDevice = {}
-    const byDevice = entry.byDevice
-
-    const own = byDevice[deviceId]
-    const supersedes = status === "accepted" ? supersedesOf(byDevice) : undefined
-    byDevice[deviceId] = {
+    doc.mirrorRegistry[key] = {
       statusSeq: nextStatus,
       status,
       ...(admission ? { admission } : {}),
@@ -1421,14 +1436,14 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       // eine Freigabe widerrufen, und dieser Durchlauf stellte sie wieder her.
       if (doc.profileMigration?.bestandAt) return
 
-      const registry = doc.mirrorRegistry ?? {}
+      const registry = groupRegistryByEntry(doc.mirrorRegistry ?? {})
       // Bestand heißt: eine Mitgliedschaft, über die noch nie entschieden
-      // wurde. Ein vorhandener Eintrag ist eine Entscheidung — auch ein
+      // wurde. Ein vorhandener Beitrag ist eine Entscheidung — auch ein
       // Widerruf. Die Übergangsregel darf ihn nie überschreiben.
-      // Ein LEERER Eintrag ist keine Entscheidung: er kann aus einem
-      // abgelehnten Schreibversuch stammen (Yjs rollt beim Wurf nicht zurück).
+      // Einen leeren Eintrag kann es in der flachen Ablage nicht geben: ein
+      // Schlüssel existiert nur zusammen mit dem Beitrag, den er trägt.
       const hasEntry = (targetSpaceId: string) =>
-        Object.keys(registry[mirrorRegistryKey(did, targetSpaceId)]?.byDevice ?? {}).length > 0
+        registry.has(mirrorRegistryEntryKey(did, targetSpaceId))
 
       for (const targetSpaceId of planStockGrants(spaces, handle.id, hasEntry)) {
         this.applyRegistryContribution(doc, {
@@ -1466,9 +1481,9 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     const seen = new Set(visible.map((space) => space.id))
 
     handle.transact((doc) => {
-      const registry = doc.mirrorRegistry ?? {}
+      const registry = groupRegistryByEntry(doc.mirrorRegistry ?? {})
       const apply = (targetSpaceId: string, admission: SpaceAdmission | undefined) => {
-        const view = deriveRegistryView(registry[mirrorRegistryKey(did, targetSpaceId)]?.byDevice ?? {})
+        const view = deriveRegistryView(registry.get(mirrorRegistryEntryKey(did, targetSpaceId)) ?? {})
         const transition = planMembershipTransition(view, admission)
         if (!transition) return
         this.applyRegistryContribution(doc, {
@@ -1488,8 +1503,8 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       // Ein Eintrag, dessen Ziel-Space gar nicht mehr sichtbar ist: die
       // Mitgliedschaft ist weg (09 Invariante 11). Der Eintrag wird
       // widerrufen, nie gelöscht.
-      for (const key of Object.keys(registry)) {
-        const parsed = parseMirrorRegistryKey(key)
+      for (const entryKey of registry.keys()) {
+        const parsed = parseMirrorRegistryEntryKey(entryKey)
         if (!parsed || parsed.itemId !== did || seen.has(parsed.targetSpaceId)) continue
         apply(parsed.targetSpaceId, undefined)
       }

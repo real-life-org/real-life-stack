@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import { createObservable, hasProfile } from "@real-life-stack/data-interface"
 
 import { WotConnector } from "../src/wot-connector.js"
-import { mirrorRegistryKey } from "../src/mirror/index.js"
+import { byDeviceOf, flatRegistry, hasEntry } from "./helpers/registry-fixtures.js"
 import type { MirrorRegistryContribution, RlsSpaceDoc } from "../src/types.js"
 
 /**
@@ -68,7 +68,7 @@ function fakeConnector(options: {
 }
 
 function status(doc: RlsSpaceDoc, target: string): string | undefined {
-  return doc.mirrorRegistry?.[mirrorRegistryKey(DID, target)]?.byDevice?.[DEVICE]?.status
+  return byDeviceOf(doc, DID, target)[DEVICE]?.status
 }
 
 describe("pending bei neuem Space — Spec 12 Regel 4", () => {
@@ -83,27 +83,21 @@ describe("pending bei neuem Space — Spec 12 Regel 4", () => {
   it("eine Wiederaufnahme setzt den Eintrag zurueck auf pending", async () => {
     const doc: RlsSpaceDoc = {
       _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 2 } }) },
-        },
-      },
+      mirrorRegistry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 2 } }) } }),
     }
     const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 7 } }] })
 
     await connector.queueProfileHomeMaintenance()
 
     expect(status(doc, "garten")).toBe("pending")
-    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "garten")]?.byDevice?.[DEVICE]?.admission)
+    expect(byDeviceOf(doc, DID, "garten")[DEVICE]?.admission)
       .toEqual({ keyGeneration: 7 })
   })
 
   it("auch der Anstieg von keiner Kennung auf eine Kennung ergibt pending", async () => {
     const doc: RlsSpaceDoc = {
       _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "alt")]: { byDevice: { [DEVICE]: contribution({ status: "accepted" }) } },
-      },
+      mirrorRegistry: flatRegistry(DID, { alt: { [DEVICE]: contribution({ status: "accepted" }) } }),
     }
     const { connector } = fakeConnector({ doc, spaces: [{ id: "alt", admission: { keyGeneration: 1 } }] })
 
@@ -117,7 +111,7 @@ describe("pending bei neuem Space — Spec 12 Regel 4", () => {
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "alt")]).toBeUndefined()
+    expect(hasEntry(doc, DID, "alt")).toBe(false)
   })
 
   it("Bestands-Spaces werden NICHT pending — die Bestandsregel laeuft davor", async () => {
@@ -134,51 +128,39 @@ describe("Mitgliedschaftsverlust — Spec 12 Regel 7, Spec 09 Inv. 11", () => {
   it("ein verschwundener Ziel-Space widerruft den Eintrag mit der Kennung der Lesesicht", async () => {
     const doc: RlsSpaceDoc = {
       _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 4 } }) },
-        },
-      },
+      mirrorRegistry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 4 } }) } }),
     }
     const { connector } = fakeConnector({ doc, spaces: [] })
 
     await connector.queueProfileHomeMaintenance()
 
     expect(status(doc, "garten")).toBe("revoked")
-    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "garten")]?.byDevice?.[DEVICE]?.admission)
+    expect(byDeviceOf(doc, DID, "garten")[DEVICE]?.admission)
       .toEqual({ keyGeneration: 4 })
   })
 
   it("widerruft einen bereits widerrufenen Eintrag nicht erneut", async () => {
     const doc: RlsSpaceDoc = {
       _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: { [DEVICE]: contribution({ status: "revoked", statusSeq: 3, admission: { keyGeneration: 4 } }) },
-        },
-      },
+      mirrorRegistry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "revoked", statusSeq: 3, admission: { keyGeneration: 4 } }) } }),
     }
     const { connector } = fakeConnector({ doc, spaces: [] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "garten")]?.byDevice?.[DEVICE]?.statusSeq).toBe(3)
+    expect(byDeviceOf(doc, DID, "garten")[DEVICE]?.statusSeq).toBe(3)
   })
 
   it("Registry-Eintraege werden nie geloescht", async () => {
     const doc: RlsSpaceDoc = {
       _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 4 } }) },
-        },
-      },
+      mirrorRegistry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 4 } }) } }),
     }
     const { connector } = fakeConnector({ doc, spaces: [] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "garten")]).toBeDefined()
+    expect(hasEntry(doc, DID, "garten")).toBe(true)
   })
 })
 

@@ -8,7 +8,15 @@
  * Zusammenspiel eines Connectors beobachtbar zu sein.
  */
 export { canonicalItemString, canonicalSnapshotBytes, canonicalSnapshotString, itemHash, signedSnapshotFields } from "./canonical.js"
-export { mirrorMapKey, mirrorRegistryKey, parseMirrorMapKey, parseMirrorRegistryKey } from "./keys.js"
+export {
+  mirrorMapKey,
+  mirrorRegistryEntryKey,
+  mirrorRegistryKey,
+  parseMirrorMapKey,
+  parseMirrorRegistryEntryKey,
+  parseMirrorRegistryKey,
+} from "./keys.js"
+export { groupRegistryByEntry } from "./registry-group.js"
 export { InMemoryMirrorMarkStore } from "./mark-store-memory.js"
 export { evaluateSnapshot } from "./receiver.js"
 export type { EvaluateSnapshotInput, MirrorEvaluation } from "./receiver.js"

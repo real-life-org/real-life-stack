@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import { createObservable } from "@real-life-stack/data-interface"
 
 import { WotConnector } from "../src/wot-connector.js"
-import { mirrorRegistryKey } from "../src/mirror/index.js"
+import { byDeviceOf, flatRegistry, hasEntry } from "./helpers/registry-fixtures.js"
 import type { MirrorRegistryContribution, RlsSpaceDoc } from "../src/types.js"
 
 /**
@@ -49,7 +49,7 @@ function fakeConnector(options: {
 }
 
 function registry(doc: RlsSpaceDoc, targetSpaceId: string) {
-  return doc.mirrorRegistry?.[mirrorRegistryKey(DID, targetSpaceId)]?.byDevice ?? {}
+  return byDeviceOf(doc, DID, targetSpaceId)
 }
 
 describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
@@ -57,9 +57,7 @@ describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
     const doc: RlsSpaceDoc = {
       _type: "rls",
       items: {},
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: { byDevice: { "device-B": contribution({ status: "pending", statusSeq: 3 }) } },
-      },
+      mirrorRegistry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "pending", statusSeq: 3 }) } }),
     }
     const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
 
@@ -82,7 +80,7 @@ describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
     const { connector, doc } = fakeConnector({ spaces: [{ id: "alt" }] })
 
     await expect(connector.writeRegistryContribution("alt", "accepted")).rejects.toThrow(/Aufnahme-Kennung/)
-    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "alt")]?.byDevice?.[DEVICE]).toBeUndefined()
+    expect(registry(doc, "alt")[DEVICE]).toBeUndefined()
   })
 
   it("auch pending setzt eine gueltige Kennung voraus", async () => {
@@ -95,11 +93,7 @@ describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
     const doc: RlsSpaceDoc = {
       _type: "rls",
       items: {},
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 9 } }) },
-        },
-      },
+      mirrorRegistry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 9 } }) } }),
     }
     const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 4 } }] })
 
@@ -112,11 +106,7 @@ describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
     const doc: RlsSpaceDoc = {
       _type: "rls",
       items: {},
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 3 } }) },
-        },
-      },
+      mirrorRegistry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 3 } }) } }),
     }
     const { connector } = fakeConnector({ doc, spaces: [] })
 
@@ -129,14 +119,12 @@ describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
     const doc: RlsSpaceDoc = {
       _type: "rls",
       items: {},
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: {
-            "device-B": contribution({ status: "revoked", statusSeq: 5, admission: { keyGeneration: 2 } }),
-            "device-C": contribution({ status: "pending", statusSeq: 2, admission: { keyGeneration: 2 } }),
-          },
+      mirrorRegistry: flatRegistry(DID, {
+        garten: {
+          "device-B": contribution({ status: "revoked", statusSeq: 5, admission: { keyGeneration: 2 } }),
+          "device-C": contribution({ status: "pending", statusSeq: 2, admission: { keyGeneration: 2 } }),
         },
-      },
+      }),
     }
     const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
 
@@ -160,13 +148,11 @@ describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
     const doc: RlsSpaceDoc = {
       _type: "rls",
       items: {},
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: {
-            [DEVICE]: contribution({ status: "accepted", seq: 12, tiebreak: "abc", publishedHash: "hash-1", admission: { keyGeneration: 1 } }),
-          },
+      mirrorRegistry: flatRegistry(DID, {
+        garten: {
+          [DEVICE]: contribution({ status: "accepted", seq: 12, tiebreak: "abc", publishedHash: "hash-1", admission: { keyGeneration: 1 } }),
         },
-      },
+      }),
     }
     const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 1 } }] })
 
@@ -191,16 +177,12 @@ describe("observeProfileShares — Spec 12 Regel 14", () => {
       _type: "rls",
       items: {},
       mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 1 } }) },
-        },
-        [mirrorRegistryKey(DID, "werkstatt")]: {
-          byDevice: { "device-B": contribution({ status: "pending", admission: { keyGeneration: 1 } }) },
-        },
+        ...flatRegistry(DID, {
+          garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 1 } }) },
+          werkstatt: { "device-B": contribution({ status: "pending", admission: { keyGeneration: 1 } }) },
+        }),
         // Ein Eintrag eines ANDEREN Items gehoert nicht zu den Profil-Freigaben.
-        [mirrorRegistryKey("item-42", "garten")]: {
-          byDevice: { "device-B": contribution({ status: "revoked" }) },
-        },
+        ...flatRegistry("item-42", { garten: { "device-B": contribution({ status: "revoked" }) } }),
       },
     }
     const { connector } = fakeConnector({ doc })
@@ -214,14 +196,12 @@ describe("observeProfileShares — Spec 12 Regel 14", () => {
     const doc: RlsSpaceDoc = {
       _type: "rls",
       items: {},
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: {
-            [DEVICE]: contribution({ status: "accepted", statusSeq: 9, admission: { keyGeneration: 1 } }),
-            "device-B": contribution({ status: "revoked", statusSeq: 2, admission: { keyGeneration: 1 } }),
-          },
+      mirrorRegistry: flatRegistry(DID, {
+        garten: {
+          [DEVICE]: contribution({ status: "accepted", statusSeq: 9, admission: { keyGeneration: 1 } }),
+          "device-B": contribution({ status: "revoked", statusSeq: 2, admission: { keyGeneration: 1 } }),
         },
-      },
+      }),
     }
     const { connector } = fakeConnector({ doc })
 
@@ -237,9 +217,7 @@ describe("observeProfileShares — Spec 12 Regel 14", () => {
     connector.observeProfileShares().subscribe((value: Record<string, string>) => seen.push(value))
 
     doc.mirrorRegistry = {
-      [mirrorRegistryKey(DID, "garten")]: {
-        byDevice: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 1 } }) },
-      },
+      ...flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 1 } }) } }),
     }
     connector.onHomeDocChanged()
 

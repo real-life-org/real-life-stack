@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { createObservable } from "@real-life-stack/data-interface"
 
-import { mirrorRegistryKey, planStockGrants } from "../src/mirror/index.js"
+import { planStockGrants } from "../src/mirror/index.js"
+import { byDeviceOf, flatRegistry, hasEntry } from "./helpers/registry-fixtures.js"
 import type { MirrorRegistryContribution, RlsSpaceDoc } from "../src/types.js"
 
 /**
@@ -87,7 +88,7 @@ function fakeConnector(options: {
 }
 
 function byDevice(doc: RlsSpaceDoc, target: string) {
-  return doc.mirrorRegistry?.[mirrorRegistryKey(DID, target)]?.byDevice ?? {}
+  return byDeviceOf(doc, DID, target)
 }
 
 beforeEach(() => {
@@ -98,11 +99,7 @@ describe("Befund 2 — die Uebergangsregel ueberschreibt keine getroffene Entsch
   it("laesst ein Ziel mit vorhandenem Registry-Eintrag aus, auch wenn die Marke fehlt", async () => {
     const doc: RlsSpaceDoc = {
       _type: "rls", items: {},
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: { "device-B": contribution({ status: "revoked", admission: { keyGeneration: 2 } }) },
-        },
-      },
+      mirrorRegistry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "revoked", admission: { keyGeneration: 2 } }) } }),
     }
     const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
 
@@ -151,11 +148,7 @@ describe("Befund 3 — eine veraltete Abgleichsentscheidung schreibt nicht", () 
   it("applyRegistryContribution schreibt nicht, wenn die Erwartung in der Transaktion nicht mehr gilt", async () => {
     const doc: RlsSpaceDoc = {
       _type: "rls", items: {},
-      mirrorRegistry: {
-        [mirrorRegistryKey(DID, "garten")]: {
-          byDevice: { [DEVICE]: contribution({ status: "revoked", statusSeq: 4, admission: { keyGeneration: 2 } }) },
-        },
-      },
+      mirrorRegistry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "revoked", statusSeq: 4, admission: { keyGeneration: 2 } }) } }),
     }
     const { connector } = fakeConnector({ doc })
 
@@ -213,7 +206,7 @@ describe("Befund 4 — Registry-Schreibpfade halten die Sitzungsgrenze", () => {
     })
 
     await expect(connector.acceptSpace("garten")).rejects.toThrow(/beendeten Sitzung/)
-    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "garten")]).toBeUndefined()
+    expect(hasEntry(doc, DID, "garten")).toBe(false)
   })
 })
 
@@ -304,9 +297,7 @@ describe("Befund 6 — eine fremde Registry-Aenderung loest den Abgleich aus", (
 
     // Ein anderes Geraet traegt nachtraeglich eine Freigabe ein.
     doc.mirrorRegistry = {
-      [mirrorRegistryKey(DID, "garten")]: {
-        byDevice: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 3 } }) },
-      },
+      ...flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 3 } }) } }),
     }
     connector.onHomeDocChanged()
     await connector.profileHomeMaintenance
@@ -479,25 +470,18 @@ describe("R2-5 — ein spaet eintreffendes doc.profile wird nicht publiziert", (
 })
 
 describe("R2-6 — ein abgelehnter Schreibversuch hinterlaesst keinen Eintrag", () => {
-  it("legt die Eltern-Maps erst nach der Pruefung an", async () => {
+  it("schreibt erst nach der Pruefung", async () => {
     const { connector, doc } = fakeConnector({ spaces: [{ id: "alt" }] })
 
     await expect(connector.acceptSpace("alt")).rejects.toThrow(/Aufnahme-Kennung/)
 
-    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "alt")]).toBeUndefined()
+    expect(hasEntry(doc, DID, "alt")).toBe(false)
   })
 
-  it("ein leerer Eintrag blockiert die Bestandsfreigabe nicht", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls", items: {},
-      mirrorRegistry: { [mirrorRegistryKey(DID, "garten")]: { byDevice: {} } },
-    }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
-
-    await connector.queueProfileHomeMaintenance()
-
-    expect(byDevice(doc, "garten")[DEVICE].status).toBe("accepted")
-  })
+  // Der zweite Test dieser Runde ("ein leerer Eintrag blockiert die
+  // Bestandsfreigabe nicht") ist mit der flachen Ablage gegenstandslos: es gibt
+  // keine Eltern-Map mehr, die leer zurueckbleiben koennte — ein Schluessel
+  // existiert nur zusammen mit dem Beitrag, den er traegt (R2-1).
 })
 
 // --- Codex-Review, Runde 3 ---
