@@ -40,3 +40,12 @@ export type {
   VerifySnapshotOptions,
 } from "./snapshot.js"
 export { compareVersion, tiebreakOf } from "./version.js"
+export {
+  maxAdmission,
+  mergeProfileData,
+  planMembershipTransition,
+  planStockGrants,
+  profileItemInput,
+  supersedesOf,
+} from "./profile-home.js"
+export type { MembershipTransition, ProfileItemFields } from "./profile-home.js"
