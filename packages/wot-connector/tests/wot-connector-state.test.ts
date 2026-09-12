@@ -399,6 +399,7 @@ function createFakeConnectorForLogout() {
     groupsCache: [{ id: "g1", name: "Crew" }],
     groupsObservable: obs.groupsObs,
     profileObs: createObservable<User | null>(user),
+    profileSharesObs: createObservable<Record<string, string>>({ g1: "accepted" }),
     syncPendingObs: createObservable<boolean>(true),
     identity: {
       getDid: vi.fn(() => "did:key:alice"),
@@ -437,6 +438,9 @@ describe("WotConnector.logout() - real method regression", () => {
     expect(fake.outboxCountObs.current).toBe(0)
     expect(fake.relayStateObs.current).toBe("disconnected")
     expect(fake.profileObs.current).toBeNull()
+    // Freigaben sind auth-gebunden: sonst zeigte die Annahme-Flaeche nach einem
+    // Identitaetswechsel die Spaces der vorigen Person (Spec 12 Regel 14).
+    expect(fake.profileSharesObs.current).toEqual({})
     expect(fake.syncPendingObs.current).toBe(false)
     expect(fake.syncStateObs.current).toEqual({ logPending: 0, outboxPending: 0 })
     expect(fake.currentGroupObservable.current).toBeNull()

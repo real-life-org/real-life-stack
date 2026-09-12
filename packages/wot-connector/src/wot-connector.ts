@@ -33,6 +33,7 @@ import type {
   NotificationStatePatch,
   InitialSyncCapable,
   InitialSyncState,
+  ProfileShareStatus,
 } from "@real-life-stack/data-interface"
 import {
   deriveActivitySummary,
@@ -95,6 +96,7 @@ import {
 } from "@real-life/wot-core/protocol"
 import type {
   Attestation,
+  SpaceAdmission,
   SpaceInfo,
   MessageEnvelope,
   IncomingSpaceInvite,
@@ -155,9 +157,15 @@ import type {
 } from "./types.js"
 import { serializeItem, deserializeItem } from "./serialization.js"
 import {
+  deriveRegistryView,
+  maxAdmission,
   mergeProfileData,
+  mirrorRegistryKey,
+  nextStatusSeq,
   normalizeProfileFields,
+  parseMirrorRegistryKey,
   profileItemInput,
+  supersedesOf,
   type ProfileItemFields,
 } from "./mirror/index.js"
 import { CrossGroupIndex } from "./CrossGroupIndex.js"
@@ -430,6 +438,12 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   private outboxCountObs: ReactiveObservable<number>
   private syncStateObs: ReactiveObservable<WotSyncState>
   private profileObs: ReactiveObservable<Item | null>
+  /**
+   * Freigaben des eigenen Profils je Space (Spec 12 Regel 14), gefaltet aus der
+   * Mirror-Registry des persönlichen Space. Startet UNGELADEN: „leer" und
+   * „noch nicht gelesen" sind für eine Annahme-Fläche nicht dasselbe.
+   */
+  private profileSharesObs: ReactiveObservable<Record<string, ProfileShareStatus>>
   private currentUserObs: ReactiveObservable<User | null>
   private syncPendingObs: ReactiveObservable<boolean>
   /** Activity observables are keyed by their requested limit. */
@@ -509,6 +523,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.outboxCountObs = createObservable<number>(0)
     this.syncStateObs = createObservable<WotSyncState>({ logPending: 0, outboxPending: 0, workPending: 0 })
     this.profileObs = createObservable<Item | null>(null)
+    this.profileSharesObs = createObservable<Record<string, ProfileShareStatus>>({}, false)
     this.currentUserObs = createObservable<User | null>(null)
     this.syncPendingObs = createObservable<boolean>(false)
     // Groups load asynchronously from the local space docs (unlike the
@@ -795,6 +810,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       : { logPending: 0, outboxPending: 0 } as WotSyncState)
     this.relayStateObs.set("disconnected")
     this.profileObs.set(null)
+    this.profileSharesObs.set({})
     this.syncPendingObs.set(false)
 
     await guarded("personalDoc.reset", false, () => resetYjsPersonalDoc())
@@ -984,6 +1000,124 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   /** Fremde Geräte-Beiträge und fremde Profil-Änderungen im Home-Doc. */
   private onHomeDocChanged(): void {
     this.syncProfileObservable()
+    this.refreshProfileShares()
+  }
+
+  override observeProfileShares(): Observable<Record<string, ProfileShareStatus>> {
+    return this.profileSharesObs
+  }
+
+  /**
+   * Die Lesesicht der Mirror-Registry je Ziel-Space (Spec 12 Regel 9 und 14).
+   *
+   * Gefaltet wird bei jedem Lesen neu aus ALLEN Gerätebeiträgen — der Status
+   * steht nirgends gespeichert, und ein Beitrag eines anderen Geräts darf ihn
+   * sofort verändern. Nach außen geht eine frische Kopie, nie ein Objekt aus
+   * dem Doc.
+   */
+  private refreshProfileShares(): void {
+    const handle = this.homeHandle
+    if (!handle || handle.id !== this.privateSpaceId) return
+    const did = this.identity.getDid()
+    const shares: Record<string, ProfileShareStatus> = {}
+    try {
+      for (const [key, entry] of Object.entries(handle.getDoc()?.mirrorRegistry ?? {})) {
+        const parsed = parseMirrorRegistryKey(key)
+        if (!parsed || parsed.itemId !== did) continue
+        const view = deriveRegistryView(entry?.byDevice ?? {})
+        if (view) shares[parsed.targetSpaceId] = view.status
+      }
+    } catch {
+      return
+    }
+    this.profileSharesObs.set(shares)
+    this.profileSharesObs.markLoaded()
+  }
+
+  /**
+   * Der EINZIGE Schreibpfad in die Mirror-Registry (Spec 09 §Ablage und
+   * Registry, Spec 12 Regel 9).
+   *
+   * - Geschrieben wird ausschließlich unter dem eigenen `deviceId`; fremde
+   *   Beiträge bleiben stehen, Einträge werden NIE gelöscht.
+   * - `statusSeq = 1 + max(beobachtet)`, eine Freigabe trägt in `supersedes`
+   *   jeden beobachteten nicht-`accepted` Beitrag.
+   * - Freigabe und `pending` tragen die aktuelle Kennung des Ziel-Space und
+   *   setzen eine gültige voraus; ein Widerruf trägt
+   *   `max(Kennung der Lesesicht, aktuelle Kennung)`, damit er in der Faltung
+   *   nie gegen den alten `accepted`-Beitrag eines Offline-Geräts verliert.
+   * - `seq`, `tiebreak` und `publishedHash` gehören der Publikation (S4) und
+   *   werden hier nur weitergereicht: ein Statuswechsel publiziert nichts.
+   *
+   * Erwartung: Lesen und Schreiben liegen in EINER Transaktion, der eigene
+   * Beitrag kann sich dazwischen also nicht verändert haben.
+   */
+  private async writeRegistryContribution(
+    targetSpaceId: string,
+    status: ProfileShareStatus,
+    options: { admission?: SpaceAdmission } = {},
+  ): Promise<void> {
+    if (!targetSpaceId) throw new Error("writeRegistryContribution: targetSpaceId fehlt")
+    if (targetSpaceId === this.privateSpaceId) {
+      throw new Error("writeRegistryContribution: der persönliche Space ist das Home, nie ein Ziel")
+    }
+    const handle = await this.ensureHomeHandle()
+    if (!handle) throw new Error("writeRegistryContribution: persönlicher Space nicht verfügbar")
+
+    const did = this.identity.getDid()
+    const deviceId = await this.resolveMirrorDeviceId()
+    const currentAdmission = options.admission ?? this.admissionOfSpace(targetSpaceId)
+    const key = mirrorRegistryKey(did, targetSpaceId)
+
+    handle.transact((doc) => {
+      if (!doc.mirrorRegistry) doc.mirrorRegistry = {}
+      if (!doc.mirrorRegistry[key]) doc.mirrorRegistry[key] = { byDevice: {} }
+      const entry = doc.mirrorRegistry[key]!
+      if (!entry.byDevice) entry.byDevice = {}
+      const byDevice = entry.byDevice
+      const view = deriveRegistryView(byDevice)
+
+      const admission = status === "revoked"
+        ? maxAdmission(view?.admission, currentAdmission)
+        : (currentAdmission ? { keyGeneration: currentAdmission.keyGeneration } : undefined)
+      if (status !== "revoked" && !admission) {
+        throw new Error(
+          `writeRegistryContribution: ${status} für ${targetSpaceId} ohne gültige Aufnahme-Kennung`,
+        )
+      }
+
+      const own = byDevice[deviceId]
+      const supersedes = status === "accepted" ? supersedesOf(byDevice) : undefined
+      byDevice[deviceId] = {
+        statusSeq: nextStatusSeq(byDevice),
+        status,
+        ...(admission ? { admission } : {}),
+        ...(supersedes ? { supersedes } : {}),
+        seq: own?.seq ?? 0,
+        tiebreak: own?.tiebreak ?? "",
+        ...(own?.publishedHash ? { publishedHash: own.publishedHash } : {}),
+        updatedAt: new Date().toISOString(),
+      }
+    })
+
+    this.refreshProfileShares()
+  }
+
+  /**
+   * Die Aufnahme-Kennung eines Ziel-Space, immer frisch aus der
+   * Mitgliedschaftsprojektion des Adapters (`SpaceInfo.admission` aus
+   * `_members`). Sie wird nirgends gespeichert — gespeichert wird nur, was ein
+   * Statuswechsel als `admission` in den eigenen Beitrag schreibt.
+   */
+  private admissionOfSpace(spaceId: string): SpaceAdmission | undefined {
+    const spaces = this.replication?.watchSpaces().getValue() ?? []
+    return spaces.find((space) => space.id === spaceId)?.admission
+  }
+
+  /** Wie die Benachrichtigungs-Slots: bewusst bei jeder Mutation aufgelöst — ein wiederhergestellter Klon bekommt einen neuen Schlüssel. */
+  private async resolveMirrorDeviceId(): Promise<string> {
+    if (!this.docLogStore) throw new Error("Die Mirror-Registry braucht einen initialisierten DocLogStore")
+    return this.docLogStore.resolveConnectDeviceId()
   }
 
   /** Das Profil-Item aus dem Home, synchron. `null`, solange es nicht existiert. */
