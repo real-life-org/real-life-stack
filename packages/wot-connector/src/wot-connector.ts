@@ -773,11 +773,10 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.crossGroupIndex?.stop()
     this.crossGroupIndex = null
     this.privateSpaceId = null
-    // Inline wie der Rest dieses Seams: der Logout-Test bindet die echte
-    // Methode an ein schmales Objekt OHNE die privaten Helfer.
-    this.homeHandleUnsub?.()
-    this.homeHandleUnsub = null
-    this.homeHandle = null
+    // Der Home-Handle haelt ein eigenes Dokument-Abonnement; nur `close()`
+    // meldet es ab (siehe ensureHomeHandle). Ihn beim Abmelden nur fallen zu
+    // lassen, liesse den Listener der vorigen Person am Dokument haengen.
+    this.releaseHomeHandle()
     this.deterministicPrivateSpaceId = null
     this.spacesSubscriptionUnsub?.()
     this.personalDocUnsub?.()
@@ -1046,10 +1045,17 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   }
 
   /**
-   * Der geöffnete Handle des persönlichen Space. `openSpace` liefert für einen
-   * bereits offenen Space denselben Handle zurück, der Aufruf ist also billig;
-   * gehalten wird er trotzdem, weil `syncProfileObservable` synchron lesen
-   * muss und weil an ihm das Abonnement auf fremde Geräte-Beiträge hängt.
+   * Der geöffnete Handle des persönlichen Space.
+   *
+   * `openSpace` liefert JEDEN Aufruf einen neuen `SpaceHandle` mit eigenem
+   * Dokument-Abonnement (`YjsReplicationAdapter.openSpace` → `new
+   * YjsSpaceHandle(...)`; der Konstruktor haengt sich an `doc.on("update")` und
+   * traegt sich in `spaceState.handles` ein). Eine Referenzzaehlung gibt es
+   * nicht: `close()` wirkt nur auf genau diesen Handle, und ein nicht
+   * geschlossener Handle bleibt als Listener am Dokument haengen. Deshalb wird
+   * der Handle gehalten (`syncProfileObservable` liest synchron, und an ihm
+   * haengt das Abonnement auf fremde Geräte-Beiträge) — und jeder Handle, den
+   * dieser Pfad nicht mehr haelt, wird geschlossen.
    */
   private async ensureHomeHandle(): Promise<SpaceHandle<RlsSpaceDoc> | null> {
     const spaceId = this.privateSpaceId
@@ -1059,24 +1065,42 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     const generation = this.runtimeGeneration
     const handle = await this.replication.openSpace<RlsSpaceDoc>(spaceId)
     // Der persönliche Space kann sich während des Öffnens geändert haben
-    // (Reconcile, Identitätswechsel); dann gehört dieser Handle nicht mehr uns.
-    if (this.runtimeGeneration !== generation || this.privateSpaceId !== spaceId) return null
+    // (Reconcile, Identitätswechsel); dann gehört dieser Handle nicht mehr uns
+    // — und niemand sonst haelt ihn, also wird er hier geschlossen.
+    if (this.runtimeGeneration !== generation || this.privateSpaceId !== spaceId) {
+      this.closeHandleQuietly(handle)
+      return null
+    }
 
+    // Der vorige Home-Handle (anderer Space) gehoert ausschliesslich diesem
+    // Pfad; `currentHandle` und der CrossGroupIndex oeffnen ihre eigenen.
+    const previous = this.homeHandle
     this.homeHandleUnsub?.()
     this.homeHandle = handle
     this.homeHandleUnsub = handle.onRemoteUpdate(() => this.onHomeDocChanged())
+    if (previous && previous !== handle) this.closeHandleQuietly(previous)
     return handle
   }
 
   /**
    * Identitätsgrenze: der Home-Handle gehört einer Sitzung. Ohne dieses
    * Loslassen läse `readProfileItem` nach einem Identitätswechsel weiter im
-   * Doc der vorigen Person.
+   * Doc der vorigen Person — und das Dokument behielte den Listener dieses
+   * Handles, weil `close()` der einzige Weg ist, ihn abzumelden.
    */
   private releaseHomeHandle(): void {
+    const handle = this.homeHandle
     this.homeHandleUnsub?.()
     this.homeHandleUnsub = null
     this.homeHandle = null
+    if (handle) this.closeHandleQuietly(handle)
+  }
+
+  /** `close()` eines Handles darf keinen Teardown-Pfad abbrechen. */
+  private closeHandleQuietly(handle: SpaceHandle<RlsSpaceDoc>): void {
+    try { handle.close() } catch (error) {
+      console.warn("[WotConnector] Home-Handle schliessen fehlgeschlagen", error)
+    }
   }
 
   /**

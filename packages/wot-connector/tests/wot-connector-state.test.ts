@@ -368,9 +368,18 @@ function createFakeConnectorForLogout() {
     ["", createObservable([{ id: "old", ts: "2026-01-01T00:00:00.000Z", actor: "did:key:alice", action: "create" as const, targetId: "old", targetType: "task" }])],
     ["1", createObservable([{ id: "old", ts: "2026-01-01T00:00:00.000Z", actor: "did:key:alice", action: "create" as const, targetId: "old", targetType: "task" }])],
   ])
+  const homeHandle = {
+    id: "private-space",
+    closes: 0,
+    getDoc: () => ({ _type: "rls", items: {} }),
+    onRemoteUpdate: () => () => {},
+    close() { this.closes += 1 },
+  }
   const fake: any = {
     bufferedEvents: [] as unknown[],
     ...obs,
+    homeHandle,
+    homeHandleUnsub: vi.fn(),
     closeCurrentHandle: vi.fn(),
     crossGroupUnsub: vi.fn(),
     crossGroupIndex: { stop: vi.fn() },
@@ -417,6 +426,11 @@ function createFakeConnectorForLogout() {
   }
   fake.notifyAllObservers = (activityMayHaveChanged = false) =>
     Reflect.get(WotConnector.prototype, "notifyAllObservers").call(fake, activityMayHaveChanged)
+  // Echter Helfer, kein Mock: der Test soll belegen, dass der Home-Handle beim
+  // Abmelden wirklich geschlossen wird (eigenes Dokument-Abonnement).
+  fake.releaseHomeHandle = () => Reflect.get(WotConnector.prototype, "releaseHomeHandle").call(fake)
+  fake.closeHandleQuietly = (handle: any) =>
+    Reflect.get(WotConnector.prototype, "closeHandleQuietly").call(fake, handle)
   return fake
 }
 
@@ -427,6 +441,7 @@ describe("WotConnector.logout() - real method regression", () => {
 
   it("clears auth-scoped observables when the real logout method runs", async () => {
     const fake = createFakeConnectorForLogout()
+    const homeHandle = fake.homeHandle
     const contactsUnsub = fake.contactsUnsub
     const attestationsUnsub = fake.attestationsUnsub
     const profileUnsub = fake.profileUnsub
@@ -441,6 +456,12 @@ describe("WotConnector.logout() - real method regression", () => {
     // Freigaben sind auth-gebunden: sonst zeigte die Annahme-Flaeche nach einem
     // Identitaetswechsel die Spaces der vorigen Person (Spec 12 Regel 14).
     expect(fake.profileSharesObs.current).toEqual({})
+    // Der Home-Handle ist sitzungsgebunden und traegt ein eigenes
+    // Dokument-Abonnement; ihn nur fallen zu lassen, liesse den Listener der
+    // vorigen Person am Dokument haengen.
+    expect(fake.homeHandle).toBeNull()
+    expect(homeHandle.closes).toBe(1)
+    expect(fake.homeHandleUnsub).toBeNull()
     expect(fake.syncPendingObs.current).toBe(false)
     expect(fake.syncStateObs.current).toEqual({ logPending: 0, outboxPending: 0 })
     expect(fake.currentGroupObservable.current).toBeNull()
