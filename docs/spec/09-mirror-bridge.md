@@ -221,10 +221,17 @@ Maximum stellt der Autor-Abgleich durch Neupublikation mit höherer `seq`
 wieder her.
 
 Die Registry der Freigaben (Invariante 6) liegt im Home-Doc des Items:
-`mirrorRegistry`, Schlüssel `JSON.stringify([itemId, targetSpaceId])`.
-Jedes Gerät schreibt nur unter seinem eigenen `deviceId`-Schlüssel
-(`byDevice[deviceId] = { statusSeq, status, admission, supersedes?, seq, tiebreak, publishedHash?, updatedAt }`,
-Status `accepted | revoked`). `admission` ist die **Aufnahme-Kennung**
+`mirrorRegistry`. Die physische Ablage ist **flach je Gerät**: Schlüssel
+`JSON.stringify([itemId, targetSpaceId, deviceId])`, Wert der
+Gerätebeitrag
+`{ statusSeq, status, admission, supersedes?, seq, tiebreak, publishedHash?, updatedAt }`
+(Status `accepted | revoked`). Jedes Gerät schreibt nur seinen eigenen
+Schlüssel und legt nie eine gemeinsame Eltern-Map an; eine geschachtelte
+Ablage (`[itemId, targetSpaceId] → byDevice`) ist in Yjs bei nebenläufiger
+Erstanlage ein LWW-Register und verliert Gerätebeiträge, sie ist deshalb
+NICHT zulässig. Das Lesemodell ist der logische Eintrag
+`(itemId, targetSpaceId)` mit `byDevice[deviceId]`, den der Leser durch
+Gruppieren der Schlüssel bildet. `admission` ist die **Aufnahme-Kennung**
 des Autors im Ziel-Space zum Zeitpunkt der Freigabe:
 `SpaceInfo.admission = { keyGeneration }`, abgeleitet aus dem
 synchronisierten Mitgliedschafts-Ereignis-Set `_members` des Ziel-Space
@@ -240,14 +247,23 @@ gültige Aufnahme" bedeuten: der Ziel-Space hat noch keine Ereignisse
 Ein Gerätebeitrag setzt seine `admission` ausschließlich beim Schreiben
 eines Statuswechsels; eine stille Nachführung gibt es NICHT. Eine neue
 Freigabe (`shareItem`, Annahme) trägt die dann aktuelle Kennung des
-Ziel-Space und setzt eine gültige Kennung voraus (bei `undefined` wird
-sie abgelehnt). Ein Widerruf, explizit oder durch Mitgliedschaftsverlust,
+Ziel-Space; hat der Ziel-Space keine Kennung (Alt-Space ohne Ereignisse)
+und ist der Autor Mitglied, trägt sie `undefined`. Abgelehnt wird eine
+Freigabe nur, wenn der Autor kein Mitglied ist. Ein Widerruf, explizit
+oder durch Mitgliedschaftsverlust,
 trägt `max(admission der Lesesicht, aktuelle Kennung des Ziel-Space)`,
 also nie eine niedrigere Kennung als die Freigabe, die er widerruft;
 sonst verlöre er in der Lesesicht gegen den alten `accepted`-Beitrag
-eines Offline-Geräts. Jeder Anstieg der Ziel-Kennung über die des
-Eintrags, auch von `undefined` auf eine Kennung, ist eine Wiederaufnahme
-(Abgleich unten).
+eines Offline-Geräts. Jeder Anstieg der Ziel-Kennung über eine
+**gesetzte** Kennung des Eintrags ist eine Wiederaufnahme (Abgleich
+unten). Der Anstieg von `undefined` auf die erste Kennung bei
+fortbestehender Mitgliedschaft ist KEINE Wiederaufnahme, sondern eine
+**Nachführung**: das Gerät schreibt einen regulären `accepted`-Beitrag
+mit der Kennung (eigener `statusSeq`, `supersedes` wie bei jeder
+Freigabe). Bestehende Mitgliedschaften werden dadurch nie eingeschränkt;
+der Preis ist, dass eine Entfernung und Wiederaufnahme, die vor dem
+ersten Ereignis des Space lag, nicht erkannt wird. Das ist gewollt: ohne
+Ereignisse ist sie nicht feststellbar, und die Person ist Mitglied.
 Die Lesesicht wird deterministisch abgeleitet: Position =
 Maximum aller Geräte-Positionen in der Ordnung
 `(seq, deviceId, tiebreak)`, `publishedHash` der gewinnenden Position
@@ -262,6 +278,13 @@ existiert, den kein `accepted`-Beitrag per `supersedes` abdeckt; sonst
 `accepted`. Ein Widerruf, den keine spätere Freigabe gesehen hat,
 gewinnt also immer, auch gegen eine nebenläufige Freigabe mit höherem
 `statusSeq`; erst eine Freigabe, die ihn beobachtet hat, löst ihn ab.
+Ein unabgedeckter Widerruf gewinnt **über Kennungen hinweg**: er setzt
+den Status auch dann auf `revoked`, wenn ein `accepted`-Beitrag eine
+höhere `admission` trägt. Sonst könnte eine Nachführung (`undefined` →
+Kennung) einen nebenläufigen Widerruf eines Offline-Geräts ungesehen
+verdrängen. Da jede Freigabe beim Schreiben alle sichtbaren Widerrufe in
+`supersedes` nennt, bleibt die Wiederaufnahme nach Entfernung
+unverändert: die neue Freigabe deckt den Verlust-Widerruf ab.
 Einträge werden NIE gelöscht. Jede Publikation, Live wie
 Tombstone, trägt `seq = 1 + max(seq aller Einträge dieses itemId)`, den
 home-weiten Zähler pro Item.
@@ -276,14 +299,14 @@ Der Abgleich ist ein Zielzustand, je Eintrag:
   Ziel einer mit Version ≥ Registry-Position liegt; der Eintrag bleibt
   `accepted`, `publishedHash` ist leer. Nur der Autor signiert
   (Invariante 5); ein zurückkehrendes Autor-Gerät holt das nach.
-- `accepted` und Kennung des Ziel-Space > `admission` (Wiederaufnahme,
-  einschließlich `undefined` → Kennung): das Gerät schreibt seinen
-  Beitrag als `revoked` mit der neuen Kennung; eine neue Freigabe
-  braucht `shareItem`. Anwendungen KÖNNEN stattdessen einen
-  Zwischenstatus führen ([12-profile.md](12-profile.md): `pending`).
-  Der Preis: ein Alt-Space ohne Ereignisse verlangt beim ersten
-  Auftauchen von Ereignissen eine neue Freigabe. Das ist gewollt, weil
-  nicht entscheidbar ist, ob dazwischen eine Entfernung lag.
+- `accepted` mit `admission = undefined`, Kennung des Ziel-Space
+  gesetzt und Autor Mitglied (Nachführung): das Gerät schreibt einen
+  `accepted`-Beitrag mit der Kennung; keine neue Freigabe nötig.
+- `accepted` und Kennung des Ziel-Space > gesetzte `admission`
+  (Wiederaufnahme): das Gerät schreibt seinen Beitrag als `revoked` mit
+  der neuen Kennung; eine neue Freigabe braucht `shareItem`. Anwendungen
+  KÖNNEN stattdessen einen Zwischenstatus führen
+  ([12-profile.md](12-profile.md): `pending`).
 - `accepted` und Kennung des Ziel-Space < `admission` oder `undefined`
   bei gesetztem `admission` (Mitgliedschaft verloren): keine
   Publikation; der Beitrag wird `revoked` mit der `admission` der

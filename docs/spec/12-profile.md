@@ -96,11 +96,14 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    sie; erst ein `removed` schneidet den Lauf, das nächste `active`
    danach ist die Wiederaufnahme. Alt-Spaces ohne Ereignisse haben keine
    Kennung; die Ordnung folgt 09 §Ablage und Registry (keine Kennung
-   liegt unter jeder Kennung, keine stille Nachführung; jeder Anstieg,
-   auch von keiner Kennung auf eine, ist eine Wiederaufnahme und führt
-   zu `pending`).
+   liegt unter jeder Kennung; der Anstieg von keiner Kennung auf die
+   erste bei fortbestehender Mitgliedschaft ist eine Nachführung und
+   ändert den Status nicht; jeder Anstieg über eine gesetzte Kennung ist
+   eine Wiederaufnahme und führt zu `pending`). Einträge und Annahme
+   sind auch ohne Kennung zulässig (`admission = undefined`).
    Der Registry-Eintrag (Regel 9) entsteht mit Status `pending` und der
-   Kennung, sobald der Space auf einem Gerät der Person erscheint; die
+   Kennung (oder ohne Kennung bei einem Alt-Space), sobald der Space auf
+   einem Gerät der Person erscheint; die
    Annahme setzt ihn auf `accepted`, das Ablehnen auf `revoked`. Steigt
    die Kennung des Space über die des Eintrags (Wiederaufnahme), wird der
    Eintrag `pending` mit der neuen Kennung, unabhängig davon, ob das
@@ -139,9 +142,14 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    Doc). Der Hash folgt der kanonischen Serialisierung aus 09
    (RFC 8785).
    **Übergangsregel:** Mitgliedschaften, die VOR Einführung dieser Spec
-   bestanden, gelten als freigegeben. Der Connector legt für sie
-   `accepted`-Einträge an und setzt im Home-Doc die Marke
-   `profileMigration.bestandAt`; ist die Marke gesetzt, läuft die
+   bestanden, gelten als freigegeben, ausnahmslos und auch ohne
+   Aufnahme-Kennung (Alt-Spaces ohne Ereignisse, `admission = undefined`).
+   Der Connector legt für ALLE zu diesem Zeitpunkt bestehenden
+   Mitgliedschaften `accepted`-Einträge an und setzt im Home-Doc die Marke
+   `profileMigration.bestandAt`; das Profil ist damit in jedem Space
+   sichtbar, in dem die Person Mitglied ist, und bleibt es über die
+   Nachführung (09) auch, wenn der Space später Ereignisse erhält.
+   Ist die Marke gesetzt, läuft die
    Übergangsregel auf keinem Gerät der Person erneut, spätere
    Mitgliedschaften laufen über Regel 4. Grundlage ist das heutige
    Vertrauensmodell: Mitgliedschaft in einem Space bedeutet pauschales
@@ -213,11 +221,12 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    Abgleich als Zielzustand, Reparatur). Profil-spezifisch: die Registry
    liegt im persönlichen Space; der Eintrag trägt zusätzlich den Status
    `pending` und die Aufnahme-Kennung `admission` (Regel 4); der Status
-   folgt der höchsten `admission` (nach `keyGeneration` geordnet) und
-   innerhalb derselben `admission` der Widerrufs-Kausalität aus 09:
-   `revoked`, wenn ein Widerruf existiert, den keine Annahme per
-   `supersedes` abdeckt; sonst `pending`, wenn ein `pending`-Beitrag
-   existiert, den keine Annahme abdeckt; sonst `accepted`. So gewinnt ein
+   folgt der Widerrufs-Kausalität aus 09: `revoked`, wenn ein Widerruf
+   existiert, den keine Annahme per `supersedes` abdeckt, gleich welche
+   `admission` er trägt; sonst nach der höchsten `admission` (nach
+   `keyGeneration` geordnet, keine Kennung unter jeder) `pending`, wenn
+   dort ein `pending`-Beitrag existiert, den keine Annahme abdeckt;
+   sonst `accepted`. So gewinnt ein
    Widerruf nie gegen eine nebenläufige Annahme nur deshalb, weil deren
    Wert zuletzt geschrieben wurde, und
    `max(seq aller Einträge dieses itemId)` in Regel 5 bleibt monoton.
