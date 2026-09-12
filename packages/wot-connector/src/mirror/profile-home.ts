@@ -171,7 +171,9 @@ export function maxAdmission(
 export function supersedesOf(
   byDevice: Record<string, MirrorRegistryContribution>,
 ): Record<string, number> | undefined {
-  const supersedes: Record<string, number> = {}
+  // `Object.create(null)`: ein Gerätename `__proto__` aus einem fremden Beitrag
+  // setzte sonst den Prototyp statt einen Eintrag — die Abdeckung fehlte still.
+  const supersedes: Record<string, number> = Object.create(null)
   let found = false
   for (const [deviceId, contribution] of Object.entries(byDevice ?? {})) {
     if (!contribution || contribution.status === "accepted") continue

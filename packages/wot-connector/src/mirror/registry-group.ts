@@ -15,6 +15,12 @@ import { mirrorRegistryEntryKey, parseMirrorRegistryKey } from "./keys.js"
  * Unlesbare Schlüssel werden übergangen: die Registry ist ein gemeinsam
  * beschriebenes CRDT-Feld, und ein fremder Schreiber darf die Lesesicht nicht
  * zum Werfen bringen.
+ *
+ * Die Gruppen entstehen mit `Object.create(null)`: ein Gerätename `__proto__`
+ * setzte in einem Objektliteral den Prototyp statt einen Eintrag anzulegen —
+ * der Beitrag verschwände aus der Faltung, und ein so verschluckter Widerruf
+ * kippte den Status auf `accepted`. Die Registry ist von fremden Geräten
+ * beschrieben, ihre Schlüssel sind also Eingabe, nicht Code.
  */
 export function groupRegistryByEntry(
   registry: Record<string, MirrorRegistryContribution>,
@@ -25,7 +31,7 @@ export function groupRegistryByEntry(
     const parsed = parseMirrorRegistryKey(key)
     if (!parsed) continue
     const entryKey = mirrorRegistryEntryKey(parsed.itemId, parsed.targetSpaceId)
-    const byDevice = grouped.get(entryKey) ?? {}
+    const byDevice = grouped.get(entryKey) ?? Object.create(null) as Record<string, MirrorRegistryContribution>
     byDevice[parsed.deviceId] = contribution
     grouped.set(entryKey, byDevice)
   }

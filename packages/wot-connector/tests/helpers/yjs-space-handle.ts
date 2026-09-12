@@ -64,6 +64,20 @@ function mergeInto(map: Y.Map<unknown>, source: Record<string, unknown>): void {
   for (const [key, value] of Object.entries(source)) assign(map, key, value)
 }
 
+/**
+ * `getDoc()` liefert im Adapter einen Objekt-SNAPSHOT (`ii`), keinen lebenden
+ * Schreibproxy — Lesen außerhalb einer Transaktion darf nicht schreiben können.
+ */
+function snapshot(map: Y.Map<unknown>): Record<string, unknown> {
+  const plain: Record<string, unknown> = {}
+  map.forEach((value, key) => {
+    if (value instanceof Y.Map) plain[key] = snapshot(value)
+    else if (value instanceof Y.Array) plain[key] = value.toArray()
+    else plain[key] = value
+  })
+  return plain
+}
+
 export interface YjsTestSpaceHandle<T extends object> {
   id: string
   ydoc: Y.Doc
@@ -86,7 +100,7 @@ export function createYjsSpaceHandle<T extends object>(id: string): YjsTestSpace
   return {
     id,
     ydoc,
-    getDoc: () => doc,
+    getDoc: () => snapshot(root) as T,
     transact: (fn) => { ydoc.transact(() => { fn(doc) }) },
     onRemoteUpdate: (callback) => {
       callbacks.add(callback)

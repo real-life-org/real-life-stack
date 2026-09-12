@@ -123,15 +123,39 @@ describe("Registry-Beiträge zweier Geräte mergen konfliktfrei (Befund R2-1)", 
 
     await connectorOn(deviceB, "device-B").writeRegistryContribution("garten", "accepted")
     deviceB.syncInto(deviceA)
+    await connectorOn(deviceA, "device-A").writeRegistryContribution("garten", "pending")
+    // Zweiter Statuswechsel DESSELBEN Geräts: er ersetzt den eigenen Schlüssel
+    // und lässt den Beitrag von B unberührt.
     await connectorOn(deviceA, "device-A").writeRegistryContribution("garten", "revoked")
     deviceA.syncInto(deviceB)
 
     const byDevice = byDeviceOf(deviceB, "garten")
-    expect(byDevice["device-B"].status).toBe("accepted")
+    expect(Object.keys(byDevice).sort()).toEqual(["device-A", "device-B"])
+    expect(byDevice["device-B"]).toMatchObject({ status: "accepted", statusSeq: 1 })
     expect(byDevice["device-A"].status).toBe("revoked")
-    // A hat die Freigabe von B gesehen: sein `statusSeq` liegt darüber, und die
-    // Faltung kennt keine Abdeckung des Widerrufs.
-    expect(byDevice["device-A"].statusSeq).toBeGreaterThan(byDevice["device-B"].statusSeq)
+    // A hat die Freigabe von B und den eigenen Vorbeitrag gesehen: sein
+    // `statusSeq` steigt monoton, ein Widerruf trägt kein `supersedes`.
+    expect(byDevice["device-A"].statusSeq).toBe(3)
+    expect(byDevice["device-A"].supersedes).toBeUndefined()
+    expect(deriveRegistryView(byDevice)?.status).toBe("revoked")
+  })
+})
+
+describe("fremde Schlüssel sind Eingabe, nicht Code", () => {
+  it("verschluckt einen Beitrag unter dem Gerätenamen __proto__ nicht", () => {
+    const registry = {
+      [mirrorRegistryKey(DID, "garten", "__proto__")]: {
+        statusSeq: 2, status: "revoked" as const, seq: 0, tiebreak: "", updatedAt: "2026-09-01T00:00:00.000Z",
+      },
+      [mirrorRegistryKey(DID, "garten", "device-B")]: {
+        statusSeq: 1, status: "accepted" as const, seq: 0, tiebreak: "", updatedAt: "2026-09-01T00:00:00.000Z",
+      },
+    }
+
+    const byDevice = groupRegistryByEntry(registry).get(mirrorRegistryEntryKey(DID, "garten")) ?? {}
+
+    expect(Object.keys(byDevice).sort()).toEqual(["__proto__", "device-B"])
+    // Der Widerruf ist von keiner Freigabe abgedeckt und gewinnt.
     expect(deriveRegistryView(byDevice)?.status).toBe("revoked")
   })
 })
