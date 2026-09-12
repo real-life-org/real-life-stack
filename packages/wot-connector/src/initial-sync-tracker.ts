@@ -38,6 +38,16 @@ export class InitialSyncTracker {
   private stopped = false
   /** Läuft laut Adapter gerade ein Catch-up, dem etwas fehlt? */
   private outstanding = false
+  /**
+   * Hat der Adapter in dieser Runtime einen Lauf als ABGESCHLOSSEN gemeldet?
+   *
+   * Trennt „nichts steht aus, weil der Lauf durch ist" von „nichts steht aus,
+   * weil noch nichts angefangen hat". Nur im ersten Fall darf die
+   * Abschlussbedingung greifen; ohne diese Unterscheidung liesse die
+   * Nachbewertung in {@link setGroupCounts} das Latch schon beim Login
+   * zuschnappen.
+   */
+  private catchUpSettled = false
   private loadedGroups = 0
   private expectedGroups: number | null = null
 
@@ -64,6 +74,7 @@ export class InitialSyncTracker {
     this.expectRemoteData = false
     this.firstFillDone = false
     this.outstanding = false
+    this.catchUpSettled = false
     this.loadedGroups = 0
     this.expectedGroups = null
     this.publish()
@@ -105,22 +116,36 @@ export class InitialSyncTracker {
    * ausdrücklich NICHT — beim Login ist das persönliche Dokument zwar schon
    * initialisiert, aber leer, und „0 von 0" hiesse fertig, bevor überhaupt
    * etwas angefangen hat. Diese Aussage darf erst nach einem abgeschlossenen
-   * Catch-up gelten (siehe {@link setOutstanding}).
+   * Catch-up gelten (siehe {@link evaluateFirstFill}).
    */
   private completeAtLogin(): boolean {
     return this.loadedGroups > 0 && !this.missingGroups()
+  }
+
+  /**
+   * Erstbefüllung abgeschlossen: der Adapter hat einen Lauf beendet, es steht
+   * nichts mehr aus UND nichts fehlt. Nach einem abgeschlossenen Lauf darf auch
+   * „die Liste kennt keine Gruppe" als Vollzug gelten; beim Login wäre das
+   * verfrüht (siehe {@link completeAtLogin}).
+   *
+   * Die Bedingung wird aus BEIDEN Eingängen bewertet — dem Catch-up-Zustand und
+   * den Gruppenzahlen. Die Reihenfolge, in der sie eintreffen, ist nicht
+   * festgelegt: meldet der Adapter den Abschluss, während die Liste noch „0 von
+   * 1" sagt, holt die Zahl erst danach auf, und ohne Nachbewertung bliebe das
+   * Latch für den Rest der Sitzung offen.
+   */
+  private evaluateFirstFill(): void {
+    if (this.firstFillDone || this.outstanding || !this.catchUpSettled) return
+    if (this.missingGroups()) return
+    if (this.loadedGroups > 0 || this.expectedGroups === 0) this.firstFillDone = true
   }
 
   /** Der Adapter meldet, ob für irgendein Dokument noch etwas aussteht. */
   setOutstanding(outstanding: boolean): void {
     if (this.stopped || outstanding === this.outstanding) return
     this.outstanding = outstanding
-    // Erstbefüllung abgeschlossen: nichts steht mehr aus UND nichts fehlt.
-    // Hier — nach einem abgeschlossenen Lauf — darf auch „die Liste kennt
-    // keine Gruppe" als Vollzug gelten; beim Login wäre das verfrüht.
-    if (!outstanding && !this.missingGroups() && (this.loadedGroups > 0 || this.expectedGroups === 0)) {
-      this.firstFillDone = true
-    }
+    if (!outstanding) this.catchUpSettled = true
+    this.evaluateFirstFill()
     this.publish()
   }
 
@@ -134,6 +159,7 @@ export class InitialSyncTracker {
     if (loaded === this.loadedGroups && expected === this.expectedGroups) return
     this.loadedGroups = loaded
     this.expectedGroups = expected
+    this.evaluateFirstFill()
     this.publish()
   }
 
