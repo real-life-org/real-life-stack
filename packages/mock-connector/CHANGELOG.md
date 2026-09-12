@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.5](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.1.4...mock-connector-v0.1.5) (2026-09-12)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.2.0
+
 ## [0.1.4](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.1.3...mock-connector-v0.1.4) (2026-09-08)
 
 

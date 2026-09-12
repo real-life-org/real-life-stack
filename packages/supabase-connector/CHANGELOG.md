@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.0](https://github.com/real-life-org/real-life-stack/compare/supabase-connector-v0.1.4...supabase-connector-v0.2.0) (2026-09-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **data-interface:** MirrorCapable, Profil-Freigaben, mirrorOf-Helfer (S1) ([#344](https://github.com/real-life-org/real-life-stack/issues/344))
+
+### Features
+
+* **data-interface:** MirrorCapable, Profil-Freigaben, mirrorOf-Helfer (S1) ([#344](https://github.com/real-life-org/real-life-stack/issues/344)) ([cd1392c](https://github.com/real-life-org/real-life-stack/commit/cd1392c43db7a6d08da32c93f585a29949c969ef))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.2.0
+
 ## [0.1.4](https://github.com/real-life-org/real-life-stack/compare/supabase-connector-v0.1.3...supabase-connector-v0.1.4) (2026-09-08)
 
 
