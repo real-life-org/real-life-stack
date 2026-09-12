@@ -757,7 +757,12 @@ describe("WotConnector person/v1 item projection", () => {
       currentUserObs: createObservable<User | null>(null),
       memberObservables: new Map(),
       notifyMemberObservers: vi.fn(),
+      // S3: die Projektion liest jetzt zuerst das Profil-Item im persoenlichen
+      // Space (Spec 12 Regel 12). Ohne Home-Handle bleibt der Uebergangspfad.
+      homeHandle: null,
+      privateSpaceId: null,
     }
+    Object.setPrototypeOf(fake, WotConnector.prototype)
 
     ;(WotConnector.prototype as any).syncProfileObservable.call(fake)
     const item = await WotConnector.prototype.getMyProfile.call(fake as any)

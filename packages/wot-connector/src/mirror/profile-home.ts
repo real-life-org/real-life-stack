@@ -169,3 +169,40 @@ export function supersedesOf(
   }
   return found ? supersedes : undefined
 }
+
+/**
+ * Normalisiert die lose typisierte Eingabe von `updateMyProfile` auf die
+ * Item-Felder.
+ *
+ * Die Item-Form (`displayName`, `avatarUrl`) ist die Wahrheit (Spec 12 §Form);
+ * die alten Namen `name` und `avatar` bleiben angenommen, weil sie die heutigen
+ * Aufrufer im Baukasten und in den anderen Connectoren benutzen. Unbekannte
+ * Schlüssel werden ignoriert — insbesondere `did`, das nie aus der Eingabe
+ * stammt (Regel 1).
+ */
+export function normalizeProfileFields(updates: Record<string, unknown>): ProfileItemFields {
+  const fields: ProfileItemFields = {}
+  const pick = (...keys: string[]): unknown => {
+    for (const key of keys) if (key in updates) return updates[key]
+    return undefined
+  }
+  const text = (value: unknown): string | null | undefined => {
+    if (value === undefined) return undefined
+    if (value === null || value === "") return null
+    return typeof value === "string" ? value : undefined
+  }
+
+  const displayName = text(pick("displayName", "name"))
+  if (displayName !== undefined) fields.displayName = displayName
+  const bio = text(pick("bio"))
+  if (bio !== undefined) fields.bio = bio
+  const avatarUrl = text(pick("avatarUrl", "avatar"))
+  if (avatarUrl !== undefined) fields.avatarUrl = avatarUrl
+  const address = text(pick("address"))
+  if (address !== undefined) fields.address = address
+  const locationName = text(pick("locationName"))
+  if (locationName !== undefined) fields.locationName = locationName
+  if ("position" in updates) fields.position = updates.position ?? null
+
+  return fields
+}

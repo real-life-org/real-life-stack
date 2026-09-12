@@ -154,6 +154,12 @@ import type {
   ClosableYjsCompactStore,
 } from "./types.js"
 import { serializeItem, deserializeItem } from "./serialization.js"
+import {
+  mergeProfileData,
+  normalizeProfileFields,
+  profileItemInput,
+  type ProfileItemFields,
+} from "./mirror/index.js"
 import { CrossGroupIndex } from "./CrossGroupIndex.js"
 import { projectAttestationConfirmations } from "./confirmations.js"
 import {
@@ -410,6 +416,9 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   private catchUpRegistry: CatchUpRegistry | null = null
   private catchUpUnsub: (() => void) | null = null
   private privateSpaceReconcile: Promise<void> = Promise.resolve()
+  /** Home des Profils (Spec 12 Regel 12): der geöffnete persönliche Space. */
+  private homeHandle: SpaceHandle<RlsSpaceDoc> | null = null
+  private homeHandleUnsub: (() => void) | null = null
   private contactsUnsub: (() => void) | null = null
   private attestationsUnsub: (() => void) | null = null
 
@@ -541,6 +550,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.activityReconciliations.clear()
     this.crossGroupIndex = null
     this.privateSpaceId = null
+    this.releaseHomeHandle()
     this.deterministicPrivateSpaceId = null
     this.spacesSubscriptionUnsub?.()
     this.personalDocUnsub?.()
@@ -704,6 +714,11 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.crossGroupIndex?.stop()
     this.crossGroupIndex = null
     this.privateSpaceId = null
+    // Inline wie der Rest dieses Seams: der Logout-Test bindet die echte
+    // Methode an ein schmales Objekt OHNE die privaten Helfer.
+    this.homeHandleUnsub?.()
+    this.homeHandleUnsub = null
+    this.homeHandle = null
     this.deterministicPrivateSpaceId = null
     this.spacesSubscriptionUnsub?.()
     this.personalDocUnsub?.()
@@ -828,8 +843,59 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     }
   }
 
-  /** Update the local profile in PersonalDoc */
+  /**
+   * Schreibt das Profil (Spec 12 Regel 12): ERST das Item im persönlichen
+   * Space — die kanonische Quelle —, DANN der Write-through auf `doc.profile`,
+   * dann der Verzeichnisdienst wie bisher (Regel 11).
+   */
   async updateProfile(updates: { name?: string; bio?: string; avatar?: string }): Promise<User> {
+    await this.applyProfileUpdate({
+      ...(updates.name !== undefined ? { displayName: updates.name } : {}),
+      ...(updates.bio !== undefined ? { bio: updates.bio } : {}),
+      ...(updates.avatar !== undefined ? { avatarUrl: updates.avatar } : {}),
+    })
+    return (await this.getCurrentUser())!
+  }
+
+  override async updateMyProfile(updates: Partial<Record<string, unknown>>): Promise<Item> {
+    const item = await this.applyProfileUpdate(normalizeProfileFields(updates))
+    if (item) return item
+
+    // Ohne Home-Space (Anmeldung noch nicht durch, Adapter ohne Replikation)
+    // bleibt die Projektion aus `doc.profile` die beste verfügbare Antwort;
+    // das Item entsteht mit dem nächsten Schreibpfad oder der Migration.
+    const user = (await this.getCurrentUser())!
+    return (await this.getMyProfile()) ?? projectPersonItem(
+      user.id,
+      new Date().toISOString(),
+      user.displayName || getDefaultDisplayName(user.id),
+      undefined,
+      user.avatarUrl,
+    )
+  }
+
+  /**
+   * Der EINE Schreibpfad des eigenen Profils (Spec 12 Regel 12). Die
+   * Gegenrichtung `doc.profile` → Item gibt es außerhalb der Migration nicht.
+   */
+  private async applyProfileUpdate(fields: ProfileItemFields): Promise<Item | null> {
+    const item = await this.writeProfileItem(fields)
+    this.writeProfileThroughToPersonalDoc(fields)
+    // OfflineFirstDiscoveryAdapter turns network failure into a dirty profile
+    // that syncPending() retries on init/online/visibility. Awaiting here makes
+    // sure the dirty marker exists before the UI considers the update complete.
+    await this.publishProfile()
+    void this.broadcastProfileUpdate().catch(() => {})
+    return item
+  }
+
+  /**
+   * Write-through der Übergangsprojektion (Spec 12 Regel 12):
+   * `displayName → name`, `bio → bio`, `avatarUrl → avatar`. Die Ortsfelder
+   * bleiben ausdrücklich draußen — `position` erreicht den Verzeichnisdienst
+   * nie (Regel 11).
+   */
+  private writeProfileThroughToPersonalDoc(fields: ProfileItemFields): void {
     const did = this.identity.getDid()
     const now = new Date().toISOString()
     changeYjsPersonalDoc((doc: any) => {
@@ -845,32 +911,91 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
           updatedAt: now,
         }
       }
-      if (updates.name !== undefined) doc.profile.name = updates.name || null
-      if (updates.bio !== undefined) doc.profile.bio = updates.bio || null
-      if (updates.avatar !== undefined) doc.profile.avatar = updates.avatar || null
+      if (fields.displayName !== undefined) doc.profile.name = fields.displayName || null
+      if (fields.bio !== undefined) doc.profile.bio = fields.bio || null
+      if (fields.avatarUrl !== undefined) doc.profile.avatar = fields.avatarUrl || null
       doc.profile.updatedAt = now
     })
-    // OfflineFirstDiscoveryAdapter turns network failure into a dirty profile
-    // that syncPending() retries on init/online/visibility. Awaiting here makes
-    // sure the dirty marker exists before the UI considers the update complete.
-    await this.publishProfile()
-    void this.broadcastProfileUpdate().catch(() => {})
-    return (await this.getCurrentUser())!
   }
 
-  override async updateMyProfile(updates: Partial<Record<string, unknown>>): Promise<Item> {
-    const user = await this.updateProfile({
-      name: updates.name as string | undefined,
-      bio: updates.bio as string | undefined,
-      avatar: updates.avatar as string | undefined,
-    })
-    return (await this.getMyProfile()) ?? projectPersonItem(
-      user.id,
-      new Date().toISOString(),
-      user.displayName || getDefaultDisplayName(user.id),
-      undefined,
-      user.avatarUrl,
-    )
+  /**
+   * Legt das Profil-Item an oder aktualisiert es — im deterministischen
+   * persönlichen Space, mit fester `id` = DID (Spec 12 Regel 1 und 12).
+   *
+   * Die Anlage läuft über denselben `createItemOnHandle` wie jedes andere Item:
+   * er ist auf der `id` idempotent, bindet `createdBy` an die Sitzung und
+   * schreibt den Aktivitätseintrag. Ein zweiter Anlagepfad daneben wäre eine
+   * zweite Wahrheit über die Item-Form.
+   */
+  private async writeProfileItem(fields: ProfileItemFields): Promise<Item | null> {
+    const handle = await this.ensureHomeHandle()
+    if (!handle) return null
+    const did = this.identity.getDid()
+
+    const existing = handle.getDoc()?.items?.[did]
+    if (!existing) {
+      const created = this.createItemOnHandle(handle, profileItemInput(did, fields), handle.id)
+      this.syncProfileObservable()
+      return created
+    }
+
+    const data = mergeProfileData(did, deserializeItem(existing).data as Record<string, unknown>, fields)
+    this.applyItemUpdate(handle, did, { data, "@context": deriveContext("person", data) })
+    this.crossGroupIndex?.reindexGroup(handle.id)
+    this.notifyAllObservers(true)
+    this.syncProfileObservable()
+    return this.readProfileItem()
+  }
+
+  /**
+   * Der geöffnete Handle des persönlichen Space. `openSpace` liefert für einen
+   * bereits offenen Space denselben Handle zurück, der Aufruf ist also billig;
+   * gehalten wird er trotzdem, weil `syncProfileObservable` synchron lesen
+   * muss und weil an ihm das Abonnement auf fremde Geräte-Beiträge hängt.
+   */
+  private async ensureHomeHandle(): Promise<SpaceHandle<RlsSpaceDoc> | null> {
+    const spaceId = this.privateSpaceId
+    if (!spaceId || !this.replication) return null
+    if (this.homeHandle && this.homeHandle.id === spaceId) return this.homeHandle
+
+    const generation = this.runtimeGeneration
+    const handle = await this.replication.openSpace<RlsSpaceDoc>(spaceId)
+    // Der persönliche Space kann sich während des Öffnens geändert haben
+    // (Reconcile, Identitätswechsel); dann gehört dieser Handle nicht mehr uns.
+    if (this.runtimeGeneration !== generation || this.privateSpaceId !== spaceId) return null
+
+    this.homeHandleUnsub?.()
+    this.homeHandle = handle
+    this.homeHandleUnsub = handle.onRemoteUpdate(() => this.onHomeDocChanged())
+    return handle
+  }
+
+  /**
+   * Identitätsgrenze: der Home-Handle gehört einer Sitzung. Ohne dieses
+   * Loslassen läse `readProfileItem` nach einem Identitätswechsel weiter im
+   * Doc der vorigen Person.
+   */
+  private releaseHomeHandle(): void {
+    this.homeHandleUnsub?.()
+    this.homeHandleUnsub = null
+    this.homeHandle = null
+  }
+
+  /** Fremde Geräte-Beiträge und fremde Profil-Änderungen im Home-Doc. */
+  private onHomeDocChanged(): void {
+    this.syncProfileObservable()
+  }
+
+  /** Das Profil-Item aus dem Home, synchron. `null`, solange es nicht existiert. */
+  private readProfileItem(): Item | null {
+    const handle = this.homeHandle
+    if (!handle || handle.id !== this.privateSpaceId) return null
+    try {
+      const serialized = handle.getDoc()?.items?.[this.identity.getDid()]
+      return serialized ? deserializeItem(serialized) : null
+    } catch {
+      return null
+    }
   }
 
   override async getMyProfile(): Promise<Item | null> {
@@ -4155,9 +4280,32 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
   // (syncContactsFromPersonalDoc removed — contacts are now reactive via YjsStorageAdapter.watchContacts())
 
+  /**
+   * Das Profil kommt aus dem Item im persönlichen Space (Spec 12 Regel 12).
+   *
+   * Solange es nicht existiert (vor der Migration, auf einem Altgerät), bleibt
+   * die Projektion aus `doc.profile` als Übergang sichtbar — sonst stünde die
+   * Anzeige zwischen Erstsync und Migration leer. Sobald das Item da ist,
+   * gewinnt es immer, auch gegen ein später eintreffendes `doc.profile`.
+   */
   private syncProfileObservable(): void {
     try {
       const did = this.identity.getDid()
+      const item = this.readProfileItem()
+      if (item) {
+        const data = (item.data ?? {}) as Record<string, unknown>
+        const itemName = typeof data.displayName === "string" && data.displayName
+          ? data.displayName
+          : getDefaultDisplayName(did)
+        const itemAvatar = typeof data.avatarUrl === "string" && data.avatarUrl ? data.avatarUrl : undefined
+        this.profileObs.set(item)
+        this.currentUserObs.set({ id: did, displayName: itemName, avatarUrl: itemAvatar })
+        for (const groupId of this.memberObservables.keys()) {
+          void this.notifyMemberObservers(groupId)
+        }
+        return
+      }
+
       const doc = getYjsPersonalDoc()
       const profile = doc?.profile
       const name = profile?.name || getDefaultDisplayName(did)
