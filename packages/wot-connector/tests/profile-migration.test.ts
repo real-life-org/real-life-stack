@@ -35,6 +35,7 @@ function fakeConnector(options: {
   firstFillDone?: boolean
   expectRemoteData?: boolean
   deviceId?: string
+  homeCatchUpReported?: boolean
 } = {}) {
   const doc: RlsSpaceDoc = options.doc ?? { _type: "rls", items: {} }
   const handle = {
@@ -70,6 +71,9 @@ function fakeConnector(options: {
   connector.notifyAllObservers = vi.fn()
   connector.activityDirty = false
   connector.profileHomeMaintenance = Promise.resolve()
+  // Der Adapter hat den Catch-up des Home-Docs gemeldet (Spec 12 Regel 12) —
+  // erst dann darf die pauschale Bestandsregel laufen.
+  connector.homeCatchUpReported = options.homeCatchUpReported ?? true
   return { connector, doc, handle }
 }
 

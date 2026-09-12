@@ -20,6 +20,7 @@ function contribution(partial: Partial<MirrorRegistryContribution>): MirrorRegis
 function fakeConnector(options: {
   doc?: RlsSpaceDoc
   spaces?: Array<{ id: string; appTag?: string; type?: string; admission?: { keyGeneration: number } }>
+  homeCatchUpReported?: boolean
 } = {}) {
   const doc: RlsSpaceDoc = options.doc ?? { _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" } }
   const handle = {
@@ -58,6 +59,9 @@ function fakeConnector(options: {
   connector.activityDirty = false
   connector.currentGroupId = null
   connector.profileHomeMaintenance = Promise.resolve()
+  // Der Adapter hat den Catch-up des Home-Docs gemeldet (Spec 12 Regel 12) —
+  // erst dann darf die pauschale Bestandsregel laufen.
+  connector.homeCatchUpReported = options.homeCatchUpReported ?? true
   return { connector, doc, handle }
 }
 

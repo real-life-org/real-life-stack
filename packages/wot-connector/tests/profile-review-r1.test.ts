@@ -39,6 +39,7 @@ function fakeConnector(options: {
   doc?: RlsSpaceDoc
   spaces?: Array<{ id: string; appTag?: string; type?: string; admission?: { keyGeneration: number } }>
   resolveDeviceId?: () => Promise<string>
+  homeCatchUpReported?: boolean
 } = {}) {
   const doc: RlsSpaceDoc = options.doc ?? { _type: "rls", items: {} }
   const handle = {
@@ -77,6 +78,9 @@ function fakeConnector(options: {
   connector.getCurrentUser = async () => connector.currentUserObs.current
   connector.activityDirty = false
   connector.profileHomeMaintenance = Promise.resolve()
+  // Der Adapter hat den Catch-up des Home-Docs gemeldet (Spec 12 Regel 12) —
+  // erst dann darf die pauschale Bestandsregel laufen.
+  connector.homeCatchUpReported = options.homeCatchUpReported ?? true
   return { connector, doc, handle }
 }
 
@@ -307,5 +311,163 @@ describe("Befund 6 — eine fremde Registry-Aenderung loest den Abgleich aus", (
 
     expect(byDevice(doc, "garten")[DEVICE]).toMatchObject({ status: "revoked", admission: { keyGeneration: 3 } })
     expect(connector.observeProfileShares().current.garten).toBe("revoked")
+  })
+})
+
+// --- Codex-Review, Runde 2 ---
+
+describe("R2-2 — die pauschale Bestandsregel verlangt den beobachteten Catch-up des Home-Docs", () => {
+  it("gibt nichts pauschal frei, solange der Adapter fuer das Home-Doc nichts gemeldet hat", async () => {
+    const doc: RlsSpaceDoc = { _type: "rls", items: {} }
+    const { connector } = fakeConnector({
+      doc,
+      homeCatchUpReported: false,
+      spaces: [{ id: "garten", admission: { keyGeneration: 2 } }],
+    })
+
+    await connector.queueProfileHomeMaintenance()
+
+    // Fail-closed: der Space wird ausstehend, nicht pauschal freigegeben — ein
+    // Geraet ohne Nachweis kann die Marke eines anderen Geraets verpasst haben.
+    expect(byDevice(doc, "garten")[DEVICE].status).toBe("pending")
+    expect(doc.profileMigration?.bestandAt).toBeUndefined()
+  })
+
+  it("eine frisch erzeugte Identitaet erwartet nichts und darf sofort laufen", async () => {
+    const doc: RlsSpaceDoc = { _type: "rls", items: {} }
+    const { connector } = fakeConnector({
+      doc,
+      homeCatchUpReported: false,
+      spaces: [{ id: "garten", admission: { keyGeneration: 0 } }],
+    })
+    connector.authExpectsRemoteData = false
+
+    await connector.queueProfileHomeMaintenance()
+
+    expect(byDevice(doc, "garten")[DEVICE].status).toBe("accepted")
+  })
+
+  it("noteHomeCatchUp merkt sich die Meldung des Home-Docs und nimmt sie nie zurueck", () => {
+    const { connector } = fakeConnector({ homeCatchUpReported: false })
+
+    connector.noteHomeCatchUp([{ docId: "garten" }])
+    expect(connector.homeCatchUpReported).toBe(false)
+
+    connector.noteHomeCatchUp([{ docId: "home-space" }])
+    expect(connector.homeCatchUpReported).toBe(true)
+
+    connector.noteHomeCatchUp([])
+    expect(connector.homeCatchUpReported).toBe(true)
+  })
+})
+
+describe("R2-3 — die Profil-Identitaet gilt auch im generischen Item-Schreibpfad", () => {
+  it("ein person-Item mit eigener data.did bekommt die DID als id, keine zufaellige", async () => {
+    const { connector, doc, handle } = fakeConnector()
+
+    const created = connector.createItemOnHandle(handle, {
+      type: "person",
+      data: { displayName: "Anton", did: DID },
+    }, "home-space")
+
+    expect(created.id).toBe(DID)
+    expect(Object.keys(doc.items)).toEqual([DID])
+  })
+
+  it("ein zweiter Anlageversuch liefert das vorhandene Profil statt eines zweiten", async () => {
+    const { connector, doc, handle } = fakeConnector()
+    connector.createItemOnHandle(handle, { type: "person", data: { displayName: "Anton", did: DID } }, "home-space")
+
+    connector.createItemOnHandle(handle, { type: "person", data: { displayName: "Zweites", did: DID } }, "home-space")
+
+    expect(Object.keys(doc.items)).toEqual([DID])
+    expect((doc.items[DID].data as Record<string, unknown>).displayName).toBe("Anton")
+  })
+
+  it("ein gewoehnliches Update ohne did loescht den Profil-Marker nicht", async () => {
+    const { connector, doc, handle } = fakeConnector()
+    await connector.updateMyProfile({ displayName: "Anton" })
+
+    connector.applyItemUpdate(handle, DID, { data: { displayName: "Anton Neu" } })
+
+    expect((doc.items[DID].data as Record<string, unknown>).did).toBe(DID)
+  })
+})
+
+describe("R2-4 — der Profil-Schreibpfad haelt die Sitzungsgrenze", () => {
+  it("scheitert laut und schreibt nichts, wenn die Sitzung waehrend des Oeffnens endet", async () => {
+    const { connector, doc, handle } = fakeConnector()
+    connector.homeHandle = null
+    connector.replication.openSpace = vi.fn(async () => {
+      // Identitaetswechsel waehrend des Oeffnens.
+      connector.runtimeGeneration = 2
+      return handle
+    })
+
+    await expect(connector.updateMyProfile({ displayName: "Anton" }))
+      .rejects.toThrow(/persönliche Space|beendeten Sitzung/)
+    expect(doc.items[DID]).toBeUndefined()
+    expect(connector.publishProfile).not.toHaveBeenCalled()
+  })
+
+  it("scheitert laut, wenn der gehaltene Home-Handle waehrend des Oeffnens ausgetauscht wurde", async () => {
+    const { connector, doc, handle } = fakeConnector()
+    const original = connector.ensureHomeHandle.bind(connector)
+    connector.ensureHomeHandle = async () => {
+      const result = await original()
+      // Ein Reconcile hat inzwischen einen anderen Handle installiert.
+      connector.homeHandle = { ...handle, id: "home-space" }
+      return result
+    }
+
+    await expect(connector.updateMyProfile({ displayName: "Anton" }))
+      .rejects.toThrow(/beendeten Sitzung/)
+    expect(doc.items[DID]).toBeUndefined()
+  })
+})
+
+describe("R2-5 — ein spaet eintreffendes doc.profile wird nicht publiziert", () => {
+  it("richtet die Uebergangsprojektion am Item aus, statt den alten Stand zu veroeffentlichen", async () => {
+    const { connector } = fakeConnector()
+    await connector.updateMyProfile({ displayName: "Canonical", bio: "Baut Netze" })
+
+    // Wiederherstellung schiebt einen alten Stand ins PersonalDoc.
+    personalDoc.value.profile = { did: DID, name: "Alter Name", bio: "Alte Bio", avatar: null }
+    connector.lastObservedProfileKey = ""
+    connector.handlePersonalDocProfileChange()
+
+    expect(personalDoc.value.profile).toMatchObject({ name: "Canonical", bio: "Baut Netze" })
+  })
+
+  it("laeuft dabei nicht in eine Schleife: inhaltsgleich ist ein No-op", async () => {
+    const { connector } = fakeConnector()
+    await connector.updateMyProfile({ displayName: "Canonical" })
+    const before = personalDoc.value.profile?.updatedAt
+
+    connector.writeProfileThroughToPersonalDoc(await connector.getMyProfile())
+
+    expect(personalDoc.value.profile?.updatedAt).toBe(before)
+  })
+})
+
+describe("R2-6 — ein abgelehnter Schreibversuch hinterlaesst keinen Eintrag", () => {
+  it("legt die Eltern-Maps erst nach der Pruefung an", async () => {
+    const { connector, doc } = fakeConnector({ spaces: [{ id: "alt" }] })
+
+    await expect(connector.acceptSpace("alt")).rejects.toThrow(/Aufnahme-Kennung/)
+
+    expect(doc.mirrorRegistry?.[mirrorRegistryKey(DID, "alt")]).toBeUndefined()
+  })
+
+  it("ein leerer Eintrag blockiert die Bestandsfreigabe nicht", async () => {
+    const doc: RlsSpaceDoc = {
+      _type: "rls", items: {},
+      mirrorRegistry: { [mirrorRegistryKey(DID, "garten")]: { byDevice: {} } },
+    }
+    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+
+    await connector.queueProfileHomeMaintenance()
+
+    expect(byDevice(doc, "garten")[DEVICE].status).toBe("accepted")
   })
 })

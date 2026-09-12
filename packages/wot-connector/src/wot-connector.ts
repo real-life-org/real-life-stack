@@ -448,6 +448,12 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   private homeHandleUnsub: (() => void) | null = null
   /** Migration, Bestand und Registry-Abgleich der Home-Quelle, serialisiert. */
   private profileHomeMaintenance: Promise<void> = Promise.resolve()
+  /**
+   * Der Adapter hat für das Doc des persönlichen Space in DIESER Sitzung einen
+   * Catch-up gemeldet (Spec 12 Regel 12). Nur dann ist „nichts steht mehr aus"
+   * ein Beweis und nicht bloß „hat noch nicht gemeldet".
+   */
+  private homeCatchUpReported = false
   private contactsUnsub: (() => void) | null = null
   private attestationsUnsub: (() => void) | null = null
 
@@ -937,6 +943,15 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     const data = (item.data ?? {}) as Record<string, unknown>
     const text = (value: unknown): string | null =>
       typeof value === "string" && value ? value : null
+    const current = getYjsPersonalDoc()?.profile
+    // Inhaltsgleich ist ein No-op: `updatedAt` anzufassen machte aus jedem
+    // Abgleich eine neue PersonalDoc-Änderung und damit eine Schleife.
+    if (
+      current
+      && (current.name ?? null) === text(data.displayName)
+      && (current.bio ?? null) === text(data.bio)
+      && (current.avatar ?? null) === text(data.avatarUrl)
+    ) return
     const now = new Date().toISOString()
     changeYjsPersonalDoc((doc: any) => {
       if (!doc.profile) {
@@ -968,11 +983,16 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * zweite Wahrheit über die Item-Form.
    */
   private async writeProfileItem(fields: ProfileItemFields): Promise<Item> {
+    const generation = this.runtimeGeneration
+    const did = this.identity.getDid()
     const handle = await this.ensureHomeHandle()
     if (!handle) {
       throw new Error("Das Profil kann nicht geschrieben werden: der persönliche Space ist nicht verfügbar")
     }
-    const did = this.identity.getDid()
+    // Dieselbe Sitzungsgrenze wie bei den Registry-Schreibpfaden: ein während
+    // des Öffnens geschlossener Handle verwirft seine Transaktion still, und
+    // der Aufrufer läse danach den ALTEN Stand als Erfolg zurück.
+    this.assertHomeSessionUnchanged(generation, handle, did)
 
     const existing = handle.getDoc()?.items?.[did]
     if (!existing) {
@@ -1180,12 +1200,12 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     const { did, deviceId, targetSpaceId, status, currentAdmission, expect } = params
     const key = mirrorRegistryKey(did, targetSpaceId)
 
-    if (!doc.mirrorRegistry) doc.mirrorRegistry = {}
-    if (!doc.mirrorRegistry[key]) doc.mirrorRegistry[key] = { byDevice: {} }
-    const entry = doc.mirrorRegistry[key]!
-    if (!entry.byDevice) entry.byDevice = {}
-    const byDevice = entry.byDevice
-    const view = deriveRegistryView(byDevice)
+    // ERST lesen und prüfen, DANN anlegen. Yjs rollt eine Transaktion beim Wurf
+    // nicht zurück: ein abgelehnter Schreibversuch hinterließe sonst einen
+    // leeren Eintrag `{ byDevice: {} }`, und der zählte später als bereits
+    // getroffene Entscheidung.
+    const existing = doc.mirrorRegistry?.[key]?.byDevice
+    const view = deriveRegistryView(existing ?? {})
     if (expect && !expect(view)) return false
 
     const admission = status === "revoked"
@@ -1196,11 +1216,18 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         `writeRegistryContribution: ${status} für ${targetSpaceId} ohne gültige Aufnahme-Kennung`,
       )
     }
+    const nextStatus = nextStatusSeq(existing ?? {})
+
+    if (!doc.mirrorRegistry) doc.mirrorRegistry = {}
+    if (!doc.mirrorRegistry[key]) doc.mirrorRegistry[key] = { byDevice: {} }
+    const entry = doc.mirrorRegistry[key]!
+    if (!entry.byDevice) entry.byDevice = {}
+    const byDevice = entry.byDevice
 
     const own = byDevice[deviceId]
     const supersedes = status === "accepted" ? supersedesOf(byDevice) : undefined
     byDevice[deviceId] = {
-      statusSeq: nextStatusSeq(byDevice),
+      statusSeq: nextStatus,
       status,
       ...(admission ? { admission } : {}),
       ...(supersedes ? { supersedes } : {}),
@@ -1236,6 +1263,18 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * Gruppen hält). Erwartet eine gerade erzeugte Identität nichts von außen,
    * gibt es nichts zu warten.
    */
+  /**
+   * Merkt sich, dass der Adapter für das Home-Doc überhaupt einen Catch-up
+   * gemeldet hat. Einmal gesetzt, bleibt es gesetzt: ein späterer Catch-up ist
+   * normaler Betrieb.
+   */
+  private noteHomeCatchUp(outstanding: ReadonlyArray<{ docId: string }>): void {
+    if (this.homeCatchUpReported || !this.privateSpaceId) return
+    if (outstanding.some((state) => state.docId === this.privateSpaceId)) {
+      this.homeCatchUpReported = true
+    }
+  }
+
   private isHomeCatchUpSettled(): boolean {
     const homeSpaceId = this.privateSpaceId
     if (!homeSpaceId) return false
@@ -1280,7 +1319,17 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     // neu erschienen durch Regel 4 und wären ausstehend. Beide laufen in je
     // EINER Transaktion — Entscheidung und Schreibvorgang dürfen nicht durch
     // eine `await`-Grenze getrennt sein.
-    this.grantStockMemberships(handle, did, deviceId)
+    //
+    // Die Bestandsregel verlangt ZUSÄTZLICH den beobachteten Catch-up des
+    // Home-Docs: sie gibt pauschal frei, und ein Gerät, das die Marke eines
+    // anderen Geräts noch nicht empfangen hat, gäbe sonst einen inzwischen neu
+    // hinzugekommenen Space pauschal frei, statt ihn nach Regel 4 ausstehend
+    // zu lassen. Läuft sie deshalb auf diesem Gerät nie, ist das
+    // fail-closed: ein anderes Gerät erledigt sie, und bis dahin bleiben die
+    // Spaces ausstehend — in S3 wird ohnehin nichts publiziert.
+    if (this.homeCatchUpReported || !this.authExpectsRemoteData) {
+      this.grantStockMemberships(handle, did, deviceId)
+    }
     this.reconcileProfileRegistry(handle, did, deviceId)
 
     this.syncProfileObservable()
@@ -1343,8 +1392,10 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       // Bestand heißt: eine Mitgliedschaft, über die noch nie entschieden
       // wurde. Ein vorhandener Eintrag ist eine Entscheidung — auch ein
       // Widerruf. Die Übergangsregel darf ihn nie überschreiben.
+      // Ein LEERER Eintrag ist keine Entscheidung: er kann aus einem
+      // abgelehnten Schreibversuch stammen (Yjs rollt beim Wurf nicht zurück).
       const hasEntry = (targetSpaceId: string) =>
-        Boolean(registry[mirrorRegistryKey(did, targetSpaceId)])
+        Object.keys(registry[mirrorRegistryKey(did, targetSpaceId)]?.byDevice ?? {}).length > 0
 
       for (const targetSpaceId of planStockGrants(spaces, handle.id, hasEntry)) {
         this.applyRegistryContribution(doc, {
@@ -1843,12 +1894,20 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     handle.transact((doc) => {
       if (!doc.items) doc.items = {}
-      if (item.id !== undefined && doc.items[item.id]) {
-        result = deserializeItem(doc.items[item.id])
+      const declaredId = item.id ?? (typeof (item.data as Record<string, unknown> | undefined)?.did === "string"
+        ? (item.data as Record<string, string>).did
+        : undefined)
+      if (declaredId !== undefined && doc.items[declaredId]) {
+        result = deserializeItem(doc.items[declaredId])
         return
       }
 
-      let id = item.id
+      // Spec 12 Regel 1: ein person-Item MIT `data.did` IST das Profil dieser
+      // Person — seine `id` ist die DID, auch wenn der Aufrufer keine angibt.
+      // Ohne diese Bindung entstünde über `createItem` ein zweites Profil mit
+      // zufälliger Id (Regel 1: „Eine Person, ein Profil").
+      const declaredDid = (item.data as Record<string, unknown> | undefined)?.did
+      let id = item.id ?? (typeof declaredDid === "string" && declaredDid ? declaredDid : undefined)
       if (id === undefined) {
         do {
           id = crypto.randomUUID()
@@ -1896,6 +1955,12 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       // Item-Schreibpfad das Profil einer Person auf eine fremde DID um — das
       // Profil ist seit diesem Schnitt ein gewöhnliches Item.
       assertProfileDidBinding(updates.data as Record<string, unknown> | undefined, existing.createdBy)
+      // `updates.data` ERSETZT die Daten vollständig; ein Aufrufer, der `did`
+      // nicht nennt, löschte sonst den Profil-Marker und machte aus dem Profil
+      // einen Platzhalter (Regel 3). Der Marker gehört nicht dem Aufrufer.
+      if (updates.data && existing.data?.did && !("did" in updates.data)) {
+        updates = { ...updates, data: { ...updates.data, did: existing.data.did } }
+      }
 
       if (updates.type) existing.type = updates.type
       if (updates.data) {
@@ -2508,6 +2573,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.catchUpRegistry = new CatchUpRegistry()
     this.catchUpUnsub = this.catchUpRegistry.subscribe((overview) => {
       this.initialSync.setOutstanding(overview.syncing)
+      this.noteHomeCatchUp(overview.outstanding)
       // Das Erstsync-Signal des persönlichen Space (Spec 12 Regel 12) kommt aus
       // genau dieser Quelle — Migration und Bestandsregel hängen daran.
       void this.queueProfileHomeMaintenance().catch((error) => {
@@ -2779,6 +2845,17 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     this.lastObservedProfileKey = key
     this.syncProfileObservable()
+    // Spec 12 Regel 12: „Trifft `doc.profile` später ein (Wiederherstellung)
+    // und das Item existiert, gilt das Item." Ein wiederhergestellter alter
+    // Stand darf also nicht publiziert, sondern MUSS am kanonischen Item
+    // ausgerichtet werden — sonst wäre `doc.profile` für Verzeichnisdienst und
+    // Kontaktanzeige eine konkurrierende Quelle. Der Write-through ist
+    // inhaltsgleich ein No-op und läuft deshalb nicht in eine Schleife.
+    const item = this.readProfileItem()
+    if (item) {
+      this.writeProfileThroughToPersonalDoc(item)
+      this.lastObservedProfileKey = JSON.stringify(getYjsPersonalDoc()?.profile ?? null)
+    }
     // A recovered PersonalDoc can arrive after authentication. This retry is
     // content-idempotent and publishProfile does not mutate PersonalDoc.
     void this.publishProfile().catch(() => {})
