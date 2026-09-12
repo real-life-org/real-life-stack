@@ -2207,6 +2207,11 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       // Der Move ist hier woertlich create-im-Ziel plus delete-in-der-Quelle —
       // derselbe Guard wie beim Loeschen, VOR dem ersten Effekt.
       assertMayMutateAuthoredItem(serialized, mover, "delete")
+      // Der Move ist eine Anlage im Ziel — also gilt dort dieselbe Ortsregel
+      // wie fuer jede andere Anlage: ein Profil-Item verlaesst das Home nicht
+      // (Spec 12 Regel 12). Die Pruefung steht VOR der ersten Mutation, sonst
+      // laege das Profil bereits im Ziel, wenn sie faellt.
+      assertProfileLivesInHome(serialized.data as Record<string, unknown> | undefined, targetGroupId, this.privateSpaceId)
 
       // Write to target
       targetHandle = await this.replication.openSpace<RlsSpaceDoc>(targetGroupId)

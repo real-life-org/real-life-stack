@@ -657,3 +657,79 @@ describe("R6-1 — ein Profil entsteht nur im persoenlichen Space (Spec 12 Regel
     expect((await connector.getMyProfile())?.data.displayName).toBe("Anton Neu")
   })
 })
+
+describe("R6-2 — auch der Umzug bringt ein Profil nicht aus dem Home (Codex-Runde 6)", () => {
+  function moveHarness(profileInHome = true) {
+    const docs: Record<string, RlsSpaceDoc> = {
+      "home-space": {
+        _type: "rls",
+        items: profileInHome
+          ? { [DID]: { id: DID, type: "person", createdAt: "", createdBy: DID, data: { displayName: "Anton", did: DID } } as never }
+          : {},
+      } as RlsSpaceDoc,
+      "shared-space": { _type: "rls", items: {} } as RlsSpaceDoc,
+    }
+    const makeHandle = (id: string) => ({
+      id,
+      getDoc: () => docs[id],
+      transact: (fn: (d: RlsSpaceDoc) => void) => { fn(docs[id]) },
+      onRemoteUpdate: () => () => {},
+      close: () => {},
+    })
+    const connector = Object.create(WotConnector.prototype) as any
+    connector.handleReady = Promise.resolve()
+    connector.privateSpaceId = "home-space"
+    connector.identity = { getDid: () => DID }
+    connector.currentGroupId = "home-space"
+    connector.currentHandle = makeHandle("home-space")
+    connector.currentUserObs = { current: { id: DID } }
+    connector.replication = { openSpace: async (id: string) => makeHandle(id) }
+    connector.crossGroupIndex = null
+    connector.activityObservables = new Map()
+    connector.appendActivity = vi.fn()
+    connector.notifyAllObservers = vi.fn()
+    return { connector, docs }
+  }
+
+  it("weist den Umzug des Profil-Items in einen gemeinsamen Space ab und laesst beide Dokumente unberuehrt", async () => {
+    const { connector, docs } = moveHarness()
+
+    await expect(connector.moveItemToGroup(DID, "shared-space")).rejects.toThrow(/Regel 12/)
+
+    expect(docs["shared-space"].items[DID]).toBeUndefined()
+    expect(docs["home-space"].items[DID]).toBeDefined()
+    expect(connector.appendActivity).not.toHaveBeenCalled()
+  })
+
+  it("laesst den Umzug eines Platzhalters ohne data.did zu", async () => {
+    const { connector, docs } = moveHarness(false)
+    docs["home-space"].items["platzhalter"] = {
+      id: "platzhalter", type: "person", createdAt: "", createdBy: DID, data: { displayName: "Dritte Person" },
+    } as never
+
+    await connector.moveItemToGroup("platzhalter", "shared-space")
+
+    expect(docs["shared-space"].items["platzhalter"]).toBeDefined()
+    expect(docs["home-space"].items["platzhalter"]).toBeUndefined()
+  })
+
+  it("weist auch ein Update ohne mitgegebene Daten ab, wenn das Profil-Item im gemeinsamen Space liegt", () => {
+    const doc: RlsSpaceDoc = {
+      _type: "rls",
+      items: {
+        [DID]: { id: DID, type: "person", createdAt: "", createdBy: DID, data: { displayName: "Alt", did: DID }, tags: [] } as never,
+      },
+    }
+    const { connector } = fakeConnector()
+    const shared = {
+      id: "shared-space",
+      getDoc: () => doc,
+      transact: (fn: (d: RlsSpaceDoc) => void) => { fn(doc) },
+      onRemoteUpdate: () => () => {},
+      close: () => {},
+    }
+
+    expect(() => connector.applyItemUpdate(shared, DID, { tags: ["neu"] })).toThrow(/Regel 12/)
+    expect(doc.items[DID].tags).toEqual([])
+  })
+})
