@@ -120,15 +120,26 @@ export function planMembershipTransition(
  *
  * Alt-Spaces ohne Kennung bleiben bewusst draußen — eine Freigabe setzt nach
  * 09 eine gültige Aufnahme voraus. Sie laufen später über Regel 4 (`pending`),
- * sobald Ereignisse auftauchen.
+ * sobald Ereignisse auftauchen. Ebenso draußen bleibt jedes Ziel, für das
+ * bereits ein Registry-Eintrag existiert.
  */
-export function planStockGrants(spaces: readonly SpaceInfo[], homeSpaceId: string): string[] {
+export function planStockGrants(
+  spaces: readonly SpaceInfo[],
+  homeSpaceId: string,
+  hasRegistryEntry: (targetSpaceId: string) => boolean = () => false,
+): string[] {
   return spaces
     .filter((space) =>
       space.id !== homeSpaceId
       && space.type === "shared"
       && space.appTag !== "rls-private"
-      && Boolean(space.admission))
+      && Boolean(space.admission)
+      // Über einen vorhandenen Eintrag wurde bereits entschieden — auch ein
+      // Widerruf ist eine Entscheidung. Die Übergangsregel gilt nur für
+      // Mitgliedschaften, die es vor dieser Spec schon gab, und darf eine
+      // getroffene Entscheidung nie überschreiben, auch nicht, wenn die Marke
+      // dieses Gerät verspätet erreicht.
+      && !hasRegistryEntry(space.id))
     .map((space) => space.id)
 }
 

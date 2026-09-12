@@ -490,11 +490,30 @@ describe("WotConnector profile publish and contact refresh", () => {
   it("publishes the updated profile through discovery before resolving updateProfile", async () => {
     const publishProfile = vi.fn(async () => {})
     const broadcastProfileUpdate = vi.fn(async () => {})
+    // S3: der Schreibpfad geht zuerst ins Profil-Item im persoenlichen Space
+    // (Spec 12 Regel 12), erst der Write-through fuettert den Verzeichnisdienst.
+    const doc: any = { _type: "rls", items: {} }
+    const handle = {
+      id: "home-space",
+      getDoc: () => doc,
+      transact: (fn: (d: any) => void) => { fn(doc) },
+      onRemoteUpdate: () => () => {},
+      close: () => {},
+    }
     const fake = {
       identity: { getDid: () => "did:key:alice" },
       discovery: { publishProfile },
       broadcastProfileUpdate,
       currentUserObs: createObservable<User | null>({ id: "did:key:alice", displayName: "Alice" }),
+      profileObs: createObservable<Item | null>(null),
+      memberObservables: new Map(),
+      privateSpaceId: "home-space",
+      homeHandle: handle,
+      runtimeGeneration: 1,
+      replication: { openSpace: async () => handle },
+      crossGroupIndex: { reindexGroup: vi.fn() },
+      notifyAllObservers: vi.fn(),
+      activityDirty: false,
     }
     Object.setPrototypeOf(fake, WotConnector.prototype)
 
@@ -502,6 +521,8 @@ describe("WotConnector profile publish and contact refresh", () => {
       name: "Alice Neu",
       avatar: "data:image/png;base64,new-avatar",
     })
+
+    expect(doc.items["did:key:alice"]).toBeDefined()
 
     expect(publishProfile).toHaveBeenCalledTimes(1)
     expect(publishProfile).toHaveBeenCalledWith(
@@ -513,6 +534,27 @@ describe("WotConnector profile publish and contact refresh", () => {
       fake.identity,
     )
     expect(broadcastProfileUpdate).toHaveBeenCalledTimes(1)
+  })
+
+  it("scheitert laut, wenn der persoenliche Space nicht erreichbar ist", async () => {
+    // Spec 12 Regel 12: „Alle Schreibpfade ... schreiben das Item." Ein stiller
+    // Teil-Erfolg verloere die Felder, die es in doc.profile gar nicht gibt.
+    const publishProfile = vi.fn(async () => {})
+    const fake = {
+      identity: { getDid: () => "did:key:alice" },
+      discovery: { publishProfile },
+      broadcastProfileUpdate: vi.fn(async () => {}),
+      currentUserObs: createObservable<User | null>({ id: "did:key:alice", displayName: "Alice" }),
+      privateSpaceId: null,
+      homeHandle: null,
+      replication: null,
+    }
+    Object.setPrototypeOf(fake, WotConnector.prototype)
+
+    await expect(
+      WotConnector.prototype.updateProfile.call(fake as any, { name: "Alice Neu" }),
+    ).rejects.toThrow(/persönliche Space/)
+    expect(publishProfile).not.toHaveBeenCalled()
   })
 
   it("skips discovery publishing when the PersonalDoc has no local profile name", async () => {

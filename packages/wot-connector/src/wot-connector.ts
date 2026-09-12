@@ -168,6 +168,7 @@ import {
   planStockGrants,
   profileItemInput,
   supersedesOf,
+  type MirrorRegistryView,
   type ProfileItemFields,
 } from "./mirror/index.js"
 import { CrossGroupIndex } from "./CrossGroupIndex.js"
@@ -231,6 +232,22 @@ const TERMINAL_DELIVERY_STATUSES = new Set<DeliveryStatus>([
 
 function compareActivity(a: ActivityEntry, b: ActivityEntry): number {
   return b.ts.localeCompare(a.ts) || b.actor.localeCompare(a.actor) || b.id.localeCompare(a.id)
+}
+
+/**
+ * Spec 12 Regel 1 und 3: `data.did` unterscheidet Profil von Platzhalter und
+ * MUSS, wenn vorhanden, gleich `createdBy` sein. `null`, leer oder ein
+ * Nicht-String ist kein Platzhalter, sondern ungültig (Regel 8, rls#348).
+ */
+function assertProfileDidBinding(data: Record<string, unknown> | undefined, createdBy: string): void {
+  if (!data || !("did" in data)) return
+  const did = data.did
+  if (typeof did !== "string" || did.length === 0) {
+    throw new Error("data.did muss ein nicht-leerer String sein (Spec 12 Regel 3 und 8)")
+  }
+  if (did !== createdBy) {
+    throw new Error(`data.did (${did}) muss gleich createdBy (${createdBy}) sein (Spec 12 Regel 1)`)
+  }
 }
 
 function projectPersonItem(
@@ -878,29 +895,21 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   }
 
   override async updateMyProfile(updates: Partial<Record<string, unknown>>): Promise<Item> {
-    const item = await this.applyProfileUpdate(normalizeProfileFields(updates))
-    if (item) return item
-
-    // Ohne Home-Space (Anmeldung noch nicht durch, Adapter ohne Replikation)
-    // bleibt die Projektion aus `doc.profile` die beste verfügbare Antwort;
-    // das Item entsteht mit dem nächsten Schreibpfad oder der Migration.
-    const user = (await this.getCurrentUser())!
-    return (await this.getMyProfile()) ?? projectPersonItem(
-      user.id,
-      new Date().toISOString(),
-      user.displayName || getDefaultDisplayName(user.id),
-      undefined,
-      user.avatarUrl,
-    )
+    return this.applyProfileUpdate(normalizeProfileFields(updates))
   }
 
   /**
    * Der EINE Schreibpfad des eigenen Profils (Spec 12 Regel 12). Die
    * Gegenrichtung `doc.profile` → Item gibt es außerhalb der Migration nicht.
+   *
+   * Ohne erreichbares Home scheitert der Aufruf LAUT: „Alle Schreibpfade
+   * schreiben das Item" (Regel 12). Ein stiller Teil-Erfolg — `doc.profile`
+   * und Verzeichnisdienst geschrieben, das Item nicht — verlöre alle Felder,
+   * die es in der Übergangsprojektion gar nicht gibt (`position`, `address`,
+   * `locationName`), und meldete der Oberfläche trotzdem Erfolg.
    */
-  private async applyProfileUpdate(fields: ProfileItemFields): Promise<Item | null> {
+  private async applyProfileUpdate(fields: ProfileItemFields): Promise<Item> {
     const item = await this.writeProfileItem(fields)
-    this.writeProfileThroughToPersonalDoc(fields)
     // OfflineFirstDiscoveryAdapter turns network failure into a dirty profile
     // that syncPending() retries on init/online/visibility. Awaiting here makes
     // sure the dirty marker exists before the UI considers the update complete.
@@ -911,12 +920,23 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
   /**
    * Write-through der Übergangsprojektion (Spec 12 Regel 12):
-   * `displayName → name`, `bio → bio`, `avatarUrl → avatar`. Die Ortsfelder
-   * bleiben ausdrücklich draußen — `position` erreicht den Verzeichnisdienst
-   * nie (Regel 11).
+   * `displayName → name`, `bio → bio`, `avatarUrl → avatar`.
+   *
+   * Quelle ist das RESULTIERENDE Item, nicht die Eingabe des Aufrufers: das
+   * Item ist die kanonische Quelle, und ein verspätet eingetroffenes
+   * `doc.profile` darf nicht stehenbleiben, nur weil der letzte Schreibvorgang
+   * dieses Feld nicht genannt hat — sonst publizierte der Verzeichnisdienst
+   * einen Stand, den es nirgends gibt.
+   *
+   * Die Ortsfelder bleiben ausdrücklich draußen: `position` erreicht den
+   * Verzeichnisdienst nie (Regel 11).
    */
-  private writeProfileThroughToPersonalDoc(fields: ProfileItemFields): void {
+  private writeProfileThroughToPersonalDoc(item: Item | null): void {
+    if (!item) return
     const did = this.identity.getDid()
+    const data = (item.data ?? {}) as Record<string, unknown>
+    const text = (value: unknown): string | null =>
+      typeof value === "string" && value ? value : null
     const now = new Date().toISOString()
     changeYjsPersonalDoc((doc: any) => {
       if (!doc.profile) {
@@ -931,9 +951,9 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
           updatedAt: now,
         }
       }
-      if (fields.displayName !== undefined) doc.profile.name = fields.displayName || null
-      if (fields.bio !== undefined) doc.profile.bio = fields.bio || null
-      if (fields.avatarUrl !== undefined) doc.profile.avatar = fields.avatarUrl || null
+      doc.profile.name = text(data.displayName)
+      doc.profile.bio = text(data.bio)
+      doc.profile.avatar = text(data.avatarUrl)
       doc.profile.updatedAt = now
     })
   }
@@ -947,24 +967,45 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * schreibt den Aktivitätseintrag. Ein zweiter Anlagepfad daneben wäre eine
    * zweite Wahrheit über die Item-Form.
    */
-  private async writeProfileItem(fields: ProfileItemFields): Promise<Item | null> {
+  private async writeProfileItem(fields: ProfileItemFields): Promise<Item> {
     const handle = await this.ensureHomeHandle()
-    if (!handle) return null
+    if (!handle) {
+      throw new Error("Das Profil kann nicht geschrieben werden: der persönliche Space ist nicht verfügbar")
+    }
     const did = this.identity.getDid()
 
     const existing = handle.getDoc()?.items?.[did]
     if (!existing) {
-      const created = this.createItemOnHandle(handle, profileItemInput(did, fields), handle.id)
-      this.syncProfileObservable()
-      return created
+      // `createItemOnHandle` und `applyItemUpdate` melden die Änderung des
+      // Profil-Items selbst weiter (Observable + Write-through), damit auch der
+      // gewöhnliche Item-Schreibpfad sie nicht umgehen kann.
+      return this.createItemOnHandle(handle, profileItemInput(did, fields), handle.id)
     }
 
     const data = mergeProfileData(did, deserializeItem(existing).data as Record<string, unknown>, fields)
     this.applyItemUpdate(handle, did, { data, "@context": deriveContext("person", data) })
     this.crossGroupIndex?.reindexGroup(handle.id)
     this.notifyAllObservers(true)
+    const item = this.readProfileItemFrom(handle)
+    if (!item) throw new Error("Das Profil-Item ist nach dem Schreiben nicht lesbar")
+    return item
+  }
+
+  /**
+   * Jede Änderung des Profil-Items — gleich über welchen Schreibpfad — hält die
+   * Übergangsprojektion und das Profil-Observable nach (Spec 12 Regel 12).
+   *
+   * Der Hook sitzt bewusst im GENERISCHEN Item-Schreibpfad: das Profil ist seit
+   * diesem Schnitt ein gewöhnliches Item, `updateItem` erreicht es also auch.
+   */
+  private noteProfileItemChanged(handle: SpaceHandle<RlsSpaceDoc>, itemId: string): void {
+    // Schmale Laufzeit-Seams binden `createItemOnHandle`/`applyItemUpdate` an
+    // Objekte ohne Identität und ohne persönlichen Space; dort gibt es kein
+    // Profil-Item, das nachzuhalten wäre.
+    if (!this.privateSpaceId || !this.identity || handle.id !== this.privateSpaceId) return
+    if (itemId !== this.identity.getDid()) return
     this.syncProfileObservable()
-    return this.readProfileItem()
+    this.writeProfileThroughToPersonalDoc(this.readProfileItemFrom(handle))
   }
 
   /**
@@ -1001,10 +1042,21 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.homeHandle = null
   }
 
-  /** Fremde Geräte-Beiträge und fremde Profil-Änderungen im Home-Doc. */
+  /**
+   * Fremde Geräte-Beiträge und fremde Profil-Änderungen im Home-Doc.
+   *
+   * „Änderung der Registry (auch von einem anderen Gerät)" ist ein ausdrücklicher
+   * Auslöser des Abgleichs (Spec 12 Regel 5, Spec 09 §Ablage und Registry) —
+   * nicht nur der Anzeige: ein fremder `accepted`-Beitrag für einen Space, den
+   * dieses Gerät gar nicht mehr sieht, muss nach 09 Invariante 11 widerrufen
+   * werden.
+   */
   private onHomeDocChanged(): void {
     this.syncProfileObservable()
     this.refreshProfileShares()
+    void this.queueProfileHomeMaintenance().catch((error) => {
+      console.warn("[WotConnector] Profil-Home-Pflege verschoben", error)
+    })
   }
 
   override observeProfileShares(): Observable<Record<string, ProfileShareStatus>> {
@@ -1053,58 +1105,111 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * - `seq`, `tiebreak` und `publishedHash` gehören der Publikation (S4) und
    *   werden hier nur weitergereicht: ein Statuswechsel publiziert nichts.
    *
-   * Erwartung: Lesen und Schreiben liegen in EINER Transaktion, der eigene
-   * Beitrag kann sich dazwischen also nicht verändert haben.
+   * Erwartung: Lesen und Schreiben liegen in EINER Transaktion; Entscheidungen,
+   * die davor aus der Lesesicht abgeleitet wurden, werden über `expect` in der
+   * Transaktion erneut geprüft (siehe {@link applyRegistryContribution}).
    */
   private async writeRegistryContribution(
     targetSpaceId: string,
     status: ProfileShareStatus,
     options: { admission?: SpaceAdmission } = {},
   ): Promise<void> {
-    if (!targetSpaceId) throw new Error("writeRegistryContribution: targetSpaceId fehlt")
-    if (targetSpaceId === this.privateSpaceId) {
-      throw new Error("writeRegistryContribution: der persönliche Space ist das Home, nie ein Ziel")
-    }
+    const generation = this.runtimeGeneration
+    const did = this.identity.getDid()
     const handle = await this.ensureHomeHandle()
     if (!handle) throw new Error("writeRegistryContribution: persönlicher Space nicht verfügbar")
-
-    const did = this.identity.getDid()
     const deviceId = await this.resolveMirrorDeviceId()
-    const currentAdmission = options.admission ?? this.admissionOfSpace(targetSpaceId)
-    const key = mirrorRegistryKey(did, targetSpaceId)
+    this.assertHomeSessionUnchanged(generation, handle, did)
 
     handle.transact((doc) => {
-      if (!doc.mirrorRegistry) doc.mirrorRegistry = {}
-      if (!doc.mirrorRegistry[key]) doc.mirrorRegistry[key] = { byDevice: {} }
-      const entry = doc.mirrorRegistry[key]!
-      if (!entry.byDevice) entry.byDevice = {}
-      const byDevice = entry.byDevice
-      const view = deriveRegistryView(byDevice)
-
-      const admission = status === "revoked"
-        ? maxAdmission(view?.admission, currentAdmission)
-        : (currentAdmission ? { keyGeneration: currentAdmission.keyGeneration } : undefined)
-      if (status !== "revoked" && !admission) {
-        throw new Error(
-          `writeRegistryContribution: ${status} für ${targetSpaceId} ohne gültige Aufnahme-Kennung`,
-        )
-      }
-
-      const own = byDevice[deviceId]
-      const supersedes = status === "accepted" ? supersedesOf(byDevice) : undefined
-      byDevice[deviceId] = {
-        statusSeq: nextStatusSeq(byDevice),
+      this.applyRegistryContribution(doc, {
+        did,
+        deviceId,
+        targetSpaceId,
         status,
-        ...(admission ? { admission } : {}),
-        ...(supersedes ? { supersedes } : {}),
-        seq: own?.seq ?? 0,
-        tiebreak: own?.tiebreak ?? "",
-        ...(own?.publishedHash ? { publishedHash: own.publishedHash } : {}),
-        updatedAt: new Date().toISOString(),
-      }
+        currentAdmission: options.admission ?? this.admissionOfSpace(targetSpaceId),
+      })
     })
 
     this.refreshProfileShares()
+  }
+
+  /**
+   * Die Sitzungsgrenze der Registry-Schreibpfade.
+   *
+   * Zwischen dem Öffnen des Home-Handles und dem Auflösen der `deviceId` liegen
+   * `await`-Grenzen; ein Logout oder Identitätswechsel dazwischen darf nicht in
+   * das Home der VORIGEN Person schreiben — und schon gar nicht mit einer
+   * Aufnahme-Kennung aus der neuen Replikation.
+   */
+  private assertHomeSessionUnchanged(
+    generation: number,
+    handle: SpaceHandle<RlsSpaceDoc>,
+    did: string,
+  ): void {
+    if (
+      this.runtimeGeneration !== generation
+      || this.homeHandle !== handle
+      || this.privateSpaceId !== handle.id
+      || this.identity.getDid() !== did
+    ) {
+      throw new Error("Die Registry-Änderung gehört zu einer beendeten Sitzung")
+    }
+  }
+
+  /**
+   * Der Beitrag dieses Geräts, IN der Transaktion angewandt.
+   *
+   * `expect` ist die Erwartung aus der Linse: eine Entscheidung, die vor der
+   * Transaktion aus der Lesesicht abgeleitet wurde, wird hier gegen die
+   * inzwischen gültige Lesesicht erneut geprüft. Ohne sie ersetzte ein
+   * verspäteter Abgleichs-Beitrag einen nebenläufig geschriebenen
+   * Statuswechsel derselben Sitzung.
+   */
+  private applyRegistryContribution(
+    doc: RlsSpaceDoc,
+    params: {
+      did: string
+      deviceId: string
+      targetSpaceId: string
+      status: ProfileShareStatus
+      currentAdmission: SpaceAdmission | undefined
+      expect?: (view: MirrorRegistryView | null) => boolean
+    },
+  ): boolean {
+    const { did, deviceId, targetSpaceId, status, currentAdmission, expect } = params
+    const key = mirrorRegistryKey(did, targetSpaceId)
+
+    if (!doc.mirrorRegistry) doc.mirrorRegistry = {}
+    if (!doc.mirrorRegistry[key]) doc.mirrorRegistry[key] = { byDevice: {} }
+    const entry = doc.mirrorRegistry[key]!
+    if (!entry.byDevice) entry.byDevice = {}
+    const byDevice = entry.byDevice
+    const view = deriveRegistryView(byDevice)
+    if (expect && !expect(view)) return false
+
+    const admission = status === "revoked"
+      ? maxAdmission(view?.admission, currentAdmission)
+      : (currentAdmission ? { keyGeneration: currentAdmission.keyGeneration } : undefined)
+    if (status !== "revoked" && !admission) {
+      throw new Error(
+        `writeRegistryContribution: ${status} für ${targetSpaceId} ohne gültige Aufnahme-Kennung`,
+      )
+    }
+
+    const own = byDevice[deviceId]
+    const supersedes = status === "accepted" ? supersedesOf(byDevice) : undefined
+    byDevice[deviceId] = {
+      statusSeq: nextStatusSeq(byDevice),
+      status,
+      ...(admission ? { admission } : {}),
+      ...(supersedes ? { supersedes } : {}),
+      seq: own?.seq ?? 0,
+      tiebreak: own?.tiebreak ?? "",
+      ...(own?.publishedHash ? { publishedHash: own.publishedHash } : {}),
+      updatedAt: new Date().toISOString(),
+    }
+    return true
   }
 
   /**
@@ -1158,15 +1263,25 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   private async runProfileHomeMaintenance(): Promise<void> {
     const generation = this.runtimeGeneration
     if (!this.isHomeCatchUpSettled()) return
+    const did = this.identity.getDid()
     const handle = await this.ensureHomeHandle()
-    if (!handle || this.runtimeGeneration !== generation) return
+    if (!handle) return
+    const deviceId = await this.resolveMirrorDeviceId()
+    // Alles Weitere schreibt ins Home der Person; die Sitzung muss dieselbe sein.
+    if (
+      this.runtimeGeneration !== generation
+      || this.homeHandle !== handle
+      || this.privateSpaceId !== handle.id
+      || this.identity.getDid() !== did
+    ) return
 
     this.migrateProfileItem(handle)
     // Bestand VOR dem `pending`-Pfad: sonst liefen die Bestands-Spaces als
-    // neu erschienen durch Regel 4 und wären ausstehend.
-    await this.grantStockMemberships(handle)
-    await this.reconcileProfileRegistry(handle)
-    if (this.runtimeGeneration !== generation) return
+    // neu erschienen durch Regel 4 und wären ausstehend. Beide laufen in je
+    // EINER Transaktion — Entscheidung und Schreibvorgang dürfen nicht durch
+    // eine `await`-Grenze getrennt sein.
+    this.grantStockMemberships(handle, did, deviceId)
+    this.reconcileProfileRegistry(handle, did, deviceId)
 
     this.syncProfileObservable()
     this.refreshProfileShares()
@@ -1211,20 +1326,38 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * wenn es keine einzige Bestands-Mitgliedschaft gibt: sonst liefe die Regel
    * später über Spaces, die nach Regel 4 ausstehend sein müssten.
    */
-  private async grantStockMemberships(handle: SpaceHandle<RlsSpaceDoc>): Promise<void> {
-    if (handle.getDoc()?.profileMigration?.bestandAt) return
-
+  private grantStockMemberships(
+    handle: SpaceHandle<RlsSpaceDoc>,
+    did: string,
+    deviceId: string,
+  ): void {
     const spaces = this.replication?.watchSpaces().getValue() ?? []
-    for (const targetSpaceId of planStockGrants(spaces, handle.id)) {
-      await this.writeRegistryContribution(targetSpaceId, "accepted")
-    }
 
     handle.transact((doc) => {
+      // Prüfung und Schreibvorgänge in EINER Transaktion: sonst könnte ein
+      // zweites Gerät zwischen Prüfung und Marke die Migration abschließen und
+      // eine Freigabe widerrufen, und dieser Durchlauf stellte sie wieder her.
+      if (doc.profileMigration?.bestandAt) return
+
+      const registry = doc.mirrorRegistry ?? {}
+      // Bestand heißt: eine Mitgliedschaft, über die noch nie entschieden
+      // wurde. Ein vorhandener Eintrag ist eine Entscheidung — auch ein
+      // Widerruf. Die Übergangsregel darf ihn nie überschreiben.
+      const hasEntry = (targetSpaceId: string) =>
+        Boolean(registry[mirrorRegistryKey(did, targetSpaceId)])
+
+      for (const targetSpaceId of planStockGrants(spaces, handle.id, hasEntry)) {
+        this.applyRegistryContribution(doc, {
+          did,
+          deviceId,
+          targetSpaceId,
+          status: "accepted",
+          currentAdmission: spaces.find((space) => space.id === targetSpaceId)?.admission,
+        })
+      }
+
       if (!doc.profileMigration) doc.profileMigration = {}
-      // Monoton: eine vorhandene Marke wird NIE überschrieben. Setzen zwei
-      // Geräte sie nebenläufig, schreibt jedes nur seine eigenen
-      // `byDevice`-Beiträge — die Faltung macht den doppelten Durchlauf
-      // harmlos.
+      // Monoton: eine vorhandene Marke wird NIE überschrieben.
       if (!doc.profileMigration.bestandAt) doc.profileMigration.bestandAt = new Date().toISOString()
     })
   }
@@ -1239,32 +1372,44 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * Wiederaufnahme und führt ebenfalls zu `pending`; ein Abfall oder Wegfall
    * ist Mitgliedschaftsverlust und führt zu `revoked`.
    */
-  private async reconcileProfileRegistry(handle: SpaceHandle<RlsSpaceDoc>): Promise<void> {
-    const did = this.identity.getDid()
-    const registry = handle.getDoc()?.mirrorRegistry ?? {}
-    const viewOf = (targetSpaceId: string) =>
-      deriveRegistryView(registry[mirrorRegistryKey(did, targetSpaceId)]?.byDevice ?? {})
-
+  private reconcileProfileRegistry(
+    handle: SpaceHandle<RlsSpaceDoc>,
+    did: string,
+    deviceId: string,
+  ): void {
     const visible = (this.replication?.watchSpaces().getValue() ?? [])
       .filter((space) => space.id !== handle.id && space.type === "shared" && space.appTag !== "rls-private")
-
-    for (const space of visible) {
-      const transition = planMembershipTransition(viewOf(space.id), space.admission)
-      if (transition) {
-        await this.writeRegistryContribution(space.id, transition.status, { admission: space.admission })
-      }
-    }
-
-    // Ein Eintrag, dessen Ziel-Space gar nicht mehr sichtbar ist: die
-    // Mitgliedschaft ist weg (09 Invariante 11). Der Eintrag wird widerrufen,
-    // nie gelöscht.
     const seen = new Set(visible.map((space) => space.id))
-    for (const key of Object.keys(registry)) {
-      const parsed = parseMirrorRegistryKey(key)
-      if (!parsed || parsed.itemId !== did || seen.has(parsed.targetSpaceId)) continue
-      const transition = planMembershipTransition(viewOf(parsed.targetSpaceId), undefined)
-      if (transition) await this.writeRegistryContribution(parsed.targetSpaceId, transition.status)
-    }
+
+    handle.transact((doc) => {
+      const registry = doc.mirrorRegistry ?? {}
+      const apply = (targetSpaceId: string, admission: SpaceAdmission | undefined) => {
+        const view = deriveRegistryView(registry[mirrorRegistryKey(did, targetSpaceId)]?.byDevice ?? {})
+        const transition = planMembershipTransition(view, admission)
+        if (!transition) return
+        this.applyRegistryContribution(doc, {
+          did,
+          deviceId,
+          targetSpaceId,
+          status: transition.status,
+          currentAdmission: admission,
+          // Erwartung: die Entscheidung gilt nur, solange sie aus der Lesesicht
+          // in dieser Transaktion noch folgt.
+          expect: (current) => planMembershipTransition(current, admission)?.status === transition.status,
+        })
+      }
+
+      for (const space of visible) apply(space.id, space.admission)
+
+      // Ein Eintrag, dessen Ziel-Space gar nicht mehr sichtbar ist: die
+      // Mitgliedschaft ist weg (09 Invariante 11). Der Eintrag wird
+      // widerrufen, nie gelöscht.
+      for (const key of Object.keys(registry)) {
+        const parsed = parseMirrorRegistryKey(key)
+        if (!parsed || parsed.itemId !== did || seen.has(parsed.targetSpaceId)) continue
+        apply(parsed.targetSpaceId, undefined)
+      }
+    })
   }
 
   override async acceptSpace(spaceId: string): Promise<void> {
@@ -1302,6 +1447,10 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   private readProfileItem(): Item | null {
     const handle = this.homeHandle
     if (!handle || handle.id !== this.privateSpaceId) return null
+    return this.readProfileItemFrom(handle)
+  }
+
+  private readProfileItemFrom(handle: SpaceHandle<RlsSpaceDoc>): Item | null {
     try {
       const serialized = handle.getDoc()?.items?.[this.identity.getDid()]
       return serialized ? deserializeItem(serialized) : null
@@ -1716,6 +1865,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         // invent a foreign author and then hide behind their protection.
         createdBy: author,
       } as Item
+      assertProfileDidBinding(newItem.data as Record<string, unknown> | undefined, author)
       doc.items[id] = serializeItem(newItem)
       this.appendActivity(doc, "create", newItem)
       result = newItem
@@ -1727,6 +1877,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       this.crossGroupIndex?.reindexGroup(spaceId)
       this.notifyAllObservers(true)
     }
+    this.noteProfileItemChanged(handle, (result as Item).id)
     return result
   }
 
@@ -1740,6 +1891,11 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       // It keeps honest clients honest — see isAuthoredSystemItem.
       assertMayMutateAuthoredItem(existing, actor, "update")
       assertAuthoredTypeUnchanged(existing, updates)
+      // Spec 12 Regel 1 und 3: ist `data.did` vorhanden, MUSS es gleich
+      // `createdBy` sein. Ohne diese Schranke schriebe der GEWÖHNLICHE
+      // Item-Schreibpfad das Profil einer Person auf eine fremde DID um — das
+      // Profil ist seit diesem Schnitt ein gewöhnliches Item.
+      assertProfileDidBinding(updates.data as Record<string, unknown> | undefined, existing.createdBy)
 
       if (updates.type) existing.type = updates.type
       if (updates.data) {
@@ -1773,6 +1929,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       existing.updatedBy = actor
       this.appendActivity(doc, "update", deserializeItem(existing))
     })
+    this.noteProfileItemChanged(handle, id)
   }
 
   override async updateItem(id: string, updates: Partial<Item>): Promise<Item> {
