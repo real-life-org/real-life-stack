@@ -221,11 +221,12 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    Abgleich als Zielzustand, Reparatur). Profil-spezifisch: die Registry
    liegt im persönlichen Space; der Eintrag trägt zusätzlich den Status
    `pending` und die Aufnahme-Kennung `admission` (Regel 4); der Status
-   folgt der höchsten `admission` (nach `keyGeneration` geordnet) und
-   innerhalb derselben `admission` der Widerrufs-Kausalität aus 09:
-   `revoked`, wenn ein Widerruf existiert, den keine Annahme per
-   `supersedes` abdeckt; sonst `pending`, wenn ein `pending`-Beitrag
-   existiert, den keine Annahme abdeckt; sonst `accepted`. So gewinnt ein
+   folgt der Widerrufs-Kausalität aus 09: `revoked`, wenn ein Widerruf
+   existiert, den keine Annahme per `supersedes` abdeckt, gleich welche
+   `admission` er trägt; sonst nach der höchsten `admission` (nach
+   `keyGeneration` geordnet, keine Kennung unter jeder) `pending`, wenn
+   dort ein `pending`-Beitrag existiert, den keine Annahme abdeckt;
+   sonst `accepted`. So gewinnt ein
    Widerruf nie gegen eine nebenläufige Annahme nur deshalb, weil deren
    Wert zuletzt geschrieben wurde, und
    `max(seq aller Einträge dieses itemId)` in Regel 5 bleibt monoton.
