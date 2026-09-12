@@ -183,7 +183,16 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
 8. **Empfängerprüfung, verschärft.** Zusätzlich zu 09 Invariante 6 MUSS
    ein Empfänger bei jedem Profil-Schnappschuss, Live wie Tombstone,
    `itemId === authorDid` prüfen und bei Live-Schnappschüssen
-   (`item ≠ null`) zusätzlich `item.data.did === authorDid`. Außerdem
+   (`item ≠ null`) zusätzlich `item.data.did === authorDid`. Ein
+   Tombstone trägt kein Item, an dem ein Profil erkennbar wäre; deshalb
+   gilt die Regel an der `itemId`: jede `itemId` mit Präfix `did:` MUSS
+   gleich `authorDid` sein, Live wie Tombstone. Sonst könnten Fremde
+   unter dem Profil-Schlüssel einer Person Marken und Herkunftskonflikte
+   erzeugen, die eine Fläche der Inhaberin zuschreibt (die Marke selbst
+   sperrt nach 09 Invariante 6 nur den fremden Autor). Ist `data.did` in
+   einem `person`-Item vorhanden, MUSS es ein nichtleerer String sein
+   (Regel 3); `null`, leer oder ein Nicht-String ist kein Platzhalter,
+   sondern ein ungültiger Schnappschuss. Außerdem
    MUSS der Schlüssel der `mirrors`-Map, unter dem die JWS liegt, gleich
    `JSON.stringify([payload.homeSpaceId, payload.itemId])` sein, und
    `payload.targetSpaceId` gleich dem eigenen Space (09 Invariante 4).
