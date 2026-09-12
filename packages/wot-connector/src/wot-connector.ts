@@ -164,6 +164,7 @@ import {
   nextStatusSeq,
   normalizeProfileFields,
   parseMirrorRegistryKey,
+  planMembershipTransition,
   planStockGrants,
   profileItemInput,
   supersedesOf,
@@ -1146,7 +1147,9 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * `pending`-Pfad liegen — sonst würden Bestands-Spaces ausstehend.
    */
   private queueProfileHomeMaintenance(): Promise<void> {
-    this.profileHomeMaintenance = this.profileHomeMaintenance
+    // Gleiche Vorsicht wie bei `profilePublishInFlight`: schmale Laufzeit-Seams
+    // binden echte Methoden an Objekte ohne die Klassenfelder.
+    this.profileHomeMaintenance = (this.profileHomeMaintenance ??= Promise.resolve())
       .catch(() => {})
       .then(() => this.runProfileHomeMaintenance())
     return this.profileHomeMaintenance
@@ -1159,7 +1162,10 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     if (!handle || this.runtimeGeneration !== generation) return
 
     this.migrateProfileItem(handle)
+    // Bestand VOR dem `pending`-Pfad: sonst liefen die Bestands-Spaces als
+    // neu erschienen durch Regel 4 und wären ausstehend.
     await this.grantStockMemberships(handle)
+    await this.reconcileProfileRegistry(handle)
     if (this.runtimeGeneration !== generation) return
 
     this.syncProfileObservable()
@@ -1177,7 +1183,15 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   private migrateProfileItem(handle: SpaceHandle<RlsSpaceDoc>): void {
     const did = this.identity.getDid()
     if (handle.getDoc()?.items?.[did]) return
-    const profile = getYjsPersonalDoc()?.profile
+    // Das PersonalDoc kann noch nicht bereitstehen (es wirft dann). Das ist
+    // kein Fehler der Pflege, sondern „nichts zu migrieren" — und es darf die
+    // Kette aus Bestandsregel und Abgleich nicht abbrechen.
+    let profile: { name?: string | null; bio?: string | null; avatar?: string | null } | null | undefined
+    try {
+      profile = getYjsPersonalDoc()?.profile
+    } catch {
+      return
+    }
     if (!profile) return
 
     this.createItemOnHandle(handle, profileItemInput(did, {
@@ -1213,6 +1227,69 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       // harmlos.
       if (!doc.profileMigration.bestandAt) doc.profileMigration.bestandAt = new Date().toISOString()
     })
+  }
+
+  /**
+   * Der Abgleich der Registry gegen die Mitgliedschaftslage (Spec 12 Regel 4
+   * und 7, Spec 09 §Ablage und Registry).
+   *
+   * Ein neu erschienener Space wird `pending` — nie still `accepted`: die
+   * Mitgliedschaft entsteht im heutigen Protokoll ohne Zutun der Person, die
+   * Freigabe ist die Annahme. Jeder Anstieg der Kennung ist eine
+   * Wiederaufnahme und führt ebenfalls zu `pending`; ein Abfall oder Wegfall
+   * ist Mitgliedschaftsverlust und führt zu `revoked`.
+   */
+  private async reconcileProfileRegistry(handle: SpaceHandle<RlsSpaceDoc>): Promise<void> {
+    const did = this.identity.getDid()
+    const registry = handle.getDoc()?.mirrorRegistry ?? {}
+    const viewOf = (targetSpaceId: string) =>
+      deriveRegistryView(registry[mirrorRegistryKey(did, targetSpaceId)]?.byDevice ?? {})
+
+    const visible = (this.replication?.watchSpaces().getValue() ?? [])
+      .filter((space) => space.id !== handle.id && space.type === "shared" && space.appTag !== "rls-private")
+
+    for (const space of visible) {
+      const transition = planMembershipTransition(viewOf(space.id), space.admission)
+      if (transition) {
+        await this.writeRegistryContribution(space.id, transition.status, { admission: space.admission })
+      }
+    }
+
+    // Ein Eintrag, dessen Ziel-Space gar nicht mehr sichtbar ist: die
+    // Mitgliedschaft ist weg (09 Invariante 11). Der Eintrag wird widerrufen,
+    // nie gelöscht.
+    const seen = new Set(visible.map((space) => space.id))
+    for (const key of Object.keys(registry)) {
+      const parsed = parseMirrorRegistryKey(key)
+      if (!parsed || parsed.itemId !== did || seen.has(parsed.targetSpaceId)) continue
+      const transition = planMembershipTransition(viewOf(parsed.targetSpaceId), undefined)
+      if (transition) await this.writeRegistryContribution(parsed.targetSpaceId, transition.status)
+    }
+  }
+
+  override async acceptSpace(spaceId: string): Promise<void> {
+    // Die Annahme IST die Freigabe nach 09 Invariante 3 und 4 (Spec 12 Regel 4).
+    await this.writeRegistryContribution(spaceId, "accepted")
+  }
+
+  override async shareProfile(spaceId: string): Promise<void> {
+    await this.writeRegistryContribution(spaceId, "accepted")
+  }
+
+  override async declineSpace(spaceId: string): Promise<void> {
+    // Reihenfolge aus Regel 4 und 6: ERST widerrufen, DANN verlassen. Nach dem
+    // Verlassen ist der Ziel-Space nicht mehr erreichbar.
+    await this.writeRegistryContribution(spaceId, "revoked")
+    await this.deleteGroup(spaceId)
+  }
+
+  override async revokeProfileShare(spaceId: string): Promise<void> {
+    // TODO(S4): Spec 12 Regel 6 verlangt absturzsicher ERST den signierten
+    // Tombstone in die dauerhafte Outbox, DANN `revoked`. Die Outbox und die
+    // Publikation gehören zur Bridge (S4); bis dahin wird nur der
+    // Registry-Status gesetzt — kein Mirror ist bis dahin publiziert, also
+    // gibt es auch keinen, der ohne Tombstone lesbar bliebe.
+    await this.writeRegistryContribution(spaceId, "revoked")
   }
 
   /** Wie die Benachrichtigungs-Slots: bewusst bei jeder Mutation aufgelöst — ein wiederhergestellter Klon bekommt einen neuen Schlüssel. */
@@ -1352,6 +1429,16 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     const space = await this.replication.createSpace("shared", initialDoc, { name, appTag: RLS_SPACE_TYPE, modules })
     const group = this.spaceToGroup(space)
+
+    // Spec 12 Regel 4: „Wer einen Space selbst erstellt, gibt sein Profil dort
+    // mit dem Erstellen frei." Schlaegt das fehl (noch keine Aufnahme-Kennung
+    // im frisch angelegten Doc), bleibt der Space ohne Eintrag und laeuft beim
+    // naechsten Abgleich ueber `pending` — nie still ohne Freigabe publiziert.
+    try {
+      await this.writeRegistryContribution(space.id, "accepted", { admission: space.admission })
+    } catch (error) {
+      console.warn("[WotConnector] Profil-Freigabe fuer den neuen Space verschoben", error)
+    }
 
     // Auto-select first group
     if (!this.currentGroupId) {
@@ -2773,6 +2860,11 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     this.groupsCache = realGroups
     this.publishInitialSyncCounts()
+    // Aenderung der Mitgliedschaften oder der Aufnahme-Kennung ist ein Ausloeser
+    // des Abgleichs (Spec 12 Regel 5, Spec 09 §Ablage und Registry).
+    void this.queueProfileHomeMaintenance().catch((error) => {
+      console.warn("[WotConnector] Profil-Home-Pflege verschoben", error)
+    })
 
     // Update the reactive observable (inherited from BaseConnector)
     this.groupsObservable.set([...this.groupsCache])
