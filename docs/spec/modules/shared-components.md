@@ -81,6 +81,28 @@ interface ContentComposerSubmitData {
 
 **Spec:** [01-app-composition.md → Module Components](../01-app-composition.md)
 
+#### Personenfelder (`people`)
+
+**Zweck:** Ein Typ kann MEHRERE Personen-Zuweisungen führen — eine Aufgabe z.B. „Kann ich" (`assignedTo`) und „Will lernen" (`wantsToLearn`). Dafür gibt es **keine zweite Komponente und keinen zweiten Composer**: dasselbe `people`-Widget wird je deklariertem Eintrag einmal gerendert.
+
+```ts
+interface ContentTypeConfig {
+  /** Kurzform für genau ein Personenfeld. */
+  peopleRelation?: { predicate: string }
+  /** Mehrere Personenfelder, in Renderreihenfolge. */
+  peopleRelations?: readonly { predicate: string; label: string; dataKey?: string }[]
+}
+```
+
+**Regeln (normativ):**
+
+1. `peopleRelations` gewinnt über `peopleRelation`; die Einzahl-Form bleibt gültig und bedeutet genau einen Eintrag.
+2. Der Datenschlüssel ist `data.people` für den ersten (bzw. einzigen) Eintrag und `data.people:<predicate>` für jeden weiteren; ein gesetztes `dataKey` gewinnt. Ein Eintrag beschriftet sein Feld über `label`; ohne `peopleRelations` gilt weiter `widgetLabels.people`.
+3. Alle Felder teilen sich `peopleOptions`, `peopleSuggestions` und `peopleQuickSuggestions` sowie den einen `people`-Eintrag in `defaultWidgets` — der Typ schaltet die Personenfelder gemeinsam ein.
+4. Beim Speichern schreibt der Mapper je Feld die Relationen seines Prädikats (`global:<userId>`); Relationen anderer Prädikate — auch die eines nicht eingereichten Personenfeldes — bleiben unverändert. Die Vorbefüllung liest je Prädikat zurück.
+
+**Code:** `packages/toolkit/src/components/composer/people-relations.ts` (`resolvePeopleFields`, `peopleRelationsFromWidgetData`, `peopleRelationsToWidgetData`).
+
 #### Location-Widget (`location`)
 
 **Zweck:** Einen **physischen Ort** für verortete Items setzen. Das `location`-Widget (`LocationWidget`, im `WIDGET_ORDER` zwischen `date` und `people`) hat genau diesen einen Zweck. Online-/Meeting-Links sind kein Ort und gehören nicht hierher (ggf. eigenes Feld/Widget).

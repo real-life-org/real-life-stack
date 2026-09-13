@@ -171,7 +171,7 @@ Regeln:
 2. `otherKind` bindet an die Target-Konventionen aus 04: `person` persistiert als `global:`-Target (User-Id oder DID), item-artige Kinds (`place`, `project`, …) als `item:` bzw. `space:{id}/item:`. Composer und Abfrage leiten die Target-Form der Gegenstelle aus `otherKind` ab, nie umgekehrt.
 3. Das Typ-Register definiert **keine** Prädikat-Semantik. Gerichtetheit, Symmetrie und Sichtbarkeit eines Prädikats gehören in die Relation-Typ-Definition (08, Regel 3) — heute App-Konfiguration, Ziel ist die versionierte RelationTypeDefinition im Space. Ein Prädikat, das im Typ-Register auftaucht, MUSS dort definiert sein.
 4. Ob eine Kante eingebettet (`item.relations[]`) oder als Relation-Record persistiert wird, entscheiden die Forward/Reverse-Regeln aus 04 — nicht das Typ-Register. Es deklariert die Möglichkeit, nicht den Mechanismus.
-5. Personen-Kanten sind ein Fall unter vielen, kein Sonderfall: `peopleRelation` aus `ContentTypeConfig` geht auf in einem Manifest-Eintrag `{ assignedTo, from, person }` plus der `relationWidgets`-Zuordnung `people` im Darstellungs-Register.
+5. Personen-Kanten sind ein Fall unter vielen, kein Sonderfall: `peopleRelation` aus `ContentTypeConfig` geht auf in einem Manifest-Eintrag `{ assignedTo, from, person }` plus der `relationWidgets`-Zuordnung `people` im Darstellungs-Register. Ein Typ KANN mehrere Personen-Kanten führen (`peopleRelations`, siehe [shared-components.md → Personenfelder](modules/shared-components.md)) — je Kante ein eigenes Feld, alle über dieselbe Widget-Zuordnung.
 
 #### Nicht-Ziele des Registers
 
