@@ -201,9 +201,10 @@ Außenfelder.
 
 ## Ablage und Registry
 
-Mirrors liegen im Ziel-Space-Doc in einer eigenen Map `mirrors`, Schlüssel
+Mirrors liegen im Ziel-Space-Doc in der benannten Wurzel `mirrors`
+(`NamedRootsCapable`, siehe unten), Schlüssel
 `JSON.stringify([homeSpaceId, itemId])`, Wert die Compact-JWS. Sie liegen
-NICHT in `items`: der heutige `CrossGroupIndex` schlüsselt kanonisch nach
+NICHT in `items` und nicht in `data`: der heutige `CrossGroupIndex` schlüsselt kanonisch nach
 `(groupId, itemId)`, kennt aber keinen Tripel-Schlüssel (Invariante 1).
 Je Schlüssel wird nur ein Schnappschuss gehalten. Ein Empfänger MUSS vor
 Materialisierung prüfen, dass der Map-Schlüssel gleich
@@ -221,17 +222,23 @@ Maximum stellt der Autor-Abgleich durch Neupublikation mit höherer `seq`
 wieder her.
 
 Die Registry der Freigaben (Invariante 6) liegt im Home-Doc des Items:
-`mirrorRegistry`. Die physische Ablage ist **flach je Gerät**: Schlüssel
-`JSON.stringify([itemId, targetSpaceId, deviceId])`, Wert der
-Gerätebeitrag
+der **benannten Wurzel** `mirrorRegistry` des Home-Docs (Adapter-Capability
+`NamedRootsCapable`, wot-core Port: `getRoot`, `transactRoot`,
+`transactRootDurable`, Type Guard `hasNamedRoots`). Eine benannte Wurzel
+wird vom CRDT bereitgestellt, nie von einem Gerät angelegt; in `data` ist
+dagegen jede verschachtelte Map ein Register, das bei nebenläufiger
+Erstanlage einen Unterbaum verliert. Die Ablage in der Wurzel ist **flach
+je Gerät**: Schlüssel `JSON.stringify([itemId, targetSpaceId, deviceId])`,
+Wert der Gerätebeitrag als JSON
 `{ statusSeq, status, admission, supersedes?, seq, tiebreak, publishedHash?, updatedAt }`
 (Status `accepted | revoked`). Jedes Gerät schreibt nur seinen eigenen
-Schlüssel und legt nie eine gemeinsame Eltern-Map an; eine geschachtelte
-Ablage (`[itemId, targetSpaceId] → byDevice`) ist in Yjs bei nebenläufiger
-Erstanlage ein LWW-Register und verliert Gerätebeiträge, sie ist deshalb
-NICHT zulässig. Das Lesemodell ist der logische Eintrag
-`(itemId, targetSpaceId)` mit `byDevice[deviceId]`, den der Leser durch
-Gruppieren der Schlüssel bildet. `admission` ist die **Aufnahme-Kennung**
+Schlüssel. Das Lesemodell ist der logische Eintrag `(itemId, targetSpaceId)`
+mit `byDevice[deviceId]`, den der Leser durch Gruppieren der Schlüssel
+bildet. Allgemeine Regel: was mehrere Geräte erstmalig nebenläufig
+schreiben können, liegt in einer benannten Wurzel mit flachen JSON-Werten,
+nie in einer gemeinsam angelegten Map unter `data`. Ohne die Capability
+(`hasNamedRoots` false) schreibt der Connector keine Registry und meldet
+Freigaben als nicht verfügbar; er weicht NICHT auf `data` aus. `admission` ist die **Aufnahme-Kennung**
 des Autors im Ziel-Space zum Zeitpunkt der Freigabe:
 `SpaceInfo.admission = { keyGeneration }`, abgeleitet aus dem
 synchronisierten Mitgliedschafts-Ereignis-Set `_members` des Ziel-Space
