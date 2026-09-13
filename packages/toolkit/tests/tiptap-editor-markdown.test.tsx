@@ -1,0 +1,99 @@
+// @vitest-environment jsdom
+import { act, createElement, createRef } from "react"
+import { createRoot } from "react-dom/client"
+import { describe, expect, it } from "vitest"
+import { TiptapEditor, type TiptapEditorHandle } from "../src/components/composer/widgets/tiptap-editor"
+
+;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+
+// jsdom has neither ClipboardEvent nor DataTransfer. prosemirror-view reads
+// the two clipboard flavours off the event and decides from there, so a stub
+// that answers `getData` is enough to drive the real paste path — including
+// the plain-text branch, which `view.pasteText()` would skip.
+class FakeClipboardEvent extends Event {
+  clipboardData: unknown = null
+}
+;(globalThis as unknown as { ClipboardEvent: unknown }).ClipboardEvent = FakeClipboardEvent
+
+function paste(editor: { view: { dom: HTMLElement } }, data: { text?: string; html?: string }) {
+  const event = new FakeClipboardEvent("paste", { bubbles: true, cancelable: true })
+  event.clipboardData = {
+    types: Object.keys(data),
+    getData: (type: string) => {
+      if (type === "text/html") return data.html ?? ""
+      if (type === "text/plain") return data.text ?? ""
+      // Other flavours (e.g. the editor-private one the code block reads) are
+      // simply not on this clipboard.
+      return ""
+    },
+  }
+  editor.view.dom.dispatchEvent(event as unknown as Event)
+}
+
+/** Mounts the editor and reports every Markdown string it hands up. */
+async function mount(value: string) {
+  const host = document.createElement("div")
+  document.body.append(host)
+  const emitted: string[] = []
+  const ref = createRef<TiptapEditorHandle>()
+  await act(async () => {
+    createRoot(host).render(
+      createElement(TiptapEditor, { ref, value, onChange: (md) => emitted.push(md) }),
+    )
+  })
+  return { emitted, editor: ref.current!.editor! }
+}
+
+describe("TiptapEditor markdown contract", () => {
+  it("normalises raw HTML into Markdown when the item is opened", async () => {
+    // What a detail view would otherwise show as literal tags.
+    const { emitted } = await mount("<p>Ein <strong>fetter</strong> Absatz.</p>")
+
+    expect(emitted).toEqual(["Ein **fetter** Absatz."])
+  })
+
+  it("leaves text that is already Markdown alone", async () => {
+    const { emitted } = await mount("# Titel\n\nEin **fetter** Absatz.\n\n- eins\n- zwei")
+
+    expect(emitted).toEqual([])
+  })
+
+  it("never stores HTML tags for emphasis that Markdown cannot express", async () => {
+    const { emitted, editor } = await mount("")
+
+    await act(async () => {
+      paste(editor, { html: "<p>Text mit <u>unterstrichen</u> und <s>durchgestrichen</s>.</p>" })
+    })
+
+    expect(emitted.at(-1)).toBe("Text mit unterstrichen und ~~durchgestrichen~~.")
+  })
+
+  it("keeps pasted Markdown source as Markdown", async () => {
+    const { emitted, editor } = await mount("")
+
+    await act(async () => {
+      paste(editor, { text: "## Titel\n\nEin **fetter** Absatz." })
+    })
+
+    expect(emitted.at(-1)).toBe("## Titel\n\nEin **fetter** Absatz.")
+  })
+
+  // A mark the Markdown serializer has no syntax for is written out as a raw
+  // HTML tag, which the detail view can only show as literal text. Adding such
+  // an extension to the editor must fail here, not in someone's item.
+  it("has no mark that could only be stored as HTML", async () => {
+    const { editor } = await mount("")
+    const { schema } = editor
+    const serializer = (editor.storage as Record<string, any>).markdown.serializer
+
+    for (const type of Object.values(schema.marks)) {
+      // A link without a target cannot be written in any syntax.
+      const attrs = type.spec.attrs?.href ? { href: "https://example.org" } : null
+      const doc = schema.node("doc", null, [
+        schema.node("paragraph", null, [schema.text("Wort", [type.create(attrs)])]),
+      ])
+
+      expect(serializer.serialize(doc), `mark "${type.name}"`).not.toMatch(/<[a-z/]/i)
+    }
+  })
+})
