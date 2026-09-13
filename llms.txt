@@ -6,9 +6,18 @@ Architecture in one line: `App Shell / Space Modules -> hooks -> DataInterface -
 
 Most spec documents are written in German. The type definitions in `@real-life-stack/data-interface` are the precise, English source of truth for all data shapes.
 
-## Building apps on Real Life Stack
+## Building apps on Real Life Stack (read in this order)
 
-- [AGENTS.md template for RLS apps](https://github.com/real-life-org/real-life-stack/blob/master/docs/templates/AGENTS.md): Drop-in guide for coding agents that build a new app on top of the published packages. Install matrix, bootstrap code, composition pattern, rules.
+1. [Anatomy of a module](https://github.com/real-life-org/real-life-stack/blob/master/docs/anatomie-eines-moduls.md): One page. Which zone of the screen belongs to whom (app shell, module head, content, filter pill, create button, detail panel), which toolkit component fills it, and the three flows create / open / delete. Read this before writing any UI.
+2. [01 App composition](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/01-app-composition.md), sections "Overlay-Flächen", "Content-Bereich", "Die Modulfläche ist eine Spalte", "Modul-Register": the normative rules the anatomy page cites.
+3. [Shared module components](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/modules/shared-components.md): contracts of `ItemPreview`, `ItemDetailView`, `ContentComposer`, `CreateFab`, `FilterPill`, hooks.
+4. [Toolkit index](https://github.com/real-life-org/real-life-stack/blob/master/docs/toolkit-index.md): every exported component and hook of the installed toolkit version, grouped by zone. Generated from the package; if a component is not in here, it does not exist — report the gap, do not build a substitute.
+5. [AGENTS.md template for RLS apps](https://github.com/real-life-org/real-life-stack/blob/master/docs/templates/AGENTS.md): Drop-in guide for coding agents that build a new app on top of the published packages. Install matrix, bootstrap code, composition pattern, rules.
+6. [Module spec template](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/modules/template.md): a new module is specified here first, then built.
+
+Version matters: the repository moves faster than the packages. Read the docs at the tag of the toolkit version you installed, `https://github.com/real-life-org/real-life-stack/tree/toolkit-vX.Y.Z/docs`, and check exports against the installed `node_modules/@real-life-stack/toolkit/dist`, not against a local checkout.
+
+Worked example: [Karabirrdt](https://github.com/antontranelis/karabirrdt), a Dragon Dreaming board built as a standalone RLS-compatible app on the published packages, with a log of every deviation that had to be corrected and every gap found in `docs/rls-kompatibel.md`.
 
 ## Packages (npm)
 

@@ -4,6 +4,31 @@ This file is a template. Copy it into the root of a new app repository (or hand 
 
 Machine-readable overview of the whole stack: <https://github.com/real-life-org/real-life-stack/blob/master/llms.txt>
 
+## Read first, in this order
+
+1. [Anatomy of a module](../anatomie-eines-moduls.md) — which zone of the screen belongs to whom, which component fills it, the three flows create / open / delete. One page. Do not write UI before reading it.
+2. [01 App composition](../spec/01-app-composition.md) — app shell vs. module surface, overlay layers, module head, module register.
+3. [Shared module components](../spec/modules/shared-components.md) — the contracts of `ItemPreview`, `ItemDetailView`, `ContentComposer`, `CreateFab`, `FilterPill`.
+4. [Toolkit index](../toolkit-index.md) — everything the installed toolkit exports, by zone. Not in the index means it does not exist.
+
+Match the docs to the installed version: the repository moves faster than the packages. Use the tag `toolkit-vX.Y.Z` of the version in your `package.json` and verify exports against `node_modules/@real-life-stack/toolkit/dist`, never against a local checkout of the repository.
+
+## Anatomy at a glance
+
+| Zone | Owner | Component | Never here |
+|---|---|---|---|
+| Navbar | app shell | `Navbar`, `WorkspaceSwitcher`, `ModuleTabs`, `UserMenu`, `RelayStatusBadge` | module buttons, module fields, module status |
+| Space configuration (dialog) | app shell | `GroupDialog`, members | module state |
+| Module head | module surface | `ModuleFrame` owns it, `ModuleToolbar` is the module's contribution: search left, view/actions right | explanatory text, connection status, data export |
+| Content | module | the module's projection (`KanbanBoard`, `MapView`, `CollectionView`, your own grid) | hand-rolled item cards |
+| Item card | toolkit | `ItemPreview` + adornment slots | custom tiles |
+| Bottom-left | module surface | `FilterPill` in `PanelSafeArea` | a second element in that corner |
+| Bottom-right | module surface | `CreateFab`; the composer picks the type | custom plus buttons, "add another" buttons in the detail |
+| Right panel | app, one instance | `ItemDetailView`: read first (`ItemDetailBody`, ⋮ menu with edit and delete, discussion), then edit (`ContentComposer`) | composer as the first view, delete/status buttons inside the form, custom headers |
+| Form | toolkit | `ContentComposer` with declared widgets (title, text, media, date, location, people, tags, status, group); people from members via `peopleOptions` and `peopleQuickSuggestions` | custom widgets where a declared one exists |
+
+If a component you need is missing: do not build a substitute. Note the file in the package and the missing prop, propose the change, and report it in your handoff. A missing field is better than a custom build that has to be migrated later.
+
 ## What Real Life Stack is
 
 A modular, backend-agnostic app and UI toolkit for community apps: maps of people/places/projects, calendars, kanban boards, feeds, profiles, and relation graphs.
