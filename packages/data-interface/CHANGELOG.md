@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.1.4...data-interface-v0.2.0) (2026-09-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **data-interface:** MirrorCapable, Profil-Freigaben, mirrorOf-Helfer (S1) ([#344](https://github.com/real-life-org/real-life-stack/issues/344))
+
+### Features
+
+* **data-interface:** MirrorCapable, Profil-Freigaben, mirrorOf-Helfer (S1) ([#344](https://github.com/real-life-org/real-life-stack/issues/344)) ([cd1392c](https://github.com/real-life-org/real-life-stack/commit/cd1392c43db7a6d08da32c93f585a29949c969ef))
+
+
+### Bug Fixes
+
+* **packages:** veröffentlichte exports ohne die development-Bedingung ([#358](https://github.com/real-life-org/real-life-stack/issues/358)) ([dc0e062](https://github.com/real-life-org/real-life-stack/commit/dc0e06210842c5f87c267036745cb5373f290912))
+
 ## [0.1.4](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.1.3...data-interface-v0.1.4) (2026-09-08)
 
 

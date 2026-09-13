@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.7](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.1.6...wot-connector-v0.1.7) (2026-09-13)
+
+
+### Features
+
+* **wot-connector:** Mirror-Typen, Doc-Felder und reine Funktionen (S2); Bump core 0.5.7 ([#347](https://github.com/real-life-org/real-life-stack/issues/347)) ([c87b7fe](https://github.com/real-life-org/real-life-stack/commit/c87b7fe801c1efbb655339101ac8380464de27d7))
+
+
+### Bug Fixes
+
+* **packages:** veröffentlichte exports ohne die development-Bedingung ([#358](https://github.com/real-life-org/real-life-stack/issues/358)) ([dc0e062](https://github.com/real-life-org/real-life-stack/commit/dc0e06210842c5f87c267036745cb5373f290912))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.2.0
+    * @real-life-stack/toolkit bumped to 0.1.7
+
 ## [0.1.6](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.1.5...wot-connector-v0.1.6) (2026-09-09)
 
 

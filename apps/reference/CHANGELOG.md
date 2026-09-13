@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.0](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.10...app-v0.3.0) (2026-09-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **data-interface:** MirrorCapable, Profil-Freigaben, mirrorOf-Helfer (S1) ([#344](https://github.com/real-life-org/real-life-stack/issues/344))
+
+### Features
+
+* **data-interface:** MirrorCapable, Profil-Freigaben, mirrorOf-Helfer (S1) ([#344](https://github.com/real-life-org/real-life-stack/issues/344)) ([cd1392c](https://github.com/real-life-org/real-life-stack/commit/cd1392c43db7a6d08da32c93f585a29949c969ef))
+* **toolkit:** mehrere Personen-Zuweisungen je Typ im Composer ([#359](https://github.com/real-life-org/real-life-stack/issues/359)) ([abedfe6](https://github.com/real-life-org/real-life-stack/commit/abedfe69ad5adedc4a72f2b19dd33566a665f230))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.2.0
+    * @real-life-stack/local-connector bumped to 0.1.5
+    * @real-life-stack/mock-connector bumped to 0.1.5
+    * @real-life-stack/supabase-connector bumped to 0.2.0
+    * @real-life-stack/toolkit bumped to 0.1.7
+    * @real-life-stack/wot-connector bumped to 0.1.7
+
 ## [0.2.10](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.9...app-v0.2.10) (2026-09-09)
 
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.5](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.1.4...mock-connector-v0.1.5) (2026-09-13)
+
+
+### Bug Fixes
+
+* **packages:** veröffentlichte exports ohne die development-Bedingung ([#358](https://github.com/real-life-org/real-life-stack/issues/358)) ([dc0e062](https://github.com/real-life-org/real-life-stack/commit/dc0e06210842c5f87c267036745cb5373f290912))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.2.0
+
 ## [0.1.4](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.1.3...mock-connector-v0.1.4) (2026-09-08)
 
 
