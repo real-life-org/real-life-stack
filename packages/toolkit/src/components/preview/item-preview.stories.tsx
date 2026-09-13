@@ -68,8 +68,10 @@ const meta: Meta<typeof ItemPreview> = {
   title: "Module Components / ItemPreview",
   component: ItemPreview,
   decorators: [
-    (Story) => (
-      <div className="max-w-2xl mx-auto p-6 bg-background">
+    // Die Karten-Stories zeigen eine Feed-Spalte; die Dichte-Stories brauchen
+    // die ganze Breite, sonst faellt das Raster in Zeilen auseinander.
+    (Story, ctx) => (
+      <div className={ctx.parameters.breit ? "p-6 bg-background" : "max-w-2xl mx-auto p-6 bg-background"}>
         <Story />
       </div>
     ),
@@ -213,14 +215,7 @@ export const LongDescriptionClamped: Story = {
  */
 export const DreiDichten: Story = {
   name: "Drei Dichten nebeneinander",
-  parameters: { layout: "fullscreen" },
-  decorators: [
-    (Story) => (
-      <div className="bg-background p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: { layout: "fullscreen", breit: true },
   render: () => {
     const item: Item = {
       ...taskItem,
@@ -265,14 +260,7 @@ export const DreiDichten: Story = {
  */
 export const RasterZwoelfSpalten: Story = {
   name: "Raster 12 Spalten dense",
-  parameters: { layout: "fullscreen" },
-  decorators: [
-    (Story) => (
-      <div className="bg-background p-4">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: { layout: "fullscreen", breit: true },
   render: () => {
     const spalten = [
       "Material",
