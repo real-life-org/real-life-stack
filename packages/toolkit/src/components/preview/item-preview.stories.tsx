@@ -206,3 +206,118 @@ export const LongDescriptionClamped: Story = {
     author: lena,
   },
 }
+
+/**
+ * Dieselbe Karte in allen drei Dichten nebeneinander — derselbe Vorgang,
+ * dreimal verschieden viel Platz.
+ */
+export const DreiDichten: Story = {
+  name: "Drei Dichten nebeneinander",
+  parameters: { layout: "fullscreen" },
+  decorators: [
+    (Story) => (
+      <div className="bg-background p-6">
+        <Story />
+      </div>
+    ),
+  ],
+  render: () => {
+    const item: Item = {
+      ...taskItem,
+      data: {
+        ...taskItem.data,
+        description: "Erde umgraben und Kompost einarbeiten — bis zum Wochenende.",
+      },
+      tags: ["garten", "werkstatt", "nachbarschaft"],
+    }
+    const fuss = (dicht: boolean) => (
+      <>
+        <ItemAssignees users={[lena, anton]} size={dicht ? "xs" : "sm"} />
+        {!dicht && (
+          <div className="ml-auto">
+            <ItemCommentCount count={3} />
+          </div>
+        )}
+      </>
+    )
+    return (
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="w-[420px] space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">comfortable — Feed</p>
+          <ItemPreview item={item} author={lena} footerAdornment={fuss(false)} />
+        </div>
+        <div className="w-[276px] space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">compact — Kanban</p>
+          <ItemPreview item={item} author={null} density="compact" footerAdornment={fuss(false)} />
+        </div>
+        <div className="w-[130px] space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">dense — Matrix</p>
+          <ItemPreview item={item} author={null} density="dense" footerAdornment={fuss(true)} />
+        </div>
+      </div>
+    )
+  },
+}
+
+/**
+ * Wofuer die dichte Karte gebaut ist: zwoelf Spalten mal vier Zeilen auf
+ * einen Schirm, ohne zu scrollen.
+ */
+export const RasterZwoelfSpalten: Story = {
+  name: "Raster 12 Spalten dense",
+  parameters: { layout: "fullscreen" },
+  decorators: [
+    (Story) => (
+      <div className="bg-background p-4">
+        <Story />
+      </div>
+    ),
+  ],
+  render: () => {
+    const spalten = [
+      "Material",
+      "Werkzeug",
+      "Termine",
+      "Orte",
+      "Leute",
+      "Geld",
+      "Technik",
+      "Garten",
+      "Kueche",
+      "Doku",
+      "Aussen",
+      "Rest",
+    ]
+    return (
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(12, minmax(0, 130px))" }}>
+        {spalten.map((spalte) => (
+          <div key={spalte} className="text-[10px] font-medium text-muted-foreground">
+            {spalte}
+          </div>
+        ))}
+        {Array.from({ length: 48 }, (_, i) => {
+          const item: Item = {
+            ...taskItem,
+            id: `matrix-${i}`,
+            data: {
+              ...taskItem.data,
+              title: i % 3 === 0 ? `Hochbeet ${i + 1} vorbereiten und bepflanzen` : `Aufgabe ${i + 1}`,
+            },
+          }
+          return (
+            <ItemPreview
+              key={item.id}
+              item={item}
+              author={null}
+              density="dense"
+              footerAdornment={
+                <ItemAssignees users={i % 2 === 0 ? [lena, anton] : [lena]} size="xs" />
+              }
+              onClick={() => console.log("click", item.id)}
+            />
+          )
+        })}
+      </div>
+    )
+  },
+}
