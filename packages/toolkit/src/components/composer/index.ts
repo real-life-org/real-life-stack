@@ -14,7 +14,18 @@ export {
   type ContentComposerProps,
   type ContentComposerHandle,
   type PersonOption,
+  type PeopleRelationConfig,
 } from "./content-composer"
+export {
+  PEOPLE_DATA_KEY,
+  peopleDataKey,
+  isPeopleDataKey,
+  resolvePeopleFields,
+  peopleRelationsFromWidgetData,
+  peopleRelationsToWidgetData,
+  type PeopleField,
+  type PeopleRelationSource,
+} from "./people-relations"
 export {
   ComposerFullscreenShell,
   type ComposerFullscreenShellProps,

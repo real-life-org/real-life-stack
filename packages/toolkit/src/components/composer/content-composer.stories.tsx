@@ -76,6 +76,20 @@ const taskType: ContentTypeConfig = {
   defaultGroup: "g1",
 }
 
+/** Zwei Personenfelder je Typ: „Kann ich" und „Will lernen" (peopleRelations). */
+const skillTaskType: ContentTypeConfig = {
+  id: "skill-task",
+  label: "Aufgabe mit Lernwunsch",
+  icon: CheckSquare,
+  defaultWidgets: ["title", "text", "people"],
+  widgetLabels: { text: "Beschreibung" },
+  peopleRelations: [
+    { predicate: "assignedTo", label: "Kann ich" },
+    { predicate: "wantsToLearn", label: "Will lernen" },
+  ],
+  submitLabel: "Aufgabe erstellen",
+}
+
 const projectType: ContentTypeConfig = {
   id: "project",
   label: "Projekt",
@@ -249,6 +263,24 @@ export const MitQuickSuggestions: Story = {
     peopleOptions,
     tagSuggestions,
     tagQuickSuggestions: tagSuggestions,
+    peopleQuickSuggestions: peopleOptions,
+  },
+}
+
+export const ZweiPersonenfelder: Story = {
+  name: "Zwei Personenfelder (Kann ich / Will lernen)",
+  args: {
+    contentTypes: [skillTaskType],
+    mode: "skill-task",
+    showVisibility: false,
+    showPreview: false,
+    initialData: {
+      title: "Hochbeet bauen",
+      people: ["u1"],
+      "people:wantsToLearn": ["u2", "u3"],
+    },
+    onSubmit: action("onSubmit"),
+    peopleOptions,
     peopleQuickSuggestions: peopleOptions,
   },
 }

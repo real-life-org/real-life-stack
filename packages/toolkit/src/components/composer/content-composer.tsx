@@ -27,6 +27,12 @@ import type { Geocoder, ReverseGeocoder } from "@/lib/geocode"
 import { MediaWidget } from "./widgets/media-widget"
 import { PeopleWidget, type PersonOption } from "./widgets/people-widget"
 export type { PersonOption } from "./widgets/people-widget"
+import {
+  isPeopleDataKey,
+  resolvePeopleFields,
+  type PeopleRelationConfig,
+} from "./people-relations"
+export type { PeopleRelationConfig } from "./people-relations"
 import { TagsWidget } from "./widgets/tags-widget"
 import { StatusWidget } from "./widgets/status-widget"
 import { GroupWidget } from "./widgets/group-widget"
@@ -125,6 +131,14 @@ export interface ContentTypeConfig {
    * stays in `widgetLabels.people`.
    */
   peopleRelation?: { predicate: string }
+  /**
+   * Mehrere Personenfelder je Typ (z.B. eine Aufgabe mit „Kann ich" =
+   * `assignedTo` und „Will lernen" = `wantsToLearn`). Jeder Eintrag rendert
+   * dasselbe `people`-Widget mit eigenem Label und eigenem Datenschlüssel;
+   * `peopleRelation` (Einzahl) bleibt die Kurzform für genau einen Eintrag.
+   * Auflösung siehe {@link resolvePeopleFields}.
+   */
+  peopleRelations?: readonly PeopleRelationConfig[]
 }
 
 export interface WidgetComponentProps<T = unknown> {
@@ -265,14 +279,27 @@ const PRESENCE_WIDGET_BY_FIELD: Record<string, WidgetType> = {
 function widgetsWithValue(data: Partial<WidgetData> | undefined): Set<string> {
   const set = new Set<string>()
   if (!data) return set
+  const hasValue = (value: unknown) => {
+    if (value == null) return false
+    if (typeof value === "string" && value.trim() === "") return false
+    if (Array.isArray(value) && value.length === 0) return false
+    return true
+  }
   for (const [field, widget] of Object.entries(PRESENCE_WIDGET_BY_FIELD)) {
-    const value = (data as Record<string, unknown>)[field]
-    if (value == null) continue
-    if (typeof value === "string" && value.trim() === "") continue
-    if (Array.isArray(value) && value.length === 0) continue
-    set.add(widget)
+    if (hasValue((data as Record<string, unknown>)[field])) set.add(widget)
+  }
+  // Weitere Personenfelder (`people:<predicate>`) zeigen dasselbe Widget.
+  for (const [field, value] of Object.entries(data as Record<string, unknown>)) {
+    if (isPeopleDataKey(field) && hasValue(value)) set.add("people")
   }
   return set
+}
+
+/** Die Datenschlüssel der *weiteren* Personenfelder (`people:<predicate>`). */
+function extraPeopleDataKeys(data: Partial<WidgetData>): string[] {
+  return Object.keys(data)
+    .filter((key) => isPeopleDataKey(key))
+    .sort()
 }
 
 /**
@@ -294,7 +321,7 @@ const DIRTY_FIELDS = [
  */
 function dirtySignature(data: WidgetData): string {
   const out: Record<string, unknown> = {}
-  for (const field of DIRTY_FIELDS) {
+  for (const field of [...DIRTY_FIELDS, ...extraPeopleDataKeys(data)]) {
     const value = (data as Record<string, unknown>)[field]
     if (value === "" || value === null || value === undefined) continue
     if (Array.isArray(value) && value.length === 0) continue
@@ -424,6 +451,9 @@ export function ContentComposer({
         prev.group !== data.group ||
         prev.tags !== data.tags ||
         prev.people !== data.people ||
+        extraPeopleDataKeys({ ...prev, ...data }).some(
+          (key) => (prev as Record<string, unknown>)[key] !== (data as Record<string, unknown>)[key],
+        ) ||
         prev.start !== data.start ||
         prev.end !== data.end ||
         prev.address !== data.address ||
@@ -483,6 +513,9 @@ export function ContentComposer({
       !(w === "group" && !hasGroupOptions),
   ) as WidgetType[]
 
+  // Personenfelder des Typs (mehrere je Typ möglich, siehe peopleRelations).
+  const peopleFields = resolvePeopleFields(currentConfig)
+
   // Get widget label
   const getWidgetLabel = (widgetId: string): string => {
     return (
@@ -523,8 +556,11 @@ export function ContentComposer({
     if (!activeWidgets.has("people")) {
       setManualWidgets((prev) => new Set([...prev, "people"]))
     }
-    if (!data.people?.includes(name)) {
-      updateData("people", [...(data.people || []), name])
+    // @mention landet im ersten Personenfeld des Typs.
+    const key = peopleFields[0].dataKey
+    const current = (data[key] as string[] | undefined) || []
+    if (!current.includes(name)) {
+      updateData(key, [...current, name])
     }
   }
 
@@ -741,14 +777,22 @@ export function ContentComposer({
                       />
                     )}
                   {widgetId === "people" && (
-                    <PeopleWidget
-                      value={data.people || []}
-                      onChange={(v) => updateData("people", v)}
-                      label={widgetLabel}
-                      options={peopleOptions}
-                      suggestions={peopleSuggestions}
-                      quickSuggestions={peopleQuickSuggestions}
-                    />
+                    <div className="flex flex-col gap-4">
+                      {peopleFields.map((field) => (
+                        <PeopleWidget
+                          key={field.dataKey}
+                          value={(data[field.dataKey] as string[] | undefined) || []}
+                          onChange={(v) => updateData(field.dataKey, v)}
+                          // `resolvePeopleFields` hat `widgetLabels.people` für
+                          // die Einzahl-Kurzform schon eingesetzt; deklarierte
+                          // `peopleRelations`-Labels gewinnen.
+                          label={field.label}
+                          options={peopleOptions}
+                          suggestions={peopleSuggestions}
+                          quickSuggestions={peopleQuickSuggestions}
+                        />
+                      ))}
+                    </div>
                   )}
                   {widgetId === "tags" && (
                     <TagsWidget
@@ -963,18 +1007,23 @@ function DefaultPreview({
           {data.locationName || data.address || data.meetingLink}
         </div>
       )}
-      {has("people") && data.people && data.people.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {data.people.map((p) => (
-            <span
-              key={p}
-              className="rounded-full bg-secondary px-2 py-0.5 text-xs"
-            >
-              {p}
-            </span>
-          ))}
-        </div>
-      )}
+      {has("people") &&
+        resolvePeopleFields(config).map((field) => {
+          const people = (data[field.dataKey] as string[] | undefined) ?? []
+          if (people.length === 0) return null
+          return (
+            <div key={field.dataKey} className="flex flex-wrap gap-1">
+              {people.map((p) => (
+                <span
+                  key={p}
+                  className="rounded-full bg-secondary px-2 py-0.5 text-xs"
+                >
+                  {p}
+                </span>
+              ))}
+            </div>
+          )
+        })}
       {has("tags") && data.tags && data.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {data.tags.map((t) => (
