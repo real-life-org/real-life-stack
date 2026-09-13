@@ -97,5 +97,22 @@
     "maplibre-gl": {
       "optional": true
     }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./leaflet": {
+        "types": "./dist/leaflet.d.ts",
+        "import": "./dist/leaflet.js"
+      },
+      "./maplibre": {
+        "types": "./dist/maplibre.d.ts",
+        "import": "./dist/maplibre.js"
+      },
+      "./styles/globals.css": "./src/styles/globals.css"
+    }
   }
 }

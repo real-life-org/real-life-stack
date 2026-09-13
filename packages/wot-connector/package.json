@@ -52,5 +52,17 @@
     "typescript": "~5.7.2",
     "vitest": "^4.1.0",
     "yjs": "^13.6.30"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./components": {
+        "types": "./dist/components/index.d.ts",
+        "import": "./dist/components/index.js"
+      }
+    }
   }
 }

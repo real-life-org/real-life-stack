@@ -42,5 +42,21 @@
     "ajv-formats": "^3.0.1",
     "typescript": "~5.7.2",
     "vitest": "^4.1.0"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/src/index.d.ts",
+        "import": "./dist/src/index.js"
+      },
+      "./demo-data": {
+        "types": "./dist/src/demo-data.d.ts",
+        "import": "./dist/src/demo-data.js"
+      },
+      "./testing": {
+        "types": "./dist/src/testing/contract-suite.d.ts",
+        "import": "./dist/src/testing/contract-suite.js"
+      }
+    }
   }
 }
