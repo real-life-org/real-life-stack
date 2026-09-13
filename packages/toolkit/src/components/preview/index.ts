@@ -3,6 +3,7 @@ export {
   DEFAULT_ACTIVE_ITEM_COLOR,
   DEFAULT_ACTIVE_ITEM_GLOW_COLOR,
   type ItemPreviewProps,
+  type ItemPreviewDensity,
 } from "./item-preview"
 export { ItemPreviewSkeleton } from "./item-preview-skeleton"
 export { MarkdownText } from "./markdown-text"
