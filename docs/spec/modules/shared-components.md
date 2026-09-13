@@ -307,7 +307,7 @@ interface ReactionBarProps {
 **Vertrag:**
 
 ```ts
-type ItemPreviewDensity = "comfortable" | "compact"
+type ItemPreviewDensity = "comfortable" | "compact" | "dense"
 
 interface ItemPreviewProps {
   item: Item
@@ -328,7 +328,7 @@ interface ItemPreviewProps {
   metaAdornment?: ReactNode
   /** Slot unter den Tag-Chips (z.B. Assignees, Comment-Count, ReactionBar). */
   footerAdornment?: ReactNode
-  /** Layout-Density (siehe unten). Default `comfortable`. */
+  /** Layout-Density (siehe unten): `comfortable` | `compact` | `dense`. Default `comfortable`. */
   density?: ItemPreviewDensity
   /** Hebt eine Karten-Linse als aktuell selektiert hervor. */
   active?: boolean
@@ -342,6 +342,16 @@ interface ItemPreviewProps {
 
 - `comfortable` (Default) — Feed-Card-Form: Avatar 10×10, font-base Title, p-4 Spacing, Description wird angezeigt, Footer mit Border-Top.
 - `compact` — Kanban-/Liste-Form: Avatar 6×6, font-sm Title, p-3 Spacing, **Description wird ausgeblendet**, Footer ohne Border. Tauglich für dichte Board-Spalten, wo mehrere Cards zugleich sichtbar bleiben sollen.
+- `dense` — **Matrix-Form** für Raster und Bretter mit 12+ Spalten (Zielmaß ca. 120–140 px breit, 56–64 px hoch, Padding ca. 6 px). Die Karte zeigt **nur**:
+  - den **Title**, klein (ca. 11 px, fett) und auf **zwei Zeilen** begrenzt (Auslassung danach),
+  - die `footerAdornment`-Zeile, ohne Border-Top,
+  - den Kommentar-Hinweis **nur bei Count > 0**, als Symbol plus Zahl ohne Wort.
+
+  Sie lässt weg: Description/Body, `metaAdornment`, Tags und die Author-Zeile. Rahmen, Radius, `active`/`activeColor`, `onClick` und die Keyboard-Aktivierung sind identisch mit `compact`.
+
+  **Typ-getriebenes Rendering:** Der Vertrag bleibt, aber `dense` rendert von den Typ-Slots nur den Title. `metaAdornment` (also `ItemMetaRow`, `ItemTimeRange`, `ItemProfileMeta` und Geschwister) wird nicht gerendert; Caller legen in `dense` keinen `ItemTypeBadge` in den `headerAdornment`-Slot — eine Matrix-Zelle trägt ihn nicht. Die Slots selbst (`headerAdornment`, `footerAdornment`) bleiben bestehen und werden gerendert.
+
+  **Tags:** `dense` zeigt **keine** Tags. Ein Farbpunkt ohne Namen wäre eine zweite Tag-Darstellung neben `TagChip` und verletzt die Regel aus [07-tags.md](../07-tags.md), dass das Default-Display über alle Flächen identisch ist.
 
 **Default-Body:** Author-Row (Avatar + Name + `RelativeTime`), Title, Description (`data.content ?? data.description`, max 4 Zeilen), Tags (chips, top-level `item.tags`, Color via `getTagColor`).
 
@@ -467,11 +477,15 @@ Zwei Render-Modi je nach `onClick`:
 ```ts
 interface ItemAssigneesProps {
   users: readonly User[]
+  /** `sm` (Default) mit Namens-Summary, `xs` nur Avatare (für `dense`). */
+  size?: "sm" | "xs"
   className?: string
 }
 ```
 
 Caller löst die User-Objekte auf (typischerweise aus `assignedTo`-Relations + Member-Liste) und übergibt sie als resolved Array. Komponente ist rein präsentational. Namens-Summary: einzelner Name, „A, B" für zwei, „A + N weitere" ab drei; voller Kommaseparierter Liste im Hover-Tooltip.
+
+**Größe:** `size="sm"` (Default) — Avatare 5×5 plus Namens-Summary. `size="xs"` — Avatare 4×4, enger gestapelt, **ohne** Namens-Summary; die Variante für `ItemPreview density="dense"`, wo keine Textzeile mehr in die Zelle passt. Die Namen bleiben über den Tooltip erreichbar. Keine zweite Komponente, damit beide Stapel nicht auseinanderlaufen.
 
 **Code:** `packages/toolkit/src/components/preview/item-{type-badge,meta-row,comment-count,assignees}.tsx`.
 
