@@ -125,6 +125,42 @@ Regeln:
 5. Für `panelFit: "overlay"` schwebt derselbe Kopf-Inhalt **über** der Fläche statt über ihr zu stehen (oben links, in der `PanelSafeArea`; Feld und Chips auf eigener Fläche, weil eine Karte keinen ruhigen Untergrund hat). Gehostet wird er weiterhin von der **Fläche**: Zwei Wirte für dieselben Bausteine laufen auseinander — im Graphen fehlte darum die Chip-Zeile. Ein Modul, das dort eigene Bedienelemente führt (Zoom der Karte), sagt das als Beitrag (`clearsTopLeft`), statt sich einen zweiten Kopf zu bauen.
 6. Das **Öffnen des Filters** gehört NICHT in den Kopf, sondern zu den schwebenden Bedienelementen: eine Pille unten links der Fläche (`FilterPill` in der `PanelSafeArea`, siehe [modules/shared-components.md → `FilterPill`](modules/shared-components.md)). Sie ist ein Werkzeug, kein Zustand, und nimmt der Fläche darum eine Ecke statt einer Zeile. Was gerade **filtert**, bleibt oben im Kopf — in Blickrichtung des Inhalts, den es beschneidet. Auch überlagerte Module führen sie, dort schwebend wie ihr Kopf.
 
+### Anatomie der Fläche
+
+Die Regeln oben, auf einer Karte. Jede Zone hat genau einen Besitzer und einen Baustein, der sie füllt. Wer etwas baut, das hier einen Besitzer hat, baut es doppelt.
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ Navbar: WorkspaceSwitcher · ModuleTabs · RelayStatus · User  │ App Shell
+├──────────────────────────────────────────────────────────────┤
+│ Kopf: Suche, aktive Filter (links) · Modul-Aktionen (rechts) │ Modulfläche
+├─────────────────────────────────────────┬────────────────────┤
+│ Inhalt: die Projektion des Moduls       │ Panel (eine        │
+│                                         │ Instanz): Detail   │
+│                                         │ lesen → bearbeiten │
+│ ◯ FilterPill              CreateFab ⊕   │ · Composer · Filter│
+└─────────────────────────────────────────┴────────────────────┘
+  Ebene 2 Dialog: Space konfigurieren, Mitglieder, Profil, Kontakte
+  Ebene 3 Hinweis: Einladung, eingehende Verifikation
+```
+
+| Zone | Besitzer | Baustein | Gehört hinein | Gehört nicht hinein |
+|---|---|---|---|---|
+| Navbar | App Shell | `Navbar`, `WorkspaceSwitcher`, `ModuleTabs`, `UserMenu`, `RelayStatusBadge` | Space wechseln, Modul wechseln, Nutzer, Verbindungsstatus | Knöpfe, Felder, Anzeigen eines Moduls |
+| Space-Konfiguration | App Shell, Ebene 2 | `GroupDialog`, Mitglieder | Name, Beschreibung, Module, Mitglieder, Daten des Space | Zustand eines Moduls |
+| Kopf | Modulfläche; das Modul trägt bei | `ModuleFrame` (Wirt), `ModuleToolbar` (Beitrag) | Suche links, aktive Filter, Ansichtswechsel und Modul-Aktionen rechts | Erklärtexte, Verbindungsstatus, Datenexport |
+| Inhalt | Modul | eigene Fläche oder Linse | die Projektion der Items | selbst gebaute Item-Karten |
+| Item-Karte | Toolkit | `ItemPreview` mit Adornment-Slots | typ-getriebene Darstellung | eigene Kacheln |
+| Ecke unten links | Modulfläche | `FilterPill` in der `PanelSafeArea` | Filter öffnen | ein zweites Element |
+| Ecke unten rechts | Modulfläche | `CreateFab` | neues Item; der Composer wählt den Typ | eigene Plus-Knöpfe |
+| Schwebende Bedienung über Karte oder Graph | Modul, als Beitrag zum Kopf (`clearsTopLeft`) | in der `PanelSafeArea` | Zoom, Standort | ein zweiter Kopf, eine eigene Leiste |
+| Panel | App, eine Instanz | `AdaptivePanel`, `DetailHostProvider`, `ItemDetailView` | erst lesen, dann bearbeiten; Löschen im Aktionsmenü; Diskussion | Composer als erste Ansicht; Lösch- oder Status-Knöpfe im Formular; eigene Kopfzeilen |
+| Formular | Toolkit | `ContentComposer` mit deklarierten Widgets | Felder als Widgets; Personen aus den Mitgliedern; Tags des Space | eigene Widgets, wo ein deklariertes existiert; Erklärsätze |
+
+Ein Modul besitzt selbst: seine Fläche und deren Projektion, seine Aktionen rechts im Kopf, Auswertungen, die seine Modul-Spec vorsieht, und seinen Beitrag zum Typ-Register. Alles andere ist geliehen. Die Abläufe anlegen, öffnen und löschen stehen in [modules/shared-components.md → Abläufe](modules/shared-components.md); die Abnahme eines Moduls in [modules/template.md → Abnahme](modules/template.md).
+
+Fehlt ein Baustein, wird er nicht ersetzt, sondern gemeldet: Fundstelle im Paket, fehlende Prop, Vorschlag. Ein fehlendes Feld ist ein Issue, ein Eigenbau ist eine Migration.
+
 ### Verworfene Alternativen
 
 Festgehalten, damit sie nicht neu aufgemacht werden:

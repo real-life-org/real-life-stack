@@ -4,6 +4,19 @@ This file is a template. Copy it into the root of a new app repository (or hand 
 
 Machine-readable overview of the whole stack: <https://github.com/real-life-org/real-life-stack/blob/master/llms.txt>
 
+## Read first, in this order
+
+1. [Anatomy of a module](../anatomie-eines-moduls.md) — which zone of the screen belongs to whom, which component fills it, the three flows create / open / delete. One page. Do not write UI before reading it.
+2. [01 App composition](../spec/01-app-composition.md) — app shell vs. module surface, overlay layers, module head, module register.
+3. [Shared module components](../spec/modules/shared-components.md) — the contracts of `ItemPreview`, `ItemDetailView`, `ContentComposer`, `CreateFab`, `FilterPill`.
+4. [Toolkit index](../toolkit-index.md) — everything the installed toolkit exports, by zone. Not in the index means it does not exist.
+
+Match the docs to the installed version: the repository moves faster than the packages. Use the tag `toolkit-vX.Y.Z` of the version in your `package.json` and verify exports against `node_modules/@real-life-stack/toolkit/dist`, never against a local checkout of the repository.
+
+The zone map (which part of the screen belongs to the app shell, the module surface, the toolkit, or your module) lives in the spec: [01 App composition → Anatomie der Fläche](../spec/01-app-composition.md). The three flows create / open / delete: [shared-components → Abläufe](../spec/modules/shared-components.md). Do not keep a private copy of either; they are normative and this file only points to them.
+
+If a component you need is missing: do not build a substitute. Note the file in the package and the missing prop, propose the change, and report it in your handoff. A missing field is better than a custom build that has to be migrated later.
+
 ## What Real Life Stack is
 
 A modular, backend-agnostic app and UI toolkit for community apps: maps of people/places/projects, calendars, kanban boards, feeds, profiles, and relation graphs.

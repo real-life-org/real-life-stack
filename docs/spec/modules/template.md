@@ -96,6 +96,18 @@ Beispiele:
 - keine WoT-Attestation-Formate,
 - keine globale Berechtigungslogik.
 
+## Abnahme
+
+Vor dem Handoff gegen [01-app-composition.md → Anatomie der Fläche](../01-app-composition.md) und [shared-components.md → Abläufe](shared-components.md) prüfen:
+
+- Die Navbar enthält nur, was die App Shell besitzt.
+- Klick auf ein Item öffnet zuerst den Lesemodus; Löschen liegt im Aktionsmenü.
+- Jede Item-Karte ist eine `ItemPreview`.
+- Jedes Formularfeld ist ein deklariertes Widget des `ContentComposer`.
+- Filter unten links, Erstellen unten rechts, Suche oben links.
+- Kein Erklärtext, keine Legende, keine eigene Kopfzeile in Panels.
+- Jede eigene Komponente ist unter „Komponenten“ begründet oder als fehlender Baustein gemeldet.
+
 ## Implementierungsreferenzen
 
 Links auf bestehende Code- oder Demo-Stellen, wenn vorhanden.

@@ -670,6 +670,18 @@ function useOpenProfile(): OpenProfile  // no-op fallback ohne Provider
 
 **App-Shell-Mechanik (Referenz-App):** Die App Shell hostet **eine** `AdaptivePanel`-Instanz mit `allowedModes={["modal"]}` (`modal` auf Desktop und Mobile). Der `OpenProfileProvider` erzeugt das Panel nicht — er liefert nur den `openProfile(userId)`-Callback (no-op ohne Provider), der diese gehostete Instanz öffnet. (Bewusst kein `drawer`: auf Mobile öffnet das Item-Detail bereits als Drawer; ein zweiter Drawer darüber wäre als gestapelte Ebene unklar. Ein zentriertes Modal liegt sichtbar abgehoben über dem Item-Drawer.) `openProfile(userId)` öffnet sie; eigener User → `edit`, fremder → `view` (lädt via `connector.getUser`). Modal liegt über einem offenen Item-Detail-Panel (z-Stacking), statt es zu ersetzen.
 
+## Abläufe
+
+Drei Abläufe, die jedes Modul gleich führt. Sie folgen aus den Verträgen oben; hier stehen sie am Stück, damit ein Modul sie nicht anders zusammensetzt.
+
+**Anlegen.** `CreateFab` unten rechts öffnet den Composer im Content-Panel. Der Composer bietet die `contentTypes` des Moduls an und wählt den Typ; das Modul reicht Vorbelegungen (Ort, Datum, Spalte, Zelle) als `initialData`. Ein Modul DARF einen zusätzlichen, schnelleren Einstieg haben (Feed-Pille, Klick in eine leere Zelle); er ersetzt den `CreateFab` nicht.
+
+**Öffnen.** Klick auf eine `ItemPreview` öffnet `ItemDetailView` im Lesemodus: `ItemDetailBody` mit Typ-Badge, Titel, Text, Fakten-Box (Datum, Ort, Beteiligte, Beziehungen als `ItemPreview`), Autor, `CommentSection`. Rechts oben `ItemDetailActions`. „Bearbeiten“ schaltet dasselbe Panel auf den `ContentComposer`; Speichern und Abbrechen führen zurück in den Lesemodus. Ein Modul öffnet NICHT den Composer als erste Ansicht.
+
+**Löschen.** Nur über `ItemDetailActions` im Lesemodus, mit `DeleteConfirmDialog`. Nicht als Knopf im Formular, nicht als eigener Zweischritt.
+
+Status (offen, erledigt) ist ein Widget des Composers, keine Aktion daneben.
+
 ## Composability
 
 Module nutzen mehrere shared Components zusammen. Die Verträge sind so geschnitten, dass Komposition direkt funktioniert — keine impliziten Annahmen über Render-Reihenfolge oder DOM-Struktur:
