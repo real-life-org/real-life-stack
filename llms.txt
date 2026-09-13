@@ -8,9 +8,9 @@ Most spec documents are written in German. The type definitions in `@real-life-s
 
 ## Building apps on Real Life Stack (read in this order)
 
-1. [Anatomy of a module](https://github.com/real-life-org/real-life-stack/blob/master/docs/anatomie-eines-moduls.md): One page. Which zone of the screen belongs to whom (app shell, module head, content, filter pill, create button, detail panel), which toolkit component fills it, and the three flows create / open / delete. Read this before writing any UI.
-2. [01 App composition](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/01-app-composition.md), sections "Overlay-Flächen", "Content-Bereich", "Die Modulfläche ist eine Spalte", "Modul-Register": the normative rules the anatomy page cites.
-3. [Shared module components](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/modules/shared-components.md): contracts of `ItemPreview`, `ItemDetailView`, `ContentComposer`, `CreateFab`, `FilterPill`, hooks.
+1. [01 App composition → Anatomie der Fläche](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/01-app-composition.md): the zone map. Which part of the screen belongs to the app shell, the module surface, the toolkit, or your module, and which component fills it. Read this before writing any UI; then the rest of 01 (overlay layers, content area, module surface, module register).
+2. [Anatomy entry page](https://github.com/real-life-org/real-life-stack/blob/master/docs/anatomie-eines-moduls.md): the reading order below, with the version note.
+3. [Shared module components](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/modules/shared-components.md): contracts of `ItemPreview`, `ItemDetailView`, `ContentComposer`, `CreateFab`, `FilterPill`, hooks, and the section "Abläufe": the flows create / open / delete every module follows.
 4. [Toolkit index](https://github.com/real-life-org/real-life-stack/blob/master/docs/toolkit-index.md): every exported component and hook of the installed toolkit version, grouped by zone. Generated from the package; if a component is not in here, it does not exist — report the gap, do not build a substitute.
 5. [AGENTS.md template for RLS apps](https://github.com/real-life-org/real-life-stack/blob/master/docs/templates/AGENTS.md): Drop-in guide for coding agents that build a new app on top of the published packages. Install matrix, bootstrap code, composition pattern, rules.
 6. [Module spec template](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/modules/template.md): a new module is specified here first, then built.
@@ -32,7 +32,7 @@ Worked example: [Karabirrdt](https://github.com/antontranelis/karabirrdt), a Dra
 
 - [Spec index](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/README.md): Entry point; the spec is the single source of truth of the repository.
 - [00 Architecture](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/00-architecture.md): Layer model and architecture rules.
-- [01 App composition](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/01-app-composition.md): App shell, current space, space modules, module components.
+- [01 App composition](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/01-app-composition.md): App shell, current space, space modules, module components, and the zone map "Anatomie der Fläche".
 - [02 DataInterface](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/02-data-interface.md): Core read contract, items, observables, filters.
 - [03 Capabilities](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/03-capabilities.md): Optional connector capabilities and feature detection.
 - [04 Items, Relations, Groups/Spaces](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/04-items-relations-groups-spaces.md): The generic data model.

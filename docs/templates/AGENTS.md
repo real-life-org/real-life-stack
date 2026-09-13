@@ -13,19 +13,7 @@ Machine-readable overview of the whole stack: <https://github.com/real-life-org/
 
 Match the docs to the installed version: the repository moves faster than the packages. Use the tag `toolkit-vX.Y.Z` of the version in your `package.json` and verify exports against `node_modules/@real-life-stack/toolkit/dist`, never against a local checkout of the repository.
 
-## Anatomy at a glance
-
-| Zone | Owner | Component | Never here |
-|---|---|---|---|
-| Navbar | app shell | `Navbar`, `WorkspaceSwitcher`, `ModuleTabs`, `UserMenu`, `RelayStatusBadge` | module buttons, module fields, module status |
-| Space configuration (dialog) | app shell | `GroupDialog`, members | module state |
-| Module head | module surface | `ModuleFrame` owns it, `ModuleToolbar` is the module's contribution: search left, view/actions right | explanatory text, connection status, data export |
-| Content | module | the module's projection (`KanbanBoard`, `MapView`, `CollectionView`, your own grid) | hand-rolled item cards |
-| Item card | toolkit | `ItemPreview` + adornment slots | custom tiles |
-| Bottom-left | module surface | `FilterPill` in `PanelSafeArea` | a second element in that corner |
-| Bottom-right | module surface | `CreateFab`; the composer picks the type | custom plus buttons, "add another" buttons in the detail |
-| Right panel | app, one instance | `ItemDetailView`: read first (`ItemDetailBody`, ⋮ menu with edit and delete, discussion), then edit (`ContentComposer`) | composer as the first view, delete/status buttons inside the form, custom headers |
-| Form | toolkit | `ContentComposer` with declared widgets (title, text, media, date, location, people, tags, status, group); people from members via `peopleOptions` and `peopleQuickSuggestions` | custom widgets where a declared one exists |
+The zone map (which part of the screen belongs to the app shell, the module surface, the toolkit, or your module) lives in the spec: [01 App composition → Anatomie der Fläche](../spec/01-app-composition.md). The three flows create / open / delete: [shared-components → Abläufe](../spec/modules/shared-components.md). Do not keep a private copy of either; they are normative and this file only points to them.
 
 If a component you need is missing: do not build a substitute. Note the file in the package and the missing prop, propose the change, and report it in your handoff. A missing field is better than a custom build that has to be migrated later.
 
