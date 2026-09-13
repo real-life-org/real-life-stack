@@ -1,5 +1,12 @@
-import type { Item, Relation } from "@real-life-stack/data-interface"
-import type { ContentTypeConfig, ItemEditorMapper, WidgetData } from "@real-life-stack/toolkit"
+import type { Item } from "@real-life-stack/data-interface"
+import {
+  isPeopleDataKey,
+  peopleRelationsFromWidgetData,
+  peopleRelationsToWidgetData,
+  type ContentTypeConfig,
+  type ItemEditorMapper,
+  type WidgetData,
+} from "@real-life-stack/toolkit"
 import { resolveContentType } from "./content-types"
 
 // The composer surfaces free text as `data.text`, but the spec stores it as
@@ -54,13 +61,16 @@ export const mapComposerSubmission: ItemEditorMapper = (submission, { existingIt
   // `group` is the item's group/space association, persisted via the connector
   // (moveItemToGroup in useItemEditor) — never written into item.data.
   // `people` becomes relations (below), not item.data. `tags` is top-level.
-  const { text, tags: submittedTags, group: _group, people, ...rest } = submission.data
+  const { text, tags: submittedTags, group: _group, people: _people, ...rest } = submission.data
   const type = existingItem?.type ?? submission.contentType
   const typeConfig = resolveContentType(type)
 
   // Base on the existing data so unmanaged fields survive an edit; empty on create.
   const itemData: Record<string, unknown> = { ...(existingItem?.data ?? {}) }
   for (const [key, value] of Object.entries(rest)) {
+    // Weitere Personenfelder (`people:<predicate>`) werden wie `people` zu
+    // Relationen, nicht zu item.data.
+    if (isPeopleDataKey(key)) continue
     if (!isEmptyValue(value)) {
       itemData[key] = value
     } else if (existingItem && CLEARABLE_DATA_FIELDS.has(key)) {
@@ -97,18 +107,13 @@ export const mapComposerSubmission: ItemEditorMapper = (submission, { existingIt
       ? submittedTags
       : undefined
 
-  // People → relations on the type's predicate (task→assignedTo, event→invited).
-  // Only managed when the `people` field was part of the submission (widget
-  // shown); relations with other predicates are preserved.
-  const predicate = typeConfig?.peopleRelation?.predicate
-  let relations: Relation[] | undefined
-  if (predicate && Array.isArray(people)) {
-    const others = (existingItem?.relations ?? []).filter((r) => r.predicate !== predicate)
-    const assigned: Relation[] = people.map((id: string) => ({ predicate, target: `global:${id}` }))
-    relations = [...others, ...assigned]
-  } else {
-    relations = existingItem?.relations
-  }
+  // People → relations on the type's predicates (task→assignedTo, event→invited,
+  // und jedes weitere Feld aus `peopleRelations`). Nur die Prädikate der
+  // tatsächlich eingereichten Felder werden ersetzt; andere Relationen bleiben.
+  const relations = typeConfig
+    ? (peopleRelationsFromWidgetData(typeConfig, submission.data, existingItem?.relations) ??
+      existingItem?.relations)
+    : existingItem?.relations
 
   return {
     type,
@@ -162,13 +167,10 @@ export function withGroupOptions(
 export function itemToComposerData(item: Item): Partial<WidgetData> {
   const d = item.data as Record<string, unknown>
   const text = d[textFieldFor(item.type)]
-  // People come from the type's relation predicate (assignedTo / invited / …).
-  const predicate = resolveContentType(item.type)?.peopleRelation?.predicate
-  const people = predicate
-    ? (item.relations ?? [])
-        .filter((r) => r.predicate === predicate)
-        .map((r) => r.target.replace(/^global:/, ""))
-    : []
+  // People come from the type's relation predicates (assignedTo / invited / …) —
+  // je Personenfeld eines, siehe `peopleRelations`.
+  const typeConfig = resolveContentType(item.type)
+  const people = typeConfig ? peopleRelationsToWidgetData(typeConfig, item.relations) : {}
   return {
     ...(typeof d.title === "string" ? { title: d.title } : {}),
     ...(typeof text === "string" ? { text } : {}),
@@ -183,7 +185,7 @@ export function itemToComposerData(item: Item): Partial<WidgetData> {
       ? { media: d.media as WidgetData["media"] }
       : {}),
     ...(typeof d.status === "string" ? { status: d.status } : {}),
-    ...(people.length > 0 ? { people } : {}),
+    ...people,
     tags: item.tags ?? [],
   }
 }
