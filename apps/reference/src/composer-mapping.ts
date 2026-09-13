@@ -1,6 +1,6 @@
 import type { Item } from "@real-life-stack/data-interface"
 import {
-  isPeopleDataKey,
+  peopleDataKeys,
   peopleRelationsFromWidgetData,
   peopleRelationsToWidgetData,
   type ContentTypeConfig,
@@ -66,11 +66,14 @@ export const mapComposerSubmission: ItemEditorMapper = (submission, { existingIt
   const typeConfig = resolveContentType(type)
 
   // Base on the existing data so unmanaged fields survive an edit; empty on create.
+  // Welche Schlüssel Personen tragen, sagt die Typ-Konfiguration (der Eintrag
+  // darf einen eigenen dataKey setzen) — sie werden zu Relationen, nicht zu
+  // item.data.
+  const personenSchluessel = new Set(typeConfig ? peopleDataKeys(typeConfig) : ["people"])
+
   const itemData: Record<string, unknown> = { ...(existingItem?.data ?? {}) }
   for (const [key, value] of Object.entries(rest)) {
-    // Weitere Personenfelder (`people:<predicate>`) werden wie `people` zu
-    // Relationen, nicht zu item.data.
-    if (isPeopleDataKey(key)) continue
+    if (personenSchluessel.has(key)) continue
     if (!isEmptyValue(value)) {
       itemData[key] = value
     } else if (existingItem && CLEARABLE_DATA_FIELDS.has(key)) {

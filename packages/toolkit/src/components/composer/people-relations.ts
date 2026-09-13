@@ -41,9 +41,13 @@ export function peopleDataKey(predicate: string): string {
   return `${PEOPLE_DATA_KEY_PREFIX}${predicate}`
 }
 
-/** Ob ein Datenschlüssel zu einem *weiteren* Personenfeld gehört. */
-export function isPeopleDataKey(key: string): boolean {
-  return key.startsWith(PEOPLE_DATA_KEY_PREFIX)
+/**
+ * Die Datenschlüssel aller Personenfelder eines Typs. Wer wissen will, ob ein
+ * Schlüssel Personen trägt, fragt DIESE Liste — nicht das `people:`-Präfix:
+ * ein Eintrag darf einen eigenen `dataKey` setzen.
+ */
+export function peopleDataKeys(config: PeopleRelationSource): string[] {
+  return resolvePeopleFields(config).map((field) => field.dataKey)
 }
 
 /** Der Teil der Typ-Konfiguration, den die Auflösung braucht. */

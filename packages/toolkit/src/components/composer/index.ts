@@ -19,7 +19,7 @@ export {
 export {
   PEOPLE_DATA_KEY,
   peopleDataKey,
-  isPeopleDataKey,
+  peopleDataKeys,
   resolvePeopleFields,
   peopleRelationsFromWidgetData,
   peopleRelationsToWidgetData,

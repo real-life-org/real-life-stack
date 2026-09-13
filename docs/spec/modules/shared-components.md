@@ -98,10 +98,11 @@ interface ContentTypeConfig {
 
 1. `peopleRelations` gewinnt über `peopleRelation`; die Einzahl-Form bleibt gültig und bedeutet genau einen Eintrag.
 2. Der Datenschlüssel ist `data.people` für den ersten (bzw. einzigen) Eintrag und `data.people:<predicate>` für jeden weiteren; ein gesetztes `dataKey` gewinnt. Ein Eintrag beschriftet sein Feld über `label`; ohne `peopleRelations` gilt weiter `widgetLabels.people`.
-3. Alle Felder teilen sich `peopleOptions`, `peopleSuggestions` und `peopleQuickSuggestions` sowie den einen `people`-Eintrag in `defaultWidgets` — der Typ schaltet die Personenfelder gemeinsam ein.
-4. Beim Speichern schreibt der Mapper je Feld die Relationen seines Prädikats (`global:<userId>`); Relationen anderer Prädikate — auch die eines nicht eingereichten Personenfeldes — bleiben unverändert. Die Vorbefüllung liest je Prädikat zurück.
+3. Welche Schlüssel Personen tragen, sagt die **Konfiguration**, nicht der Name: Composer (Sichtbarkeit, Ungespeichert-Schutz, `liveUpdate`) und Mapper erkennen sie über die aufgelöste Feldliste. Das `people:`-Präfix ist nur die Ableitungsregel für den Standardschlüssel, kein Erkennungsmerkmal — ein eigener `dataKey` nimmt an allem gleichberechtigt teil.
+4. Alle Felder teilen sich `peopleOptions`, `peopleSuggestions` und `peopleQuickSuggestions` sowie den einen `people`-Eintrag in `defaultWidgets` — der Typ schaltet die Personenfelder gemeinsam ein.
+5. Beim Speichern schreibt der Mapper je Feld die Relationen seines Prädikats (`global:<userId>`); Relationen anderer Prädikate — auch die eines nicht eingereichten Personenfeldes — bleiben unverändert. Die Vorbefüllung liest je Prädikat zurück.
 
-**Code:** `packages/toolkit/src/components/composer/people-relations.ts` (`resolvePeopleFields`, `peopleRelationsFromWidgetData`, `peopleRelationsToWidgetData`).
+**Code:** `packages/toolkit/src/components/composer/people-relations.ts` (`resolvePeopleFields`, `peopleDataKeys`, `peopleRelationsFromWidgetData`, `peopleRelationsToWidgetData`).
 
 #### Location-Widget (`location`)
 

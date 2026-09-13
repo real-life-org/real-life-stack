@@ -27,11 +27,7 @@ import type { Geocoder, ReverseGeocoder } from "@/lib/geocode"
 import { MediaWidget } from "./widgets/media-widget"
 import { PeopleWidget, type PersonOption } from "./widgets/people-widget"
 export type { PersonOption } from "./widgets/people-widget"
-import {
-  isPeopleDataKey,
-  resolvePeopleFields,
-  type PeopleRelationConfig,
-} from "./people-relations"
+import { resolvePeopleFields, type PeopleRelationConfig } from "./people-relations"
 export type { PeopleRelationConfig } from "./people-relations"
 import { TagsWidget } from "./widgets/tags-widget"
 import { StatusWidget } from "./widgets/status-widget"
@@ -276,7 +272,10 @@ const PRESENCE_WIDGET_BY_FIELD: Record<string, WidgetType> = {
 }
 
 /** Widgets that have a non-empty value in `data` — shown initially when present. */
-function widgetsWithValue(data: Partial<WidgetData> | undefined): Set<string> {
+function widgetsWithValue(
+  data: Partial<WidgetData> | undefined,
+  peopleKeys: readonly string[],
+): Set<string> {
   const set = new Set<string>()
   if (!data) return set
   const hasValue = (value: unknown) => {
@@ -288,18 +287,11 @@ function widgetsWithValue(data: Partial<WidgetData> | undefined): Set<string> {
   for (const [field, widget] of Object.entries(PRESENCE_WIDGET_BY_FIELD)) {
     if (hasValue((data as Record<string, unknown>)[field])) set.add(widget)
   }
-  // Weitere Personenfelder (`people:<predicate>`) zeigen dasselbe Widget.
-  for (const [field, value] of Object.entries(data as Record<string, unknown>)) {
-    if (isPeopleDataKey(field) && hasValue(value)) set.add("people")
+  // Alle konfigurierten Personenfelder zeigen dasselbe Widget.
+  for (const key of peopleKeys) {
+    if (hasValue((data as Record<string, unknown>)[key])) set.add("people")
   }
   return set
-}
-
-/** Die Datenschlüssel der *weiteren* Personenfelder (`people:<predicate>`). */
-function extraPeopleDataKeys(data: Partial<WidgetData>): string[] {
-  return Object.keys(data)
-    .filter((key) => isPeopleDataKey(key))
-    .sort()
 }
 
 /**
@@ -308,10 +300,11 @@ function extraPeopleDataKeys(data: Partial<WidgetData>): string[] {
  * type-switch effect), so including them would flag an untouched/empty form as
  * dirty. The guard is about user-entered content that would be lost.
  */
-const DIRTY_FIELDS = [
+const DIRTY_FIELDS: readonly string[] = [
   "title", "text", "media", "start", "end", "rrule",
-  "address", "locationName", "position", "meetingLink", "people", "tags",
-] as const
+  "address", "locationName", "position", "meetingLink", "tags",
+  // Personenfelder kommen aus der Typ-Konfiguration dazu (siehe dirtySignature).
+]
 
 /**
  * Stable signature of the dirty-relevant content, empties stripped. Two states
@@ -319,9 +312,10 @@ const DIRTY_FIELDS = [
  * field, or leaving the form untouched, reads as not dirty. Fixed field order
  * keeps the JSON key order deterministic.
  */
-function dirtySignature(data: WidgetData): string {
+function dirtySignature(data: WidgetData, peopleKeys: readonly string[]): string {
   const out: Record<string, unknown> = {}
-  for (const field of [...DIRTY_FIELDS, ...extraPeopleDataKeys(data)]) {
+  const fields = [...new Set([...DIRTY_FIELDS, ...peopleKeys])]
+  for (const field of fields) {
     const value = (data as Record<string, unknown>)[field]
     if (value === "" || value === null || value === undefined) continue
     if (Array.isArray(value) && value.length === 0) continue
@@ -368,6 +362,15 @@ export function ContentComposer({
     mode || initialContentType || contentTypes[0]?.id || ""
 
   const [selectedType, setSelectedType] = React.useState(resolvedInitialType)
+
+  // Current content type config (Achtung: nur eine Ableitung, kein Hook — der
+  // Abbruch bei fehlendem Typ steht weiter unten, nach allen Hooks).
+  const currentConfig = contentTypes.find((t) => t.id === selectedType) || contentTypes[0]
+  // Personenfelder des Typs (mehrere je Typ möglich, siehe peopleRelations).
+  // Welche Datenschlüssel Personen tragen, sagt die Konfiguration.
+  const peopleFields = resolvePeopleFields(currentConfig ?? {})
+  const peopleKeys = peopleFields.map((field) => field.dataKey)
+
   const [data, setData] = React.useState<WidgetData>(() => ({
     ...DEFAULT_DATA,
     ...initialData,
@@ -375,7 +378,7 @@ export function ContentComposer({
   // Start with the widgets the item already has a value for, so editing reveals
   // its set fields (a task's date/place) instead of hiding them behind toggles.
   const [manualWidgets, setManualWidgets] = React.useState<Set<string>>(
-    () => widgetsWithValue(initialData),
+    () => widgetsWithValue(initialData, peopleKeys),
   )
   // The date widget's sub-fields (end date, time, recurrence) are UI state: an
   // opened-but-empty field has no data to be derived from. See date-widget-state.
@@ -383,6 +386,10 @@ export function ContentComposer({
   // Imperative handle so the host can patch the open composer without remounting
   // it — e.g. update only `start` when another calendar date is clicked, keeping
   // already-entered content intact.
+  const peopleKeysRef = React.useRef(peopleKeys)
+  React.useEffect(() => {
+    peopleKeysRef.current = peopleKeys
+  })
   React.useEffect(() => {
     if (!apiRef) return
     apiRef.current = {
@@ -393,7 +400,7 @@ export function ContentComposer({
         // stuck hidden behind a "+" toggle. manualWidgets is seeded only from
         // the initial data, so post-mount patches need this.
         setManualWidgets((prev) => {
-          const revealed = widgetsWithValue(patch)
+          const revealed = widgetsWithValue(patch, peopleKeysRef.current)
           if ([...revealed].every((w) => prev.has(w))) return prev
           return new Set([...prev, ...revealed])
         })
@@ -408,8 +415,6 @@ export function ContentComposer({
   // Aborts the previous reverse-geocode when the user re-picks on the map.
   const reverseAbortRef = React.useRef<AbortController | null>(null)
 
-  // Current content type config
-  const currentConfig = contentTypes.find((t) => t.id === selectedType) || contentTypes[0]
   if (!currentConfig) return null
 
   // Apply defaults from config on type change
@@ -450,8 +455,7 @@ export function ContentComposer({
         prev.status !== data.status ||
         prev.group !== data.group ||
         prev.tags !== data.tags ||
-        prev.people !== data.people ||
-        extraPeopleDataKeys({ ...prev, ...data }).some(
+        peopleKeys.some(
           (key) => (prev as Record<string, unknown>)[key] !== (data as Record<string, unknown>)[key],
         ) ||
         prev.start !== data.start ||
@@ -484,10 +488,10 @@ export function ContentComposer({
   // changes something, and an emptied form goes back to clean.
   const dirtyBaselineRef = React.useRef<string | null>(null)
   if (dirtyBaselineRef.current === null) {
-    dirtyBaselineRef.current = dirtySignature({ ...DEFAULT_DATA, ...initialData })
+    dirtyBaselineRef.current = dirtySignature({ ...DEFAULT_DATA, ...initialData }, peopleKeys)
   }
   React.useEffect(() => {
-    onDirtyChange?.(dirtySignature(data) !== dirtyBaselineRef.current)
+    onDirtyChange?.(dirtySignature(data, peopleKeysRef.current) !== dirtyBaselineRef.current)
   }, [onDirtyChange, data])
 
   // Active widgets = defaults + manually added
@@ -512,9 +516,6 @@ export function ContentComposer({
       !(w === "status" && !hasStatusOptions) &&
       !(w === "group" && !hasGroupOptions),
   ) as WidgetType[]
-
-  // Personenfelder des Typs (mehrere je Typ möglich, siehe peopleRelations).
-  const peopleFields = resolvePeopleFields(currentConfig)
 
   // Get widget label
   const getWidgetLabel = (widgetId: string): string => {

@@ -3,7 +3,7 @@ import type { Relation } from "@real-life-stack/data-interface"
 
 import {
   peopleDataKey,
-  isPeopleDataKey,
+  peopleDataKeys,
   resolvePeopleFields,
   peopleRelationsFromWidgetData,
   peopleRelationsToWidgetData,
@@ -33,9 +33,22 @@ const singleFieldType: ContentTypeConfig = {
 describe("peopleDataKey", () => {
   it("leitet den Datenschlüssel aus dem Prädikat ab", () => {
     expect(peopleDataKey("wantsToLearn")).toBe("people:wantsToLearn")
-    expect(isPeopleDataKey("people:wantsToLearn")).toBe(true)
-    expect(isPeopleDataKey("people")).toBe(false)
-    expect(isPeopleDataKey("tags")).toBe(false)
+  })
+})
+
+describe("peopleDataKeys", () => {
+  it("nennt die konfigurierten Schlüssel, nicht das Präfix", () => {
+    expect(peopleDataKeys(twoFieldType)).toEqual(["people", "people:wantsToLearn"])
+    expect(peopleDataKeys(singleFieldType)).toEqual(["people"])
+    expect(
+      peopleDataKeys({
+        ...twoFieldType,
+        peopleRelations: [
+          { predicate: "assignedTo", label: "Kann ich" },
+          { predicate: "wantsToLearn", label: "Will lernen", dataKey: "learners" },
+        ],
+      }),
+    ).toEqual(["people", "learners"])
   })
 })
 
