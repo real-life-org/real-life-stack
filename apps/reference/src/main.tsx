@@ -11,7 +11,7 @@ import './index.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { checkForLiveUpdate } from './live-update'
 import { prefetchMapLibre } from '@real-life-stack/toolkit/maplibre'
-import { loadRuntimeConfig, applyBranding } from '@real-life-stack/toolkit'
+import { loadRuntimeConfig, applyBranding, applyStoredTweaks } from '@real-life-stack/toolkit'
 import { RootError } from './root-error'
 import { applyInitialColorScheme } from './initial-color-scheme'
 
@@ -68,6 +68,11 @@ async function start() {
   // liegen VOR der App-Shell und blieben sonst hell, egal was System oder eine
   // frueher getroffene Wahl sagen.
   applyInitialColorScheme()
+  // Zuletzt: Anpassungen aus den Design-Reglern, die jemand im Browser
+  // gespeichert hat. NACH Branding und Schema, weil beides die Basis ist, auf
+  // der die Regler stehen — die globalen Regler brauchen die Werte des
+  // Schemas, das gleich sichtbar wird.
+  applyStoredTweaks()
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

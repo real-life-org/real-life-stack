@@ -25,6 +25,15 @@ export {
   type Branding,
 } from "./lib/runtime-config"
 export {
+  applyStoredTweaks,
+  clearTweaks,
+  TOKEN_GROUPS,
+  CONTRAST_PAIRS,
+  type ThemeTweaks,
+  type GlobalAdjust,
+} from "./lib/theme-tweaks"
+export { parseColor, formatOklch, contrastRatio, contrastLevel, type Oklch } from "./lib/oklch"
+export {
   CORE_MODULES,
   CORE_MODULE_LAYER,
   composeModules,

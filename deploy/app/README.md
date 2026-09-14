@@ -57,6 +57,13 @@ inklusive `oklch()`, `rgb()` und `hsl()`.
 Die Datei wird **getrennt** von der übrigen Konfiguration geladen: Ist sie
 kaputt, fehlen nur die Farben, und Name, Relay und Connector stehen weiter.
 
+Die Werte muss niemand raten: In der laufenden App öffnet **User-Menü →
+„Design anpassen"** Regler für jedes Token — Helligkeit, Sättigung, Farbton,
+dazu die Kontraste nach WCAG. Was dort steht, wirkt sofort auf die Seite und
+lässt sich als fertige `theme.json` herunterladen. Die Anpassung bleibt im
+eigenen Browser, bis sie zurückgesetzt wird; andere sehen sie erst, wenn die
+Datei in `branding/` liegt.
+
 ## Volle Kontrolle über die Konfiguration
 
 Wer mehr will, als `.env` hergibt, legt eine eigene
