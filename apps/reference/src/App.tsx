@@ -32,6 +32,7 @@ import {
   ModulePanelProvider,
   useModulePanel,
   DebugDashboard,
+  ThemeTweaker,
   ProfilePanelContent,
   type ProfileData,
   ContactsDialog,
@@ -247,6 +248,35 @@ function RelayStatusBadgeWrapper() {
       onClick={toggleDebug}
     />
   )
+}
+
+/**
+ * Die Design-Regler (Spec 11) teilen sich wie Debug das eine App-Panel:
+ * Klick im User-Menue oeffnet sie, ein zweiter schliesst sie. Ohne Backdrop,
+ * damit die Seite darunter bedienbar bleibt — man will sehen, wie ein Knopf
+ * unter dem neuen Primaer aussieht, waehrend man ihn noch verschiebt.
+ *
+ * Der Umschalter fuer hell/dunkel gehoert der App (isDark in Home); das
+ * Panel bekommt ihn ueber einen Ref, weil sein Inhalt beim Oeffnen in den
+ * Panel-Zustand wandert und eine direkt uebergebene Closure sonst beim
+ * ersten Wechsel veraltet waere.
+ */
+function ThemeTweakerOpener({ onToggleScheme, children }: { onToggleScheme: () => void; children: (open: () => void) => ReactNode }) {
+  const panel = useModulePanel()
+  const toggleRef = useRef(onToggleScheme)
+  toggleRef.current = onToggleScheme
+  const open = () => {
+    if (panel.current?.kind === "theme") {
+      panel.close()
+    } else {
+      panel.open({
+        kind: "theme",
+        backdrop: false,
+        content: <ThemeTweaker onToggleScheme={() => toggleRef.current()} />,
+      })
+    }
+  }
+  return <>{children(open)}</>
 }
 
 /**
@@ -762,17 +792,22 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
               <Moon className="h-4 w-4" />
             )}
           </Button>
-          <UserMenu
-            user={userData}
-            onProfile={() => { if (currentUser?.id) openProfile(currentUser.id) }}
-            onContacts={supportsContacts ? () => openDialog("contacts") : undefined}
-            contactCount={activeContacts.length}
-            onVerify={hasEncounterVerification(connector) ? () => openDialog("verify") : undefined}
-            onLogout={isAuthenticatable(connector) ? async () => {
-              await connector.logout()
-              window.location.reload()
-            } : undefined}
-          />
+          <ThemeTweakerOpener onToggleScheme={toggleTheme}>
+            {(openTheme) => (
+              <UserMenu
+                user={userData}
+                onProfile={() => { if (currentUser?.id) openProfile(currentUser.id) }}
+                onContacts={supportsContacts ? () => openDialog("contacts") : undefined}
+                contactCount={activeContacts.length}
+                onVerify={hasEncounterVerification(connector) ? () => openDialog("verify") : undefined}
+                onTheme={openTheme}
+                onLogout={isAuthenticatable(connector) ? async () => {
+                  await connector.logout()
+                  window.location.reload()
+                } : undefined}
+              />
+            )}
+          </ThemeTweakerOpener>
         </NavbarEnd>
       </Navbar>
 

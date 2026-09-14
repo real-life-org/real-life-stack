@@ -1,6 +1,6 @@
 "use client"
 
-import { LogOut, QrCode, Settings, User, Users } from "lucide-react"
+import { LogOut, Palette, QrCode, Settings, User, Users } from "lucide-react"
 
 import {
   DropdownMenu,
@@ -25,6 +25,8 @@ interface UserMenuProps {
   onContacts?: () => void
   contactCount?: number
   onVerify?: () => void
+  /** Oeffnet die Design-Regler (ThemeTweaker) — Farbtokens live anpassen, theme.json exportieren. */
+  onTheme?: () => void
   onSettings?: () => void
   onLogout?: () => void
 }
@@ -35,6 +37,7 @@ export function UserMenu({
   onContacts,
   contactCount,
   onVerify,
+  onTheme,
   onSettings,
   onLogout,
 }: UserMenuProps) {
@@ -84,6 +87,12 @@ export function UserMenu({
           <DropdownMenuItem onClick={onVerify} className="flex items-center gap-2">
             <QrCode className="h-4 w-4" />
             <span>Verifizieren</span>
+          </DropdownMenuItem>
+        )}
+        {onTheme && (
+          <DropdownMenuItem onClick={onTheme} className="flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            <span>Design anpassen</span>
           </DropdownMenuItem>
         )}
         {onSettings && (

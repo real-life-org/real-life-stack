@@ -1,0 +1,47 @@
+# Build-Kontext fuer deploy/app/Dockerfile.
+#
+# Der Kontext ist der Repo-Stamm, weil der Build das ganze Workspace-Setup
+# braucht (pnpm-workspace.yaml, packages/*). Ohne diese Datei wandert aber
+# alles mit — .git, node_modules, alte dist-Ordner — und jeder Build beginnt
+# mit dem Uebertragen von Daten, die er nie anfasst.
+#
+# Grundsatz: Nur ausschliessen, was der Build nachweislich nicht braucht.
+# Quelltext, Manifeste und Lockfile bleiben; Erzeugtes und Fremdes geht raus.
+
+# Versionskontrolle und CI
+.git
+.github
+
+# Installiert und gebaut wird im Container, nie vom Host uebernommen.
+# Ein gemischtes node_modules (macOS-Binaries in einem Linux-Image) waere
+# schlimmer als gar keins.
+node_modules
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+**/storybook-static
+**/test-results
+**/playwright-report
+
+# Native Huellen der Reference-App — der Container liefert nur das Web-Bundle.
+apps/reference/android
+apps/reference/ios
+apps/reference/fastlane
+apps/reference/ota-bundles
+
+# Werkzeug- und Editor-Ablagen
+.vscode
+.idea
+.mcp.json
+.claude
+.wot
+*.log
+.DS_Store
+
+# Was der Betreiber mountet, gehoert nicht ins Image (siehe Dockerfile:
+# /srv/landing und /srv/branding sind Mountpunkte). landing-default/ bleibt.
+deploy/app/landing
+deploy/app/branding
+deploy/app/.env
+deploy/supabase

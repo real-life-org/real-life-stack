@@ -9,6 +9,7 @@ Code-Referenzen:
 - `packages/toolkit/src/lib/runtime-config.ts`
 - `apps/reference/src/main.tsx` — Laden vor dem ersten Render
 - `deploy/app/` — Container, der die Konfiguration aus Umgebungsvariablen erzeugt
+- `packages/toolkit/src/components/theme-tweaker/` — Werkzeug, das `colors` erzeugt: Tokens live regeln, Kontraste messen, `theme.json` exportieren (nicht normativ)
 
 ## Motivation
 

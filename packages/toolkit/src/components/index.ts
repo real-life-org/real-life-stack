@@ -13,6 +13,9 @@ export * from "./contacts"
 // Debug
 export * from "./debug"
 
+// Design-Regler (Spec 11: Tokens live anpassen, theme.json exportieren)
+export * from "./theme-tweaker"
+
 // Space modules
 export * from "./feed"
 export * from "./kanban"

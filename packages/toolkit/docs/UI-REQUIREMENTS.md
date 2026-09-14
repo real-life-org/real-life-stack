@@ -157,6 +157,19 @@ Jede Checkbox repräsentiert eine einzelne, aktivierbare Entscheidung.
 
 ---
 
+## Design-Regler (ThemeTweaker)
+
+- [x] **theme-tweaker-oklch**: Regler arbeiten in OKLCH (L/C/H getrennt), nicht in RGB/HSL — die Achsen entsprechen dem, was ein Mensch meint („heller", „kräftiger", „wärmer")
+- [x] **theme-tweaker-two-layers**: Einzelwerte je Token, darüber globale Regler (Helligkeit, Kontrast, Sättigung, Farbton) für das ganze Schema
+- [x] **theme-tweaker-per-scheme**: Bearbeitet wird das sichtbare Schema; hell und dunkel werden getrennt gehalten und gemeinsam exportiert
+- [x] **theme-tweaker-contrast-report**: WCAG-2-Kontrast für Text-auf-Fläche-Paare, mit Schwelle 4.5 (Text) bzw. 3 (Rahmen, große Flächen) und Stufe AAA/AA/AA-large
+- [x] **theme-tweaker-gamut-warning**: Werte außerhalb des sRGB-Gamuts werden markiert, nicht stumm gerundet
+- [x] **theme-tweaker-export-theme-json**: Ausgabe ist genau das `colors`-Format aus Spec 11 (`{ light, dark }`), nur geänderte Tokens
+- [x] **theme-tweaker-persist-local**: Anpassungen überleben einen Reload im selben Browser (`localStorage`), nie serverseitig
+- [x] **theme-tweaker-shared-panel**: In der App im geteilten Modul-Panel (User-Menü → „Design anpassen"), ohne Backdrop; in Storybook per Toolbar-Schalter „Regler" neben jeder Story
+
+---
+
 ## Assets
 
 - [x] **assets-base-path**: Logo-Pfade nutzen `import.meta.env.BASE_URL` für GitHub Pages Kompatibilität
@@ -189,3 +202,4 @@ Jede Checkbox repräsentiert eine einzelne, aktivierbare Entscheidung.
 | 2026-07-17 | Listen- und Rasterdichte zur CollectionView-Linse mit session-lokalem Toggle zusammengeführt |
 | 2026-07-17 | Vollbreite Linsen-Scroller, gemeinsamer Inhaltsrahmen und gemessene Raster-Zeilenabstände dokumentiert |
 | 2026-07-17 | CollectionView-Toggle erhält den Linsen-Innenabstand oben; Rasterkarten nutzen reihenfolgestabile, gemessene Masonry-Lanes |
+| 2026-09-14 | Design-Regler (ThemeTweaker): Farbtokens live anpassen, Kontraste messen, theme.json exportieren |
