@@ -5,12 +5,13 @@ import type { Item, User } from "@real-life-stack/data-interface"
 
 import { ItemPreview } from "../src/components/preview/item-preview"
 import { ItemAssignees } from "../src/components/preview/item-assignees"
+import { getUserColor } from "../src/lib/utils"
 
 /**
  * Die dritte Dichte ist fuer Matrix-Flaechen gedacht: zwoelf Spalten mal N
  * Zeilen auf einen Schirm. Was dort noch Platz hat, ist der Titel und ein
  * Hinweis darauf, wer dranhaengt — alles andere kostet Hoehe, die es nicht
- * gibt.
+ * gibt. Masse aus „RLS System Design → Dragon Dreaming.dc.html", Variante 1a.
  */
 const aufgabe = (over: Partial<Item> = {}): Item =>
   ({
@@ -43,10 +44,17 @@ function markup(over: Partial<Parameters<typeof ItemPreview>[0]> = {}) {
 }
 
 describe("ItemPreview: Dichte dense", () => {
-  it("zeigt den Titel, auf zwei Zeilen begrenzt", () => {
+  it("zeigt den Titel, auf drei Zeilen begrenzt", () => {
     const html = markup({ density: "dense" })
     expect(html).toContain("Beete vorbereiten")
-    expect(html).toContain("line-clamp-2")
+    expect(html).toContain("line-clamp-3")
+  })
+
+  it("laesst lange Woerter brechen statt die Kachel zu sprengen", () => {
+    const html = markup({ density: "dense" })
+    expect(html).toContain("anywhere")
+    expect(html).toContain("hyphens")
+    expect(html).toContain('lang="de"')
   })
 
   it("laesst Text, Meta-Zeile und Tags weg", () => {
@@ -76,14 +84,33 @@ describe("ItemPreview: Dichte dense", () => {
 })
 
 /**
- * Eine Null ist keine Auskunft — in der dichten Karte noch weniger als
- * anderswo: Dort stuende ein Symbol ohne Zahl und nichts dahinter.
+ * Erledigtes bleibt sichtbar, tritt aber zurueck: ein Haekchen vor dem Titel
+ * und die ganze Kachel gedimmt. Wer das Brett ueberfliegt, sieht, was noch
+ * offen ist, ohne dass Erledigtes verschwindet.
  */
-describe("ItemPreview dense: Kommentarzaehler", () => {
-  it("nennt ohne Kommentare gar nichts", () => {
+describe("ItemPreview: erledigt", () => {
+  it("setzt ein Haekchen vor den Titel und dimmt die Kachel", () => {
+    const html = markup({ density: "dense", completed: true })
+    expect(html).toContain("✓")
+    expect(html).toContain("0.55")
+    expect(html).toContain('data-completed="true"')
+  })
+
+  it("laesst offene Karten unangetastet", () => {
+    const html = markup({ density: "dense" })
+    expect(html).not.toContain("✓")
+    expect(html).not.toContain("0.55")
+  })
+})
+
+/**
+ * In der Matrix-Kachel steht kein Kommentarzaehler: Das Design zeigt dort
+ * genau zwei Dinge, Titel und Zugewiesene.
+ */
+describe("ItemPreview dense: kein Kommentarzaehler", () => {
+  it("nennt weder Zahl noch Einladung", () => {
     const html = markup({ density: "dense" })
     expect(html).not.toContain("Kommentieren")
-    expect(html).not.toContain("MessageSquare")
     expect(html).not.toMatch(/lucide-message-square/)
   })
 })
@@ -109,26 +136,61 @@ describe("ItemPreview: comfortable und compact bleiben", () => {
   })
 
   it("begrenzt den Titel nur in der dichtesten Ansicht", () => {
-    expect(markup()).not.toContain("line-clamp-2")
-    expect(markup({ density: "compact" })).not.toContain("line-clamp-2")
+    expect(markup()).not.toContain("line-clamp-3")
+    expect(markup({ density: "compact" })).not.toContain("line-clamp-3")
   })
 })
 
 /**
- * `ItemAssignees` bekommt fuer die dichte Karte eine kleine Groesse — keine
- * zweite Komponente, sonst laufen zwei Avatar-Stacks auseinander.
+ * `ItemAssignees` bekommt fuer die dichte Karte eine kleine Groesse und zwei
+ * Stile — keine zweite Komponente, sonst laufen zwei Avatar-Stapel
+ * auseinander.
  */
 describe("ItemAssignees: Groesse xs", () => {
   it("zeigt nur die Bilder, keinen Namen", () => {
     const html = renderToStaticMarkup(<ItemAssignees users={[lena, anton]} size="xs" />)
     expect(html).not.toContain("Lena Berg,")
     expect(html).not.toContain("+ 1 weitere")
-    expect(html).toContain("h-4 w-4")
+    expect(html).toContain("h-3.5 w-3.5")
   })
 
   it("bleibt in der Standardgroesse beim Namens-Resuemee", () => {
     const html = renderToStaticMarkup(<ItemAssignees users={[lena, anton]} />)
     expect(html).toContain("Lena Berg, Anton T.")
     expect(html).toContain("h-5 w-5")
+  })
+
+  it("zeigt hoechstens fuenf Avatare", () => {
+    const viele = Array.from({ length: 8 }, (_, i) => ({
+      id: `u${i}`,
+      displayName: `Person ${i}`,
+    })) as User[]
+    const html = renderToStaticMarkup(<ItemAssignees users={viele} size="xs" />)
+    expect(html.match(/data-slot="avatar"/g)?.length).toBe(5)
+  })
+})
+
+/**
+ * Zwei Stile, keine Bedeutung: Das Toolkit faerbt gefuellt oder umrandet, was
+ * das heisst (kann ich / will lernen, Zusage / vielleicht), entscheidet die
+ * App.
+ */
+describe("ItemAssignees: gefuellt und umrandet", () => {
+  it("fuellt per Default mit der Personenfarbe", () => {
+    const html = renderToStaticMarkup(<ItemAssignees users={[lena]} size="xs" />)
+    expect(html).toContain(getUserColor(lena.id))
+  })
+
+  it("zeichnet den umrandeten Stil mit Ring und Schrift in der Personenfarbe", () => {
+    const html = renderToStaticMarkup(
+      <ItemAssignees users={[{ ...lena, variant: "outline" }]} size="xs" />,
+    )
+    expect(html).toContain("inset")
+    expect(html).toContain(getUserColor(lena.id))
+  })
+
+  it("gibt jeder Person dieselbe Farbe, egal wo sie auftaucht", () => {
+    expect(getUserColor(lena.id)).toBe(getUserColor(lena.id))
+    expect(getUserColor(lena.id)).not.toBe(getUserColor(anton.id))
   })
 })

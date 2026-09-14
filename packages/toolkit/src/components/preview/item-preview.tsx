@@ -53,9 +53,11 @@ import { MessageSquare } from "lucide-react"
  * 10×10, font-base title, p-4 spacing, description shown). `compact`
  * is tuned for kanban boards and dense list views: no description in
  * the body, smaller padding/font/avatar so multiple cards fit a
- * column without bleeding off-screen. `dense` is the matrix card: a
- * title of at most two lines plus the footer the caller supplies,
- * nothing else, so twelve columns fit one screen.
+ * column without bleeding off-screen. `dense` is the matrix tile: a
+ * title of at most three lines plus the footer the caller supplies,
+ * nothing else, so twelve columns fit one screen. Masse aus „RLS System
+ * Design → Dragon Dreaming.dc.html", Variante 1a: 112 px breit, rund
+ * 62 px hoch.
  */
 export type ItemPreviewDensity = "comfortable" | "compact" | "dense"
 export type ItemPreviewSurface = "card" | "panel"
@@ -95,10 +97,11 @@ export interface ItemPreviewProps {
   /**
    * Layout density. Default `comfortable` matches the feed card.
    * `compact` shrinks paddings and avatar, drops the description
-   * block — fits kanban / dense list contexts. `dense` is the card for
-   * grids and matrices (12+ columns): title (max 2 lines) plus the
+   * block — fits kanban / dense list contexts. `dense` is the tile for
+   * grids and matrices (12+ columns): title (max 3 lines) plus the
    * `footerAdornment` the caller supplies — no body, no meta row, no
-   * tags, no author. Spec: `docs/spec/modules/shared-components.md`.
+   * tags, no author, no comment count.
+   * Spec: `docs/spec/modules/shared-components.md`.
    */
   density?: ItemPreviewDensity
   /**
@@ -126,6 +129,12 @@ export interface ItemPreviewProps {
    * Space. Zwei Aussagen, nicht drei.
    */
   active?: boolean
+  /**
+   * Die Sache ist erledigt: Haekchen vor dem Titel, die ganze Karte gedimmt.
+   * Was „erledigt" heisst, entscheidet die Flaeche — eine Kanban-Spalte, ein
+   * Feld, ein Haken in der App. Das Toolkit zeigt es nur an.
+   */
+  completed?: boolean
   /** Farbe des Rands der aktiven Karte (`#rrggbb`), meist die Space-Farbe. */
   activeColor?: string
   /** @deprecated Frueherer Name von {@link activeColor}. */
@@ -220,6 +229,7 @@ export function ItemPreview({
   density = "comfortable",
   surface = "card",
   active = false,
+  completed = false,
   activeColor,
   activeGlowColor,
   className,
@@ -250,9 +260,10 @@ export function ItemPreview({
   // ohne Deckung.
   // In der Matrix-Zelle steht der Zaehler nur, wenn es etwas zu zaehlen gibt:
   // Ein Symbol ohne Zahl waere dort eine Einladung, fuer die kein Platz ist.
+  // In der Matrix-Kachel steht ueberhaupt kein Zaehler: Sie zeigt genau zwei
+  // Dinge, den Titel und wer dranhaengt.
   const showCommentHint =
-    !isPanel &&
-    (isDense ? commentCount > 0 : commentCount > 0 || zumKommentieren !== null)
+    !isPanel && !isDense && (commentCount > 0 || zumKommentieren !== null)
 
   const authorName = author?.displayName ?? item.createdBy
   const authorAvatar = author?.avatarUrl
@@ -296,9 +307,13 @@ export function ItemPreview({
     <article
       data-preview-density={density}
       data-active-preview={active ? "true" : undefined}
+      data-completed={completed ? "true" : undefined}
       className={cn(
-        "flex flex-col rounded-lg border bg-card transition-all",
-        isDense ? "gap-1 p-1.5" : isCompact ? "gap-1.5 p-3" : "gap-2 p-4",
+        "flex flex-col border bg-card transition-all",
+        // Die Kachel traegt den kleineren Radius: 8 px runden an einer
+        // 112-px-Flaeche sichtbar mehr ab als an einer Feed-Karte.
+        isDense ? "gap-1 rounded-md p-[7px]" : "rounded-lg",
+        isDense ? "" : isCompact ? "gap-1.5 p-3" : "gap-2 p-4",
         interactive &&
           "cursor-pointer hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
         // Derselbe Schatten wie die schwebende Karte: die ausgewaehlte Karte
@@ -306,7 +321,12 @@ export function ItemPreview({
         active && "shadow-xl",
         className,
       )}
-      style={{ ...(active ? { borderColor: aktivRand } : {}), ...style }}
+      style={{
+        ...(active ? { borderColor: aktivRand } : {}),
+        // Erledigtes verschwindet nicht, es tritt zurueck.
+        ...(completed ? { opacity: 0.55 } : {}),
+        ...style,
+      }}
       onClick={onClick}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}
@@ -321,16 +341,31 @@ export function ItemPreview({
           <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-1">
             {title && (
               <h3
+                // Deutsche Komposita sind lang und eine Kachel ist 112 px
+                // breit: ohne Trennung stuende „Gemeinschaftsgarten" ueber den
+                // Rand hinaus. `lang` macht die Silbentrennung erst moeglich.
+                lang={isDense ? "de" : undefined}
                 className={cn(
                   "min-w-0 flex-1 font-semibold text-foreground",
-                  // Zwei Zeilen, dann Auslassung: In einer Matrix ist die
+                  // Drei Zeilen, dann Auslassung: In einer Matrix ist die
                   // Zeilenhoehe die Rasterhoehe — ein langer Titel darf die
                   // Zeile darunter nicht verschieben.
                   isDense
-                    ? "line-clamp-2 text-[11px] leading-[1.2]"
+                    ? "line-clamp-3 text-[10.5px] leading-[1.3]"
                     : "text-base leading-snug",
                 )}
+                style={
+                  isDense ? { overflowWrap: "anywhere", hyphens: "auto" } : undefined
+                }
               >
+                {/* Erledigtes traegt das Haekchen im Titel: In der Kachel gibt
+                    es keine zweite Zeile, die es tragen koennte. */}
+                {completed && (
+                  <>
+                    <span aria-hidden>✓ </span>
+                    <span className="sr-only">Erledigt: </span>
+                  </>
+                )}
                 {title}
               </h3>
             )}

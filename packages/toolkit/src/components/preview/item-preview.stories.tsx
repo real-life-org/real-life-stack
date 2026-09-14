@@ -245,7 +245,7 @@ export const DreiDichten: Story = {
           <p className="text-xs font-medium text-muted-foreground">compact — Kanban</p>
           <ItemPreview item={item} author={null} density="compact" footerAdornment={fuss(false)} />
         </div>
-        <div className="w-[130px] space-y-2">
+        <div className="w-[112px] space-y-2">
           <p className="text-xs font-medium text-muted-foreground">dense — Matrix</p>
           <ItemPreview item={item} author={null} density="dense" footerAdornment={fuss(true)} />
         </div>
@@ -277,7 +277,7 @@ export const RasterZwoelfSpalten: Story = {
       "Rest",
     ]
     return (
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(12, minmax(0, 130px))" }}>
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(12, 112px)" }}>
         {spalten.map((spalte) => (
           <div key={spalte} className="text-[10px] font-medium text-muted-foreground">
             {spalte}
@@ -289,7 +289,10 @@ export const RasterZwoelfSpalten: Story = {
             id: `matrix-${i}`,
             data: {
               ...taskItem.data,
-              title: i % 3 === 0 ? `Hochbeet ${i + 1} vorbereiten und bepflanzen` : `Aufgabe ${i + 1}`,
+              title:
+                i % 3 === 0
+                  ? `Gemeinschaftsgarten ${i + 1} vorbereiten und bepflanzen`
+                  : `Aufgabe ${i + 1}`,
             },
           }
           return (
@@ -298,13 +301,68 @@ export const RasterZwoelfSpalten: Story = {
               item={item}
               author={null}
               density="dense"
+              // Jede vierte gilt als erledigt: Haekchen plus gedimmte Kachel.
+              completed={i % 4 === 3}
               footerAdornment={
-                <ItemAssignees users={i % 2 === 0 ? [lena, anton] : [lena]} size="xs" />
+                <ItemAssignees
+                  users={
+                    i % 2 === 0
+                      ? [lena, { ...anton, variant: "outline" as const }]
+                      : [lena]
+                  }
+                  size="xs"
+                />
               }
               onClick={() => console.log("click", item.id)}
             />
           )
         })}
+      </div>
+    )
+  },
+}
+
+/**
+ * Zwei Avatar-Stile, keine Bedeutung: Das Karabirrdt liest gefuellt als „kann
+ * ich" und umrandet als „will lernen"; eine andere App liest sie als Zusage
+ * und Vielleicht. Das Toolkit liefert nur die beiden Stile.
+ */
+export const AvatarStile: Story = {
+  name: "Zugewiesene — gefuellt und umrandet",
+  parameters: { layout: "fullscreen", breit: true },
+  render: () => {
+    const leute = [lena, anton, { id: "user-emil", displayName: "Emil Kranz" }]
+    return (
+      <div className="flex flex-wrap items-start gap-8">
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">gefuellt (Default)</p>
+          <ItemAssignees users={leute} />
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">umrandet</p>
+          <ItemAssignees users={leute.map((u) => ({ ...u, variant: "outline" as const }))} />
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">gemischt, Groesse xs</p>
+          <ItemAssignees
+            users={[lena, { ...anton, variant: "outline" as const }, leute[2]]}
+            size="xs"
+          />
+        </div>
+        <div className="w-[112px] space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">in der Kachel</p>
+          <ItemPreview
+            item={{ ...taskItem, data: { ...taskItem.data, title: "Gemeinschaftsgarten giessen" } }}
+            author={null}
+            density="dense"
+            footerAdornment={
+              <ItemAssignees
+                users={[lena, { ...anton, variant: "outline" as const }]}
+                size="xs"
+              />
+            }
+          />
+        </div>
       </div>
     )
   },

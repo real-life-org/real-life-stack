@@ -17,7 +17,11 @@ export { ItemPrivateBadge, type ItemPrivateBadgeProps } from "./item-private-bad
 export { ItemScopeBadge } from "./item-scope-badge"
 export { ItemMetaRow, formatEventRange, type ItemMetaRowProps } from "./item-meta-row"
 export { ItemCommentCount, type ItemCommentCountProps } from "./item-comment-count"
-export { ItemAssignees, type ItemAssigneesProps } from "./item-assignees"
+export {
+  ItemAssignees,
+  type ItemAssigneesProps,
+  type ItemAssigneeUser,
+} from "./item-assignees"
 export { ItemTimeRange, formatTimeRange, type ItemTimeRangeProps } from "./item-time-range"
 export {
   ItemProfileMeta,

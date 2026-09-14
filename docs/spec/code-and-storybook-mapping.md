@@ -108,6 +108,7 @@ Mutations-Callbacks ein.
 | Generische Listen-Projektion | `components/lens/list-view.tsx` | `RLS/Module Components/Lenses/ListView` | Baustein der CollectionView: kompakte Dichte ohne lokalen Filter |
 | Generische Linsen-Karte | `components/preview/item-preview.tsx` + `preview/item-type-meta.tsx` | Linsen-Stories | ItemPreview: List kompakt, Grid komfortabel; `active` nutzt den geteilten Glow; Typ-Meta für Person, Projekt, Ressource und Event sowie Typ-Badge-Fallback |
 | Kartendichten | `components/preview/item-preview.tsx` | `RLS/Module Components/ItemPreview` → „Drei Dichten nebeneinander", „Raster 12 Spalten dense" | Ein Item mit Tags, zwei Assignees und Kommentaren; `dense` für Matrix-Flächen mit 12+ Spalten |
+| Zugewiesene, zwei Stile | `components/preview/item-assignees.tsx` | `RLS/Module Components/ItemPreview` → „Zugewiesene — gefuellt und umrandet" | Resolved User-Liste, je Eintrag optional `variant` |
 | Typspezifische Raster-Projektion | `components/lens/grid-view.tsx` | `RLS/Module Components/Lenses/GridView` | Baustein der CollectionView: komfortable Dichte mit geteilten Preview-Adornments |
 | Read-only Karten-Linse | `components/lens/map-lens.tsx` | `RLS/Module Components/Lenses/MapLens` | Nicht-Relation-Items mit gültigem GeoJSON-`Point`; `createAdapter` erzeugt pro Mount eine frische Engine; ein Marker zentriert im Shell-Sichtbereich bei Zoom 16, mehrere nutzen `fitBounds`; `viewportResetKey` re-armt beim Bestandswechsel; kein lokaler Filter |
 
