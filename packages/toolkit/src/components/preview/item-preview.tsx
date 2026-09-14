@@ -53,9 +53,13 @@ import { MessageSquare } from "lucide-react"
  * 10×10, font-base title, p-4 spacing, description shown). `compact`
  * is tuned for kanban boards and dense list views: no description in
  * the body, smaller padding/font/avatar so multiple cards fit a
- * column without bleeding off-screen.
+ * column without bleeding off-screen. `dense` is the matrix tile: a
+ * title of at most three lines plus the footer the caller supplies,
+ * nothing else, so twelve columns fit one screen. Masse aus „RLS System
+ * Design → Dragon Dreaming.dc.html", Variante 1a: 112 px breit, rund
+ * 62 px hoch.
  */
-export type ItemPreviewDensity = "comfortable" | "compact"
+export type ItemPreviewDensity = "comfortable" | "compact" | "dense"
 export type ItemPreviewSurface = "card" | "panel"
 
 /** Neutral toolkit default; apps may supply an origin-group colour instead. */
@@ -93,7 +97,11 @@ export interface ItemPreviewProps {
   /**
    * Layout density. Default `comfortable` matches the feed card.
    * `compact` shrinks paddings and avatar, drops the description
-   * block — fits kanban / dense list contexts.
+   * block — fits kanban / dense list contexts. `dense` is the tile for
+   * grids and matrices (12+ columns): title (max 3 lines) plus the
+   * `footerAdornment` the caller supplies — no body, no meta row, no
+   * tags, no author, no comment count.
+   * Spec: `docs/spec/modules/shared-components.md`.
    */
   density?: ItemPreviewDensity
   /**
@@ -121,6 +129,12 @@ export interface ItemPreviewProps {
    * Space. Zwei Aussagen, nicht drei.
    */
   active?: boolean
+  /**
+   * Die Sache ist erledigt: Haekchen vor dem Titel, die ganze Karte gedimmt.
+   * Was „erledigt" heisst, entscheidet die Flaeche — eine Kanban-Spalte, ein
+   * Feld, ein Haken in der App. Das Toolkit zeigt es nur an.
+   */
+  completed?: boolean
   /** Farbe des Rands der aktiven Karte (`#rrggbb`), meist die Space-Farbe. */
   activeColor?: string
   /** @deprecated Frueherer Name von {@link activeColor}. */
@@ -138,15 +152,18 @@ export interface ItemPreviewProps {
 function KommentarHinweis({
   anzahl,
   kompakt,
+  dicht = false,
   onClick,
 }: {
   anzahl: number
   kompakt: boolean
+  /** Matrix-Zelle: kleineres Symbol, kleinere Zahl. */
+  dicht?: boolean
   onClick: (() => void) | null
 }) {
   const inhalt = (
     <>
-      <MessageSquare className="h-3.5 w-3.5" aria-hidden />
+      <MessageSquare className={dicht ? "h-3 w-3" : "h-3.5 w-3.5"} aria-hidden />
       {anzahl > 0 && <span className="tabular-nums">{anzahl}</span>}
       {/* In einer Kanban-Spalte ist fuer das Wort kein Platz. */}
       {!kompakt && <span>Kommentieren</span>}
@@ -160,7 +177,10 @@ function KommentarHinweis({
     anzahl === 0
       ? "Kommentieren"
       : `${anzahl} ${anzahl === 1 ? "Kommentar" : "Kommentare"}, kommentieren`
-  const klassen = "flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"
+  const klassen = cn(
+    "flex shrink-0 items-center text-muted-foreground",
+    dicht ? "gap-0.5 text-[10px]" : "gap-1.5 text-xs",
+  )
   if (!onClick) {
     // Ohne Weg ist es eine Auskunft, kein Bedienelement — der Name gehoert
     // trotzdem dazu, sonst bleibt die Zahl unerklaert.
@@ -209,6 +229,7 @@ export function ItemPreview({
   density = "comfortable",
   surface = "card",
   active = false,
+  completed = false,
   activeColor,
   activeGlowColor,
   className,
@@ -217,13 +238,17 @@ export function ItemPreview({
   const data = item.data as Record<string, unknown>
   const title = typeof data.title === "string" ? data.title : undefined
   const description =
-    density === "compact"
+    density === "compact" || density === "dense"
       ? ""
       : (typeof data.content === "string" && data.content) ||
         (typeof data.description === "string" && data.description) ||
         ""
   const tags = useItemTags(item)
   const isPanel = surface === "panel"
+  // `dense` ist die Matrix-Karte: Sie teilt mit `compact` die engen Masse,
+  // laesst aber alles weg, was eine Zelle von 120×60 px nicht traegt.
+  const isDense = density === "dense"
+  const isCompact = density === "compact" || isDense
   // A card should reveal that a discussion exists — otherwise comments are
   // invisible until the item is opened. The panel lists them anyway.
   const commentCount = useCommentCount(item.id)
@@ -233,7 +258,12 @@ export function ItemPreview({
   // Ohne Kommentare steht dort keine Null, sondern eine Einladung — aber nur,
   // wenn man ihr auch folgen kann. Sonst bliebe „Kommentieren" ein Versprechen
   // ohne Deckung.
-  const showCommentHint = !isPanel && (commentCount > 0 || zumKommentieren !== null)
+  // In der Matrix-Zelle steht der Zaehler nur, wenn es etwas zu zaehlen gibt:
+  // Ein Symbol ohne Zahl waere dort eine Einladung, fuer die kein Platz ist.
+  // In der Matrix-Kachel steht ueberhaupt kein Zaehler: Sie zeigt genau zwei
+  // Dinge, den Titel und wer dranhaengt.
+  const showCommentHint =
+    !isPanel && !isDense && (commentCount > 0 || zumKommentieren !== null)
 
   const authorName = author?.displayName ?? item.createdBy
   const authorAvatar = author?.avatarUrl
@@ -243,7 +273,6 @@ export function ItemPreview({
   const editedTitle = item.updatedAt
     ? `Bearbeitet von ${resolveName(item.updatedBy ?? item.createdBy)} am ${new Date(item.updatedAt).toLocaleString("de-DE")}`
     : undefined
-  const isCompact = density === "compact"
 
   // Keyboard activation: when the card is interactive, treat Enter and
   // Space like a button. We don't render a real <button> because the
@@ -278,9 +307,13 @@ export function ItemPreview({
     <article
       data-preview-density={density}
       data-active-preview={active ? "true" : undefined}
+      data-completed={completed ? "true" : undefined}
       className={cn(
-        "flex flex-col rounded-lg border bg-card transition-all",
-        isCompact ? "gap-1.5 p-3" : "gap-2 p-4",
+        "flex flex-col border bg-card transition-all",
+        // Die Kachel traegt den kleineren Radius: 8 px runden an einer
+        // 112-px-Flaeche sichtbar mehr ab als an einer Feed-Karte.
+        isDense ? "gap-1 rounded-md p-[7px]" : "rounded-lg",
+        isDense ? "" : isCompact ? "gap-1.5 p-3" : "gap-2 p-4",
         interactive &&
           "cursor-pointer hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
         // Derselbe Schatten wie die schwebende Karte: die ausgewaehlte Karte
@@ -288,7 +321,12 @@ export function ItemPreview({
         active && "shadow-xl",
         className,
       )}
-      style={{ ...(active ? { borderColor: aktivRand } : {}), ...style }}
+      style={{
+        ...(active ? { borderColor: aktivRand } : {}),
+        // Erledigtes verschwindet nicht, es tritt zurueck.
+        ...(completed ? { opacity: 0.55 } : {}),
+        ...style,
+      }}
       onClick={onClick}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}
@@ -302,7 +340,32 @@ export function ItemPreview({
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-1">
             {title && (
-              <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground">
+              <h3
+                // Deutsche Komposita sind lang und eine Kachel ist 112 px
+                // breit: ohne Trennung stuende „Gemeinschaftsgarten" ueber den
+                // Rand hinaus. `lang` macht die Silbentrennung erst moeglich.
+                lang={isDense ? "de" : undefined}
+                className={cn(
+                  "min-w-0 flex-1 font-semibold text-foreground",
+                  // Drei Zeilen, dann Auslassung: In einer Matrix ist die
+                  // Zeilenhoehe die Rasterhoehe — ein langer Titel darf die
+                  // Zeile darunter nicht verschieben.
+                  isDense
+                    ? "line-clamp-3 text-[10.5px] leading-[1.3]"
+                    : "text-base leading-snug",
+                )}
+                style={
+                  isDense ? { overflowWrap: "anywhere", hyphens: "auto" } : undefined
+                }
+              >
+                {/* Erledigtes traegt das Haekchen im Titel: In der Kachel gibt
+                    es keine zweite Zeile, die es tragen koennte. */}
+                {completed && (
+                  <>
+                    <span aria-hidden>✓ </span>
+                    <span className="sr-only">Erledigt: </span>
+                  </>
+                )}
                 {title}
               </h3>
             )}
@@ -317,7 +380,9 @@ export function ItemPreview({
       )}
 
       {/* Die harten Fakten des Typs: wann, wo, mit wem. */}
-      {metaAdornment && <div className="text-xs text-muted-foreground">{metaAdornment}</div>}
+      {metaAdornment && !isDense && (
+        <div className="text-xs text-muted-foreground">{metaAdornment}</div>
+      )}
 
       {description && (
         // Der Composer schreibt Markdown, also wird ueberall Markdown
@@ -332,7 +397,7 @@ export function ItemPreview({
           bleibt: Wer etwas geschrieben hat, ist die verlaesslichere Auskunft
           als der fuenfte Tag. Umbrechen darf hier nichts — sonst waechst die
           Karte je nach Anzahl der Tags unterschiedlich hoch. */}
-      {(sichtbareTags.length > 0 || author !== null) && (
+      {!isDense && (sichtbareTags.length > 0 || author !== null) && (
         <div className="flex items-center gap-x-3 overflow-hidden">
           {sichtbareTags.length > 0 && (
             <div className="flex min-w-0 shrink items-center gap-1.5 overflow-hidden">
@@ -394,11 +459,23 @@ export function ItemPreview({
           Diskussion. Ohne Kommentare steht dort keine Null — sie sagte
           dasselbe wie nichts und kostete eine Zeile. */}
       {(footerAdornment || showCommentHint) && (
-        <div className={cn("flex items-center justify-between gap-3 border-t", isCompact ? "-mx-3 mt-0.5 px-3 pt-1.5" : "-mx-4 mt-1 px-4 pt-2")}>
-          <div className="flex min-w-0 items-center gap-3">{footerAdornment}</div>
+        <div
+          className={cn(
+            "flex items-center justify-between",
+            // Die Matrix-Zelle hat fuer einen Trenner keine Hoehe uebrig; die
+            // Fusszeile sitzt direkt unter dem Titel.
+            isDense
+              ? "mt-auto gap-1"
+              : cn("gap-3 border-t", isCompact ? "-mx-3 mt-0.5 px-3 pt-1.5" : "-mx-4 mt-1 px-4 pt-2"),
+          )}
+        >
+          <div className={cn("flex min-w-0 items-center", isDense ? "gap-1" : "gap-3")}>
+            {footerAdornment}
+          </div>
           {showCommentHint && <KommentarHinweis
             anzahl={commentCount}
             kompakt={isCompact}
+            dicht={isDense}
             onClick={zumKommentieren}
           />}
         </div>

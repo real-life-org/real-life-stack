@@ -54,6 +54,16 @@ export function getSpacePrimaryColor(id: string, explicit?: string | null): stri
 }
 
 /**
+ * Die Farbe einer Person — dieselbe deterministische Palette wie Tags und
+ * Spaces, abgeleitet aus der User-Id. Stabil ueber Geraete und Sitzungen,
+ * nie zufaellig, kein Speicherplatz noetig. Genutzt fuer Initialen-Avatare
+ * (siehe `ItemAssignees`), damit dieselbe Person ueberall gleich aussieht.
+ */
+export function getUserColor(userId: string): string {
+  return paletteEntry(userId).accent
+}
+
+/**
  * Soft "glow" for the item currently open in the shared panel, in the colour of
  * its (origin) group. A thin colour edge keeps it defined on busy backgrounds;
  * the blurred halo does the highlighting without a hard, heavy ring. `color`
