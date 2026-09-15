@@ -78,13 +78,23 @@ jobs:
           # Renovate gar nicht laeuft.
           #
           # Noetige Rechte (fein granuliert, nur dieses Repo):
-          # Contents: read+write · Pull requests: read+write · Issues: read+write
+          # Contents: read+write · Pull requests: read+write ·
+          # Issues: read+write · Workflows: read+write
           #
           # Issues, weil `dependencyDashboard` in renovate.json5 auf true
           # steht: das Dashboard ist eine Issue. Ohne das Recht scheitert
           # Renovate genau daran — dieselbe Stolperstelle wie bei
           # release-please, das seine Labels ebenfalls ueber die Issues-API
           # fuehrt.
+          #
+          # Workflows, weil Renovate den SHA-Pin DIESER Datei selbst nachzieht
+          # (die zweite packageRule in renovate.json5). GitHub weist jeden
+          # Push zurueck, der `.github/workflows/` aendert, wenn dem Token das
+          # Recht fehlt — der Lauf scheitert dann erst beim Pushen, nicht beim
+          # Planen. Wer den Pin lieber von Hand bewegt, streicht die Regel und
+          # spart sich dieses Recht: es ist das maechtigste der vier, denn mit
+          # ihm kann der Bot jede CI-Datei umschreiben. Dagegen steht, dass
+          # seine Aenderungen als PR kommen und `master` geschuetzt ist.
           token: ${{ secrets.RENOVATE_TOKEN || github.token }}
         env:
           # Ohne diese Zeile sucht Renovate sich seine Repos selbst zusammen

@@ -88,6 +88,13 @@
       // dieser ganze PR antritt — also soll der Bot auch sich selbst
       // nachziehen. Renovate hebt SHA und den Versionskommentar dahinter
       // gemeinsam an.
+      //
+      // PREIS: der Token braucht dafuer `Workflows: read+write`. GitHub weist
+      // jeden Push zurueck, der `.github/workflows/` aendert, wenn das Recht
+      // fehlt. Es ist das maechtigste der vier Rechte — mit ihm kann der Bot
+      // jede CI-Datei umschreiben. Wem das zu weit geht, streicht diese Regel
+      // und bewegt den Pin von Hand; dann reichen Contents, Pull requests und
+      // Issues.
       matchManagers: ['github-actions'],
       matchDepNames: ['renovatebot/github-action'],
       enabled: true,
