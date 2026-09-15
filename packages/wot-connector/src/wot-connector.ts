@@ -73,6 +73,7 @@ import {
   TracedCompactStorageManager,
   getMetrics,
   getDefaultDisplayName,
+  hasNamedRoots,
   signEnvelope,
   verifyEnvelope,
 } from "@real-life/wot-core"
@@ -104,6 +105,7 @@ import type {
   PublicIdentitySession,
   DeliveryReceipt,
 } from "@real-life/wot-core/types"
+import type { NamedRootsCapable } from "@real-life/wot-core"
 import type {
   DocLogStore,
   KeyManagementPort,
@@ -161,6 +163,7 @@ import {
   deriveRegistryView,
   groupRegistryByEntry,
   maxAdmission,
+  MIRROR_REGISTRY_ROOT,
   mergeProfileData,
   mirrorRegistryEntryKey,
   mirrorRegistryKey,
@@ -170,7 +173,11 @@ import {
   planMembershipTransition,
   planStockGrants,
   profileItemInput,
+  PROFILE_MIGRATION_KEY,
+  profileMigrationMark,
+  registryContributionsOf,
   supersedesOf,
+  type MirrorRegistryRoot,
   type MirrorRegistryView,
   type ProfileItemFields,
 } from "./mirror/index.js"
@@ -1181,11 +1188,21 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   private refreshProfileShares(): void {
     const handle = this.homeHandle
     if (!handle || handle.id !== this.privateSpaceId) return
+    // Fail-closed ohne benannte Wurzeln (Spec 09 §Ablage und Registry): es gibt
+    // keinen Ersatzweg über `data`. Gemeldet wird „keine Freigaben", geladen —
+    // damit eine Annahme-Fläche nicht ewig auf ein Signal wartet, das nie kommt.
+    if (!hasNamedRoots(handle)) {
+      this.profileSharesObs.set({})
+      this.profileSharesObs.markLoaded()
+      return
+    }
     const did = this.identity.getDid()
     const shares: Record<string, ProfileShareStatus> = {}
     try {
-      // Physisch liegt je Gerät ein flacher Schlüssel; gefaltet wird je Eintrag.
-      for (const [entryKey, byDevice] of groupRegistryByEntry(handle.getDoc()?.mirrorRegistry ?? {})) {
+      // Physisch liegt je Gerät ein flacher Schlüssel in der WURZEL
+      // `mirrorRegistry`; gefaltet wird je Eintrag.
+      const root = handle.getRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT)
+      for (const [entryKey, byDevice] of groupRegistryByEntry(registryContributionsOf(root))) {
         const parsed = parseMirrorRegistryEntryKey(entryKey)
         if (!parsed || parsed.itemId !== did) continue
         const view = deriveRegistryView(byDevice)
@@ -1228,9 +1245,10 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     if (!handle) throw new Error("writeRegistryContribution: persönlicher Space nicht verfügbar")
     const deviceId = await this.resolveMirrorDeviceId()
     this.assertHomeSessionUnchanged(generation, handle, did)
+    this.assertNamedRoots(handle)
 
-    handle.transact((doc) => {
-      this.applyRegistryContribution(doc, {
+    handle.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
+      this.applyRegistryContribution(root, {
         did,
         deviceId,
         targetSpaceId,
@@ -1250,6 +1268,23 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * das Home der VORIGEN Person schreiben — und schon gar nicht mit einer
    * Aufnahme-Kennung aus der neuen Replikation.
    */
+  /**
+   * Die Capability-Grenze aus Spec 09 §Ablage und Registry: ohne benannte
+   * Wurzeln schreibt der Connector KEINE Registry und weicht nicht auf `data`
+   * aus — genau der Erstanlage-Verlust unter `data` ist der Grund für die
+   * Wurzeln (rls#353). Ein Schreibpfad wirft dann laut, statt still nichts zu
+   * tun.
+   */
+  private assertNamedRoots(
+    handle: SpaceHandle<RlsSpaceDoc>,
+  ): asserts handle is SpaceHandle<RlsSpaceDoc> & NamedRootsCapable {
+    if (!hasNamedRoots(handle)) {
+      throw new Error(
+        "Adapter ohne benannte Wurzeln: Profil-Freigaben sind mit diesem Adapter nicht verfügbar",
+      )
+    }
+  }
+
   private assertHomeSessionUnchanged(
     generation: number,
     handle: SpaceHandle<RlsSpaceDoc>,
@@ -1273,11 +1308,11 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * Beitrag eines anderen Geräts darf ihn sofort verändern.
    */
   private registryByDevice(
-    doc: RlsSpaceDoc,
+    root: MirrorRegistryRoot,
     did: string,
     targetSpaceId: string,
   ): Record<string, MirrorRegistryContribution> {
-    return groupRegistryByEntry(doc.mirrorRegistry ?? {}).get(mirrorRegistryEntryKey(did, targetSpaceId)) ?? {}
+    return groupRegistryByEntry(registryContributionsOf(root)).get(mirrorRegistryEntryKey(did, targetSpaceId)) ?? {}
   }
 
   /**
@@ -1290,7 +1325,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * Statuswechsel derselben Sitzung.
    */
   private applyRegistryContribution(
-    doc: RlsSpaceDoc,
+    root: MirrorRegistryRoot,
     params: {
       did: string
       deviceId: string
@@ -1307,7 +1342,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     // flacher Schlüssel — der eigene. Eine gemeinsame Eltern-Map je Eintrag
     // gibt es nicht: zwei Geräte, die sie nebenläufig anlegen, verlören einen
     // der beiden Beiträge (Spec 09 §Ablage und Registry, konfliktfreier Merge).
-    const existing = this.registryByDevice(doc, did, targetSpaceId)
+    const existing = this.registryByDevice(root, did, targetSpaceId)
     const view = deriveRegistryView(existing)
     if (expect && !expect(view)) return false
 
@@ -1324,8 +1359,8 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     const own = existing[deviceId]
     const supersedes = status === "accepted" ? supersedesOf(existing) : undefined
 
-    if (!doc.mirrorRegistry) doc.mirrorRegistry = {}
-    doc.mirrorRegistry[key] = {
+    // Die Wurzel muss nicht angelegt werden — sie existiert auf jedem Gerät.
+    root[key] = {
       statusSeq: nextStatus,
       status,
       ...(admission ? { admission } : {}),
@@ -1422,6 +1457,16 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     ) return
 
     this.migrateProfileItem(handle)
+    // Ohne benannte Wurzeln gibt es keine Registry — also weder Bestandsregel
+    // noch Abgleich noch Bestandsmarke (Spec 09 §Ablage und Registry,
+    // fail-closed). Das Profil-Item selbst liegt unter `data` und wird weiter
+    // migriert; nur geteilt wird es mit diesem Adapter nie.
+    if (!hasNamedRoots(handle)) {
+      this.syncProfileObservable()
+      this.writeProfileThroughToPersonalDoc(this.readProfileItemFrom(handle))
+      this.refreshProfileShares()
+      return
+    }
     // Bestand VOR dem `pending`-Pfad: sonst liefen die Bestands-Spaces als
     // neu erschienen durch Regel 4 und wären ausstehend. Beide laufen in je
     // EINER Transaktion — Entscheidung und Schreibvorgang dürfen nicht durch
@@ -1493,14 +1538,18 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     deviceId: string,
   ): void {
     const spaces = this.replication?.watchSpaces().getValue() ?? []
+    this.assertNamedRoots(handle)
 
-    handle.transact((doc) => {
-      // Prüfung und Schreibvorgänge in EINER Transaktion: sonst könnte ein
+    handle.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
+      // Prüfung, Beiträge UND Marke in EINER Transaktion: sonst könnte ein
       // zweites Gerät zwischen Prüfung und Marke die Migration abschließen und
       // eine Freigabe widerrufen, und dieser Durchlauf stellte sie wieder her.
-      if (doc.profileMigration?.bestandAt) return
+      // Genau deshalb liegt die Marke als reservierter Schlüssel in DERSELBEN
+      // Wurzel: `transactRoot` umfasst je Aufruf genau eine Wurzel, eine
+      // Transaktion über zwei Wurzeln bietet `NamedRootsCapable` nicht an.
+      if (profileMigrationMark(root)?.bestandAt) return
 
-      const registry = groupRegistryByEntry(doc.mirrorRegistry ?? {})
+      const registry = groupRegistryByEntry(registryContributionsOf(root))
       // Bestand heißt: eine Mitgliedschaft, über die noch nie entschieden
       // wurde. Ein vorhandener Beitrag ist eine Entscheidung — auch ein
       // Widerruf. Die Übergangsregel darf ihn nie überschreiben.
@@ -1510,7 +1559,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         registry.has(mirrorRegistryEntryKey(did, targetSpaceId))
 
       for (const targetSpaceId of planStockGrants(spaces, handle.id, hasEntry)) {
-        this.applyRegistryContribution(doc, {
+        this.applyRegistryContribution(root, {
           did,
           deviceId,
           targetSpaceId,
@@ -1519,9 +1568,9 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         })
       }
 
-      if (!doc.profileMigration) doc.profileMigration = {}
-      // Monoton: eine vorhandene Marke wird NIE überschrieben.
-      if (!doc.profileMigration.bestandAt) doc.profileMigration.bestandAt = new Date().toISOString()
+      // Monoton: eine vorhandene Marke wird NIE überschrieben — der Durchlauf
+      // ist oben schon abgebrochen, wenn sie stand.
+      root[PROFILE_MIGRATION_KEY] = { bestandAt: new Date().toISOString() }
     })
   }
 
@@ -1544,13 +1593,15 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       .filter((space) => space.id !== handle.id && space.type === "shared" && space.appTag !== "rls-private")
     const seen = new Set(visible.map((space) => space.id))
 
-    handle.transact((doc) => {
-      const registry = groupRegistryByEntry(doc.mirrorRegistry ?? {})
+    this.assertNamedRoots(handle)
+
+    handle.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
+      const registry = groupRegistryByEntry(registryContributionsOf(root))
       const apply = (targetSpaceId: string, admission: SpaceAdmission | undefined) => {
         const view = deriveRegistryView(registry.get(mirrorRegistryEntryKey(did, targetSpaceId)) ?? {})
         const transition = planMembershipTransition(view, admission)
         if (!transition) return
-        this.applyRegistryContribution(doc, {
+        this.applyRegistryContribution(root, {
           did,
           deviceId,
           targetSpaceId,

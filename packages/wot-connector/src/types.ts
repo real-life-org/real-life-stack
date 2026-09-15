@@ -80,36 +80,11 @@ export interface RlsSpaceDoc {
    * eine niedrigere Version tragen als die höchste je akzeptierte).
    */
   mirrors?: Record<string, string>
-  /**
-   * HOME-Seite von Spec 09 §Ablage und Registry: die Freigaben dieses Space
-   * als Home. Schlüssel `JSON.stringify([itemId, targetSpaceId, deviceId])`,
-   * Wert der Beitrag GENAU DIESES Geräts.
-   *
-   * Physisch flach je Gerät, gelesen wird als `byDevice` je Eintrag
-   * `(itemId, targetSpaceId)` — die Umgruppierung macht `groupRegistryByEntry`,
-   * die Faltung `deriveRegistryView`. Der Grund für die flache Form ist der
-   * Merge: eine gemeinsame Eltern-Map, die zwei Geräte nebenläufig anlegen,
-   * ist ein Register — eine gewinnt, die andere geht samt Beitrag verloren, und
-   * ein so verlorener Widerruf kippt den Status zurück auf `accepted`. Mit dem
-   * Gerät im Schlüssel legt jedes Gerät nur seinen eigenen Schlüssel an.
-   *
-   * Keine Migration: vor diesem Schnitt hat nichts in dieses Feld geschrieben
-   * (S0 bis S2 waren reine Funktionen und Typen), es gibt also keinen Bestand
-   * in der alten, geschachtelten Form.
-   *
-   * Steht im selben Doc-Typ, weil ein Home ein gewöhnlicher Space ist —
-   * der persönliche Space eines Profils (Spec 12) genauso wie ein
-   * Gruppen-Space, der Items in andere Spaces freigibt.
-   */
-  mirrorRegistry?: Record<string, MirrorRegistryContribution>
-  /**
-   * Spec 12 Regel 5 (Übergangsregel): ist die Marke gesetzt, hat ein Gerät
-   * der Person die Bestands-Mitgliedschaften einmalig pauschal freigegeben.
-   * Sie verhindert, dass die Regel auf einem anderen Gerät erneut läuft —
-   * dort liefe sie sonst über Mitgliedschaften, die inzwischen widerrufen
-   * wurden, und stellte sie wieder her.
-   */
-  profileMigration?: { bestandAt?: string }
+  // Registry und Bestandsmarke stehen NICHT in diesem Typ: sie liegen in der
+  // benannten Wurzel `mirrorRegistry` des Home-Docs (Spec 09 §Ablage und
+  // Registry in der Fassung rls#354, Adapter-Capability `NamedRootsCapable`).
+  // `getDoc()` bildet nur `data` ab, Wurzeln liegen bewusst daneben — siehe
+  // `src/mirror/roots.ts`.
 }
 
 /**

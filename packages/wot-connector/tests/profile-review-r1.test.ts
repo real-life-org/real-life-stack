@@ -3,6 +3,8 @@ import { createObservable } from "@real-life-stack/data-interface"
 
 import { planStockGrants } from "../src/mirror/index.js"
 import { byDeviceOf, flatRegistry, hasEntry } from "./helpers/registry-fixtures.js"
+import { createFakeNamedRoots, type FakeNamedRoots } from "./helpers/named-roots.js"
+import { PROFILE_MIGRATION_KEY, profileMigrationMark, type MirrorRegistryRoot } from "../src/mirror/index.js"
 import type { MirrorRegistryContribution, RlsSpaceDoc } from "../src/types.js"
 
 /**
@@ -38,17 +40,30 @@ function contribution(partial: Partial<MirrorRegistryContribution>): MirrorRegis
 
 function fakeConnector(options: {
   doc?: RlsSpaceDoc
+  registry?: MirrorRegistryRoot
+  bestand?: boolean
   spaces?: Array<{ id: string; appTag?: string; type?: string; admission?: { keyGeneration: number } }>
   resolveDeviceId?: () => Promise<string>
   homeCatchUpReported?: boolean
 } = {}) {
   const doc: RlsSpaceDoc = options.doc ?? { _type: "rls", items: {} }
+  // Registry und Bestandsmarke liegen in der benannten Wurzel `mirrorRegistry`
+  // (Spec 09 §Ablage und Registry, Fassung rls#354).
+  const named = createFakeNamedRoots({
+    mirrorRegistry: {
+      ...(options.registry ?? {}),
+      ...(options.bestand ? { [PROFILE_MIGRATION_KEY]: { bestandAt: "2026-09-01T00:00:00.000Z" } } : {}),
+    },
+  })
   const handle = {
     id: "home-space",
     getDoc: () => doc,
     transact: (fn: (d: RlsSpaceDoc) => void) => { fn(doc) },
     onRemoteUpdate: () => () => {},
     close: () => {},
+    getRoot: named.getRoot,
+    transactRoot: named.transactRoot,
+    transactRootDurable: named.transactRootDurable,
   }
   const spaces = (options.spaces ?? []).map((space) => ({
     type: "shared", appTag: "rls", members: [DID], createdAt: "", ...space,
@@ -84,11 +99,19 @@ function fakeConnector(options: {
   connector.homeCatchUpReported = (options.homeCatchUpReported ?? true)
     ? { generation: connector.runtimeGeneration, spaceId: connector.privateSpaceId }
     : null
-  return { connector, doc, handle }
+  return { connector, doc, handle, named }
 }
 
-function byDevice(doc: RlsSpaceDoc, target: string) {
-  return byDeviceOf(doc, DID, target)
+function registryRootOf(named: FakeNamedRoots): MirrorRegistryRoot {
+  return named.roots.mirrorRegistry as MirrorRegistryRoot
+}
+
+function byDevice(named: FakeNamedRoots, target: string) {
+  return byDeviceOf(registryRootOf(named), DID, target)
+}
+
+function mark(named: FakeNamedRoots): string | undefined {
+  return profileMigrationMark(registryRootOf(named))?.bestandAt
 }
 
 beforeEach(() => {
@@ -97,17 +120,16 @@ beforeEach(() => {
 
 describe("Befund 2 — die Uebergangsregel ueberschreibt keine getroffene Entscheidung", () => {
   it("laesst ein Ziel mit vorhandenem Registry-Eintrag aus, auch wenn die Marke fehlt", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls", items: {},
-      mirrorRegistry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "revoked", admission: { keyGeneration: 2 } }) } }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "revoked", admission: { keyGeneration: 2 } }) } }),
+      spaces: [{ id: "garten", admission: { keyGeneration: 2 } }],
+    })
 
     await connector.queueProfileHomeMaintenance()
 
     // Der Widerruf des anderen Geraets bleibt der gefaltete Status: kein
     // pauschales `accepted` dieses Geraets daneben.
-    expect(byDevice(doc, "garten")[DEVICE]).toBeUndefined()
+    expect(byDevice(named, "garten")[DEVICE]).toBeUndefined()
     expect(connector.observeProfileShares().current.garten).toBe("revoked")
   })
 
@@ -121,38 +143,39 @@ describe("Befund 2 — die Uebergangsregel ueberschreibt keine getroffene Entsch
   })
 
   it("schreibt Freigaben und Marke in EINER Transaktion", async () => {
-    const doc: RlsSpaceDoc = { _type: "rls", items: {} }
-    const { connector, handle } = fakeConnector({
-      doc,
+    const { connector, handle, named } = fakeConnector({
       spaces: [
         { id: "garten", admission: { keyGeneration: 1 } },
         { id: "werkstatt", admission: { keyGeneration: 1 } },
       ],
     })
-    const original = handle.transact
-    const calls: number[] = []
-    handle.transact = (fn: (d: RlsSpaceDoc) => void) => { calls.push(1); original(fn) }
+    const original = handle.transactRoot
+    const calls: string[] = []
+    handle.transactRoot = ((name: string, fn: (root: never) => void) => {
+      calls.push(name)
+      original(name, fn)
+    }) as typeof handle.transactRoot
 
     connector.grantStockMemberships(handle, DID, DEVICE)
 
     // Zwei Freigaben und die Marke in genau einer Transaktion: es gibt keinen
     // Zustand, in dem ein Teil geschrieben ist und die Marke fehlt.
-    expect(calls).toHaveLength(1)
-    expect(byDevice(doc, "garten")[DEVICE].status).toBe("accepted")
-    expect(byDevice(doc, "werkstatt")[DEVICE].status).toBe("accepted")
-    expect(doc.profileMigration?.bestandAt).toBeTruthy()
+    // Beitraege UND Marke in genau EINER Wurzel-Transaktion — deshalb liegt
+    // die Marke als reservierter Schluessel in derselben Wurzel.
+    expect(calls).toEqual(["mirrorRegistry"])
+    expect(byDevice(named, "garten")[DEVICE].status).toBe("accepted")
+    expect(byDevice(named, "werkstatt")[DEVICE].status).toBe("accepted")
+    expect(mark(named)).toBeTruthy()
   })
 })
 
 describe("Befund 3 — eine veraltete Abgleichsentscheidung schreibt nicht", () => {
   it("applyRegistryContribution schreibt nicht, wenn die Erwartung in der Transaktion nicht mehr gilt", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls", items: {},
-      mirrorRegistry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "revoked", statusSeq: 4, admission: { keyGeneration: 2 } }) } }),
-    }
-    const { connector } = fakeConnector({ doc })
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "revoked", statusSeq: 4, admission: { keyGeneration: 2 } }) } }),
+    })
 
-    const written = connector.applyRegistryContribution(doc, {
+    const written = connector.applyRegistryContribution(registryRootOf(named), {
       did: DID,
       deviceId: DEVICE,
       targetSpaceId: "garten",
@@ -163,39 +186,37 @@ describe("Befund 3 — eine veraltete Abgleichsentscheidung schreibt nicht", () 
     })
 
     expect(written).toBe(false)
-    expect(byDevice(doc, "garten")[DEVICE]).toMatchObject({ status: "revoked", statusSeq: 4 })
+    expect(byDevice(named, "garten")[DEVICE]).toMatchObject({ status: "revoked", statusSeq: 4 })
   })
 
   it("verwirft den geplanten Statuswechsel, wenn er aus der Lesesicht nicht mehr folgt", async () => {
-    const doc: RlsSpaceDoc = { _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" } }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ bestand: true, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
 
     // Erster Lauf: der neue Space wird pending.
     await connector.queueProfileHomeMaintenance()
-    expect(byDevice(doc, "garten")[DEVICE].status).toBe("pending")
+    expect(byDevice(named, "garten")[DEVICE].status).toBe("pending")
 
     // Die Person nimmt an; ein weiterer Abgleich darf das nicht zurueckdrehen.
     await connector.acceptSpace("garten")
     await connector.queueProfileHomeMaintenance()
 
-    expect(byDevice(doc, "garten")[DEVICE].status).toBe("accepted")
+    expect(byDevice(named, "garten")[DEVICE].status).toBe("accepted")
   })
 
   it("dreht einen ausdruecklichen Widerruf nicht auf pending zurueck", async () => {
-    const doc: RlsSpaceDoc = { _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" } }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ bestand: true, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
     await connector.acceptSpace("garten")
 
     await connector.revokeProfileShare("garten")
     await connector.queueProfileHomeMaintenance()
 
-    expect(byDevice(doc, "garten")[DEVICE].status).toBe("revoked")
+    expect(byDevice(named, "garten")[DEVICE].status).toBe("revoked")
   })
 })
 
 describe("Befund 4 — Registry-Schreibpfade halten die Sitzungsgrenze", () => {
   it("schreibt nicht mehr, wenn die Identitaet waehrend des Aufloesens gewechselt hat", async () => {
-    const { connector, doc } = fakeConnector({
+    const { connector, doc, named } = fakeConnector({
       spaces: [{ id: "garten", admission: { keyGeneration: 2 } }],
       resolveDeviceId: async () => {
         connector.runtimeGeneration = 2
@@ -206,7 +227,7 @@ describe("Befund 4 — Registry-Schreibpfade halten die Sitzungsgrenze", () => {
     })
 
     await expect(connector.acceptSpace("garten")).rejects.toThrow(/beendeten Sitzung/)
-    expect(hasEntry(doc, DID, "garten")).toBe(false)
+    expect(hasEntry(registryRootOf(named), DID, "garten")).toBe(false)
   })
 })
 
@@ -292,17 +313,17 @@ describe("Befund 9 — ein nicht erfolgter Schreibvorgang meldet keinen Erfolg",
 
 describe("Befund 6 — eine fremde Registry-Aenderung loest den Abgleich aus", () => {
   it("widerruft einen fremden accepted-Beitrag fuer einen nicht mehr sichtbaren Space", async () => {
-    const doc: RlsSpaceDoc = { _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" } }
-    const { connector } = fakeConnector({ doc, spaces: [] })
+    const { connector, named } = fakeConnector({ bestand: true, spaces: [] })
 
     // Ein anderes Geraet traegt nachtraeglich eine Freigabe ein.
-    doc.mirrorRegistry = {
-      ...flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 3 } }) } }),
-    }
+    Object.assign(
+      registryRootOf(named),
+      flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 3 } }) } }),
+    )
     connector.onHomeDocChanged()
     await connector.profileHomeMaintenance
 
-    expect(byDevice(doc, "garten")[DEVICE]).toMatchObject({ status: "revoked", admission: { keyGeneration: 3 } })
+    expect(byDevice(named, "garten")[DEVICE]).toMatchObject({ status: "revoked", admission: { keyGeneration: 3 } })
     expect(connector.observeProfileShares().current.garten).toBe("revoked")
   })
 })
@@ -311,9 +332,7 @@ describe("Befund 6 — eine fremde Registry-Aenderung loest den Abgleich aus", (
 
 describe("R2-2 — die pauschale Bestandsregel verlangt den beobachteten Catch-up des Home-Docs", () => {
   it("gibt nichts pauschal frei, solange der Adapter fuer das Home-Doc nichts gemeldet hat", async () => {
-    const doc: RlsSpaceDoc = { _type: "rls", items: {} }
-    const { connector } = fakeConnector({
-      doc,
+    const { connector, named } = fakeConnector({
       homeCatchUpReported: false,
       spaces: [{ id: "garten", admission: { keyGeneration: 2 } }],
     })
@@ -322,14 +341,12 @@ describe("R2-2 — die pauschale Bestandsregel verlangt den beobachteten Catch-u
 
     // Fail-closed: der Space wird ausstehend, nicht pauschal freigegeben — ein
     // Geraet ohne Nachweis kann die Marke eines anderen Geraets verpasst haben.
-    expect(byDevice(doc, "garten")[DEVICE].status).toBe("pending")
-    expect(doc.profileMigration?.bestandAt).toBeUndefined()
+    expect(byDevice(named, "garten")[DEVICE].status).toBe("pending")
+    expect(mark(named)).toBeUndefined()
   })
 
   it("eine frisch erzeugte Identitaet erwartet nichts und darf sofort laufen", async () => {
-    const doc: RlsSpaceDoc = { _type: "rls", items: {} }
-    const { connector } = fakeConnector({
-      doc,
+    const { connector, named } = fakeConnector({
       homeCatchUpReported: false,
       spaces: [{ id: "garten", admission: { keyGeneration: 0 } }],
     })
@@ -337,7 +354,7 @@ describe("R2-2 — die pauschale Bestandsregel verlangt den beobachteten Catch-u
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(byDevice(doc, "garten")[DEVICE].status).toBe("accepted")
+    expect(byDevice(named, "garten")[DEVICE].status).toBe("accepted")
   })
 
   it("noteHomeCatchUp merkt sich nur die Meldung des Home-Docs und nimmt sie in der Sitzung nie zurueck", () => {
@@ -369,14 +386,13 @@ describe("R2-2 — die pauschale Bestandsregel verlangt den beobachteten Catch-u
   })
 
   it("gibt nach einem Re-Login nichts pauschal frei, bevor das Home gemeldet hat", async () => {
-    const doc: RlsSpaceDoc = { _type: "rls", items: {} }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
     connector.runtimeGeneration = 2
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(byDevice(doc, "garten")[DEVICE].status).toBe("pending")
-    expect(doc.profileMigration?.bestandAt).toBeUndefined()
+    expect(byDevice(named, "garten")[DEVICE].status).toBe("pending")
+    expect(mark(named)).toBeUndefined()
   })
 })
 
@@ -471,11 +487,11 @@ describe("R2-5 — ein spaet eintreffendes doc.profile wird nicht publiziert", (
 
 describe("R2-6 — ein abgelehnter Schreibversuch hinterlaesst keinen Eintrag", () => {
   it("schreibt erst nach der Pruefung", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "alt" }] })
+    const { connector, doc, named } = fakeConnector({ spaces: [{ id: "alt" }] })
 
     await expect(connector.acceptSpace("alt")).rejects.toThrow(/Aufnahme-Kennung/)
 
-    expect(hasEntry(doc, DID, "alt")).toBe(false)
+    expect(hasEntry(registryRootOf(named), DID, "alt")).toBe(false)
   })
 
   // Der zweite Test dieser Runde ("ein leerer Eintrag blockiert die
@@ -521,7 +537,7 @@ describe("R3-2 — id = createdBy = data.did gilt ohne Schlupfloch (Spec 12 Rege
 
 describe("R3-3 — das Item gewinnt auch, wenn es nach doc.profile eintrifft", () => {
   it("richtet die Uebergangsprojektion nach, sobald das Home-Doc sich aendert", async () => {
-    const { connector, doc } = fakeConnector()
+    const { connector, doc, named } = fakeConnector()
     await connector.updateMyProfile({ displayName: "Alt" })
 
     // Ein fremdes PersonalDoc trifft zuerst ein und wird am alten Item ausgerichtet.

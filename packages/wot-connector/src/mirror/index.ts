@@ -17,6 +17,13 @@ export {
   parseMirrorRegistryKey,
 } from "./keys.js"
 export { groupRegistryByEntry } from "./registry-group.js"
+export {
+  MIRROR_REGISTRY_ROOT,
+  PROFILE_MIGRATION_KEY,
+  profileMigrationMark,
+  registryContributionsOf,
+} from "./roots.js"
+export type { MirrorRegistryRoot, ProfileMigrationMark } from "./roots.js"
 export { InMemoryMirrorMarkStore } from "./mark-store-memory.js"
 export { evaluateSnapshot } from "./receiver.js"
 export type { EvaluateSnapshotInput, MirrorEvaluation } from "./receiver.js"

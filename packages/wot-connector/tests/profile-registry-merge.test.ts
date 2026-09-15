@@ -2,12 +2,20 @@ import { describe, expect, it, vi } from "vitest"
 import { createObservable } from "@real-life-stack/data-interface"
 
 import { WotConnector } from "../src/wot-connector.js"
-import { deriveRegistryView, groupRegistryByEntry, mirrorRegistryEntryKey, mirrorRegistryKey } from "../src/mirror/index.js"
+import {
+  deriveRegistryView,
+  groupRegistryByEntry,
+  MIRROR_REGISTRY_ROOT,
+  mirrorRegistryEntryKey,
+  mirrorRegistryKey,
+  registryContributionsOf,
+  type MirrorRegistryRoot,
+} from "../src/mirror/index.js"
 import type { MirrorRegistryContribution, RlsSpaceDoc } from "../src/types.js"
 import { createYjsSpaceHandle, type YjsTestSpaceHandle } from "./helpers/yjs-space-handle.js"
 
 /**
- * Befund R2-1 aus der Codex-Runde 2, mit zwei ECHTEN Yjs-Dokumenten.
+ * Befund R2-1 aus der Codex-Runde 2 und rls#353, mit zwei ECHTEN Yjs-Dokumenten.
  *
  * Spec 09 §Ablage und Registry verlangt, dass die Beiträge der Geräte
  * konfliktfrei mergen: jedes Gerät schreibt nur unter sich selbst, und die eine
@@ -50,9 +58,13 @@ function connectorOn(handle: YjsTestSpaceHandle<RlsSpaceDoc>, deviceId: string) 
   return connector
 }
 
+function registryRoot(handle: YjsTestSpaceHandle<RlsSpaceDoc>): MirrorRegistryRoot {
+  return handle.getRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT)
+}
+
 function byDeviceOf(handle: YjsTestSpaceHandle<RlsSpaceDoc>, targetSpaceId: string) {
-  const registry = handle.getDoc().mirrorRegistry ?? {}
-  return groupRegistryByEntry(registry).get(mirrorRegistryEntryKey(DID, targetSpaceId))
+  return groupRegistryByEntry(registryContributionsOf(registryRoot(handle)))
+    .get(mirrorRegistryEntryKey(DID, targetSpaceId))
     ?? ({} as Record<string, MirrorRegistryContribution>)
 }
 
@@ -60,18 +72,14 @@ describe("Registry-Beiträge zweier Geräte mergen konfliktfrei (Befund R2-1)", 
   it("hält beide nebenläufig angelegten Beiträge und lässt den Widerruf gewinnen", async () => {
     const deviceA = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
     const deviceB = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
-    // Gemeinsamer Ausgangszustand: ein Home ohne jeden Registry-Eintrag zu
-    // diesem Ziel. Beide Geräte schreiben ihren ERSTEN Beitrag nebenläufig.
-    //
-    // Die oberste `mirrorRegistry`-Map steht im gemeinsamen Ausgangszustand.
-    // Ihre nebenläufige ERSTANLAGE ist der Rest des Befunds, der in der Ablage
-    // nicht auflösbar ist (jede geschachtelte Map dieses Doc-Typs teilt ihn,
-    // `items` eingeschlossen) — er ist im PR benannt und gehört in den Adapter.
-    // Alles darunter ist mit der flachen Schlüsselform konfliktfrei.
+    // Gemeinsamer Ausgangszustand: ein Home OHNE jede Vorinitialisierung der
+    // Registry. Genau das ist der Punkt von rls#353: die Wurzel `mirrorRegistry`
+    // stellt das CRDT bereit (`doc.getMap(name)`), kein Gerät legt sie an — die
+    // nebenläufige Erstanlage, die unter `data` einen Unterbaum verlor, gibt es
+    // nicht mehr.
     deviceA.transact((doc) => {
       doc._type = "rls"
       doc.items = {}
-      doc.mirrorRegistry = {}
     })
     deviceA.syncInto(deviceB)
 
@@ -90,13 +98,40 @@ describe("Registry-Beiträge zweier Geräte mergen konfliktfrei (Befund R2-1)", 
     }
   })
 
+  it.each([
+    ["A zuerst", "a-first"],
+    ["B zuerst", "b-first"],
+  ])("hält in beiden Update-Reihenfolgen beide Erstbeiträge (%s)", async (_name, order) => {
+    const deviceA = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    const deviceB = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    // Keine Vorinitialisierung, auch nicht des Doc-Baums: die Wurzel ist auf
+    // beiden Geräten dieselbe, ohne dass eines sie angelegt hätte.
+    await connectorOn(deviceA, "device-A").writeRegistryContribution("garten", "revoked")
+    await connectorOn(deviceB, "device-B").writeRegistryContribution("garten", "accepted")
+
+    if (order === "a-first") {
+      deviceA.syncInto(deviceB)
+      deviceB.syncInto(deviceA)
+    } else {
+      deviceB.syncInto(deviceA)
+      deviceA.syncInto(deviceB)
+    }
+
+    for (const handle of [deviceA, deviceB]) {
+      const byDevice = byDeviceOf(handle, "garten")
+      expect(Object.keys(byDevice).sort()).toEqual(["device-A", "device-B"])
+      // Der Widerruf ist von keiner Freigabe beobachtet worden und gewinnt,
+      // unabhängig davon, welches Update zuletzt ankam.
+      expect(deriveRegistryView(byDevice)?.status).toBe("revoked")
+    }
+  })
+
   it("legt je Gerät genau einen flachen Schlüssel an, nie eine gemeinsame Eltern-Map", async () => {
     const deviceA = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
     const deviceB = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
     deviceA.transact((doc) => {
       doc._type = "rls"
       doc.items = {}
-      doc.mirrorRegistry = {}
     })
     deviceA.syncInto(deviceB)
 
@@ -105,7 +140,7 @@ describe("Registry-Beiträge zweier Geräte mergen konfliktfrei (Befund R2-1)", 
     deviceA.syncInto(deviceB)
     deviceB.syncInto(deviceA)
 
-    expect(Object.keys(deviceA.getDoc().mirrorRegistry ?? {}).sort()).toEqual([
+    expect(Object.keys(registryRoot(deviceA)).sort()).toEqual([
       mirrorRegistryKey(DID, "garten", "device-A"),
       mirrorRegistryKey(DID, "garten", "device-B"),
     ].sort())
@@ -117,7 +152,6 @@ describe("Registry-Beiträge zweier Geräte mergen konfliktfrei (Befund R2-1)", 
     deviceA.transact((doc) => {
       doc._type = "rls"
       doc.items = {}
-      doc.mirrorRegistry = {}
     })
     deviceA.syncInto(deviceB)
 

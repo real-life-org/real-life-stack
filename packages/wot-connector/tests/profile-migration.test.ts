@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { createObservable } from "@real-life-stack/data-interface"
 
 import { byDeviceOf, hasEntry } from "./helpers/registry-fixtures.js"
+import { createFakeNamedRoots, type FakeNamedRoots } from "./helpers/named-roots.js"
+import { PROFILE_MIGRATION_KEY, profileMigrationMark, type MirrorRegistryRoot } from "../src/mirror/index.js"
 import type { RlsSpaceDoc } from "../src/types.js"
 
 /**
@@ -30,6 +32,9 @@ const DID = "did:key:z6MkAnton"
 
 function fakeConnector(options: {
   doc?: RlsSpaceDoc
+  /** Geteilte benannte Wurzeln, wenn zwei Geraete auf DEMSELBEN Home arbeiten. */
+  named?: FakeNamedRoots
+  bestandAt?: string
   spaces?: Array<{ id: string; appTag?: string; type?: string; admission?: { keyGeneration: number } }>
   outstanding?: Array<{ docId: string }>
   firstFillDone?: boolean
@@ -38,12 +43,20 @@ function fakeConnector(options: {
   homeCatchUpReported?: boolean
 } = {}) {
   const doc: RlsSpaceDoc = options.doc ?? { _type: "rls", items: {} }
+  // Registry und Bestandsmarke liegen in der benannten Wurzel `mirrorRegistry`
+  // (Spec 09 §Ablage und Registry, Fassung rls#354).
+  const named = options.named ?? createFakeNamedRoots({
+    mirrorRegistry: options.bestandAt ? { [PROFILE_MIGRATION_KEY]: { bestandAt: options.bestandAt } } : {},
+  })
   const handle = {
     id: "home-space",
     getDoc: () => doc,
     transact: (fn: (d: RlsSpaceDoc) => void) => { fn(doc) },
     onRemoteUpdate: () => () => {},
     close: () => {},
+    getRoot: named.getRoot,
+    transactRoot: named.transactRoot,
+    transactRootDurable: named.transactRootDurable,
   }
   const spaces = (options.spaces ?? []).map((space) => ({
     type: "shared", appTag: "rls", members: [DID], createdAt: "", ...space,
@@ -76,7 +89,16 @@ function fakeConnector(options: {
   connector.homeCatchUpReported = (options.homeCatchUpReported ?? true)
     ? { generation: connector.runtimeGeneration, spaceId: connector.privateSpaceId }
     : null
-  return { connector, doc, handle }
+  return { connector, doc, handle, named }
+}
+
+/** Die Bestandsmarke aus der Wurzel — sie steht NICHT im Doc-Baum unter `data`. */
+function mark(named: FakeNamedRoots): string | undefined {
+  return profileMigrationMark(named.roots.mirrorRegistry as MirrorRegistryRoot)?.bestandAt
+}
+
+function registryRootOf(named: FakeNamedRoots): MirrorRegistryRoot {
+  return named.roots.mirrorRegistry as MirrorRegistryRoot
 }
 
 beforeEach(() => {
@@ -117,7 +139,7 @@ describe("Erstsync-Signal — Spec 12 Regel 12", () => {
 
   it("migriert NICHT, bevor das Signal da ist", async () => {
     personalDoc.value.profile = { did: DID, name: "Anton" }
-    const { connector, doc } = fakeConnector({ outstanding: [{ docId: "home-space" }] })
+    const { connector, doc, named } = fakeConnector({ outstanding: [{ docId: "home-space" }] })
 
     await connector.queueProfileHomeMaintenance()
 
@@ -128,7 +150,7 @@ describe("Erstsync-Signal — Spec 12 Regel 12", () => {
 describe("Migration — Spec 12 Regel 12", () => {
   it("legt das Item aus doc.profile an, wenn es fehlt", async () => {
     personalDoc.value.profile = { did: DID, name: "Anton", bio: "Baut Netze", avatar: "a.png" }
-    const { connector, doc } = fakeConnector()
+    const { connector, doc, named } = fakeConnector()
 
     await connector.queueProfileHomeMaintenance()
 
@@ -158,7 +180,7 @@ describe("Migration — Spec 12 Regel 12", () => {
   })
 
   it("legt ohne doc.profile KEIN leeres Item an", async () => {
-    const { connector, doc } = fakeConnector()
+    const { connector, doc, named } = fakeConnector()
 
     await connector.queueProfileHomeMaintenance()
 
@@ -167,7 +189,7 @@ describe("Migration — Spec 12 Regel 12", () => {
 
   it("ein spaet eintreffendes doc.profile aendert das migrierte Item nicht mehr", async () => {
     personalDoc.value.profile = { did: DID, name: "Anton" }
-    const { connector, doc } = fakeConnector()
+    const { connector, doc, named } = fakeConnector()
     await connector.queueProfileHomeMaintenance()
 
     personalDoc.value.profile = { did: DID, name: "Wiederhergestellt" }
@@ -177,7 +199,7 @@ describe("Migration — Spec 12 Regel 12", () => {
   })
 
   it("migriert ein spaet eintreffendes doc.profile, solange das Item noch fehlt", async () => {
-    const { connector, doc } = fakeConnector()
+    const { connector, doc, named } = fakeConnector()
     await connector.queueProfileHomeMaintenance()
     expect(doc.items[DID]).toBeUndefined()
 
@@ -190,7 +212,7 @@ describe("Migration — Spec 12 Regel 12", () => {
 
 describe("Bestandsregel — Spec 12 Regel 5", () => {
   it("gibt jede bestehende Mitgliedschaft mit gueltiger Kennung frei und setzt die Marke", async () => {
-    const { connector, doc } = fakeConnector({
+    const { connector, doc, named } = fakeConnector({
       spaces: [
         { id: "home-space", appTag: "rls-private", admission: { keyGeneration: 0 } },
         { id: "garten", admission: { keyGeneration: 2 } },
@@ -200,50 +222,50 @@ describe("Bestandsregel — Spec 12 Regel 5", () => {
 
     await connector.queueProfileHomeMaintenance()
 
-    const byDevice = (target: string) => byDeviceOf(doc, DID, target)
+    const byDevice = (target: string) => byDeviceOf(registryRootOf(named), DID, target)
     expect(byDevice("garten")["device-A"]).toMatchObject({ status: "accepted", admission: { keyGeneration: 2 } })
     expect(byDevice("werkstatt")["device-A"]).toMatchObject({ status: "accepted", admission: { keyGeneration: 5 } })
-    expect(hasEntry(doc, DID, "home-space")).toBe(false)
-    expect(doc.profileMigration?.bestandAt).toBeTruthy()
+    expect(hasEntry(registryRootOf(named), DID, "home-space")).toBe(false)
+    expect(mark(named)).toBeTruthy()
   })
 
   it("laesst Alt-Spaces ohne Aufnahme-Kennung ohne Eintrag (09: keine gueltige Aufnahme)", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "alt" }] })
+    const { connector, doc, named } = fakeConnector({ spaces: [{ id: "alt" }] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(hasEntry(doc, DID, "alt")).toBe(false)
-    expect(doc.profileMigration?.bestandAt).toBeTruthy()
+    expect(hasEntry(registryRootOf(named), DID, "alt")).toBe(false)
+    expect(mark(named)).toBeTruthy()
   })
 
   it("setzt die Marke auch ohne eine einzige Mitgliedschaft — sonst liefe die Regel spaeter ueber Regel-4-Spaces", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [] })
+    const { connector, doc, named } = fakeConnector({ spaces: [] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(doc.profileMigration?.bestandAt).toBeTruthy()
+    expect(mark(named)).toBeTruthy()
   })
 
   it("laeuft auf einem zweiten Geraet nicht erneut: die Marke konvergiert ueber das CRDT-Doc", async () => {
     const doc: RlsSpaceDoc = { _type: "rls", items: {} }
-    const deviceA = fakeConnector({ doc, deviceId: "device-A", spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const shared = createFakeNamedRoots()
+    const deviceA = fakeConnector({ doc, named: shared, deviceId: "device-A", spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
     await deviceA.connector.queueProfileHomeMaintenance()
-    const markAfterA = doc.profileMigration?.bestandAt
+    const markAfterA = mark(shared)
 
     // Zweites Geraet derselben Person auf DEMSELBEN Doc: es sieht die Marke.
-    const deviceB = fakeConnector({ doc, deviceId: "device-B", spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const deviceB = fakeConnector({ doc, named: shared, deviceId: "device-B", spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
     await deviceB.connector.queueProfileHomeMaintenance()
 
-    expect(doc.profileMigration?.bestandAt).toBe(markAfterA)
-    expect(Object.keys(byDeviceOf(doc, DID, "garten"))).toEqual(["device-A"])
+    expect(mark(shared)).toBe(markAfterA)
+    expect(Object.keys(byDeviceOf(registryRootOf(shared), DID, "garten"))).toEqual(["device-A"])
   })
 
   it("ueberschreibt eine vorhandene Marke nie", async () => {
-    const doc: RlsSpaceDoc = { _type: "rls", items: {}, profileMigration: { bestandAt: "2026-01-01T00:00:00.000Z" } }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ bestandAt: "2026-01-01T00:00:00.000Z", spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(doc.profileMigration?.bestandAt).toBe("2026-01-01T00:00:00.000Z")
+    expect(mark(named)).toBe("2026-01-01T00:00:00.000Z")
   })
 })

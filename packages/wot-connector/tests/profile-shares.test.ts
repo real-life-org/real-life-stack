@@ -3,6 +3,8 @@ import { createObservable, hasProfile } from "@real-life-stack/data-interface"
 
 import { WotConnector } from "../src/wot-connector.js"
 import { byDeviceOf, flatRegistry, hasEntry } from "./helpers/registry-fixtures.js"
+import { createFakeNamedRoots, type FakeNamedRoots } from "./helpers/named-roots.js"
+import { PROFILE_MIGRATION_KEY, type MirrorRegistryRoot } from "../src/mirror/index.js"
 import type { MirrorRegistryContribution, RlsSpaceDoc } from "../src/types.js"
 
 /**
@@ -18,17 +20,32 @@ function contribution(partial: Partial<MirrorRegistryContribution>): MirrorRegis
 }
 
 function fakeConnector(options: {
-  doc?: RlsSpaceDoc
+  registry?: MirrorRegistryRoot
+  /** Die Bestandsmarke aus Spec 12 Regel 5 — standardmaessig gesetzt. */
+  bestand?: boolean
   spaces?: Array<{ id: string; appTag?: string; type?: string; admission?: { keyGeneration: number } }>
   homeCatchUpReported?: boolean
 } = {}) {
-  const doc: RlsSpaceDoc = options.doc ?? { _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" } }
+  const doc: RlsSpaceDoc = { _type: "rls", items: {} }
+  // Registry UND Bestandsmarke liegen in der benannten Wurzel `mirrorRegistry`
+  // (Spec 09 §Ablage und Registry, Fassung rls#354); die Marke unter dem
+  // reservierten Schluessel, damit Beitraege und Marke in EINER Transaktion
+  // geschrieben werden koennen.
+  const named = createFakeNamedRoots({
+    mirrorRegistry: {
+      ...(options.registry ?? {}),
+      ...((options.bestand ?? true) ? { [PROFILE_MIGRATION_KEY]: { bestandAt: "2026-09-01T00:00:00.000Z" } } : {}),
+    },
+  })
   const handle = {
     id: "home-space",
     getDoc: () => doc,
     transact: (fn: (d: RlsSpaceDoc) => void) => { fn(doc) },
     onRemoteUpdate: () => () => {},
     close: () => {},
+    getRoot: named.getRoot,
+    transactRoot: named.transactRoot,
+    transactRootDurable: named.transactRootDurable,
   }
   const spaces = (options.spaces ?? []).map((space) => ({
     type: "shared", appTag: "rls", members: [DID], createdAt: "", ...space,
@@ -64,122 +81,115 @@ function fakeConnector(options: {
   connector.homeCatchUpReported = (options.homeCatchUpReported ?? true)
     ? { generation: connector.runtimeGeneration, spaceId: connector.privateSpaceId }
     : null
-  return { connector, doc, handle }
+  return { connector, doc, handle, named }
 }
 
-function status(doc: RlsSpaceDoc, target: string): string | undefined {
-  return byDeviceOf(doc, DID, target)[DEVICE]?.status
+function entry(named: FakeNamedRoots, target: string): Record<string, MirrorRegistryContribution> {
+  return byDeviceOf(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, target)
+}
+
+function status(named: FakeNamedRoots, target: string): string | undefined {
+  return entry(named, target)[DEVICE]?.status
 }
 
 describe("pending bei neuem Space — Spec 12 Regel 4", () => {
   it("ein neu erschienener Space wird pending, nicht accepted", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(status(doc, "garten")).toBe("pending")
+    expect(status(named, "garten")).toBe("pending")
   })
 
   it("eine Wiederaufnahme setzt den Eintrag zurueck auf pending", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
-      mirrorRegistry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 2 } }) } }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 7 } }] })
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 2 } }) } }),
+      spaces: [{ id: "garten", admission: { keyGeneration: 7 } }] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(status(doc, "garten")).toBe("pending")
-    expect(byDeviceOf(doc, DID, "garten")[DEVICE]?.admission)
+    expect(status(named, "garten")).toBe("pending")
+    expect(entry(named, "garten")[DEVICE]?.admission)
       .toEqual({ keyGeneration: 7 })
   })
 
   it("auch der Anstieg von keiner Kennung auf eine Kennung ergibt pending", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
-      mirrorRegistry: flatRegistry(DID, { alt: { [DEVICE]: contribution({ status: "accepted" }) } }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "alt", admission: { keyGeneration: 1 } }] })
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { alt: { [DEVICE]: contribution({ status: "accepted" }) } }),
+      spaces: [{ id: "alt", admission: { keyGeneration: 1 } }] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(status(doc, "alt")).toBe("pending")
+    expect(status(named, "alt")).toBe("pending")
   })
 
   it("ein Alt-Space ohne Kennung bekommt weiterhin keinen Eintrag", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "alt" }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "alt" }] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(hasEntry(doc, DID, "alt")).toBe(false)
+    expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "alt")).toBe(false)
   })
 
   it("Bestands-Spaces werden NICHT pending — die Bestandsregel laeuft davor", async () => {
-    const doc: RlsSpaceDoc = { _type: "rls", items: {} }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ bestand: false, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(status(doc, "garten")).toBe("accepted")
+    expect(status(named, "garten")).toBe("accepted")
   })
 })
 
 describe("Mitgliedschaftsverlust — Spec 12 Regel 7, Spec 09 Inv. 11", () => {
   it("ein verschwundener Ziel-Space widerruft den Eintrag mit der Kennung der Lesesicht", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
-      mirrorRegistry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 4 } }) } }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [] })
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 4 } }) } }),
+      spaces: [] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(status(doc, "garten")).toBe("revoked")
-    expect(byDeviceOf(doc, DID, "garten")[DEVICE]?.admission)
+    expect(status(named, "garten")).toBe("revoked")
+    expect(entry(named, "garten")[DEVICE]?.admission)
       .toEqual({ keyGeneration: 4 })
   })
 
   it("widerruft einen bereits widerrufenen Eintrag nicht erneut", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
-      mirrorRegistry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "revoked", statusSeq: 3, admission: { keyGeneration: 4 } }) } }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [] })
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "revoked", statusSeq: 3, admission: { keyGeneration: 4 } }) } }),
+      spaces: [] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(byDeviceOf(doc, DID, "garten")[DEVICE]?.statusSeq).toBe(3)
+    expect(entry(named, "garten")[DEVICE]?.statusSeq).toBe(3)
   })
 
   it("Registry-Eintraege werden nie geloescht", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls", items: {}, profileMigration: { bestandAt: "2026-09-01T00:00:00.000Z" },
-      mirrorRegistry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 4 } }) } }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [] })
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 4 } }) } }),
+      spaces: [] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(hasEntry(doc, DID, "garten")).toBe(true)
+    expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "garten")).toBe(true)
   })
 })
 
 describe("ProfileCapable-Freigaben — Spec 12 Regel 14", () => {
   it("acceptSpace setzt den Eintrag auf accepted", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
 
     await connector.acceptSpace("garten")
 
-    expect(status(doc, "garten")).toBe("accepted")
+    expect(status(named, "garten")).toBe("accepted")
     expect(connector.observeProfileShares().current.garten).toBe("accepted")
   })
 
   it("shareProfile gibt nachtraeglich frei", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
 
     await connector.shareProfile("garten")
 
-    expect(status(doc, "garten")).toBe("accepted")
+    expect(status(named, "garten")).toBe("accepted")
   })
 
   it("eine Freigabe ohne gueltige Aufnahme-Kennung wird abgelehnt", async () => {
@@ -189,29 +199,29 @@ describe("ProfileCapable-Freigaben — Spec 12 Regel 14", () => {
   })
 
   it("revokeProfileShare widerruft, ohne den Space zu verlassen", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
     await connector.acceptSpace("garten")
 
     await connector.revokeProfileShare("garten")
 
-    expect(status(doc, "garten")).toBe("revoked")
+    expect(status(named, "garten")).toBe("revoked")
     expect(connector.replication.leaveSpace).not.toHaveBeenCalled()
   })
 
   it("declineSpace widerruft und verlaesst danach den Space", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
 
     await connector.declineSpace("garten")
 
-    expect(status(doc, "garten")).toBe("revoked")
+    expect(status(named, "garten")).toBe("revoked")
     expect(connector.replication.leaveSpace).toHaveBeenCalledWith("garten")
   })
 
   it("declineSpace widerruft VOR dem Verlassen", async () => {
     const order: string[] = []
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
     connector.replication.leaveSpace = vi.fn(async () => {
-      order.push(`leave:${status(doc, "garten")}`)
+      order.push(`leave:${status(named, "garten")}`)
     })
 
     await connector.declineSpace("garten")
@@ -228,7 +238,7 @@ describe("ProfileCapable-Freigaben — Spec 12 Regel 14", () => {
 
 describe("Selbst erstellter Space — Spec 12 Regel 4", () => {
   it("wer einen Space selbst erstellt, gibt sein Profil dort mit dem Erstellen frei", async () => {
-    const { connector, doc } = fakeConnector()
+    const { connector, named } = fakeConnector()
     connector.replication.createSpace = vi.fn(async () => ({
       id: "neu", type: "shared", appTag: "rls", members: [DID], createdAt: "", admission: { keyGeneration: 0 },
     }))
@@ -237,6 +247,6 @@ describe("Selbst erstellter Space — Spec 12 Regel 4", () => {
 
     await connector.createGroup("Neu")
 
-    expect(status(doc, "neu")).toBe("accepted")
+    expect(status(named, "neu")).toBe("accepted")
   })
 })

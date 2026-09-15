@@ -78,15 +78,84 @@ function snapshot(map: Y.Map<unknown>): Record<string, unknown> {
   return plain
 }
 
+/**
+ * Benannte Wurzeln wie in `@real-life/adapter-yjs` 0.2.9 (`dist/index.js`,
+ * `getRoot`/`transactRoot`/`transactRootDurable`, Helfer `Ol`, `tr`, `nr`):
+ *
+ * - Eine Wurzel IST ein Y-Root-Type (`doc.getMap(name)`). Sie existiert auf
+ *   jedem Gerät, ohne dass ein Gerät sie anlegt — genau das ist der Grund für
+ *   rls#353.
+ * - Werte sind flaches JSON, tief kopiert. Es entstehen KEINE geschachtelten
+ *   Y.Maps, eine Zuweisung ersetzt den Wert atomar.
+ * - Der Entwurf sammelt die Schreibvorgänge und wendet sie erst NACH der
+ *   Rückkehr der Funktion in EINER Transaktion an; wirft die Funktion, wird
+ *   nichts geschrieben.
+ */
+function rootDraft<R extends object>(map: Y.Map<unknown>, fn: (root: R) => void): Array<[string, unknown]> {
+  const ops = new Map<string, { value: unknown } | { remove: true }>()
+  const read = (key: string): unknown => {
+    const pending = ops.get(key)
+    if (pending) return "remove" in pending ? undefined : clone(pending.value)
+    return clone(map.get(key))
+  }
+  const keys = () => {
+    const all = new Set(map.keys())
+    for (const [key, op] of ops) {
+      if ("remove" in op) all.delete(key)
+      else all.add(key)
+    }
+    return Array.from(all)
+  }
+  const draft = new Proxy({}, {
+    get: (_t, key: string | symbol) => (typeof key === "string" ? read(key) : undefined),
+    set: (_t, key: string | symbol, value: unknown) => {
+      if (typeof key !== "string") throw new TypeError("named root keys must be strings")
+      if (FORBIDDEN_ROOT_KEYS.has(key)) throw new TypeError(`named root key "${key}" is not allowed`)
+      if (value === undefined) ops.set(key, { remove: true })
+      else ops.set(key, { value: clone(value) })
+      return true
+    },
+    deleteProperty: (_t, key: string | symbol) => {
+      if (typeof key === "string") ops.set(key, { remove: true })
+      return true
+    },
+    has: (_t, key: string | symbol) => typeof key === "string" && read(key) !== undefined,
+    ownKeys: () => keys(),
+    getOwnPropertyDescriptor: (_t, key: string | symbol) => {
+      if (typeof key !== "string" || read(key) === undefined) return undefined
+      return { configurable: true, enumerable: true, get: () => read(key) }
+    },
+  }) as R
+  fn(draft)
+  return Array.from(ops.entries()).map(([key, op]) => [key, "remove" in op ? undefined : op.value] as [string, unknown])
+}
+
+const FORBIDDEN_ROOT_KEYS = new Set(["__proto__", "constructor", "prototype"])
+
+function clone<V>(value: V): V {
+  return value === undefined || value === null || typeof value !== "object"
+    ? value
+    : JSON.parse(JSON.stringify(value)) as V
+}
+
 export interface YjsTestSpaceHandle<T extends object> {
   id: string
   ydoc: Y.Doc
   getDoc(): T
   transact(fn: (doc: T) => void): void
+  getRoot<R extends object = Record<string, unknown>>(name: string): R
+  transactRoot<R extends object = Record<string, unknown>>(name: string, fn: (root: R) => void): void
+  transactRootDurable<R extends object = Record<string, unknown>>(name: string, fn: (root: R) => void): Promise<void>
   onRemoteUpdate(callback: () => void): () => void
   close(): void
   /** Alles, was dieses Doc weiß, in ein anderes übertragen (ein Sync-Schritt). */
   syncInto(other: YjsTestSpaceHandle<T>): void
+}
+
+function assertRootName(name: string): void {
+  if (name === "data" || name.startsWith("_") || !/^[a-z][A-Za-z0-9]*$/.test(name)) {
+    throw new TypeError(`named root: "${name}" is not a valid root name`)
+  }
 }
 
 export function createYjsSpaceHandle<T extends object>(id: string): YjsTestSpaceHandle<T> {
@@ -97,11 +166,32 @@ export function createYjsSpaceHandle<T extends object>(id: string): YjsTestSpace
   ydoc.on("update", (_update: Uint8Array, origin: unknown) => {
     if (origin === "remote") callbacks.forEach((callback) => { callback() })
   })
-  return {
+  const handle: YjsTestSpaceHandle<T> = {
     id,
     ydoc,
     getDoc: () => snapshot(root) as T,
     transact: (fn) => { ydoc.transact(() => { fn(doc) }) },
+    getRoot: <R extends object>(name: string) => {
+      assertRootName(name)
+      const projection: Record<string, unknown> = {}
+      ydoc.getMap<unknown>(name).forEach((value, key) => { projection[key] = clone(value) })
+      return projection as R
+    },
+    transactRoot: <R extends object>(name: string, fn: (root: R) => void) => {
+      assertRootName(name)
+      const map = ydoc.getMap<unknown>(name)
+      const ops = rootDraft<R>(map, fn)
+      if (ops.length === 0) return
+      ydoc.transact(() => {
+        for (const [key, value] of ops) {
+          if (value === undefined) map.delete(key)
+          else map.set(key, value)
+        }
+      })
+    },
+    transactRootDurable: async <R extends object>(name: string, fn: (root: R) => void) => {
+      handle.transactRoot<R>(name, fn)
+    },
     onRemoteUpdate: (callback) => {
       callbacks.add(callback)
       return () => callbacks.delete(callback)
@@ -111,4 +201,5 @@ export function createYjsSpaceHandle<T extends object>(id: string): YjsTestSpace
       Y.applyUpdate(other.ydoc, Y.encodeStateAsUpdate(ydoc), "remote")
     },
   }
+  return handle
 }

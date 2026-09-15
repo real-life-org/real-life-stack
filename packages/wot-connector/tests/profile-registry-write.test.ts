@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest"
 import { createObservable } from "@real-life-stack/data-interface"
 
 import { WotConnector } from "../src/wot-connector.js"
-import { byDeviceOf, flatRegistry, hasEntry } from "./helpers/registry-fixtures.js"
+import { byDeviceOf, flatRegistry } from "./helpers/registry-fixtures.js"
+import { createFakeNamedRoots } from "./helpers/named-roots.js"
+import type { MirrorRegistryRoot } from "../src/mirror/index.js"
 import type { MirrorRegistryContribution, RlsSpaceDoc } from "../src/types.js"
 
 /**
@@ -10,6 +12,10 @@ import type { MirrorRegistryContribution, RlsSpaceDoc } from "../src/types.js"
  * Mirror-Registry des persoenlichen Space. Jedes Geraet schreibt nur unter
  * seinem eigenen `deviceId`-Schluessel, Eintraege werden NIE geloescht, und die
  * Aufnahme-Kennung wird nur beim Statuswechsel gesetzt, nie still nachgefuehrt.
+ *
+ * Die Ablage ist die benannte WURZEL `mirrorRegistry` des Home-Docs (Fassung
+ * rls#354, Adapter-Capability `NamedRootsCapable`) — nicht der Doc-Baum unter
+ * `data`.
  */
 
 const DID = "did:key:z6MkAnton"
@@ -20,17 +26,21 @@ function contribution(partial: Partial<MirrorRegistryContribution>): MirrorRegis
 }
 
 function fakeConnector(options: {
-  doc?: RlsSpaceDoc
-  spaces?: Array<{ id: string; admission?: { keyGeneration: number } }>
+  registry?: MirrorRegistryRoot
+  spaces?: Array<{ id: string; members?: string[]; admission?: { keyGeneration: number } }>
   deviceId?: string
 } = {}) {
-  const doc: RlsSpaceDoc = options.doc ?? { _type: "rls", items: {} }
+  const doc: RlsSpaceDoc = { _type: "rls", items: {} }
+  const named = createFakeNamedRoots({ mirrorRegistry: { ...(options.registry ?? {}) } })
   const handle = {
     id: "home-space",
     getDoc: () => doc,
     transact: (fn: (d: RlsSpaceDoc) => void) => { fn(doc) },
     onRemoteUpdate: () => () => {},
     close: () => {},
+    getRoot: named.getRoot,
+    transactRoot: named.transactRoot,
+    transactRootDurable: named.transactRootDurable,
   }
   const spaces = (options.spaces ?? []).map((space) => ({
     type: "shared", appTag: "rls", members: [DID], createdAt: "", ...space,
@@ -45,42 +55,52 @@ function fakeConnector(options: {
   }
   connector.docLogStore = { resolveConnectDeviceId: async () => options.deviceId ?? DEVICE }
   connector.profileSharesObs = createObservable<Record<string, string>>({}, false)
-  return { connector, doc, handle }
+  return { connector, doc, handle, named }
 }
 
-function registry(doc: RlsSpaceDoc, targetSpaceId: string) {
-  return byDeviceOf(doc, DID, targetSpaceId)
+function registry(
+  named: { roots: Record<string, Record<string, unknown>> },
+  targetSpaceId: string,
+): Record<string, MirrorRegistryContribution> {
+  return byDeviceOf(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, targetSpaceId)
 }
 
 describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
   it("schreibt ausschliesslich unter dem eigenen deviceId und laesst fremde Beitraege stehen", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls",
-      items: {},
-      mirrorRegistry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "pending", statusSeq: 3 }) } }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "pending", statusSeq: 3 }) } }),
+      spaces: [{ id: "garten", admission: { keyGeneration: 2 } }],
+    })
 
     await connector.writeRegistryContribution("garten", "accepted")
 
-    const byDevice = registry(doc, "garten")
+    const byDevice = registry(named, "garten")
     expect(Object.keys(byDevice).sort()).toEqual(["device-A", "device-B"])
     expect(byDevice["device-B"].status).toBe("pending")
   })
 
-  it("eine Freigabe traegt die aktuelle Aufnahme-Kennung des Ziel-Space", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 7 } }] })
+  it("schreibt in die WURZEL, nie in den Doc-Baum unter data", async () => {
+    const { connector, doc, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 1 } }] })
 
     await connector.writeRegistryContribution("garten", "accepted")
 
-    expect(registry(doc, "garten")[DEVICE].admission).toEqual({ keyGeneration: 7 })
+    expect(Object.keys(named.roots.mirrorRegistry)).toHaveLength(1)
+    expect((doc as Record<string, unknown>).mirrorRegistry).toBeUndefined()
+  })
+
+  it("eine Freigabe traegt die aktuelle Aufnahme-Kennung des Ziel-Space", async () => {
+    const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 7 } }] })
+
+    await connector.writeRegistryContribution("garten", "accepted")
+
+    expect(registry(named, "garten")[DEVICE].admission).toEqual({ keyGeneration: 7 })
   })
 
   it("eine Freigabe ohne gueltige Aufnahme-Kennung wird abgelehnt", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "alt" }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "alt" }] })
 
     await expect(connector.writeRegistryContribution("alt", "accepted")).rejects.toThrow(/Aufnahme-Kennung/)
-    expect(registry(doc, "alt")[DEVICE]).toBeUndefined()
+    expect(registry(named, "alt")[DEVICE]).toBeUndefined()
   })
 
   it("auch pending setzt eine gueltige Kennung voraus", async () => {
@@ -90,75 +110,67 @@ describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
   })
 
   it("ein Widerruf traegt nie eine niedrigere Kennung als die Freigabe, die er widerruft", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls",
-      items: {},
-      mirrorRegistry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 9 } }) } }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 4 } }] })
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 9 } }) } }),
+      spaces: [{ id: "garten", admission: { keyGeneration: 4 } }],
+    })
 
     await connector.writeRegistryContribution("garten", "revoked")
 
-    expect(registry(doc, "garten")[DEVICE].admission).toEqual({ keyGeneration: 9 })
+    expect(registry(named, "garten")[DEVICE].admission).toEqual({ keyGeneration: 9 })
   })
 
   it("ein Widerruf ohne Kennung im Ziel-Space traegt die Kennung der Lesesicht (09 Inv. 11)", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls",
-      items: {},
-      mirrorRegistry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 3 } }) } }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [] })
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 3 } }) } }),
+      spaces: [],
+    })
 
     await connector.writeRegistryContribution("garten", "revoked")
 
-    expect(registry(doc, "garten")[DEVICE].admission).toEqual({ keyGeneration: 3 })
+    expect(registry(named, "garten")[DEVICE].admission).toEqual({ keyGeneration: 3 })
   })
 
   it("eine Freigabe deckt jeden beobachteten nicht-accepted Beitrag per supersedes ab", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls",
-      items: {},
-      mirrorRegistry: flatRegistry(DID, {
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, {
         garten: {
           "device-B": contribution({ status: "revoked", statusSeq: 5, admission: { keyGeneration: 2 } }),
           "device-C": contribution({ status: "pending", statusSeq: 2, admission: { keyGeneration: 2 } }),
         },
       }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
+      spaces: [{ id: "garten", admission: { keyGeneration: 2 } }],
+    })
 
     await connector.writeRegistryContribution("garten", "accepted")
 
-    const own = registry(doc, "garten")[DEVICE]
+    const own = registry(named, "garten")[DEVICE]
     expect(own.supersedes).toEqual({ "device-B": 5, "device-C": 2 })
     expect(own.statusSeq).toBe(6)
   })
 
   it("ein Widerruf traegt kein supersedes (nur eine Freigabe loest ab)", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 1 } }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 1 } }] })
     await connector.writeRegistryContribution("garten", "pending")
 
     await connector.writeRegistryContribution("garten", "revoked")
 
-    expect(registry(doc, "garten")[DEVICE].supersedes).toBeUndefined()
+    expect(registry(named, "garten")[DEVICE].supersedes).toBeUndefined()
   })
 
   it("laesst seq und publishedHash unberuehrt — Publikation ist S4", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls",
-      items: {},
-      mirrorRegistry: flatRegistry(DID, {
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, {
         garten: {
           [DEVICE]: contribution({ status: "accepted", seq: 12, tiebreak: "abc", publishedHash: "hash-1", admission: { keyGeneration: 1 } }),
         },
       }),
-    }
-    const { connector } = fakeConnector({ doc, spaces: [{ id: "garten", admission: { keyGeneration: 1 } }] })
+      spaces: [{ id: "garten", admission: { keyGeneration: 1 } }],
+    })
 
     await connector.writeRegistryContribution("garten", "revoked")
 
-    const own = registry(doc, "garten")[DEVICE]
+    const own = registry(named, "garten")[DEVICE]
     expect(own.seq).toBe(12)
     expect(own.tiebreak).toBe("abc")
     expect(own.publishedHash).toBe("hash-1")
@@ -173,10 +185,8 @@ describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
 
 describe("observeProfileShares — Spec 12 Regel 14", () => {
   it("faltet je Ziel-Space genau einen Status aus allen Geraete-Beitraegen", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls",
-      items: {},
-      mirrorRegistry: {
+    const { connector } = fakeConnector({
+      registry: {
         ...flatRegistry(DID, {
           garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 1 } }) },
           werkstatt: { "device-B": contribution({ status: "pending", admission: { keyGeneration: 1 } }) },
@@ -184,26 +194,35 @@ describe("observeProfileShares — Spec 12 Regel 14", () => {
         // Ein Eintrag eines ANDEREN Items gehoert nicht zu den Profil-Freigaben.
         ...flatRegistry("item-42", { garten: { "device-B": contribution({ status: "revoked" }) } }),
       },
-    }
-    const { connector } = fakeConnector({ doc })
+    })
 
     connector.refreshProfileShares()
 
     expect(connector.observeProfileShares().current).toEqual({ garten: "accepted", werkstatt: "pending" })
   })
 
+  it("uebergeht den reservierten Schluessel der Bestandsmarke", async () => {
+    const { connector } = fakeConnector({
+      registry: {
+        ...flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 1 } }) } }),
+        [JSON.stringify(["_profileMigration"])]: { bestandAt: "2026-09-15T07:00:00.000Z" },
+      } as MirrorRegistryRoot,
+    })
+
+    connector.refreshProfileShares()
+
+    expect(connector.observeProfileShares().current).toEqual({ garten: "accepted" })
+  })
+
   it("ein unabgedeckter Widerruf eines fremden Geraets gewinnt (09 Widerrufs-Kausalitaet)", async () => {
-    const doc: RlsSpaceDoc = {
-      _type: "rls",
-      items: {},
-      mirrorRegistry: flatRegistry(DID, {
+    const { connector } = fakeConnector({
+      registry: flatRegistry(DID, {
         garten: {
           [DEVICE]: contribution({ status: "accepted", statusSeq: 9, admission: { keyGeneration: 1 } }),
           "device-B": contribution({ status: "revoked", statusSeq: 2, admission: { keyGeneration: 1 } }),
         },
       }),
-    }
-    const { connector } = fakeConnector({ doc })
+    })
 
     connector.refreshProfileShares()
 
@@ -211,21 +230,21 @@ describe("observeProfileShares — Spec 12 Regel 14", () => {
   })
 
   it("reagiert auf einen nachtraeglichen Beitrag eines fremden Geraets", async () => {
-    const doc: RlsSpaceDoc = { _type: "rls", items: {} }
-    const { connector } = fakeConnector({ doc })
+    const { connector, named } = fakeConnector()
     const seen: Array<Record<string, string>> = []
     connector.observeProfileShares().subscribe((value: Record<string, string>) => seen.push(value))
 
-    doc.mirrorRegistry = {
-      ...flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 1 } }) } }),
-    }
+    Object.assign(
+      named.roots.mirrorRegistry,
+      flatRegistry(DID, { garten: { "device-B": contribution({ status: "accepted", admission: { keyGeneration: 1 } }) } }),
+    )
     connector.onHomeDocChanged()
 
     expect(seen.at(-1)).toEqual({ garten: "accepted" })
   })
 
   it("liefert eine Kopie, kein Objekt aus dem Doc", async () => {
-    const { connector, doc } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 1 } }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 1 } }] })
     await connector.writeRegistryContribution("garten", "accepted")
 
     const shares = connector.observeProfileShares().current
@@ -233,6 +252,6 @@ describe("observeProfileShares — Spec 12 Regel 14", () => {
     connector.refreshProfileShares()
 
     expect(connector.observeProfileShares().current.garten).toBe("accepted")
-    expect(doc.mirrorRegistry).toBeDefined()
+    expect(Object.keys(named.roots.mirrorRegistry)).toHaveLength(1)
   })
 })
