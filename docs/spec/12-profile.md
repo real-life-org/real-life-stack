@@ -145,9 +145,16 @@ Gruppen-Space, für den die Person es freigegeben hat, als **Mirror nach
    bestanden, gelten als freigegeben, ausnahmslos und auch ohne
    Aufnahme-Kennung (Alt-Spaces ohne Ereignisse, `admission = undefined`).
    Der Connector legt für ALLE zu diesem Zeitpunkt bestehenden
-   Mitgliedschaften `accepted`-Einträge an und setzt in der benannten
-   Wurzel `profileMigration` des Home-Docs den Schlüssel `bestandAt`
-   (09 §Ablage, `NamedRootsCapable`); das Profil ist damit in jedem Space
+   Mitgliedschaften `accepted`-Einträge an und setzt in derselben
+   Transaktion die Marke `bestandAt` unter dem reservierten Schlüssel
+   `JSON.stringify(["_profileMigration"])` in der Wurzel `mirrorRegistry`
+   des Home-Docs (09 §Ablage; einelementig, also kein Registry-Schlüssel,
+   Leser übergehen ihn). Marke und Beiträge liegen in EINER Wurzel, weil
+   eine Transaktion je Wurzel gilt und die Marke nur zusammen mit den
+   Beiträgen sichtbar werden darf. „Bestand" ist die Menge der
+   Mitgliedschaften, die das ausführende Gerät zum Zeitpunkt des ersten
+   Bestandslaufs der Person sieht; einen festen Stichtag gibt es nicht,
+   weil kein Gerät ihn kennen könnte; das Profil ist damit in jedem Space
    sichtbar, in dem die Person Mitglied ist, und bleibt es über die
    Nachführung (09) auch, wenn der Space später Ereignisse erhält.
    Ist die Marke gesetzt, läuft die
