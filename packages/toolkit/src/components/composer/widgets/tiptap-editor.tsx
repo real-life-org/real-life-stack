@@ -12,7 +12,16 @@ export interface TiptapEditorHandle {
 
 interface TiptapEditorProps {
   value: string
+  /** The user changed the text. */
   onChange: (md: string) => void
+  /**
+   * The same text in the spelling this editor writes — nobody typed anything.
+   *
+   * Separate from {@link TiptapEditorProps.onChange} because a consumer may
+   * read input as a gesture: a trailing `#garten` adds a tag, an `@name` a
+   * person. Opening an item must not re-enact what its text once triggered.
+   */
+  onNormalise: (md: string) => void
   placeholder?: string
   autoFocus?: boolean
   className?: string
@@ -39,12 +48,12 @@ function readsTheSame(editor: Editor, before: string, after: string): boolean {
 }
 
 export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorProps>(
-  function TiptapEditor({ value, onChange, placeholder, autoFocus, className }, ref) {
-    // `onChange` is a fresh closure on every render, but the editor callbacks
-    // below are created once — so they read it through a ref.
-    const onChangeRef = React.useRef(onChange)
+  function TiptapEditor({ value, onChange, onNormalise, placeholder, autoFocus, className }, ref) {
+    // Both callbacks are fresh closures on every render, but the editor
+    // callbacks below are created once — so they read them through a ref.
+    const callbacks = React.useRef({ onChange, onNormalise })
     React.useEffect(() => {
-      onChangeRef.current = onChange
+      callbacks.current = { onChange, onNormalise }
     })
 
     // The Markdown the editor currently holds. Lets the sync effect tell "the
@@ -73,7 +82,7 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
 
       if (md !== incoming && readsTheSame(editor, incoming, md)) {
         editorText.current = md
-        onChangeRef.current(md)
+        callbacks.current.onNormalise(md)
         return
       }
 
@@ -102,7 +111,7 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
       onUpdate({ editor }) {
         const md = getMarkdown(editor)
         editorText.current = md
-        onChangeRef.current(md)
+        callbacks.current.onChange(md)
       },
     })
 

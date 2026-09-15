@@ -30,26 +30,34 @@ function paste(editor: { view: { dom: HTMLElement } }, data: { text?: string; ht
   editor.view.dom.dispatchEvent(event as unknown as Event)
 }
 
-/** Mounts the editor and reports every Markdown string it hands up. */
+/** Mounts the editor and records both channels it reports through. */
 async function mount(value: string) {
   const host = document.createElement("div")
   document.body.append(host)
-  const emitted: string[] = []
+  const changed: string[] = []
+  const normalised: string[] = []
   const ref = createRef<TiptapEditorHandle>()
   await act(async () => {
     createRoot(host).render(
-      createElement(TiptapEditor, { ref, value, onChange: (md) => emitted.push(md) }),
+      createElement(TiptapEditor, {
+        ref,
+        value,
+        onChange: (md) => changed.push(md),
+        onNormalise: (md) => normalised.push(md),
+      }),
     )
   })
-  return { emitted, editor: ref.current!.editor! }
+  return { changed, normalised, editor: ref.current!.editor! }
 }
 
 describe("TiptapEditor markdown contract", () => {
   it("normalises raw HTML into Markdown when the item is opened", async () => {
     // What a detail view would otherwise show as literal tags.
-    const { emitted } = await mount("<p>Ein <strong>fetter</strong> Absatz.</p>")
+    const { changed, normalised } = await mount("<p>Ein <strong>fetter</strong> Absatz.</p>")
 
-    expect(emitted).toEqual(["Ein **fetter** Absatz."])
+    expect(normalised).toEqual(["Ein **fetter** Absatz."])
+    // Nobody typed — a consumer that reads input as a gesture must not hear it.
+    expect(changed).toEqual([])
   })
 
   // The editor understands less Markdown than the preview renders. Opening an
@@ -60,35 +68,35 @@ describe("TiptapEditor markdown contract", () => {
     ["a heading below h2", "### Dritte Ebene\n\nText."],
     ["a table", "| a | b |\n|---|---|\n| 1 | 2 |"],
   ])("does not rewrite %s it cannot express", async (_what, value) => {
-    const { emitted } = await mount(value)
+    const { changed, normalised } = await mount(value)
 
-    expect(emitted).toEqual([])
+    expect([...changed, ...normalised]).toEqual([])
   })
 
   it("leaves text that is already Markdown alone", async () => {
-    const { emitted } = await mount("# Titel\n\nEin **fetter** Absatz.\n\n- eins\n- zwei")
+    const { changed, normalised } = await mount("# Titel\n\nEin **fetter** Absatz.\n\n- eins\n- zwei")
 
-    expect(emitted).toEqual([])
+    expect([...changed, ...normalised]).toEqual([])
   })
 
   it("never stores HTML tags for emphasis that Markdown cannot express", async () => {
-    const { emitted, editor } = await mount("")
+    const { changed, editor } = await mount("")
 
     await act(async () => {
       paste(editor, { html: "<p>Text mit <u>unterstrichen</u> und <s>durchgestrichen</s>.</p>" })
     })
 
-    expect(emitted.at(-1)).toBe("Text mit unterstrichen und ~~durchgestrichen~~.")
+    expect(changed.at(-1)).toBe("Text mit unterstrichen und ~~durchgestrichen~~.")
   })
 
   it("keeps pasted Markdown source as Markdown", async () => {
-    const { emitted, editor } = await mount("")
+    const { changed, editor } = await mount("")
 
     await act(async () => {
       paste(editor, { text: "## Titel\n\nEin **fetter** Absatz." })
     })
 
-    expect(emitted.at(-1)).toBe("## Titel\n\nEin **fetter** Absatz.")
+    expect(changed.at(-1)).toBe("## Titel\n\nEin **fetter** Absatz.")
   })
 
   // A mark the Markdown serializer has no syntax for is written out as a raw

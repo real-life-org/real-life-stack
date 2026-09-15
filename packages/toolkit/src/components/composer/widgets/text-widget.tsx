@@ -309,6 +309,9 @@ export function TextWidget({
           ref={tiptapRef}
           value={value}
           onChange={handleTextChange}
+          // Not handleTextChange: the editor only restates the stored text
+          // here, and a `#garten` that is already in it was acted on long ago.
+          onNormalise={onChange}
           placeholder={label}
           autoFocus={autoFocus}
           className={cn(
