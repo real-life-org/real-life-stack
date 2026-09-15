@@ -51,7 +51,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: renovatebot/github-action@v46
+      # Auf den Commit-SHA gepinnt, nicht auf einen Tag. Zwei Gruende: dieses
+      # Repo pflegt keine mitlaufenden Major-Tags (es gibt kein `v46`, nur
+      # `v46.3.1` und Geschwister — ein `@v46` laeuft in ein 404 und der
+      # Workflow startet gar nicht erst), und ein Tag laesst sich umhaengen,
+      # ein SHA nicht. Der Schritt hier bekommt einen Token mit
+      # Schreibrechten; was er ausfuehrt, soll fest stehen.
+      #
+      # Den SHA bewegt Renovate selbst — siehe die zweite packageRule in
+      # renovate.json5, die genau diese eine Action beobachtet. Von Hand
+      # nachziehen muesste man ihn sonst, und eine Handliste driftet lautlos.
+      - uses: renovatebot/github-action@dcfba84a42d1b5d5e49bf131b1bf53511851a123 # v46.3.1
         with:
           # Eigener Token statt GITHUB_TOKEN — aus genau dem Grund, der in
           # release-please.yml ausfuehrlich steht: GitHub startet fuer

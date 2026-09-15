@@ -77,5 +77,26 @@
       // Kombination, die hier nie gelaufen ist.
       rangeStrategy: 'bump',
     },
+    {
+      // Renovate haelt seinen eigenen Runner aktuell.
+      //
+      // `.github/workflows/renovate.yml` pinnt die Action auf einen
+      // Commit-SHA (das Repo hat keine mitlaufenden Major-Tags, und ein Tag
+      // liesse sich umhaengen). Ein gepinnter SHA veraltet, und niemand
+      // merkt es: der Lauf bleibt gruen, bis die Version irgendwann an einer
+      // Registry-Aenderung zerbricht. Genau die Klasse Fehler, gegen die
+      // dieser ganze PR antritt — also soll der Bot auch sich selbst
+      // nachziehen. Renovate hebt SHA und den Versionskommentar dahinter
+      // gemeinsam an.
+      matchManagers: ['github-actions'],
+      matchDepNames: ['renovatebot/github-action'],
+      enabled: true,
+
+      // `ci`, nicht `fix`: eine neue Runner-Version aendert nichts an dem,
+      // was die App tut. release-please ignoriert `ci` — hier ist das
+      // richtig, waehrend es bei den WoT-Paketen oben falsch waere.
+      semanticCommitType: 'ci',
+      semanticCommitScope: 'renovate',
+    },
   ],
 }
