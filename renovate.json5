@@ -1,0 +1,60 @@
+{
+  // Renovate öffnet Bump-PRs für die WoT-Pakete — und NUR für die.
+  //
+  // Warum überhaupt: `pnpm install --frozen-lockfile` läuft in jedem Job
+  // (tests, publish, deploy-prototypes). Die Range `^0.2.9` in der
+  // package.json wird dabei nie neu aufgelöst — es gilt ausschliesslich,
+  // was in der Lockfile steht. Ein neues Release auf npm erreicht uns also
+  // nur, wenn jemand den Bump von Hand macht. Zwischen dem 30.07. und dem
+  // 12.09.2026 ist das zweimal passiert, davon einmal unbeabsichtigt als
+  // Beifang eines fremden PRs (#274). In der Lücke lag wochenlang ein
+  // Absturz der Kontaktliste in der App, dessen Fix auf npm längst
+  // bereitlag (adapter-yjs 0.2.7, web-of-trust#349).
+  //
+  // Bewusst nur die WoT-Pakete: der Rest des Baums (React, Vite, Storybook,
+  // Capacitor …) wird weiter von Hand bewegt. Alles auf einmal zu öffnen
+  // erzeugt eine PR-Flut, die niemand liest — und ungelesene Bump-PRs sind
+  // schlechter als keine, weil sie den Eindruck erwecken, das Thema sei
+  // versorgt.
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+
+  // Eine Übersichts-Issue statt stiller Arbeit: was Renovate sieht und
+  // warum es nichts tut, steht dort nachlesbar.
+  dependencyDashboard: true,
+
+  // Der PR-Titel wird beim Squash-Merge zum Commit-Betreff auf master und
+  // muss durch die Prüfung in `.github/workflows/pr-title.yml` —
+  // Conventional Commits, sonst übersieht release-please die Änderung
+  // lautlos. `chore(deps): …` erfüllt das.
+  semanticCommits: 'enabled',
+
+  packageRules: [
+    // Erst alles aus, dann gezielt eines an. Andersherum (nur eine
+    // Positiv-Regel) bliebe der Standard für alle übrigen Pakete aktiv.
+    {
+      matchPackageNames: ['*'],
+      enabled: false,
+    },
+    {
+      // Die Pakete hängen als npm-Alias in der package.json
+      // (`npm:@web_of_trust/adapter-yjs@^0.2.9`). Renovate matcht auf den
+      // echten Paketnamen hinter dem Alias, nicht auf den Alias-Schlüssel.
+      matchPackageNames: ['@web_of_trust/**'],
+      enabled: true,
+
+      // Ein PR für beide. adapter-yjs verlangt core als Peer in exakt
+      // passender Minor (0.2.9 → `^0.5.9`); einzeln geöffnet wäre jeder
+      // der beiden PRs für sich rot.
+      groupName: 'WoT-Pakete',
+      semanticCommitType: 'chore',
+      semanticCommitScope: 'deps',
+
+      // Die Range in der package.json mitziehen, nicht nur die Lockfile.
+      // Sonst driftet die veröffentlichte Angabe von dem weg, was wir
+      // tatsächlich testen: wir liefern `^0.2.5` aus und prüfen 0.2.9 —
+      // jeder, der unsere Pakete frisch installiert, bekommt eine
+      // Kombination, die hier nie gelaufen ist.
+      rangeStrategy: 'bump',
+    },
+  ],
+}
