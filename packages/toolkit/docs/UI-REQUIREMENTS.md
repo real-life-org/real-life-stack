@@ -79,6 +79,40 @@ Jede Checkbox repräsentiert eine einzelne, aktivierbare Entscheidung.
 
 ---
 
+## Space-Konfiguration
+
+Entwurf: Claude-Design-Projekt „RLS System Design", Datei `Space Menu.dc.html` (Turn 3 und 4).
+
+- [x] **space-config-side-menu**: Bereiche stehen in einem Seitenmenü links, nicht in einer Reiterleiste — die Leiste war schon bei drei Einträgen am Anschlag
+- [x] **space-config-section-list**: Menü, Inhalt und Startwert lesen **eine** Liste (`spaceConfigSections`); keine zweite Aufzählung der Bereiche
+- [x] **space-config-identity-in-header**: Bild und Name stehen über den Bereichen und bleiben in jedem Bereich änderbar; es gibt keinen Bereich „Allgemein"
+- [x] **space-config-fixed-frame**: Fester Rahmen, nur der Inhalt scrollt — Kopf, Menü und Fußzeile stehen
+- [x] **space-config-single-section-no-menu**: Bleibt genau ein Bereich übrig, entfällt das Menü; ein einzelner Eintrag wäre eine Wahl ohne Alternative
+- [x] **space-config-section-fallback**: Fällt der gewählte Bereich weg (Adminrecht steht beim Öffnen noch nicht fest), fällt die Auswahl auf den ersten zurück statt eine leere Fläche zu zeigen
+- [x] **space-config-reset-on-close**: Beim Schließen fallen Bereich, Suche und Kontaktfilter zurück — der Dialog bleibt montiert und öffnete sonst für den nächsten Space im Bereich des vorigen
+- [x] **space-config-no-name-autofocus**: Der Name fängt beim Öffnen keinen Fokus; er stand markiert da und ein Tastendruck hätte den Space umbenannt
+- [x] **space-config-image-badge-persistent**: Das Stift-Abzeichen am Bild ist dauerhaft sichtbar, nicht erst bei Hover — auf einem Tastfeld gibt es kein Hover
+- [x] **space-config-menu-horizontal-mobile**: Auf schmalen Schirmen liegt das Menü waagerecht über dem Inhalt
+- [ ] **space-config-menu-as-page-mobile**: Auf schmalen Schirmen klappt das Menü zur Liste, der Bereich öffnet als zweite Seite mit „‹ Zurück" (Entwurf Turn 4)
+
+### Mitglieder
+
+- [x] **space-members-grouped**: Admins und übrige Mitglieder stehen in getrennten Gruppen; `members` ist nach DID sortiert, ein Abzeichen in flacher Liste sagte nichts über die Rolle
+- [x] **space-members-no-admin-badge**: Kein Admin-Abzeichen an der Zeile — die Gruppe sagt es bereits
+- [x] **space-members-search-threshold**: Suchfeld ab neun Mitgliedern; darunter überschaut man die Liste
+- [x] **space-members-search-sticky**: Ein eingegebener Suchbegriff hält das Feld sichtbar, auch wenn die Zahl unter die Schwelle fällt — sonst bliebe ein wirksamer Filter ohne Bedienteil zurück (rls#377)
+- [ ] **space-members-invited-by**: Herkunftszeile „eingeladen von …" je Mitglied und Gruppe „Offene Einladungen" (Entwurf 4c) — braucht `invitedBy` und einen Einladungszustand im `data-interface`
+
+### Einladen
+
+- [x] **space-invite-own-section**: Einladen ist ein eigener Bereich, kein Unterzustand von Mitgliedern; „Einladen" bei den Mitgliedern springt dorthin statt aufzuklappen
+- [x] **space-invite-not-admin-gated**: Der Bereich hängt nicht am Adminrecht — im WoT lädt jedes Mitglied ein, nur der Creator entfernt
+- [x] **space-invite-verified-only**: Einladbar sind nur verifizierte Kontakte, die noch nicht Mitglied sind; es gibt bewusst keine Einladung per Link
+- [ ] **space-invite-shared-space-subtitle**: Untertitel „gemeinsamer Space" an der Kontaktzeile (Entwurf 4a) — `ContactInfo` kennt keinen Bezug zu Spaces
+- [ ] **space-invite-history**: „Von dir eingeladen" mit Zeitpunkt und Status Mitglied/Offen — nicht im Modell; gezeigt wird nur, wer in dieser Sitzung eingeladen wurde
+
+---
+
 ## Adaptive Panels
 
 - [x] **adaptive-panel-stack-order**: Gestapelte Panels schließen per Escape nur die oberste sichtbare Ebene
@@ -189,3 +223,4 @@ Jede Checkbox repräsentiert eine einzelne, aktivierbare Entscheidung.
 | 2026-07-17 | Listen- und Rasterdichte zur CollectionView-Linse mit session-lokalem Toggle zusammengeführt |
 | 2026-07-17 | Vollbreite Linsen-Scroller, gemeinsamer Inhaltsrahmen und gemessene Raster-Zeilenabstände dokumentiert |
 | 2026-07-17 | CollectionView-Toggle erhält den Linsen-Innenabstand oben; Rasterkarten nutzen reihenfolgestabile, gemessene Masonry-Lanes |
+| 2026-09-15 | Space-Konfiguration als Seitenmenü mit Bereichen Mitglieder, Einladen, Module (Entwurf „Space Menu") |
