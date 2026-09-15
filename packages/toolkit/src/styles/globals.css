@@ -393,6 +393,20 @@
   outline: 2px solid var(--primary);
 }
 
+.tiptap-editor .tiptap h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.tiptap-editor .tiptap h4,
+.tiptap-editor .tiptap h5,
+.tiptap-editor .tiptap h6 {
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
 .tiptap-editor .tiptap table {
   width: 100%;
   border-collapse: collapse;

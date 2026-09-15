@@ -166,7 +166,11 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
     const editor = useEditor({
       extensions: [
         StarterKit.configure({
-          heading: { levels: [1, 2] },
+          // The toolbar offers two levels, the schema holds all six. A heading
+          // outside `levels` keeps its level in the document but renders as
+          // `levels[0]` — so an imported `###` looked like an h1 while being
+          // written back as h3.
+          heading: { levels: [1, 2, 3, 4, 5, 6] },
           // Standard Markdown has no underline: Ctrl+U used to write a `<u>`
           // tag, and now writes `++text++`. The preview renders neither, so
           // both reach the reader as visible punctuation.

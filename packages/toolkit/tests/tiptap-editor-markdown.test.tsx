@@ -71,6 +71,10 @@ describe("TiptapEditor markdown contract", () => {
 
     expect([...changed, ...normalised]).toEqual([])
     expect(editor.getJSON().content?.[0]).toMatchObject({ type: "heading", attrs: { level: 3 } })
+    // A level outside the toolbar's two still has to look like what it is: the
+    // extension renders anything it does not list as `levels[0]`, so an h3 used
+    // to sit there as a big h1 while being written back as h3.
+    expect(editor.view.dom.innerHTML).toContain("<h3")
 
     await act(async () => {
       editor.commands.insertContentAt(editor.state.doc.content.size - 1, "X")
