@@ -1,11 +1,35 @@
 # release-please fuer Real Life Stack: verwaltet die publizierbaren Pakete
 # (data-interface, toolkit, vier Konnektoren) UND die Reference App in EINER
 # Release-PR. Merge der PR erzeugt die Tags → npm-Publish (publish.yml) bzw.
-# App-Build (build-on-tag), beide per Dispatch. Siehe docs/RELEASING.md.
+# App-Build (build-on-tag) und Instanz-Image (publish-app-image).
+# Siehe docs/RELEASING.md.
 #
-# Die Dispatch-Kette bleibt auch mit RELEASE_PLEASE_TOKEN bestehen: bei
-# publish.yml ist sie KEIN Workaround, sondern Voraussetzung dafuer, dass das
-# OIDC-Token publish.yml nennt und npm den Trusted Publisher akzeptiert.
+# WER DIE NACHGELAGERTEN WORKFLOWS STARTET, HAENGT AM TOKEN.
+#
+# Mit RELEASE_PLEASE_TOKEN traegt alles, was release-please anlegt, einen
+# echten Benutzer-Token: Commit, Tag und Release. GitHub startet daraufhin die
+# normalen Trigger wieder — `release: published` fuer publish.yml und der
+# Tag-Push fuer build-on-tag. Ohne das Secret faellt der Job auf GITHUB_TOKEN
+# zurueck, und aus dessen Ereignissen startet GitHub keine Workflows; erst dann
+# braucht es die Dispatch-Kette weiter unten.
+#
+# Fuer diese beiden gilt: genau EINER der Wege darf laufen. Liefen beide, baute
+# jeder Workflow zweimal. npm wies den zweiten Publish-Lauf mit `E409 — Cannot
+# publish over previously staged version` ab, und zwei parallele Android-Builds
+# luden dasselbe Asset an dasselbe Release — ein Rennen um genau das Artefakt,
+# an das sich die Signier-Pipeline bindet. Das war vom 10.09.2026 (Einfuehrung
+# des Tokens) bis zum 15.09. der Zustand. Sie haengen darum am Ausgabewert
+# `own_token`.
+#
+# DIE AUSNAHME: publish-app-image.yml hoert auf `push: branches: [master]`,
+# nicht auf Tags. Der Release-Commit erzeugt dort nur `edge`; das versionierte
+# Image, auf das die Instanzen pinnen, entsteht EINZIG ueber den Dispatch. Der
+# laeuft darum immer. Details am Schritt selbst.
+#
+# Die frueher hier notierte Sorge, der Dispatch sei fuer npms Trusted
+# Publishing noetig, traegt nicht: auch bei `release: published` ist publish.yml
+# der Top-Level-Workflow, und genau darauf bindet npm. Nachgewiesen am
+# 15.09.2026, Lauf 35011958238: veroeffentlicht samt Provenance-Eintrag.
 name: Release Please
 
 on:
@@ -46,7 +70,18 @@ jobs:
       # App (component "app") → Tag app-vX.Y.Z, loest build-on-tag per Dispatch aus.
       app_released: ${{ steps.release.outputs['apps/reference--release_created'] }}
       app_tag: ${{ steps.release.outputs['apps/reference--tag_name'] }}
+      # "true", wenn release-please mit einem echten Benutzer-Token gelaufen
+      # ist. Dann starten die nachgelagerten Workflows von selbst und die
+      # Dispatch-Kette unten muss schweigen (siehe Kopf der Datei).
+      own_token: ${{ steps.token.outputs.own }}
     steps:
+      # Der `secrets`-Kontext steht in einem Job-`if` NICHT zur Verfuegung —
+      # dort gibt es nur github, needs, vars und inputs. Die Frage wird darum
+      # hier beantwortet und als Ausgabewert weitergereicht. Verglichen wird
+      # nur auf "gesetzt oder nicht"; der Wert selbst taucht nirgends auf.
+      - id: token
+        run: echo "own=${{ secrets.RELEASE_PLEASE_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+
       - uses: googleapis/release-please-action@v4
         id: release
         with:
@@ -70,13 +105,17 @@ jobs:
           manifest-file: .release-please-manifest.json
           config-file: release-please-config.json
 
-  # Pro released Paket publish.yml per workflow_dispatch anstossen (GITHUB_TOKEN-
-  # Tags triggern kein on:release). publish.yml laeuft so als Top-Level-Workflow
-  # → das OIDC-Token nennt publish.yml, worauf npm den Trusted Publisher pruefen
-  # wird. Guard pro Paket: released=true aber leerer Tag = Abbruch (Schema-Drift).
+  # ERSATZWEG, nur ohne RELEASE_PLEASE_TOKEN: pro released Paket publish.yml per
+  # workflow_dispatch anstossen, weil GITHUB_TOKEN-Releases kein `on: release`
+  # ausloesen. Mit Token laeuft publish.yml von selbst und dieser Job wird
+  # uebersprungen — sonst publizieren beide Wege dieselbe Version und der
+  # zweite scheitert an npm (E409). Guard pro Paket: released=true aber leerer
+  # Tag = Abbruch (Schema-Drift).
   trigger-publish:
     needs: release-please
-    if: needs.release-please.outputs.releases_created == 'true'
+    if: >-
+      needs.release-please.outputs.releases_created == 'true'
+      && needs.release-please.outputs.own_token != 'true'
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -136,10 +175,18 @@ jobs:
           # Paket gewesen sein. Dann ist started=0 voellig ok (kein Abbruch).
           echo "$started Publish-Lauf/Laeufe angestossen"
 
-  # Wurde die App released (Tag app-vX.Y.Z), den nativen Build anstossen.
+  # ERSATZWEG, nur ohne RELEASE_PLEASE_TOKEN: wurde die App released (Tag
+  # app-vX.Y.Z), den nativen Build und das Instanz-Image anstossen. Mit Token
+  # erledigen das der Tag-Push (build-on-tag) und der Commit-Push
+  # (publish-app-image) selbst; dieser Job wird dann uebersprungen. Liefen
+  # beide, bauten zwei Laeufe denselben Android-Build und luden dasselbe Asset
+  # an dasselbe Release — ein Rennen um genau das Artefakt, an das sich die
+  # Signier-Pipeline ueber build-info.commit bindet.
+  #
   # build-on-tag checkt inputs.tag aus, also traegt build-info.commit den
   # Tag-Commit — genau worauf die Signier-Pipeline (verify_attested_artifact)
-  # bindet. Signiert/deployt wird danach auf dem Server:
+  # bindet. Ueber den Tag-Push gilt dasselbe, dort IST der Tag der Ref.
+  # Signiert/deployt wird danach auf dem Server:
   # docker compose run --rm signer|play-publish.
   trigger-app-build:
     needs: release-please
@@ -148,7 +195,14 @@ jobs:
     permissions:
       actions: write
     steps:
-      - name: build-on-tag fuer den App-Tag anstossen
+      # ERSATZWEG, nur ohne RELEASE_PLEASE_TOKEN. build-on-tag hoert selbst auf
+      # `push: tags: app-v*` und behandelt beide Wege gleichwertig: es checkt
+      # `inputs.tag` ODER `github.ref` aus, build-info.commit traegt also so
+      # oder so den Tag-Commit. Mit Token waere dieser Anstoss der zweite —
+      # zwei Laeufe bauten denselben Android-Build und luden dasselbe Asset an
+      # dasselbe Release.
+      - name: build-on-tag anstossen (nur ohne eigenen Token)
+        if: needs.release-please.outputs.own_token != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           APP_TAG: ${{ needs.release-please.outputs.app_tag }}
@@ -160,8 +214,27 @@ jobs:
           fi
           echo "starte build-on-tag fuer $APP_TAG"
           gh workflow run build-on-tag.yml --repo "$GITHUB_REPOSITORY" -f tag="$APP_TAG"
-          # Das Instanz-Image braucht denselben Anstoss: Ein Tag von
-          # release-please traegt das GITHUB_TOKEN und loest von sich aus
-          # keinen Workflow aus (siehe Kopf von publish-app-image.yml).
+
+      # IMMER — und das ist der Unterschied zu allem anderen hier.
+      #
+      # publish-app-image.yml hoert auf `push: branches: [master]`, NICHT auf
+      # Tags. Der Push des Release-Commits erzeugt darum nur `edge`. Das
+      # versionierte Image (`0.3.1` und `0.3`), auf das die Instanzen pinnen,
+      # entsteht einzig ueber diesen Dispatch mit `-f tag=app-vX.Y.Z`.
+      #
+      # Wer diesen Schritt an den Token knuepft wie die anderen, dreht dem
+      # Server die Bilder ab: die .env zeigt auf eine Version, die nie gebaut
+      # wurde. Erst wenn publish-app-image einen eigenen Tag-Trigger bekommt,
+      # darf hier eine Bedingung stehen.
+      - name: publish-app-image fuer den App-Tag anstossen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_TAG: ${{ needs.release-please.outputs.app_tag }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APP_TAG" ]; then
+            echo "ABBRUCH: app_released=true, aber kein app_tag-Output (Schema-Aenderung?)." >&2
+            exit 1
+          fi
           echo "starte publish-app-image fuer $APP_TAG"
           gh workflow run publish-app-image.yml --repo "$GITHUB_REPOSITORY" -f tag="$APP_TAG"

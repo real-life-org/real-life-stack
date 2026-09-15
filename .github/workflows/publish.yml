@@ -1,11 +1,21 @@
 name: Publish Packages
 
 on:
-  # ACHTUNG: dieser Trigger feuert NICHT fuer Releases, die release-please als
-  # github-actions[bot] anlegt — GitHub loest aus GITHUB_TOKEN-Events keine
-  # Workflows aus. Er greift nur, wenn ein Mensch ein Release von Hand anlegt.
-  # Der automatische Weg laeuft ueber den trigger-publish-Job in
-  # release-please.yml, der hier per workflow_dispatch reinkommt.
+  # DER REGELWEG, seit release-please mit RELEASE_PLEASE_TOKEN laeuft: dessen
+  # Releases tragen einen echten Benutzer-Token, also feuert `published` ganz
+  # normal. Frueher stand hier das Gegenteil, und es stimmte auch — unter
+  # GITHUB_TOKEN loest GitHub keine Workflows aus. Seit dem 10.09.2026 nicht
+  # mehr.
+  #
+  # npms Trusted Publishing bindet auf den Top-Level-Workflow, und das ist
+  # publish.yml auf diesem Weg genauso wie per Dispatch. Nachgewiesen am
+  # 15.09.2026 (Lauf 35011958238, veroeffentlicht samt Provenance).
+  #
+  # Der workflow_dispatch darunter bleibt der Ersatzweg fuer den Fall ohne
+  # Secret; release-please stoesst ihn dann an. Dass nie beide Wege gleichzeitig
+  # laufen, regelt die Bedingung an den `trigger-*`-Jobs in release-please.yml —
+  # sonst trifft der zweite Lauf auf eine bereits veroeffentlichte Version und
+  # npm antwortet mit `E409 — Cannot publish over previously staged version`.
   release:
     types: [published]
   workflow_dispatch:
