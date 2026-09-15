@@ -35,7 +35,7 @@ describe("spaceConfigSections", () => {
     expect(spaceConfigSections({ isAdmin: false, canInvite: true }).map((s) => s.id))
       .toEqual(["members", "invite"])
     expect(spaceConfigSections({ isAdmin: true, canInvite: true }).map((s) => s.id))
-      .toEqual(["members", "modules", "invite"])
+      .toEqual(["members", "invite", "modules"])
   })
 
   it("beginnt immer mit Mitgliedern — der Startwert braucht keine Sonderregel", () => {

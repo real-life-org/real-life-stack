@@ -122,8 +122,8 @@ export function spaceConfigSections({
   const sections: SpaceConfigSection[] = [
     { id: "members", label: "Mitglieder", icon: Users },
   ]
-  if (isAdmin) sections.push({ id: "modules", label: "Module", icon: LayoutGrid })
   if (canInvite) sections.push({ id: "invite", label: "Einladen", icon: UserPlus })
+  if (isAdmin) sections.push({ id: "modules", label: "Module", icon: LayoutGrid })
   return sections
 }
 
