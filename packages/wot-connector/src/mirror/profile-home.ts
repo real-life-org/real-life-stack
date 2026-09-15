@@ -81,7 +81,7 @@ export function profileItemInput(did: string, fields: ProfileItemFields): Create
 }
 
 /** Was eine Mitgliedschaftslage am Registry-Eintrag ändern muss — `null` = nichts. */
-export type MembershipTransition = { status: "pending" | "revoked" } | null
+export type MembershipTransition = { status: "pending" | "accepted" | "revoked" } | null
 
 /**
  * Die Abgleichsregel aus Spec 09 §Ablage und Registry in der Profil-Lesart
@@ -93,8 +93,14 @@ export type MembershipTransition = { status: "pending" | "revoked" } | null
  *   Auch ein Alt-Space ohne Ereignisse bekommt so einen Eintrag — er trägt
  *   dann `admission: undefined` (Spec 12 Regel 4 in der Fassung rls#354:
  *   „Eintraege und Annahme sind auch ohne Kennung zulässig").
- * - Kennung des Space höher als die des Eintrags (auch `undefined` → Kennung)
- *   → Wiederaufnahme, also `pending` mit der neuen Kennung
+ * - Kennung des Space höher als eine GESETZTE Kennung des Eintrags →
+ *   Wiederaufnahme, also `pending` mit der neuen Kennung
+ * - Kennung des Space gesetzt, Eintrag OHNE Kennung → **Nachführung** (09,
+ *   Fassung rls#354): der Status bleibt, er wird nur mit der Kennung neu
+ *   geschrieben. Ohne Ereignisse ist eine Entfernung nicht feststellbar, und
+ *   die Person IST Mitglied — eine bestehende Freigabe darf daran nicht
+ *   zerbrechen. Ein Widerruf wird nicht nachgeführt: er bleibt widerrufen,
+ *   und eine erneute Freigabe läuft ohnehin über `shareProfile`.
  * - Kennung niedriger oder weg → Mitgliedschaft verloren, also `revoked`
  * - gleich → nichts
  *
@@ -108,7 +114,11 @@ export function planMembershipTransition(
   if (!view) return { status: "pending" }
 
   const order = compareAdmissionOrUndefined(spaceAdmission, view.admission)
-  if (order > 0) return { status: "pending" }
+  if (order > 0) {
+    // Nachführung statt Wiederaufnahme: der Eintrag trug noch KEINE Kennung.
+    if (!view.admission) return view.status === "revoked" ? null : { status: view.status }
+    return { status: "pending" }
+  }
   if (order < 0) return view.status === "revoked" ? null : { status: "revoked" }
   return null
 }

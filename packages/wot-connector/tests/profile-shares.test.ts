@@ -113,14 +113,30 @@ describe("pending bei neuem Space — Spec 12 Regel 4", () => {
       .toEqual({ keyGeneration: 7 })
   })
 
-  it("auch der Anstieg von keiner Kennung auf eine Kennung ergibt pending", async () => {
+  it("der Anstieg von keiner Kennung auf die erste fuehrt den Eintrag nach (Regel 4, Fassung rls#354)", async () => {
     const { connector, named } = fakeConnector({
-      registry: flatRegistry(DID, { alt: { [DEVICE]: contribution({ status: "accepted" }) } }),
+      registry: flatRegistry(DID, { alt: { [DEVICE]: contribution({ status: "accepted", statusSeq: 2 }) } }),
+      spaces: [{ id: "alt", admission: { keyGeneration: 1 } }] })
+
+    await connector.queueProfileHomeMaintenance()
+
+    const own = entry(named, "alt")[DEVICE]
+    expect(own.status).toBe("accepted")
+    expect(own.admission).toEqual({ keyGeneration: 1 })
+    // Ein regulaerer Beitrag: eigener statusSeq, keine stille Nachfuehrung des
+    // alten Beitrags.
+    expect(own.statusSeq).toBe(3)
+  })
+
+  it("ein ausstehender Eintrag bleibt bei der Nachfuehrung ausstehend", async () => {
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { alt: { [DEVICE]: contribution({ status: "pending" }) } }),
       spaces: [{ id: "alt", admission: { keyGeneration: 1 } }] })
 
     await connector.queueProfileHomeMaintenance()
 
     expect(status(named, "alt")).toBe("pending")
+    expect(entry(named, "alt")[DEVICE].admission).toEqual({ keyGeneration: 1 })
   })
 
   it("ein neuer Alt-Space OHNE Kennung wird pending, mit admission undefined", async () => {

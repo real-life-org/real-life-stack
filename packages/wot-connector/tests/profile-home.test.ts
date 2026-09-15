@@ -103,8 +103,27 @@ describe("planMembershipTransition — Spec 12 Regel 4 und 7, Spec 09 §Ablage",
       .toEqual({ status: "pending" })
   })
 
-  it("auch der Anstieg von keiner Kennung auf eine Kennung ist eine Wiederaufnahme", () => {
-    expect(planMembershipTransition(view({ admission: undefined }), { keyGeneration: 1 }))
+  it("der Anstieg von KEINER Kennung auf die erste ist eine Nachfuehrung, keine Wiederaufnahme", () => {
+    // Spec 09 (Fassung rls#354): „Der Anstieg von `undefined` auf die erste
+    // Kennung bei fortbestehender Mitgliedschaft ist KEINE Wiederaufnahme,
+    // sondern eine Nachfuehrung: das Geraet schreibt einen regulaeren
+    // `accepted`-Beitrag mit der Kennung."
+    expect(planMembershipTransition(view({ status: "accepted", admission: undefined }), { keyGeneration: 1 }))
+      .toEqual({ status: "accepted" })
+  })
+
+  it("ein ausstehender Eintrag bleibt bei der Nachfuehrung ausstehend", () => {
+    expect(planMembershipTransition(view({ status: "pending", admission: undefined }), { keyGeneration: 1 }))
+      .toEqual({ status: "pending" })
+  })
+
+  it("ein Widerruf ohne Kennung wird nicht nachgefuehrt — er bleibt widerrufen", () => {
+    expect(planMembershipTransition(view({ status: "revoked", admission: undefined }), { keyGeneration: 1 }))
+      .toBeNull()
+  })
+
+  it("nur der Anstieg ueber eine GESETZTE Kennung bleibt Wiederaufnahme", () => {
+    expect(planMembershipTransition(view({ status: "accepted", admission: { keyGeneration: 1 } }), { keyGeneration: 2 }))
       .toEqual({ status: "pending" })
   })
 
