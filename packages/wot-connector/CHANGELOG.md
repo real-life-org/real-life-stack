@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.8](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.1.7...wot-connector-v0.1.8) (2026-09-15)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/toolkit bumped to 0.1.8
+
 ## [0.1.7](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.1.6...wot-connector-v0.1.7) (2026-09-13)
 
 

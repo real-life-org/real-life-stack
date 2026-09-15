@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.1](https://github.com/real-life-org/real-life-stack/compare/app-v0.3.0...app-v0.3.1) (2026-09-15)
+
+
+### Performance Improvements
+
+* eine Karte rendert nur noch, wenn sie sich geaendert hat ([#376](https://github.com/real-life-org/real-life-stack/issues/376)) ([ba88ef1](https://github.com/real-life-org/real-life-stack/commit/ba88ef180de144b2b45fd44bc89541119acd2872))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/toolkit bumped to 0.1.8
+    * @real-life-stack/wot-connector bumped to 0.1.8
+
 ## [0.3.0](https://github.com/real-life-org/real-life-stack/compare/app-v0.2.10...app-v0.3.0) (2026-09-13)
 
 
