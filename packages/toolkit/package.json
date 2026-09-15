@@ -53,6 +53,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@real-life-stack/data-interface": "workspace:*",
     "@tanstack/react-virtual": "3.14.6",
+    "@tiptap/extension-image": "^3.31.3",
     "@tiptap/markdown": "^3.31.3",
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",

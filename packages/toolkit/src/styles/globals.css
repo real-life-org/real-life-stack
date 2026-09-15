@@ -383,6 +383,16 @@
   line-height: 1.3;
 }
 
+.tiptap-editor .tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5em;
+}
+
+.tiptap-editor .tiptap img.ProseMirror-selectednode {
+  outline: 2px solid var(--primary);
+}
+
 .tiptap-editor .tiptap strong {
   font-weight: 700;
 }

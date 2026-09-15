@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useEditor, EditorContent, type Editor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
+import Image from "@tiptap/extension-image"
 import { Markdown } from "@tiptap/markdown"
 import { cn } from "@/lib/utils"
 
@@ -112,6 +113,12 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
           // both reach the reader as visible punctuation.
           underline: false,
         }),
+        // `![](…)` is Markdown the preview renders, so the editor has to hold
+        // it: without an image node the picture was dropped on paste and on
+        // the next keystroke in an item that had one. Inline, like the
+        // Markdown it is written as; base64 because the media widget produces
+        // resized data URIs.
+        Image.configure({ inline: true, allowBase64: true }),
         Markdown,
       ],
       autofocus: autoFocus ? "end" : false,
