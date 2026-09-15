@@ -99,6 +99,31 @@ describe("createObservable", () => {
     expect(obs.loaded).toBe(true)
   })
 
+  it("markUnloaded setzt den Ladezustand zurueck und meldet das", () => {
+    // Sitzungsgrenze: nach einem Logout ist "geladen, aber leer" eine falsche
+    // Aussage — die Quelle wurde nicht gelesen, sie wurde abgeraeumt.
+    const obs = createObservable<Record<string, string>>({}, false)
+    obs.markLoaded()
+    let calls = 0
+    obs.subscribe(() => calls++)
+
+    obs.markUnloaded()
+
+    expect(obs.loaded).toBe(false)
+    expect(calls).toBe(1)
+  })
+
+  it("markUnloaded ist ohne geladenen Zustand ein No-op", () => {
+    const obs = createObservable<number[]>([], false)
+    let calls = 0
+    obs.subscribe(() => calls++)
+
+    obs.markUnloaded()
+
+    expect(obs.loaded).toBe(false)
+    expect(calls).toBe(0)
+  })
+
   it("markLoaded is a no-op once already loaded", () => {
     const obs = createObservable(0) // loaded=true
     let calls = 0

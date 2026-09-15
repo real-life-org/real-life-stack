@@ -1,0 +1,217 @@
+import { describe, expect, it, vi } from "vitest"
+import { createObservable } from "@real-life-stack/data-interface"
+
+import { WotConnector } from "../src/wot-connector.js"
+import {
+  deriveRegistryView,
+  groupRegistryByEntry,
+  MIRROR_REGISTRY_ROOT,
+  mirrorRegistryEntryKey,
+  mirrorRegistryKey,
+  registryContributionsOf,
+  type MirrorRegistryRoot,
+} from "../src/mirror/index.js"
+import type { MirrorRegistryContribution, RlsSpaceDoc } from "../src/types.js"
+import { createYjsSpaceHandle, type YjsTestSpaceHandle } from "./helpers/yjs-space-handle.js"
+
+/**
+ * Befund R2-1 aus der Codex-Runde 2 und rls#353, mit zwei ECHTEN Yjs-Dokumenten.
+ *
+ * Spec 09 §Ablage und Registry verlangt, dass die Beiträge der Geräte
+ * konfliktfrei mergen: jedes Gerät schreibt nur unter sich selbst, und die eine
+ * Lesesicht entsteht aus ALLEN Beiträgen. Eine physische Ablage, bei der zwei
+ * Geräte erst eine gemeinsame Eltern-Map anlegen müssen, erfüllt das nicht — im
+ * Merge ist so eine Map ein Register, eine der beiden gewinnt, die andere geht
+ * samt Beitrag verloren. Der verlorene Beitrag war in Codex' Reproduktion ein
+ * Widerruf, der Freigabestatus kippte also zurück auf `accepted`.
+ *
+ * Deshalb ist der Registry-Schlüssel physisch flach: `[itemId, targetSpaceId,
+ * deviceId]`. Jedes Gerät legt genau seinen eigenen Schlüssel an, nie eine
+ * gemeinsame Eltern-Map.
+ */
+
+const DID = "did:key:z6MkAnton"
+
+function spaceList(admission: number | undefined = 1) {
+  return [{
+    id: "garten",
+    type: "shared",
+    appTag: "rls",
+    members: [DID],
+    createdAt: "",
+    ...(admission === undefined ? {} : { admission: { keyGeneration: admission } }),
+  }]
+}
+
+function connectorOn(handle: YjsTestSpaceHandle<RlsSpaceDoc>, deviceId: string) {
+  const connector = Object.create(WotConnector.prototype) as any
+  connector.identity = { getDid: () => DID }
+  connector.privateSpaceId = handle.id
+  connector.homeHandle = handle
+  connector.runtimeGeneration = 1
+  connector.replication = {
+    openSpace: vi.fn(async () => handle),
+    watchSpaces: () => ({ getValue: () => spaceList() }),
+  }
+  connector.docLogStore = { resolveConnectDeviceId: async () => deviceId }
+  connector.profileSharesObs = createObservable<Record<string, string>>({}, false)
+  return connector
+}
+
+function registryRoot(handle: YjsTestSpaceHandle<RlsSpaceDoc>): MirrorRegistryRoot {
+  return handle.getRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT)
+}
+
+function byDeviceOf(handle: YjsTestSpaceHandle<RlsSpaceDoc>, targetSpaceId: string) {
+  return groupRegistryByEntry(registryContributionsOf(registryRoot(handle)))
+    .get(mirrorRegistryEntryKey(DID, targetSpaceId))
+    ?? ({} as Record<string, MirrorRegistryContribution>)
+}
+
+describe("Registry-Beiträge zweier Geräte mergen konfliktfrei (Befund R2-1)", () => {
+  it("hält beide nebenläufig angelegten Beiträge und lässt den Widerruf gewinnen", async () => {
+    const deviceA = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    const deviceB = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    // Gemeinsamer Ausgangszustand: ein Home OHNE jede Vorinitialisierung der
+    // Registry. Genau das ist der Punkt von rls#353: die Wurzel `mirrorRegistry`
+    // stellt das CRDT bereit (`doc.getMap(name)`), kein Gerät legt sie an — die
+    // nebenläufige Erstanlage, die unter `data` einen Unterbaum verlor, gibt es
+    // nicht mehr.
+    deviceA.transact((doc) => {
+      doc._type = "rls"
+      doc.items = {}
+    })
+    deviceA.syncInto(deviceB)
+
+    await connectorOn(deviceA, "device-A").writeRegistryContribution("garten", "revoked")
+    await connectorOn(deviceB, "device-B").writeRegistryContribution("garten", "accepted")
+
+    deviceA.syncInto(deviceB)
+    deviceB.syncInto(deviceA)
+
+    for (const handle of [deviceA, deviceB]) {
+      const byDevice = byDeviceOf(handle, "garten")
+      expect(Object.keys(byDevice).sort()).toEqual(["device-A", "device-B"])
+      // Widerrufs-Kausalität: die Freigabe von B hat den Widerruf von A nie
+      // gesehen, also löst sie ihn nicht ab (Spec 09 §Ablage und Registry).
+      expect(deriveRegistryView(byDevice)?.status).toBe("revoked")
+    }
+  })
+
+  it.each([
+    ["A zuerst", "a-first"],
+    ["B zuerst", "b-first"],
+  ])("hält in beiden Update-Reihenfolgen beide Erstbeiträge (%s)", async (_name, order) => {
+    const deviceA = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    const deviceB = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    // Keine Vorinitialisierung, auch nicht des Doc-Baums: die Wurzel ist auf
+    // beiden Geräten dieselbe, ohne dass eines sie angelegt hätte.
+    await connectorOn(deviceA, "device-A").writeRegistryContribution("garten", "revoked")
+    await connectorOn(deviceB, "device-B").writeRegistryContribution("garten", "accepted")
+
+    if (order === "a-first") {
+      deviceA.syncInto(deviceB)
+      deviceB.syncInto(deviceA)
+    } else {
+      deviceB.syncInto(deviceA)
+      deviceA.syncInto(deviceB)
+    }
+
+    for (const handle of [deviceA, deviceB]) {
+      const byDevice = byDeviceOf(handle, "garten")
+      expect(Object.keys(byDevice).sort()).toEqual(["device-A", "device-B"])
+      // Der Widerruf ist von keiner Freigabe beobachtet worden und gewinnt,
+      // unabhängig davon, welches Update zuletzt ankam.
+      expect(deriveRegistryView(byDevice)?.status).toBe("revoked")
+    }
+  })
+
+  it("legt je Gerät genau einen flachen Schlüssel an, nie eine gemeinsame Eltern-Map", async () => {
+    const deviceA = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    const deviceB = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    deviceA.transact((doc) => {
+      doc._type = "rls"
+      doc.items = {}
+    })
+    deviceA.syncInto(deviceB)
+
+    await connectorOn(deviceA, "device-A").writeRegistryContribution("garten", "accepted")
+    await connectorOn(deviceB, "device-B").writeRegistryContribution("garten", "pending")
+    deviceA.syncInto(deviceB)
+    deviceB.syncInto(deviceA)
+
+    expect(Object.keys(registryRoot(deviceA)).sort()).toEqual([
+      mirrorRegistryKey(DID, "garten", "device-A"),
+      mirrorRegistryKey(DID, "garten", "device-B"),
+    ].sort())
+  })
+
+  it("überschreibt bei einem weiteren Statuswechsel nur den eigenen Schlüssel", async () => {
+    const deviceA = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    const deviceB = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    deviceA.transact((doc) => {
+      doc._type = "rls"
+      doc.items = {}
+    })
+    deviceA.syncInto(deviceB)
+
+    await connectorOn(deviceB, "device-B").writeRegistryContribution("garten", "accepted")
+    deviceB.syncInto(deviceA)
+    await connectorOn(deviceA, "device-A").writeRegistryContribution("garten", "pending")
+    // Zweiter Statuswechsel DESSELBEN Geräts: er ersetzt den eigenen Schlüssel
+    // und lässt den Beitrag von B unberührt.
+    await connectorOn(deviceA, "device-A").writeRegistryContribution("garten", "revoked")
+    deviceA.syncInto(deviceB)
+
+    const byDevice = byDeviceOf(deviceB, "garten")
+    expect(Object.keys(byDevice).sort()).toEqual(["device-A", "device-B"])
+    expect(byDevice["device-B"]).toMatchObject({ status: "accepted", statusSeq: 1 })
+    expect(byDevice["device-A"].status).toBe("revoked")
+    // A hat die Freigabe von B und den eigenen Vorbeitrag gesehen: sein
+    // `statusSeq` steigt monoton, ein Widerruf trägt kein `supersedes`.
+    expect(byDevice["device-A"].statusSeq).toBe(3)
+    expect(byDevice["device-A"].supersedes).toBeUndefined()
+    expect(deriveRegistryView(byDevice)?.status).toBe("revoked")
+  })
+})
+
+describe("fremde Schlüssel sind Eingabe, nicht Code", () => {
+  it("eine Freigabe nach einem Widerruf des Geräts __proto__ lässt sich schreiben", async () => {
+    // Der Wertvertrag benannter Wurzeln verbietet `__proto__` REKURSIV, also
+    // auch in `supersedes`. Ein fremder Beitrag unter diesem Gerätenamen darf
+    // den Freigabepfad deshalb nicht zum Werfen bringen — und der Widerruf
+    // darf trotzdem nicht verschwinden: er bleibt unabgedeckt, der Eintrag
+    // bleibt fail-closed `revoked`.
+    const device = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    device.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
+      root[mirrorRegistryKey(DID, "garten", "__proto__")] = {
+        statusSeq: 2, status: "revoked", seq: 0, tiebreak: "", updatedAt: "2026-09-01T00:00:00.000Z",
+      }
+    })
+
+    await connectorOn(device, "device-B").writeRegistryContribution("garten", "accepted")
+
+    const byDevice = byDeviceOf(device, "garten")
+    expect(Object.keys(byDevice).sort()).toEqual(["__proto__", "device-B"])
+    expect(byDevice["device-B"].supersedes).toBeUndefined()
+    expect(deriveRegistryView(byDevice)?.status).toBe("revoked")
+  })
+
+
+  it("verschluckt einen Beitrag unter dem Gerätenamen __proto__ nicht", () => {
+    const registry = {
+      [mirrorRegistryKey(DID, "garten", "__proto__")]: {
+        statusSeq: 2, status: "revoked" as const, seq: 0, tiebreak: "", updatedAt: "2026-09-01T00:00:00.000Z",
+      },
+      [mirrorRegistryKey(DID, "garten", "device-B")]: {
+        statusSeq: 1, status: "accepted" as const, seq: 0, tiebreak: "", updatedAt: "2026-09-01T00:00:00.000Z",
+      },
+    }
+
+    const byDevice = groupRegistryByEntry(registry).get(mirrorRegistryEntryKey(DID, "garten")) ?? {}
+
+    expect(Object.keys(byDevice).sort()).toEqual(["__proto__", "device-B"])
+    // Der Widerruf ist von keiner Freigabe abgedeckt und gewinnt.
+    expect(deriveRegistryView(byDevice)?.status).toBe("revoked")
+  })
+})

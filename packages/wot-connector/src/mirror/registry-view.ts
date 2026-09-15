@@ -73,14 +73,16 @@ export function deriveRegistryView(
   }
   if (!winner) return null
 
-  // Nur die Beiträge der HÖCHSTEN Aufnahme entscheiden über den Status.
-  const current = devices
+  const all = devices
     .map((deviceId) => [deviceId, byDevice[deviceId]] as const)
     .filter((pair): pair is readonly [string, MirrorRegistryContribution] => Boolean(pair[1]))
+  // Über `pending` und `accepted` entscheiden nur die Beiträge der HÖCHSTEN
+  // Aufnahme; ein unabgedeckter Widerruf gewinnt dagegen über Kennungen hinweg.
+  const current = all
     .filter(([, contribution]) => compareAdmissionOrUndefined(contribution.admission, highestAdmission) === 0)
 
   return {
-    status: foldStatus(current),
+    status: foldStatus(all, current),
     ...(highestAdmission ? { admission: highestAdmission } : {}),
     seq: winner.position.seq,
     deviceId: winner.position.deviceId,
@@ -95,26 +97,41 @@ export function deriveRegistryView(
  * beobachtet hat, gewinnt immer — auch gegen eine nebenläufige Freigabe mit
  * höherem `statusSeq`. Erst eine Freigabe, die ihn gesehen hat, löst ihn ab.
  *
- * Dieselbe Abdeckung gilt für `pending` (Spec 12 Regel 9: „sonst pending, wenn
- * ein pending-Beitrag existiert, den keine Annahme abdeckt"); `supersedes`
- * trägt deshalb die beobachteten NICHT-`accepted`-Beiträge, nicht nur die
- * Widerrufe.
+ * Und zwar ÜBER KENNUNGEN HINWEG (Fassung rls#354): „Ein unabgedeckter
+ * Widerruf setzt den Status auch dann auf `revoked`, wenn ein
+ * `accepted`-Beitrag eine höhere `admission` trägt. Sonst könnte eine
+ * Nachführung (`undefined` → Kennung) einen nebenläufigen Widerruf eines
+ * Offline-Geräts ungesehen verdrängen." Die Wiederaufnahme nach Entfernung
+ * bleibt davon unberührt: jede Freigabe nennt beim Schreiben alle sichtbaren
+ * Widerrufe in `supersedes` und deckt den Verlust-Widerruf damit ab.
+ *
+ * `pending` dagegen ist ein Overlay der höchsten Aufnahme (Spec 12 Regel 9:
+ * „sonst nach der höchsten `admission` `pending`, wenn dort ein
+ * `pending`-Beitrag existiert, den keine Annahme abdeckt").
+ *
+ * Die Abdeckung selbst kennt keine Kennungen: `statusSeq` ist ein
+ * Lamport-Zähler, `supersedes[device] >= statusSeq` heißt „gesehen", gleich
+ * aus welcher Aufnahme der abdeckende Beitrag stammt.
  */
 function foldStatus(
-  contributions: ReadonlyArray<readonly [string, MirrorRegistryContribution]>,
+  all: ReadonlyArray<readonly [string, MirrorRegistryContribution]>,
+  highestAdmission: ReadonlyArray<readonly [string, MirrorRegistryContribution]>,
 ): "pending" | "accepted" | "revoked" {
   const covered = (deviceId: string, statusSeq: number) =>
-    contributions.some(
+    all.some(
       ([, contribution]) =>
         contribution.status === "accepted" && (contribution.supersedes?.[deviceId] ?? -1) >= statusSeq,
     )
-  const uncovered = (status: "revoked" | "pending") =>
+  const uncovered = (
+    contributions: ReadonlyArray<readonly [string, MirrorRegistryContribution]>,
+    status: "revoked" | "pending",
+  ) =>
     contributions.some(
       ([deviceId, contribution]) => contribution.status === status && !covered(deviceId, contribution.statusSeq),
     )
 
-  if (uncovered("revoked")) return "revoked"
-  if (uncovered("pending")) return "pending"
+  if (uncovered(all, "revoked")) return "revoked"
+  if (uncovered(highestAdmission, "pending")) return "pending"
   return "accepted"
 }
 

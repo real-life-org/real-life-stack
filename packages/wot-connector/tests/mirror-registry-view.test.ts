@@ -60,13 +60,36 @@ describe("deriveRegistryView — Position", () => {
 })
 
 describe("deriveRegistryView — Aufnahme-Kennung", () => {
-  it("nimmt den Status aus der höchsten Kennung", () => {
+  it("nimmt den Status aus der höchsten Kennung, sobald die Freigabe den alten Widerruf abdeckt", () => {
+    // Wiederaufnahme nach Entfernung: die neue Freigabe hat den
+    // Verlust-Widerruf beim Schreiben gesehen und nennt ihn in `supersedes`.
+    const view = deriveRegistryView({
+      alt: contribution({ status: "revoked", statusSeq: 9, admission: gen(1) }),
+      neu: contribution({ status: "accepted", statusSeq: 10, admission: gen(2), supersedes: { alt: 9 } }),
+    })
+    expect(view?.status).toBe("accepted")
+    expect(view?.admission).toEqual(gen(2))
+  })
+
+  it("ein UNABGEDECKTER Widerruf gewinnt über Kennungen hinweg (Fassung rls#354)", () => {
+    // Sonst verdrängte eine Nachführung (undefined → Kennung) oder eine
+    // Freigabe aus einer neuen Aufnahme einen nebenläufigen Widerruf eines
+    // Offline-Geräts, den sie nie gesehen hat.
     const view = deriveRegistryView({
       alt: contribution({ status: "revoked", statusSeq: 9, admission: gen(1) }),
       neu: contribution({ status: "accepted", statusSeq: 1, admission: gen(2) }),
     })
-    expect(view?.status).toBe("accepted")
+    expect(view?.status).toBe("revoked")
+    // Die Kennung der Lesesicht bleibt die höchste (09 Inv. 11).
     expect(view?.admission).toEqual(gen(2))
+  })
+
+  it("ein Widerruf OHNE Kennung gewinnt gegen eine nebenläufige Nachführung mit Kennung", () => {
+    const view = deriveRegistryView({
+      offline: contribution({ status: "revoked", statusSeq: 4 }),
+      nachgefuehrt: contribution({ status: "accepted", statusSeq: 5, admission: gen(3) }),
+    })
+    expect(view?.status).toBe("revoked")
   })
 
   it("legt keine Kennung (undefined) unter jede Kennung", () => {
@@ -124,12 +147,21 @@ describe("deriveRegistryView — Widerrufs-Kausalität", () => {
     ).toBe("accepted")
   })
 
-  it("vergleicht Kausalität nur innerhalb derselben Kennung", () => {
-    const view = deriveRegistryView({
-      A: contribution({ status: "revoked", statusSeq: 7, admission: gen(1) }),
-      B: contribution({ status: "accepted", statusSeq: 1, admission: gen(2) }),
-    })
-    expect(view?.status).toBe("accepted")
+  it("die Abdeckung gilt über Kennungen hinweg — ein ungesehener Widerruf bleibt stehen", () => {
+    // Bis zur Fassung rls#354 entschied hier allein die höhere Kennung; das
+    // ließ einen nie beobachteten Widerruf lautlos verschwinden.
+    expect(
+      deriveRegistryView({
+        A: contribution({ status: "revoked", statusSeq: 7, admission: gen(1) }),
+        B: contribution({ status: "accepted", statusSeq: 1, admission: gen(2) }),
+      })?.status,
+    ).toBe("revoked")
+    expect(
+      deriveRegistryView({
+        A: contribution({ status: "revoked", statusSeq: 7, admission: gen(1) }),
+        B: contribution({ status: "accepted", statusSeq: 8, admission: gen(2), supersedes: { A: 7 } }),
+      })?.status,
+    ).toBe("accepted")
   })
 })
 

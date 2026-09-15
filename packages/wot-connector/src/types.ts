@@ -80,31 +80,19 @@ export interface RlsSpaceDoc {
    * eine niedrigere Version tragen als die höchste je akzeptierte).
    */
   mirrors?: Record<string, string>
-  /**
-   * HOME-Seite von Spec 09 §Ablage und Registry: die Freigaben dieses Space
-   * als Home. Schlüssel `JSON.stringify([itemId, targetSpaceId])`.
-   *
-   * Steht im selben Doc-Typ, weil ein Home ein gewöhnlicher Space ist —
-   * der persönliche Space eines Profils (Spec 12) genauso wie ein
-   * Gruppen-Space, der Items in andere Spaces freigibt.
-   */
-  mirrorRegistry?: Record<string, MirrorRegistryEntry>
-  /**
-   * Spec 12 Regel 5 (Übergangsregel): ist die Marke gesetzt, hat ein Gerät
-   * der Person die Bestands-Mitgliedschaften einmalig pauschal freigegeben.
-   * Sie verhindert, dass die Regel auf einem anderen Gerät erneut läuft —
-   * dort liefe sie sonst über Mitgliedschaften, die inzwischen widerrufen
-   * wurden, und stellte sie wieder her.
-   */
-  profileMigration?: { bestandAt?: string }
+  // Registry und Bestandsmarke stehen NICHT in diesem Typ: sie liegen in der
+  // benannten Wurzel `mirrorRegistry` des Home-Docs (Spec 09 §Ablage und
+  // Registry in der Fassung rls#354, Adapter-Capability `NamedRootsCapable`).
+  // `getDoc()` bildet nur `data` ab, Wurzeln liegen bewusst daneben — siehe
+  // `src/mirror/roots.ts`.
 }
 
 /**
- * Ein Registry-Eintrag `(itemId, targetSpaceId)`: die Beiträge ALLER Geräte des
- * Autors (Spec 09 §Ablage und Registry). Jedes Gerät schreibt ausschließlich
- * unter seinem eigenen `deviceId`-Schlüssel — damit ist der Eintrag ein
- * konfliktfreier Merge, und die eine Lesesicht entsteht deterministisch aus
- * allen Beiträgen (`deriveRegistryView`). Einträge werden NIE gelöscht.
+ * Ein Registry-Eintrag `(itemId, targetSpaceId)` im LESEMODELL: die Beiträge
+ * ALLER Geräte des Autors (Spec 09 §Ablage und Registry). Er steht so nicht im
+ * Doc — dort liegt je Gerät ein eigener flacher Schlüssel — sondern entsteht
+ * beim Lesen (`groupRegistryByEntry`). Die eine Lesesicht entsteht daraus
+ * deterministisch (`deriveRegistryView`). Beiträge werden NIE gelöscht.
  */
 export interface MirrorRegistryEntry {
   byDevice: Record<string, MirrorRegistryContribution>
@@ -112,7 +100,8 @@ export interface MirrorRegistryEntry {
 
 /**
  * Der Beitrag EINES Geräts zu einer Freigabe. `deviceId` steht nicht im Wert,
- * sondern ist der Map-Schlüssel in {@link MirrorRegistryEntry.byDevice}.
+ * sondern im physischen Schlüssel (`mirrorRegistryKey`) und damit auch im
+ * Lesemodell {@link MirrorRegistryEntry.byDevice}.
  */
 export interface MirrorRegistryContribution {
   /**

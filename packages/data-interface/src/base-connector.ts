@@ -31,6 +31,11 @@ export type ReactiveObservable<T> = Observable<T> & {
    *  value is unchanged — so an async source resolving to an *empty* result still
    *  flips `loaded` and re-renders. No-op once already loaded. */
   markLoaded(): void
+  /** Reset to "not yet read" at a session boundary (logout, identity switch):
+   *  the source was torn down, not read empty. Without it a reset observable
+   *  keeps claiming "loaded, empty", which consumers render as a real result.
+   *  Notifies subscribers; no-op when already unloaded. */
+  markUnloaded(): void
   destroy(): void
 }
 
@@ -83,6 +88,11 @@ export function createObservable<T>(initial: T, loaded = true): ReactiveObservab
     markLoaded() {
       if (isLoaded) return
       isLoaded = true
+      subscribers.forEach((cb) => cb(current))
+    },
+    markUnloaded() {
+      if (!isLoaded) return
+      isLoaded = false
       subscribers.forEach((cb) => cb(current))
     },
     destroy() {
