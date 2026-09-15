@@ -229,12 +229,14 @@ describe("Bestandsregel — Spec 12 Regel 5", () => {
     expect(mark(named)).toBeTruthy()
   })
 
-  it("laesst Alt-Spaces ohne Aufnahme-Kennung ohne Eintrag (09: keine gueltige Aufnahme)", async () => {
-    const { connector, doc, named } = fakeConnector({ spaces: [{ id: "alt" }] })
+  it("gibt Alt-Spaces OHNE Aufnahme-Kennung ausnahmslos mit frei (Regel 5, Fassung rls#354)", async () => {
+    const { connector, named } = fakeConnector({ spaces: [{ id: "alt" }] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(hasEntry(registryRootOf(named), DID, "alt")).toBe(false)
+    const own = byDeviceOf(registryRootOf(named), DID, "alt")["device-A"]
+    expect(own.status).toBe("accepted")
+    expect(own.admission).toBeUndefined()
     expect(mark(named)).toBeTruthy()
   })
 

@@ -115,13 +115,16 @@ export function planMembershipTransition(
 
 /**
  * Die Bestands-Mitgliedschaften der Übergangsregel (Spec 12 Regel 5): alle
- * geteilten Spaces außer dem persönlichen, die eine gültige Aufnahme-Kennung
- * haben.
+ * geteilten Spaces außer dem persönlichen.
  *
- * Alt-Spaces ohne Kennung bleiben bewusst draußen — eine Freigabe setzt nach
- * 09 eine gültige Aufnahme voraus. Sie laufen später über Regel 4 (`pending`),
- * sobald Ereignisse auftauchen. Ebenso draußen bleibt jedes Ziel, für das
- * bereits ein Registry-Eintrag existiert.
+ * AUSNAHMSLOS, auch ohne Aufnahme-Kennung (Fassung rls#354): „Der Connector
+ * legt für ALLE zu diesem Zeitpunkt bestehenden Mitgliedschaften
+ * `accepted`-Einträge an … auch ohne Aufnahme-Kennung (Alt-Spaces ohne
+ * Ereignisse, `admission = undefined`)." Der Eintrag trägt dann keine Kennung
+ * und wird nachgeführt, sobald der Space seine ersten Ereignisse bekommt (09,
+ * Nachführung) — die Mitgliedschaft wird dadurch nie eingeschränkt.
+ *
+ * Draußen bleibt jedes Ziel, für das bereits ein Registry-Eintrag existiert.
  */
 export function planStockGrants(
   spaces: readonly SpaceInfo[],
@@ -133,7 +136,6 @@ export function planStockGrants(
       space.id !== homeSpaceId
       && space.type === "shared"
       && space.appTag !== "rls-private"
-      && Boolean(space.admission)
       // Über einen vorhandenen Eintrag wurde bereits entschieden — auch ein
       // Widerruf ist eine Entscheidung. Die Übergangsregel gilt nur für
       // Mitgliedschaften, die es vor dieser Spec schon gab, und darf eine

@@ -129,12 +129,15 @@ describe("planStockGrants — Spec 12 Regel 5 Übergangsregel", () => {
     { id: "personal", type: "personal", members: [], createdAt: "", admission: { keyGeneration: 1 } },
   ] as never
 
-  it("nimmt nur geteilte Spaces mit gültiger Aufnahme-Kennung, ohne den persönlichen Space", () => {
-    expect(planStockGrants(spaces, "home")).toEqual(["garten"])
+  it("nimmt alle geteilten Spaces, ohne den persönlichen Space", () => {
+    expect(planStockGrants(spaces, "home")).toEqual(["garten", "alt"])
   })
 
-  it("lässt Alt-Spaces ohne Kennung aus (09: keine gültige Aufnahme)", () => {
-    expect(planStockGrants(spaces, "home")).not.toContain("alt")
+  it("nimmt Alt-Spaces OHNE Kennung ausnahmslos mit (Spec 12 Regel 5, Fassung rls#354)", () => {
+    // „Der Connector legt für ALLE zu diesem Zeitpunkt bestehenden
+    // Mitgliedschaften `accepted`-Einträge an … ausnahmslos und auch ohne
+    // Aufnahme-Kennung."
+    expect(planStockGrants(spaces, "home")).toContain("alt")
   })
 })
 
