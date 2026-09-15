@@ -287,8 +287,41 @@ describe("Codex-Runde 2 zum Nachtrag — fehlende Information ist kein Verlust",
     // Mitgliedschaften), und ein Teil-Durchlauf liesse einen spaeteren
     // Neuzugang als Bestand durchgehen.
     expect(mark(named)).toBeUndefined()
-    expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "garten")).toBe(false)
+    // Der Abgleich traegt sie als ausstehend ein — das ist keine Entscheidung
+    // und schliesst sie spaeter nicht vom Bestand aus.
+    expect(status(named, "garten")).toBe("pending")
     expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "unklar")).toBe(false)
+  })
+
+  it("ein ausstehender Eintrag vor der Marke ist keine Entscheidung und wird Bestand", async () => {
+    // Der Abgleich schreibt `pending`, sobald ein Space auftaucht — auch fuer
+    // einen Bestands-Space, solange der Bestandsdurchlauf noch auf seinen
+    // Nachweis wartet. Zaehlte das als Entscheidung, bliebe dieser Space
+    // dauerhaft von der einmaligen Bestandsfreigabe ausgeschlossen.
+    const { connector, named } = fakeConnector({
+      bestand: false,
+      registry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "pending", admission: { keyGeneration: 1 } }) } }),
+      spaces: [{ id: "garten", admission: { keyGeneration: 1 } }],
+    })
+
+    await connector.queueProfileHomeMaintenance()
+
+    expect(status(named, "garten")).toBe("accepted")
+    expect(mark(named)).toBeTruthy()
+  })
+
+  it("laesst einen widerrufenen Eintrag auch vor der Marke in Ruhe", async () => {
+    const { connector, named } = fakeConnector({
+      bestand: false,
+      registry: flatRegistry(DID, { garten: { "device-B": contribution({ status: "revoked", admission: { keyGeneration: 1 } }) } }),
+      spaces: [{ id: "garten", admission: { keyGeneration: 1 } }],
+    })
+
+    await connector.queueProfileHomeMaintenance()
+
+    // Kein pauschaler accepted-Beitrag dieses Geraets daneben.
+    expect(entry(named, "garten")[DEVICE]).toBeUndefined()
+    expect(connector.observeProfileShares().current.garten).toBe("revoked")
   })
 
   it("holt den Bestandsdurchlauf nach, sobald die Projektion geladen ist", async () => {

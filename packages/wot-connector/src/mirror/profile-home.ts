@@ -175,13 +175,15 @@ export function planMembershipTransition(
  * und wird nachgeführt, sobald der Space seine ersten Ereignisse bekommt (09,
  * Nachführung) — die Mitgliedschaft wird dadurch nie eingeschränkt.
  *
- * Draußen bleibt jedes Ziel, für das bereits ein Registry-Eintrag existiert.
+ * Draußen bleibt jedes Ziel, über das bereits ENTSCHIEDEN wurde (`accepted`
+ * oder `revoked`). Ein bloßes `pending` ist keine Entscheidung — es schreibt
+ * der Abgleich selbst, sobald ein Space auftaucht.
  */
 export function planStockGrants(
   spaces: readonly SpaceInfo[],
   homeSpaceId: string,
   did: string,
-  hasRegistryEntry: (targetSpaceId: string) => boolean = () => false,
+  hasDecision: (targetSpaceId: string) => boolean = () => false,
 ): string[] {
   return spaces
     .filter((space) =>
@@ -194,12 +196,10 @@ export function planStockGrants(
       // Bestandsdurchlauf — und weil Beiträge und Marke in EINER Transaktion
       // liegen, fiele der ganze Durchlauf samt echter Bestandsfreigaben aus.
       && membershipOf(space, did) === "member"
-      // Über einen vorhandenen Eintrag wurde bereits entschieden — auch ein
-      // Widerruf ist eine Entscheidung. Die Übergangsregel gilt nur für
-      // Mitgliedschaften, die es vor dieser Spec schon gab, und darf eine
-      // getroffene Entscheidung nie überschreiben, auch nicht, wenn die Marke
-      // dieses Gerät verspätet erreicht.
-      && !hasRegistryEntry(space.id))
+      // Über ein entschiedenes Ziel (`accepted` oder `revoked`) geht die
+      // Übergangsregel nie hinweg, auch nicht, wenn die Marke dieses Gerät
+      // verspätet erreicht.
+      && !hasDecision(space.id))
     .map((space) => space.id)
 }
 

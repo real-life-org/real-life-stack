@@ -1595,15 +1595,23 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       if (profileMigrationMark(root)?.bestandAt) return
 
       const registry = groupRegistryByEntry(registryContributionsOf(root))
-      // Bestand heißt: eine Mitgliedschaft, über die noch nie entschieden
-      // wurde. Ein vorhandener Beitrag ist eine Entscheidung — auch ein
-      // Widerruf. Die Übergangsregel darf ihn nie überschreiben.
-      // Einen leeren Eintrag kann es in der flachen Ablage nicht geben: ein
-      // Schlüssel existiert nur zusammen mit dem Beitrag, den er trägt.
-      const hasEntry = (targetSpaceId: string) =>
-        registry.has(mirrorRegistryEntryKey(did, targetSpaceId))
+      // Bestand heißt: eine Mitgliedschaft, über die noch nie ENTSCHIEDEN
+      // wurde. Eine Entscheidung ist `accepted` oder `revoked` — die
+      // Übergangsregel darf sie nie überschreiben, auch den Widerruf nicht.
+      //
+      // Ein bloßes `pending` ist dagegen KEINE Entscheidung: es schreibt der
+      // Abgleich selbst, sobald ein Space auftaucht, und es kann einen
+      // Bestands-Space treffen, der vor dem Durchlauf sichtbar wurde (der
+      // Durchlauf wartet auf den Catch-up-Nachweis und die vollständige
+      // Mitgliederprojektion). Zählte es als Entscheidung, bliebe genau
+      // dieser Space dauerhaft von der einmaligen Bestandsfreigabe
+      // ausgeschlossen.
+      const hasDecision = (targetSpaceId: string) => {
+        const view = deriveRegistryView(registry.get(mirrorRegistryEntryKey(did, targetSpaceId)) ?? {})
+        return Boolean(view) && view?.status !== "pending"
+      }
 
-      for (const targetSpaceId of planStockGrants(spaces, handle.id, did, hasEntry)) {
+      for (const targetSpaceId of planStockGrants(spaces, handle.id, did, hasDecision)) {
         this.applyRegistryContribution(root, {
           did,
           deviceId,
@@ -1646,21 +1654,12 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     handle.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
       const registry = groupRegistryByEntry(registryContributionsOf(root))
-      // Vor der Bestandsmarke ist nicht entscheidbar, ob ein Space Bestand
-      // (Regel 5, pauschal `accepted`) oder Neuzugang (Regel 4, `pending`)
-      // ist — die Marke IST diese Grenze. Also entsteht vor ihr kein neuer
-      // Eintrag; ein `pending` hier würde den Space später von der einmaligen
-      // Bestandsfreigabe ausschließen (ein vorhandener Eintrag ist eine
-      // Entscheidung). Statuswechsel an BESTEHENDEN Einträgen laufen weiter,
-      // besonders der Widerruf bei Mitgliedschaftsverlust (09 Invariante 11).
-      const bestandEntschieden = Boolean(profileMigrationMark(root)?.bestandAt)
       const apply = (
         targetSpaceId: string,
         admission: SpaceAdmission | undefined,
         membership: SpaceMembership,
       ) => {
         const view = deriveRegistryView(registry.get(mirrorRegistryEntryKey(did, targetSpaceId)) ?? {})
-        if (!view && !bestandEntschieden) return
         const transition = planMembershipTransition(view, admission, membership)
         if (!transition) return
         this.applyRegistryContribution(root, {

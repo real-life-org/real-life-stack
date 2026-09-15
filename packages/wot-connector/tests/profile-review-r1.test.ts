@@ -339,11 +339,11 @@ describe("R2-2 — die pauschale Bestandsregel verlangt den beobachteten Catch-u
 
     await connector.queueProfileHomeMaintenance()
 
-    // Fail-closed: gar kein Eintrag. Vor der Bestandsmarke ist nicht
-    // entscheidbar, ob der Space Bestand (Regel 5) oder Neuzugang (Regel 4)
-    // ist; ein `pending` hier schloesse ihn spaeter von der einmaligen
-    // Bestandsfreigabe aus.
-    expect(byDevice(named, "garten")[DEVICE]).toBeUndefined()
+    // Fail-closed: der Space wird ausstehend, nicht pauschal freigegeben — ein
+    // Geraet ohne Nachweis kann die Marke eines anderen Geraets verpasst haben.
+    // `pending` ist dabei keine Entscheidung: holt dieses Geraet die
+    // Bestandsregel spaeter nach, wird daraus `accepted`.
+    expect(byDevice(named, "garten")[DEVICE].status).toBe("pending")
     expect(mark(named)).toBeUndefined()
   })
 
@@ -393,7 +393,7 @@ describe("R2-2 — die pauschale Bestandsregel verlangt den beobachteten Catch-u
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(byDevice(named, "garten")[DEVICE]).toBeUndefined()
+    expect(byDevice(named, "garten")[DEVICE].status).toBe("pending")
     expect(mark(named)).toBeUndefined()
   })
 })
