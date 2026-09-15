@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   groupMembersForDisplay,
   resolveConfigSection,
+  filterInvitableContacts,
   showsMemberSearch,
   spaceConfigSections,
   type SpaceConfigSectionId,
@@ -16,23 +17,37 @@ import {
  */
 describe("spaceConfigSections", () => {
   it("zeigt jedem Mitglied die Mitglieder", () => {
-    const ids = spaceConfigSections({ isAdmin: false }).map((s) => s.id)
+    const ids = spaceConfigSections({ isAdmin: false, canInvite: false }).map((s) => s.id)
     expect(ids).toEqual(["members"])
   })
 
   it("haengt Module nur fuer Admins an", () => {
-    const ids = spaceConfigSections({ isAdmin: true }).map((s) => s.id)
+    const ids = spaceConfigSections({ isAdmin: true, canInvite: false }).map((s) => s.id)
     expect(ids).toEqual(["members", "modules"])
+  })
+
+  /**
+   * Einladen ist ein eigener Bereich, kein Unterzustand von Mitgliedern
+   * (Entwurf "Space Menu", Turn 4). Es haengt NICHT am Adminrecht: im WoT
+   * laedt jedes Mitglied ein, nur der Creator entfernt.
+   */
+  it("haengt Einladen an, sobald eingeladen werden kann — auch ohne Adminrecht", () => {
+    expect(spaceConfigSections({ isAdmin: false, canInvite: true }).map((s) => s.id))
+      .toEqual(["members", "invite"])
+    expect(spaceConfigSections({ isAdmin: true, canInvite: true }).map((s) => s.id))
+      .toEqual(["members", "modules", "invite"])
   })
 
   it("beginnt immer mit Mitgliedern — der Startwert braucht keine Sonderregel", () => {
     for (const isAdmin of [true, false]) {
-      expect(spaceConfigSections({ isAdmin })[0].id).toBe("members")
+      for (const canInvite of [true, false]) {
+        expect(spaceConfigSections({ isAdmin, canInvite })[0].id).toBe("members")
+      }
     }
   })
 
   it("gibt jedem Bereich Beschriftung und Symbol", () => {
-    for (const section of spaceConfigSections({ isAdmin: true })) {
+    for (const section of spaceConfigSections({ isAdmin: true, canInvite: true })) {
       expect(section.label.trim()).not.toBe("")
       expect(section.icon).toBeTruthy()
     }
@@ -44,9 +59,9 @@ describe("spaceConfigSections", () => {
    * Eintrag waere eine Wahl ohne Alternative. Die Flaeche entscheidet das an
    * dieser Zahl.
    */
-  it("laesst ohne Modulrecht nur einen Bereich uebrig", () => {
-    expect(spaceConfigSections({ isAdmin: false })).toHaveLength(1)
-    expect(spaceConfigSections({ isAdmin: true }).length).toBeGreaterThan(1)
+  it("laesst ohne Modulrecht und ohne Einladen nur einen Bereich uebrig", () => {
+    expect(spaceConfigSections({ isAdmin: false, canInvite: false })).toHaveLength(1)
+    expect(spaceConfigSections({ isAdmin: true, canInvite: false }).length).toBeGreaterThan(1)
   })
 })
 
@@ -57,8 +72,8 @@ describe("spaceConfigSections", () => {
  * Eintrags, den es nicht mehr gibt: eine leere Flaeche.
  */
 describe("resolveConfigSection", () => {
-  const memberSections = spaceConfigSections({ isAdmin: false })
-  const adminSections = spaceConfigSections({ isAdmin: true })
+  const memberSections = spaceConfigSections({ isAdmin: false, canInvite: false })
+  const adminSections = spaceConfigSections({ isAdmin: true, canInvite: false })
 
   it("laesst einen vorhandenen Bereich unangetastet", () => {
     expect(resolveConfigSection("members", memberSections)).toBe("members")
@@ -146,5 +161,37 @@ describe("showsMemberSearch", () => {
 
   it("verschwindet wieder, sobald die Suche geleert ist", () => {
     expect(showsMemberSearch(8, "")).toBe(false)
+  })
+})
+
+/**
+ * Die Kontaktliste im Bereich "Einladen" (Entwurf 4a) filtert dieselbe
+ * Quelle wie zuvor der Picker: `invitableContacts` — aktiv, nicht Mitglied,
+ * nicht gerade eingeladen. Gesucht wird ueber Name UND Kennung, denn ohne
+ * gesetzten Namen ist die Kennung alles, was eine Zeile unterscheidet.
+ */
+describe("filterInvitableContacts", () => {
+  const contacts = [
+    { id: "did:key:zTOM", name: "Tom Richter" },
+    { id: "did:key:zNINA", name: "Nina Kowalski" },
+    { id: "did:key:zANON" },
+  ]
+
+  it("gibt ohne Suchbegriff alle zurueck", () => {
+    expect(filterInvitableContacts(contacts, "")).toHaveLength(3)
+    expect(filterInvitableContacts(contacts, "   ")).toHaveLength(3)
+  })
+
+  it("sucht ohne Ruecksicht auf Gross- und Kleinschreibung", () => {
+    expect(filterInvitableContacts(contacts, "nina").map((c) => c.id)).toEqual(["did:key:zNINA"])
+    expect(filterInvitableContacts(contacts, "RICHTER").map((c) => c.id)).toEqual(["did:key:zTOM"])
+  })
+
+  it("findet einen Kontakt ohne Namen ueber die Kennung", () => {
+    expect(filterInvitableContacts(contacts, "zanon").map((c) => c.id)).toEqual(["did:key:zANON"])
+  })
+
+  it("gibt eine leere Liste zurueck, wenn nichts passt", () => {
+    expect(filterInvitableContacts(contacts, "xyz")).toEqual([])
   })
 })

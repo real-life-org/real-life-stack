@@ -86,8 +86,8 @@ export function knownModules(modules: readonly string[]): string[] {
 // App-Schicht nicht mehr (Review #277).
 const defaults = () => defaultModuleIds()
 
-/** Die Bereiche der Space-Konfiguration (Entwurf "Space Menu", Turn 3). */
-export type SpaceConfigSectionId = "members" | "modules"
+/** Die Bereiche der Space-Konfiguration (Entwurf "Space Menu", Turn 3/4). */
+export type SpaceConfigSectionId = "members" | "modules" | "invite"
 
 export interface SpaceConfigSection {
   id: SpaceConfigSectionId
@@ -107,13 +107,43 @@ export interface SpaceConfigSection {
  *
  * Module sind Admin-Sache: wer sie nicht aendern darf, bekommt keinen leeren
  * Bereich zu sehen, sondern gar keinen.
+ *
+ * Einladen ist ein eigener Bereich, kein Unterzustand von Mitgliedern
+ * (Entwurf Turn 4), und haengt NICHT am Adminrecht: im WoT laedt jedes
+ * Mitglied ein, nur der Creator entfernt.
  */
-export function spaceConfigSections({ isAdmin }: { isAdmin: boolean }): SpaceConfigSection[] {
+export function spaceConfigSections({
+  isAdmin,
+  canInvite,
+}: {
+  isAdmin: boolean
+  canInvite: boolean
+}): SpaceConfigSection[] {
   const sections: SpaceConfigSection[] = [
     { id: "members", label: "Mitglieder", icon: Users },
   ]
   if (isAdmin) sections.push({ id: "modules", label: "Module", icon: LayoutGrid })
+  if (canInvite) sections.push({ id: "invite", label: "Einladen", icon: UserPlus })
   return sections
+}
+
+/**
+ * Die Kontaktliste im Bereich "Einladen" (Entwurf 4a): dieselbe Quelle wie
+ * zuvor der Picker — aktiv, nicht Mitglied, nicht gerade eingeladen —, nur
+ * zusaetzlich nach Suchbegriff gefiltert. Gesucht wird ueber Name UND
+ * Kennung: ohne gesetzten Namen ist die Kennung alles, was eine Zeile
+ * unterscheidet.
+ */
+export function filterInvitableContacts<T extends { id: string; name?: string }>(
+  contacts: readonly T[],
+  search: string,
+): T[] {
+  const needle = search.trim().toLowerCase()
+  if (!needle) return [...contacts]
+  return contacts.filter(
+    (c) =>
+      (c.name ?? "").toLowerCase().includes(needle) || c.id.toLowerCase().includes(needle),
+  )
 }
 
 /**
@@ -131,15 +161,6 @@ export function resolveConfigSection(
   return sections.some((s) => s.id === requested) ? requested : sections[0].id
 }
 
-/**
- * Teilt die Mitglieder in Admins und uebrige und filtert sie nach Suchbegriff
- * (Entwurf "Space Menu", 3a).
- *
- * `members` ist nach DID sortiert, das Admin-Abzeichen stand also an
- * beliebiger Stelle einer flachen Liste — wer den Space verwaltet, war nicht
- * auf einen Blick erkennbar. Gesucht wird ueber Anzeigename UND Kennung:
- * ohne gesetzten Namen ist die Kennung alles, was eine Zeile unterscheidet.
- */
 /** Ab wie vielen Mitgliedern die Liste ein Suchfeld bekommt. */
 const MEMBER_SEARCH_THRESHOLD = 8
 
@@ -161,6 +182,15 @@ export function showsMemberSearch(memberCount: number, search: string): boolean 
   return memberCount > MEMBER_SEARCH_THRESHOLD || search !== ""
 }
 
+/**
+ * Teilt die Mitglieder in Admins und uebrige und filtert sie nach Suchbegriff
+ * (Entwurf "Space Menu", 3a).
+ *
+ * `members` ist nach DID sortiert, das Admin-Abzeichen stand also an
+ * beliebiger Stelle einer flachen Liste — wer den Space verwaltet, war nicht
+ * auf einen Blick erkennbar. Gesucht wird ueber Anzeigename UND Kennung:
+ * ohne gesetzten Namen ist die Kennung alles, was eine Zeile unterscheidet.
+ */
 export function groupMembersForDisplay<T extends { id: string; displayName?: string }>(
   members: readonly T[],
   isAdmin: (member: T) => boolean,
@@ -322,12 +352,15 @@ export function GroupDialog({
   // Mitgliedern abgeleitet wird und beim Oeffnen noch nicht feststeht — daher
   // laeuft die Auswahl durch resolveConfigTab, statt roh an Radix zu gehen.
   const [requestedSection, setRequestedSection] = useState<SpaceConfigSectionId>("members")
-  const sections = spaceConfigSections({ isAdmin: isCurrentUserAdmin })
+  const sections = spaceConfigSections({
+    isAdmin: isCurrentUserAdmin,
+    canInvite: Boolean(onInviteMember),
+  })
   const activeSection = resolveConfigSection(requestedSection, sections)
   /** Suche in der Mitgliederliste (Entwurf 3a). */
   const [memberSearch, setMemberSearch] = useState("")
-  /** Der Kontakt-Picker liegt hinter "+ Einladen" statt dauerhaft offen. */
-  const [inviteOpen, setInviteOpen] = useState(false)
+  /** Suche in der Kontaktliste des Bereichs "Einladen" (Entwurf 4a). */
+  const [inviteSearch, setInviteSearch] = useState("")
 
   // Persisting the module list: rapid ↑/↓ clicks fire faster than a save
   // round-trips, and two in-flight saves can settle out of order — the older
@@ -437,7 +470,7 @@ export function GroupDialog({
         // eines anderen Space.
         setRequestedSection("members")
         setMemberSearch("")
-        setInviteOpen(false)
+        setInviteSearch("")
       }
       onOpenChange(nextOpen)
     },
@@ -556,10 +589,13 @@ export function GroupDialog({
     memberSearch,
   )
 
+  const shownInvitable = filterInvitableContacts(invitableContacts, inviteSearch)
+
   /** Zahlen am Menue — die Suche aendert sie nicht, sie zaehlen den Bestand. */
   const sectionCounts: Record<SpaceConfigSectionId, number | undefined> = {
     members: members.length || undefined,
     modules: visibleModules.length || undefined,
+    invite: undefined,
   }
 
   const renderMemberRow = (member: (typeof members)[number]) => (
@@ -761,71 +797,20 @@ export function GroupDialog({
               <div className="mb-3 flex items-center gap-2.5">
                 <h3 className="text-sm font-semibold">Mitglieder</h3>
                 {/* Einladen bleibt allen Mitgliedern offen, nicht nur Admins:
-                    im WoT laedt jedes Mitglied ein, nur der Creator entfernt. */}
+                    im WoT laedt jedes Mitglied ein, nur der Creator entfernt.
+                    Der Knopf springt in den Bereich, statt einen Picker
+                    aufzuklappen (Entwurf Turn 4). */}
                 {onInviteMember && (
                   <Button
                     size="sm"
                     className="ml-auto h-7 text-xs"
-                    onClick={() => setInviteOpen((v) => !v)}
-                    aria-expanded={inviteOpen}
+                    onClick={() => setRequestedSection("invite")}
                   >
                     <UserPlus className="h-3 w-3" />
                     <span className="ml-1">Einladen</span>
                   </Button>
                 )}
               </div>
-
-              {/* Der Kontakt-Picker liegt hinter dem Knopf. Er stand frueher
-                  dauerhaft unter der Liste und schob die Mitglieder nach oben
-                  aus dem Blick, sobald es viele Kontakte gab. */}
-              {inviteOpen && onInviteMember && (
-                <div className="mb-3 rounded-lg border bg-muted/20 p-2">
-                  {invitableContacts.length > 0 ? (
-                    <div className="max-h-40 space-y-1 overflow-y-auto">
-                      {invitableContacts.map((contact) => {
-                        const isInviting = invitingId === contact.id
-                        const inviteError = inviteErrors.get(contact.id)
-                        return (
-                          <div key={contact.id}>
-                            <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/50">
-                              <Avatar className="h-7 w-7">
-                                {contact.avatar && <AvatarImage src={contact.avatar} />}
-                                <AvatarFallback className="text-[10px]">
-                                  {getInitials(contact.name ?? contact.id)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="flex-1 truncate text-sm">{contact.name ?? shortName(contact.id)}</span>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => handleInviteContact(contact.id)}
-                                disabled={isInviting || invitingId !== null}
-                              >
-                                {isInviting ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  <UserPlus className="h-3 w-3" />
-                                )}
-                                <span className="ml-1">Einladen</span>
-                              </Button>
-                            </div>
-                            {inviteError && (
-                              <p className="-mt-0.5 mb-1 ml-11 text-xs text-destructive">{inviteError}</p>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <p className="px-2 py-1.5 text-xs text-muted-foreground">
-                      {(contacts ?? []).some((c) => c.status === "active")
-                        ? "Alle Kontakte sind bereits Mitglied."
-                        : "Keine verifizierten Kontakte."}
-                    </p>
-                  )}
-                </div>
-              )}
 
               {/* Suchen lohnt erst, wenn die Liste nicht mehr auf einen Blick
                   zu ueberschauen ist — ein laufender Suchbegriff haelt das
@@ -886,6 +871,107 @@ export function GroupDialog({
                         </Avatar>
                         <span className="flex-1 truncate text-sm">{c.name ?? shortName(c.id)}</span>
                         <Check className="h-3.5 w-3.5 text-green-600" />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Einladen (Entwurf 4a): eigener Bereich, kein Unterzustand von
+              Mitgliedern. Es gibt keine Einladung per Link — eingeladen wird
+              nur, wen man persoenlich getroffen und verifiziert hat. Die
+              Quelle ist darum dieselbe wie bisher: verifizierte Kontakte,
+              die noch nicht Mitglied sind. */}
+          {activeSection === "invite" && onInviteMember && (
+            <>
+              <h3 className="mb-3 text-sm font-semibold">Einladen</h3>
+
+              <div className="relative mb-3">
+                <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={inviteSearch}
+                  onChange={(e) => setInviteSearch(e.target.value)}
+                  placeholder="Kontakt suchen…"
+                  className="h-8 pl-8 text-xs"
+                />
+              </div>
+
+              {shownInvitable.length > 0 ? (
+                <>
+                  <MemberGroupLabel>{`Kontakte · ${shownInvitable.length}`}</MemberGroupLabel>
+                  <div className="space-y-0.5">
+                    {shownInvitable.map((contact) => {
+                      const isInviting = invitingId === contact.id
+                      const inviteError = inviteErrors.get(contact.id)
+                      return (
+                        <div key={contact.id}>
+                          <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted/50">
+                            <Avatar className="h-7 w-7">
+                              {contact.avatar && <AvatarImage src={contact.avatar} />}
+                              <AvatarFallback className="text-[10px]">
+                                {getInitials(contact.name ?? contact.id)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="min-w-0 flex-1 truncate text-sm">
+                              {contact.name ?? shortName(contact.id)}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => handleInviteContact(contact.id)}
+                              disabled={isInviting || invitingId !== null}
+                            >
+                              {isInviting ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <UserPlus className="h-3 w-3" />
+                              )}
+                              <span className="ml-1">Einladen</span>
+                            </Button>
+                          </div>
+                          {inviteError && (
+                            <p className="-mt-0.5 mb-1 ml-11 text-xs text-destructive">{inviteError}</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                <p className="px-2.5 py-3 text-xs text-muted-foreground">
+                  {invitableContacts.length > 0
+                    ? "Kein Kontakt gefunden."
+                    : (contacts ?? []).some((c) => c.status === "active")
+                      ? "Alle Kontakte sind bereits Mitglied."
+                      : "Keine verifizierten Kontakte."}
+                </p>
+              )}
+
+              {/* "Von dir eingeladen" zeigt der Entwurf mit Zeitpunkt und
+                  Status (Mitglied / Offen). Beides steht nicht im Modell:
+                  `User` kennt nur `isAdmin`, `ContactInfo` keinen Bezug zu
+                  diesem Space. Was hier steht, ist darum auf DIESE Sitzung
+                  begrenzt — mehr traegt die Quelle nicht. */}
+              {justInvitedContacts.length > 0 && (
+                <>
+                  <MemberGroupLabel>{`Von dir eingeladen · ${justInvitedContacts.length}`}</MemberGroupLabel>
+                  <div className="space-y-0.5">
+                    {justInvitedContacts.map((c) => (
+                      <div key={c.id} className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5">
+                        <Avatar className="h-7 w-7">
+                          {c.avatar && <AvatarImage src={c.avatar} />}
+                          <AvatarFallback className="text-[10px]">
+                            {getInitials(c.name ?? shortName(c.id))}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="min-w-0 flex-1 truncate text-sm">
+                          {c.name ?? shortName(c.id)}
+                          <span className="ml-1 text-xs text-muted-foreground">gerade eben</span>
+                        </span>
+                        <span className="text-xs font-semibold text-primary">Offen</span>
                       </div>
                     ))}
                   </div>
