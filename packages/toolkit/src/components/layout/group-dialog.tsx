@@ -16,6 +16,7 @@ import { Input } from "../primitives/input"
 import { Label } from "../primitives/label"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Skeleton } from "../primitives/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../primitives/tabs"
 
 function getInitials(name: string): string {
   return name
@@ -85,6 +86,48 @@ export function knownModules(modules: readonly string[]): string[] {
 // festgehalten: ein Snapshot auf Modulebene sieht eine spaeter gebundene
 // App-Schicht nicht mehr (Review #277).
 const defaults = () => defaultModuleIds()
+
+/** Die Faecher der Space-Konfiguration. */
+export type SpaceConfigTabId = "members" | "modules"
+
+export interface SpaceConfigTab {
+  id: SpaceConfigTabId
+  label: string
+}
+
+/**
+ * Welche Faecher dieser Dialog zeigt — die EINE Stelle, die das beantwortet.
+ *
+ * Leiste, Inhalte und Startwert fragen alle hier; sonst waere dieselbe Liste
+ * dreimal geschrieben und liefe lautlos auseinander, wie es die fuenf
+ * Modul-Listen vor dem Modul-Register (Spec 01) getan haben.
+ *
+ * Bild und Name sind KEIN Fach: sie stehen im Kopf, wo sie immer sichtbar und
+ * immer aenderbar sind. Ein Fach "Allgemein" haette daneben nichts zu zeigen.
+ *
+ * Module sind Admin-Sache: wer sie nicht aendern darf, bekommt kein leeres
+ * Fach zu sehen, sondern gar keins.
+ */
+export function spaceConfigTabs({ isAdmin }: { isAdmin: boolean }): SpaceConfigTab[] {
+  const tabs: SpaceConfigTab[] = [{ id: "members", label: "Mitglieder" }]
+  if (isAdmin) tabs.push({ id: "modules", label: "Module" })
+  return tabs
+}
+
+/**
+ * Haelt die Auswahl auf einem Fach, das es wirklich gibt.
+ *
+ * `isAdmin` stammt aus den Mitgliedern und steht beim Oeffnen noch nicht fest
+ * (useMembers laedt). Das Modul-Fach kann darum nach dem ersten Rendern
+ * verschwinden — Radix zeigte dann den Inhalt eines Reiters an, den es nicht
+ * mehr gibt, und der Dialog waere leer. Der Rueckfall ist das erste Fach.
+ */
+export function resolveConfigTab(
+  requested: SpaceConfigTabId,
+  tabs: readonly SpaceConfigTab[],
+): SpaceConfigTabId {
+  return tabs.some((t) => t.id === requested) ? requested : tabs[0].id
+}
 
 /**
  * Serialize saves so a slow older request can never overwrite a newer state:
@@ -216,6 +259,13 @@ export function GroupDialog({
   // and two operations failing with the same text (`Network request failed`)
   // still collided. Separate state = ownership by construction (rls#232).
   const [moduleError, setModuleError] = useState<string | null>(null)
+
+  // Das gewaehlte Fach. `tabs` haengt an isCurrentUserAdmin, das aus den
+  // Mitgliedern abgeleitet wird und beim Oeffnen noch nicht feststeht — daher
+  // laeuft die Auswahl durch resolveConfigTab, statt roh an Radix zu gehen.
+  const [requestedTab, setRequestedTab] = useState<SpaceConfigTabId>("members")
+  const tabs = spaceConfigTabs({ isAdmin: isCurrentUserAdmin })
+  const activeTab = resolveConfigTab(requestedTab, tabs)
 
   // Persisting the module list: rapid ↑/↓ clicks fire faster than a save
   // round-trips, and two in-flight saves can settle out of order — the older
@@ -474,9 +524,11 @@ export function GroupDialog({
   // --- Edit Mode ---
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-sm gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
+      <DialogContent className="sm:max-w-md gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
         <DialogTitle className="sr-only">{isEdit ? mode.group.name : "Neue Gruppe"}</DialogTitle>
-        {/* Group Identity Header */}
+        {/* Group Identity Header — Bild und Name bleiben ueber den Faechern:
+            beide gehoeren dem Space als Ganzem und sind aenderbar, egal
+            welches Fach offen ist. */}
         <div className="relative px-6 pt-6 pb-5">
           <div className="flex items-start gap-4">
             {/* Group Image */}
@@ -536,9 +588,26 @@ export function GroupDialog({
           </div>
         </div>
 
-        {/* Members */}
-        <div className="px-6 pb-2">
-          <div className="space-y-1 max-h-48 overflow-y-auto">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setRequestedTab(v as SpaceConfigTabId)}
+          className="gap-0"
+        >
+          {/* Eine Leiste mit einem einzigen Reiter waere eine Wahl ohne
+              Alternative — ohne Modulrecht bleibt nur ein Fach uebrig. */}
+          {tabs.length > 1 && (
+            <TabsList className="mx-6 w-[calc(100%-3rem)]">
+              {tabs.map((t) => (
+                <TabsTrigger key={t.id} value={t.id} className="text-xs">
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          )}
+
+          {/* Mitglieder — Liste und Einladen. */}
+          <TabsContent value="members" className="min-h-64 px-6 py-5">
+          <div className="space-y-1 max-h-64 overflow-y-auto">
             {membersLoading &&
               members.length === 0 &&
               Array.from({ length: 3 }).map((_, i) => (
@@ -644,7 +713,9 @@ export function GroupDialog({
             </p>
           )}
 
-          {/* Modules (admin only): the ACTIVE list is ordered — data.modules
+          </TabsContent>
+
+          {/* Module (admin only): the ACTIVE list is ordered — data.modules
               is what the nav renders, top row = first tab. Reorder by DRAGGING
               a row (one gesture, any distance), deactivate via ✕; available
               modules append at the end. The ↑/↓ buttons stay as the keyboard
@@ -652,7 +723,7 @@ export function GroupDialog({
               drag, so showing them on hover was pure noise. Dragging alone
               would lock out keyboard and screen-reader users. */}
           {isCurrentUserAdmin && (
-            <div className="mt-3 pt-3 border-t border-border/50">
+            <TabsContent value="modules" className="min-h-64 px-6 py-5">
               <Label className="text-xs text-muted-foreground">Module (ziehen zum Sortieren)</Label>
               <div className="mt-2 space-y-0.5" onDragOver={(e) => e.preventDefault()} onDrop={handleModuleDrop}>
                 {visibleModules.map((id, index) => {
@@ -748,12 +819,15 @@ export function GroupDialog({
                   </div>
                 </div>
               )}
-            </div>
+            </TabsContent>
           )}
-        </div>
+        </Tabs>
 
         {/* Errors: module-save failures have their own state (ownership by
-            construction, rls#232) and can coexist with a general error. */}
+            construction, rls#232) and can coexist with a general error.
+            Beide stehen AUSSERHALB der Faecher: ein Fehler beim Speichern der
+            Module darf nicht verschwinden, weil man inzwischen im Fach
+            "Mitglieder" steht. */}
         {moduleError && (
           <p className="text-xs text-destructive px-6 pb-2">{moduleError}</p>
         )}
