@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useEditor, EditorContent, type Editor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
-import { Markdown } from "tiptap-markdown"
+import { Markdown } from "@tiptap/markdown"
 import { cn } from "@/lib/utils"
 
 export interface TiptapEditorHandle {
@@ -27,24 +27,38 @@ interface TiptapEditorProps {
   className?: string
 }
 
-function getMarkdown(editor: Editor): string {
-  return (editor.storage as Record<string, any>).markdown.getMarkdown() as string
+/**
+ * The document as Markdown.
+ *
+ * Trailing blank lines are dropped: the serializer closes every block with
+ * one, so without this a stored text would differ from its own round trip and
+ * every item would be rewritten — and synced — the first time it is opened.
+ */
+function markdownOf(editor: Editor): string {
+  return editor.getMarkdown().trimEnd()
 }
 
 /**
  * Whether rewriting `before` as `after` would change the document itself and
  * not just its spelling.
  *
- * The editor understands less Markdown than the preview renders: an image or
- * an `###` heading survives the round trip through its schema only as text.
- * Rewriting a stored text the user has not touched must never cost content,
- * so both readings are rendered through the editor's own parser and compared.
- * Raw HTML turned into Markdown reads identically and may be written back; a
- * dropped image does not and is left alone.
+ * The editor understands less Markdown than the preview renders: a table
+ * survives the round trip through its schema only as its text. Rewriting a
+ * stored text the user has not touched must never cost content, so both
+ * readings are rendered by `marked` — which knows every construct the preview
+ * knows — and compared. Raw HTML turned into Markdown reads the same and may
+ * be written back; a flattened table does not, and is left alone.
+ *
+ * Deliberately not `manager.parse()`: that builds the document through the
+ * editor's own registry, where a table collapses to nothing at all. Two texts
+ * that both parse to an empty document would look equal, and normalising would
+ * then replace the stored table with "".
  */
 function readsTheSame(editor: Editor, before: string, after: string): boolean {
-  const { parser } = (editor.storage as Record<string, any>).markdown
-  return parser.parse(before) === parser.parse(after)
+  const { instance } = editor.storage.markdown.manager
+  const render = (markdown: string) =>
+    (instance.parse(markdown, { async: false }) as string).replace(/\s+/g, " ").trim()
+  return render(before) === render(after)
 }
 
 export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorProps>(
@@ -78,7 +92,7 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
      * merely opening an item can never reduce it.
      */
     const publish = (editor: Editor, incoming: string) => {
-      const md = getMarkdown(editor)
+      const md = markdownOf(editor)
 
       if (md !== incoming && readsTheSame(editor, incoming, md)) {
         editorText.current = md
@@ -93,23 +107,21 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
       extensions: [
         StarterKit.configure({
           heading: { levels: [1, 2] },
-          // Markdown has no underline. Left on, Ctrl+U wrote a `<u>` tag that
-          // the serializer can only keep as raw HTML — invisible in the
-          // editor, literal tags in the detail view.
+          // Standard Markdown has no underline: Ctrl+U used to write a `<u>`
+          // tag, and now writes `++text++`. The preview renders neither, so
+          // both reach the reader as visible punctuation.
           underline: false,
         }),
-        // Pasted plain text is Markdown, and is parsed as such: otherwise a
-        // pasted document arrived escaped ("\## Titel") with its structure
-        // gone.
-        Markdown.configure({ transformPastedText: true }),
+        Markdown,
       ],
       autofocus: autoFocus ? "end" : false,
       content: value,
+      contentType: "markdown",
       onCreate({ editor }) {
         publish(editor, value)
       },
       onUpdate({ editor }) {
-        const md = getMarkdown(editor)
+        const md = markdownOf(editor)
         editorText.current = md
         callbacks.current.onChange(md)
       },
@@ -125,7 +137,7 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
       // would only reset the cursor.
       if (value === editorText.current) return
 
-      editor.commands.setContent(value, { emitUpdate: false })
+      editor.commands.setContent(value, { emitUpdate: false, contentType: "markdown" })
       publish(editor, value)
     }, [value, editor])
 

@@ -99,22 +99,31 @@ describe("TiptapEditor markdown contract", () => {
     expect(changed.at(-1)).toBe("## Titel\n\nEin **fetter** Absatz.")
   })
 
-  // A mark the Markdown serializer has no syntax for is written out as a raw
-  // HTML tag, which the detail view can only show as literal text. Adding such
-  // an extension to the editor must fail here, not in someone's item.
-  it("has no mark that could only be stored as HTML", async () => {
+  // The preview renders standard Markdown and nothing else. A mark the
+  // serializer can only write as a raw tag (`<u>`) or as a non-standard
+  // extension (`++text++`) reaches the reader as visible punctuation, so the
+  // set of marks is spelled out here: adding one has to be a decision.
+  it("carries only marks the preview can render", async () => {
     const { editor } = await mount("")
-    const { schema } = editor
-    const serializer = (editor.storage as Record<string, any>).markdown.serializer
 
-    for (const type of Object.values(schema.marks)) {
+    expect(Object.keys(editor.schema.marks).sort()).toEqual(["bold", "code", "italic", "link", "strike"])
+  })
+
+  it("writes no mark as raw HTML", async () => {
+    const { editor } = await mount("")
+    const markdown = editor.storage.markdown.manager
+
+    for (const type of Object.values(editor.schema.marks)) {
       // A link without a target cannot be written in any syntax.
-      const attrs = type.spec.attrs?.href ? { href: "https://example.org" } : null
-      const doc = schema.node("doc", null, [
-        schema.node("paragraph", null, [schema.text("Wort", [type.create(attrs)])]),
-      ])
+      const attrs = type.spec.attrs?.href ? { href: "https://example.org" } : undefined
+      const doc = {
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "Wort", marks: [{ type: type.name, attrs }] }] },
+        ],
+      }
 
-      expect(serializer.serialize(doc), `mark "${type.name}"`).not.toMatch(/<[a-z/]/i)
+      expect(markdown.serialize(doc), `mark "${type.name}"`).not.toMatch(/<[a-z/]/i)
     }
   })
 })
