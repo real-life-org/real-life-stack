@@ -81,6 +81,12 @@ jobs:
           # Contents: read+write · Pull requests: read+write ·
           # Issues: read+write · Workflows: read+write
           #
+          # Bewusst OHNE `Dependabot alerts`: die Abfrage der
+          # Sicherheitsmeldungen ist in renovate.json5 abgeschaltet
+          # (`vulnerabilityAlerts`), weil sie bei unserer Filterung ohnehin nie
+          # zu einem PR fuehren wuerde. Wer sie will, braucht beides — das
+          # Recht UND die Konfiguration.
+          #
           # Issues, weil `dependencyDashboard` in renovate.json5 auf true
           # steht: das Dashboard ist eine Issue. Ohne das Recht scheitert
           # Renovate genau daran — dieselbe Stolperstelle wie bei

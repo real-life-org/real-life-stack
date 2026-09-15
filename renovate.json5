@@ -28,6 +28,26 @@
   // lautlos. `chore(deps): …` erfüllt das.
   semanticCommits: 'enabled',
 
+  // Sicherheitsmeldungen von GitHub fragen wir nicht ab.
+  //
+  // Renovate liest sie sonst beim Start, um daraus eigene Sicherheits-PRs zu
+  // bauen. Bei uns liefe das ins Leere: ausser den beiden WoT-Paketen ist
+  // unten alles abgeschaltet, ein Alert zu irgendeinem anderen Paket wuerde
+  // also nie zu einem PR fuehren.
+  //
+  // Der Abruf verlangt dafuer ein weiteres Token-Recht (`Dependabot alerts`).
+  // Ohne das Recht warnt Renovate bei jedem Lauf und schreibt die Warnung als
+  // "Repository Problems" an den Kopf des Dashboards — ein Banner, das
+  // dauerhaft steht und einem abgewoehnt, dort hinzuschauen.
+  //
+  // Wir geben darum nicht das Recht, sondern lassen die Frage weg. Weniger
+  // Zugriff bei gleicher Funktion. Wer die Sicherheits-PRs spaeter will,
+  // dreht das hier um UND ergaenzt das Recht am Token — eines allein nuetzt
+  // nichts.
+  vulnerabilityAlerts: {
+    enabled: false,
+  },
+
   packageRules: [
     // Erst alles aus, dann gezielt eines an. Andersherum (nur eine
     // Positiv-Regel) bliebe der Standard für alle übrigen Pakete aktiv.
