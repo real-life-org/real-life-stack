@@ -1237,7 +1237,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
   private async writeRegistryContribution(
     targetSpaceId: string,
     status: ProfileShareStatus,
-    options: { admission?: SpaceAdmission } = {},
+    options: { admission?: SpaceAdmission; isMember?: boolean } = {},
   ): Promise<void> {
     const generation = this.runtimeGeneration
     const did = this.identity.getDid()
@@ -1254,6 +1254,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         targetSpaceId,
         status,
         currentAdmission: options.admission ?? this.admissionOfSpace(targetSpaceId),
+        ...(options.isMember === undefined ? {} : { isMember: options.isMember }),
       })
     })
 
@@ -1332,10 +1333,18 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       targetSpaceId: string
       status: ProfileShareStatus
       currentAdmission: SpaceAdmission | undefined
+      /**
+       * Ist die Person JETZT Mitglied des Ziel-Space? Eine Freigabe und ein
+       * `pending` setzen das voraus — die Aufnahme-Kennung dagegen nicht mehr
+       * (Spec 09 §Ablage und Registry, Fassung rls#354). Ein Widerruf braucht
+       * sie nicht: genau der Verlust der Mitgliedschaft löst ihn aus.
+       */
+      isMember?: boolean
       expect?: (view: MirrorRegistryView | null) => boolean
     },
   ): boolean {
     const { did, deviceId, targetSpaceId, status, currentAdmission, expect } = params
+    const isMember = params.isMember ?? this.isMemberOfSpace(targetSpaceId, did)
     const key = mirrorRegistryKey(did, targetSpaceId, deviceId)
 
     // ERST lesen und prüfen, DANN schreiben. Geschrieben wird genau EIN
@@ -1346,14 +1355,18 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     const view = deriveRegistryView(existing)
     if (expect && !expect(view)) return false
 
+    // Abgelehnt wird NUR die fehlende Mitgliedschaft (Spec 09 §Ablage und
+    // Registry, Fassung rls#354): „Eine neue Freigabe trägt die dann aktuelle
+    // Kennung des Ziel-Space; hat der Ziel-Space keine Kennung (Alt-Space ohne
+    // Ereignisse) und ist der Autor Mitglied, trägt sie `undefined`."
+    if (status !== "revoked" && !isMember) {
+      throw new Error(
+        `writeRegistryContribution: ${status} für ${targetSpaceId} ohne Mitgliedschaft im Ziel-Space`,
+      )
+    }
     const admission = status === "revoked"
       ? maxAdmission(view?.admission, currentAdmission)
       : (currentAdmission ? { keyGeneration: currentAdmission.keyGeneration } : undefined)
-    if (status !== "revoked" && !admission) {
-      throw new Error(
-        `writeRegistryContribution: ${status} für ${targetSpaceId} ohne gültige Aufnahme-Kennung`,
-      )
-    }
     const nextStatus = nextStatusSeq(existing)
 
     const own = existing[deviceId]
@@ -1379,6 +1392,17 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    * `_members`). Sie wird nirgends gespeichert — gespeichert wird nur, was ein
    * Statuswechsel als `admission` in den eigenen Beitrag schreibt.
    */
+  /**
+   * Ist die Person Mitglied des Ziel-Space? Die Wahrheit steht in der
+   * Mitgliedschaftsprojektion des Adapters (`SpaceInfo.members` aus
+   * `_members`), nie in lokaler Metadata. Ein Space, den dieses Gerät gar nicht
+   * sieht, gilt als keine Mitgliedschaft — fail-closed.
+   */
+  private isMemberOfSpace(spaceId: string, did: string): boolean {
+    const spaces = this.replication?.watchSpaces().getValue() ?? []
+    return spaces.find((space) => space.id === spaceId)?.members?.includes(did) ?? false
+  }
+
   private admissionOfSpace(spaceId: string): SpaceAdmission | undefined {
     const spaces = this.replication?.watchSpaces().getValue() ?? []
     return spaces.find((space) => space.id === spaceId)?.admission
@@ -1794,11 +1818,20 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     const group = this.spaceToGroup(space)
 
     // Spec 12 Regel 4: „Wer einen Space selbst erstellt, gibt sein Profil dort
-    // mit dem Erstellen frei." Schlaegt das fehl (noch keine Aufnahme-Kennung
-    // im frisch angelegten Doc), bleibt der Space ohne Eintrag und laeuft beim
-    // naechsten Abgleich ueber `pending` — nie still ohne Freigabe publiziert.
+    // mit dem Erstellen frei." Schlaegt das fehl, bleibt der Space ohne Eintrag
+    // und laeuft beim naechsten Abgleich ueber `pending` — nie still ohne
+    // Freigabe publiziert.
+    //
+    // Mitgliedschaft und Kennung kommen aus dem gerade erzeugten `SpaceInfo`,
+    // nicht aus `watchSpaces()`: die Projektion kann den frischen Space noch
+    // nicht kennen, und ohne Mitgliedschaft lehnt der Schreibpfad ab
+    // (Spec 09 §Ablage und Registry, Fassung rls#354). Eine Kennung braucht es
+    // dafuer nicht mehr.
     try {
-      await this.writeRegistryContribution(space.id, "accepted", { admission: space.admission })
+      await this.writeRegistryContribution(space.id, "accepted", {
+        admission: space.admission,
+        isMember: space.members?.includes(this.identity.getDid()) ?? false,
+      })
     } catch (error) {
       console.warn("[WotConnector] Profil-Freigabe fuer den neuen Space verschoben", error)
     }

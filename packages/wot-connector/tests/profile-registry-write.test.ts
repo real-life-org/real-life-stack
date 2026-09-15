@@ -96,17 +96,47 @@ describe("writeRegistryContribution — Spec 09 §Ablage und Registry", () => {
     expect(registry(named, "garten")[DEVICE].admission).toEqual({ keyGeneration: 7 })
   })
 
-  it("eine Freigabe ohne gueltige Aufnahme-Kennung wird abgelehnt", async () => {
+  it("eine Freigabe OHNE Kennung ist zulaessig, solange die Person Mitglied ist (09, Fassung #354)", async () => {
     const { connector, named } = fakeConnector({ spaces: [{ id: "alt" }] })
 
-    await expect(connector.writeRegistryContribution("alt", "accepted")).rejects.toThrow(/Aufnahme-Kennung/)
-    expect(registry(named, "alt")[DEVICE]).toBeUndefined()
+    await connector.writeRegistryContribution("alt", "accepted")
+
+    const own = registry(named, "alt")[DEVICE]
+    expect(own.status).toBe("accepted")
+    expect(own.admission).toBeUndefined()
   })
 
-  it("auch pending setzt eine gueltige Kennung voraus", async () => {
-    const { connector } = fakeConnector({ spaces: [{ id: "alt" }] })
+  it("auch pending traegt bei einem Alt-Space keine Kennung", async () => {
+    const { connector, named } = fakeConnector({ spaces: [{ id: "alt" }] })
 
-    await expect(connector.writeRegistryContribution("alt", "pending")).rejects.toThrow(/Aufnahme-Kennung/)
+    await connector.writeRegistryContribution("alt", "pending")
+
+    expect(registry(named, "alt")[DEVICE]).toMatchObject({ status: "pending" })
+    expect(registry(named, "alt")[DEVICE].admission).toBeUndefined()
+  })
+
+  it("abgelehnt wird nur, wenn die Person NICHT Mitglied des Ziel-Space ist", async () => {
+    const { connector, named } = fakeConnector({ spaces: [{ id: "fremd", members: [] }] })
+
+    await expect(connector.writeRegistryContribution("fremd", "accepted")).rejects.toThrow(/Mitglied/)
+    expect(registry(named, "fremd")[DEVICE]).toBeUndefined()
+  })
+
+  it("ein unbekannter Ziel-Space ist keine Mitgliedschaft", async () => {
+    const { connector } = fakeConnector({ spaces: [] })
+
+    await expect(connector.writeRegistryContribution("unbekannt", "accepted")).rejects.toThrow(/Mitglied/)
+  })
+
+  it("ein Widerruf braucht keine Mitgliedschaft — genau dann ist er faellig (09 Inv. 11)", async () => {
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 2 } }) } }),
+      spaces: [],
+    })
+
+    await connector.writeRegistryContribution("garten", "revoked")
+
+    expect(registry(named, "garten")[DEVICE].status).toBe("revoked")
   })
 
   it("ein Widerruf traegt nie eine niedrigere Kennung als die Freigabe, die er widerruft", async () => {

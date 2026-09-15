@@ -192,10 +192,19 @@ describe("ProfileCapable-Freigaben — Spec 12 Regel 14", () => {
     expect(status(named, "garten")).toBe("accepted")
   })
 
-  it("eine Freigabe ohne gueltige Aufnahme-Kennung wird abgelehnt", async () => {
-    const { connector } = fakeConnector({ spaces: [{ id: "alt" }] })
+  it("eine Annahme OHNE Aufnahme-Kennung ist zulaessig (Alt-Space, Fassung rls#354)", async () => {
+    const { connector, named } = fakeConnector({ spaces: [{ id: "alt" }] })
 
-    await expect(connector.acceptSpace("alt")).rejects.toThrow(/Aufnahme-Kennung/)
+    await connector.acceptSpace("alt")
+
+    expect(status(named, "alt")).toBe("accepted")
+    expect(entry(named, "alt")[DEVICE].admission).toBeUndefined()
+  })
+
+  it("abgelehnt wird nur die fehlende Mitgliedschaft", async () => {
+    const { connector } = fakeConnector({ spaces: [{ id: "fremd", members: [] }] })
+
+    await expect(connector.acceptSpace("fremd")).rejects.toThrow(/Mitglied/)
   })
 
   it("revokeProfileShare widerruft, ohne den Space zu verlassen", async () => {

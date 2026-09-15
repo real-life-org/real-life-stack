@@ -487,11 +487,13 @@ describe("R2-5 — ein spaet eintreffendes doc.profile wird nicht publiziert", (
 
 describe("R2-6 — ein abgelehnter Schreibversuch hinterlaesst keinen Eintrag", () => {
   it("schreibt erst nach der Pruefung", async () => {
-    const { connector, doc, named } = fakeConnector({ spaces: [{ id: "alt" }] })
+    // Abgelehnt wird seit der Fassung rls#354 nur noch die fehlende
+    // Mitgliedschaft, nicht mehr die fehlende Aufnahme-Kennung.
+    const { connector, named } = fakeConnector({ spaces: [{ id: "fremd", members: [] }] })
 
-    await expect(connector.acceptSpace("alt")).rejects.toThrow(/Aufnahme-Kennung/)
+    await expect(connector.acceptSpace("fremd")).rejects.toThrow(/Mitglied/)
 
-    expect(hasEntry(registryRootOf(named), DID, "alt")).toBe(false)
+    expect(hasEntry(registryRootOf(named), DID, "fremd")).toBe(false)
   })
 
   // Der zweite Test dieser Runde ("ein leerer Eintrag blockiert die
