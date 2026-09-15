@@ -40,6 +40,17 @@ wirken beim nächsten Laden der Seite; nur `.env`-Änderungen brauchen ein
 
 ## Farben
 
+`RLS_HOME_SPACE_ID` in der `.env` benennt das **Netzwerk**, in dem eure
+Instanz startet (Spec 11, „Zuhause-Space"). Das Netzwerk legt ihr in der App
+an: „Neue Gruppe erstellen", Häkchen „Als Netzwerk anlegen". Seine Id steht
+danach in der URL (`/<id>/feed`). Über sein Zahnrad bestimmt ihr Name, Bild,
+Mitglieder, Module und die **Arten** eurer Gruppen (etwa Stiftung und
+Projekt, oder Werkstatt und Garten); jede Gruppe wählt in ihrem Zahnrad das
+Netzwerk und ihre Art. Der Space-Wechsel zeigt dann oben die Netzwerke und
+darunter die Gruppen des aktiven Netzwerks, nach Art gegliedert. Wer im
+Netzwerk kein Mitglied ist, sieht es nicht und startet in der Übersicht. Ohne
+`RLS_HOME_SPACE_ID` ändert sich nichts.
+
 `branding/theme.json` setzt Design-Tokens, getrennt nach hell und dunkel:
 
 ```json

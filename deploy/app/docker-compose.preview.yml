@@ -25,6 +25,7 @@ services:
       RLS_SUPABASE_ANON_KEY: ${RLS_SUPABASE_ANON_KEY:-}
       RLS_APP_NAME: ${RLS_APP_NAME:-Vorschau}
       RLS_FAVICON_URL: ${RLS_FAVICON_URL:-/branding/favicon.svg}
+      RLS_HOME_SPACE_ID: ${RLS_HOME_SPACE_ID:-}
     volumes:
       - ./landing:/srv/landing:ro
       - ./branding:/srv/branding:ro

@@ -23,7 +23,9 @@ export {
   type RuntimeConfig,
   type RuntimeEndpoints,
   type Branding,
+  parseHomeSpaceId,
 } from "./lib/runtime-config"
+export { parseSpaceKinds, kindIdFromLabel, type SpaceKind } from "./lib/space-kinds"
 export {
   CORE_MODULES,
   CORE_MODULE_LAYER,

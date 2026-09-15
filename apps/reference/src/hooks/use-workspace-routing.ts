@@ -11,6 +11,8 @@ import {
   getModule,
   resolveSpaceModules,
   resolveActiveModule,
+  getRuntimeConfig,
+  parseSpaceKinds,
   type Workspace,
   type Module,
 } from "@real-life-stack/toolkit"
@@ -19,6 +21,7 @@ import { hasGroups, moduleHintsFor, type ModuleHints } from "@real-life-stack/da
 
 export const STORAGE_KEY_GROUP = "rls-active-group"
 export const STORAGE_KEY_MODULE = "rls-active-module"
+export const STORAGE_KEY_NETWORK = "rls-active-network"
 
 // Modul-Ids und Anzeigenamen kommen aus dem Register — Spec 01,
 // "Modul-Register", Regel 1: keine zweite Aufzaehlung. Frueher standen hier
@@ -40,7 +43,20 @@ export const scopeToSlug = (id: string) => (id === OVERVIEW_ID ? OVERVIEW_SLUG :
 /** URL slug → internal scope id. */
 const slugToScope = (slug: string) => (slug === OVERVIEW_SLUG ? OVERVIEW_ID : slug)
 
-const OVERVIEW_WORKSPACE: Workspace = { id: OVERVIEW_ID, name: "Mein Netzwerk", scope: "overview" }
+/**
+ * Die Uebersicht (Spec 01, "Space-Wechsel nach Netzwerk und Art", Regel 2):
+ * Gibt es Netzwerke, bleibt das Aggregat "Mein Netzwerk" — der Instanzname
+ * steht dann am Netzwerk, das der Betreiber selbst benannt hat. Ohne
+ * Netzwerke traegt die Uebersicht den Instanznamen, damit er dorthin fuehrt,
+ * wo alles zusammenkommt. Als Funktion, nicht als Konstante: Die
+ * Konfiguration wird vor dem ersten Render geladen, ein Modul-Schnappschuss
+ * saehe sie nicht.
+ */
+const overviewWorkspace = (hasNetworks: boolean): Workspace => ({
+  id: OVERVIEW_ID,
+  name: (!hasNetworks && getRuntimeConfig().branding?.appName) || "Mein Netzwerk",
+  scope: "overview",
+})
 
 /**
  * Default module for a module-less item link (`/{scope}/{itemId}`), by field
@@ -101,6 +117,8 @@ export interface WorkspaceRouting {
   /** Modules available in the active workspace (group's data.modules). */
   modules: Module[]
   isOverview: boolean
+  /** Das aktive Netzwerk, wenn der Mensch in einem ist (Spec 04, "Netzwerk"). */
+  activeNetworkId: string | null
   urlSpaceId?: string
   urlItemId?: string
   /** Navigate to a workspace, keeping the module if the target offers it. */
@@ -144,19 +162,41 @@ export function useWorkspaceRouting(): WorkspaceRouting {
   const urlSpaceId = urlScope ? slugToScope(urlScope) : undefined
 
   const basePath = import.meta.env.BASE_URL
-  const workspaces: Workspace[] = useMemo(
-    () => [
-      OVERVIEW_WORKSPACE,
-      ...groups.map((g) => ({
+  const workspaces: Workspace[] = useMemo(() => {
+    // Netzwerke stehen vor allem anderen — das Start-Netzwerk der Instanz
+    // (Spec 11, "Zuhause-Space") zuerst, damit `workspaces[0]` (der Anfang
+    // ohne URL und ohne Merker) dorthin fuehrt. Ist der Mensch dort kein
+    // Mitglied, faellt es still weg: ein Eintrag, der ins Leere fuehrt, waere
+    // schlimmer als keiner.
+    const homeId = getRuntimeConfig().homeSpaceId
+    const list: Workspace[] = groups.map((g) => {
+      const isNetwork = g.data?.isNetwork === true
+      return {
         id: g.id,
         name: g.name,
         avatar: g.data?.image as string | undefined ?? (g.data?.avatar ? `${basePath}${g.data.avatar}` : undefined),
         scope: g.data?.scope as string | undefined,
         primaryColor: g.data?.primaryColor as string | undefined,
-      })),
-    ],
-    [groups, basePath]
-  )
+        kind: typeof g.data?.kind === "string" ? g.data.kind : undefined,
+        isNetwork,
+        network: typeof g.data?.network === "string" ? g.data.network : undefined,
+        kinds: isNetwork ? parseSpaceKinds(g.data?.spaceKinds, `Space "${g.name}", spaceKinds`) : undefined,
+        domain: isNetwork && typeof g.data?.domain === "string" ? g.data.domain : undefined,
+      }
+    })
+    const networks = list.filter((w) => w.isNetwork)
+    const home = networks.find((w) => w.id === homeId)
+    // Nur das Start-Netzwerk steht vor der Uebersicht: `workspaces[0]` ist
+    // der Anfang ohne URL und ohne Merker (Spec 11, Regel 4). Ohne Start-
+    // Netzwerk bleibt die Uebersicht der Anfang (Regel 1); die uebrigen
+    // Netzwerke stehen dahinter, ihre Reihenfolge traegt keine Bedeutung.
+    return [
+      ...(home ? [home] : []),
+      overviewWorkspace(networks.length > 0),
+      ...networks.filter((w) => w !== home),
+      ...list.filter((w) => !w.isNetwork),
+    ]
+  }, [groups, basePath])
 
   // Derive active workspace from the URL scope (fallback localStorage → first space).
   const activeWorkspace: Workspace | null = useMemo(() => {
@@ -179,6 +219,26 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     }
     return workspaces[0] ?? null
   }, [urlSpaceId, workspaces, groupsLoading])
+
+  // Das aktive Netzwerk (Spec 01, "Space-Wechsel nach Netzwerk und Art"):
+  // der Space selbst, wenn er ein Netzwerk ist; sonst das Netzwerk, zu dem
+  // er gehoert; sonst das zuletzt gewaehlte; sonst das Start-Netzwerk der
+  // Instanz. Nur Netzwerke, in denen der Mensch Mitglied ist, kommen in Frage.
+  const activeNetworkId: string | null = useMemo(() => {
+    const ids = new Set(workspaces.filter((w) => w.isNetwork).map((w) => w.id))
+    if (ids.size === 0) return null
+    if (activeWorkspace?.isNetwork) return activeWorkspace.id
+    if (activeWorkspace?.network && ids.has(activeWorkspace.network)) return activeWorkspace.network
+    const gemerkt = localStorage.getItem(STORAGE_KEY_NETWORK)
+    if (gemerkt && ids.has(gemerkt)) return gemerkt
+    const home = getRuntimeConfig().homeSpaceId
+    if (home && ids.has(home)) return home
+    return null
+  }, [workspaces, activeWorkspace])
+
+  useEffect(() => {
+    if (activeNetworkId) localStorage.setItem(STORAGE_KEY_NETWORK, activeNetworkId)
+  }, [activeNetworkId])
 
   // Available modules for the active space (overview = all modules).
   const isOverview = activeWorkspace?.scope === "overview"
@@ -214,6 +274,10 @@ export function useWorkspaceRouting(): WorkspaceRouting {
   // Redirect bare/short paths to the canonical form.
   useEffect(() => {
     if (workspaces.length === 0 || !activeWorkspace) return
+    // Ohne Ziel in der URL wartet der Anfang, bis die Spaces da sind: Sonst
+    // faellt ein frisches Geraet auf die Uebersicht, bevor das Start-Netzwerk
+    // ueberhaupt geladen ist, und merkt sich das auch noch.
+    if (!urlScope && groupsLoading) return
     const slug = scopeToSlug(activeWorkspace.id)
     // Query und Fragment gehoeren zum Ort, nicht zum Modul: `?connector=`
     // waehlt den Connector, `?dev` schaltet den Entwicklermodus. Ein Redirect,
@@ -243,6 +307,8 @@ export function useWorkspaceRouting(): WorkspaceRouting {
   }, [
     workspaces.length,
     activeWorkspace,
+    urlScope,
+    groupsLoading,
     urlSeg,
     urlModule,
     urlItemId,
@@ -266,9 +332,9 @@ export function useWorkspaceRouting(): WorkspaceRouting {
 
   // Save to localStorage for next session
   useEffect(() => {
-    if (activeWorkspace) localStorage.setItem(STORAGE_KEY_GROUP, activeWorkspace.id)
+    if (activeWorkspace && !groupsLoading) localStorage.setItem(STORAGE_KEY_GROUP, activeWorkspace.id)
     if (urlModule) localStorage.setItem(STORAGE_KEY_MODULE, urlModule)
-  }, [activeWorkspace?.id, urlModule]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeWorkspace?.id, urlModule, groupsLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const modules: Module[] = useMemo(
     // displayableModules zuerst: eine Id aus einer anderen App-Version bleibt
@@ -347,6 +413,7 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     activeModule,
     modules,
     isOverview,
+    activeNetworkId,
     urlSpaceId,
     urlItemId,
     handleWorkspaceChange,

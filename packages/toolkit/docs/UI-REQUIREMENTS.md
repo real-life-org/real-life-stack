@@ -72,6 +72,12 @@ Jede Checkbox repräsentiert eine einzelne, aktivierbare Entscheidung.
 
 ---
 
+## Netzwerke und Arten
+
+- Der Workspace-Switcher zeigt oben einen Abschnitt **Netzwerke** (Spaces mit `data.isNetwork`), jedes mit Haus-Symbol (ohne Bild) und Zahnrad; darunter die Übersicht („Mein Netzwerk"), dann die Gruppen des aktiven Netzwerks, je Art ein Abschnitt mit farbigem Punkt (`color` der Art), Spaces ohne Art zuletzt unter „Gruppen". Ohne Netzwerke sieht die Liste aus wie bisher.
+- Der Gruppen-Dialog trägt bei Admins: Häkchen „Dieser Space ist ein Netzwerk", bei Netzwerken den Arten-Editor (Farbe, Einzahl, Mehrzahl, ✕, „Art hinzufügen"), Domain der Landingpage und den kopierbaren Link; für jeden Space die Auswahl „Netzwerk" und „Art" (native `<select>`, `color-scheme` folgt dem Dunkelmodus). Mitglieder sehen dieselben Werte als Text, keine ausgegrauten Regler.
+- Der Dialog-Körper scrollt (höchstens 90 dvh), die Fußzeile bleibt stehen.
+
 ## User-Menu
 
 - [x] **user-avatar-round**: User-Avatar ist rund (Standard)

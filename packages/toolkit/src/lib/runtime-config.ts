@@ -46,6 +46,12 @@ export interface RuntimeConfig {
   /** Voreingestellter Connector; `?connector=` in der URL sticht ihn. */
   defaultConnector?: string
   branding?: Branding
+  /**
+   * Das Netzwerk, in dem diese Instanz startet (Spec 11, "Zuhause-Space"):
+   * ein Netzwerk-Space, den der Betreiber in der App angelegt hat. Fehlt er,
+   * startet die App in der Uebersicht.
+   */
+  homeSpaceId?: string
 }
 
 /** Stufe 3 der Vorrangkette. Eine Instanz ohne jede Konfiguration startet hiermit. */
@@ -132,6 +138,21 @@ function pickEndpoint(
     if (endpointOk(key, wert, quelle)) return wert
   }
   return undefined
+}
+
+/**
+ * Prueft die Id des Zuhause-Space (Spec 11, "Zuhause-Space"). Eine Id ist
+ * ein Text ohne Leerraum; alles andere wird verworfen und gemeldet. Ob der
+ * Space existiert und der Mensch Mitglied ist, entscheidet sich erst zur
+ * Laufzeit — dann faellt das Zuhause still weg.
+ */
+export function parseHomeSpaceId(raw: unknown, quelle = "config.json"): string | undefined {
+  if (raw === undefined || raw === null || raw === "") return undefined
+  if (typeof raw !== "string" || /\s/.test(raw)) {
+    console.warn(`[rls] homeSpaceId aus ${quelle} ist keine Space-Id — ignoriert.`)
+    return undefined
+  }
+  return raw
 }
 
 async function fetchJson(
@@ -233,6 +254,7 @@ export async function loadRuntimeConfig(opts: LoadOptions = {}): Promise<Runtime
       endpoints: Object.freeze(endpoints),
       defaultConnector: connector,
       branding: branding ? freezeBranding(branding) : undefined,
+      homeSpaceId: parseHomeSpaceId(fromFile.homeSpaceId),
     }) as RuntimeConfig
     return loaded
   })()

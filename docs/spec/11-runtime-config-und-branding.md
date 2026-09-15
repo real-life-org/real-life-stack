@@ -48,6 +48,8 @@ interface RuntimeConfig {
   defaultConnector?: string
   /** Identität der Instanz. */
   branding?: Branding
+  /** Das Netzwerk, in dem diese Instanz startet. */
+  homeSpaceId?: string
 }
 
 interface Branding {
@@ -93,6 +95,18 @@ Branding ist **Daten, nicht Code**. Eine Instanz gestaltet über Tokens und Asse
 6. Branding wird von **App-Shell-Flächen** gelesen. Space Modules DÜRFEN NICHT auf Branding verzweigen — ein Modul sieht in jeder Instanz gleich aus, abgesehen von den Tokens, die ohnehin global wirken.
 7. Ein **Instanz-Logo ist in v0.1 nicht Teil des Vertrags**: Die App-Shell hat heute keine Fläche dafür, und ein Feld ohne Wirkung wäre ein Versprechen, das nichts einlöst. Landingpages liefern ihr Logo als eigene Datei aus und brauchen dafür keine Konfiguration.
 8. Freies CSS einer Instanz ist **nicht Teil dieses Vertrags**. Ein Betreiber kann eigene Regeln nachladen; sie stehen außerhalb der Kompatibilitätszusage und können mit jedem Update brechen.
+
+## Zuhause-Space
+
+Eine Instanz KANN benennen, in welchem **Netzwerk** sie startet: dem Space, an dem eine Gemeinschaft ankommt, wenn sie die Domain öffnet. Was ein Netzwerk ist und was es trägt (Name, Bild, Mitglieder, Module, die Arten seiner Gruppen), definiert [04-items-relations-groups-spaces.md → Netzwerk und Space-Art](04-items-relations-groups-spaces.md) — alles davon liegt am Space und bei seinen Menschen. Die Konfiguration sagt nur, welches Netzwerk zu dieser Domain gehört. So trägt dieselbe App unter `foerdern.example` ein Förder-Netzwerk und unter `werkstatt.example` ein Werkstatt-Netzwerk, ohne dass sie von beiden wüsste.
+
+Regeln:
+
+1. `homeSpaceId` ist optional. Fehlt sie, hat die Instanz kein Start-Netzwerk; die App startet in der Übersicht oder im zuletzt gewählten Netzwerk.
+2. Der Wert MUSS eine Space-Id sein (Text ohne Leerraum). Ein anderer Wert wird verworfen und gemeldet.
+3. Ob der Space existiert, ein Netzwerk ist und der angemeldete Mensch Mitglied ist, entscheidet sich zur Laufzeit. Ist er es nicht, fällt das Start-Netzwerk **still weg**. Ein Eintrag, der in einen Space ohne Zugang führt, wäre schlimmer als keiner.
+4. Das Start-Netzwerk steht im Space-Wechsel als erstes seiner Netzwerke. Ohne URL und ohne gemerkten Space öffnet die App es.
+5. Die Konfiguration trägt **nichts** über das Netzwerk außer seiner Id. Arten, Module und Name liegen am Space; eine zweite Quelle dafür in der Konfiguration wäre eine Liste, die der ersten davonliefe.
 
 ## Landingpage
 

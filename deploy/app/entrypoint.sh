@@ -72,6 +72,11 @@ BRAND=$(cat "$BUF")
   if [ -n "$BRAND" ]; then
     printf ',\n  "branding": {\n%s\n  }' "$BRAND"
   fi
+  # Das Start-Netzwerk der Instanz (Spec 11, "Zuhause-Space"): ein Space, den
+  # der Betreiber in der App angelegt hat und dessen Id er hier eintraegt.
+  if [ -n "${RLS_HOME_SPACE_ID:-}" ]; then
+    printf ',\n  "homeSpaceId": "%s"' "$(esc "$RLS_HOME_SPACE_ID")"
+  fi
   printf '\n}\n'
 } > "$TARGET"
 

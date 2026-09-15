@@ -180,6 +180,32 @@ Regeln:
 4. UI-Flächen MÜSSEN ohne `primaryColor` robust bleiben und den deterministischen ID-Fallback verwenden.
 5. Kontraste (Text/Icon auf Akzentfläche) MÜSSEN lesbar bleiben; Flächen SOLLEN nicht annehmen, dass `primaryColor` hell oder dunkel ist.
 
+### Netzwerk und Space-Art
+
+Ein White-Label-Kontext ist nicht automatisch ein Space (Regel 4 oben) — er KANN aber einer sein. Ein Space, der ein **Netzwerk** ist, ist der Ort, an dem eine Gemeinschaft ankommt: mit eigener Karte, eigenem Kalender, eigenen Mitgliedern, und mit den **Arten**, als die seine Gruppen sich führen — Projekte und Stiftungen, Werkstätten und Gärten, Kreise und Orte. Andere Spaces gehören zu einem Netzwerk und tragen eine seiner Arten. Alles davon sind Space-Metadaten nach obigem Muster (Wert in `Group.data`, Spiegelung nach `_meta.appData` über `updateGroup`), gesetzt von den Menschen im Space, synchronisiert wie alles andere. Weder der Stack noch die App noch eine Datei auf dem Server wissen, welche Arten es gibt.
+
+| Feld | Wo | Bedeutung |
+|---|---|---|
+| `isNetwork` | `Group.data.isNetwork: true` | dieser Space ist ein Netzwerk |
+| `spaceKinds` | `Group.data.spaceKinds: SpaceKind[]` | die Arten der Gruppen dieses Netzwerks, in Anzeigereihenfolge (nur an Netzwerken) |
+| `network` | `Group.data.network: <spaceId>` | das Netzwerk, zu dem dieser Space gehört |
+| `kind` | `Group.data.kind: <id>` | die Art dieses Space, ein Schlüssel aus `spaceKinds` seines Netzwerks |
+| `domain` | `Group.data.domain: <hostname>` | die Domain der Landingpage eines Netzwerks (nur an Netzwerken, nur Auskunft) |
+
+Ein Eintrag in `spaceKinds` trägt `id` (`[a-z0-9-]{1,32}`, ein Schlüssel, kein Anzeigename), `label` (Einzahl), `labelPlural` (Mehrzahl) und optional `color` (`#rrggbb`).
+
+Regeln:
+
+1. Alle Felder sind **optional**. Ein Space ohne sie ist gültig und erscheint in aufzählenden Flächen ungegliedert, wie bisher. Flächen MÜSSEN ohne sie robust bleiben.
+2. `Group.data` ist die kanonische Quelle; `_meta.appData` ist die synchronisierte Projektion. Ein Space ist **nie sein eigenes Netzwerk** (`network` DARF NICHT die eigene Id tragen); er KANN aber zugleich Netzwerk sein **und** zu einem anderen gehören — ein Projekt mit eigener Domain ist im übergeordneten Netzwerk ein Projekt und für seine eigenen Gruppen ein Netzwerk. Seine eigenen Arten gelten nur, wenn es selbst das aktive Netzwerk ist.
+3. Der Schlüssel einer Art wird **einmal** beim Anlegen aus der Einzahl gebildet und bleibt danach; Umbenennen ändert nur `label` und `labelPlural`. Sonst verlören Spaces beim Umbenennen einer Art ihre Zuordnung.
+4. Eine `spaceKinds`-Liste wird **eintragsweise** geprüft: Ein fehlerhafter Eintrag (Schlüssel außerhalb des Musters, doppelter Schlüssel, fehlender Name, unbrauchbare Farbe) wird verworfen und gemeldet, die übrigen gelten weiter. Eine Liste, die kein Array ist, fällt als Ganzes.
+5. Ein `kind`, das das Netzwerk nicht kennt, und ein `network`, in dem der Mensch kein Mitglied ist, sind **kein Fehler**: Der Wert stammt aus einer früheren Liste oder einem Netzwerk, das dieses Gerät nicht sieht. Er MUSS erhalten bleiben (nie stillschweigend entfernt oder ersetzt) und wird wie ein fehlender behandelt.
+6. Netzwerk und Art werden vom Space selbst gesetzt, im Gruppen-Dialog, und NICHT aus Items, Tags oder Modulen abgeleitet. Sie sind eine Aussage der Gemeinschaft über sich, keine Berechnung. Die Arten eines Netzwerks setzen dessen Admins.
+7. Netzwerk und Art steuern **keine** Modul-Aktivierung und **keine** Rechte und **keine** Sichtbarkeit. Welche Module ein Space führt, bleibt `Group.data.modules`; was ein Mitglied darf, bleibt Sache der Autorisierung; was ein Mensch sieht, bleibt Sache seiner Mitgliedschaften. Zugehörigkeit zu einem Netzwerk ist Ordnung und Darstellung, kein Zugang: Wer im Netzwerk ist, sieht dessen Gruppen im Space-Wechsel nur, wenn er auch in ihnen Mitglied ist. Was im Netzwerk für alle sichtbar sein soll, legen die Mitglieder dort ab; ein automatisches Erscheinen aus anderen Spaces ist Sache von [09-mirror-bridge.md](09-mirror-bridge.md).
+8. Ein Netzwerk ist keine Typ-Hierarchie: Flächen zeigen immer genau eine Ebene, das aktive Netzwerk und seine Spaces. Dass ein Space darin selbst Netzwerk ist, wird dort nicht aufgefaltet — wer hinein will, macht ihn zum aktiven Netzwerk.
+9. `domain` ist Auskunft, kein Routing: Sie sagt, wo die Landingpage des Netzwerks liegt, und dient dem Menschen, der dort einen Knopf setzt. Der Link in einen Space ist die Adresse der App plus Space; wer dort kein Mitglied ist, sieht keinen Zugang. **Ein Beitritt über einen Link ohne Einladung ist nicht Teil dieses Vertrags** und gehört zu Einladung und Verifikation ([05-confirmations-and-trust.md](05-confirmations-and-trust.md)).
+
 ## Profile
 
 Ein Profil ist das person-Item einer Person mit DID. Es lebt genau einmal im persönlichen Space und erscheint in Gruppen-Spaces als Mirror nach [09-mirror-bridge.md](09-mirror-bridge.md). Form, Freigabe, Widerruf und Ablage definiert [12-profile.md](12-profile.md). `ProfileCapable` bleibt der technische Vertrag; Kontakte und Verifikationen sind nicht dasselbe wie Profile; WoT-Identität und Attestations werden im RLS-Item-Modell nicht neu definiert.

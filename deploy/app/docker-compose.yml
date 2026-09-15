@@ -31,6 +31,8 @@ services:
       # --- Identitaet ---
       RLS_APP_NAME: ${RLS_APP_NAME:?RLS_APP_NAME fehlt — wie heisst diese Instanz?}
       RLS_FAVICON_URL: ${RLS_FAVICON_URL:-/branding/favicon.svg}
+      # --- Zuhause (Spec 11): ein Space, den der Betreiber in der App angelegt hat ---
+      RLS_HOME_SPACE_ID: ${RLS_HOME_SPACE_ID:-}
     volumes:
       # Beides gehoert dem Betreiber. Read-only: der Container schreibt nie
       # in das, was der Mensch bearbeitet.

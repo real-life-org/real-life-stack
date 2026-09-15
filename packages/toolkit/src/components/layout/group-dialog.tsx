@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef } from "react"
-import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical } from "lucide-react"
+import { useState, useCallback, useEffect, useRef } from "react"
+import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Plus } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
+import { parseSpaceKinds, kindIdFromLabel, type SpaceKind } from "@/lib/space-kinds"
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
@@ -156,6 +157,23 @@ export type GroupDialogMode =
   | { type: "create" }
   | { type: "edit"; group: Group }
 
+/** Ein Netzwerk zur Auswahl: Id, Name und seine Arten (Spec 04, "Netzwerk und Space-Art"). */
+export interface NetworkOption {
+  id: string
+  name: string
+  kinds: readonly SpaceKind[]
+}
+
+/** Was beim Anlegen ausser dem Namen gewaehlt wurde. */
+export interface GroupCreateData {
+  isNetwork?: boolean
+  network?: string
+  kind?: string
+}
+
+/** Eine Art in Bearbeitung: `id` bleibt leer, bis sie zum ersten Mal gespeichert ist. */
+type KindRow = SpaceKind
+
 export interface GroupDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -163,11 +181,131 @@ export interface GroupDialogProps {
   contacts?: ContactInfo[]
   /** Current user's ID (DID) — used to determine creator status */
   currentUserId?: string
-  onCreateGroup: (name: string) => Promise<void>
+  /**
+   * Die Netzwerke, in denen der Mensch Mitglied ist (Spec 04, "Netzwerk").
+   * Ohne Netzwerke zeigt der Dialog weder Netzwerk noch Art — die Flaeche
+   * sieht dann aus wie vorher.
+   */
+  networks?: readonly NetworkOption[]
+  /** Vorauswahl beim Anlegen: das gerade aktive Netzwerk. */
+  currentNetworkId?: string | null
+  /**
+   * Der Link, der in einen Space fuehrt — fuer den Knopf auf der Landingpage
+   * eines Netzwerks. Die App kennt Basispfad und Routen, das Toolkit nicht.
+   */
+  spaceLink?: (groupId: string, domain?: string) => string
+  /** `data` traegt Netzwerk-Haekchen, Netzwerk und Art (Spec 04); fehlt, wenn nichts gewaehlt wurde. */
+  onCreateGroup: (name: string, data?: GroupCreateData) => Promise<void>
   onUpdateGroup: (id: string, updates: Partial<Group>) => Promise<void>
   onDeleteGroup: (id: string) => Promise<void>
   onInviteMember?: (groupId: string, userId: string) => Promise<void>
   onRemoveMember?: (groupId: string, userId: string) => Promise<void>
+}
+
+/**
+ * Native Auswahl mit einem leeren Eintrag. Ein Wert, den die Liste nicht
+ * kennt, bleibt als roher Wert sichtbar und waehlbar: er stammt aus einer
+ * anderen Liste oder Version und wird nie still ersetzt (Spec 04, Regel 5).
+ * Native statt Radix, weil das Feld in einem Dialog sitzt und auf dem
+ * Telefon den System-Picker oeffnen soll. `color-scheme` folgt dem
+ * Dunkelmodus, sonst zeichnet der Browser die Liste hell auf hell.
+ */
+function NativeSelect({
+  id,
+  options,
+  value,
+  emptyLabel,
+  onChange,
+}: {
+  id: string
+  options: readonly { id: string; label: string }[]
+  value: string
+  emptyLabel: string
+  onChange: (value: string) => void
+}) {
+  const unbekannt = value !== "" && !options.some((o) => o.id === value)
+  return (
+    <select
+      id={id}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none [color-scheme:light] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:[color-scheme:dark]"
+    >
+      <option value="">{emptyLabel}</option>
+      {options.map((o) => (
+        <option key={o.id} value={o.id}>{o.label}</option>
+      ))}
+      {unbekannt && <option value={value}>{value}</option>}
+    </select>
+  )
+}
+
+/**
+ * Die Arten eines Netzwerks bearbeiten: Farbe, Einzahl, Mehrzahl je Zeile.
+ * Gespeichert wird beim Verlassen eines Feldes und beim Entfernen — der
+ * Schluessel einer Art entsteht beim ersten Speichern aus der Einzahl und
+ * bleibt danach, damit Spaces beim Umbenennen zugeordnet bleiben.
+ */
+function KindsEditor({
+  rows,
+  onChange,
+  onCommit,
+  onRemove,
+}: {
+  rows: KindRow[]
+  onChange: (rows: KindRow[]) => void
+  onCommit: (rows: KindRow[]) => void
+  onRemove: (rows: KindRow[], index: number) => void
+}) {
+  const update = (i: number, patch: Partial<KindRow>) =>
+    onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  return (
+    <div className="mt-2 space-y-1.5">
+      {rows.map((row, i) => (
+        <div key={row.id || `neu-${i}`} className="flex items-center gap-1.5">
+          <input
+            type="color"
+            aria-label="Farbe"
+            value={row.color ?? "#6b7280"}
+            onChange={(e) => update(i, { color: e.target.value })}
+            onBlur={() => onCommit(rows)}
+            className="h-8 w-8 shrink-0 cursor-pointer rounded border border-input bg-transparent p-0.5"
+          />
+          <Input
+            value={row.label}
+            placeholder="Einzahl, z.B. Stiftung"
+            aria-label="Einzahl"
+            className="h-8 text-sm"
+            onChange={(e) => update(i, { label: e.target.value })}
+            onBlur={() => onCommit(rows)}
+          />
+          <Input
+            value={row.labelPlural}
+            placeholder="Mehrzahl"
+            aria-label="Mehrzahl"
+            className="h-8 text-sm"
+            onChange={(e) => update(i, { labelPlural: e.target.value })}
+            onBlur={() => onCommit(rows)}
+          />
+          <button
+            type="button"
+            aria-label={`${row.label || "Art"} entfernen`}
+            onClick={() => onRemove(rows, i)}
+            className="rounded p-1 text-muted-foreground hover:text-destructive"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...rows, { id: "", label: "", labelPlural: "" }])}
+        className="flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground hover:border-primary hover:text-foreground"
+      >
+        <Plus className="h-3 w-3" /> Art hinzufügen
+      </button>
+    </div>
+  )
 }
 
 // --- Component ---
@@ -178,6 +316,9 @@ export function GroupDialog({
   mode,
   contacts,
   currentUserId,
+  networks = [],
+  currentNetworkId = null,
+  spaceLink,
   onCreateGroup,
   onUpdateGroup,
   onDeleteGroup,
@@ -204,6 +345,124 @@ export function GroupDialog({
   const [groupImage, setGroupImage] = useState(() =>
     isEdit ? (mode.group.data?.image as string | undefined) ?? "" : ""
   )
+
+  // Netzwerk und Art (Spec 04, "Netzwerk und Space-Art"). Ein Space kann ein
+  // Netzwerk sein UND zu einem gehoeren; ein Netzwerk traegt die Arten seiner
+  // Gruppen. Leer = keins / keine.
+  const [isNetwork, setIsNetwork] = useState(() => isEdit && mode.group.data?.isNetwork === true)
+  const [network, setNetwork] = useState<string>(() =>
+    isEdit
+      ? (typeof mode.group.data?.network === "string" ? mode.group.data.network : "")
+      : (currentNetworkId ?? "")
+  )
+  const [kind, setKind] = useState<string>(() =>
+    isEdit && typeof mode.group.data?.kind === "string" ? mode.group.data.kind : ""
+  )
+  const [kindRows, setKindRows] = useState<KindRow[]>(() =>
+    isEdit ? parseSpaceKinds(mode.group.data?.spaceKinds, "Arten") : []
+  )
+  // Domain der Landingpage eines Netzwerks: nur Auskunft und Link-Grundlage.
+  const [domain, setDomain] = useState<string>(() =>
+    isEdit && typeof mode.group.data?.domain === "string" ? mode.group.data.domain : ""
+  )
+  const [linkKopiert, setLinkKopiert] = useState(false)
+  // Nur der Hostname, ohne Schema und Pfad; der Link wird daraus gebaut.
+  const hostname = (d: string) => d.trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "").toLowerCase()
+  const link = isEdit && spaceLink ? spaceLink(mode.group.id, hostname(domain) || undefined) : ""
+  // Ein Space ist nie sein eigenes Netzwerk.
+  const otherNetworks = networks.filter((n) => !isEdit || n.id !== mode.group.id)
+  const networkOptions = otherNetworks.map((n) => ({ id: n.id, label: n.name }))
+  const availableKinds = otherNetworks.find((n) => n.id === network)?.kinds ?? []
+
+  // Der Create-Dialog bleibt gemountet (fester key in der App): Beim Oeffnen
+  // beginnt er frisch, mit dem gerade aktiven Netzwerk vorbelegt. Sonst erbt
+  // die naechste Gruppe die Wahl der vorigen.
+  useEffect(() => {
+    if (!open || isEdit) return
+    setIsNetwork(false)
+    setNetwork(currentNetworkId ?? "")
+    setKind("")
+    setDomain("")
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // `null` entfernt den Schluessel (Patch-Vertrag, rls#234); `undefined`
+  // ginge im JSON-Transport verloren und liesse den alten Wert stehen.
+  // Im Create-Modus wird nichts gepatcht, die Werte gehen mit onCreateGroup.
+  const patchData = (data: Record<string, unknown>, was: string) => {
+    if (!isEdit) return
+    setError(null)
+    onUpdateGroup(mode.group.id, { data }).catch((err) => {
+      setError(err instanceof Error ? err.message : `${was} konnte nicht gespeichert werden`)
+    })
+  }
+  const handleIsNetworkChange = (value: boolean) => {
+    setIsNetwork(value)
+    patchData({ isNetwork: value ? true : null }, "Netzwerk")
+  }
+  const handleNetworkChange = (value: string) => {
+    setNetwork(value)
+    setKind("")
+    patchData({ network: value || null, kind: null }, "Netzwerk")
+  }
+  const handleKindChange = (value: string) => {
+    setKind(value)
+    patchData({ kind: value || null }, "Art")
+  }
+  const commitDomain = () => {
+    const clean = hostname(domain)
+    setDomain(clean)
+    const stored = isEdit && typeof mode.group.data?.domain === "string" ? mode.group.data.domain : ""
+    if (clean === stored) return
+    patchData({ domain: clean || null }, "Domain")
+  }
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(link)
+      setLinkKopiert(true)
+      setTimeout(() => setLinkKopiert(false), 1500)
+    } catch {
+      setError("Link konnte nicht kopiert werden")
+    }
+  }
+
+  // Arten speichern: wie die Modul-Liste ueber den Latest-wins-Saver, damit
+  // zwei schnelle Aenderungen nicht in falscher Reihenfolge landen. Gespeichert
+  // wird nur, was vollstaendig ist; eine bestehende Art, deren Name gerade
+  // leer ist, behaelt ihren gespeicherten Stand. Loeschen geht nur ueber das ✕.
+  const lastSavedKinds = useRef<SpaceKind[]>(isEdit ? parseSpaceKinds(mode.group.data?.spaceKinds, "Arten") : [])
+  const saveKindsRef = useRef<((kinds: SpaceKind[]) => void) | null>(null)
+  if (!saveKindsRef.current) {
+    saveKindsRef.current = createLatestWinsSaver<SpaceKind[]>(
+      (kinds) => {
+        if (mode.type !== "edit") return Promise.resolve()
+        return onUpdateGroup(mode.group.id, { data: { spaceKinds: kinds.length > 0 ? kinds : null } })
+      },
+      (err) => setError(err instanceof Error ? err.message : "Arten konnten nicht gespeichert werden"),
+      (kinds) => { lastSavedKinds.current = kinds },
+    )
+  }
+  const commitKinds = (rows: KindRow[]) => {
+    const complete = (r: KindRow) => r.label.trim() !== "" && r.labelPlural.trim() !== ""
+    const ids = new Set(rows.map((r) => r.id).filter(Boolean))
+    // Neue, vollstaendige Zeilen bekommen jetzt ihren Schluessel: einmal, dauerhaft.
+    const mitId = rows.map((r) => {
+      if (r.id || !complete(r)) return r
+      const id = kindIdFromLabel(r.label, ids)
+      ids.add(id)
+      return { ...r, id }
+    })
+    setKindRows(mitId)
+    const gespeichert = lastSavedKinds.current
+    const zumSpeichern = mitId
+      .filter((r) => r.id)
+      .map((r) => (complete(r) ? r : gespeichert.find((k) => k.id === r.id)))
+      .filter((r): r is KindRow => r !== undefined)
+    const clean = parseSpaceKinds(zumSpeichern, "Arten")
+    if (JSON.stringify(clean) === JSON.stringify(gespeichert)) return
+    setError(null)
+    saveKindsRef.current?.(clean)
+  }
+  const removeKind = (rows: KindRow[], index: number) => commitKinds(rows.filter((_, j) => j !== index))
 
   // Module state
   const [activeModules, setActiveModules] = useState<string[]>(() =>
@@ -330,7 +589,11 @@ export function GroupDialog({
     setSaving(true)
     setError(null)
     try {
-      await onCreateGroup(name.trim())
+      await onCreateGroup(name.trim(), {
+        isNetwork: isNetwork || undefined,
+        network: network || undefined,
+        kind: kind || undefined,
+      })
       handleOpenChange(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fehler beim Erstellen")
@@ -456,6 +719,27 @@ export function GroupDialog({
                 }}
               />
             </div>
+            <label className="mt-3 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isNetwork}
+                onChange={(e) => handleIsNetworkChange(e.target.checked)}
+                className="h-4 w-4 accent-primary"
+              />
+              Als Netzwerk anlegen
+            </label>
+            {otherNetworks.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                <Label htmlFor="group-network" className="text-xs text-muted-foreground">{isNetwork ? "Gehört zum Netzwerk" : "Netzwerk"}</Label>
+                <NativeSelect id="group-network" options={networkOptions} value={network} emptyLabel="Keins" onChange={handleNetworkChange} />
+              </div>
+            )}
+            {availableKinds.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                <Label htmlFor="group-kind" className="text-xs text-muted-foreground">Art</Label>
+                <NativeSelect id="group-kind" options={availableKinds} value={kind} emptyLabel="Keine" onChange={handleKindChange} />
+              </div>
+            )}
             {error && <p className="text-xs text-destructive mt-2">{error}</p>}
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-muted/20">
@@ -474,8 +758,11 @@ export function GroupDialog({
   // --- Edit Mode ---
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-sm gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
+      <DialogContent className="sm:max-w-sm gap-0 p-0 overflow-hidden max-h-[90dvh] flex flex-col" aria-describedby={undefined}>
         <DialogTitle className="sr-only">{isEdit ? mode.group.name : "Neue Gruppe"}</DialogTitle>
+        {/* Der Koerper scrollt, die Fusszeile bleibt stehen — ein Space mit
+            Netzwerk, Arten, Mitgliedern und Modulen ist laenger als ein Schirm. */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
         {/* Group Identity Header */}
         <div className="relative px-6 pt-6 pb-5">
           <div className="flex items-start gap-4">
@@ -535,6 +822,84 @@ export function GroupDialog({
             </div>
           </div>
         </div>
+
+        {/* Netzwerk und Art (Spec 04): der Admin waehlt, Mitglieder lesen. Was
+            einer nicht darf, erscheint nicht — kein ausgegrauter Regler. */}
+        {isCurrentUserAdmin ? (
+          <div className="px-6 pb-4 space-y-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isNetwork}
+                onChange={(e) => handleIsNetworkChange(e.target.checked)}
+                className="h-4 w-4 accent-primary"
+              />
+              Dieser Space ist ein Netzwerk
+            </label>
+            {isNetwork && (
+              <>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Arten der Gruppen in diesem Netzwerk</Label>
+                  <KindsEditor rows={kindRows} onChange={setKindRows} onCommit={commitKinds} onRemove={removeKind} />
+                </div>
+                <div>
+                  <Label htmlFor="group-domain" className="text-xs text-muted-foreground">Domain der Landingpage</Label>
+                  <Input
+                    id="group-domain"
+                    value={domain}
+                    placeholder="z.B. lichtung.ooo"
+                    className="mt-1.5 h-9 text-sm"
+                    onChange={(e) => setDomain(e.target.value)}
+                    onBlur={commitDomain}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitDomain() } }}
+                  />
+                </div>
+                {link && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Link für den Knopf auf eurer Landingpage</Label>
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <Input readOnly value={link} className="h-9 text-sm" onFocus={(e) => e.currentTarget.select()} />
+                      <Button variant="outline" size="sm" className="h-9 shrink-0" onClick={copyLink}>
+                        {linkKopiert ? <Check className="h-3.5 w-3.5" /> : "Kopieren"}
+                      </Button>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Führt Mitglieder direkt hinein. Wer noch kein Mitglied ist, braucht eine Einladung.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+            {/* Ein Netzwerk kann zugleich zu einem anderen gehoeren — die
+                Lichtung ist ein Projekt in Real Life und selbst ein Netzwerk. */}
+            {otherNetworks.length > 0 && (
+              <div>
+                <Label htmlFor="group-network" className="text-xs text-muted-foreground">
+                  {isNetwork ? "Gehört zum Netzwerk" : "Netzwerk"}
+                </Label>
+                <div className="mt-1.5">
+                  <NativeSelect id="group-network" options={networkOptions} value={network} emptyLabel="Keins" onChange={handleNetworkChange} />
+                </div>
+              </div>
+            )}
+            {availableKinds.length > 0 && (
+              <div>
+                <Label htmlFor="group-kind" className="text-xs text-muted-foreground">Art</Label>
+                <div className="mt-1.5">
+                  <NativeSelect id="group-kind" options={availableKinds} value={kind} emptyLabel="Keine" onChange={handleKindChange} />
+                </div>
+              </div>
+            )}
+          </div>
+        ) : isNetwork || network || kind ? (
+          <p className="px-6 pb-4 text-sm text-muted-foreground">
+            {[
+              isNetwork ? (domain ? `Netzwerk · ${domain}` : "Netzwerk") : undefined,
+              otherNetworks.find((n) => n.id === network)?.name,
+              availableKinds.find((k) => k.id === kind)?.label ?? (kind || undefined),
+            ].filter(Boolean).join(" · ")}
+          </p>
+        ) : null}
 
         {/* Members */}
         <div className="px-6 pb-2">
@@ -762,6 +1127,7 @@ export function GroupDialog({
         )}
 
         {/* Footer */}
+        </div>
         <DialogFooter className="flex-row! px-6 py-3 border-t bg-muted/20">
           <Button
             variant={confirmDelete ? "destructive" : "ghost"}

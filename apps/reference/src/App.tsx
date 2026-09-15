@@ -73,6 +73,7 @@ import {
   IncomingContactRequestDialog,
   getRuntimeConfig,
   getModule,
+  resolveSpaceModules,
 } from "@real-life-stack/toolkit"
 import { initialDarkMode, rememberColorScheme } from "./initial-color-scheme"
 import type { DataInterface, User } from "@real-life-stack/data-interface"
@@ -476,6 +477,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     urlItemId,
     handleWorkspaceChange,
     handleModuleChange,
+    activeNetworkId,
   } = useWorkspaceRouting()
   const createGroup = useCreateGroup()
   const updateGroup = useUpdateGroup()
@@ -609,6 +611,13 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     setGroupDialogOpen(true)
   }, [groups])
 
+  // Die Netzwerke, in denen der Mensch Mitglied ist — der Gruppen-Dialog
+  // bietet sie zur Zuordnung an und liest ihre Arten (Spec 04, "Netzwerk").
+  const networkOptions = useMemo(
+    () => workspaces.filter((w) => w.isNetwork).map((w) => ({ id: w.id, name: w.name, kinds: w.kinds ?? [] })),
+    [workspaces],
+  )
+
   const userData: UserData = useMemo(
     () => ({
       id: currentUser?.id ?? "",
@@ -728,6 +737,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
               onEditWorkspace={openEditDialog}
               syncing={initialSync.active}
               syncExpected={initialSync.expectedGroups}
+              activeNetworkId={activeNetworkId}
             />
           ) : (
             <Button
@@ -807,9 +817,40 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
         mode={groupDialogMode}
         currentUserId={currentUser?.id}
         contacts={allContacts}
-        onCreateGroup={async (name) => {
+        networks={networkOptions}
+        currentNetworkId={activeNetworkId}
+        // Der Link fuer den Knopf auf einer Landingpage: die Domain des
+        // Netzwerks, wenn es eine hat (dort laeuft dann seine eigene Instanz
+        // mit demselben Relay), sonst die Adresse, unter der die App gerade
+        // laeuft — plus Space und Karte als Einstieg.
+        // Eine fremde Domain liefert die App nach der Deploy-Vorlage unter
+        // /app aus; die eigene Adresse kennt ihren Basispfad selbst. Einstieg
+        // ist das erste Modul des Space, wie beim Space-Wechsel.
+        spaceLink={(id, domain) => {
+          const group = groups.find((g) => g.id === id)
+          const start = resolveSpaceModules(group?.data?.modules as string[] | undefined)[0]
+          return domain ? `https://${domain}/app/${id}/${start}` : `${window.location.origin}${import.meta.env.BASE_URL}${id}/${start}`
+        }}
+        onCreateGroup={async (name, data) => {
           const group = await createGroup(name)
-          handleWorkspaceChange({ id: group.id, name: group.name })
+          // Netzwerk und Art als eigener Patch nach dem Anlegen: createGroup
+          // kennt je nach Connector nur Name und Module; updateGroup mergt per
+          // Schluessel (Spec 04, Regel 3) und traegt sie in jeden Connector.
+          const patch: Record<string, unknown> = {}
+          if (data?.isNetwork) patch.isNetwork = true
+          if (data?.network) patch.network = data.network
+          if (data?.kind) patch.kind = data.kind
+          if (Object.keys(patch).length > 0) {
+            // Der Space existiert ab hier. Scheitert nur der Patch, bleibt er
+            // ohne Netzwerk und Art stehen, statt dass ein erneutes "Erstellen"
+            // ein Duplikat anlegt; die Zuordnung holt man im Zahnrad nach.
+            try {
+              await updateGroup(group.id, { data: patch })
+            } catch (err) {
+              console.warn(`[rls] Space "${group.name}" angelegt, Netzwerk/Art nicht gespeichert:`, err)
+            }
+          }
+          handleWorkspaceChange({ id: group.id, name: group.name, ...patch })
         }}
         onUpdateGroup={async (id, updates) => {
           await updateGroup(id, updates)

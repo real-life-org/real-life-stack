@@ -75,6 +75,19 @@ Regeln:
 4. Die App Shell ist nicht selbst ein Space Module.
 5. Funktionen wie Profile, Contacts, Verification oder Auth sind App-Shell-Flächen, auch wenn ihre Daten in Space Modules sichtbar werden können.
 
+### Space-Wechsel nach Netzwerk und Art
+
+Der Space-Wechsel ist die Fläche, in der ein Mensch sieht, welche Spaces er hat, und in einen davon eintritt. Ist er Mitglied in Netzwerken ([04-items-relations-groups-spaces.md → Netzwerk und Space-Art](04-items-relations-groups-spaces.md)), gliedert die Fläche sich nach ihnen: Die Netzwerke stehen oben, ein **aktives Netzwerk** bestimmt, welche Spaces darunter stehen, und dessen Arten gliedern sie.
+
+Regeln:
+
+1. Ganz oben steht der Abschnitt **Netzwerke** mit allen Netzwerken, in denen der Mensch Mitglied ist, das Start-Netzwerk der Instanz zuerst ([11 → Zuhause-Space](11-runtime-config-und-branding.md)). Jedes trägt das Zahnrad wie jeder Space; dort setzen seine Admins Name, Bild, Module und Arten. Ohne Netzwerke entfällt der Abschnitt.
+2. Darunter der Eintrag für die **Übersicht** (das Aggregat über alle Spaces, intern `__overview__`). Gibt es Netzwerke, heißt sie „Mein Netzwerk"; ohne Netzwerke trägt sie den Namen der Instanz aus `branding.appName`, damit der Name dorthin führt, wo alles zusammenkommt.
+3. Das **aktive Netzwerk** ist der aktive Space, wenn er ein Netzwerk ist; sonst das Netzwerk, zu dem er gehört; sonst das zuletzt gewählte; sonst das Start-Netzwerk der Instanz. Es ist ein Zustand der App-Shell auf diesem Gerät, kein Metadatum.
+4. Mit aktivem Netzwerk stehen unter der Übersicht nur die Spaces, die zu diesem Netzwerk gehören — auch solche, die selbst Netzwerke sind, dann zusätzlich zu ihrem Platz im Abschnitt Netzwerke: je Art des Netzwerks ein Abschnitt in dessen Reihenfolge, überschrieben mit `labelPlural`, ein Abschnitt ohne Spaces entfällt; Spaces ohne Art oder mit unbekannter Art zuletzt unter „Gruppen". Ohne aktives Netzwerk stehen alle Spaces, die keine Netzwerke sind, ungegliedert unter „Gruppen" — die Fläche sieht dann aus wie bisher.
+5. Der Gruppen-Dialog ist die einzige Fläche, die Netzwerk und Art schreibt: das Häkchen „Dieser Space ist ein Netzwerk", die Arten eines Netzwerks, und für jeden anderen Space die Auswahl seines Netzwerks (aus den Netzwerken des Menschen, ohne den Space selbst) und seiner Art (aus den Arten des gewählten Netzwerks). Ohne Netzwerke zeigt er von alledem nur das Häkchen.
+6. Die Gliederung ist Darstellung: Sie ändert weder Routing noch Rechte noch Sichtbarkeit noch die Module eines Space. Ein Space, der zu keinem sichtbaren Netzwerk gehört, bleibt über die Übersicht erreichbar wie jeder andere.
+
 ## Overlay-Flächen (Panels, Dialoge, Notifications)
 
 Overlays folgen einem Drei-Ebenen-Modell. Pro Ebene gibt es höchstens **eine** Fläche; Ebenen dürfen einander überlagern, weil sie sichtbar von anderer Art sind.

@@ -57,3 +57,40 @@ export const OverviewActive: Story = {
 export const NoActiveWorkspace: Story = {
   render: () => <InteractiveSwitcher initial={null} />,
 }
+
+/**
+ * Der Mensch ist Mitglied in Netzwerken (Spec 04): Sie stehen oben mit
+ * Zahnrad, darunter „Mein Netzwerk", dann die Gruppen des aktiven Netzwerks,
+ * gegliedert nach dessen Arten. Spaces ohne Art zuletzt unter „Gruppen".
+ */
+export const WithNetworks: Story = {
+  render: () => {
+    const kinds = [
+      { id: "stiftung", label: "Stiftung", labelPlural: "Stiftungen", color: "#1B5E40" },
+      { id: "projekt", label: "Projekt", labelPlural: "Projekte", color: "#EA580C" },
+    ]
+    const workspaces: Workspace[] = [
+      { id: "td", name: "trustdonation", isNetwork: true, kinds },
+      { id: "mn", name: "macher.network", isNetwork: true, kinds: [] },
+      { id: "__overview__", name: "Mein Netzwerk", scope: "overview" },
+      { id: "s-1", name: "Bürgerstiftung Kassel", network: "td", kind: "stiftung" },
+      { id: "s-2", name: "Software AG-Stiftung", network: "td", kind: "stiftung" },
+      { id: "p-1", name: "Werkstatt am Bahnhof", network: "td", kind: "projekt" },
+      { id: "p-2", name: "Musterschule Gudensberg", network: "td", kind: "projekt" },
+      { id: "g-1", name: "Tratsch & Off-Topics", network: "td" },
+      { id: "m-1", name: "Holzwerkstatt", network: "mn" },
+    ]
+    const [active, setActive] = useState<Workspace | null>(workspaces[0])
+    const activeNetworkId = active?.isNetwork ? active.id : (active?.network ?? "td")
+    return (
+      <WorkspaceSwitcher
+        workspaces={workspaces}
+        activeWorkspace={active}
+        onWorkspaceChange={setActive}
+        onCreateWorkspace={() => console.log("create workspace")}
+        onEditWorkspace={(w) => console.log("edit workspace", w.id)}
+        activeNetworkId={activeNetworkId}
+      />
+    )
+  },
+}

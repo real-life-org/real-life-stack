@@ -6,6 +6,7 @@ import {
   resetRuntimeConfigForTests,
   applyBranding,
   DEFAULT_RUNTIME_CONFIG,
+  parseHomeSpaceId,
   type RuntimeConfig,
 } from "../src/lib/runtime-config"
 
@@ -438,5 +439,30 @@ describe("Ungueltiges faellt DURCH die Kette (Re-Review #276)", () => {
     expect(Object.isFrozen(cfg.branding?.colors)).toBe(true)
     expect(Object.isFrozen(cfg.branding?.colors?.light)).toBe(true)
     expect(Object.isFrozen(cfg.branding?.colors?.dark)).toBe(true)
+  })
+})
+
+describe("homeSpaceId (Spec 11, Zuhause-Space)", () => {
+  beforeEach(() => resetRuntimeConfigForTests())
+  afterEach(() => vi.restoreAllMocks())
+
+  it("fehlt ohne Eintrag", () => {
+    expect(parseHomeSpaceId(undefined)).toBeUndefined()
+    expect(parseHomeSpaceId("")).toBeUndefined()
+  })
+
+  it("nimmt eine Space-Id und verwirft, was keine ist", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    expect(parseHomeSpaceId("space-abc123")).toBe("space-abc123")
+    expect(parseHomeSpaceId("mit leerzeichen")).toBeUndefined()
+    expect(parseHomeSpaceId(42)).toBeUndefined()
+    expect(warn).toHaveBeenCalledTimes(2)
+  })
+
+  it("liest das Zuhause aus config.json", async () => {
+    const cfg = await loadRuntimeConfig({
+      fetchImpl: stubFetch({ ok: true, json: { homeSpaceId: "space-home" } }),
+    })
+    expect(cfg.homeSpaceId).toBe("space-home")
   })
 })
