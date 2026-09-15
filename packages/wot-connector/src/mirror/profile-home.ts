@@ -88,11 +88,11 @@ export type MembershipTransition = { status: "pending" | "revoked" } | null
  * (Spec 12 Regel 4 und 7), rein aus Lesesicht und aktueller Kennung des
  * Ziel-Space:
  *
- * - kein Eintrag und gültige Kennung → `pending` (der Eintrag entsteht, sobald
- *   der Space auf einem Gerät erscheint; Freigabe ist die Annahme)
- * - kein Eintrag und KEINE Kennung → nichts. Ein Alt-Space ohne Ereignisse hat
- *   nach 09 „keine gültige Aufnahme"; er bekommt erst einen Eintrag, wenn
- *   Ereignisse auftauchen.
+ * - kein Eintrag → `pending`, mit oder ohne Kennung (der Eintrag entsteht,
+ *   sobald der Space auf einem Gerät erscheint; Freigabe ist die Annahme).
+ *   Auch ein Alt-Space ohne Ereignisse bekommt so einen Eintrag — er trägt
+ *   dann `admission: undefined` (Spec 12 Regel 4 in der Fassung rls#354:
+ *   „Eintraege und Annahme sind auch ohne Kennung zulässig").
  * - Kennung des Space höher als die des Eintrags (auch `undefined` → Kennung)
  *   → Wiederaufnahme, also `pending` mit der neuen Kennung
  * - Kennung niedriger oder weg → Mitgliedschaft verloren, also `revoked`
@@ -105,7 +105,7 @@ export function planMembershipTransition(
   view: MirrorRegistryView | null,
   spaceAdmission: SpaceAdmission | undefined,
 ): MembershipTransition {
-  if (!view) return spaceAdmission ? { status: "pending" } : null
+  if (!view) return { status: "pending" }
 
   const order = compareAdmissionOrUndefined(spaceAdmission, view.admission)
   if (order > 0) return { status: "pending" }

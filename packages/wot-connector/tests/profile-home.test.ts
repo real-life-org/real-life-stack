@@ -87,8 +87,11 @@ describe("planMembershipTransition — Spec 12 Regel 4 und 7, Spec 09 §Ablage",
     expect(planMembershipTransition(null, { keyGeneration: 3 })).toEqual({ status: "pending" })
   })
 
-  it("ein Alt-Space ohne Aufnahme-Kennung bekommt KEINEN Eintrag", () => {
-    expect(planMembershipTransition(null, undefined)).toBeNull()
+  it("ein Alt-Space OHNE Aufnahme-Kennung wird ebenfalls pending (Regel 4, Fassung rls#354)", () => {
+    // „Eintraege und Annahme sind auch ohne Kennung zulaessig
+    // (`admission = undefined`)." Der Eintrag entsteht, sobald der Space auf
+    // einem Geraet erscheint — nicht erst, wenn er Ereignisse bekommt.
+    expect(planMembershipTransition(null, undefined)).toEqual({ status: "pending" })
   })
 
   it("gleiche Kennung heißt: nichts zu tun", () => {

@@ -123,12 +123,13 @@ describe("pending bei neuem Space — Spec 12 Regel 4", () => {
     expect(status(named, "alt")).toBe("pending")
   })
 
-  it("ein Alt-Space ohne Kennung bekommt weiterhin keinen Eintrag", async () => {
+  it("ein neuer Alt-Space OHNE Kennung wird pending, mit admission undefined", async () => {
     const { connector, named } = fakeConnector({ spaces: [{ id: "alt" }] })
 
     await connector.queueProfileHomeMaintenance()
 
-    expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "alt")).toBe(false)
+    expect(status(named, "alt")).toBe("pending")
+    expect(entry(named, "alt")[DEVICE].admission).toBeUndefined()
   })
 
   it("Bestands-Spaces werden NICHT pending — die Bestandsregel laeuft davor", async () => {
