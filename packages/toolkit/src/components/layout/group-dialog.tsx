@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react"
-import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical } from "lucide-react"
+import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
@@ -16,7 +16,6 @@ import { Input } from "../primitives/input"
 import { Label } from "../primitives/label"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Skeleton } from "../primitives/skeleton"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../primitives/tabs"
 
 function getInitials(name: string): string {
   return name
@@ -87,46 +86,75 @@ export function knownModules(modules: readonly string[]): string[] {
 // App-Schicht nicht mehr (Review #277).
 const defaults = () => defaultModuleIds()
 
-/** Die Faecher der Space-Konfiguration. */
-export type SpaceConfigTabId = "members" | "modules"
+/** Die Bereiche der Space-Konfiguration (Entwurf "Space Menu", Turn 3). */
+export type SpaceConfigSectionId = "members" | "modules"
 
-export interface SpaceConfigTab {
-  id: SpaceConfigTabId
+export interface SpaceConfigSection {
+  id: SpaceConfigSectionId
   label: string
+  icon: LucideIcon
 }
 
 /**
- * Welche Faecher dieser Dialog zeigt — die EINE Stelle, die das beantwortet.
+ * Welche Bereiche dieser Dialog zeigt — die EINE Stelle, die das beantwortet.
  *
- * Leiste, Inhalte und Startwert fragen alle hier; sonst waere dieselbe Liste
+ * Menue, Inhalte und Startwert fragen alle hier; sonst waere dieselbe Liste
  * dreimal geschrieben und liefe lautlos auseinander, wie es die fuenf
  * Modul-Listen vor dem Modul-Register (Spec 01) getan haben.
  *
- * Bild und Name sind KEIN Fach: sie stehen im Kopf, wo sie immer sichtbar und
- * immer aenderbar sind. Ein Fach "Allgemein" haette daneben nichts zu zeigen.
+ * Bild und Name sind KEIN Bereich: sie stehen im Kopf, wo sie immer sichtbar
+ * und immer aenderbar sind.
  *
- * Module sind Admin-Sache: wer sie nicht aendern darf, bekommt kein leeres
- * Fach zu sehen, sondern gar keins.
+ * Module sind Admin-Sache: wer sie nicht aendern darf, bekommt keinen leeren
+ * Bereich zu sehen, sondern gar keinen.
  */
-export function spaceConfigTabs({ isAdmin }: { isAdmin: boolean }): SpaceConfigTab[] {
-  const tabs: SpaceConfigTab[] = [{ id: "members", label: "Mitglieder" }]
-  if (isAdmin) tabs.push({ id: "modules", label: "Module" })
-  return tabs
+export function spaceConfigSections({ isAdmin }: { isAdmin: boolean }): SpaceConfigSection[] {
+  const sections: SpaceConfigSection[] = [
+    { id: "members", label: "Mitglieder", icon: Users },
+  ]
+  if (isAdmin) sections.push({ id: "modules", label: "Module", icon: LayoutGrid })
+  return sections
 }
 
 /**
- * Haelt die Auswahl auf einem Fach, das es wirklich gibt.
+ * Haelt die Auswahl auf einem Bereich, den es wirklich gibt.
  *
  * `isAdmin` stammt aus den Mitgliedern und steht beim Oeffnen noch nicht fest
- * (useMembers laedt). Das Modul-Fach kann darum nach dem ersten Rendern
- * verschwinden — Radix zeigte dann den Inhalt eines Reiters an, den es nicht
- * mehr gibt, und der Dialog waere leer. Der Rueckfall ist das erste Fach.
+ * (useMembers laedt). Der Modul-Bereich kann darum nach dem ersten Rendern
+ * verschwinden — der Dialog zeigte dann den Inhalt eines Eintrags an, den es
+ * nicht mehr gibt. Der Rueckfall ist der erste Bereich.
  */
-export function resolveConfigTab(
-  requested: SpaceConfigTabId,
-  tabs: readonly SpaceConfigTab[],
-): SpaceConfigTabId {
-  return tabs.some((t) => t.id === requested) ? requested : tabs[0].id
+export function resolveConfigSection(
+  requested: SpaceConfigSectionId,
+  sections: readonly SpaceConfigSection[],
+): SpaceConfigSectionId {
+  return sections.some((s) => s.id === requested) ? requested : sections[0].id
+}
+
+/**
+ * Teilt die Mitglieder in Admins und uebrige und filtert sie nach Suchbegriff
+ * (Entwurf "Space Menu", 3a).
+ *
+ * `members` ist nach DID sortiert, das Admin-Abzeichen stand also an
+ * beliebiger Stelle einer flachen Liste — wer den Space verwaltet, war nicht
+ * auf einen Blick erkennbar. Gesucht wird ueber Anzeigename UND Kennung:
+ * ohne gesetzten Namen ist die Kennung alles, was eine Zeile unterscheidet.
+ */
+export function groupMembersForDisplay<T extends { id: string; displayName?: string }>(
+  members: readonly T[],
+  isAdmin: (member: T) => boolean,
+  search: string,
+): { admins: T[]; others: T[] } {
+  const needle = search.trim().toLowerCase()
+  const matches = (m: T) =>
+    !needle ||
+    (m.displayName ?? "").toLowerCase().includes(needle) ||
+    m.id.toLowerCase().includes(needle)
+  const visible = members.filter(matches)
+  return {
+    admins: visible.filter(isAdmin),
+    others: visible.filter((m) => !isAdmin(m)),
+  }
 }
 
 /**
@@ -191,6 +219,15 @@ export function createLatestWinsSaver<T>(
 /** Human-readable fallback for raw IDs (e.g. DIDs) */
 function shortName(id: string): string {
   return `User-${id.slice(-6)}`
+}
+
+/** Ueberschrift einer Mitglieder-Gruppe (Entwurf "Space Menu", 3a). */
+function MemberGroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="px-2.5 pt-2.5 pb-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+      {children}
+    </div>
+  )
 }
 
 // --- Types ---
@@ -263,9 +300,13 @@ export function GroupDialog({
   // Das gewaehlte Fach. `tabs` haengt an isCurrentUserAdmin, das aus den
   // Mitgliedern abgeleitet wird und beim Oeffnen noch nicht feststeht — daher
   // laeuft die Auswahl durch resolveConfigTab, statt roh an Radix zu gehen.
-  const [requestedTab, setRequestedTab] = useState<SpaceConfigTabId>("members")
-  const tabs = spaceConfigTabs({ isAdmin: isCurrentUserAdmin })
-  const activeTab = resolveConfigTab(requestedTab, tabs)
+  const [requestedSection, setRequestedSection] = useState<SpaceConfigSectionId>("members")
+  const sections = spaceConfigSections({ isAdmin: isCurrentUserAdmin })
+  const activeSection = resolveConfigSection(requestedSection, sections)
+  /** Suche in der Mitgliederliste (Entwurf 3a). */
+  const [memberSearch, setMemberSearch] = useState("")
+  /** Der Kontakt-Picker liegt hinter "+ Einladen" statt dauerhaft offen. */
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   // Persisting the module list: rapid ↑/↓ clicks fire faster than a save
   // round-trips, and two in-flight saves can settle out of order — the older
@@ -369,6 +410,13 @@ export function GroupDialog({
         setInvitingId(null)
         setInvitedIds(new Set())
         setInviteErrors(new Map())
+        // Der Dialog bleibt zwischen zwei Aufrufen montiert. Ohne diesen
+        // Rueckfall oeffnete er fuer den NAECHSTEN Space im zuletzt
+        // gewaehlten Bereich — mit Suchbegriff und offenem Kontakt-Picker
+        // eines anderen Space.
+        setRequestedSection("members")
+        setMemberSearch("")
+        setInviteOpen(false)
       }
       onOpenChange(nextOpen)
     },
@@ -481,6 +529,49 @@ export function GroupDialog({
     (c) => invitedIds.has(c.id) && !memberIds.has(c.id)
   )
 
+  const { admins: shownAdmins, others: shownOthers } = groupMembersForDisplay(
+    members,
+    memberIsAdmin,
+    memberSearch,
+  )
+
+  /** Zahlen am Menue — die Suche aendert sie nicht, sie zaehlen den Bestand. */
+  const sectionCounts: Record<SpaceConfigSectionId, number | undefined> = {
+    members: members.length || undefined,
+    modules: visibleModules.length || undefined,
+  }
+
+  const renderMemberRow = (member: (typeof members)[number]) => (
+    <div
+      key={member.id}
+      className="group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted/50"
+    >
+      <Avatar className="h-7 w-7">
+        {member.avatarUrl && <AvatarImage src={member.avatarUrl} />}
+        <AvatarFallback className="text-[10px]">
+          {getInitials(member.displayName ?? shortName(member.id))}
+        </AvatarFallback>
+      </Avatar>
+      <span className="min-w-0 flex-1 truncate text-sm">
+        {member.displayName ?? shortName(member.id)}
+        {member.id === currentUserId && (
+          <span className="ml-1 text-xs text-muted-foreground">(du)</span>
+        )}
+      </span>
+      {isCurrentUserAdmin && onRemoveMember && member.id !== currentUserId && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => handleRemoveMember(member.id)}
+          title="Mitglied entfernen"
+          className="h-6 w-6 opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
+        >
+          <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
+        </Button>
+      )}
+    </div>
+  )
+
   // --- Create Mode ---
   if (!isEdit) {
     return (
@@ -524,196 +615,261 @@ export function GroupDialog({
   // --- Edit Mode ---
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
+      <DialogContent
+        className="flex h-[85vh] max-h-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]"
+        aria-describedby={undefined}
+        // Ohne das faengt der Name als erstes Feld den Fokus und steht
+        // markiert da — ein Tastendruck ueberschriebe den Space-Namen. Der
+        // Fokus bleibt im Dialog (Tab und Escape wirken), nur eben nicht
+        // in einem Eingabefeld.
+        onOpenAutoFocus={(e) => {
+          e.preventDefault()
+          ;(e.currentTarget as HTMLElement | null)?.focus()
+        }}
+      >
         <DialogTitle className="sr-only">{isEdit ? mode.group.name : "Neue Gruppe"}</DialogTitle>
-        {/* Group Identity Header — Bild und Name bleiben ueber den Faechern:
-            beide gehoeren dem Space als Ganzem und sind aenderbar, egal
-            welches Fach offen ist. */}
-        <div className="relative px-6 pt-6 pb-5">
-          <div className="flex items-start gap-4">
-            {/* Group Image */}
-            <div className="relative group shrink-0">
-              {groupImage ? (
-                <>
-                  <img src={groupImage} alt={name} className="w-14 h-14 rounded-xl object-cover ring-2 ring-background shadow-sm" />
-                  <button
-                    onClick={handleImageRemove}
-                    className="absolute -top-1 -right-1 p-0.5 bg-destructive text-white rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                  <label className="absolute -bottom-0.5 -right-0.5 p-1 bg-card border border-border rounded-full shadow-sm cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent">
-                    <Camera className="h-2.5 w-2.5 text-muted-foreground" />
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                  </label>
-                </>
-              ) : (
-                <label className="w-14 h-14 rounded-xl border-2 border-dashed border-border hover:border-primary/50 bg-muted/30 flex items-center justify-center cursor-pointer transition-all hover:bg-muted/50">
-                  <ImagePlus className="h-5 w-5 text-muted-foreground/40" />
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                </label>
-              )}
-            </div>
-
-            {/* Name Input */}
-            <div className="flex-1 min-w-0 pt-1 group/name">
-              <div className="relative">
-                <Input
-                  ref={nameInputRef}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onBlur={handleNameBlur}
-                  className="h-8 text-base font-semibold border-transparent shadow-none bg-transparent -ml-1.5 px-1 min-w-32 max-w-[calc(100%-2rem)] hover:bg-muted/50 focus:shadow-sm focus:bg-card focus:border-input focus:ml-0 focus:px-2 focus:max-w-[calc(100%-2rem)] transition-all truncate"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleNameBlur()
-                      ;(e.target as HTMLInputElement).blur()
-                    }
-                  }}
-                />
+        {/* Kopf — Bild und Name gehoeren dem Space als Ganzem und bleiben
+            ueber den Bereichen stehen, aenderbar egal welcher offen ist.
+            Der Stift am Bild ist dauerhaft sichtbar statt erst bei Hover:
+            auf einem Tastfeld gibt es kein Hover (Entwurf "Space Menu", 3a). */}
+        <div className="flex shrink-0 items-center gap-3.5 border-b px-6 py-4">
+          <div className="group relative shrink-0">
+            {groupImage ? (
+              <>
+                <img src={groupImage} alt={name} className="h-12 w-12 rounded-xl object-cover ring-2 ring-background shadow-sm" />
                 <button
-                  type="button"
-                  onClick={() => nameInputRef.current?.focus()}
-                  className="absolute top-1/2 -translate-y-1/2 group-focus-within/name:hidden text-muted-foreground/30 group-hover/name:text-muted-foreground/60 transition-colors"
-                  style={{ left: `${Math.min(name.length + 1, 20)}ch` }}
+                  onClick={handleImageRemove}
+                  aria-label="Bild entfernen"
+                  className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
                 >
-                  <Pencil className="h-3 w-3" />
+                  <X className="h-3 w-3" />
                 </button>
+              </>
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30">
+                <ImagePlus className="h-5 w-5 text-muted-foreground/40" />
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {membersLoading ? "Mitglieder werden geladen…" : `${members.length} Mitglieder`}
-              </p>
+            )}
+            <label
+              title="Bild waehlen"
+              className="absolute -right-1.5 -bottom-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-border bg-card shadow-sm transition-colors hover:bg-accent"
+            >
+              <Camera className="h-2.5 w-2.5 text-muted-foreground" />
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            </label>
+          </div>
+
+          <div className="min-w-0 flex-1 group/name">
+            <div className="relative">
+              <Input
+                ref={nameInputRef}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={handleNameBlur}
+                className="h-7 -ml-1.5 min-w-32 max-w-[calc(100%-2rem)] truncate border-transparent bg-transparent px-1 text-[17px] font-semibold shadow-none transition-all hover:bg-muted/50 focus:ml-0 focus:max-w-[calc(100%-2rem)] focus:border-input focus:bg-card focus:px-2 focus:shadow-sm"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    handleNameBlur()
+                    ;(e.target as HTMLInputElement).blur()
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => nameInputRef.current?.focus()}
+                className="absolute top-1/2 -translate-y-1/2 text-muted-foreground/30 transition-colors group-hover/name:text-muted-foreground/60 group-focus-within/name:hidden"
+                style={{ left: `${Math.min(name.length + 1, 20)}ch` }}
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
             </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {membersLoading
+                ? "Mitglieder werden geladen…"
+                : `${members.length} ${members.length === 1 ? "Mitglied" : "Mitglieder"}`}
+              {isCurrentUserAdmin && " · du bist Admin"}
+            </p>
           </div>
         </div>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setRequestedTab(v as SpaceConfigTabId)}
-          className="gap-0"
-        >
-          {/* Eine Leiste mit einem einzigen Reiter waere eine Wahl ohne
-              Alternative — ohne Modulrecht bleibt nur ein Fach uebrig. */}
-          {tabs.length > 1 && (
-            <TabsList className="mx-6 w-[calc(100%-3rem)]">
-              {tabs.map((t) => (
-                <TabsTrigger key={t.id} value={t.id} className="text-xs">
-                  {t.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          )}
-
-          {/* Mitglieder — Liste und Einladen. */}
-          <TabsContent value="members" className="min-h-64 px-6 py-5">
-          <div className="space-y-1 max-h-64 overflow-y-auto">
-            {membersLoading &&
-              members.length === 0 &&
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={`member-skeleton-${i}`} className="flex items-center gap-2.5 px-2 py-1.5" aria-hidden>
-                  <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
-                  <Skeleton className="h-3.5 w-32" />
-                </div>
-              ))}
-            {members.map((member) => (
-              <div
-                key={member.id}
-                className="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors"
-              >
-                <Avatar className="h-7 w-7">
-                  {member.avatarUrl && <AvatarImage src={member.avatarUrl} />}
-                  <AvatarFallback className="text-[10px]">
-                    {getInitials(member.displayName ?? shortName(member.id))}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="flex-1 truncate text-sm">
-                  {member.displayName ?? shortName(member.id)}
-                </span>
-                {memberIsAdmin(member) && (
-                  <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 bg-muted rounded-full">Admin</span>
-                )}
-                {isCurrentUserAdmin && onRemoveMember && member.id !== currentUserId && (
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => handleRemoveMember(member.id)}
-                    title="Mitglied entfernen"
-                    className="h-6 w-6 opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
-                  >
-                    <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
-                  </Button>
-                )}
-              </div>
-            ))}
-
-            {/* Just invited feedback */}
-            {justInvitedContacts.map((c) => (
-              <div key={c.id} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 bg-green-500/5">
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback className="text-[10px] bg-green-500/10 text-green-700">
-                    {getInitials(c.name ?? shortName(c.id))}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="flex-1 truncate text-sm">{c.name ?? shortName(c.id)}</span>
-                <Check className="h-3.5 w-3.5 text-green-600" />
-              </div>
-            ))}
-          </div>
-
-          {/* Invite Section */}
-          {onInviteMember && invitableContacts.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-border/50">
-              <Label className="text-xs text-muted-foreground">Kontakt einladen</Label>
-              <div className="mt-2 max-h-32 space-y-1 overflow-y-auto">
-                {invitableContacts.map((contact) => {
-                  const isInviting = invitingId === contact.id
-                  const inviteError = inviteErrors.get(contact.id)
+        {/* Menue und Inhalt. Auf schmalen Schirmen liegt das Menue als
+            waagerechte Leiste ueber dem Inhalt — 190px Seitenspalte plus
+            Inhalt passen dort nicht nebeneinander. */}
+        <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
+          {/* Ein Menue mit einem einzigen Eintrag waere eine Wahl ohne
+              Alternative — ohne Modulrecht bleibt nur ein Bereich uebrig. */}
+          {sections.length > 1 && (
+            <nav
+              aria-label="Bereiche"
+              className="shrink-0 border-b bg-muted/50 p-2.5 sm:w-[190px] sm:border-b-0 sm:border-r dark:bg-muted/20"
+            >
+              <div className="flex gap-1 overflow-x-auto sm:flex-col sm:gap-0.5 sm:overflow-visible">
+                {sections.map((section) => {
+                  const Icon = section.icon
+                  const active = section.id === activeSection
+                  const count = sectionCounts[section.id]
                   return (
-                    <div key={contact.id}>
-                      <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/50">
-                        <Avatar className="h-7 w-7">
-                          {contact.avatar && <AvatarImage src={contact.avatar} />}
-                          <AvatarFallback className="text-[10px]">
-                            {getInitials(contact.name ?? contact.id)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="flex-1 truncate text-sm">{contact.name ?? shortName(contact.id)}</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => handleInviteContact(contact.id)}
-                          disabled={isInviting || invitingId !== null}
-                        >
-                          {isInviting ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <UserPlus className="h-3 w-3" />
-                          )}
-                          <span className="ml-1">Einladen</span>
-                        </Button>
-                      </div>
-                      {inviteError && (
-                        <p className="text-xs text-destructive ml-11 -mt-0.5 mb-1">{inviteError}</p>
+                    <button
+                      key={section.id}
+                      type="button"
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => setRequestedSection(section.id)}
+                      className={cn(
+                        "flex items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors",
+                        active
+                          ? "bg-card font-semibold text-foreground shadow-sm"
+                          : "font-medium text-muted-foreground hover:bg-muted/60",
                       )}
-                    </div>
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span className="flex-1">{section.label}</span>
+                      {count !== undefined && (
+                        <span className="text-[10px] text-muted-foreground">{count}</span>
+                      )}
+                    </button>
                   )
                 })}
               </div>
-            </div>
+            </nav>
           )}
 
-          {/* No contacts hint */}
-          {onInviteMember && invitableContacts.length === 0 && justInvitedContacts.length === 0 && (
-            <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border/50">
-              {(contacts ?? []).some((c) => c.status === "active")
-                ? "Alle Kontakte sind bereits Mitglied."
-                : "Keine verifizierten Kontakte."}
-            </p>
-          )}
+          <div className="min-w-0 flex-1 overflow-y-auto px-6 py-4">
+          {activeSection === "members" && (
+            <>
+              <div className="mb-3 flex items-center gap-2.5">
+                <h3 className="text-sm font-semibold">Mitglieder</h3>
+                {/* Einladen bleibt allen Mitgliedern offen, nicht nur Admins:
+                    im WoT laedt jedes Mitglied ein, nur der Creator entfernt. */}
+                {onInviteMember && (
+                  <Button
+                    size="sm"
+                    className="ml-auto h-7 text-xs"
+                    onClick={() => setInviteOpen((v) => !v)}
+                    aria-expanded={inviteOpen}
+                  >
+                    <UserPlus className="h-3 w-3" />
+                    <span className="ml-1">Einladen</span>
+                  </Button>
+                )}
+              </div>
 
-          </TabsContent>
+              {/* Der Kontakt-Picker liegt hinter dem Knopf. Er stand frueher
+                  dauerhaft unter der Liste und schob die Mitglieder nach oben
+                  aus dem Blick, sobald es viele Kontakte gab. */}
+              {inviteOpen && onInviteMember && (
+                <div className="mb-3 rounded-lg border bg-muted/20 p-2">
+                  {invitableContacts.length > 0 ? (
+                    <div className="max-h-40 space-y-1 overflow-y-auto">
+                      {invitableContacts.map((contact) => {
+                        const isInviting = invitingId === contact.id
+                        const inviteError = inviteErrors.get(contact.id)
+                        return (
+                          <div key={contact.id}>
+                            <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-muted/50">
+                              <Avatar className="h-7 w-7">
+                                {contact.avatar && <AvatarImage src={contact.avatar} />}
+                                <AvatarFallback className="text-[10px]">
+                                  {getInitials(contact.name ?? contact.id)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="flex-1 truncate text-sm">{contact.name ?? shortName(contact.id)}</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => handleInviteContact(contact.id)}
+                                disabled={isInviting || invitingId !== null}
+                              >
+                                {isInviting ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <UserPlus className="h-3 w-3" />
+                                )}
+                                <span className="ml-1">Einladen</span>
+                              </Button>
+                            </div>
+                            {inviteError && (
+                              <p className="-mt-0.5 mb-1 ml-11 text-xs text-destructive">{inviteError}</p>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                      {(contacts ?? []).some((c) => c.status === "active")
+                        ? "Alle Kontakte sind bereits Mitglied."
+                        : "Keine verifizierten Kontakte."}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Suchen lohnt erst, wenn die Liste nicht mehr auf einen Blick
+                  zu ueberschauen ist. */}
+              {members.length > 8 && (
+                <div className="relative mb-2">
+                  <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                    placeholder="Suchen…"
+                    className="h-8 pl-8 text-xs"
+                  />
+                </div>
+              )}
+
+              {membersLoading && members.length === 0 && (
+                <div className="space-y-1">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={`member-skeleton-${i}`} className="flex items-center gap-2.5 px-2.5 py-1.5" aria-hidden>
+                      <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+                      <Skeleton className="h-3.5 w-32" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Drei Gruppen statt einer flachen Liste: `members` ist nach
+                  DID sortiert, das Admin-Abzeichen sass also an beliebiger
+                  Stelle. Die Gruppe sagt es jetzt, das Abzeichen entfaellt. */}
+              {shownAdmins.length > 0 && (
+                <>
+                  <MemberGroupLabel>Admin</MemberGroupLabel>
+                  <div className="space-y-0.5">{shownAdmins.map(renderMemberRow)}</div>
+                </>
+              )}
+              {shownOthers.length > 0 && (
+                <>
+                  <MemberGroupLabel>{`Mitglieder · ${shownOthers.length}`}</MemberGroupLabel>
+                  <div className="space-y-0.5">{shownOthers.map(renderMemberRow)}</div>
+                </>
+              )}
+              {!membersLoading && shownAdmins.length === 0 && shownOthers.length === 0 && (
+                <p className="px-2.5 py-3 text-xs text-muted-foreground">Niemand gefunden.</p>
+              )}
+
+              {justInvitedContacts.length > 0 && (
+                <>
+                  <MemberGroupLabel>{`Eingeladen · ${justInvitedContacts.length}`}</MemberGroupLabel>
+                  <div className="space-y-0.5">
+                    {justInvitedContacts.map((c) => (
+                      <div key={c.id} className="flex items-center gap-2.5 rounded-lg bg-green-500/5 px-2.5 py-1.5">
+                        <Avatar className="h-7 w-7">
+                          <AvatarFallback className="bg-green-500/10 text-[10px] text-green-700">
+                            {getInitials(c.name ?? shortName(c.id))}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="flex-1 truncate text-sm">{c.name ?? shortName(c.id)}</span>
+                        <Check className="h-3.5 w-3.5 text-green-600" />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
 
           {/* Module (admin only): the ACTIVE list is ordered — data.modules
               is what the nav renders, top row = first tab. Reorder by DRAGGING
@@ -722,9 +878,10 @@ export function GroupDialog({
               path and appear ONLY on keyboard focus — with the mouse you
               drag, so showing them on hover was pure noise. Dragging alone
               would lock out keyboard and screen-reader users. */}
-          {isCurrentUserAdmin && (
-            <TabsContent value="modules" className="min-h-64 px-6 py-5">
-              <Label className="text-xs text-muted-foreground">Module (ziehen zum Sortieren)</Label>
+          {activeSection === "modules" && isCurrentUserAdmin && (
+            <>
+              <h3 className="mb-3 text-sm font-semibold">Module</h3>
+              <Label className="text-xs text-muted-foreground">Ziehen zum Sortieren</Label>
               <div className="mt-2 space-y-0.5" onDragOver={(e) => e.preventDefault()} onDrop={handleModuleDrop}>
                 {visibleModules.map((id, index) => {
                   const mod = getModule(id)!
@@ -819,9 +976,10 @@ export function GroupDialog({
                   </div>
                 </div>
               )}
-            </TabsContent>
+            </>
           )}
-        </Tabs>
+          </div>
+        </div>
 
         {/* Errors: module-save failures have their own state (ownership by
             construction, rls#232) and can coexist with a general error.
