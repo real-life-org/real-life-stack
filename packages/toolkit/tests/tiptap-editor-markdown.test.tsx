@@ -52,6 +52,19 @@ describe("TiptapEditor markdown contract", () => {
     expect(emitted).toEqual(["Ein **fetter** Absatz."])
   })
 
+  // The editor understands less Markdown than the preview renders. Opening an
+  // item must never be the moment its content shrinks — the normalisation
+  // above stays out of the way where it cannot round-trip.
+  it.each([
+    ["an image", "![Karte vom Treffpunkt](https://example.org/karte.png)"],
+    ["a heading below h2", "### Dritte Ebene\n\nText."],
+    ["a table", "| a | b |\n|---|---|\n| 1 | 2 |"],
+  ])("does not rewrite %s it cannot express", async (_what, value) => {
+    const { emitted } = await mount(value)
+
+    expect(emitted).toEqual([])
+  })
+
   it("leaves text that is already Markdown alone", async () => {
     const { emitted } = await mount("# Titel\n\nEin **fetter** Absatz.\n\n- eins\n- zwei")
 

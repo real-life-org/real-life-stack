@@ -22,6 +22,22 @@ function getMarkdown(editor: Editor): string {
   return (editor.storage as Record<string, any>).markdown.getMarkdown() as string
 }
 
+/**
+ * Whether rewriting `before` as `after` would change the document itself and
+ * not just its spelling.
+ *
+ * The editor understands less Markdown than the preview renders: an image or
+ * an `###` heading survives the round trip through its schema only as text.
+ * Rewriting a stored text the user has not touched must never cost content,
+ * so both readings are rendered through the editor's own parser and compared.
+ * Raw HTML turned into Markdown reads identically and may be written back; a
+ * dropped image does not and is left alone.
+ */
+function readsTheSame(editor: Editor, before: string, after: string): boolean {
+  const { parser } = (editor.storage as Record<string, any>).markdown
+  return parser.parse(before) === parser.parse(after)
+}
+
 export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorProps>(
   function TiptapEditor({ value, onChange, placeholder, autoFocus, className }, ref) {
     // `onChange` is a fresh closure on every render, but the editor callbacks
@@ -47,11 +63,21 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
      * Markdown parser renders it) but the preview shows it as literal tags,
      * and re-saving kept writing the same string back. Inserting a single
      * space used to be the only way out.
+     *
+     * Nothing is handed up that would cost the user content — see
+     * {@link readsTheSame}. Such a text stays authoritative as it is, so that
+     * merely opening an item can never reduce it.
      */
     const publish = (editor: Editor, incoming: string) => {
       const md = getMarkdown(editor)
-      editorText.current = md
-      if (md !== incoming) onChangeRef.current(md)
+
+      if (md !== incoming && readsTheSame(editor, incoming, md)) {
+        editorText.current = md
+        onChangeRef.current(md)
+        return
+      }
+
+      editorText.current = incoming
     }
 
     const editor = useEditor({
