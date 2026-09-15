@@ -163,6 +163,7 @@ import {
   deriveRegistryView,
   groupRegistryByEntry,
   maxAdmission,
+  membershipOf,
   MIRROR_REGISTRY_ROOT,
   mergeProfileData,
   mirrorRegistryEntryKey,
@@ -179,6 +180,7 @@ import {
   supersedesOf,
   type MirrorRegistryRoot,
   type MirrorRegistryView,
+  type SpaceMembership,
   type ProfileItemFields,
 } from "./mirror/index.js"
 import { CrossGroupIndex } from "./CrossGroupIndex.js"
@@ -1400,7 +1402,10 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
    */
   private isMemberOfSpace(spaceId: string, did: string): boolean {
     const spaces = this.replication?.watchSpaces().getValue() ?? []
-    return spaces.find((space) => space.id === spaceId)?.members?.includes(did) ?? false
+    // „unknown" (Projektion noch leer) gilt hier als NICHT Mitglied: ein
+    // ausdrücklicher Schreibversuch scheitert dann laut, statt eine Freigabe
+    // ohne belegte Mitgliedschaft zu schreiben.
+    return membershipOf(spaces.find((space) => space.id === spaceId), did) === "member"
   }
 
   private admissionOfSpace(spaceId: string): SpaceAdmission | undefined {
@@ -1564,6 +1569,19 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     const spaces = this.replication?.watchSpaces().getValue() ?? []
     this.assertNamedRoots(handle)
 
+    // Die Übergangsregel gilt für ALLE bestehenden Mitgliedschaften und läuft
+    // genau einmal. Sagt die Mitgliederprojektion zu einem sichtbaren Space
+    // noch nichts (leere `members`-Liste — ein echter Space hat mindestens
+    // seinen Ersteller), ist die Auswahl unvollständig. Die Marke bleibt dann
+    // aus, sonst wäre die einmalige Freigabe für diesen Space für immer
+    // verpasst; die auflösbaren Ziele werden trotzdem schon freigegeben, und
+    // der nächste Auslöser holt den Rest nach.
+    const unresolved = spaces.some((space) =>
+      space.id !== handle.id
+      && space.type === "shared"
+      && space.appTag !== "rls-private"
+      && membershipOf(space, did) === "unknown")
+
     handle.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
       // Prüfung, Beiträge UND Marke in EINER Transaktion: sonst könnte ein
       // zweites Gerät zwischen Prüfung und Marke die Migration abschließen und
@@ -1598,7 +1616,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
       // Monoton: eine vorhandene Marke wird NIE überschrieben — der Durchlauf
       // ist oben schon abgebrochen, wenn sie stand.
-      root[PROFILE_MIGRATION_KEY] = { bestandAt: new Date().toISOString() }
+      if (!unresolved) root[PROFILE_MIGRATION_KEY] = { bestandAt: new Date().toISOString() }
     })
   }
 
@@ -1625,9 +1643,13 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     handle.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
       const registry = groupRegistryByEntry(registryContributionsOf(root))
-      const apply = (targetSpaceId: string, admission: SpaceAdmission | undefined, isMember: boolean) => {
+      const apply = (
+        targetSpaceId: string,
+        admission: SpaceAdmission | undefined,
+        membership: SpaceMembership,
+      ) => {
         const view = deriveRegistryView(registry.get(mirrorRegistryEntryKey(did, targetSpaceId)) ?? {})
-        const transition = planMembershipTransition(view, admission, isMember)
+        const transition = planMembershipTransition(view, admission, membership)
         if (!transition) return
         this.applyRegistryContribution(root, {
           did,
@@ -1635,16 +1657,18 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
           targetSpaceId,
           status: transition.status,
           currentAdmission: admission,
-          isMember,
+          isMember: membership === "member",
           // Erwartung: die Entscheidung gilt nur, solange sie aus der Lesesicht
           // in dieser Transaktion noch folgt.
-          expect: (current) => planMembershipTransition(current, admission, isMember)?.status === transition.status,
+          expect: (current) => planMembershipTransition(current, admission, membership)?.status === transition.status,
         })
       }
 
       // Sichtbar heißt nicht Mitglied: die Space-Liste kann einen Space führen,
-      // aus dem die Person entfernt wurde (09 Invariante 11).
-      for (const space of visible) apply(space.id, space.admission, space.members?.includes(did) ?? false)
+      // aus dem die Person entfernt wurde (09 Invariante 11). Eine noch leere
+      // Mitgliederprojektion heißt dagegen „noch nichts gesagt" und führt zu
+      // gar keinem Statuswechsel.
+      for (const space of visible) apply(space.id, space.admission, membershipOf(space, did))
 
       // Ein Eintrag, dessen Ziel-Space gar nicht mehr sichtbar ist: die
       // Mitgliedschaft ist weg (09 Invariante 11). Der Eintrag wird
@@ -1652,7 +1676,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       for (const entryKey of registry.keys()) {
         const parsed = parseMirrorRegistryEntryKey(entryKey)
         if (!parsed || parsed.itemId !== did || seen.has(parsed.targetSpaceId)) continue
-        apply(parsed.targetSpaceId, undefined, false)
+        apply(parsed.targetSpaceId, undefined, "not-member")
       }
     })
   }

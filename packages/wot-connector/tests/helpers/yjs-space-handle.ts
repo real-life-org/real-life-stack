@@ -93,10 +93,11 @@ function snapshot(map: Y.Map<unknown>): Record<string, unknown> {
  */
 function rootDraft<R extends object>(map: Y.Map<unknown>, fn: (root: R) => void): Array<[string, unknown]> {
   const ops = new Map<string, { value: unknown } | { remove: true }>()
+  // Gelesen wird eine tief EINGEFRORENE Kopie, wie im Adapter.
   const read = (key: string): unknown => {
     const pending = ops.get(key)
-    if (pending) return "remove" in pending ? undefined : clone(pending.value)
-    return clone(map.get(key))
+    if (pending) return "remove" in pending ? undefined : toRootValue(clone(pending.value), `root.${key}`)
+    return toRootValue(clone(map.get(key)), `root.${key}`)
   }
   const keys = () => {
     const all = new Set(map.keys())
@@ -196,7 +197,9 @@ export function createYjsSpaceHandle<T extends object>(id: string): YjsTestSpace
     getRoot: <R extends object>(name: string) => {
       assertRootName(name)
       const projection: Record<string, unknown> = {}
-      ydoc.getMap<unknown>(name).forEach((value, key) => { projection[key] = clone(value) })
+      ydoc.getMap<unknown>(name).forEach((value, key) => {
+        projection[key] = toRootValue(clone(value), `${name}.${key}`)
+      })
       return projection as R
     },
     transactRoot: <R extends object>(name: string, fn: (root: R) => void) => {

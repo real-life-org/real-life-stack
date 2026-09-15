@@ -4,7 +4,7 @@ import { createObservable, hasProfile } from "@real-life-stack/data-interface"
 import { WotConnector } from "../src/wot-connector.js"
 import { byDeviceOf, flatRegistry, hasEntry } from "./helpers/registry-fixtures.js"
 import { createFakeNamedRoots, type FakeNamedRoots } from "./helpers/named-roots.js"
-import { PROFILE_MIGRATION_KEY, type MirrorRegistryRoot } from "../src/mirror/index.js"
+import { PROFILE_MIGRATION_KEY, profileMigrationMark, type MirrorRegistryRoot } from "../src/mirror/index.js"
 import type { MirrorRegistryContribution, RlsSpaceDoc } from "../src/types.js"
 
 /**
@@ -86,6 +86,10 @@ function fakeConnector(options: {
 
 function entry(named: FakeNamedRoots, target: string): Record<string, MirrorRegistryContribution> {
   return byDeviceOf(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, target)
+}
+
+function mark(named: FakeNamedRoots): string | undefined {
+  return profileMigrationMark(named.roots.mirrorRegistry as MirrorRegistryRoot)?.bestandAt
 }
 
 function status(named: FakeNamedRoots, target: string): string | undefined {
@@ -209,7 +213,9 @@ describe("Codex-Runde 1 zum Nachtrag — Mitgliedschaft vor Kennungsvergleich", 
   it("widerruft auch, wenn der Space sichtbar bleibt, die Person aber kein Mitglied mehr ist", async () => {
     const { connector, named } = fakeConnector({
       registry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 2 } }) } }),
-      spaces: [{ id: "garten", members: [], admission: { keyGeneration: 2 } }],
+      // Nicht die LEERE Liste (die heisst „noch nichts gesagt"), sondern eine
+      // geladene Liste ohne die eigene DID.
+      spaces: [{ id: "garten", members: ["did:key:z6MkFremd"], admission: { keyGeneration: 2 } }],
     })
 
     await connector.queueProfileHomeMaintenance()
@@ -218,7 +224,7 @@ describe("Codex-Runde 1 zum Nachtrag — Mitgliedschaft vor Kennungsvergleich", 
   })
 
   it("legt fuer einen sichtbaren Space ohne eigene Mitgliedschaft keinen pending-Eintrag an", async () => {
-    const { connector, named } = fakeConnector({ spaces: [{ id: "fremd", members: [] }] })
+    const { connector, named } = fakeConnector({ spaces: [{ id: "fremd", members: ["did:key:z6MkFremd"] }] })
 
     await connector.queueProfileHomeMaintenance()
 
@@ -230,7 +236,7 @@ describe("Codex-Runde 1 zum Nachtrag — Mitgliedschaft vor Kennungsvergleich", 
       bestand: false,
       spaces: [
         { id: "garten", admission: { keyGeneration: 1 } },
-        { id: "entfernt", members: [], admission: { keyGeneration: 3 } },
+        { id: "entfernt", members: ["did:key:z6MkFremd"], admission: { keyGeneration: 3 } },
       ],
     })
 
@@ -240,6 +246,65 @@ describe("Codex-Runde 1 zum Nachtrag — Mitgliedschaft vor Kennungsvergleich", 
     // Durchlauf haette auch die echte Bestandsfreigabe verworfen.
     expect(status(named, "garten")).toBe("accepted")
     expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "entfernt")).toBe(false)
+  })
+})
+
+describe("Codex-Runde 2 zum Nachtrag — fehlende Information ist kein Verlust", () => {
+  it("widerruft NICHT, solange die Mitgliederprojektion eines sichtbaren Space leer ist", async () => {
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { alt: { [DEVICE]: contribution({ status: "accepted" }) } }),
+      // `members: []` heisst „noch nichts gesagt" — ein echter Space hat
+      // mindestens seinen Ersteller.
+      spaces: [{ id: "alt", members: [] }],
+    })
+
+    await connector.queueProfileHomeMaintenance()
+
+    expect(status(named, "alt")).toBe("accepted")
+  })
+
+  it("legt fuer einen Space mit leerer Projektion auch keinen pending-Eintrag an", async () => {
+    const { connector, named } = fakeConnector({ spaces: [{ id: "alt", members: [] }] })
+
+    await connector.queueProfileHomeMaintenance()
+
+    expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "alt")).toBe(false)
+  })
+
+  it("setzt die Bestandsmarke NICHT, solange eine Mitgliederprojektion fehlt", async () => {
+    const { connector, named } = fakeConnector({
+      bestand: false,
+      spaces: [
+        { id: "garten", admission: { keyGeneration: 1 } },
+        { id: "unklar", members: [] },
+      ],
+    })
+
+    await connector.queueProfileHomeMaintenance()
+
+    // Sonst waere die einmalige Bestandsfreigabe fuer `unklar` dauerhaft
+    // verpasst (Spec 12 Regel 5: ALLE bestehenden Mitgliedschaften). Die
+    // aufloesbaren Ziele laufen trotzdem schon durch.
+    expect(mark(named)).toBeUndefined()
+    expect(status(named, "garten")).toBe("accepted")
+    expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "unklar")).toBe(false)
+  })
+
+  it("holt den Bestandsdurchlauf nach, sobald die Projektion geladen ist", async () => {
+    const spaces: Array<Record<string, unknown>> = [
+      { id: "garten", type: "shared", appTag: "rls", members: [], createdAt: "", admission: { keyGeneration: 1 } },
+    ]
+    const { connector, named } = fakeConnector({ bestand: false })
+    connector.replication.watchSpaces = () => ({ getValue: () => spaces })
+
+    await connector.queueProfileHomeMaintenance()
+    expect(mark(named)).toBeUndefined()
+
+    spaces[0].members = [DID]
+    await connector.queueProfileHomeMaintenance()
+
+    expect(status(named, "garten")).toBe("accepted")
+    expect(mark(named)).toBeTruthy()
   })
 })
 

@@ -57,6 +57,7 @@ export type {
 export { compareVersion, tiebreakOf } from "./version.js"
 export {
   maxAdmission,
+  membershipOf,
   mergeProfileData,
   planMembershipTransition,
   planStockGrants,
@@ -64,4 +65,4 @@ export {
   supersedesOf,
 } from "./profile-home.js"
 export { normalizeProfileFields } from "./profile-home.js"
-export type { MembershipTransition, ProfileItemFields } from "./profile-home.js"
+export type { MembershipTransition, ProfileItemFields, SpaceMembership } from "./profile-home.js"

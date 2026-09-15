@@ -61,10 +61,13 @@ export function createFakeNamedRoots(
   const transactRoot = <R extends object>(name: string, fn: (root: R) => void): void => {
     const stored = rootOf(name)
     const ops = new Map<string, { value: unknown } | { remove: true }>()
+    // Gelesen wird eine tief EINGEFRORENE Kopie, wie im Adapter: eine
+    // verschachtelte Mutation am gelesenen Wert wirkt nie im Doc und muss
+    // deshalb auch im Test auffallen.
     const read = (key: string) => {
       const pending = ops.get(key)
-      if (pending) return "remove" in pending ? undefined : clone(pending.value)
-      return clone(stored[key])
+      if (pending) return "remove" in pending ? undefined : toRootValue(clone(pending.value), `${name}.${key}`)
+      return toRootValue(clone(stored[key]), `${name}.${key}`)
     }
     const keys = () => {
       const all = new Set(Object.keys(stored))
@@ -104,7 +107,13 @@ export function createFakeNamedRoots(
 
   return {
     roots,
-    getRoot: <R extends object>(name: string) => clone(rootOf(name)) as R,
+    getRoot: <R extends object>(name: string) => {
+      const projection: Record<string, unknown> = {}
+      for (const [key, value] of Object.entries(rootOf(name))) {
+        projection[key] = toRootValue(clone(value), `${name}.${key}`)
+      }
+      return projection as R
+    },
     transactRoot,
     transactRootDurable: async <R extends object>(name: string, fn: (root: R) => void) => {
       transactRoot<R>(name, fn)

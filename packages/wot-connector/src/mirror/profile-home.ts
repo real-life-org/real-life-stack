@@ -80,6 +80,27 @@ export function profileItemInput(did: string, fields: ProfileItemFields): Create
   } as CreateItemInput
 }
 
+/**
+ * Die Mitgliedschaft im Ziel-Space, dreiwertig.
+ *
+ * `"unknown"` ist der Zustand, in dem die Mitgliederprojektion des Adapters
+ * noch nichts sagt (leere `members`-Liste — ein echter Space hat immer
+ * mindestens seinen Ersteller). Er ist ausdrücklich NICHT `"not-member"`:
+ * fehlende Information darf keinen Widerruf und keine Bestandsmarke auslösen.
+ */
+export type SpaceMembership = "member" | "not-member" | "unknown"
+
+/**
+ * Die Mitgliedschaft aus der Projektion des Adapters (`SpaceInfo.members` aus
+ * `_members`). Ein Space, den dieses Gerät gar nicht mehr sieht, ist ein
+ * Verlust; eine leere Mitgliederliste ist dagegen „noch nichts gesagt".
+ */
+export function membershipOf(space: SpaceInfo | undefined, did: string): SpaceMembership {
+  if (!space) return "not-member"
+  if (!space.members || space.members.length === 0) return "unknown"
+  return space.members.includes(did) ? "member" : "not-member"
+}
+
 /** Was eine Mitgliedschaftslage am Registry-Eintrag ändern muss — `null` = nichts. */
 export type MembershipTransition = { status: "pending" | "accepted" | "revoked" } | null
 
@@ -104,12 +125,19 @@ export type MembershipTransition = { status: "pending" | "accepted" | "revoked" 
  * - Kennung niedriger oder weg → Mitgliedschaft verloren, also `revoked`
  * - gleich → nichts
  *
- * `isMember` trägt den Mitgliedschaftsverlust, den der Kennungsvergleich NICHT
+ * `membership` trägt den Mitgliedschaftsverlust, den der Kennungsvergleich NICHT
  * ausdrücken kann: ein Eintrag ohne Kennung (seit der Übergangsregel in der
  * Fassung rls#354 der Regelfall für Alt-Spaces ohne Ereignisse) vergleicht sich
  * mit „keine Kennung" als gleich, auch wenn der Ziel-Space längst weg ist. Die
  * Mitgliedschaftsbindung (09 Invariante 11) hängt aber an der Mitgliedschaft,
  * nicht an der Ordnung der Kennungen; deshalb entscheidet sie zuerst.
+ *
+ * `"unknown"` ist der dritte Zustand und heißt NICHTS TUN: eine noch nicht
+ * geladene Mitgliederprojektion ist fehlende Information, kein Verlust. Sie als
+ * Verlust zu lesen machte aus einem Erstsync einen dauerhaften Widerruf —
+ * Einträge werden nie gelöscht, und der spätere `accepted`-Beitrag desselben
+ * Geräts löst den Widerruf nicht ab (er hat ihn ja beobachtet, aber die Person
+ * hat nichts entschieden).
  *
  * Die Kennung selbst setzt der Schreibpfad; hier steht nur, DASS ein
  * Statuswechsel fällig ist.
@@ -117,12 +145,14 @@ export type MembershipTransition = { status: "pending" | "accepted" | "revoked" 
 export function planMembershipTransition(
   view: MirrorRegistryView | null,
   spaceAdmission: SpaceAdmission | undefined,
-  isMember = true,
+  membership: SpaceMembership = "member",
 ): MembershipTransition {
+  // Fehlende Information ist kein Statuswechsel.
+  if (membership === "unknown") return null
   // Kein Eintrag und keine Mitgliedschaft: es gibt nichts zu widerrufen.
-  if (!view) return isMember ? { status: "pending" } : null
+  if (!view) return membership === "member" ? { status: "pending" } : null
   // Mitgliedschaft verloren — unabhängig davon, ob die Kennungen das zeigen.
-  if (!isMember) return view.status === "revoked" ? null : { status: "revoked" }
+  if (membership === "not-member") return view.status === "revoked" ? null : { status: "revoked" }
 
   const order = compareAdmissionOrUndefined(spaceAdmission, view.admission)
   if (order > 0) {
@@ -163,7 +193,7 @@ export function planStockGrants(
       // wurde. Ohne diese Prüfung wirft der Schreibpfad mitten im
       // Bestandsdurchlauf — und weil Beiträge und Marke in EINER Transaktion
       // liegen, fiele der ganze Durchlauf samt echter Bestandsfreigaben aus.
-      && (space.members?.includes(did) ?? false)
+      && membershipOf(space, did) === "member"
       // Über einen vorhandenen Eintrag wurde bereits entschieden — auch ein
       // Widerruf ist eine Entscheidung. Die Übergangsregel gilt nur für
       // Mitgliedschaften, die es vor dieser Spec schon gab, und darf eine
