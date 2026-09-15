@@ -65,7 +65,6 @@ describe("TiptapEditor markdown contract", () => {
   // above stays out of the way where it cannot round-trip.
   it.each([
     ["a heading below h2", "### Dritte Ebene\n\nText."],
-    ["a table", "| a | b |\n|---|---|\n| 1 | 2 |"],
   ])("does not rewrite %s it cannot express", async (_what, value) => {
     const { changed, normalised } = await mount(value)
 
@@ -160,6 +159,29 @@ describe("TiptapEditor markdown contract", () => {
       })
 
       expect(changed.at(-1)).toBe(`XText.\n\n![](${url})`)
+    })
+  })
+
+  // Both are Markdown the preview renders. A table used to vanish from the
+  // document entirely when an item was opened — whole, not just its pipes —
+  // and a checklist came back as a plain list.
+  describe("tables and checklists", () => {
+    it("keeps a table between two paragraphs", async () => {
+      const table = "Davor.\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n\nDanach."
+      const { editor } = await mount(table)
+
+      await act(async () => {
+        editor.commands.insertContentAt(1, "X")
+      })
+
+      expect(editor.getMarkdown()).toContain("| 1")
+      expect(editor.getMarkdown()).toContain("Danach.")
+    })
+
+    it("keeps the boxes of a checklist", async () => {
+      const { changed, normalised } = await mount("- [ ] offen\n- [x] fertig")
+
+      expect([...changed, ...normalised]).toEqual([])
     })
   })
 })

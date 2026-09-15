@@ -1,9 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { useEditor, EditorContent, type Editor } from "@tiptap/react"
+import { Extension, useEditor, EditorContent, type Editor } from "@tiptap/react"
+import { Node as ProseMirrorNode, Slice } from "@tiptap/pm/model"
+import { Plugin, PluginKey } from "@tiptap/pm/state"
 import StarterKit from "@tiptap/starter-kit"
 import Image from "@tiptap/extension-image"
+import { TaskItem, TaskList } from "@tiptap/extension-list"
+import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table"
 import { Markdown } from "@tiptap/markdown"
 import { cn } from "@/lib/utils"
 
@@ -27,6 +31,47 @@ interface TiptapEditorProps {
   autoFocus?: boolean
   className?: string
 }
+
+/**
+ * Pasted plain text is read as Markdown.
+ *
+ * `@tiptap/markdown` reads Markdown into the editor and writes it back out,
+ * but it leaves the clipboard alone: pasted text arrives as literal
+ * characters, so `![](…)` landed as the visible string `!\[\]…` with the URL
+ * autolinked beside it. Text copied out of a Markdown document is Markdown,
+ * and the editor already knows how to read it.
+ *
+ * A paste held down with Shift asks for the literal characters and is left
+ * alone, and so is text the parser makes nothing of — ProseMirror's own
+ * handling is the better answer there than an empty selection.
+ */
+const MarkdownPaste = Extension.create({
+  name: "markdownPaste",
+
+  addProseMirrorPlugins() {
+    const { editor } = this
+
+    return [
+      new Plugin({
+        key: new PluginKey("markdownPaste"),
+        props: {
+          clipboardTextParser: (text, _context, plainText) => {
+            if (plainText) return null as unknown as Slice
+
+            try {
+              const json = editor.storage.markdown.manager.parse(text)
+              if (!json.content?.length) return null as unknown as Slice
+
+              return Slice.maxOpen(ProseMirrorNode.fromJSON(editor.schema, json).content)
+            } catch {
+              return null as unknown as Slice
+            }
+          },
+        },
+      }),
+    ]
+  },
+})
 
 /**
  * The document as Markdown.
@@ -119,7 +164,18 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
         // Markdown it is written as; base64 because the media widget produces
         // resized data URIs.
         Image.configure({ inline: true, allowBase64: true }),
+        // Tables and checklists are Markdown the preview renders, and both
+        // read and write themselves. Without them a table between two
+        // paragraphs was dropped from the document on open — whole, not just
+        // its formatting — and a checklist lost its boxes.
+        Table,
+        TableRow,
+        TableHeader,
+        TableCell,
+        TaskList,
+        TaskItem,
         Markdown,
+        MarkdownPaste,
       ],
       autofocus: autoFocus ? "end" : false,
       content: value,

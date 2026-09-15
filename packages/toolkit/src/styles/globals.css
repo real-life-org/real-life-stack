@@ -393,6 +393,33 @@
   outline: 2px solid var(--primary);
 }
 
+.tiptap-editor .tiptap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875em;
+}
+
+.tiptap-editor .tiptap th,
+.tiptap-editor .tiptap td {
+  border: 1px solid var(--border);
+  padding: 0.25em 0.5em;
+  text-align: left;
+}
+
+.tiptap-editor .tiptap th {
+  font-weight: 600;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap-editor .tiptap ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.5em;
+}
+
 .tiptap-editor .tiptap strong {
   font-weight: 700;
 }
