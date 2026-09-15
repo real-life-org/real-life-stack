@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef, type DragEvent, type ReactNode } from "react"
+import { memo, useState, useCallback, useEffect, useMemo, useRef, type DragEvent, type ReactNode } from "react"
 import type { Item, User, Relation } from "@real-life-stack/data-interface"
 import { cn } from "../../lib/utils"
 import {
@@ -70,8 +70,15 @@ interface KanbanCardProps {
   readOnly: boolean
   isDragged: boolean
   active?: boolean
-  /** Optional header badge (e.g. „Privat") next to the card title. */
-  headerAdornment?: ReactNode
+  /**
+   * Optional header badge (e.g. „Privat") next to the card title.
+   *
+   * The card is handed the function, not the finished badge: a board renders
+   * for every drag, every open panel and every keystroke in a composer, and a
+   * badge built up there would be a new element each time — which is exactly
+   * what the memo below exists to avoid.
+   */
+  renderAdornment?: (item: Item) => ReactNode
   /** Colour of the active glow when this card's item is open in the panel. */
   glowColor?: string
   onDragStart?: (e: DragEvent, itemId: string) => void
@@ -79,7 +86,7 @@ interface KanbanCardProps {
   onClick?: (item: Item) => void
 }
 
-function KanbanCard({ item, users, readOnly, isDragged, active, headerAdornment, glowColor, onDragStart, onDragEnd, onClick }: KanbanCardProps) {
+const KanbanCard = memo(function KanbanCard({ item, users, readOnly, isDragged, active, renderAdornment, glowColor, onDragStart, onDragEnd, onClick }: KanbanCardProps) {
   const assigneeIds = getAssigneeIds(item)
   const userMap = new Map((users ?? []).map((u) => [u.id, u]))
   const assignees = assigneeIds.map((id) => userMap.get(id)).filter((u): u is User => u != null)
@@ -116,7 +123,7 @@ function KanbanCard({ item, users, readOnly, isDragged, active, headerAdornment,
         item={displayItem}
         author={null}
         density="compact"
-        headerAdornment={headerAdornment}
+        headerAdornment={renderAdornment?.(item)}
         active={active}
         activeGlowColor={glowColor}
         onClick={onClick ? () => onClick(item) : undefined}
@@ -135,7 +142,7 @@ function KanbanCard({ item, users, readOnly, isDragged, active, headerAdornment,
       />
     </div>
   )
-}
+})
 
 function DropIndicator({ visible }: { visible: boolean }) {
   return (
@@ -549,7 +556,7 @@ export function KanbanBoard({
                       readOnly={readOnly}
                       isDragged={draggedItemId === item.id}
                       active={activeItemId === item.id}
-                      headerAdornment={renderCardAdornment?.(item)}
+                      renderAdornment={renderCardAdornment}
                       glowColor={resolveItemGroupColor?.(item)}
                       onDragStart={handleDragStart}
                       onDragEnd={handleDragEnd}

@@ -1,6 +1,6 @@
 "use client"
 
-import type { CSSProperties, KeyboardEvent, ReactNode } from "react"
+import { memo, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
 import type { Item, User } from "@real-life-stack/data-interface"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { RelativeTime } from "../primitives/relative-time"
@@ -198,7 +198,18 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-export function ItemPreview({
+/**
+ * A card in a list of cards.
+ *
+ * Memoised, because a card re-renders for reasons that have nothing to do with
+ * it: while someone writes in the composer the draft is republished, and every
+ * module showing items renders again — with 60 cards on screen that was 60
+ * cards of work per update. The memo only bites where the surface hands over
+ * stable props; a freshly built `headerAdornment` or an inline `onClick`
+ * defeats it, so a surface builds its row in a component of its own (see
+ * `FeedCard` in feed-view.tsx, `KanbanCard` here in the toolkit).
+ */
+export const ItemPreview = memo(function ItemPreview({
   item,
   author,
   onClick,
@@ -405,4 +416,4 @@ export function ItemPreview({
       )}
     </article>
   )
-}
+})

@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useRef } from "react"
+import { memo, useMemo, useCallback, useEffect, useRef } from "react"
 import {
   useModulePanel,
   ReactionBar,
@@ -198,7 +198,13 @@ export function FeedView({ groupId }: { groupId: string }) {
   // FAB beobachtet sie und tritt an ihre Stelle, sobald sie weggescrollt ist.
   const composerTrigger = useRef<HTMLDivElement | null>(null)
 
-  const renderFeedFooter = useCallback(feedFooter, [])
+  // Stable so a card's wrapper keeps its ref callback across renders —
+  // otherwise React detaches and reattaches every card on every render of the
+  // list.
+  const registerItemRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    if (el) itemRefs.current.set(id, el)
+    else itemRefs.current.delete(id)
+  }, [])
 
   return (
     <div className="space-y-4">
@@ -235,30 +241,18 @@ export function FeedView({ groupId }: { groupId: string }) {
           // next to the type badge (analogous to it). Omitted inside a single group.
           const group = isOverview ? resolveItemGroup(item) : undefined
           return (
-            <div
+            <FeedCard
               key={item.id}
-              ref={(el) => {
-                if (el) itemRefs.current.set(item.id, el)
-                else itemRefs.current.delete(item.id)
-              }}
-            >
-              <ItemPreview
-                item={item}
-                author={resolveAuthor(item.createdBy)}
-                active={modulePanel.current?.itemId === item.id}
-                activeColor={resolveItemGroupColor(item)}
-                onClick={() => focusItem(item.id)}
-                headerAdornment={
-                  <>
-                    <ItemTypeBadge type={item.type} />
-                    {group && <ItemGroupBadge name={group.name} color={resolveItemGroupColor(item)} />}
-                    {isOverview && isItemPrivate(item) && <ItemPrivateBadge />}
-                  </>
-                }
-                metaAdornment={<ItemMetaRow item={item} />}
-                footerAdornment={renderFeedFooter(item, () => focusItem(item.id))}
-              />
-            </div>
+              item={item}
+              author={resolveAuthor(item.createdBy)}
+              active={modulePanel.current?.itemId === item.id}
+              activeColor={resolveItemGroupColor(item)}
+              groupName={group?.name}
+              groupColor={group ? resolveItemGroupColor(item) : undefined}
+              isPrivate={isOverview && isItemPrivate(item)}
+              onFocus={focusItem}
+              registerRef={registerItemRef}
+            />
           )
           })
         )}
@@ -286,6 +280,64 @@ export function FeedView({ groupId }: { groupId: string }) {
  * Exported as a plain function so the rule is testable without mounting the
  * whole feed.
  */
+/**
+ * One row of the feed.
+ *
+ * Its own component so its props can stay stable: the badges, the click and the
+ * ref are built in here instead of in the list. That is what lets the memo on
+ * {@link ItemPreview} bite — while someone writes in the composer the draft is
+ * republished, this list renders again, and without this every card on screen
+ * rendered with it.
+ */
+const FeedCard = memo(function FeedCard({
+  item,
+  author,
+  active,
+  activeColor,
+  groupName,
+  groupColor,
+  isPrivate,
+  onFocus,
+  registerRef,
+}: {
+  item: Item
+  author: User | undefined
+  active: boolean
+  activeColor?: string
+  groupName?: string
+  groupColor?: string
+  isPrivate: boolean
+  onFocus: (id: string) => void
+  registerRef: (id: string, el: HTMLDivElement | null) => void
+}) {
+  const focus = useCallback(() => onFocus(item.id), [onFocus, item.id])
+  const ref = useCallback(
+    (el: HTMLDivElement | null) => registerRef(item.id, el),
+    [registerRef, item.id],
+  )
+
+  return (
+    <div ref={ref}>
+      <ItemPreview
+        item={item}
+        author={author}
+        active={active}
+        activeColor={activeColor}
+        onClick={focus}
+        headerAdornment={
+          <>
+            <ItemTypeBadge type={item.type} />
+            {groupName && groupColor && <ItemGroupBadge name={groupName} color={groupColor} />}
+            {isPrivate && <ItemPrivateBadge />}
+          </>
+        }
+        metaAdornment={<ItemMetaRow item={item} />}
+        footerAdornment={feedFooter(item, focus)}
+      />
+    </div>
+  )
+})
+
 export function feedFooter(item: Item, onCommentClick: () => void) {
   const commentCount = (item.data as Record<string, unknown>).commentCount
   const count = typeof commentCount === "number" ? commentCount : 0
