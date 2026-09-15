@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   groupMembersForDisplay,
   resolveConfigSection,
+  showsMemberSearch,
   spaceConfigSections,
   type SpaceConfigSectionId,
 } from "../src/components/layout/group-dialog"
@@ -118,5 +119,32 @@ describe("groupMembersForDisplay", () => {
   it("gibt ohne Suchbegriff alle zurueck", () => {
     const { admins, others } = groupMembersForDisplay(users, isAdmin, "   ")
     expect(admins.length + others.length).toBe(3)
+  })
+})
+
+/**
+ * Sichtbarkeit des Suchfelds und Wirksamkeit des Filters MUESSEN dieselbe
+ * Frage beantworten. Vorher hing das Feld an der Mitgliederzahl, der Filter
+ * am Suchbegriff: sank die Zahl waehrend einer Suche unter die Schwelle,
+ * verschwand das Feld, der Filter blieb — und die verbliebenen Mitglieder
+ * waren unerreichbar, bis man den Dialog neu oeffnete (#377).
+ */
+describe("showsMemberSearch", () => {
+  it("bleibt unter der Schwelle verborgen, solange nicht gesucht wird", () => {
+    expect(showsMemberSearch(8, "")).toBe(false)
+    expect(showsMemberSearch(0, "")).toBe(false)
+  })
+
+  it("erscheint, sobald die Liste nicht mehr zu ueberschauen ist", () => {
+    expect(showsMemberSearch(9, "")).toBe(true)
+  })
+
+  it("bleibt bei aktiver Suche sichtbar, auch unter der Schwelle", () => {
+    expect(showsMemberSearch(8, "anton")).toBe(true)
+    expect(showsMemberSearch(1, "a")).toBe(true)
+  })
+
+  it("verschwindet wieder, sobald die Suche geleert ist", () => {
+    expect(showsMemberSearch(8, "")).toBe(false)
   })
 })

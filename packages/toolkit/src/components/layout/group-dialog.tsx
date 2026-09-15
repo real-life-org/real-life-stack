@@ -140,6 +140,27 @@ export function resolveConfigSection(
  * auf einen Blick erkennbar. Gesucht wird ueber Anzeigename UND Kennung:
  * ohne gesetzten Namen ist die Kennung alles, was eine Zeile unterscheidet.
  */
+/** Ab wie vielen Mitgliedern die Liste ein Suchfeld bekommt. */
+const MEMBER_SEARCH_THRESHOLD = 8
+
+/**
+ * Ob die Mitgliederliste ein Suchfeld zeigt.
+ *
+ * Sichtbarkeit des Feldes und Wirksamkeit des Filters MUESSEN dieselbe Frage
+ * beantworten. Vorher hing das Feld an der Mitgliederzahl und der Filter am
+ * Suchbegriff: sank die Zahl waehrend einer Suche unter die Schwelle — weil
+ * das gesuchte Mitglied entfernt wurde oder eine Synchronisierung eintraf —
+ * verschwand das Feld, der Suchbegriff blieb, und die verbliebenen
+ * Mitglieder waren nicht mehr erreichbar. Ohne Feld liess sich der Filter
+ * auch nicht loeschen; nur Schliessen und Wiederoeffnen half (#377).
+ *
+ * Darum haelt ein eingegebener Suchbegriff das Feld offen, unabhaengig von
+ * der Zahl. Es verschwindet erst, wenn die Suche geleert ist.
+ */
+export function showsMemberSearch(memberCount: number, search: string): boolean {
+  return memberCount > MEMBER_SEARCH_THRESHOLD || search !== ""
+}
+
 export function groupMembersForDisplay<T extends { id: string; displayName?: string }>(
   members: readonly T[],
   isAdmin: (member: T) => boolean,
@@ -807,8 +828,10 @@ export function GroupDialog({
               )}
 
               {/* Suchen lohnt erst, wenn die Liste nicht mehr auf einen Blick
-                  zu ueberschauen ist. */}
-              {members.length > 8 && (
+                  zu ueberschauen ist — ein laufender Suchbegriff haelt das
+                  Feld aber offen, sonst bliebe der Filter ohne Bedienteil
+                  zurueck (#377). */}
+              {showsMemberSearch(members.length, memberSearch) && (
                 <div className="relative mb-2">
                   <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
