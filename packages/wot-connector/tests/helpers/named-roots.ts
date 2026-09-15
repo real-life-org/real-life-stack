@@ -22,6 +22,30 @@ export interface FakeNamedRoots {
   transactRootDurable<R extends object = Record<string, unknown>>(name: string, fn: (root: R) => void): Promise<void>
 }
 
+const FORBIDDEN_ROOT_KEYS = new Set(["__proto__", "constructor", "prototype"])
+
+/**
+ * Der Wertvertrag benannter Wurzeln, wie der Adapter ihn prüft: `nt`/`Sa` in
+ * `@real-life/adapter-yjs@0.2.9` gehen REKURSIV durch den Wert und werfen bei
+ * jedem verbotenen Schlüssel — auch tief drin, etwa in `supersedes`. Und der
+ * gelesene Wert ist tief eingefroren, eine verschachtelte Mutation wirft.
+ */
+function toRootValue<V>(value: V, path: string): V {
+  if (value === null || typeof value !== "object") return value
+  const source = value as Record<string, unknown>
+  if (Array.isArray(source)) {
+    return Object.freeze(source.map((entry, index) => toRootValue(entry, `${path}[${index}]`))) as unknown as V
+  }
+  const copy: Record<string, unknown> = {}
+  for (const [key, entry] of Object.entries(source)) {
+    if (FORBIDDEN_ROOT_KEYS.has(key)) {
+      throw new TypeError(`named root key "${key}" at "${path}.${key}" is not allowed`)
+    }
+    copy[key] = toRootValue(entry, `${path}.${key}`)
+  }
+  return Object.freeze(copy) as V
+}
+
 function clone<V>(value: V): V {
   return value === undefined || value === null || typeof value !== "object"
     ? value
@@ -54,7 +78,10 @@ export function createFakeNamedRoots(
       get: (_t, key: string | symbol) => (typeof key === "string" ? read(key) : undefined),
       set: (_t, key: string | symbol, value: unknown) => {
         if (typeof key !== "string") throw new TypeError("named root keys must be strings")
-        ops.set(key, value === undefined ? { remove: true } : { value: clone(value) })
+        if (FORBIDDEN_ROOT_KEYS.has(key)) {
+          throw new TypeError(`named root key "${key}" at "${name}.${key}" is not allowed`)
+        }
+        ops.set(key, value === undefined ? { remove: true } : { value: toRootValue(clone(value), `${name}.${key}`) })
         return true
       },
       deleteProperty: (_t, key: string | symbol) => {

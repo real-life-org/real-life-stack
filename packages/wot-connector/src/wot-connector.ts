@@ -1582,13 +1582,17 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       const hasEntry = (targetSpaceId: string) =>
         registry.has(mirrorRegistryEntryKey(did, targetSpaceId))
 
-      for (const targetSpaceId of planStockGrants(spaces, handle.id, hasEntry)) {
+      for (const targetSpaceId of planStockGrants(spaces, handle.id, did, hasEntry)) {
         this.applyRegistryContribution(root, {
           did,
           deviceId,
           targetSpaceId,
           status: "accepted",
           currentAdmission: spaces.find((space) => space.id === targetSpaceId)?.admission,
+          // Aus DEMSELBEN Schnappschuss, aus dem die Auswahl entstand: eine
+          // zwischenzeitlich geänderte Space-Liste darf den Durchlauf nicht
+          // mitten im Schreiben werfen lassen.
+          isMember: true,
         })
       }
 
@@ -1621,9 +1625,9 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     handle.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
       const registry = groupRegistryByEntry(registryContributionsOf(root))
-      const apply = (targetSpaceId: string, admission: SpaceAdmission | undefined) => {
+      const apply = (targetSpaceId: string, admission: SpaceAdmission | undefined, isMember: boolean) => {
         const view = deriveRegistryView(registry.get(mirrorRegistryEntryKey(did, targetSpaceId)) ?? {})
-        const transition = planMembershipTransition(view, admission)
+        const transition = planMembershipTransition(view, admission, isMember)
         if (!transition) return
         this.applyRegistryContribution(root, {
           did,
@@ -1631,13 +1635,16 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
           targetSpaceId,
           status: transition.status,
           currentAdmission: admission,
+          isMember,
           // Erwartung: die Entscheidung gilt nur, solange sie aus der Lesesicht
           // in dieser Transaktion noch folgt.
-          expect: (current) => planMembershipTransition(current, admission)?.status === transition.status,
+          expect: (current) => planMembershipTransition(current, admission, isMember)?.status === transition.status,
         })
       }
 
-      for (const space of visible) apply(space.id, space.admission)
+      // Sichtbar heißt nicht Mitglied: die Space-Liste kann einen Space führen,
+      // aus dem die Person entfernt wurde (09 Invariante 11).
+      for (const space of visible) apply(space.id, space.admission, space.members?.includes(did) ?? false)
 
       // Ein Eintrag, dessen Ziel-Space gar nicht mehr sichtbar ist: die
       // Mitgliedschaft ist weg (09 Invariante 11). Der Eintrag wird
@@ -1645,7 +1652,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       for (const entryKey of registry.keys()) {
         const parsed = parseMirrorRegistryEntryKey(entryKey)
         if (!parsed || parsed.itemId !== did || seen.has(parsed.targetSpaceId)) continue
-        apply(parsed.targetSpaceId, undefined)
+        apply(parsed.targetSpaceId, undefined, false)
       }
     })
   }

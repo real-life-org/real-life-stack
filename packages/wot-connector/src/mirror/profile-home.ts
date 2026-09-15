@@ -104,14 +104,25 @@ export type MembershipTransition = { status: "pending" | "accepted" | "revoked" 
  * - Kennung niedriger oder weg → Mitgliedschaft verloren, also `revoked`
  * - gleich → nichts
  *
+ * `isMember` trägt den Mitgliedschaftsverlust, den der Kennungsvergleich NICHT
+ * ausdrücken kann: ein Eintrag ohne Kennung (seit der Übergangsregel in der
+ * Fassung rls#354 der Regelfall für Alt-Spaces ohne Ereignisse) vergleicht sich
+ * mit „keine Kennung" als gleich, auch wenn der Ziel-Space längst weg ist. Die
+ * Mitgliedschaftsbindung (09 Invariante 11) hängt aber an der Mitgliedschaft,
+ * nicht an der Ordnung der Kennungen; deshalb entscheidet sie zuerst.
+ *
  * Die Kennung selbst setzt der Schreibpfad; hier steht nur, DASS ein
  * Statuswechsel fällig ist.
  */
 export function planMembershipTransition(
   view: MirrorRegistryView | null,
   spaceAdmission: SpaceAdmission | undefined,
+  isMember = true,
 ): MembershipTransition {
-  if (!view) return { status: "pending" }
+  // Kein Eintrag und keine Mitgliedschaft: es gibt nichts zu widerrufen.
+  if (!view) return isMember ? { status: "pending" } : null
+  // Mitgliedschaft verloren — unabhängig davon, ob die Kennungen das zeigen.
+  if (!isMember) return view.status === "revoked" ? null : { status: "revoked" }
 
   const order = compareAdmissionOrUndefined(spaceAdmission, view.admission)
   if (order > 0) {
@@ -139,6 +150,7 @@ export function planMembershipTransition(
 export function planStockGrants(
   spaces: readonly SpaceInfo[],
   homeSpaceId: string,
+  did: string,
   hasRegistryEntry: (targetSpaceId: string) => boolean = () => false,
 ): string[] {
   return spaces
@@ -146,6 +158,12 @@ export function planStockGrants(
       space.id !== homeSpaceId
       && space.type === "shared"
       && space.appTag !== "rls-private"
+      // Ein sichtbarer Space ist nicht zwingend eine Mitgliedschaft: die
+      // Space-Liste kann einen Space führen, aus dem die Person entfernt
+      // wurde. Ohne diese Prüfung wirft der Schreibpfad mitten im
+      // Bestandsdurchlauf — und weil Beiträge und Marke in EINER Transaktion
+      // liegen, fiele der ganze Durchlauf samt echter Bestandsfreigaben aus.
+      && (space.members?.includes(did) ?? false)
       // Über einen vorhandenen Eintrag wurde bereits entschieden — auch ein
       // Widerruf ist eine Entscheidung. Die Übergangsregel gilt nur für
       // Mitgliedschaften, die es vor dieser Spec schon gab, und darf eine
@@ -189,11 +207,26 @@ export function supersedesOf(
   let found = false
   for (const [deviceId, contribution] of Object.entries(byDevice ?? {})) {
     if (!contribution || contribution.status === "accepted") continue
+    // Ein Gerätename, den der Wertvertrag der benannten Wurzeln nicht trägt
+    // (`__proto__`, `constructor`, `prototype` — adapter-yjs prüft REKURSIV,
+    // also auch in `supersedes`), kann hier nicht stehen: der Schreibvorgang
+    // würde werfen, und die Freigabe käme gar nicht erst zustande. Ein solcher
+    // Beitrag stammt nie von diesem Code (Geräte-Ids kommen aus dem
+    // DocLogStore), er bleibt in der Faltung und damit unabgedeckt — der
+    // Eintrag bleibt fail-closed `revoked`, statt dass ein Widerruf
+    // verschwindet.
+    if (UNSTORABLE_DEVICE_IDS.has(deviceId)) continue
     supersedes[deviceId] = contribution.statusSeq
     found = true
   }
   return found ? supersedes : undefined
 }
+
+/**
+ * Schlüssel, die der Wertvertrag benannter Wurzeln nicht trägt (wot-core
+ * `assertValidNamedRootKey`, im Adapter rekursiv über den ganzen Wert geprüft).
+ */
+const UNSTORABLE_DEVICE_IDS = new Set(["__proto__", "constructor", "prototype"])
 
 /**
  * Normalisiert die lose typisierte Eingabe von `updateMyProfile` auf die

@@ -176,6 +176,28 @@ describe("Registry-Beiträge zweier Geräte mergen konfliktfrei (Befund R2-1)", 
 })
 
 describe("fremde Schlüssel sind Eingabe, nicht Code", () => {
+  it("eine Freigabe nach einem Widerruf des Geräts __proto__ lässt sich schreiben", async () => {
+    // Der Wertvertrag benannter Wurzeln verbietet `__proto__` REKURSIV, also
+    // auch in `supersedes`. Ein fremder Beitrag unter diesem Gerätenamen darf
+    // den Freigabepfad deshalb nicht zum Werfen bringen — und der Widerruf
+    // darf trotzdem nicht verschwinden: er bleibt unabgedeckt, der Eintrag
+    // bleibt fail-closed `revoked`.
+    const device = createYjsSpaceHandle<RlsSpaceDoc>("home-space")
+    device.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
+      root[mirrorRegistryKey(DID, "garten", "__proto__")] = {
+        statusSeq: 2, status: "revoked", seq: 0, tiebreak: "", updatedAt: "2026-09-01T00:00:00.000Z",
+      }
+    })
+
+    await connectorOn(device, "device-B").writeRegistryContribution("garten", "accepted")
+
+    const byDevice = byDeviceOf(device, "garten")
+    expect(Object.keys(byDevice).sort()).toEqual(["__proto__", "device-B"])
+    expect(byDevice["device-B"].supersedes).toBeUndefined()
+    expect(deriveRegistryView(byDevice)?.status).toBe("revoked")
+  })
+
+
   it("verschluckt einen Beitrag unter dem Gerätenamen __proto__ nicht", () => {
     const registry = {
       [mirrorRegistryKey(DID, "garten", "__proto__")]: {

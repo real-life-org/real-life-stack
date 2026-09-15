@@ -112,7 +112,7 @@ function rootDraft<R extends object>(map: Y.Map<unknown>, fn: (root: R) => void)
       if (typeof key !== "string") throw new TypeError("named root keys must be strings")
       if (FORBIDDEN_ROOT_KEYS.has(key)) throw new TypeError(`named root key "${key}" is not allowed`)
       if (value === undefined) ops.set(key, { remove: true })
-      else ops.set(key, { value: clone(value) })
+      else ops.set(key, { value: toRootValue(clone(value), `root.${key}`) })
       return true
     },
     deleteProperty: (_t, key: string | symbol) => {
@@ -131,6 +131,28 @@ function rootDraft<R extends object>(map: Y.Map<unknown>, fn: (root: R) => void)
 }
 
 const FORBIDDEN_ROOT_KEYS = new Set(["__proto__", "constructor", "prototype"])
+
+/**
+ * Der Wertvertrag benannter Wurzeln, wie der Adapter ihn prüft: `nt`/`Sa` in
+ * `@real-life/adapter-yjs@0.2.9` gehen REKURSIV durch den Wert und werfen bei
+ * jedem verbotenen Schlüssel — auch tief drin, etwa in `supersedes`. Und der
+ * gelesene Wert ist tief eingefroren, eine verschachtelte Mutation wirft.
+ */
+function toRootValue<V>(value: V, path: string): V {
+  if (value === null || typeof value !== "object") return value
+  const source = value as Record<string, unknown>
+  if (Array.isArray(source)) {
+    return Object.freeze(source.map((entry, index) => toRootValue(entry, `${path}[${index}]`))) as unknown as V
+  }
+  const copy: Record<string, unknown> = {}
+  for (const [key, entry] of Object.entries(source)) {
+    if (FORBIDDEN_ROOT_KEYS.has(key)) {
+      throw new TypeError(`named root key "${key}" at "${path}.${key}" is not allowed`)
+    }
+    copy[key] = toRootValue(entry, `${path}.${key}`)
+  }
+  return Object.freeze(copy) as V
+}
 
 function clone<V>(value: V): V {
   return value === undefined || value === null || typeof value !== "object"

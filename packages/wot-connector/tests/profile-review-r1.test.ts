@@ -135,11 +135,11 @@ describe("Befund 2 — die Uebergangsregel ueberschreibt keine getroffene Entsch
 
   it("planStockGrants nimmt nur Ziele ohne Registry-Eintrag", () => {
     const spaces = [
-      { id: "garten", type: "shared", appTag: "rls", members: [], createdAt: "", admission: { keyGeneration: 1 } },
-      { id: "werkstatt", type: "shared", appTag: "rls", members: [], createdAt: "", admission: { keyGeneration: 1 } },
+      { id: "garten", type: "shared", appTag: "rls", members: [DID], createdAt: "", admission: { keyGeneration: 1 } },
+      { id: "werkstatt", type: "shared", appTag: "rls", members: [DID], createdAt: "", admission: { keyGeneration: 1 } },
     ] as never
 
-    expect(planStockGrants(spaces, "home-space", (id) => id === "garten")).toEqual(["werkstatt"])
+    expect(planStockGrants(spaces, "home-space", DID, (id) => id === "garten")).toEqual(["werkstatt"])
   })
 
   it("schreibt Freigaben und Marke in EINER Transaktion", async () => {

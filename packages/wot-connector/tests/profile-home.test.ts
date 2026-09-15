@@ -145,21 +145,27 @@ describe("planMembershipTransition — Spec 12 Regel 4 und 7, Spec 09 §Ablage",
 
 describe("planStockGrants — Spec 12 Regel 5 Übergangsregel", () => {
   const spaces = [
-    { id: "home", type: "shared", appTag: "rls-private", members: [], createdAt: "", admission: { keyGeneration: 0 } },
-    { id: "garten", type: "shared", appTag: "rls", members: [], createdAt: "", admission: { keyGeneration: 2 } },
-    { id: "alt", type: "shared", appTag: "rls", members: [], createdAt: "" },
-    { id: "personal", type: "personal", members: [], createdAt: "", admission: { keyGeneration: 1 } },
+    { id: "home", type: "shared", appTag: "rls-private", members: [DID], createdAt: "", admission: { keyGeneration: 0 } },
+    { id: "garten", type: "shared", appTag: "rls", members: [DID], createdAt: "", admission: { keyGeneration: 2 } },
+    { id: "alt", type: "shared", appTag: "rls", members: [DID], createdAt: "" },
+    { id: "personal", type: "personal", members: [DID], createdAt: "", admission: { keyGeneration: 1 } },
+    // Sichtbar, aber die Person ist kein Mitglied mehr: keine Bestandsfreigabe.
+    { id: "entfernt", type: "shared", appTag: "rls", members: [], createdAt: "", admission: { keyGeneration: 4 } },
   ] as never
 
   it("nimmt alle geteilten Spaces, ohne den persönlichen Space", () => {
-    expect(planStockGrants(spaces, "home")).toEqual(["garten", "alt"])
+    expect(planStockGrants(spaces, "home", DID)).toEqual(["garten", "alt"])
+  })
+
+  it("laesst einen sichtbaren Space aus, in dem die Person kein Mitglied ist", () => {
+    expect(planStockGrants(spaces, "home", DID)).not.toContain("entfernt")
   })
 
   it("nimmt Alt-Spaces OHNE Kennung ausnahmslos mit (Spec 12 Regel 5, Fassung rls#354)", () => {
     // „Der Connector legt für ALLE zu diesem Zeitpunkt bestehenden
     // Mitgliedschaften `accepted`-Einträge an … ausnahmslos und auch ohne
     // Aufnahme-Kennung."
-    expect(planStockGrants(spaces, "home")).toContain("alt")
+    expect(planStockGrants(spaces, "home", DID)).toContain("alt")
   })
 })
 

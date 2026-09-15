@@ -191,6 +191,58 @@ describe("Mitgliedschaftsverlust — Spec 12 Regel 7, Spec 09 Inv. 11", () => {
   })
 })
 
+describe("Codex-Runde 1 zum Nachtrag — Mitgliedschaft vor Kennungsvergleich", () => {
+  it("widerruft einen Eintrag OHNE Kennung, wenn der Ziel-Space verschwindet (09 Inv. 11)", async () => {
+    // Der Kennungsvergleich kann das nicht ausdruecken: „keine Kennung" gegen
+    // „keine Kennung" ist gleich. Die Mitgliedschaftsbindung haengt aber an
+    // der Mitgliedschaft.
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { alt: { [DEVICE]: contribution({ status: "accepted" }) } }),
+      spaces: [],
+    })
+
+    await connector.queueProfileHomeMaintenance()
+
+    expect(status(named, "alt")).toBe("revoked")
+  })
+
+  it("widerruft auch, wenn der Space sichtbar bleibt, die Person aber kein Mitglied mehr ist", async () => {
+    const { connector, named } = fakeConnector({
+      registry: flatRegistry(DID, { garten: { [DEVICE]: contribution({ status: "accepted", admission: { keyGeneration: 2 } }) } }),
+      spaces: [{ id: "garten", members: [], admission: { keyGeneration: 2 } }],
+    })
+
+    await connector.queueProfileHomeMaintenance()
+
+    expect(status(named, "garten")).toBe("revoked")
+  })
+
+  it("legt fuer einen sichtbaren Space ohne eigene Mitgliedschaft keinen pending-Eintrag an", async () => {
+    const { connector, named } = fakeConnector({ spaces: [{ id: "fremd", members: [] }] })
+
+    await connector.queueProfileHomeMaintenance()
+
+    expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "fremd")).toBe(false)
+  })
+
+  it("ein Space ohne eigene Mitgliedschaft laesst den Bestandsdurchlauf nicht scheitern", async () => {
+    const { connector, named } = fakeConnector({
+      bestand: false,
+      spaces: [
+        { id: "garten", admission: { keyGeneration: 1 } },
+        { id: "entfernt", members: [], admission: { keyGeneration: 3 } },
+      ],
+    })
+
+    await connector.queueProfileHomeMaintenance()
+
+    // Beitraege und Marke liegen in EINER Transaktion: ein Wurf mitten im
+    // Durchlauf haette auch die echte Bestandsfreigabe verworfen.
+    expect(status(named, "garten")).toBe("accepted")
+    expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "entfernt")).toBe(false)
+  })
+})
+
 describe("ProfileCapable-Freigaben — Spec 12 Regel 14", () => {
   it("acceptSpace setzt den Eintrag auf accepted", async () => {
     const { connector, named } = fakeConnector({ spaces: [{ id: "garten", admission: { keyGeneration: 2 } }] })
