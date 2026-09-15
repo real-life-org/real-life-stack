@@ -1,0 +1,88 @@
+# Renovate im eigenen Haus: der Bot laeuft als Action auf GitHubs Runnern
+# unter unserem Account, nicht als gehostete App eines Dritten.
+#
+# Die uebliche Variante waere die Renovate-GitHub-App (Mend). Sie ist bequemer,
+# braucht dafuer aber dauerhaft Schreibrechte eines Fremden auf dieses Repo.
+# Hier laeuft stattdessen dasselbe Programm in unserem eigenen Workflow. Der
+# Preis: wir ziehen die Action-Version selbst nach und zahlen Actions-Minuten.
+#
+# Was der Bot tut, steht NICHT hier, sondern in `renovate.json5` im
+# Wurzelverzeichnis. Renovate klont das Repo und liest sie von dort. Deshalb
+# ist unten bewusst KEIN `configurationFile` gesetzt: dieser Parameter meint
+# die GLOBALE Konfiguration des Laufs, nicht die des Repos, und wuerde die
+# Repo-Datei nicht ersetzen, sondern eine zweite Ebene aufmachen.
+name: Renovate
+
+on:
+  # Einmal taeglich frueh. Oefter bringt nichts: die wot-Pakete erscheinen
+  # nicht stuendlich, und jeder Lauf klont das Repo und fragt die Registry ab.
+  schedule:
+    - cron: '17 4 * * *'
+  # Fuer den ersten Lauf nach dem Merge und zum Nachschauen, ohne bis zum
+  # naechsten Morgen zu warten.
+  workflow_dispatch:
+
+# Nur der Grundstock. Die Schreibrechte stehen im Job, und auch dort nur fuer
+# den Fallback unten — mit einem eigenen Token laeuft Renovate ueber DESSEN
+# Rechte, nicht ueber die des GITHUB_TOKEN.
+permissions:
+  contents: read
+
+# Zwei Renovate-Laeufe auf demselben Repo wuerden sich um dieselben Branches
+# streiten. Der laufende darf zu Ende arbeiten, ein zweiter wartet.
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      # Fuer das Dependency-Dashboard, das eine Issue ist.
+      issues: write
+    steps:
+      # Renovate klont sich das Repo selbst; dieser Checkout dient allein dazu,
+      # dass die Action ihren Arbeitsbaum hat. `persist-credentials: false`
+      # wie in den anderen Workflows: die Git-Konfiguration soll kein Token
+      # tragen, das hier niemand braucht.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: renovatebot/github-action@v46
+        with:
+          # Eigener Token statt GITHUB_TOKEN — aus genau dem Grund, der in
+          # release-please.yml ausfuehrlich steht: GitHub startet fuer
+          # Ereignisse, die mit dem GITHUB_TOKEN ausgeloest werden, KEINE
+          # Workflows. Ein so erzeugter Bump-PR bekaeme also weder `test` noch
+          # `pr-title` — und der fehlende Pflicht-Check blockiert den Merge
+          # dauerhaft. Ein Bump-PR, gegen den die Tests nie laufen, ist
+          # ausserdem wertlos: die ganze Uebung dient dem Nachweis, dass die
+          # neue Version bei uns gruen ist.
+          #
+          # Der Fallback haelt den Workflow lauffaehig, solange das Secret
+          # fehlt: dann entstehen PRs ohne Checks, die man einmal von Hand
+          # anstupsen muss (Titel aendern und zuruecksetzen), statt dass
+          # Renovate gar nicht laeuft.
+          #
+          # Noetige Rechte (fein granuliert, nur dieses Repo):
+          # Contents: read+write · Pull requests: read+write · Issues: read+write
+          #
+          # Issues, weil `dependencyDashboard` in renovate.json5 auf true
+          # steht: das Dashboard ist eine Issue. Ohne das Recht scheitert
+          # Renovate genau daran — dieselbe Stolperstelle wie bei
+          # release-please, das seine Labels ebenfalls ueber die Issues-API
+          # fuehrt.
+          token: ${{ secrets.RENOVATE_TOKEN || github.token }}
+        env:
+          # Ohne diese Zeile sucht Renovate sich seine Repos selbst zusammen
+          # (Autodiscover) und liefe ueber alles, worauf der Token Zugriff hat.
+          # Genau ein Repo, explizit benannt.
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_AUTODISCOVER: 'false'
+          # Der Bot tritt unter dem Token-Inhaber auf; Commits brauchen
+          # trotzdem eine Absenderadresse, sonst verweigert git sie.
+          RENOVATE_GIT_AUTHOR: 'Renovate <bot@renovateapp.com>'
+          LOG_LEVEL: info
