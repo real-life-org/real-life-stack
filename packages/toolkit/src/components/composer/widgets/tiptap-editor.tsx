@@ -6,6 +6,7 @@ import { Node as ProseMirrorNode, Slice } from "@tiptap/pm/model"
 import { Plugin, PluginKey } from "@tiptap/pm/state"
 import StarterKit from "@tiptap/starter-kit"
 import Image from "@tiptap/extension-image"
+import { Placeholder } from "@tiptap/extensions"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table"
 import { Markdown } from "@tiptap/markdown"
@@ -176,6 +177,12 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
         TaskItem,
         Markdown,
         MarkdownPaste,
+        // The stylesheet has always styled `p.is-editor-empty::before` with
+        // the label — but that class and the attribute it reads come from
+        // this extension, which was never registered. The visual editor sat
+        // there without its label; only the source-mode textarea showed one,
+        // through its own `placeholder` attribute.
+        Placeholder.configure({ placeholder: () => placeholder ?? "" }),
       ],
       autofocus: autoFocus ? "end" : false,
       content: value,
@@ -205,11 +212,7 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
     }, [value, editor])
 
     return (
-      <EditorContent
-        editor={editor}
-        className={cn("tiptap-editor", className)}
-        data-placeholder={placeholder}
-      />
+      <EditorContent editor={editor} className={cn("tiptap-editor", className)} />
     )
   },
 )

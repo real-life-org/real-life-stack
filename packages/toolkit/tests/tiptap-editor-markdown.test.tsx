@@ -42,6 +42,7 @@ async function mount(value: string) {
       createElement(TiptapEditor, {
         ref,
         value,
+        placeholder: "Was gibt es Neues?",
         onChange: (md) => changed.push(md),
         onNormalise: (md) => normalised.push(md),
       }),
@@ -183,5 +184,15 @@ describe("TiptapEditor markdown contract", () => {
 
       expect([...changed, ...normalised]).toEqual([])
     })
+  })
+
+  // The stylesheet renders the label from `p.is-editor-empty::before`; both
+  // the class and the attribute it reads come from the Placeholder extension,
+  // which used to be missing — so the visual editor showed no label at all.
+  it("shows its label while it is empty", async () => {
+    const { editor } = await mount("")
+
+    expect(editor.view.dom.innerHTML).toContain("is-editor-empty")
+    expect(editor.view.dom.innerHTML).toContain("Was gibt es Neues?")
   })
 })

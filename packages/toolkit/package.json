@@ -56,6 +56,7 @@
     "@tiptap/extension-image": "^3.31.3",
     "@tiptap/extension-list": "^3.31.3",
     "@tiptap/extension-table": "^3.31.3",
+    "@tiptap/extensions": "^3.31.3",
     "@tiptap/markdown": "^3.31.3",
     "@tiptap/pm": "^3.31.3",
     "@tiptap/react": "^3.31.3",

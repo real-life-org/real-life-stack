@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils"
 /**
  * Renders item body text as Markdown.
  *
- * The composer already WRITES Markdown (tiptap-markdown), so rendering it is
+ * The composer already WRITES Markdown (@tiptap/markdown), so rendering it is
  * correctness, not decoration — without this, a user who bolded a word saw
  * literal `**word**` on every card and in the detail panel.
  *
