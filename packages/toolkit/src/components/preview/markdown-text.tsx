@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { memo, useState } from "react"
 import { ImageOff } from "lucide-react"
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -72,7 +72,20 @@ function RemoteImage({ src, alt }: { src: string; alt: string }) {
     </button>
   )
 }
-export function MarkdownText({ children, className }: { children: string; className?: string }) {
+/**
+ * Parsing Markdown is not free, and a card re-renders for reasons that have
+ * nothing to do with its own text: a draft published while someone types in the
+ * composer re-renders every card in the feed, and each one re-parsed its
+ * content. Both props are strings, so a plain memo is exact — a card whose text
+ * did not change does no work at all.
+ */
+export const MarkdownText = memo(function MarkdownText({
+  children,
+  className,
+}: {
+  children: string
+  className?: string
+}) {
   return (
     <div className={cn("[&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}>
       <ReactMarkdown
@@ -132,4 +145,4 @@ export function MarkdownText({ children, className }: { children: string; classN
       </ReactMarkdown>
     </div>
   )
-}
+})

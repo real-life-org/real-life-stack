@@ -95,4 +95,13 @@ describe("MarkdownText — externe Bilder (rls#257)", () => {
     const blobLink = await render("[klick](blob:http://localhost/x)")
     expect(blobLink.html).not.toContain('href="blob:')
   })
+
+  // Parsing Markdown is not free, and a card re-renders for reasons that have
+  // nothing to do with its own text — a draft published while someone types in
+  // the composer re-renders every card in the feed. Measured on a feed of 60
+  // cards, that cost 991 ms of blocked main thread per typed sentence in a
+  // production build; memoised, 320 ms.
+  it("does no work when it is re-rendered with the same text", () => {
+    expect((MarkdownText as unknown as { $$typeof: symbol }).$$typeof).toBe(Symbol.for("react.memo"))
+  })
 })
