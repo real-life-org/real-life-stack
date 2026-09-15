@@ -64,7 +64,6 @@ describe("TiptapEditor markdown contract", () => {
   // item must never be the moment its content shrinks — the normalisation
   // above stays out of the way where it cannot round-trip.
   it.each([
-    ["an image", "![Karte vom Treffpunkt](https://example.org/karte.png)"],
     ["a heading below h2", "### Dritte Ebene\n\nText."],
     ["a table", "| a | b |\n|---|---|\n| 1 | 2 |"],
   ])("does not rewrite %s it cannot express", async (_what, value) => {
@@ -116,5 +115,42 @@ describe("TiptapEditor markdown contract", () => {
 
       expect(serializer.serialize(doc), `mark "${type.name}"`).not.toMatch(/<[a-z/]/i)
     }
+  })
+
+  // `![](…)` is Markdown the preview renders. Before the editor had an image
+  // node, pasting one inserted nothing at all, and a keystroke in an item that
+  // already had one dropped it from the stored text.
+  describe("images", () => {
+    const url = "https://hack.utopia-lab.org/uploads/61513c36-7cfd-45f6-9d90-81a9e6dd2d8f.jpeg"
+
+    it("keeps an image that is pasted as Markdown", async () => {
+      const { changed, editor } = await mount("")
+
+      await act(async () => {
+        paste(editor, { text: `![](${url})` })
+      })
+
+      expect(changed.at(-1)).toBe(`![](${url})`)
+    })
+
+    it("keeps its alt text", async () => {
+      const { changed, editor } = await mount("")
+
+      await act(async () => {
+        paste(editor, { text: `![Karte vom Treffpunkt](${url})` })
+      })
+
+      expect(changed.at(-1)).toBe(`![Karte vom Treffpunkt](${url})`)
+    })
+
+    it("keeps an image already in the item when the user types", async () => {
+      const { changed, editor } = await mount(`Text.\n\n![](${url})`)
+
+      await act(async () => {
+        editor.commands.insertContentAt(1, "X")
+      })
+
+      expect(changed.at(-1)).toBe(`XText.\n\n![](${url})`)
+    })
   })
 })
