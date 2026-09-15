@@ -1570,17 +1570,20 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     this.assertNamedRoots(handle)
 
     // Die Übergangsregel gilt für ALLE bestehenden Mitgliedschaften und läuft
-    // genau einmal. Sagt die Mitgliederprojektion zu einem sichtbaren Space
-    // noch nichts (leere `members`-Liste — ein echter Space hat mindestens
-    // seinen Ersteller), ist die Auswahl unvollständig. Die Marke bleibt dann
-    // aus, sonst wäre die einmalige Freigabe für diesen Space für immer
-    // verpasst; die auflösbaren Ziele werden trotzdem schon freigegeben, und
-    // der nächste Auslöser holt den Rest nach.
+    // genau einmal — also ganz oder gar nicht. Sagt die Mitgliederprojektion
+    // zu einem sichtbaren Space noch nichts (leere `members`-Liste — ein
+    // echter Space hat mindestens seinen Ersteller), ist die Auswahl
+    // unvollständig; dann läuft der Durchlauf nicht, und der nächste Auslöser
+    // holt ihn nach. Ein TEIL-Durchlauf wäre schlimmer als gar keiner: die
+    // Marke unterscheidet Bestand von Neuzugang, und ohne sie gäbe es einen
+    // Zustand, in dem schon Bestand freigegeben ist, ein neuer Space aber
+    // ebenfalls als Bestand gälte.
     const unresolved = spaces.some((space) =>
       space.id !== handle.id
       && space.type === "shared"
       && space.appTag !== "rls-private"
       && membershipOf(space, did) === "unknown")
+    if (unresolved) return
 
     handle.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
       // Prüfung, Beiträge UND Marke in EINER Transaktion: sonst könnte ein
@@ -1616,7 +1619,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
       // Monoton: eine vorhandene Marke wird NIE überschrieben — der Durchlauf
       // ist oben schon abgebrochen, wenn sie stand.
-      if (!unresolved) root[PROFILE_MIGRATION_KEY] = { bestandAt: new Date().toISOString() }
+      root[PROFILE_MIGRATION_KEY] = { bestandAt: new Date().toISOString() }
     })
   }
 
@@ -1643,12 +1646,21 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     handle.transactRoot<MirrorRegistryRoot>(MIRROR_REGISTRY_ROOT, (root) => {
       const registry = groupRegistryByEntry(registryContributionsOf(root))
+      // Vor der Bestandsmarke ist nicht entscheidbar, ob ein Space Bestand
+      // (Regel 5, pauschal `accepted`) oder Neuzugang (Regel 4, `pending`)
+      // ist — die Marke IST diese Grenze. Also entsteht vor ihr kein neuer
+      // Eintrag; ein `pending` hier würde den Space später von der einmaligen
+      // Bestandsfreigabe ausschließen (ein vorhandener Eintrag ist eine
+      // Entscheidung). Statuswechsel an BESTEHENDEN Einträgen laufen weiter,
+      // besonders der Widerruf bei Mitgliedschaftsverlust (09 Invariante 11).
+      const bestandEntschieden = Boolean(profileMigrationMark(root)?.bestandAt)
       const apply = (
         targetSpaceId: string,
         admission: SpaceAdmission | undefined,
         membership: SpaceMembership,
       ) => {
         const view = deriveRegistryView(registry.get(mirrorRegistryEntryKey(did, targetSpaceId)) ?? {})
+        if (!view && !bestandEntschieden) return
         const transition = planMembershipTransition(view, admission, membership)
         if (!transition) return
         this.applyRegistryContribution(root, {

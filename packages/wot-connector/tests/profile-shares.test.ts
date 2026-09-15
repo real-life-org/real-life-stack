@@ -282,11 +282,12 @@ describe("Codex-Runde 2 zum Nachtrag — fehlende Information ist kein Verlust",
 
     await connector.queueProfileHomeMaintenance()
 
-    // Sonst waere die einmalige Bestandsfreigabe fuer `unklar` dauerhaft
-    // verpasst (Spec 12 Regel 5: ALLE bestehenden Mitgliedschaften). Die
-    // aufloesbaren Ziele laufen trotzdem schon durch.
+    // Ganz oder gar nicht: sonst waere die einmalige Bestandsfreigabe fuer
+    // `unklar` dauerhaft verpasst (Spec 12 Regel 5: ALLE bestehenden
+    // Mitgliedschaften), und ein Teil-Durchlauf liesse einen spaeteren
+    // Neuzugang als Bestand durchgehen.
     expect(mark(named)).toBeUndefined()
-    expect(status(named, "garten")).toBe("accepted")
+    expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "garten")).toBe(false)
     expect(hasEntry(named.roots.mirrorRegistry as MirrorRegistryRoot, DID, "unklar")).toBe(false)
   })
 
