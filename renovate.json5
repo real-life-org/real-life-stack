@@ -46,7 +46,28 @@
       // passender Minor (0.2.9 → `^0.5.9`); einzeln geöffnet wäre jeder
       // der beiden PRs für sich rot.
       groupName: 'WoT-Pakete',
-      semanticCommitType: 'chore',
+
+      // `fix`, nicht `chore` — das ist hier keine Kosmetik am Changelog.
+      //
+      // Play hat bewusst kein OTA (Google verbietet Self-Updates ausserhalb
+      // seines Mechanismus, siehe `scripts/release/test-release-cascade.mjs`).
+      // Ein Fix in einer dieser Abhängigkeiten erreicht Play also NUR über
+      // einen App-Release, und den löst release-please allein bei `fix`,
+      // `feat` oder Breaking Change aus. Ein `chore(deps)`-Bump landete auf
+      // master und bliebe dort liegen, bis zufällig etwas anderes released
+      // wird — bei Play-Nutzern käme er bis dahin nicht an.
+      //
+      // Renovate kann nicht wissen, was in einem Release steckt. Der Default
+      // muss darum der teurere Fall sein: adapter-yjs 0.2.7 trug den Fix
+      // gegen den Absturz der Kontaktliste und wäre unter `chore` genauso
+      // liegengeblieben wie er es ohnehin schon vier Wochen lang war. Ein
+      // überflüssiger Patch-Release kostet nichts; ein nicht ausgelieferter
+      // Fix kostet Nutzer.
+      //
+      // Umgekehrt gilt: ein Bump, der nachweislich nur Features enthält, die
+      // wir nicht benutzen, darf von Hand auf `chore` zurückgestuft werden —
+      // das ist eine Aussage über diesen einen Release, keine Regel.
+      semanticCommitType: 'fix',
       semanticCommitScope: 'deps',
 
       // Die Range in der package.json mitziehen, nicht nur die Lockfile.
