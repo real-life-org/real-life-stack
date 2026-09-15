@@ -64,12 +64,19 @@ describe("TiptapEditor markdown contract", () => {
   // The editor understands less Markdown than the preview renders. Opening an
   // item must never be the moment its content shrinks — the normalisation
   // above stays out of the way where it cannot round-trip.
-  it.each([
-    ["a heading below h2", "### Dritte Ebene\n\nText."],
-  ])("does not rewrite %s it cannot express", async (_what, value) => {
-    const { changed, normalised } = await mount(value)
+  // The toolbar offers h1 and h2, but a pasted or imported document may carry
+  // deeper ones. They used to be flattened to body text on the next keystroke.
+  it("keeps a heading below h2 through an edit", async () => {
+    const { changed, normalised, editor } = await mount("### Dritte Ebene\n\nText.")
 
     expect([...changed, ...normalised]).toEqual([])
+    expect(editor.getJSON().content?.[0]).toMatchObject({ type: "heading", attrs: { level: 3 } })
+
+    await act(async () => {
+      editor.commands.insertContentAt(editor.state.doc.content.size - 1, "X")
+    })
+
+    expect(changed.at(-1)).toContain("### Dritte Ebene")
   })
 
   it("leaves text that is already Markdown alone", async () => {
@@ -180,9 +187,23 @@ describe("TiptapEditor markdown contract", () => {
     })
 
     it("keeps the boxes of a checklist", async () => {
-      const { changed, normalised } = await mount("- [ ] offen\n- [x] fertig")
+      const { changed, normalised, editor } = await mount("- [ ] offen\n- [x] fertig")
 
       expect([...changed, ...normalised]).toEqual([])
+
+      const list = editor.getJSON().content?.[0]
+      expect(list).toMatchObject({ type: "taskList" })
+      expect(list?.content).toMatchObject([
+        { type: "taskItem", attrs: { checked: false } },
+        { type: "taskItem", attrs: { checked: true } },
+      ])
+
+      await act(async () => {
+        editor.commands.insertContentAt(3, "X")
+      })
+
+      expect(changed.at(-1)).toContain("- [ ] ")
+      expect(changed.at(-1)).toContain("- [x] fertig")
     })
   })
 
@@ -194,5 +215,38 @@ describe("TiptapEditor markdown contract", () => {
 
     expect(editor.view.dom.innerHTML).toContain("is-editor-empty")
     expect(editor.view.dom.innerHTML).toContain("Was gibt es Neues?")
+  })
+
+  // The serializer's own blank lines are dropped so that opening an item does
+  // not rewrite it — but the two spaces that carry a hard break are the user's,
+  // not the serializer's.
+  it("keeps a hard break at the end of the document", async () => {
+    const { changed, editor } = await mount("Zeile")
+
+    await act(async () => {
+      editor.commands.insertContentAt(editor.state.doc.content.size - 1, { type: "hardBreak" })
+    })
+
+    expect(changed.at(-1)).toBe("Zeile  \n")
+  })
+
+  // The label follows the chosen content type while the editor stays mounted.
+  it("follows a label that changes while it is open", async () => {
+    const host = document.createElement("div")
+    document.body.append(host)
+    const root = createRoot(host)
+    const render = async (placeholder: string) => {
+      await act(async () => {
+        root.render(
+          createElement(TiptapEditor, { value: "", onChange: () => {}, onNormalise: () => {}, placeholder }),
+        )
+      })
+    }
+
+    await render("Was gibt es Neues?")
+    await render("Worum geht es?")
+
+    expect(host.innerHTML).toContain("Worum geht es?")
+    expect(host.innerHTML).not.toContain("Was gibt es Neues?")
   })
 })

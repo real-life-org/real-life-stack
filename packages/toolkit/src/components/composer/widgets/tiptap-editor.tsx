@@ -77,29 +77,34 @@ const MarkdownPaste = Extension.create({
 /**
  * The document as Markdown.
  *
- * Trailing blank lines are dropped: the serializer closes every block with
- * one, so without this a stored text would differ from its own round trip and
- * every item would be rewritten — and synced — the first time it is opened.
+ * The serializer frames blocks with blank lines — one after a list, a heading
+ * or a fence, one before a table. Left in, a stored text would differ from its
+ * own round trip, and every item would be rewritten and synced the first time
+ * it is opened.
+ *
+ * Only those blank lines go. `trimEnd()` would also eat the two spaces that
+ * carry a hard break at the end of the document, turning a line the user broke
+ * on purpose into ordinary text.
  */
 function markdownOf(editor: Editor): string {
-  return editor.getMarkdown().trimEnd()
+  return editor.getMarkdown().replace(/^\n+/, "").replace(/\n{2,}$/, "")
 }
 
 /**
  * Whether rewriting `before` as `after` would change the document itself and
  * not just its spelling.
  *
- * The editor understands less Markdown than the preview renders: a table
- * survives the round trip through its schema only as its text. Rewriting a
+ * `marked` reads every construct the preview renders; the editor only holds
+ * what it has an extension for, and drops the rest without a word. Rewriting a
  * stored text the user has not touched must never cost content, so both
- * readings are rendered by `marked` — which knows every construct the preview
- * knows — and compared. Raw HTML turned into Markdown reads the same and may
- * be written back; a flattened table does not, and is left alone.
+ * readings are compared as `marked` sees them: raw HTML turned into Markdown
+ * reads the same and may be written back, a construct the editor swallowed
+ * does not, and that text is left alone.
  *
- * Deliberately not `manager.parse()`: that builds the document through the
- * editor's own registry, where a table collapses to nothing at all. Two texts
- * that both parse to an empty document would look equal, and normalising would
- * then replace the stored table with "".
+ * Deliberately not `manager.parse()`, which is how the editor itself reads
+ * Markdown — exactly the step that loses the construct. Two texts that both
+ * parse to an empty document would look equal, and normalising would replace
+ * the stored text with "".
  */
 function readsTheSame(editor: Editor, before: string, after: string): boolean {
   const { instance } = editor.storage.markdown.manager
@@ -115,6 +120,14 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
     const callbacks = React.useRef({ onChange, onNormalise })
     React.useEffect(() => {
       callbacks.current = { onChange, onNormalise }
+    })
+
+    // The label follows the chosen content type, and the editor stays mounted
+    // across that change — so the extension below reads it when it renders,
+    // not when it was configured.
+    const label = React.useRef(placeholder)
+    React.useEffect(() => {
+      label.current = placeholder
     })
 
     // The Markdown the editor currently holds. Lets the sync effect tell "the
@@ -182,7 +195,7 @@ export const TiptapEditor = React.forwardRef<TiptapEditorHandle, TiptapEditorPro
         // this extension, which was never registered. The visual editor sat
         // there without its label; only the source-mode textarea showed one,
         // through its own `placeholder` attribute.
-        Placeholder.configure({ placeholder: () => placeholder ?? "" }),
+        Placeholder.configure({ placeholder: () => label.current ?? "" }),
       ],
       autofocus: autoFocus ? "end" : false,
       content: value,
