@@ -247,30 +247,29 @@ describe("SPACE_COLOR_SWATCHES", () => {
  * Welcher Vorschlag traegt den Haken.
  *
  * Drei Faelle, nicht zwei: eine Palettenfarbe, eine von Hand gewaehlte
- * ausserhalb der Palette — und der Vorschlag selbst. Der Vorschlag stammt
- * aus dem Space-Bild oder deterministisch aus der Id und trifft die Palette
- * praktisch nie; er darf deshalb NICHT als "eigene Farbe" durchgehen. Er
- * hat sein eigenes Feld, damit man ihn nach einer anderen Wahl noch sieht
- * und zurueckfindet.
+ * ausserhalb der Palette — und die Farbe des Space-Bildes. Die trifft die
+ * Palette praktisch nie und darf trotzdem NICHT als "eigene Farbe"
+ * durchgehen: sie hat ihr eigenes Feld, damit man sie nach einer anderen
+ * Wahl noch sieht und zu ihr zurueckfindet.
  *
- * Erkannt wird er am Wert, nicht an der Herkunft: die Bildfarbe steht im
- * selben Schluessel wie eine Handwahl.
+ * Erkannt wird sie am Wert, nicht an der Herkunft: beim Hochladen steht sie
+ * im selben Schluessel wie eine Handwahl. Ohne Bild gibt es kein Feld.
  */
 describe("activeSpaceSwatch", () => {
-  it("meldet 'suggestion', wenn die geltende Farbe der Vorschlag ist", () => {
+  it("meldet 'suggestion', wenn die geltende Farbe die des Bildes ist", () => {
     expect(activeSpaceSwatch("#7a3b21", "#7a3b21")).toBe("suggestion")
-    // Auch dann, wenn der Vorschlag zufaellig eine Palettenfarbe trifft:
-    // was gilt, ist der Vorschlag, und sein Feld traegt den Haken.
+    // Auch dann, wenn die Bildfarbe zufaellig eine Palettenfarbe trifft:
+    // es gilt die Farbe des Bildes, und ihr Feld traegt den Haken.
     const hex = SPACE_COLOR_SWATCHES[1]
     expect(activeSpaceSwatch(hex, hex)).toBe("suggestion")
   })
 
-  it("vergleicht den Vorschlag ohne Ruecksicht auf die Schreibweise", () => {
+  it("vergleicht die Bildfarbe ohne Ruecksicht auf die Schreibweise", () => {
     expect(activeSpaceSwatch("#7A3B21", "#7a3b21")).toBe("suggestion")
   })
 
-  it("traegt keinen Haken am Vorschlag, solange er nicht bestimmt ist", () => {
-    // Die Extraktion aus dem Bild laeuft noch.
+  it("kennt kein Vorschlagsfeld ohne Bild", () => {
+    // Ohne Bild — und solange die Extraktion laeuft — gibt es keins.
     expect(activeSpaceSwatch("#123456", null)).toBe("custom")
   })
 

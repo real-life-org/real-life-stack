@@ -386,8 +386,8 @@ describe("Farbzustand bleibt mit dem Gespeicherten im Gleichklang", () => {
   }
 
   /**
-   * Der Bereich "Aussehen" bestimmt seine Vorschlagsfarbe beim Oeffnen ueber
-   * einen dynamischen Import. Bis der durch ist, vergehen ein paar
+   * Der Bereich "Aussehen" bestimmt die Bildfarbe beim Oeffnen ueber einen
+   * dynamischen Import. Bis der durch ist, vergehen ein paar
    * Microtasks — die hier abgewartet werden.
    */
   const openAppearanceSettled = async () => {
@@ -413,8 +413,8 @@ describe("Farbzustand bleibt mit dem Gespeicherten im Gleichklang", () => {
 
   it("verwirft die Bildfarbe, wenn waehrenddessen eine Farbe gewaehlt wurde", async () => {
     renderWith({ image: "data:image/png;base64,AAA", primaryColor: "#123456" })
-    // Der Bereich bestimmt die Vorschlagsfarbe, sobald er offen ist — erst
-    // dann steht das Feld da, ueber das man zu ihr zurueckfindet.
+    // Der Bereich bestimmt die Bildfarbe, sobald er offen ist — erst dann
+    // steht das Feld da, ueber das man zu ihr zurueckfindet.
     await openAppearanceSettled()
 
     // Ab jetzt haengt die Extraktion, bis der Test sie freigibt.
@@ -467,6 +467,18 @@ describe("Farbzustand bleibt mit dem Gespeicherten im Gleichklang", () => {
       .toBe("rgb(170, 187, 204)")
     expect(swatch()!.getAttribute("aria-pressed"), "nur der Haken wandert").toBe("false")
     expect(pressedLabels()).toEqual([`Primärfarbe ${hex}`])
+  })
+
+  it("zeigt kein Bildfeld, wenn es kein Bild gibt", async () => {
+    // Ohne Bild waere der Vorschlag die Farbe aus der Space-Id — nichts,
+    // was man sich ansehen will. Der Weg zurueck steht dann als Text da.
+    renderWith({ primaryColor: SPACE_COLOR_SWATCHES[1] })
+    await openAppearanceSettled()
+
+    expect(document.querySelector('button[aria-label="Farbe aus dem Bild"]')).toBeNull()
+    const back = Array.from(document.querySelectorAll("button"))
+      .find((b) => b.textContent?.includes("Zurück zur Standardfarbe"))
+    expect(back, "der Weg zurueck bleibt erreichbar").toBeDefined()
   })
 
   it("setzt die Farbe zurueck, wenn das Bild entfernt wird", async () => {
@@ -590,20 +602,17 @@ describe("Jeder Schreibweg fuehrt die Anzeige mit", () => {
   /**
    * Welche Farbe die Oberflaeche als geltend ausweist.
    *
-   * Zwei Orte, seit der Vorschlag ein eigenes Feld hat: die Palette traegt
-   * ihren Wert im Namen, das Vorschlagsfeld nur in seiner Flaeche.
+   * Zwei Orte, seit die Bildfarbe ein eigenes Feld hat: die Palette traegt
+   * ihren Wert im Namen, das Bildfeld nur in seiner Flaeche.
    */
   const shownColor = () => {
     const hit = Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Primärfarbe"]'))
       .find((b) => b.getAttribute("aria-pressed") === "true")
     if (hit) return hit.getAttribute("aria-label")!.replace("Primärfarbe ", "")
 
-    const suggestion = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
-      .find((b) => {
-        const label = b.getAttribute("aria-label")
-        return (label === "Farbe aus dem Bild" || label === "Standardfarbe") &&
-          b.getAttribute("aria-pressed") === "true"
-      })
+    const suggestion = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Farbe aus dem Bild"][aria-pressed="true"]',
+    )
     if (!suggestion) return "custom"
     const rgb = suggestion.style.backgroundColor.match(/\d+/g)
     return rgb
@@ -661,7 +670,7 @@ describe("Jeder Schreibweg fuehrt die Anzeige mit", () => {
       await Promise.resolve()
       await Promise.resolve()
     })
-    // Das neue Bild stoesst die Vorschlagsfarbe neu an.
+    // Das neue Bild stoesst die Extraktion neu an.
     for (let i = 0; i < 10; i++) await act(async () => { await Promise.resolve() })
 
     const stored = lastSavedColor()

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react"
-import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, Check as CheckIcon, type LucideIcon } from "lucide-react"
+import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, RotateCcw, Check as CheckIcon, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
@@ -137,21 +137,20 @@ export function spaceConfigSections({
 /**
  * Welcher Farbvorschlag den Haken traegt.
  *
- * Drei Antworten, nicht zwei. Der Vorschlag — aus dem Space-Bild
- * (`dominantColor`) oder deterministisch aus der Id — hat sein eigenes Feld
- * ("suggestion") und darf nicht als "eigene Farbe" durchgehen: sonst
- * verschwindet die Bildfarbe in dem Augenblick, in dem man eine andere
- * waehlt, und niemand sieht mehr, wohin der Rueckweg fuehrt.
+ * Drei Antworten, nicht zwei. Die Farbe aus dem Space-Bild hat ihr eigenes
+ * Feld ("suggestion") und darf nicht als "eigene Farbe" durchgehen: sonst
+ * verschwindet sie in dem Augenblick, in dem man eine andere waehlt, und
+ * niemand sieht mehr, wohin der Rueckweg fuehrt.
  *
  * Verglichen wird der Wert, nicht die Herkunft. Das muss so sein: die aus
  * dem Bild gewonnene Farbe wird beim Hochladen in denselben Schluessel
  * geschrieben wie eine von Hand gewaehlte, "ist gesetzt" trennt die beiden
- * also nicht. Ist der Vorschlag noch nicht bestimmt (die Extraktion
- * laeuft), traegt er auch keinen Haken.
+ * also nicht. Gibt es kein Bild (oder laeuft die Extraktion noch), gibt es
+ * auch kein Feld, das einen Haken tragen koennte.
  */
-export function activeSpaceSwatch(effectiveColor: string, suggestedColor: string | null): string {
+export function activeSpaceSwatch(effectiveColor: string, imageColor: string | null): string {
   const hex = effectiveColor.toLowerCase()
-  if (suggestedColor && hex === suggestedColor.toLowerCase()) return "suggestion"
+  if (imageColor && hex === imageColor.toLowerCase()) return "suggestion"
   return SPACE_COLOR_SWATCHES.includes(hex) ? hex : "custom"
 }
 
@@ -696,37 +695,35 @@ export function GroupDialog({
   const shownInvitable = filterInvitableContacts(invitableContacts, inviteSearch)
 
   /**
-   * Der Vorschlag: die Farbe, die ohne eigene Wahl gaelte.
+   * Die Farbe des Space-Bildes — als Feld in der Palette.
    *
-   * Sie muss sichtbar bleiben, auch nachdem jemand eine andere gewaehlt hat
-   * — sonst ist die Farbe des Space-Bildes weg, sobald man einmal danebentippt.
-   * Dafuer muss sie bekannt sein, und mit Bild heisst das: aus dem Bild
-   * bestimmen.
+   * Sie muss sichtbar bleiben, auch nachdem jemand eine andere gewaehlt hat,
+   * sonst ist sie weg, sobald man einmal danebentippt. Dafuer muss sie
+   * bekannt sein, und das heisst: aus dem Bild bestimmen.
+   *
+   * NUR mit Bild. Ohne Bild waere der Vorschlag der deterministische
+   * Rueckfall aus der Space-Id — eine Farbe, die niemand gewaehlt hat und
+   * die man sich auch nicht ansehen will; dort genuegt der Textknopf.
    *
    * Der Effekt laeuft darum genau dann, wenn der Bereich "Aussehen" offen ist
    * und sich das Bild aendert — nicht bei jedem Rendern (Spec 04, Regel 2).
-   * Ohne Bild ist der Vorschlag der deterministische Rueckfall aus der Id und
-   * steht sofort fest.
    */
-  const [suggestedColor, setSuggestedColor] = useState<string | null>(null)
+  const [imageColor, setImageColor] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isEdit || activeSection !== "theme") return
-    const fallback = getSpacePrimaryColor(groupId, null)
-    if (!groupImage) {
-      setSuggestedColor(fallback)
+    if (!isEdit || activeSection !== "theme" || !groupImage) {
+      setImageColor(null)
       return
     }
-    // Waehrend der Extraktion KEINE Farbe zeigen. Das Bild steht beim ersten
-    // Lauf noch nicht immer fest; bliebe der Id-Rueckfall solange stehen,
-    // truege das Feld "Farbe aus dem Bild" eine Farbe, die gar nicht gilt.
-    setSuggestedColor(null)
+    // Waehrend der Extraktion KEINE Farbe zeigen: sonst truege das Feld einen
+    // Wert vom vorigen Bild.
+    setImageColor(null)
     let current = true
     void (async () => {
       const { dominantColor } = await import("../../lib/image-utils")
       const derived = await dominantColor(resolveAssetUrl(groupImage) ?? groupImage).catch(() => null)
-      // Ein graustufiges Bild liefert keine Farbe; dann gilt der Id-Rueckfall.
-      if (current) setSuggestedColor(derived ?? fallback)
+      // Ein graustufiges Bild liefert keine Farbe; dann gibt es kein Feld.
+      if (current) setImageColor(derived)
     })()
     return () => { current = false }
   }, [isEdit, activeSection, groupImage, groupId])
@@ -737,7 +734,7 @@ export function GroupDialog({
    * (Spec 04, "Space-Primaerfarbe", Regel 3/5).
    */
   const effectiveColor = getSpacePrimaryColor(groupId, primaryColorChoice)
-  const currentSwatch = activeSpaceSwatch(effectiveColor, suggestedColor)
+  const currentSwatch = activeSpaceSwatch(effectiveColor, imageColor)
 
   /**
    * Erst die Anzeige, dann das Speichern: der Haken springt sofort, der
@@ -1226,15 +1223,15 @@ export function GroupDialog({
                     Space-Bildes nicht mehr. Jetzt ist er ein Feld wie jedes
                     andere, nur abgesetzt, weil er nicht aus der Palette
                     stammt. */}
-                {suggestedColor && (
+                {imageColor && (
                   <>
                     <button
                       type="button"
-                      title={groupImage ? "Farbe aus dem Bild" : "Standardfarbe"}
-                      aria-label={groupImage ? "Farbe aus dem Bild" : "Standardfarbe"}
+                      title="Farbe aus dem Bild"
+                      aria-label="Farbe aus dem Bild"
                       aria-pressed={currentSwatch === "suggestion"}
                       onClick={() => { void resetPrimaryColor() }}
-                      style={{ backgroundColor: suggestedColor }}
+                      style={{ backgroundColor: imageColor }}
                       className={cn(
                         "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110",
                         currentSwatch === "suggestion" &&
@@ -1244,15 +1241,13 @@ export function GroupDialog({
                       {currentSwatch === "suggestion" ? (
                         <CheckIcon
                           className="h-3.5 w-3.5"
-                          style={{ color: getReadableTextColor(suggestedColor) }}
+                          style={{ color: getReadableTextColor(imageColor) }}
                         />
                       ) : (
-                        groupImage && (
-                          <Camera
-                            className="h-3.5 w-3.5"
-                            style={{ color: getReadableTextColor(suggestedColor) }}
-                          />
-                        )
+                        <Camera
+                          className="h-3.5 w-3.5"
+                          style={{ color: getReadableTextColor(imageColor) }}
+                        />
                       )}
                     </button>
                     <span className="mx-0.5 h-5 w-px bg-border" aria-hidden />
@@ -1315,6 +1310,20 @@ export function GroupDialog({
                   />
                 </label>
               </div>
+
+              {/* Ohne Bild gibt es kein Feld, auf das man zurueckklicken
+                  koennte — die Farbe aus der Space-Id ist nichts, was man
+                  sich ansieht. Hier genuegt der Weg zurueck als Text. */}
+              {!groupImage && primaryColorChoice != null && (
+                <button
+                  type="button"
+                  onClick={() => { void resetPrimaryColor() }}
+                  className="mx-2.5 mt-1 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Zurück zur Standardfarbe
+                </button>
+              )}
 
               <p className="mt-3 px-2.5 text-xs text-muted-foreground">
                 Die Farbe gilt für alle im Space und wirkt, solange er geöffnet ist.
