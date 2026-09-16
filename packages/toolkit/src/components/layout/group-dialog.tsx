@@ -428,26 +428,33 @@ export function GroupDialog({
   const [primaryColorChoice, setPrimaryColorChoice] = useState<string | null>(() =>
     mode.type === "edit" ? ((mode.group.data?.primaryColor as string | undefined) ?? null) : null,
   )
-  const savePrimaryColorRef = useRef<((hex: string | null) => void) | null>(null)
+  /**
+   * Das Ziel haengt am WERT, nicht am Zeitpunkt der Ausfuehrung. Der Saver
+   * lebt so lange wie der Dialog; ein eingereihter Vorgang laeuft erst, wenn
+   * der vorige settled ist. Laese er das Ziel dann aus `modeRef`, schriebe er
+   * in den Space, der inzwischen offen ist — ein fremder Space bekaeme still
+   * die Farbe, die man dem vorigen zugedacht hatte.
+   */
+  const savePrimaryColorRef = useRef<((v: { groupId: string; hex: string | null }) => void) | null>(null)
   if (!savePrimaryColorRef.current) {
-    savePrimaryColorRef.current = createLatestWinsSaver<string | null>(
-      (hex) => {
-        const current = modeRef.current
-        if (current.type !== "edit") return Promise.resolve()
+    savePrimaryColorRef.current = createLatestWinsSaver<{ groupId: string; hex: string | null }>(
+      ({ groupId: target, hex }) =>
         // Minimaler PATCH: `null` loescht den Schluessel und stellt damit den
         // Rueckfall her (Spec 04 Regel 3), ohne image/modules zu beruehren.
-        return onUpdateGroupRef.current(current.group.id, { data: { primaryColor: hex } })
-      },
-      (err, _failed, lastSaved) => {
-        // Zurueck auf den zuletzt BESTAETIGTEN Wert — ein Haken auf einer
-        // Farbe, die nie ankam, behauptet eine Aenderung, die es nicht gibt.
+        onUpdateGroupRef.current(target, { data: { primaryColor: hex } }),
+      (err, failed, lastSaved) => {
         const current = modeRef.current
-        setPrimaryColorChoice(
-          lastSaved ??
-            (current.type === "edit"
-              ? ((current.group.data?.primaryColor as string | undefined) ?? null)
-              : null),
-        )
+        // Ein Fehlschlag fuer einen anderen Space darf die Anzeige des
+        // gerade offenen nicht anfassen — gemeldet wird er trotzdem.
+        if (current.type === "edit" && failed.groupId === current.group.id) {
+          // Zurueck auf den zuletzt BESTAETIGTEN Wert — ein Haken auf einer
+          // Farbe, die nie ankam, behauptet eine Aenderung, die es nicht gibt.
+          setPrimaryColorChoice(
+            lastSaved?.groupId === current.group.id
+              ? lastSaved.hex
+              : ((current.group.data?.primaryColor as string | undefined) ?? null),
+          )
+        }
         setError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden")
       },
       () => setError(null),
@@ -661,7 +668,31 @@ export function GroupDialog({
   const applyPrimaryColor = (hex: string | null) => {
     if (!isEdit) return
     setPrimaryColorChoice(hex)
-    savePrimaryColorRef.current?.(hex)
+    savePrimaryColorRef.current?.({ groupId: mode.group.id, hex })
+  }
+
+  /**
+   * Zurueck zum Vorschlag. Mit Bild heisst das: die dominante Farbe des
+   * Bildes NEU bestimmen und schreiben.
+   *
+   * `null` allein genuegt hier nicht. Die aus dem Bild gewonnene Farbe steht
+   * im selben Schluessel wie die von Hand gewaehlte; wer von Hand waehlt,
+   * ueberschreibt sie. Ein spaeteres `null` fiele darum nicht auf das Bild
+   * zurueck, sondern auf die Farbe aus der Space-Id — der Knopf haette
+   * versprochen, was er nicht halten kann.
+   *
+   * Die Extraktion laeuft damit ein zweites Mal, aber auf ausdrueckliche
+   * Nutzeraktion, nicht bei jedem Rendern (Spec 04, Regel 2).
+   */
+  const resetPrimaryColor = async () => {
+    if (!isEdit) return
+    if (!groupImage) {
+      applyPrimaryColor(null)
+      return
+    }
+    const { dominantColor } = await import("../../lib/image-utils")
+    // Liefert ein graustufiges Bild keine Farbe, bleibt der Id-Rueckfall.
+    applyPrimaryColor(await dominantColor(groupImage).catch(() => null))
   }
 
   /** Zahlen am Menue — die Suche aendert sie nicht, sie zaehlen den Bestand. */
@@ -1113,7 +1144,9 @@ export function GroupDialog({
                         active && "ring-2 ring-foreground ring-offset-2 ring-offset-background",
                       )}
                     >
-                      {active && <CheckIcon className="h-3.5 w-3.5 text-white drop-shadow" />}
+                      {active && (
+                        <CheckIcon className="h-3.5 w-3.5" style={{ color: getReadableTextColor(hex) }} />
+                      )}
                     </button>
                   )
                 })}
@@ -1130,12 +1163,22 @@ export function GroupDialog({
                   style={currentSwatch === "custom" ? { backgroundColor: effectiveColor } : undefined}
                 >
                   {currentSwatch === "custom" ? (
-                    <CheckIcon className="h-3.5 w-3.5 text-white drop-shadow" />
+                    // Fest weiss verschwand eine helle eigene Farbe (etwa
+                    // #ffffff) im eigenen Untergrund — Spec 04 Regel 5
+                    // verlangt lesbare Zeichen auf der Akzentflaeche.
+                    <CheckIcon
+                      className="h-3.5 w-3.5"
+                      style={{ color: getReadableTextColor(effectiveColor) }}
+                    />
                   ) : (
                     <span className="text-sm leading-none">+</span>
                   )}
+                  {/* `title` am Label benennt das Bedienelement nicht — ohne
+                      eigenes Label hiesse der Waehler fuer eine Vorlesehilfe
+                      nur "+" oder "Haken". */}
                   <input
                     type="color"
+                    aria-label="Eigene Farbe"
                     value={effectiveColor}
                     onChange={(e) => applyPrimaryColor(e.target.value)}
                     className="sr-only"
@@ -1149,7 +1192,7 @@ export function GroupDialog({
               {primaryColorChoice != null && (
                 <button
                   type="button"
-                  onClick={() => applyPrimaryColor(null)}
+                  onClick={() => { void resetPrimaryColor() }}
                   className="mx-2.5 mt-1 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <RotateCcw className="h-3 w-3" />

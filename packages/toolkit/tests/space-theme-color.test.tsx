@@ -178,3 +178,139 @@ describe("Dialog traegt die Farbe des bearbeiteten Space", () => {
     expect(invite!.style.backgroundColor).toBe("")
   })
 })
+
+/**
+ * Der Saver lebt so lange wie der Dialog und liest das Ziel beim AUSFUEHREN.
+ * Wird ein Speichern eingereiht, waehrend ein aelteres laeuft, und wechselt
+ * der Dialog inzwischen auf einen anderen Space, schrieb der eingereihte
+ * Vorgang die Farbe in den NEUEN Space — ein fremder Space bekam still die
+ * Farbe, die man dem vorigen zugedacht hatte.
+ *
+ * Das Ziel muss darum am Wert haengen, nicht am Zeitpunkt der Ausfuehrung.
+ */
+describe("Farbspeichern bleibt an seinem Space", () => {
+  let root: Root
+  const calls: Array<{ id: string; color: unknown }> = []
+  let release: (() => void) | undefined
+
+  const renderFor = (groupId: string) => {
+    act(() => {
+      root.render(
+        createElement(GroupDialog, {
+          open: true,
+          onOpenChange: () => {},
+          mode: { type: "edit", group: { id: groupId, name: groupId, data: {} } } as never,
+          currentUserId: "did:key:zME",
+          onCreateGroup: async () => {},
+          onUpdateGroup: (id: string, updates: { data?: { primaryColor?: unknown } }) => {
+            calls.push({ id, color: updates.data?.primaryColor })
+            // Der erste Aufruf haengt, bis der Test ihn loslaesst.
+            return calls.length === 1
+              ? new Promise<void>((resolve) => { release = resolve })
+              : Promise.resolve()
+          },
+          onDeleteGroup: async () => {},
+        } as never),
+      )
+    })
+  }
+
+  const openAppearance = () => {
+    const entry = Array.from(document.querySelectorAll("nav button"))
+      .find((b) => b.textContent?.startsWith("Aussehen")) as HTMLButtonElement
+    act(() => { entry.click() })
+  }
+
+  const pick = (hex: string) => {
+    act(() => {
+      document.querySelector<HTMLButtonElement>(`button[aria-label="Primärfarbe ${hex}"]`)!.click()
+    })
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = ""
+    calls.length = 0
+    release = undefined
+    const host = document.createElement("div")
+    document.body.appendChild(host)
+    root = createRoot(host)
+  })
+
+  it("schreibt einen eingereihten Vorgang nicht in den inzwischen geoeffneten Space", async () => {
+    renderFor("space-a")
+    openAppearance()
+
+    pick(SPACE_COLOR_SWATCHES[1]) // laeuft, haengt
+    pick(SPACE_COLOR_SWATCHES[2]) // wird eingereiht
+
+    // Der Dialog zeigt jetzt einen ANDEREN Space.
+    renderFor("space-b")
+
+    await act(async () => {
+      release?.()
+      await Promise.resolve()
+    })
+
+    expect(calls).toHaveLength(2)
+    expect(calls.map((c) => c.id), "beide Vorgaenge gehoeren space-a").toEqual(["space-a", "space-a"])
+    expect(calls[1].color).toBe(SPACE_COLOR_SWATCHES[2])
+  })
+})
+
+/**
+ * Zeichen auf der Akzentflaeche muessen lesbar bleiben (Spec 04,
+ * "Verwendung der Primaerfarbe", Regel 5). Der Haken war fest weiss — auf
+ * einer hellen eigenen Farbe verschwand er im eigenen Untergrund.
+ */
+describe("Lesbarkeit und Benennung der Farbwahl", () => {
+  let root: Root
+
+  const renderWith = (primaryColor?: string) => {
+    act(() => {
+      root.render(
+        createElement(GroupDialog, {
+          open: true,
+          onOpenChange: () => {},
+          mode: {
+            type: "edit",
+            group: { id: "g1", name: "G", data: primaryColor ? { primaryColor } : {} },
+          } as never,
+          currentUserId: "did:key:zME",
+          onCreateGroup: async () => {},
+          onUpdateGroup: async () => {},
+          onDeleteGroup: async () => {},
+        } as never),
+      )
+    })
+    const entry = Array.from(document.querySelectorAll("nav button"))
+      .find((b) => b.textContent?.startsWith("Aussehen")) as HTMLButtonElement
+    act(() => { entry.click() })
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = ""
+    const host = document.createElement("div")
+    document.body.appendChild(host)
+    root = createRoot(host)
+  })
+
+  it("setzt den Haken auf einer hellen eigenen Farbe dunkel", () => {
+    renderWith("#ffffff")
+    const label = document.querySelector<HTMLElement>('input[type="color"]')!.closest("label")!
+    const check = label.querySelector("svg")!
+    expect(check.style.color).toBe("rgb(0, 0, 0)")
+  })
+
+  it("setzt ihn auf einer dunklen eigenen Farbe hell", () => {
+    renderWith("#101010")
+    const label = document.querySelector<HTMLElement>('input[type="color"]')!.closest("label")!
+    expect(label.querySelector("svg")!.style.color).toBe("rgb(255, 255, 255)")
+  })
+
+  it("benennt den Farbwaehler fuer Vorlesehilfen", () => {
+    renderWith()
+    // `title` am umgebenden Label benennt das Bedienelement nicht.
+    expect(document.querySelector('input[type="color"]')!.getAttribute("aria-label"))
+      .toBe("Eigene Farbe")
+  })
+})
