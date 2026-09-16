@@ -917,7 +917,9 @@ export function GroupDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="flex h-[85vh] max-h-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]"
+        // Die Glasflaeche (Achse Panel-Hintergrund) gilt auch fuer das
+        // Space-Menue — durchscheinend oder deckend wie Navbar und Panels.
+        className="surface-glass flex h-[85vh] max-h-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]"
         aria-describedby={undefined}
         // Dieser Dialog ist ein FENSTER IN DEN SPACE und traegt darum dessen
         // Primaerfarbe — auch wenn gerade ein anderer Space oder die
