@@ -55,7 +55,14 @@ interface Branding {
   appName?: string
   /** Pfad relativ zum Auslieferungsstamm. */
   faviconUrl?: string
-  /** Farbtokens, je Schema. */
+  /** Die Achsen des Aussehens, aus denen der Tokensatz entsteht. */
+  theme?: {
+    /** Akzentfarbe, `#rrggbb`. */
+    accent?: string
+    /** Tönung der Flächen, 0–1. 0 = neutral. */
+    tint?: number
+  }
+  /** Handkorrekturen einzelner Tokens, je Schema — nach der Ableitung. */
   colors?: {
     light?: Record<string, string>
     dark?: Record<string, string>
@@ -83,16 +90,43 @@ Regeln:
 
 ## Branding
 
-Branding ist **Daten, nicht Code**. Eine Instanz gestaltet über Tokens und Assets, nicht über eigene Komponenten.
+Branding ist **Daten, nicht Code**. Eine Instanz gestaltet über Achsen, Tokens und Assets, nicht über eigene Komponenten.
 
-1. `appName` setzt den Dokumenttitel und erscheint überall, wo die App sich benennt.
-2. `colors` werden als CSS-Custom-Properties auf das Wurzelelement gelegt, getrennt nach Schema. Ein Token MUSS eines sein, das das Toolkit definiert — ein unbekannter Name wird verworfen und gemeldet, damit ein Tippfehler nicht stumm wirkungslos bleibt.
-3. Token-**Werte** sind CSS-Farbangaben einschließlich Funktionsschreibweisen (`oklch()`, `rgb()`, `hsl()`). Verworfen wird, was die Deklaration verlassen oder etwas nachladen könnte (`;`, `{}`, `@`, `url()`, Kommentare) sowie unangemessen lange Werte.
-4. `colors` und `colorsUrl` sind Alternativen. `colorsUrl` verweist auf eine Datei mit demselben Aufbau; sie wird **getrennt geladen**, damit ein Fehler darin nur die Farben kostet und nicht die übrige Konfiguration mitreißt. Ist `colorsUrl` gesetzt und lesbar, sticht sie ein gleichzeitig vorhandenes `colors`.
-5. `faviconUrl` verweist auf eine Datei, die der Betreiber ausliefert. Fehlt sie, greift das Standard-Asset.
-6. Branding wird von **App-Shell-Flächen** gelesen. Space Modules DÜRFEN NICHT auf Branding verzweigen — ein Modul sieht in jeder Instanz gleich aus, abgesehen von den Tokens, die ohnehin global wirken.
-7. Ein **Instanz-Logo ist in v0.1 nicht Teil des Vertrags**: Die App-Shell hat heute keine Fläche dafür, und ein Feld ohne Wirkung wäre ein Versprechen, das nichts einlöst. Landingpages liefern ihr Logo als eigene Datei aus und brauchen dafür keine Konfiguration.
-8. Freies CSS einer Instanz ist **nicht Teil dieses Vertrags**. Ein Betreiber kann eigene Regeln nachladen; sie stehen außerhalb der Kompatibilitätszusage und können mit jedem Update brechen.
+### Aussehen aus Achsen
+
+Das Aussehen entsteht nicht aus einzelnen Farbwerten, sondern aus wenigen **Achsen**: heute `accent` (die Akzentfarbe) und `tint` (wie stark die Flächen die Farbe tragen). Aus den Achsen leitet das Toolkit je Schema den vollständigen Tokensatz ab — eine zwölfstufige Akzentskala und eine dazu passende neutrale Skala nach dem Radix-Muster; Text auf Flächen und Fokusring halten dabei die WCAG-Latten (4.5:1, 3:1) für jede Farbe.
+
+Drei Ebenen tragen Achsen, und sie bilden eine Kaskade:
+
+| Ebene | Achsen | Quelle |
+|---|---|---|
+| Space | `accent`, `tint` | `Group.data.primaryColor`, `Group.data.tint` ([04](04-items-relations-groups-spaces.md)) |
+| Instanz | `accent`, `tint` | `branding.theme` |
+| Toolkit | Standardwerte | `runtime-config.ts` |
+
+Regeln:
+
+1. Achsen werden **feldweise** gelesen: Ein Wert des aktiven Space sticht, ein fehlender fällt auf die Instanz, ein dort fehlender auf den Toolkit-Standard. Ein Space, der nur seine Farbe setzt, erbt die Tönung der Instanz.
+2. Achsen kennen **kein Schema**. Jede Ableitung liefert hell und dunkel; welches gilt, entscheidet der Mensch am Gerät. Weder Instanz noch Space DÜRFEN das Schema vorschreiben.
+3. Der abgeleitete Tokensatz wird als CSS-Custom-Properties auf das Wurzelelement gelegt, damit auch portalte Flächen (Dialoge, Dropdowns) ihn übernehmen.
+4. Aus Achsen entstehen **nur** die Tokens der Flächen, Rahmen, Texte und des Akzents. Fehler-, Warn- und Diagrammfarben (`destructive`, `warning`, `chart-*`) entstehen nicht aus Achsen und gehören der Instanz: Rot MUSS rot bleiben, auch in einem roten Space.
+
+### Handkorrekturen
+
+`colors` sind tokenweise Korrekturen **nach** der Ableitung — für Betreiber, die eine Abweichung wollen, die keine Achse ausdrückt (ein Fokusring in einer zweiten Markenfarbe, eigene Diagrammfarben).
+
+5. `colors` MÜSSEN Tokens benennen, die das Toolkit definiert — ein unbekannter Name wird verworfen und gemeldet, damit ein Tippfehler nicht stumm wirkungslos bleibt.
+6. Token-**Werte** sind CSS-Farbangaben einschließlich Funktionsschreibweisen (`oklch()`, `rgb()`, `hsl()`). Verworfen wird, was die Deklaration verlassen oder etwas nachladen könnte (`;`, `{}`, `@`, `url()`, Kommentare) sowie unangemessen lange Werte.
+7. Ist ein Space aktiv, gehen dessen aus Achsen abgeleitete Tokens den `colors` der Instanz vor; `colors` wirken dann nur auf Tokens, die nicht aus Achsen entstehen (Regel 4). Ohne aktiven Space wirken `colors` auf alles. Eine Instanz, die ihren Akzent per `colors.primary` setzt, sieht ihn darum nur in der Übersicht — der Akzent gehört in `theme.accent`.
+8. `colors` und `colorsUrl` sind Alternativen. `colorsUrl` verweist auf eine Datei mit demselben Aufbau; sie wird **getrennt geladen**, damit ein Fehler darin nur die Farben kostet und nicht die übrige Konfiguration mitreißt. Ist `colorsUrl` gesetzt und lesbar, sticht sie ein gleichzeitig vorhandenes `colors`.
+
+### Übriges
+
+9. `appName` setzt den Dokumenttitel und erscheint überall, wo die App sich benennt.
+10. `faviconUrl` verweist auf eine Datei, die der Betreiber ausliefert. Fehlt sie, greift das Standard-Asset.
+11. Branding wird von **App-Shell-Flächen** gelesen. Space Modules DÜRFEN NICHT auf Branding verzweigen — ein Modul sieht in jeder Instanz gleich aus, abgesehen von den Tokens, die ohnehin global wirken.
+12. Ein **Instanz-Logo ist in v0.1 nicht Teil des Vertrags**: Die App-Shell hat heute keine Fläche dafür, und ein Feld ohne Wirkung wäre ein Versprechen, das nichts einlöst. Landingpages liefern ihr Logo als eigene Datei aus und brauchen dafür keine Konfiguration.
+13. Freies CSS einer Instanz ist **nicht Teil dieses Vertrags**. Ein Betreiber kann eigene Regeln nachladen; sie stehen außerhalb der Kompatibilitätszusage und können mit jedem Update brechen.
 
 ## Landingpage
 
