@@ -142,7 +142,10 @@ export function getItemColor(
  * `<img src>` that consumes a stored asset path (logos, badges, …).
  */
 export function resolveAssetUrl(url: string | undefined): string | undefined {
-  if (!url) return url
+  // `data.image` stammt aus einem `Record<string, unknown>` und wird beim
+  // Lesen gecastet — was dort steht, ist nicht garantiert eine Zeichenkette.
+  // Ein Nicht-String darf hier nicht werfen, sondern faellt durch.
+  if (!url || typeof url !== "string") return url
   if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(url)) return url
   if (!url.startsWith("/")) return url
   const base = (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/"

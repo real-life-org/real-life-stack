@@ -4,7 +4,7 @@ import { getModule, getModules, defaultModuleIds, displayableModules } from "@/l
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
-import { cn, getReadableTextColor, getSpacePrimaryColor, SPACE_COLOR_SWATCHES } from "../../lib/utils"
+import { cn, getReadableTextColor, getSpacePrimaryColor, resolveAssetUrl, SPACE_COLOR_SWATCHES } from "../../lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -730,7 +730,9 @@ export function GroupDialog({
     const ticket = ++colorRequestRef.current
     const { dominantColor } = await import("../../lib/image-utils")
     // Liefert ein graustufiges Bild keine Farbe, bleibt der Id-Rueckfall.
-    const derived = await dominantColor(groupImage).catch(() => null)
+    // Auch hier der aufgeloeste Pfad: sonst laedt die Farbextraktion unter
+    // einem Unterpfad nichts und faellt still auf die Id-Farbe zurueck.
+    const derived = await dominantColor(resolveAssetUrl(groupImage) ?? groupImage).catch(() => null)
     if (ticket !== colorRequestRef.current) return
     applyPrimaryColor(derived)
   }
@@ -860,7 +862,12 @@ export function GroupDialog({
           <div className="group relative shrink-0">
             {groupImage ? (
               <>
-                <img src={groupImage} alt={name} className="h-12 w-12 rounded-xl object-cover ring-2 ring-background shadow-sm" />
+                {/* Ueber `resolveAssetUrl` wie `AvatarImage`: ein
+                    wurzel-relativer Pfad wie `/logo.png` laedt sonst vom
+                    falschen Ort, sobald die App unter einem Unterpfad
+                    ausgeliefert wird. Data-URLs reicht die Funktion
+                    unveraendert durch. */}
+                <img src={resolveAssetUrl(groupImage)} alt={name} className="h-12 w-12 rounded-xl object-cover ring-2 ring-background shadow-sm" />
                 <button
                   onClick={handleImageRemove}
                   aria-label="Bild entfernen"

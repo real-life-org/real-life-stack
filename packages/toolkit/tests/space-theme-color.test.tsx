@@ -326,7 +326,9 @@ describe("Farbzustand bleibt mit dem Gespeicherten im Gleichklang", () => {
 
   // `resetPrimaryColor` holt die Bildfarbe ueber einen dynamischen Import.
   vi.mock("../src/lib/image-utils", () => ({
-    resizeImage: async (s: string) => s,
+    // Die echte Funktion nimmt ein File und liefert eine Data-URL. Gab der
+    // Mock das File durch, landete ein Nicht-String im `src`.
+    resizeImage: async () => "data:image/png;base64,MOCK",
     dominantColor: () => new Promise((resolve) => { resolveDominant = resolve }),
   }))
 
