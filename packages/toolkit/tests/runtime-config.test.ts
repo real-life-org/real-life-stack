@@ -510,9 +510,9 @@ describe("branding.theme — Rundung und Flaechen", () => {
   it("liest bekannte Stufen und verwirft unbekannte", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     const cfg = await loadRuntimeConfig({
-      fetchImpl: stubFetch({ ok: true, json: { branding: { theme: { radius: "large", surfaces: "glass" } } } }),
+      fetchImpl: stubFetch({ ok: true, json: { branding: { theme: { radius: "large", surfaces: "glass", gray: "sand" } } } }),
     })
-    expect(cfg.branding?.theme).toEqual({ radius: "large" })
+    expect(cfg.branding?.theme).toEqual({ radius: "large", gray: "sand" })
     expect(warn).toHaveBeenCalled()
   })
 

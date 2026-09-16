@@ -22,7 +22,7 @@ vi.mock("../src/hooks/use-groups", () => ({
 
 const { SpaceThemePanel } = await import("../src/components/layout/space-theme-panel")
 const { GroupDialog } = await import("../src/components/layout/group-dialog")
-const { colorAxes, colorFromAxes, readTint } = await import("../src/lib/space-theme")
+const { accentSwatches, colorAxes, colorFromAxes, readTint } = await import("../src/lib/space-theme")
 const { parseColor } = await import("../src/lib/oklch")
 const { loadRuntimeConfig, resetRuntimeConfigForTests } = await import("../src/lib/runtime-config")
 
@@ -98,11 +98,40 @@ describe("SpaceThemePanel", () => {
     root = createRoot(host)
   })
 
-  it("zeigt die vier Regler und die Kontraste sofort", () => {
+  it("zeigt die Regler fuer eine eigene Farbe und die Kontraste sofort", () => {
+    // #e87520 ist keine Radix-Stufe 9 — also "eigene Farbe", Regler offen.
     render({ primaryColor: COLOR })
     for (const l of ["Farbton", "Kräftigkeit", "Helligkeit", "Tönung"]) expect(slider(l), l).not.toBeNull()
     expect(document.body.textContent).toContain("Knopfbeschriftung")
     expect(document.body.textContent).toMatch(/\d\.\d:1/)
+  })
+
+  /**
+   * Die Form des Radix-Playgrounds: 25 benannte Akzentskalen als Raster.
+   * Wer eine waehlt, bekommt genau diese Skala; die eigene Farbe steht als
+   * ein Kreis daneben, und erst dort erscheinen die Regler.
+   */
+  it("bietet die Radix-Akzentskalen an und schreibt deren Stufe 9", async () => {
+    render({ primaryColor: COLOR })
+    const indigo = document.querySelector<HTMLButtonElement>('button[aria-label="Accent indigo"]')!
+    expect(indigo).not.toBeNull()
+    await act(async () => { indigo.click() })
+    const hex = last("primaryColor") as string
+    expect(hex).toBe(accentSwatches("light").find((s) => s.name === "indigo")!.hex)
+    expect(indigo.getAttribute("aria-checked")).toBe("true")
+    expect(slider("Farbton"), "Regler nur bei eigener Farbe").toBeNull()
+    // Zurueck zur eigenen Farbe: der Kreis oeffnet die Regler wieder.
+    await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Accent eigene Farbe"]')!.click() })
+    expect(slider("Farbton")).not.toBeNull()
+  })
+
+  it("bietet die sechs Neutralen plus auto an und schreibt data.gray", async () => {
+    render({ primaryColor: COLOR })
+    expect(document.querySelector('button[aria-label="Gray auto"]')!.getAttribute("aria-checked")).toBe("true")
+    await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Gray sand"]')!.click() })
+    expect(last("gray")).toBe("sand")
+    await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Gray auto"]')!.click() })
+    expect(last("gray")).toBeNull()
   })
 
   it("stellt die Regler auf die geltende Farbe", () => {
@@ -241,6 +270,7 @@ describe("SpaceThemePanel", () => {
     const patch = saved.at(-1)!
     expect(patch.radius).toBeNull()
     expect(patch.surfaces).toBeNull()
+    expect(patch.gray).toBeNull()
   })
 
   it("erbt Rundung und Flaechen von der Instanz", async () => {

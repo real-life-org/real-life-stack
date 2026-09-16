@@ -1,6 +1,7 @@
 import { scalesForColor } from "./color-scales"
 import { themeTokens } from "./theme-tokens"
-import { layoutTokens, readRadius, readSurfaces, type RadiusStep, type Surfaces } from "./space-theme"
+import { layoutTokens, readGray, readRadius, readSurfaces, type RadiusStep, type Surfaces } from "./space-theme"
+import { type GrayScaleName } from "./color-scales"
 /**
  * Runtime-Konfiguration einer RLS-Instanz.
  *
@@ -40,6 +41,8 @@ export interface BrandingTheme {
   accent?: string
   /** Tönung der Flächen, 0–1. 0 = neutral. */
   tint?: number
+  /** Die neutrale Skala (Radix' grayColor); fehlt sie: auto. */
+  gray?: GrayScaleName
   /** Rundung, fünf Stufen: none | small | medium | large | full. */
   radius?: RadiusStep
   /** Flächen der App-Hülle: translucent | solid. */
@@ -295,6 +298,12 @@ function pickTheme(value: unknown): BrandingTheme | undefined {
     if (typeof tint === "number" && Number.isFinite(tint)) out.tint = Math.min(1, Math.max(0, tint))
     else console.warn(`[rls] branding.theme.tint="${String(tint)}" ist keine Zahl — uebersprungen.`)
   }
+  const gray = (value as Record<string, unknown>).gray
+  if (gray !== undefined) {
+    const name = readGray(gray)
+    if (name) out.gray = name
+    else console.warn(`[rls] branding.theme.gray="${String(gray)}" ist keine der sechs Neutralen — uebersprungen.`)
+  }
   const radius = (value as Record<string, unknown>).radius
   if (radius !== undefined) {
     const step = readRadius(radius)
@@ -440,9 +449,9 @@ export function applyBranding(branding: Branding | undefined, doc: Document = do
     const theme = branding.theme
     if (!theme) return []
     const colors =
-      theme.accent === undefined && theme.tint === undefined
+      theme.accent === undefined && theme.tint === undefined && theme.gray === undefined
         ? {}
-        : themeTokens({ ...scalesForColor(theme.accent ?? TOOLKIT_ACCENT, scheme, { tint: theme.tint }), scheme })
+        : themeTokens({ ...scalesForColor(theme.accent ?? TOOLKIT_ACCENT, scheme, { tint: theme.tint, gray: theme.gray }), scheme })
     // Rundung und Flaechen kennen kein Schema; sie stehen in beiden Bloecken.
     const layout = layoutTokens({ radius: theme.radius, surfaces: theme.surfaces })
     return Object.entries({ ...colors, ...layout }).map(([n, v]) => [n.slice(2), v])

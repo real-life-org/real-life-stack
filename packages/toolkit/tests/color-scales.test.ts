@@ -394,3 +394,17 @@ describe("deriveColorScale — dunkle Fuellung im dunklen Schema", () => {
     for (let i = 1; i < 12; i++) expect(l[i], `Stufe ${i + 1} > ${i}`).toBeGreaterThan(l[i - 1])
   })
 })
+
+describe("scalesForColor — Grau ausdruecklich gewaehlt", () => {
+  it("nimmt die genannte Neutrale statt der Paarung", () => {
+    // Orange paart Radix ohnehin mit "sand"; "slate" ist die Gegenprobe.
+    const auto = scalesForColor("#e87520", "light").gray
+    const slate = scalesForColor("#e87520", "light", { gray: "slate" }).gray
+    expect(slate).toEqual(namedScale("slate", "light"))
+    expect(slate).not.toEqual(auto)
+  })
+
+  it("faellt bei null auf die Paarung zurueck", () => {
+    expect(scalesForColor("#e87520", "light", { gray: null }).gray).toEqual(scalesForColor("#e87520", "light").gray)
+  })
+})

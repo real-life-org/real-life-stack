@@ -13,6 +13,7 @@ import {
 } from "@/components/primitives/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
 import { type RadiusStep, type Surfaces } from "../../lib/space-theme"
+import { type GrayScaleName } from "../../lib/color-scales"
 
 export interface Workspace {
   id: string
@@ -23,6 +24,8 @@ export interface Workspace {
   primaryColor?: string
   /** Tönung der Flächen, 0–1 (`data.tint`); fehlt sie, bleiben sie neutral. */
   tint?: number
+  /** Neutrale Skala (`data.gray`); fehlt sie, erbt der Space von der Instanz, sonst auto. */
+  gray?: GrayScaleName
   /** Rundung (`data.radius`), fünf Stufen; fehlt sie, erbt der Space von der Instanz. */
   radius?: RadiusStep
   /** Flächen der App-Hülle (`data.surfaces`): translucent | solid. */

@@ -92,5 +92,5 @@ export * from "./components"
 // Hooks
 export * from "./hooks"
 export * from "./components/navigation"
-export { readRadius, readSurfaces, layoutTokens, RADIUS_ORDER, RADIUS_STEPS, SURFACES } from "./lib/space-theme"
+export { readRadius, readSurfaces, readGray, layoutTokens, RADIUS_ORDER, RADIUS_STEPS, SURFACES } from "./lib/space-theme"
 export type { RadiusStep, Surfaces } from "./lib/space-theme"

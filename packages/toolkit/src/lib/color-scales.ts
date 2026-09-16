@@ -320,6 +320,11 @@ export interface ScaleOptions {
    * ungefähr 0.5.
    */
   tint?: number
+  /**
+   * Die neutrale Skala, ausdrücklich gewählt (Radix' `grayColor`). Fehlt
+   * sie, paart {@link grayFor} automatisch (`auto`).
+   */
+  gray?: GrayScaleName | null
 }
 
 export function scalesForColor(
@@ -328,7 +333,8 @@ export function scalesForColor(
   options: ScaleOptions = {},
 ): { accent: ColorScale; gray: ColorScale } {
   const parsed = parseColor(color)
-  const gray = namedScale(parsed ? grayFor(parsed) : "gray", scheme)
+  const grayName = options.gray ?? (parsed ? grayFor(parsed) : "gray")
+  const gray = namedScale(grayName, scheme)
   const tint = clampTint(options.tint)
   // Eine unbunte Akzentfarbe hat keinen Farbton, der etwas bedeutet — bei
   // #808080 liegt er zufaellig bei Rosa. Getoent wird nur, wenn der Akzent

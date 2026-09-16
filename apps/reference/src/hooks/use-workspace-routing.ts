@@ -9,6 +9,7 @@ import {
   scalesForColor,
   instanceTheme,
   readRadius,
+  readGray,
   readSurfaces,
   layoutTokens,
   useColorScheme,
@@ -168,6 +169,7 @@ export function useWorkspaceRouting(): WorkspaceRouting {
         primaryColor: g.data?.primaryColor as string | undefined,
         // Ungeprueft durchgereicht; `scalesForColor` kappt und verwirft.
         tint: g.data?.tint as number | undefined,
+        gray: readGray(g.data?.gray) ?? undefined,
         radius: readRadius(g.data?.radius) ?? undefined,
         surfaces: readSurfaces(g.data?.surfaces) ?? undefined,
       })),
@@ -320,7 +322,10 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     // Farbe tragen. Setzt der Space keine, erbt er die der Instanz — so
     // bleibt eine cremefarbene Instanz auch in jedem Space cremefarben.
     const inherited = instanceTheme()
-    const scales = scalesForColor(seed, scheme, { tint: activeWorkspace.tint ?? inherited.tint })
+    const scales = scalesForColor(seed, scheme, {
+      tint: activeWorkspace.tint ?? inherited.tint,
+      gray: activeWorkspace.gray ?? inherited.gray,
+    })
     // Rundung und Flaechen gehoeren zum selben Satz: gesetzt und weggeraeumt
     // mit den Farben, sonst bliebe die Rundung eines Space in der Uebersicht.
     const layout = layoutTokens({
@@ -329,7 +334,7 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     })
     applyThemeTokens(root, { ...themeTokens({ ...scales, scheme }), ...layout })
     return () => clearThemeTokens(root)
-  }, [activeWorkspace?.id, activeWorkspace?.primaryColor, activeWorkspace?.tint, activeWorkspace?.radius, activeWorkspace?.surfaces, isOverview, scheme])
+  }, [activeWorkspace?.id, activeWorkspace?.primaryColor, activeWorkspace?.tint, activeWorkspace?.gray, activeWorkspace?.radius, activeWorkspace?.surfaces, isOverview, scheme])
 
   // Switch workspace (keep the module if offered). Item focus is space-scoped → dropped.
   const handleWorkspaceChange = useCallback((workspace: Workspace) => {

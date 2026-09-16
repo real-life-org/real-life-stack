@@ -3,6 +3,7 @@
  * Funktionen, damit Dialog und Panel dieselben Regeln tragen.
  */
 import { oklchToHex, parseColor } from "./oklch"
+import { ACCENT_SCALE_NAMES, GRAY_SCALE_OPTIONS, namedScale, type ColorScheme, type GrayScaleName } from "./color-scales"
 
 /**
  * Was in `data.tint` steht, als Zahl 0–1 — oder null, wenn nichts Brauchbares.
@@ -100,4 +101,31 @@ export function layoutTokens(axes: { radius?: RadiusStep | null; surfaces?: Surf
     out["--surface-blur"] = solid ? "0px" : "12px"
   }
   return out
+}
+
+/** Was in `data.gray` steht — eine der sechs Neutralen, oder null (= auto). */
+export function readGray(value: unknown): GrayScaleName | null {
+  return typeof value === "string" && (GRAY_SCALE_OPTIONS as readonly string[]).includes(value)
+    ? (value as GrayScaleName)
+    : null
+}
+
+/**
+ * Das Akzent-Raster wie im Radix-Playground: jede benannte Skala mit ihrer
+ * Füllfarbe (Stufe 9). Wer eine waehlt, bekommt genau diese Skala — die
+ * Ableitung erkennt Stufe 9 als Vorlage wieder.
+ */
+export function accentSwatches(scheme: ColorScheme): { name: string; hex: string }[] {
+  return ACCENT_SCALE_NAMES.map((name) => ({ name, hex: namedScale(name, scheme)[8] }))
+}
+
+/** Welche Radix-Skala eine Farbe IST (Stufe 9 trifft exakt) — oder null: eigene Farbe. */
+export function matchAccentScale(hex: string, scheme: ColorScheme): string | null {
+  const wanted = hex.toLowerCase()
+  return accentSwatches(scheme).find((s) => s.hex.toLowerCase() === wanted)?.name ?? null
+}
+
+/** Die Neutralen fuer das Grau-Raster, mit ihrer Stufe 9 als Farbprobe. */
+export function graySwatches(scheme: ColorScheme): { name: GrayScaleName; hex: string }[] {
+  return GRAY_SCALE_OPTIONS.map((name) => ({ name, hex: namedScale(name, scheme)[8] }))
 }
