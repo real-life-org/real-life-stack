@@ -419,6 +419,40 @@ export function GroupDialog({
       () => setModuleError(null),
     )
   }
+
+  // Die gewaehlte Primaerfarbe liegt lokal, aus demselben Grund wie Name,
+  // Bild und Modulliste: `mode.group` ist ein SNAPSHOT vom Oeffnen, den die
+  // App nicht nachfuehrt, solange der Dialog steht. Direkt daraus gelesen
+  // bewegte sich der Haken nach einem Klick nicht — gespeichert wurde, aber
+  // es sah aus, als sei nichts passiert.
+  const [primaryColorChoice, setPrimaryColorChoice] = useState<string | null>(() =>
+    mode.type === "edit" ? ((mode.group.data?.primaryColor as string | undefined) ?? null) : null,
+  )
+  const savePrimaryColorRef = useRef<((hex: string | null) => void) | null>(null)
+  if (!savePrimaryColorRef.current) {
+    savePrimaryColorRef.current = createLatestWinsSaver<string | null>(
+      (hex) => {
+        const current = modeRef.current
+        if (current.type !== "edit") return Promise.resolve()
+        // Minimaler PATCH: `null` loescht den Schluessel und stellt damit den
+        // Rueckfall her (Spec 04 Regel 3), ohne image/modules zu beruehren.
+        return onUpdateGroupRef.current(current.group.id, { data: { primaryColor: hex } })
+      },
+      (err, _failed, lastSaved) => {
+        // Zurueck auf den zuletzt BESTAETIGTEN Wert — ein Haken auf einer
+        // Farbe, die nie ankam, behauptet eine Aenderung, die es nicht gibt.
+        const current = modeRef.current
+        setPrimaryColorChoice(
+          lastSaved ??
+            (current.type === "edit"
+              ? ((current.group.data?.primaryColor as string | undefined) ?? null)
+              : null),
+        )
+        setError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden")
+      },
+      () => setError(null),
+    )
+  }
   const applyModules = useCallback((next: string[]) => {
     setActiveModules(next)
     saveModulesRef.current?.(next)
@@ -617,22 +651,17 @@ export function GroupDialog({
    * gewonnene, sonst der deterministische Rueckfall aus der Space-Id
    * (Spec 04, "Space-Primaerfarbe", Regel 3/5).
    */
-  const effectiveColor = getSpacePrimaryColor(
-    groupId,
-    (isEdit ? (mode.group.data?.primaryColor as string | undefined) : undefined) ?? null,
-  )
+  const effectiveColor = getSpacePrimaryColor(groupId, primaryColorChoice)
   const currentSwatch = activeSpaceSwatch(effectiveColor)
 
   /**
-   * `null` loescht den Schluessel (Merge-Patch, Spec 04 Regel 3) und stellt
-   * damit den Rueckfall wieder her, statt eine Farbe einzufrieren.
+   * Erst die Anzeige, dann das Speichern: der Haken springt sofort, der
+   * Saver holt es nach und rollt bei einem Fehlschlag zurueck.
    */
   const applyPrimaryColor = (hex: string | null) => {
     if (!isEdit) return
-    setError(null)
-    onUpdateGroup(mode.group.id, { data: { primaryColor: hex } }).catch((err) => {
-      setError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden")
-    })
+    setPrimaryColorChoice(hex)
+    savePrimaryColorRef.current?.(hex)
   }
 
   /** Zahlen am Menue — die Suche aendert sie nicht, sie zaehlen den Bestand. */
@@ -1083,7 +1112,7 @@ export function GroupDialog({
               {/* Der Rueckweg. Spec 04 Regel 2/3: ohne eigenen Wert stammt die
                   Farbe aus dem Logo, sonst deterministisch aus der Space-Id —
                   `null` stellt genau das wieder her. */}
-              {mode.group.data?.primaryColor != null && (
+              {primaryColorChoice != null && (
                 <button
                   type="button"
                   onClick={() => applyPrimaryColor(null)}
