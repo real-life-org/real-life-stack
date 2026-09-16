@@ -586,8 +586,8 @@ export function GroupDialog({
 
   /**
    * Die Feineinstellung ist standardmaessig zu. Wer seinen Space einstellt,
-   * braucht Farbe und Toenung; die drei Achsen und die Kontrastzahlen sind
-   * fuer die, die genauer hinschauen wollen.
+   * waehlt eine Farbe; die drei Achsen, die Toenung und die Kontrastzahlen
+   * sind fuer die, die genauer hinschauen wollen.
    */
   const [advanced, setAdvanced] = useState(false)
 
@@ -1439,36 +1439,11 @@ export function GroupDialog({
                 </label>
               </div>
 
-              {/* Die Toenung: wie stark die Flaechen die Farbe tragen. Bei 0
-                  bleibt alles neutral, der Akzent traegt die Farbe allein;
-                  weiter oben bekommt der Space eine eigene Atmosphaere —
-                  reallife.network liegt mit seinem Creme bei etwa 50. Sie
-                  steht sichtbar, nicht hinter "Erweitert": sie macht die
-                  Stimmung und ist ein einziger Handgriff. */}
-              <div className="px-2.5 pt-2">
-                <label className="flex items-center gap-3 text-xs">
-                  <span className="w-20 shrink-0 text-muted-foreground">Tönung</span>
-                  <input
-                    type="range"
-                    aria-label="Tönung"
-                    min={0}
-                    max={100}
-                    value={Math.round((tintChoice ?? 0) * 100)}
-                    onChange={(e) => applyTint(readTint(Number(e.target.value) / 100))}
-                    {...peekHandlers}
-                    className="h-1.5 flex-1 cursor-pointer accent-primary"
-                  />
-                  <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
-                    {Math.round((tintChoice ?? 0) * 100)}
-                  </span>
-                </label>
-              </div>
-
               <button
                 type="button"
                 aria-expanded={advanced}
                 onClick={() => setAdvanced((v) => !v)}
-                className="mx-2.5 mt-3 flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                className="mx-2.5 mt-2 flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 {advanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                 Erweitert
@@ -1506,6 +1481,30 @@ export function GroupDialog({
                         </span>
                       </label>
                     ))}
+                  </div>
+
+                  {/* Die Toenung: wie stark die Flaechen die Farbe tragen. Bei
+                      0 bleibt alles neutral, der Akzent traegt die Farbe
+                      allein; weiter oben bekommt der Space eine eigene
+                      Atmosphaere — reallife.network liegt mit seinem Creme
+                      bei etwa 50. */}
+                  <div className="px-2.5 pt-2">
+                    <label className="flex items-center gap-3 text-xs">
+                      <span className="w-20 shrink-0 text-muted-foreground">Tönung</span>
+                      <input
+                        type="range"
+                        aria-label="Tönung"
+                        min={0}
+                        max={100}
+                        value={Math.round((tintChoice ?? 0) * 100)}
+                        onChange={(e) => applyTint(readTint(Number(e.target.value) / 100))}
+                        {...peekHandlers}
+                        className="h-1.5 flex-1 cursor-pointer accent-primary"
+                      />
+                      <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
+                        {Math.round((tintChoice ?? 0) * 100)}
+                      </span>
+                    </label>
                   </div>
 
                   {/* Was das fuer die Lesbarkeit bedeutet. Ohne diese Zeilen

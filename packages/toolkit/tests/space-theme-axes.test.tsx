@@ -113,13 +113,12 @@ describe("Achsen im Bereich Aussehen", () => {
     root = createRoot(host)
   })
 
-  it("zeigt zuerst nur die Toenung; die drei Achsen erst hinter Erweitert", () => {
+  it("zeigt die Regler erst hinter Erweitert", () => {
     render({ primaryColor: COLOR })
-    expect(slider("Tönung")).not.toBeNull()
-    for (const l of ["Farbton", "Kräftigkeit", "Helligkeit"]) expect(slider(l), `${l} zu`).toBeNull()
+    for (const l of ["Farbton", "Kräftigkeit", "Helligkeit", "Tönung"]) expect(slider(l), `${l} zu`).toBeNull()
     expect(document.body.textContent).not.toContain("Knopfbeschriftung")
     openAdvanced()
-    for (const l of ["Farbton", "Kräftigkeit", "Helligkeit"]) expect(slider(l), `${l} offen`).not.toBeNull()
+    for (const l of ["Farbton", "Kräftigkeit", "Helligkeit", "Tönung"]) expect(slider(l), `${l} offen`).not.toBeNull()
   })
 
   it("stellt die Regler auf die geltende Farbe", () => {
@@ -155,6 +154,7 @@ describe("Achsen im Bereich Aussehen", () => {
 
   it("speichert die Toenung als Zahl 0–1", async () => {
     render({ primaryColor: COLOR })
+    openAdvanced()
     await move("Tönung", 50)
     expect(last("tint")).toBe(0.5)
     expect(Number(slider("Tönung").value)).toBe(50)
@@ -162,12 +162,14 @@ describe("Achsen im Bereich Aussehen", () => {
 
   it("loescht die Toenung bei 0 statt eine 0 zu speichern", async () => {
     render({ primaryColor: COLOR, tint: 0.5 })
+    openAdvanced()
     await move("Tönung", 0)
     expect(last("tint")).toBeNull()
   })
 
   it("uebernimmt eine gespeicherte Toenung", () => {
     render({ primaryColor: COLOR, tint: 0.4 })
+    openAdvanced()
     expect(Number(slider("Tönung").value)).toBe(40)
   })
 
@@ -202,6 +204,7 @@ describe("Achsen im Bereich Aussehen", () => {
    */
   it("gibt beim Ziehen den Blick auf die App frei", async () => {
     render({ primaryColor: COLOR })
+    openAdvanced()
     const content = () => document.querySelector('[data-slot="dialog-content"]')!
     const overlay = () => document.querySelector('[data-slot="dialog-overlay"]')!
     expect(content().getAttribute("data-peek")).toBeNull()
