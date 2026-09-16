@@ -560,36 +560,18 @@ export function GroupDialog({
     )
   }
   /**
-   * Durchblick beim Ziehen. Der Dialog verdeckt genau das, was ein Regler
-   * veraendert. Solange ein Regler gezogen (oder per Tastatur bewegt) wird,
-   * verschwindet der Backdrop und der Dialog wird fast durchsichtig; beim
-   * Loslassen ist er wieder da. Kein Umschalter, den man vergisst.
-   */
-  const [peeking, setPeeking] = useState(false)
-  useEffect(() => {
-    if (!peeking) return
-    const stop = () => setPeeking(false)
-    window.addEventListener("pointerup", stop)
-    window.addEventListener("pointercancel", stop)
-    return () => {
-      window.removeEventListener("pointerup", stop)
-      window.removeEventListener("pointercancel", stop)
-    }
-  }, [peeking])
-  /** Was ein Regler braucht, um den Durchblick auszuloesen. */
-  const peekHandlers = {
-    onPointerDown: () => setPeeking(true),
-    onKeyDown: () => setPeeking(true),
-    onKeyUp: () => setPeeking(false),
-    onBlur: () => setPeeking(false),
-  }
-
-  /**
    * Die Feineinstellung ist standardmaessig zu. Wer seinen Space einstellt,
    * waehlt eine Farbe; die drei Achsen, die Toenung und die Kontrastzahlen
    * sind fuer die, die genauer hinschauen wollen.
+   *
+   * Ist sie offen, gibt der Dialog die Mitte frei: er dockt am rechten Rand
+   * an und wird nicht-modal — kein Backdrop, die App dahinter bleibt
+   * bedienbar. Man sieht, was ein Regler tut, auf der ganzen App, mit
+   * Hover-Zustaenden und Menues, nicht auf einer Vorschau. (Ein Dimmen des
+   * Dialogs beim Ziehen war der erste Versuch und wirkte komisch.)
    */
   const [advanced, setAdvanced] = useState(false)
+  const docked = advanced && activeSection === "theme"
 
   /** Die EINE Stelle, an der die Toenung umgesetzt wird. */
   const applyTint = (tint: number | null) => {
@@ -983,9 +965,13 @@ export function GroupDialog({
 
   // --- Edit Mode ---
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange} modal={!docked}>
       <DialogContent
-        className="transition-opacity data-[peek]:opacity-15 flex h-[85vh] max-h-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]"
+        className={cn(
+          "flex h-[85vh] max-h-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]",
+          // Am rechten Rand, volle Hoehe, ohne Zentrierung.
+          docked && "sm:top-4 sm:right-4 sm:bottom-4 sm:left-auto sm:h-auto sm:max-h-none sm:translate-x-0 sm:translate-y-0 sm:max-w-[420px]",
+        )}
         aria-describedby={undefined}
         // Dieser Dialog ist ein FENSTER IN DEN SPACE und traegt darum dessen
         // Primaerfarbe — auch wenn gerade ein anderer Space oder die
@@ -1013,10 +999,11 @@ export function GroupDialog({
         // markiert da — ein Tastendruck ueberschriebe den Space-Namen. Der
         // Fokus bleibt im Dialog (Tab und Escape wirken), nur eben nicht
         // in einem Eingabefeld.
-        // Durchblick beim Ziehen eines Reglers: Backdrop weg, Dialog fast
-        // durchsichtig — die Farbe soll man auf der App sehen.
-        data-peek={peeking || undefined}
-        overlayClassName={peeking ? "opacity-0 pointer-events-none" : undefined}
+        // Angedockt, solange die Feineinstellung offen ist (siehe `docked`).
+        // Ohne das Preventing schloesse ein Klick in die App den Dialog —
+        // dabei will man dort gerade herumklicken, um die Farbe zu sehen.
+        data-docked={docked || undefined}
+        onInteractOutside={docked ? (e) => e.preventDefault() : undefined}
         onOpenAutoFocus={(e) => {
           e.preventDefault()
           ;(e.currentTarget as HTMLElement | null)?.focus()
@@ -1473,7 +1460,6 @@ export function GroupDialog({
                           max={max}
                           value={axes[key]}
                           onChange={(e) => setAxis(key, Number(e.target.value))}
-                          {...peekHandlers}
                           className="h-1.5 flex-1 cursor-pointer accent-primary"
                         />
                         <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
@@ -1498,7 +1484,6 @@ export function GroupDialog({
                         max={100}
                         value={Math.round((tintChoice ?? 0) * 100)}
                         onChange={(e) => applyTint(readTint(Number(e.target.value) / 100))}
-                        {...peekHandlers}
                         className="h-1.5 flex-1 cursor-pointer accent-primary"
                       />
                       <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">

@@ -199,24 +199,21 @@ describe("Achsen im Bereich Aussehen", () => {
   })
 
   /**
-   * Der Dialog verdeckt genau das, was ein Regler veraendert. Solange man
-   * zieht, gibt er den Blick frei; beim Loslassen ist er wieder da.
+   * Der Dialog verdeckt genau das, was ein Regler veraendert. Ist die
+   * Feineinstellung offen, gibt er die Mitte frei: angedockt, ohne Backdrop,
+   * die App dahinter bedienbar.
    */
-  it("gibt beim Ziehen den Blick auf die App frei", async () => {
+  it("dockt an und laesst den Backdrop weg, sobald Erweitert offen ist", () => {
     render({ primaryColor: COLOR })
-    openAdvanced()
     const content = () => document.querySelector('[data-slot="dialog-content"]')!
-    const overlay = () => document.querySelector('[data-slot="dialog-overlay"]')!
-    expect(content().getAttribute("data-peek")).toBeNull()
+    expect(content().getAttribute("data-docked")).toBeNull()
+    expect(document.querySelector('[data-slot="dialog-overlay"]'), "modal: Backdrop da").not.toBeNull()
 
-    await act(async () => {
-      slider("Tönung").dispatchEvent(new Event("pointerdown", { bubbles: true }))
-    })
-    expect(content().getAttribute("data-peek"), "Dialog tritt zurueck").toBe("true")
-    expect(overlay().className, "Backdrop weg").toContain("opacity-0")
+    openAdvanced()
+    expect(content().getAttribute("data-docked"), "angedockt").toBe("true")
+    expect(document.querySelector('[data-slot="dialog-overlay"]'), "nicht-modal: kein Backdrop").toBeNull()
 
-    await act(async () => { window.dispatchEvent(new Event("pointerup")) })
-    expect(content().getAttribute("data-peek"), "und ist wieder da").toBeNull()
-    expect(overlay().className).not.toContain("opacity-0")
+    openAdvanced()
+    expect(content().getAttribute("data-docked"), "und zurueck in die Mitte").toBeNull()
   })
 })
