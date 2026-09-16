@@ -121,7 +121,7 @@ describe("SpaceThemePanel", () => {
     expect(indigo.getAttribute("aria-checked")).toBe("true")
     expect(slider("Farbton"), "Regler nur bei eigener Farbe").toBeNull()
     // Zurueck zur eigenen Farbe: der Kreis oeffnet die Regler wieder.
-    await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Accent eigene Farbe"]')!.click() })
+    await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Eigene Farbe"]')!.click() })
     expect(slider("Farbton")).not.toBeNull()
   })
 

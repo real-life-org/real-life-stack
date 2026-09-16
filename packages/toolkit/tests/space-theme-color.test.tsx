@@ -60,7 +60,7 @@ describe("Primärfarbe im Bereich Aussehen", () => {
 
   const pressed = () =>
     Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Primärfarbe"]'))
-      .filter((b) => b.getAttribute("aria-pressed") === "true")
+      .filter((b) => b.getAttribute("aria-checked") === "true")
       .map((b) => b.getAttribute("aria-label"))
 
   beforeEach(() => {
@@ -405,7 +405,7 @@ describe("Farbzustand bleibt mit dem Gespeicherten im Gleichklang", () => {
 
   const pressedLabels = () =>
     Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Primärfarbe"]'))
-      .filter((b) => b.getAttribute("aria-pressed") === "true")
+      .filter((b) => b.getAttribute("aria-checked") === "true")
       .map((b) => b.getAttribute("aria-label"))
 
   beforeEach(() => {
@@ -640,7 +640,7 @@ describe("Jeder Schreibweg fuehrt die Anzeige mit", () => {
    */
   const shownColor = () => {
     const hit = Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Primärfarbe"]'))
-      .find((b) => b.getAttribute("aria-pressed") === "true")
+      .find((b) => b.getAttribute("aria-checked") === "true")
     if (hit) return hit.getAttribute("aria-label")!.replace("Primärfarbe ", "")
 
     const suggestion = document.querySelector<HTMLButtonElement>(

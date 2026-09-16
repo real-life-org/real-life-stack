@@ -13,13 +13,14 @@
  * kleinen Host, der die Gruppe je Render neu heraussucht.
  */
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Check, RotateCcw, SlidersHorizontal } from "lucide-react"
+import { Check, RotateCcw, SlidersHorizontal, X } from "lucide-react"
 import type { Group } from "@real-life-stack/data-interface"
 
 import { useColorScheme } from "../../hooks/use-color-scheme"
 import { scalesForColor } from "../../lib/color-scales"
 import { contrastChecks, themeTokens } from "../../lib/theme-tokens"
-import { accentSwatches, colorAxes, colorFromAxes, graySwatches, matchAccentScale, RADIUS_ORDER, readGray, readRadius, readSurfaces, readTint, type RadiusStep, type Surfaces } from "../../lib/space-theme"
+import { colorAxes, colorFromAxes, graySwatches, matchAccentScale, readGray, readRadius, readSurfaces, readTint, type RadiusStep, type Surfaces } from "../../lib/space-theme"
+import { AccentGrid, RadiusTiles, SurfacesToggle, ThemeSectionLabel } from "./space-theme-controls"
 import { type GrayScaleName } from "../../lib/color-scales"
 import { cn, getSpacePrimaryColor } from "../../lib/utils"
 import { instanceTheme } from "../../lib/runtime-config"
@@ -28,10 +29,11 @@ import { Button } from "../primitives/button"
 export interface SpaceThemePanelProps {
   group: Group
   onUpdateGroup: (id: string, updates: { data?: Record<string, unknown> }) => Promise<void> | void
+  onClose?: () => void
   className?: string
 }
 
-export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemePanelProps) {
+export function SpaceThemePanel({ group, onUpdateGroup, onClose, className }: SpaceThemePanelProps) {
   const onUpdateRef = useRef(onUpdateGroup)
   onUpdateRef.current = onUpdateGroup
 
@@ -181,6 +183,11 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
           <div className="truncate text-sm font-semibold">Theme</div>
           <div className="truncate text-xs text-muted-foreground">{group.name}</div>
         </div>
+        {onClose && (
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Schließen">
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4">
@@ -191,47 +198,13 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
             eine eigene Farbe neben den 25 Skalen, die Toenung neben den
             sechs Neutralen. Wer nur Radix-Werte nimmt, ist exakt bei Radix. */}
         <section className="space-y-2">
-          <h3 className="text-xs font-medium text-muted-foreground">Accent color</h3>
-          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Accent color">
-            {accentSwatches("light").map(({ name, hex }) => {
-              const active = accentName === name && !customOpen
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  aria-label={`Accent ${name}`}
-                  title={name}
-                  onClick={() => setAccentScale(hex)}
-                  style={{ backgroundColor: hex }}
-                  className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110",
-                    active && "ring-2 ring-foreground ring-offset-2 ring-offset-card",
-                  )}
-                >
-                  {active && <Check className="h-3.5 w-3.5 text-white" />}
-                </button>
-              )
-            })}
-            {/* Die eigene Farbe — Logo-Farbe, Waehler, Regler. Das ist unsere
-                Erweiterung; sie steht als ein Kreis neben den Skalen. */}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={showSliders}
-              aria-label="Accent eigene Farbe"
-              title="Eigene Farbe"
-              onClick={() => setCustomOpen(true)}
-              style={accentName === null ? { backgroundColor: effectiveColor } : undefined}
-              className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-primary",
-                showSliders && "border-solid border-foreground",
-              )}
-            >
-              {accentName === null ? <Check className="h-3.5 w-3.5 text-white" /> : <span className="text-sm leading-none">+</span>}
-            </button>
-          </div>
+          <ThemeSectionLabel>Akzentfarbe</ThemeSectionLabel>
+          <AccentGrid
+            effectiveColor={effectiveColor}
+            onPick={setAccentScale}
+            customActive={showSliders}
+            onCustom={() => setCustomOpen(true)}
+          />
 
           {showSliders && (
             <div className="space-y-2 pt-1">
@@ -257,7 +230,7 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
         </section>
 
         <section className="space-y-2">
-          <h3 className="text-xs font-medium text-muted-foreground">Gray color</h3>
+          <ThemeSectionLabel>Grau</ThemeSectionLabel>
           <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Gray color">
             <button
               type="button"
@@ -315,53 +288,13 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
         </section>
 
         <section className="space-y-2">
-          <h3 className="text-xs font-medium text-muted-foreground">Radius</h3>
-          <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="Rundung">
-            {RADIUS_ORDER.map((step, i) => (
-              <button
-                key={step}
-                type="button"
-                role="radio"
-                aria-checked={effectiveRadius === step}
-                aria-label={`Rundung ${step}`}
-                onClick={() => setRadius(step)}
-                className={cn(
-                  "flex flex-col items-center gap-1 rounded-md border p-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground",
-                  effectiveRadius === step && "border-foreground text-foreground",
-                )}
-              >
-                {/* Die Ecke, wie sie der Playground zeigt. */}
-                <span
-                  aria-hidden
-                  className="block h-7 w-7 border-l-2 border-t-2 border-primary bg-primary/15"
-                  style={{ borderTopLeftRadius: ["0px", "4px", "8px", "12px", "18px"][i] }}
-                />
-                {["None", "Small", "Medium", "Large", "Full"][i]}
-              </button>
-            ))}
-          </div>
+          <ThemeSectionLabel>Radius</ThemeSectionLabel>
+          <RadiusTiles value={effectiveRadius} onChange={setRadius} />
         </section>
 
         <section className="space-y-2">
-          <h3 className="text-xs font-medium text-muted-foreground">Panel background</h3>
-          <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Flächen">
-            {([["solid", "Solid"], ["translucent", "Translucent"]] as const).map(([kind, label]) => (
-              <button
-                key={kind}
-                type="button"
-                role="radio"
-                aria-checked={effectiveSurfaces === kind}
-                aria-label={`Flächen ${kind}`}
-                onClick={() => setSurfaces(kind)}
-                className={cn(
-                  "h-8 rounded-md border text-xs text-muted-foreground transition-colors hover:text-foreground",
-                  effectiveSurfaces === kind && "border-foreground text-foreground",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <ThemeSectionLabel>Panel-Hintergrund</ThemeSectionLabel>
+          <SurfacesToggle value={effectiveSurfaces} onChange={setSurfaces} />
         </section>
 
         {/* Was das fuer die Lesbarkeit bedeutet. Die Knopfschrift ist mit
@@ -389,6 +322,24 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
         {error && <p className="text-xs text-destructive">{error}</p>}
 
       </div>
+    </div>
+  )
+}
+
+/**
+ * Die Feineinstellung als schwebende Karte ueber dem Inhalt — unten links,
+ * dort, wo sonst der Filter liegt (Entwurf 5b). Bewusst KEIN Dialog und
+ * kein Modul-Panel: die Karte darf nichts verdecken, was man beim Regeln
+ * sehen will, und sie liegt auf der Seite, auf der die App ihre Werkzeuge
+ * hat. Rahmen wie die Filter-Karte, nur breiter.
+ */
+export function SpaceThemeCard(props: SpaceThemePanelProps) {
+  return (
+    <div
+      data-space-theme-card
+      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 z-40 flex max-h-[min(70vh,640px)] w-[min(300px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border surface-glass shadow-xl md:bottom-4"
+    >
+      <SpaceThemePanel {...props} />
     </div>
   )
 }

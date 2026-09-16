@@ -5,6 +5,9 @@ import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
 import { cn, getReadableTextColor, getSpacePrimaryColor, resolveAssetUrl, SPACE_COLOR_SWATCHES } from "../../lib/utils"
+import { instanceTheme } from "../../lib/runtime-config"
+import { readRadius, readSurfaces, type RadiusStep, type Surfaces } from "../../lib/space-theme"
+import { AccentGrid, RadiusTiles, SurfacesToggle, ThemeSectionLabel } from "./space-theme-controls"
 import {
   Dialog,
   DialogContent,
@@ -501,6 +504,52 @@ export function GroupDialog({
       () => setColorError(null),
     )
   }
+  /**
+   * Rundung und Flaechen im Dialog — Entwurf 5a. Ein eigener Saver fuer die
+   * Layout-Achsen neben dem Farbsaver: die Felder sind disjunkt, also gibt
+   * es keine Reihenfolge, die zwischen beiden zaehlen koennte. Der Reset
+   * schreibt hier ausserdem Toenung und Grau auf null: "setzt alles auf den
+   * Toolkit-Default", auch was nur die Feineinstellung setzen kann.
+   */
+  const [radiusChoice, setRadiusChoice] = useState<RadiusStep | null>(() =>
+    mode.type === "edit" ? readRadius(mode.group.data?.radius) : null,
+  )
+  const [surfacesChoice, setSurfacesChoice] = useState<Surfaces | null>(() =>
+    mode.type === "edit" ? readSurfaces(mode.group.data?.surfaces) : null,
+  )
+  const saveLayoutRef = useRef<((v: { groupId: string; patch: Record<string, unknown> }) => void) | null>(null)
+  if (!saveLayoutRef.current) {
+    saveLayoutRef.current = createLatestWinsSaver<{ groupId: string; patch: Record<string, unknown> }>(
+      ({ groupId: target, patch }) => onUpdateGroupRef.current(target, { data: patch }),
+      (err, failed) => {
+        const current = modeRef.current
+        if (current.type === "edit" && failed.groupId === current.group.id) {
+          setRadiusChoice(readRadius(current.group.data?.radius))
+          setSurfacesChoice(readSurfaces(current.group.data?.surfaces))
+        }
+        setColorError(err instanceof Error ? err.message : "Aussehen konnte nicht gespeichert werden")
+      },
+      () => setColorError(null),
+    )
+  }
+  const applyRadius = (radius: RadiusStep) => {
+    if (!isEdit) return
+    setRadiusChoice(radius)
+    saveLayoutRef.current?.({ groupId: mode.group.id, patch: { radius } })
+  }
+  const applySurfaces = (surfaces: Surfaces) => {
+    if (!isEdit) return
+    setSurfacesChoice(surfaces)
+    saveLayoutRef.current?.({ groupId: mode.group.id, patch: { surfaces } })
+  }
+  /** Alles zurueck: Farbe ueber ihren eigenen Weg (Bildfarbe neu bestimmen), die uebrigen Achsen hier. */
+  const resetLayout = () => {
+    if (!isEdit) return
+    setRadiusChoice(null)
+    setSurfacesChoice(null)
+    saveLayoutRef.current?.({ groupId: mode.group.id, patch: { radius: null, surfaces: null, tint: null, gray: null } })
+  }
+
   const applyModules = useCallback((next: string[]) => {
     setActiveModules(next)
     saveModulesRef.current?.(next)
@@ -1221,134 +1270,97 @@ export function GroupDialog({
               Themefarbe. Hintergruende und Karten bleiben unberuehrt. */}
           {activeSection === "theme" && isCurrentUserAdmin && (
             <>
-              <MemberGroupLabel>Primärfarbe</MemberGroupLabel>
+              {/* Entwurf 5a: die drei Regler, die den Space sichtbar praegen —
+                  Akzentfarbe (Radix-Palette plus eigene, und vorn die aus dem
+                  Bild gewonnene), Radius, Panel-Hintergrund. Grau, Toenung
+                  und Kontrast bleiben der Feineinstellung vorbehalten. */}
+              <div className="space-y-4 px-2.5 py-2">
+                <section className="space-y-2">
+                  <ThemeSectionLabel>Akzentfarbe</ThemeSectionLabel>
+                  <AccentGrid
+                    effectiveColor={effectiveColor}
+                    onPick={(hex) => applyPrimaryColor(hex)}
+                    customActive={currentSwatch === "custom"}
+                    onCustom={() => {}}
+                    customAsLabel
+                    swatchLabel={(s) => `Primärfarbe ${s.hex}`}
+                    leading={imageColor ? (
+                      <>
+                        <button
+                          type="button"
+                          title="Farbe aus dem Bild"
+                          aria-label="Farbe aus dem Bild"
+                          aria-pressed={currentSwatch === "suggestion"}
+                          onClick={() => { void resetPrimaryColor() }}
+                          style={{ backgroundColor: imageColor }}
+                          className={cn(
+                            "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110",
+                            currentSwatch === "suggestion" && "ring-2 ring-foreground ring-offset-2 ring-offset-card",
+                          )}
+                        >
+                          {currentSwatch === "suggestion" ? (
+                            <CheckIcon className="h-3.5 w-3.5" style={{ color: getReadableTextColor(imageColor) }} />
+                          ) : (
+                            <Camera className="h-3.5 w-3.5" style={{ color: getReadableTextColor(imageColor) }} />
+                          )}
+                        </button>
+                        <span className="mx-0.5 h-5 w-px bg-border" aria-hidden />
+                      </>
+                    ) : undefined}
+                    customChildren={
+                      // Der native Farbwaehler: er kennt die Bedienhilfen des
+                      // Systems, und ein eigener Farbkreis waere eine zweite
+                      // Farbwelt neben der Palette.
+                      <input
+                        type="color"
+                        aria-label="Eigene Farbe"
+                        value={effectiveColor}
+                        onChange={(e) => applyPrimaryColor(e.target.value)}
+                        className="sr-only"
+                      />
+                    }
+                  />
+                </section>
 
-              <div className="flex flex-wrap items-center gap-2 px-2.5 py-2">
-                {/* Der Vorschlag zuerst — und dauerhaft. Vorher stand er nur
-                    als Textknopf unter der Palette und war damit unsichtbar:
-                    wer einmal eine andere Farbe waehlte, sah die Farbe seines
-                    Space-Bildes nicht mehr. Jetzt ist er ein Feld wie jedes
-                    andere, nur abgesetzt, weil er nicht aus der Palette
-                    stammt. */}
-                {imageColor && (
-                  <>
-                    <button
-                      type="button"
-                      title="Farbe aus dem Bild"
-                      aria-label="Farbe aus dem Bild"
-                      aria-pressed={currentSwatch === "suggestion"}
-                      onClick={() => { void resetPrimaryColor() }}
-                      style={{ backgroundColor: imageColor }}
-                      className={cn(
-                        "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110",
-                        currentSwatch === "suggestion" &&
-                          "ring-2 ring-foreground ring-offset-2 ring-offset-background",
-                      )}
-                    >
-                      {currentSwatch === "suggestion" ? (
-                        <CheckIcon
-                          className="h-3.5 w-3.5"
-                          style={{ color: getReadableTextColor(imageColor) }}
-                        />
-                      ) : (
-                        <Camera
-                          className="h-3.5 w-3.5"
-                          style={{ color: getReadableTextColor(imageColor) }}
-                        />
-                      )}
-                    </button>
-                    <span className="mx-0.5 h-5 w-px bg-border" aria-hidden />
-                  </>
+                <section className="space-y-2">
+                  <ThemeSectionLabel>Radius</ThemeSectionLabel>
+                  <RadiusTiles value={radiusChoice ?? instanceTheme().radius ?? "medium"} onChange={applyRadius} />
+                </section>
+
+                <section className="space-y-2">
+                  <ThemeSectionLabel>Panel-Hintergrund</ThemeSectionLabel>
+                  <SurfacesToggle value={surfacesChoice ?? instanceTheme().surfaces ?? "translucent"} onChange={applySurfaces} />
+                </section>
+
+                {/* Die Feineinstellung (Grau, Toenung, Kontraste) lebt als
+                    schwebende Karte ueber dem Inhalt, nicht hier: dort bleibt
+                    die App sichtbar und bedienbar. Der Dialog schliesst sich. */}
+                {onOpenThemePanel && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenChange(false)
+                      onOpenThemePanel(mode.group)
+                    }}
+                    className="flex items-center gap-1.5 text-sm text-primary transition-colors hover:underline"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Feineinstellung öffnen
+                  </button>
                 )}
 
-                {SPACE_COLOR_SWATCHES.map((hex) => {
-                  const active = currentSwatch === hex
-                  return (
-                    <button
-                      key={hex}
-                      type="button"
-                      aria-label={`Primärfarbe ${hex}`}
-                      aria-pressed={active}
-                      onClick={() => applyPrimaryColor(hex)}
-                      style={{ backgroundColor: hex }}
-                      className={cn(
-                        "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110",
-                        active && "ring-2 ring-foreground ring-offset-2 ring-offset-background",
-                      )}
-                    >
-                      {active && (
-                        <CheckIcon className="h-3.5 w-3.5" style={{ color: getReadableTextColor(hex) }} />
-                      )}
-                    </button>
-                  )
-                })}
-
-                {/* Eigene Farbe. Der native Farbwaehler ist hier der richtige:
-                    er kennt die Bedienhilfen des Systems, und ein eigener
-                    Farbkreis waere eine zweite Farbwelt neben der Palette. */}
-                <label
-                  title="Eigene Farbe"
-                  className={cn(
-                    "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-primary",
-                    currentSwatch === "custom" && "border-solid border-foreground",
-                  )}
-                  style={currentSwatch === "custom" ? { backgroundColor: effectiveColor } : undefined}
-                >
-                  {currentSwatch === "custom" ? (
-                    // Fest weiss verschwand eine helle eigene Farbe (etwa
-                    // #ffffff) im eigenen Untergrund — Spec 04 Regel 5
-                    // verlangt lesbare Zeichen auf der Akzentflaeche.
-                    <CheckIcon
-                      className="h-3.5 w-3.5"
-                      style={{ color: getReadableTextColor(effectiveColor) }}
-                    />
-                  ) : (
-                    <span className="text-sm leading-none">+</span>
-                  )}
-                  {/* `title` am Label benennt das Bedienelement nicht — ohne
-                      eigenes Label hiesse der Waehler fuer eine Vorlesehilfe
-                      nur "+" oder "Haken". */}
-                  <input
-                    type="color"
-                    aria-label="Eigene Farbe"
-                    value={effectiveColor}
-                    onChange={(e) => applyPrimaryColor(e.target.value)}
-                    className="sr-only"
-                  />
-                </label>
+                {/* Der Weg zurueck fuer alles: Farbe (Spec 04 Regel 2/3 — aus dem
+                    Logo, sonst aus der Space-Id), Rundung, Flaechen, und was nur
+                    die Feineinstellung setzt. */}
+                {(primaryColorChoice != null || radiusChoice != null || surfacesChoice != null) && (
+                  <div>
+                    <Button variant="outline" size="sm" onClick={() => { resetLayout(); void resetPrimaryColor() }}>
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Zurücksetzen
+                    </Button>
+                  </div>
+                )}
               </div>
-
-              {/* Die Feineinstellung (drei Achsen, Toenung, Kontraste) lebt im
-                  Modul-Panel, nicht hier: dort bleibt die App sichtbar und
-                  bedienbar, waehrend man regelt. Der Dialog schliesst sich
-                  dafuer — ein Dialog und ein Panel zugleich waeren zwei
-                  Flaechen, die um denselben Wert streiten. */}
-              {onOpenThemePanel && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenChange(false)
-                    onOpenThemePanel(mode.group)
-                  }}
-                  className="mx-2.5 mt-2 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <SlidersHorizontal className="h-3 w-3" />
-                  Feineinstellung öffnen
-                </button>
-              )}
-
-              {/* Der Weg zurueck. Spec 04 Regel 2/3: ohne eigenen Wert stammt
-                  die Farbe aus dem Logo, sonst deterministisch aus der
-                  Space-Id. Die Toenung setzt das Panel zurueck. */}
-              {primaryColorChoice != null && (
-                <div className="px-2.5 pt-3">
-                  <Button variant="outline" size="sm" onClick={() => { void resetPrimaryColor() }}>
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    Zurücksetzen
-                  </Button>
-                </div>
-              )}
-
             </>
           )}
 

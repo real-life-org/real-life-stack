@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { accentSwatches } from "./space-theme"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -47,7 +48,10 @@ export function getTagAccentColor(tag: string): string {
  * Doppelliste, die das Modul-Register einmal eingesammelt hat: sie liefe
  * lautlos auseinander, sobald jemand eine Farbe ergaenzt.
  */
-export const SPACE_COLOR_SWATCHES: readonly string[] = TAG_PALETTE.map((e) => e.accent)
+// Die Palette des Space-Dialogs sind Radix' Akzentskalen (Stufe 9), nach
+// Farbton geordnet — dieselben wie in der Feineinstellung (Entwurf Turn 5).
+// Bis 09/2026 war es die Tag-Palette; die gehoert den Tags.
+export const SPACE_COLOR_SWATCHES: readonly string[] = accentSwatches("light").map((s) => s.hex)
 
 const HEX6 = /^#[0-9a-fA-F]{6}$/
 
