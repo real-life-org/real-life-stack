@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 import {
   useConnector,
@@ -8,6 +8,7 @@ import {
   getSpacePrimaryColor,
   scalesForColor,
   readAccentSteps,
+  useColorScheme,
   themeTokens,
   applyThemeTokens,
   clearThemeTokens,
@@ -147,22 +148,11 @@ export function useWorkspaceRouting(): WorkspaceRouting {
   // The space the URL names (aggregate slug → internal overview id).
   const urlSpaceId = urlScope ? slugToScope(urlScope) : undefined
 
-  // Hell oder dunkel entscheidet der Mensch, nicht der Space — die App legt
-  // die Klasse `dark` auf das Wurzelelement. Beobachtet statt durchgereicht,
-  // weil dieser Hook vor dem Schalter aufgerufen wird.
-  const [scheme, setScheme] = useState<"light" | "dark">(() =>
-    typeof document !== "undefined" && document.documentElement.classList.contains("dark")
-      ? "dark"
-      : "light",
-  )
-  useEffect(() => {
-    const root = document.documentElement
-    const read = () => setScheme(root.classList.contains("dark") ? "dark" : "light")
-    read()
-    const observer = new MutationObserver(read)
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] })
-    return () => observer.disconnect()
-  }, [])
+  // Hell oder dunkel entscheidet der Mensch, nicht der Space. Gelesen wird das
+  // im Toolkit: der Space-Dialog zeigt eine Vorschau derselben Skala und
+  // braucht dasselbe Schema — zwei Leser mit eigenem Code waeren zwei
+  // Wahrheiten.
+  const scheme = useColorScheme()
 
   const workspaces: Workspace[] = useMemo(
     () => [
