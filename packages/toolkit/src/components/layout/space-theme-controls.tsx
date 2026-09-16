@@ -125,6 +125,19 @@ export function RadiusTiles({ value, onChange }: { value: RadiusStep; onChange: 
   )
 }
 
+/**
+ * Die Zeichen des Playgrounds: ein Kreis mit Rand fuer Solid, ein halb
+ * durchscheinender fuer Translucent.
+ */
+function SurfaceIcon({ kind }: { kind: Surfaces }) {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0">
+      <circle cx="8" cy="8" r="6" fill={kind === "solid" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" fillOpacity={kind === "solid" ? 1 : undefined} />
+      {kind === "translucent" && <path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor" fillOpacity="0.45" />}
+    </svg>
+  )
+}
+
 /** Solid / Translucent — Radix' panelBackground. */
 export function SurfacesToggle({ value, onChange }: { value: Surfaces; onChange: (kind: Surfaces) => void }) {
   return (
@@ -138,10 +151,11 @@ export function SurfacesToggle({ value, onChange }: { value: Surfaces; onChange:
           aria-label={`Flächen ${kind}`}
           onClick={() => onChange(kind)}
           className={cn(
-            "h-8 rounded-md border text-xs text-muted-foreground transition-colors hover:text-foreground",
+            "flex h-8 items-center justify-center gap-1.5 rounded-md border text-xs text-muted-foreground transition-colors hover:text-foreground",
             value === kind && "border-foreground text-foreground",
           )}
         >
+          <SurfaceIcon kind={kind} />
           {label}
         </button>
       ))}
