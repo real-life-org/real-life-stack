@@ -79,6 +79,12 @@ describe("Achsen im Bereich Aussehen", () => {
 
   const slider = (label: string) => document.querySelector<HTMLInputElement>(`input[type="range"][aria-label="${label}"]`)!
 
+  /** Die drei Achsen und die Kontrastzahlen liegen hinter "Erweitert". */
+  const openAdvanced = () => {
+    const toggle = Array.from(document.querySelectorAll("button")).find((b) => b.textContent?.trim() === "Erweitert") as HTMLButtonElement
+    act(() => { toggle.click() })
+  }
+
   /** Einen Regler bewegen, wie der Browser es taete (nativer Setter + `input`). */
   const move = async (label: string, value: number) => {
     const input = slider(label)
@@ -107,13 +113,18 @@ describe("Achsen im Bereich Aussehen", () => {
     root = createRoot(host)
   })
 
-  it("zeigt die vier Regler", () => {
+  it("zeigt zuerst nur die Toenung; die drei Achsen erst hinter Erweitert", () => {
     render({ primaryColor: COLOR })
-    for (const l of ["Farbton", "Kräftigkeit", "Helligkeit", "Tönung"]) expect(slider(l), l).not.toBeNull()
+    expect(slider("Tönung")).not.toBeNull()
+    for (const l of ["Farbton", "Kräftigkeit", "Helligkeit"]) expect(slider(l), `${l} zu`).toBeNull()
+    expect(document.body.textContent).not.toContain("Knopfbeschriftung")
+    openAdvanced()
+    for (const l of ["Farbton", "Kräftigkeit", "Helligkeit"]) expect(slider(l), `${l} offen`).not.toBeNull()
   })
 
   it("stellt die Regler auf die geltende Farbe", () => {
     render({ primaryColor: COLOR })
+    openAdvanced()
     const axes = colorAxes(COLOR)
     expect(Number(slider("Farbton").value)).toBe(axes.hue)
     expect(Number(slider("Helligkeit").value)).toBe(axes.lightness)
@@ -122,6 +133,7 @@ describe("Achsen im Bereich Aussehen", () => {
 
   it("schreibt eine Reglerbewegung als neue Primaerfarbe", async () => {
     render({ primaryColor: COLOR })
+    openAdvanced()
     // 60 liegt fuer Orange im Farbraum; weiter unten schnappt die Abbildung
     // auf den naechsten darstellbaren Wert, und das zeigt der Regler dann auch.
     await move("Helligkeit", 60)
@@ -134,6 +146,7 @@ describe("Achsen im Bereich Aussehen", () => {
 
   it("zeigt nach einem Sprung aus dem Farbraum, was wirklich gilt", async () => {
     render({ primaryColor: COLOR })
+    openAdvanced()
     await move("Helligkeit", 30)
     const hex = last("primaryColor") as string
     // Regler und gespeicherte Farbe sagen dasselbe — auch wenn es nicht 30 ist.
@@ -176,9 +189,31 @@ describe("Achsen im Bereich Aussehen", () => {
 
   it("zeigt die Kontraste der akzentabhaengigen Paare", () => {
     render({ primaryColor: COLOR })
+    openAdvanced()
     const text = document.body.textContent ?? ""
     expect(text).toContain("Knopfbeschriftung")
     expect(text).toContain("Fokusring")
     expect(text).toMatch(/\d\.\d:1/)
+  })
+
+  /**
+   * Der Dialog verdeckt genau das, was ein Regler veraendert. Solange man
+   * zieht, gibt er den Blick frei; beim Loslassen ist er wieder da.
+   */
+  it("gibt beim Ziehen den Blick auf die App frei", async () => {
+    render({ primaryColor: COLOR })
+    const content = () => document.querySelector('[data-slot="dialog-content"]')!
+    const overlay = () => document.querySelector('[data-slot="dialog-overlay"]')!
+    expect(content().getAttribute("data-peek")).toBeNull()
+
+    await act(async () => {
+      slider("Tönung").dispatchEvent(new Event("pointerdown", { bubbles: true }))
+    })
+    expect(content().getAttribute("data-peek"), "Dialog tritt zurueck").toBe("true")
+    expect(overlay().className, "Backdrop weg").toContain("opacity-0")
+
+    await act(async () => { window.dispatchEvent(new Event("pointerup")) })
+    expect(content().getAttribute("data-peek"), "und ist wieder da").toBeNull()
+    expect(overlay().className).not.toContain("opacity-0")
   })
 })

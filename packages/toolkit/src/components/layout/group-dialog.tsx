@@ -559,6 +559,38 @@ export function GroupDialog({
       () => setColorError(null),
     )
   }
+  /**
+   * Durchblick beim Ziehen. Der Dialog verdeckt genau das, was ein Regler
+   * veraendert. Solange ein Regler gezogen (oder per Tastatur bewegt) wird,
+   * verschwindet der Backdrop und der Dialog wird fast durchsichtig; beim
+   * Loslassen ist er wieder da. Kein Umschalter, den man vergisst.
+   */
+  const [peeking, setPeeking] = useState(false)
+  useEffect(() => {
+    if (!peeking) return
+    const stop = () => setPeeking(false)
+    window.addEventListener("pointerup", stop)
+    window.addEventListener("pointercancel", stop)
+    return () => {
+      window.removeEventListener("pointerup", stop)
+      window.removeEventListener("pointercancel", stop)
+    }
+  }, [peeking])
+  /** Was ein Regler braucht, um den Durchblick auszuloesen. */
+  const peekHandlers = {
+    onPointerDown: () => setPeeking(true),
+    onKeyDown: () => setPeeking(true),
+    onKeyUp: () => setPeeking(false),
+    onBlur: () => setPeeking(false),
+  }
+
+  /**
+   * Die Feineinstellung ist standardmaessig zu. Wer seinen Space einstellt,
+   * braucht Farbe und Toenung; die drei Achsen und die Kontrastzahlen sind
+   * fuer die, die genauer hinschauen wollen.
+   */
+  const [advanced, setAdvanced] = useState(false)
+
   /** Die EINE Stelle, an der die Toenung umgesetzt wird. */
   const applyTint = (tint: number | null) => {
     if (!isEdit) return
@@ -953,7 +985,7 @@ export function GroupDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="flex h-[85vh] max-h-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]"
+        className="transition-opacity data-[peek]:opacity-15 flex h-[85vh] max-h-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]"
         aria-describedby={undefined}
         // Dieser Dialog ist ein FENSTER IN DEN SPACE und traegt darum dessen
         // Primaerfarbe — auch wenn gerade ein anderer Space oder die
@@ -981,6 +1013,10 @@ export function GroupDialog({
         // markiert da — ein Tastendruck ueberschriebe den Space-Namen. Der
         // Fokus bleibt im Dialog (Tab und Escape wirken), nur eben nicht
         // in einem Eingabefeld.
+        // Durchblick beim Ziehen eines Reglers: Backdrop weg, Dialog fast
+        // durchsichtig — die Farbe soll man auf der App sehen.
+        data-peek={peeking || undefined}
+        overlayClassName={peeking ? "opacity-0 pointer-events-none" : undefined}
         onOpenAutoFocus={(e) => {
           e.preventDefault()
           ;(e.currentTarget as HTMLElement | null)?.focus()
@@ -1403,40 +1439,13 @@ export function GroupDialog({
                 </label>
               </div>
 
-              {/* Die Farbe feinstellen — drei Achsen von OKLCH in Worten. Kein
-                  eigener Zustand: die Regler zeigen die geltende Farbe und
-                  schreiben sie zurueck, also gibt es genau einen Wert und
-                  einen Reset. "Ein bisschen ruhiger" ist so ein Handgriff,
-                  und die App zieht live mit. */}
-              <div className="space-y-2 px-2.5 pt-2">
-                {(
-                  [
-                    ["hue", "Farbton", 0, 360, `hsl(${axes.hue} 70% 50%)`],
-                    ["chroma", "Kräftigkeit", 0, 100, undefined],
-                    ["lightness", "Helligkeit", 0, 100, undefined],
-                  ] as const
-                ).map(([key, label, min, max]) => (
-                  <label key={key} className="flex items-center gap-3 text-xs">
-                    <span className="w-20 shrink-0 text-muted-foreground">{label}</span>
-                    <input
-                      type="range"
-                      aria-label={label}
-                      min={min}
-                      max={max}
-                      value={axes[key]}
-                      onChange={(e) => setAxis(key, Number(e.target.value))}
-                      className="h-1.5 flex-1 cursor-pointer accent-primary"
-                    />
-                    <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
-                      {axes[key]}{key === "hue" ? "°" : ""}
-                    </span>
-                  </label>
-                ))}
-
-                {/* Die Toenung: wie stark die Flaechen die Farbe tragen. Bei 0
-                    bleibt alles neutral, der Akzent traegt die Farbe allein;
-                    weiter oben bekommt der Space eine eigene Atmosphaere —
-                    reallife.network liegt mit seinem Creme bei etwa 50. */}
+              {/* Die Toenung: wie stark die Flaechen die Farbe tragen. Bei 0
+                  bleibt alles neutral, der Akzent traegt die Farbe allein;
+                  weiter oben bekommt der Space eine eigene Atmosphaere —
+                  reallife.network liegt mit seinem Creme bei etwa 50. Sie
+                  steht sichtbar, nicht hinter "Erweitert": sie macht die
+                  Stimmung und ist ein einziger Handgriff. */}
+              <div className="px-2.5 pt-2">
                 <label className="flex items-center gap-3 text-xs">
                   <span className="w-20 shrink-0 text-muted-foreground">Tönung</span>
                   <input
@@ -1446,6 +1455,7 @@ export function GroupDialog({
                     max={100}
                     value={Math.round((tintChoice ?? 0) * 100)}
                     onChange={(e) => applyTint(readTint(Number(e.target.value) / 100))}
+                    {...peekHandlers}
                     className="h-1.5 flex-1 cursor-pointer accent-primary"
                   />
                   <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
@@ -1454,22 +1464,68 @@ export function GroupDialog({
                 </label>
               </div>
 
-              {/* Was das fuer die Lesbarkeit bedeutet. Ohne diese Zeilen merkt
-                  man erst im Betrieb, dass eine Beschriftung in ihrem Knopf
-                  verschwunden ist. Die Knopfschrift ist mit Absicht weiss
-                  (siehe getReadableTextColor) und kann darum unter 3:1 liegen
-                  — gezeigt wird es trotzdem. */}
-              <div className="space-y-0.5 px-2.5 pt-3">
-                {accentChecks.map((check) => (
-                  <div key={check.label} className="flex items-baseline justify-between text-xs">
-                    <span className="text-muted-foreground">{check.label}</span>
-                    <span className={cn("tabular-nums", check.ok ? "text-muted-foreground" : "text-destructive")}>
-                      {check.ratio.toFixed(1)}:1
-                      {!check.ok && <span className="ml-1">· {check.minimum}:1 nötig</span>}
-                    </span>
+              <button
+                type="button"
+                aria-expanded={advanced}
+                onClick={() => setAdvanced((v) => !v)}
+                className="mx-2.5 mt-3 flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {advanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                Erweitert
+              </button>
+
+              {advanced && (
+                <>
+                  {/* Die Farbe feinstellen — drei Achsen von OKLCH in Worten.
+                      Kein eigener Zustand: die Regler zeigen die geltende
+                      Farbe und schreiben sie zurueck, also gibt es genau
+                      einen Wert und einen Reset. "Ein bisschen ruhiger" ist
+                      so ein Handgriff, und die App zieht live mit. */}
+                  <div className="space-y-2 px-2.5 pt-2">
+                    {(
+                      [
+                        ["hue", "Farbton", 0, 360],
+                        ["chroma", "Kräftigkeit", 0, 100],
+                        ["lightness", "Helligkeit", 0, 100],
+                      ] as const
+                    ).map(([key, label, min, max]) => (
+                      <label key={key} className="flex items-center gap-3 text-xs">
+                        <span className="w-20 shrink-0 text-muted-foreground">{label}</span>
+                        <input
+                          type="range"
+                          aria-label={label}
+                          min={min}
+                          max={max}
+                          value={axes[key]}
+                          onChange={(e) => setAxis(key, Number(e.target.value))}
+                          {...peekHandlers}
+                          className="h-1.5 flex-1 cursor-pointer accent-primary"
+                        />
+                        <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
+                          {axes[key]}{key === "hue" ? "°" : ""}
+                        </span>
+                      </label>
+                    ))}
                   </div>
-                ))}
-              </div>
+
+                  {/* Was das fuer die Lesbarkeit bedeutet. Ohne diese Zeilen
+                      merkt man erst im Betrieb, dass eine Beschriftung in
+                      ihrem Knopf verschwunden ist. Die Knopfschrift ist mit
+                      Absicht weiss (siehe getReadableTextColor) und kann
+                      darum unter 3:1 liegen — gezeigt wird es trotzdem. */}
+                  <div className="space-y-0.5 px-2.5 pt-3">
+                    {accentChecks.map((check) => (
+                      <div key={check.label} className="flex items-baseline justify-between text-xs">
+                        <span className="text-muted-foreground">{check.label}</span>
+                        <span className={cn("tabular-nums", check.ok ? "text-muted-foreground" : "text-destructive")}>
+                          {check.ratio.toFixed(1)}:1
+                          {!check.ok && <span className="ml-1">· {check.minimum}:1 nötig</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
               {/* EIN Weg zurueck fuer alles, was der Space am Aussehen
                   gesetzt hat. Spec 04 Regel 2/3: ohne eigenen Wert stammt

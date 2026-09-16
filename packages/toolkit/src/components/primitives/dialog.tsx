@@ -71,6 +71,7 @@ function renderDialogError({ error, label }: ErrorFallbackProps) {
 
 function DialogContent({
   className,
+  overlayClassName,
   children,
   showCloseButton = true,
   errorLabel,
@@ -79,10 +80,16 @@ function DialogContent({
   showCloseButton?: boolean
   /** Name des Bereichs in der Fehlermeldung („Die Kontaktliste"). */
   errorLabel?: string
+  /**
+   * Klassen für den Backdrop. Der Space-Dialog blendet ihn aus, solange man
+   * einen Regler zieht — die Farbe soll man auf der App sehen, nicht auf
+   * dem Dialog, der sie verdeckt.
+   */
+  overlayClassName?: string
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
