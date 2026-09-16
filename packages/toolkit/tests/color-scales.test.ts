@@ -358,39 +358,19 @@ describe("scalesForColor — Toenung der neutralen Skala", () => {
 })
 
 /**
- * Eine dunkle Akzentfarbe auf dunklem Grund ist dumpf. Radix umgeht das,
- * indem seine kuratierten Skalen Stufe 9 nie unter L 0.54 legen; wir lassen
- * jede Farbe zu, also muss die Regel hier stehen: im dunklen Schema wird die
- * Fuellung angehoben, im hellen bleibt sie, wie gewaehlt.
- *
- * reallife.network/app macht genau das von Hand — hell Forest (L 0.42),
- * dunkel Sage (L 0.64).
+ * Stufe 9 ist hell und dunkel DIESELBE Farbe — wie bei Radix. Eine
+ * Anhebung im dunklen Schema machte die Fuellung heller als das Space-Logo,
+ * aus dem sie stammt; das fiel sofort als Unstimmigkeit auf (16.09.).
  */
-describe("deriveColorScale — dunkle Fuellung im dunklen Schema", () => {
-  const forest = "#3e5e2e"
-
-  it("hebt eine dunkle Farbe im dunklen Schema an", () => {
-    const l = parseColor(deriveColorScale(forest, "dark")[8])!.l
-    expect(l).toBeGreaterThanOrEqual(0.58)
-  })
-
-  it("behaelt den Farbton dabei", () => {
-    const seed = parseColor(forest)!
-    const fill = parseColor(deriveColorScale(forest, "dark")[8])!
-    expect(Math.abs(fill.h - seed.h)).toBeLessThan(8)
-  })
-
-  it("laesst sie im hellen Schema exakt, wie gewaehlt", () => {
+describe("deriveColorScale — Fuellung in beiden Schemata gleich", () => {
+  it("laesst auch eine dunkle Farbe im dunklen Schema exakt, wie gewaehlt", () => {
+    const forest = "#3e5e2e"
+    expect(deriveColorScale(forest, "dark")[8]).toBe(forest)
     expect(deriveColorScale(forest, "light")[8]).toBe(forest)
   })
 
-  it("laesst eine ohnehin helle Farbe auch dunkel in Ruhe", () => {
-    const sage = "#8c9a5b"
-    expect(deriveColorScale(sage, "dark")[8]).toBe(sage)
-  })
-
-  it("haelt die Reihenfolge der Stufen", () => {
-    const l = deriveColorScale(forest, "dark").map((h) => parseColor(h)!.l)
+  it("haelt die Reihenfolge der Stufen auch dunkel", () => {
+    const l = deriveColorScale("#3e5e2e", "dark").map((h) => parseColor(h)!.l)
     for (let i = 1; i < 12; i++) expect(l[i], `Stufe ${i + 1} > ${i}`).toBeGreaterThan(l[i - 1])
   })
 })

@@ -71,8 +71,6 @@ export const GRAY_SCALE_OPTIONS: readonly GrayScaleName[] = GRAY_SCALE_NAMES
  * bleiben unter diesem Wert; alles darunter wird wie Grau behandelt.
  */
 const NEUTRAL_CHROMA = 0.03
-/** Unter dieser Helligkeit ist eine Füllung auf dunklem Grund dumpf. */
-const DARK_FILL_LIGHTNESS_MIN = 0.6
 /** Buntheit der neutralen Skala bei voller Tönung — gerade noch "neutral". */
 const TINT_CHROMA_MAX = 0.03
 
@@ -272,13 +270,13 @@ export function deriveColorScale(
   // Erst auf den Bereich ziehen, in dem eine Füllfläche liegen kann, dann
   // die Verschiebung so begrenzen, dass keine Stufe klemmt.
   //
-  // Im dunklen Schema liegt die Untergrenze höher: eine dunkle Farbe auf
-  // dunklem Grund ist dumpf. Radix umgeht das, weil seine kuratierten Skalen
-  // Stufe 9 nie so tief legen; wir lassen jede Farbe zu, also steht die Regel
-  // hier. reallife.network/app macht es von Hand — hell Forest (L 0.42),
-  // dunkel Sage (L 0.64). Im hellen Schema bleibt die Farbe, wie gewählt.
-  const floor = scheme === "dark" ? DARK_FILL_LIGHTNESS_MIN : FILL_LIGHTNESS_MIN
-  const fillL = Math.min(FILL_LIGHTNESS_MAX, Math.max(floor, target.l))
+  // In BEIDEN Schemata dieselbe Untergrenze — wie bei Radix, wo Stufe 9 hell
+  // und dunkel dieselbe Farbe ist. Eine höhere Grenze im Dunklen (L 0.6)
+  // hatte die Füllung heller gemacht als das Space-Logo, aus dem die Farbe
+  // stammt; Anton las das sofort als Unstimmigkeit (16.09.). Wirkt eine sehr
+  // dunkle Farbe im Dunklen dumpf, regelt der Space das selbst über die
+  // Helligkeit und sieht dabei genau, was er bekommt.
+  const fillL = Math.min(FILL_LIGHTNESS_MAX, Math.max(FILL_LIGHTNESS_MIN, target.l))
   const deltaL = allowedShift(template, fillL - anchor.l)
   const deltaH = target.h - anchor.h
   // Buntheit wird verhältnismäßig verschoben; eine Vorlage mit nahezu
