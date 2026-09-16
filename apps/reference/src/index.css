@@ -128,7 +128,10 @@
 .dark .maplibregl-map .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
   filter: invert(1);
 }
-.maplibregl-map .maplibregl-ctrl-attrib {
+/* Drei Klassen, weil maplibre-gl.css die Attribution mit zwei setzt
+   (`.maplibregl-ctrl.maplibregl-ctrl-attrib`) — sonst bliebe sie weiss. */
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib,
+.maplibregl-map .maplibregl-ctrl-attrib.maplibregl-compact {
   background: var(--card);
   color: var(--muted-foreground);
   border-radius: var(--radius-md);
