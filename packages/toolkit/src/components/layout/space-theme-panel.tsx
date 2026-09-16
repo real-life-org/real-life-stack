@@ -175,21 +175,14 @@ export function SpaceThemePanel({ group, onUpdateGroup, onClose, className }: Sp
         </div>
 
         {(colorChoice != null || tintChoice != null) && (
-          <button
-            type="button"
-            onClick={reset}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <RotateCcw className="h-3 w-3" />
+          <Button variant="outline" size="sm" onClick={reset}>
+            <RotateCcw className="h-3.5 w-3.5" />
             Zurücksetzen
-          </button>
+          </Button>
         )}
 
         {error && <p className="text-xs text-destructive">{error}</p>}
 
-        <p className="text-xs text-muted-foreground">
-          Gilt für alle im Space. Die Seite bleibt bedienbar — schau dir Knöpfe, Menüs und Karten mit der neuen Farbe an.
-        </p>
       </div>
     </div>
   )

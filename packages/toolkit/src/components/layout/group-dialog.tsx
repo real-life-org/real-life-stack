@@ -1341,19 +1341,14 @@ export function GroupDialog({
                   die Farbe aus dem Logo, sonst deterministisch aus der
                   Space-Id. Die Toenung setzt das Panel zurueck. */}
               {primaryColorChoice != null && (
-                <button
-                  type="button"
-                  onClick={() => { void resetPrimaryColor() }}
-                  className="mx-2.5 mt-2 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  Zurücksetzen
-                </button>
+                <div className="px-2.5 pt-3">
+                  <Button variant="outline" size="sm" onClick={() => { void resetPrimaryColor() }}>
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Zurücksetzen
+                  </Button>
+                </div>
               )}
 
-              <p className="mt-3 px-2.5 text-xs text-muted-foreground">
-                Die Farbe gilt für alle im Space und wirkt, solange er geöffnet ist.
-              </p>
             </>
           )}
 
