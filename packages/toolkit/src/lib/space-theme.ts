@@ -116,7 +116,15 @@ export function readGray(value: unknown): GrayScaleName | null {
  * Ableitung erkennt Stufe 9 als Vorlage wieder.
  */
 export function accentSwatches(scheme: ColorScheme): { name: string; hex: string }[] {
-  return ACCENT_SCALE_NAMES.map((name) => ({ name, hex: namedScale(name, scheme)[8] }))
+  // Nach Farbton geordnet, beginnend bei Rot — wie im Playground. Alphabetisch
+  // (amber, blue, bronze …) findet niemand eine Farbe.
+  return ACCENT_SCALE_NAMES.map((name) => {
+    const hex = namedScale(name, scheme)[8]
+    const h = parseColor(hex)?.h ?? 0
+    return { name, hex, hue: (h - 20 + 360) % 360 }
+  })
+    .sort((a, b) => a.hue - b.hue)
+    .map(({ name, hex }) => ({ name, hex }))
 }
 
 /** Welche Radix-Skala eine Farbe IST (Stufe 9 trifft exakt) — oder null: eigene Farbe. */
