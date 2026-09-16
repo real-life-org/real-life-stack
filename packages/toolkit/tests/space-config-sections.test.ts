@@ -244,28 +244,53 @@ describe("SPACE_COLOR_SWATCHES", () => {
 })
 
 /**
- * Welcher Vorschlag traegt den Haken. Die geltende Farbe kann aus dem
- * Space-Bild stammen oder deterministisch aus der Id abgeleitet sein — beides
- * trifft die Palette in aller Regel NICHT. Dann ist "eigene" richtig, nicht
- * "keine": es gilt ja eine Farbe.
+ * Welcher Vorschlag traegt den Haken.
+ *
+ * Drei Faelle, nicht zwei: eine Palettenfarbe, eine von Hand gewaehlte
+ * ausserhalb der Palette — und der Vorschlag selbst. Der Vorschlag stammt
+ * aus dem Space-Bild oder deterministisch aus der Id und trifft die Palette
+ * praktisch nie; er darf deshalb NICHT als "eigene Farbe" durchgehen. Er
+ * hat sein eigenes Feld, damit man ihn nach einer anderen Wahl noch sieht
+ * und zurueckfindet.
+ *
+ * Erkannt wird er am Wert, nicht an der Herkunft: die Bildfarbe steht im
+ * selben Schluessel wie eine Handwahl.
  */
 describe("activeSpaceSwatch", () => {
+  it("meldet 'suggestion', wenn die geltende Farbe der Vorschlag ist", () => {
+    expect(activeSpaceSwatch("#7a3b21", "#7a3b21")).toBe("suggestion")
+    // Auch dann, wenn der Vorschlag zufaellig eine Palettenfarbe trifft:
+    // was gilt, ist der Vorschlag, und sein Feld traegt den Haken.
+    const hex = SPACE_COLOR_SWATCHES[1]
+    expect(activeSpaceSwatch(hex, hex)).toBe("suggestion")
+  })
+
+  it("vergleicht den Vorschlag ohne Ruecksicht auf die Schreibweise", () => {
+    expect(activeSpaceSwatch("#7A3B21", "#7a3b21")).toBe("suggestion")
+  })
+
+  it("traegt keinen Haken am Vorschlag, solange er nicht bestimmt ist", () => {
+    // Die Extraktion aus dem Bild laeuft noch.
+    expect(activeSpaceSwatch("#123456", null)).toBe("custom")
+  })
+
   it("findet den Vorschlag, der genau passt", () => {
     const hex = SPACE_COLOR_SWATCHES[1]
-    expect(activeSpaceSwatch(hex)).toBe(hex)
+    expect(activeSpaceSwatch(hex, null)).toBe(hex)
   })
 
   it("ignoriert Gross- und Kleinschreibung", () => {
     const hex = SPACE_COLOR_SWATCHES[0]
-    expect(activeSpaceSwatch(hex.toUpperCase())).toBe(hex)
+    expect(activeSpaceSwatch(hex.toUpperCase(), null)).toBe(hex)
   })
 
-  it("meldet 'custom' fuer eine Farbe ausserhalb der Palette", () => {
-    expect(activeSpaceSwatch("#123456")).toBe("custom")
+  it("meldet 'custom' fuer eine von Hand gewaehlte Farbe ausserhalb der Palette", () => {
+    expect(activeSpaceSwatch("#123456", "#7a3b21")).toBe("custom")
   })
 
-  it("meldet 'custom' auch fuer die aus dem Bild gewonnene Farbe", () => {
-    // dominantColor liefert beliebige Werte, keine Palettenfarben.
-    expect(activeSpaceSwatch("#7a3b21")).toBe("custom")
+  it("meldet 'custom' auch fuer eine von Hand gesetzte Bildfarbe", () => {
+    // Wer den Waehler benutzt, kann jeden Wert setzen — auch einen, der
+    // aussieht wie eine Bildfarbe. Entscheidend ist, dass gewaehlt wurde.
+    expect(activeSpaceSwatch("#7a3b21", "#112233")).toBe("custom")
   })
 })
