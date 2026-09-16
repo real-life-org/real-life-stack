@@ -32,7 +32,6 @@ import {
   UnsavedChangesProvider,
   ModulePanelProvider,
   useModulePanel,
-  useGroups,
   DebugDashboard,
   ProfilePanelContent,
   type ProfileData,
@@ -100,36 +99,39 @@ import { useItemFocus } from "./hooks/use-item-focus"
  * bleibt — man will Knoepfe und Menues mit der neuen Farbe sehen, waehrend
  * man noch regelt.
  *
- * Ein eigener Host, weil Panel-Inhalt beim Oeffnen in den Panel-Zustand
- * wandert: eine direkt uebergebene Gruppe waere beim ersten Regler veraltet.
- * Der Host holt sie sich je Render aus `useGroups`.
+ * Das Panel regelt immer den AKTIVEN Space, nicht den, fuer den es geoeffnet
+ * wurde: die Tokens auf dem Bildschirm gehoeren dem aktiven, und wer den
+ * Space wechselt, soll nicht unbemerkt das Theme des vorigen ueberschreiben.
+ * Darum `useCurrentGroup` statt einer beim Oeffnen eingefrorenen Id, und ein
+ * `key` auf die Gruppen-Id, damit die Regler beim Wechsel sauber neu stehen.
  */
-function SpaceThemePanelHost({ groupId }: { groupId: string }) {
-  const { data: groups } = useGroups()
+function SpaceThemePanelHost() {
+  const group = useCurrentGroup()
   const updateGroup = useUpdateGroup()
-  const group = groups.find((g) => g.id === groupId)
-  if (!group) return null
+  if (!group) {
+    return <p className="px-4 py-6 text-sm text-muted-foreground">Kein Space geöffnet.</p>
+  }
   return (
     <SpaceThemePanel
+      key={group.id}
       group={group}
       onUpdateGroup={async (id, updates) => { await updateGroup(id, updates) }}
     />
   )
 }
 
-
 /**
  * Reicht dem Space-Dialog einen Oeffner fuer das Panel. Als Render-Prop,
  * weil `useModulePanel` nur innerhalb des Providers geht und `Home` selbst
  * ausserhalb steht — dasselbe Muster wie der ThemeTweaker-Oeffner in #361.
  */
-function SpaceThemePanelOpener({ children }: { children: (open: (group: { id: string }) => void) => ReactNode }) {
+function SpaceThemePanelOpener({ children }: { children: (open: () => void) => ReactNode }) {
   const panel = useModulePanel()
-  const open = (group: { id: string }) =>
+  const open = () =>
     panel.open({
       kind: "theme",
       backdrop: false,
-      content: <SpaceThemePanelHost groupId={group.id} />,
+      content: <SpaceThemePanelHost />,
     })
   return <>{children(open)}</>
 }
@@ -864,7 +866,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           // anderen geoeffnet, regelte man sonst an Farben, die gar nicht
           // auf dem Bildschirm sind — also erst hinspringen.
           if (activeWorkspace?.id !== group.id) handleWorkspaceChange({ id: group.id, name: group.name })
-          openThemePanel(group)
+          openThemePanel()
         }}
         onDeleteGroup={async (id) => {
           await deleteGroup(id)
