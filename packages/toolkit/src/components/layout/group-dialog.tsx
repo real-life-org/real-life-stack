@@ -367,6 +367,11 @@ export function GroupDialog({
   // and two operations failing with the same text (`Network request failed`)
   // still collided. Separate state = ownership by construction (rls#232).
   const [moduleError, setModuleError] = useState<string | null>(null)
+  // Eigener Zustand wie beim Modul-Fehler: haengt die Farbe am gemeinsamen
+  // `error`, loescht ihr Erfolg die Meldung des Umbenennens oder Einladens
+  // gleich mit. Zugehoerigkeit durch Konstruktion, nicht durch Vermutung
+  // (rls#232).
+  const [colorError, setColorError] = useState<string | null>(null)
 
   // Das gewaehlte Fach. `tabs` haengt an isCurrentUserAdmin, das aus den
   // Mitgliedern abgeleitet wird und beim Oeffnen noch nicht feststeht — daher
@@ -435,6 +440,12 @@ export function GroupDialog({
    * in den Space, der inzwischen offen ist — ein fremder Space bekaeme still
    * die Farbe, die man dem vorigen zugedacht hatte.
    */
+  /**
+   * Laufende Nummer der Farbabsicht. Jede bewusste Wahl und jedes Entfernen
+   * des Bildes zaehlt hoch; ein Zuruecksetzen, dessen Bildfarbe erst danach
+   * eintrifft, erkennt daran, dass es ueberholt ist.
+   */
+  const colorRequestRef = useRef(0)
   const savePrimaryColorRef = useRef<((v: { groupId: string; hex: string | null }) => void) | null>(null)
   if (!savePrimaryColorRef.current) {
     savePrimaryColorRef.current = createLatestWinsSaver<{ groupId: string; hex: string | null }>(
@@ -455,9 +466,9 @@ export function GroupDialog({
               : ((current.group.data?.primaryColor as string | undefined) ?? null),
           )
         }
-        setError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden")
+        setColorError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden")
       },
-      () => setError(null),
+      () => setColorError(null),
     )
   }
   const applyModules = useCallback((next: string[]) => {
@@ -523,6 +534,7 @@ export function GroupDialog({
         setConfirmDelete(false)
         setError(null)
         setModuleError(null)
+        setColorError(null)
         setInvitingId(null)
         setInvitedIds(new Set())
         setInviteErrors(new Map())
@@ -587,6 +599,12 @@ export function GroupDialog({
   const handleImageRemove = () => {
     if (!isEdit) return
     setGroupImage("")
+    // Der Patch unten verwirft `primaryColor`; ohne diese Zeile behielte der
+    // Dialog die alte Farbe und zeigte etwas anderes als die App daneben.
+    // Der Zaehler entwertet zugleich ein laufendes Zuruecksetzen, dessen
+    // Bildfarbe jetzt zu einem Bild gehoerte, das es nicht mehr gibt.
+    colorRequestRef.current++
+    setPrimaryColorChoice(null)
     // Drop the cached accent too, so it falls back to the deterministic id
     // color — `null` removes the key (patch contract), `undefined` would be
     // dropped by JSON transports and leave the stale accent behind.
@@ -667,6 +685,7 @@ export function GroupDialog({
    */
   const applyPrimaryColor = (hex: string | null) => {
     if (!isEdit) return
+    colorRequestRef.current++
     setPrimaryColorChoice(hex)
     savePrimaryColorRef.current?.({ groupId: mode.group.id, hex })
   }
@@ -690,9 +709,15 @@ export function GroupDialog({
       applyPrimaryColor(null)
       return
     }
+    // Die Extraktion dauert. Waehlt der Nutzer inzwischen bewusst eine Farbe,
+    // ist das Ergebnis ueberholt und DARF sie nicht ueberschreiben — sonst
+    // sprang die Farbe Augenblicke nach dem Klick von selbst zurueck.
+    const ticket = ++colorRequestRef.current
     const { dominantColor } = await import("../../lib/image-utils")
     // Liefert ein graustufiges Bild keine Farbe, bleibt der Id-Rueckfall.
-    applyPrimaryColor(await dominantColor(groupImage).catch(() => null))
+    const derived = await dominantColor(groupImage).catch(() => null)
+    if (ticket !== colorRequestRef.current) return
+    applyPrimaryColor(derived)
   }
 
   /** Zahlen am Menue — die Suche aendert sie nicht, sie zaehlen den Bestand. */
@@ -1322,6 +1347,9 @@ export function GroupDialog({
             "Mitglieder" steht. */}
         {moduleError && (
           <p className="text-xs text-destructive px-6 pb-2">{moduleError}</p>
+        )}
+        {colorError && (
+          <p className="text-xs text-destructive px-6 pb-2">{colorError}</p>
         )}
         {error && (
           <p className="text-xs text-destructive px-6 pb-2">{error}</p>

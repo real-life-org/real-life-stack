@@ -314,3 +314,158 @@ describe("Lesbarkeit und Benennung der Farbwahl", () => {
       .toBe("Eigene Farbe")
   })
 })
+
+/**
+ * Drei Wege, auf denen die Farbe des Dialogs von der gespeicherten
+ * abweichen konnte.
+ */
+describe("Farbzustand bleibt mit dem Gespeicherten im Gleichklang", () => {
+  let root: Root
+  const saved: Array<Record<string, unknown>> = []
+  let resolveDominant: ((hex: string | null) => void) | undefined
+
+  // `resetPrimaryColor` holt die Bildfarbe ueber einen dynamischen Import.
+  vi.mock("../src/lib/image-utils", () => ({
+    resizeImage: async (s: string) => s,
+    dominantColor: () => new Promise((resolve) => { resolveDominant = resolve }),
+  }))
+
+  const renderWith = (data: Record<string, unknown>) => {
+    act(() => {
+      root.render(
+        createElement(GroupDialog, {
+          open: true,
+          onOpenChange: () => {},
+          mode: { type: "edit", group: { id: "g1", name: "G", data } } as never,
+          currentUserId: "did:key:zME",
+          onCreateGroup: async () => {},
+          onUpdateGroup: async (_id: string, u: { data?: Record<string, unknown> }) => {
+            if (u.data) saved.push(u.data)
+          },
+          onDeleteGroup: async () => {},
+        } as never),
+      )
+    })
+  }
+
+  const openAppearance = () => {
+    const entry = Array.from(document.querySelectorAll("nav button"))
+      .find((b) => b.textContent?.startsWith("Aussehen")) as HTMLButtonElement
+    act(() => { entry.click() })
+  }
+
+  const pressedLabels = () =>
+    Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Primärfarbe"]'))
+      .filter((b) => b.getAttribute("aria-pressed") === "true")
+      .map((b) => b.getAttribute("aria-label"))
+
+  beforeEach(() => {
+    document.body.innerHTML = ""
+    saved.length = 0
+    resolveDominant = undefined
+    const host = document.createElement("div")
+    document.body.appendChild(host)
+    root = createRoot(host)
+  })
+
+  it("verwirft die Bildfarbe, wenn waehrenddessen eine Farbe gewaehlt wurde", async () => {
+    renderWith({ image: "data:image/png;base64,AAA", primaryColor: "#123456" })
+    openAppearance()
+
+    // Zuruecksetzen anstossen — die Extraktion laeuft noch.
+    const reset = Array.from(document.querySelectorAll("button"))
+      .find((b) => b.textContent?.includes("Zurück")) as HTMLButtonElement
+    act(() => { reset.click() })
+
+    // Der Nutzer waehlt inzwischen bewusst eine Farbe.
+    const hex = SPACE_COLOR_SWATCHES[1]
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>(`button[aria-label="Primärfarbe ${hex}"]`)!.click()
+    })
+
+    // Erst jetzt kommt die Bildfarbe — sie ist ueberholt.
+    await act(async () => { resolveDominant?.("#aabbcc"); await Promise.resolve() })
+
+    expect(pressedLabels(), "die bewusste Wahl gewinnt").toEqual([`Primärfarbe ${hex}`])
+    expect(saved.at(-1)?.primaryColor, "und nichts Neueres wurde ueberschrieben").toBe(hex)
+  })
+
+  it("setzt die Farbe zurueck, wenn das Bild entfernt wird", async () => {
+    // Eine Farbe, die NICHT dem Id-Rueckfall von "g1" entspricht — sonst
+    // pruefte der Test nichts: der Haken staende danach zu Recht dort.
+    const chosen = SPACE_COLOR_SWATCHES[1]
+    renderWith({ image: "data:image/png;base64,AAA", primaryColor: chosen })
+    openAppearance()
+    expect(pressedLabels()).toEqual([`Primärfarbe ${chosen}`])
+
+    const removeBtn = document.querySelector<HTMLButtonElement>('button[aria-label="Bild entfernen"]')!
+    await act(async () => { removeBtn.click() })
+
+    // Gespeichert wird `primaryColor: null` — die Anzeige muss folgen,
+    // sonst zeigen Dialog und App verschiedene Farben.
+    expect(saved.some((d) => d.primaryColor === null), "null wurde gespeichert").toBe(true)
+    expect(pressedLabels(), "kein Haken auf der verworfenen Farbe")
+      .not.toEqual([`Primärfarbe ${chosen}`])
+  })
+})
+
+/**
+ * Der Dialog trennt Fehler nach Zugehoerigkeit, seit ein erfolgreicher
+ * Modul-Speichervorgang nur raten konnte, ob die angezeigte Meldung seine
+ * eigene war (rls#232). Die Farbe hing zunaechst am gemeinsamen `error` und
+ * loeschte es bei Erfolg — damit konnte sie die Meldung des Umbenennens
+ * mit wegwischen.
+ */
+describe("Farb-Erfolg loescht keine fremden Meldungen", () => {
+  let root: Root
+
+  beforeEach(() => {
+    document.body.innerHTML = ""
+    const host = document.createElement("div")
+    document.body.appendChild(host)
+    root = createRoot(host)
+    act(() => {
+      root.render(
+        createElement(GroupDialog, {
+          open: true,
+          onOpenChange: () => {},
+          mode: { type: "edit", group: { id: "g1", name: "G", data: {} } } as never,
+          currentUserId: "did:key:zME",
+          onCreateGroup: async () => {},
+          // Nur das Umbenennen scheitert, das Farbspeichern gelingt.
+          onUpdateGroup: async (_id: string, u: { name?: string }) => {
+            if (u.name !== undefined) throw new Error("Umbenennen ging schief")
+          },
+          onDeleteGroup: async () => {},
+        } as never),
+      )
+    })
+  })
+
+  it("laesst die Meldung des Umbenennens stehen", async () => {
+    const nameInput = document.querySelector<HTMLInputElement>('input.text-\\[17px\\]')
+      ?? document.querySelector<HTMLInputElement>("input")!
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype, "value")!.set!
+      setter.call(nameInput, "Neuer Name")
+      nameInput.dispatchEvent(new Event("input", { bubbles: true }))
+      // React delegiert onBlur ueber focusout, nicht ueber blur.
+      nameInput.dispatchEvent(new Event("focusout", { bubbles: true }))
+      await Promise.resolve()
+    })
+    expect(document.body.textContent).toContain("Umbenennen ging schief")
+
+    const entry = Array.from(document.querySelectorAll("nav button"))
+      .find((b) => b.textContent?.startsWith("Aussehen")) as HTMLButtonElement
+    act(() => { entry.click() })
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>(
+        `button[aria-label="Primärfarbe ${SPACE_COLOR_SWATCHES[1]}"]`)!.click()
+      await Promise.resolve()
+    })
+
+    expect(document.body.textContent, "der fremde Fehler bleibt sichtbar")
+      .toContain("Umbenennen ging schief")
+  })
+})
