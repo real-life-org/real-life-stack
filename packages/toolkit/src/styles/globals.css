@@ -346,17 +346,20 @@
 /* Die Navbar liegt UEBER dem Inhalt, traegt also die erhabene Flaeche und
    nicht die getoente Seitenflaeche — sonst verschwimmt sie mit dem Modul
    darunter, sobald der Hintergrund getoent ist. */
+/* NUR die unpraefixte Deklaration. Stand daneben von Hand noch
+   `-webkit-backdrop-filter`, fasste Lightning CSS im Produktionsbuild beide
+   zusammen und behielt die praefixte — mit einem `var()` als Wert. Chrome
+   kennt die nicht: der Blur fehlte im Deploy, im Dev-Server nicht. Den
+   Praefix setzt der Build nach seinen Zielen selbst. */
 .glass-navbar,
 .surface-glass {
   background-color: oklch(from var(--card) l c h / var(--surface-alpha));
   backdrop-filter: blur(var(--surface-blur));
-  -webkit-backdrop-filter: blur(var(--surface-blur));
 }
 
 .surface-glass-inner {
   background-color: oklch(from var(--card) l c h / var(--surface-inner-alpha));
   backdrop-filter: blur(var(--surface-blur));
-  -webkit-backdrop-filter: blur(var(--surface-blur));
 }
 
 /* Drop shadow under map markers (the rendered pin SVG is an <img>; a CSS
