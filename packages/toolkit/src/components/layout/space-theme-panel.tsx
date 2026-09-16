@@ -23,7 +23,6 @@ import { colorAxes, colorFromAxes, readTint } from "../../lib/space-theme"
 import { cn, getSpacePrimaryColor } from "../../lib/utils"
 import { instanceTheme } from "../../lib/runtime-config"
 import { Button } from "../primitives/button"
-import { createLatestWinsSaver } from "./group-dialog"
 
 export interface SpaceThemePanelProps {
   group: Group
@@ -47,31 +46,54 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
   const [error, setError] = useState<string | null>(null)
 
   /**
-   * Zwei Saver, einer je Wert: "der letzte gewinnt" gilt je Wert, und Farbe
-   * und Toenung sind unabhaengig. Das Ziel haengt am Wert, nicht am
-   * Zeitpunkt — ein eingereihter Vorgang darf nicht in einen anderen Space
-   * schreiben, der inzwischen offen ist.
+   * EINE Warteschlange fuer alles, was das Panel schreibt.
+   *
+   * Zwei getrennte Warteschlangen (Farbe, Toenung) hatten keine gemeinsame
+   * Reihenfolge: nach zwei schnellen Toenungsaenderungen und "Zuruecksetzen"
+   * schrieb die Toenungsschlange danach wieder 0.8 statt null — der Reset
+   * war ueberholt, bevor er ankam. Darum ein Patch, in den jede Aenderung
+   * feldweise gemischt wird; "der letzte gewinnt" gilt je Feld, die
+   * Reihenfolge der Schreibvorgaenge ist total.
+   *
+   * Das Ziel haengt am Patch, nicht am Zeitpunkt: ein eingereihter Vorgang
+   * darf nicht in einen Space schreiben, der inzwischen offen ist.
    */
-  const saveColorRef = useRef<((v: { groupId: string; hex: string | null; clearTint?: boolean }) => void) | null>(null)
-  if (!saveColorRef.current) {
-    saveColorRef.current = createLatestWinsSaver<{ groupId: string; hex: string | null; clearTint?: boolean }>(
-      async ({ groupId, hex, clearTint }) => {
-        await onUpdateRef.current(groupId, { data: { primaryColor: hex, ...(clearTint ? { tint: null } : {}) } })
-      },
-      (err) => setError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden"),
-      () => setError(null),
-    )
+  const pendingRef = useRef<{ groupId: string; data: Record<string, unknown> } | null>(null)
+  const flushingRef = useRef(false)
+  const flush = async () => {
+    if (flushingRef.current) return
+    flushingRef.current = true
+    try {
+      while (pendingRef.current) {
+        const { groupId, data } = pendingRef.current
+        pendingRef.current = null
+        try {
+          await onUpdateRef.current(groupId, { data })
+          setError(null)
+        } catch (err) {
+          // Zurueck auf das, was die Gruppe wirklich traegt.
+          pendingRef.current = null
+          setColorChoice(storedColorRef.current)
+          setTintChoice(storedTintRef.current)
+          setError(err instanceof Error ? err.message : "Aussehen konnte nicht gespeichert werden")
+        }
+      }
+    } finally {
+      flushingRef.current = false
+    }
   }
-  const saveTintRef = useRef<((v: { groupId: string; tint: number | null }) => void) | null>(null)
-  if (!saveTintRef.current) {
-    saveTintRef.current = createLatestWinsSaver<{ groupId: string; tint: number | null }>(
-      async ({ groupId, tint }) => {
-        await onUpdateRef.current(groupId, { data: { tint } })
-      },
-      (err) => setError(err instanceof Error ? err.message : "Tönung konnte nicht gespeichert werden"),
-      () => setError(null),
-    )
+  const write = (data: Record<string, unknown>) => {
+    const pending = pendingRef.current
+    pendingRef.current =
+      pending && pending.groupId === group.id
+        ? { groupId: group.id, data: { ...pending.data, ...data } }
+        : { groupId: group.id, data }
+    void flush()
   }
+  const storedColorRef = useRef(storedColor)
+  storedColorRef.current = storedColor
+  const storedTintRef = useRef(storedTint)
+  storedTintRef.current = storedTint
 
   const effectiveColor = getSpacePrimaryColor(group.id, colorChoice)
   // Ohne eigene Toenung erbt der Space die der Instanz (Kaskade). Der Regler
@@ -82,17 +104,17 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
   const setAxis = (key: keyof typeof axes, value: number) => {
     const hex = colorFromAxes({ ...axes, [key]: value })
     setColorChoice(hex)
-    saveColorRef.current?.({ groupId: group.id, hex })
+    write({ primaryColor: hex })
   }
   const setTint = (tint: number | null) => {
     setTintChoice(tint)
-    saveTintRef.current?.({ groupId: group.id, tint })
+    write({ tint })
   }
   /** EIN Reset fuer alles, was der Space am Aussehen gesetzt hat. */
   const reset = () => {
     setColorChoice(null)
     setTintChoice(null)
-    saveColorRef.current?.({ groupId: group.id, hex: null, clearTint: true })
+    write({ primaryColor: null, tint: null })
   }
 
   const scheme = useColorScheme()

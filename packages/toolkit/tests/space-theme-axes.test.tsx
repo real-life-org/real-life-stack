@@ -146,6 +146,38 @@ describe("SpaceThemePanel", () => {
   })
 
   /**
+   * Review #389: Zwei schnelle Toenungsaenderungen, dann Zuruecksetzen — die
+   * getrennte Toenungsschlange schrieb danach wieder 0.8 statt null. Alles,
+   * was das Panel schreibt, geht darum durch EINE Warteschlange.
+   */
+  it("laesst einen Reset nicht von einer eingereihten Toenung ueberholen", async () => {
+    // Ein Speichern, das erst auf Kommando fertig wird.
+    const releases: Array<() => void> = []
+    const slowSaved: Array<Record<string, unknown>> = []
+    act(() => {
+      root.render(
+        createElement(SpaceThemePanel, {
+          group: group({ primaryColor: COLOR }),
+          onUpdateGroup: (_id: string, u: { data?: Record<string, unknown> }) =>
+            new Promise<void>((resolve) => { releases.push(() => { if (u.data) slowSaved.push(u.data); resolve() }) }),
+        }),
+      )
+    })
+    await move("Tönung", 60)
+    await move("Tönung", 80)
+    await act(async () => { resetButton()!.click() })
+    // Jetzt alles der Reihe nach fertig werden lassen.
+    while (releases.length) {
+      const next = releases.shift()!
+      await act(async () => { next(); await Promise.resolve(); await Promise.resolve() })
+    }
+    const last = slowSaved.at(-1)!
+    expect(last.tint, "der Reset ist das Letzte, was ankommt").toBeNull()
+    expect(last.primaryColor).toBeNull()
+    expect(slowSaved.some((d) => d.tint === 0.8 && d.primaryColor === undefined && slowSaved.indexOf(d) > slowSaved.findIndex((x) => x.tint === null)), "nichts schreibt nach dem Reset 0.8").toBe(false)
+  })
+
+  /**
    * Ohne eigene Toenung erbt der Space die der Instanz. Der Regler zeigt,
    * was gilt; ein Reset fuehrt dorthin zurueck, nicht auf 0.
    */

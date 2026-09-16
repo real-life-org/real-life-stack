@@ -330,9 +330,13 @@ export function scalesForColor(
   const parsed = parseColor(color)
   const gray = namedScale(parsed ? grayFor(parsed) : "gray", scheme)
   const tint = clampTint(options.tint)
+  // Eine unbunte Akzentfarbe hat keinen Farbton, der etwas bedeutet — bei
+  // #808080 liegt er zufaellig bei Rosa. Getoent wird nur, wenn der Akzent
+  // wirklich einen Ton hat (dieselbe Schwelle wie bei der Vorlagenwahl).
+  const tintable = parsed !== null && parsed.c >= NEUTRAL_CHROMA
   return {
     accent: deriveColorScale(color, scheme),
-    gray: parsed && tint > 0 ? tintGray(gray, parsed.h, tint) : gray,
+    gray: tintable && tint > 0 ? tintGray(gray, parsed.h, tint) : gray,
   }
 }
 

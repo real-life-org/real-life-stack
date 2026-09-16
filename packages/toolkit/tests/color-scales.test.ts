@@ -324,6 +324,15 @@ describe("scalesForColor — Toenung der neutralen Skala", () => {
     }
   })
 
+  it("toent nicht, wenn der Akzent unbunt ist", () => {
+    // Review #389: bei #808080 und voller Toenung wurde Graustufe 5 rosa —
+    // der Farbton eines Graus ist Zufall, kein Wunsch.
+    for (const grey of ["#808080", "#999999", "#000000", "#ffffff"]) {
+      expect(scalesForColor(grey, "light", { tint: 1 }).gray, grey).toEqual(scalesForColor(grey, "light").gray)
+      expect(scalesForColor(grey, "dark", { tint: 1 }).gray, grey).toEqual(scalesForColor(grey, "dark").gray)
+    }
+  })
+
   it("liefert gueltige Farben, auch wenn die Toenung den Farbraum ankratzt", () => {
     for (const seed of ["#ffff00", "#0000ff", "#ff00ff"]) {
       for (const scheme of ["light", "dark"] as const) {
