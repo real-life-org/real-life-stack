@@ -53,7 +53,10 @@ describe("Bereichswechsel beim asynchronen Adminrecht", () => {
       b.textContent?.startsWith(label),
     ) as HTMLButtonElement | undefined
 
-  const heading = () => document.querySelector("h3")?.textContent ?? ""
+  // Der Bereich nennt sich fuer Screenreader ueber die Flaeche selbst; eine
+  // sichtbare Ueberschrift waere die Wiederholung des Menueeintrags daneben.
+  const heading = () =>
+    document.querySelector('[role="region"]')?.getAttribute("aria-label") ?? ""
 
   beforeEach(() => {
     document.body.innerHTML = ""

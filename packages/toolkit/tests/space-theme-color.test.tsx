@@ -101,3 +101,69 @@ describe("Primärfarbe im Bereich Aussehen", () => {
     expect(document.body.textContent).toContain("Netzwerk weg")
   })
 })
+
+/**
+ * Der aktive Menueeintrag traegt die Farbe des Space — Spec 04, "Verwendung
+ * der Primaerfarbe", Regel 1 nennt "aktive Navigations- und Sidebar-Items"
+ * ausdruecklich. Damit ist das Menue dieselbe Sprache wie die Modulleiste in
+ * der Navbar, und ein Farbwechsel im Bereich "Aussehen" zeigt sich sofort an
+ * der Flaeche daneben.
+ *
+ * Die Farbe kommt aus dem DIALOG, nicht aus `--primary`: wird die
+ * Konfiguration aus der Uebersicht heraus geoeffnet, ist der bearbeitete
+ * Space gar nicht der aktive, und das Token truege eine fremde Farbe.
+ */
+describe("Menue-Hervorhebung in der Space-Farbe", () => {
+  let root: Root
+
+  const renderDialog = () => {
+    act(() => {
+      root.render(
+        createElement(GroupDialog, {
+          open: true,
+          onOpenChange: () => {},
+          mode: { type: "edit", group: { id: "g1", name: "Gartenprojekt", data: {} } } as never,
+          currentUserId: "did:key:zME",
+          onCreateGroup: async () => {},
+          onUpdateGroup: async () => {},
+          onDeleteGroup: async () => {},
+        } as never),
+      )
+    })
+  }
+
+  const activeEntry = () =>
+    Array.from(document.querySelectorAll<HTMLButtonElement>("nav button"))
+      .find((b) => b.getAttribute("aria-current") === "page")!
+
+  beforeEach(() => {
+    document.body.innerHTML = ""
+    const host = document.createElement("div")
+    document.body.appendChild(host)
+    root = createRoot(host)
+    renderDialog()
+  })
+
+  it("faerbt den aktiven Eintrag ueberhaupt ein", () => {
+    expect(activeEntry().style.backgroundColor).not.toBe("")
+  })
+
+  it("folgt einem Farbwechsel sofort", async () => {
+    const entry = Array.from(document.querySelectorAll("nav button"))
+      .find((b) => b.textContent?.startsWith("Aussehen")) as HTMLButtonElement
+    act(() => { entry.click() })
+
+    const hex = SPACE_COLOR_SWATCHES[1]
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>(`button[aria-label="Primärfarbe ${hex}"]`)!.click()
+    })
+
+    // rgb(22, 163, 74) === #16a34a
+    const rgb = activeEntry().style.backgroundColor.replace(/\s/g, "")
+    expect(rgb).toBe("rgb(22,163,74)")
+  })
+
+  it("setzt eine lesbare Textfarbe dazu", () => {
+    expect(activeEntry().style.color).not.toBe("")
+  })
+})

@@ -4,7 +4,7 @@ import { getModule, getModules, defaultModuleIds, displayableModules } from "@/l
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
-import { cn, getSpacePrimaryColor, SPACE_COLOR_SWATCHES } from "../../lib/utils"
+import { cn, getReadableTextColor, getSpacePrimaryColor, SPACE_COLOR_SWATCHES } from "../../lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -846,17 +846,35 @@ export function GroupDialog({
                       type="button"
                       aria-current={active ? "page" : undefined}
                       onClick={() => setRequestedSection(section.id)}
+                      // Der aktive Eintrag traegt die Farbe des Space — Spec 04
+                      // ("Verwendung der Primaerfarbe", Regel 1) nennt aktive
+                      // Navigations- und Sidebar-Items ausdruecklich. Damit
+                      // spricht das Menue dieselbe Sprache wie die Modulleiste
+                      // in der Navbar, und eine Farbaenderung im Bereich
+                      // "Aussehen" zeigt sich sofort daneben.
+                      //
+                      // Die Farbe kommt aus dem Dialog, NICHT aus `--primary`:
+                      // wird die Konfiguration aus der Uebersicht heraus
+                      // geoeffnet, ist der bearbeitete Space nicht der aktive
+                      // und das Token truege eine fremde Farbe.
+                      style={
+                        active
+                          ? { backgroundColor: effectiveColor, color: getReadableTextColor(effectiveColor) }
+                          : undefined
+                      }
                       className={cn(
                         "flex items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors",
                         active
-                          ? "bg-card font-semibold text-foreground shadow-sm"
+                          ? "font-semibold shadow-sm"
                           : "font-medium text-muted-foreground hover:bg-muted/60",
                       )}
                     >
-                      <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <Icon className={cn("h-3.5 w-3.5 shrink-0", !active && "text-muted-foreground")} />
                       <span className="flex-1">{section.label}</span>
                       {count !== undefined && (
-                        <span className="text-[10px] text-muted-foreground">{count}</span>
+                        <span className={cn("text-[10px]", active ? "opacity-70" : "text-muted-foreground")}>
+                          {count}
+                        </span>
                       )}
                     </button>
                   )
@@ -865,11 +883,18 @@ export function GroupDialog({
             </nav>
           )}
 
-          <div className="min-w-0 flex-1 overflow-y-auto px-6 py-4">
+          {/* Der Name des Bereichs stand hier frueher als Ueberschrift — direkt
+              neben dem Menueeintrag, der ihn auf gleicher Hoehe schon nennt
+              und ihn in der Space-Farbe hervorhebt. Fuer Screenreader traegt
+              ihn jetzt die Flaeche selbst, sichtbar wiederholt wird er nicht. */}
+          <div
+            role="region"
+            aria-label={sections.find((s) => s.id === activeSection)?.label}
+            className="min-w-0 flex-1 overflow-y-auto px-6 py-4"
+          >
           {activeSection === "members" && (
             <>
               <div className="mb-3 flex items-center gap-2.5">
-                <h3 className="text-sm font-semibold">Mitglieder</h3>
                 {/* Einladen bleibt allen Mitgliedern offen, nicht nur Admins:
                     im WoT laedt jedes Mitglied ein, nur der Creator entfernt.
                     Der Knopf springt in den Bereich, statt einen Picker
@@ -960,8 +985,6 @@ export function GroupDialog({
               die noch nicht Mitglied sind. */}
           {activeSection === "invite" && onInviteMember && (
             <>
-              <h3 className="mb-3 text-sm font-semibold">Einladen</h3>
-
               <div className="relative mb-3">
                 <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -1060,7 +1083,6 @@ export function GroupDialog({
               Themefarbe. Hintergruende und Karten bleiben unberuehrt. */}
           {activeSection === "theme" && isCurrentUserAdmin && (
             <>
-              <h3 className="mb-3 text-sm font-semibold">Aussehen</h3>
               <MemberGroupLabel>Primärfarbe</MemberGroupLabel>
 
               <div className="flex flex-wrap items-center gap-2 px-2.5 py-2">
@@ -1138,7 +1160,6 @@ export function GroupDialog({
               would lock out keyboard and screen-reader users. */}
           {activeSection === "modules" && isCurrentUserAdmin && (
             <>
-              <h3 className="mb-3 text-sm font-semibold">Module</h3>
               <Label className="text-xs text-muted-foreground">Ziehen zum Sortieren</Label>
               <div className="mt-2 space-y-0.5" onDragOver={(e) => e.preventDefault()} onDrop={handleModuleDrop}>
                 {visibleModules.map((id, index) => {
