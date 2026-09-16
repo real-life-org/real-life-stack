@@ -97,7 +97,8 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
 
   const effectiveColor = getSpacePrimaryColor(group.id, colorChoice)
   // Ohne eigene Toenung erbt der Space die der Instanz (Kaskade). Der Regler
-  // zeigt, was gilt — und ein Reset fuehrt dorthin zurueck, nicht auf 0.
+  // zeigt, was gilt. Eine explizite 0 bleibt 0 ("keine Toenung"); nur der
+  // Reset schreibt null und stellt die Vererbung wieder her.
   const inheritedTint = instanceTheme().tint ?? 0
   const effectiveTint = tintChoice ?? inheritedTint
   const axes = colorAxes(effectiveColor)

@@ -4,11 +4,17 @@
  */
 import { oklchToHex, parseColor } from "./oklch"
 
-/** Was in `data.tint` steht, als Zahl 0–1 — oder null, wenn nichts Brauchbares. */
+/**
+ * Was in `data.tint` steht, als Zahl 0–1 — oder null, wenn nichts Brauchbares.
+ *
+ * Eine explizite 0 ist ein WERT: "keine Toenung, obwohl die Instanz eine
+ * hat". Erst `null` (kein Schluessel) heisst "erbt von der Instanz". Wuerde
+ * 0 zu null, liesse sich eine geerbte Toenung nie ausschalten — der Regler
+ * spraenge nach 0 sofort wieder auf den geerbten Wert (Review #389).
+ */
 export function readTint(value: unknown): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) return null
-  const t = Math.min(1, Math.max(0, value))
-  return t > 0 ? t : null
+  return Math.min(1, Math.max(0, value))
 }
 
 /** Größte Buntheit, die ein Regler anbietet — jenseits davon ist kaum etwas im Farbraum. */

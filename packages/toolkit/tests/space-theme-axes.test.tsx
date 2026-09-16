@@ -32,8 +32,10 @@ describe("readTint", () => {
   it("nimmt Zahlen 0–1, kappt und wirft Unsinn weg", () => {
     expect(readTint(0.5)).toBe(0.5)
     expect(readTint(2)).toBe(1)
-    expect(readTint(0)).toBeNull()
-    expect(readTint(-1)).toBeNull()
+    // 0 ist ein Wert ("keine Toenung"), kein Nichts — sonst liesse sich eine
+    // geerbte Toenung nie ausschalten.
+    expect(readTint(0)).toBe(0)
+    expect(readTint(-1)).toBe(0)
     for (const v of [Number.NaN, "0.5", null, undefined, {}]) expect(readTint(v), String(v)).toBeNull()
   })
 })
@@ -126,12 +128,36 @@ describe("SpaceThemePanel", () => {
     expect(Number(slider("Helligkeit").value)).toBe(Math.round(parseColor(hex)!.l * 100))
   })
 
-  it("speichert die Toenung als Zahl 0–1 und loescht sie bei 0", async () => {
+  it("speichert die Toenung als Zahl 0–1, auch die 0", async () => {
     render({ primaryColor: COLOR })
     await move("Tönung", 50)
     expect(last("tint")).toBe(0.5)
     await move("Tönung", 0)
-    expect(last("tint")).toBeNull()
+    expect(last("tint")).toBe(0)
+  })
+
+  /**
+   * Review #389: Bei geerbter Toenung 0.5 sprang der Regler nach 0 sofort
+   * auf 50 zurueck — 0 wurde zu null und null hiess "erben". Eine explizite
+   * 0 muss stehen bleiben; erst der Reset erbt wieder.
+   */
+  it("laesst eine geerbte Toenung ausschalten", async () => {
+    resetRuntimeConfigForTests()
+    await loadRuntimeConfig({
+      fetchImpl: (async () => ({ ok: true, status: 200, json: async () => ({ branding: { theme: { tint: 0.5 } } }) })) as unknown as typeof fetch,
+    })
+    try {
+      render({})
+      expect(Number(slider("Tönung").value)).toBe(50)
+      await move("Tönung", 0)
+      expect(last("tint")).toBe(0)
+      expect(Number(slider("Tönung").value), "bleibt auf 0").toBe(0)
+      render({ tint: 0 })
+      expect(Number(slider("Tönung").value), "auch nach dem Nachziehen der Gruppe").toBe(0)
+      expect(resetButton(), "0 ist gesetzt — Reset fuehrt zum Erben zurueck").toBeDefined()
+    } finally {
+      resetRuntimeConfigForTests()
+    }
   })
 
   it("nimmt mit EINEM Knopf Farbe und Toenung zurueck", async () => {
