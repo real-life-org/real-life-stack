@@ -241,10 +241,23 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     // `data` is a shallow PATCH (null removes), never a replacement — see the
     // GroupManager contract (rls#234).
     const { data, ...rest } = updates
-    Object.assign(group, rest)
-    if (data) group.data = applyGroupDataPatch(group.data, data)
+    // Ein NEUES Objekt, nicht das alte mutiert: `createObservable.set`
+    // verwirft ein Array, dessen Elemente dieselben Referenzen tragen
+    // (shallowEqual), und niemand erfuehre von der Aenderung. Genau so
+    // verpufften Aenderungen an `data` (Rundung, Toenung) im Mock, waehrend
+    // der Local-Connector — der neue Objekte schreibt — sie zeigte.
+    const next: Group = {
+      ...group,
+      ...rest,
+      ...(data ? { data: applyGroupDataPatch(group.data, data) } : {}),
+    }
+    this.groups = this.groups.map((g) => (g.id === id ? next : g))
+    if (this.currentGroup?.id === id) {
+      this.currentGroup = next
+      this.currentGroupObs.set(next)
+    }
     this.notifyGroupObservers()
-    return group
+    return next
   }
 
   async deleteGroup(id: string): Promise<void> {
