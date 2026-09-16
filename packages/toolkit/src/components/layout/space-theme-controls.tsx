@@ -6,7 +6,7 @@
  */
 import { Check } from "lucide-react"
 
-import { accentSwatches, RADIUS_ORDER, type RadiusStep, type Surfaces } from "../../lib/space-theme"
+import { accentSwatches, RADIUS_ORDER, RADIUS_STEPS, type RadiusStep, type Surfaces } from "../../lib/space-theme"
 import { cn, getReadableTextColor } from "../../lib/utils"
 
 /** Kapitaelchen-Ueberschrift, wie im Entwurf ("AKZENTFARBE"). */
@@ -114,7 +114,9 @@ export function RadiusTiles({ value, onChange }: { value: RadiusStep; onChange: 
           <span
             aria-hidden
             className="block h-7 w-7 border-l-2 border-t-2 border-primary bg-primary/15"
-            style={{ borderTopLeftRadius: ["0px", "4px", "8px", "12px", "18px"][i] }}
+            // Die Ecke zeigt die echte Stufe (rem → px), nicht eine
+            // gerundete Schaetzung: "Full" sind 20px, nicht 18.
+            style={{ borderTopLeftRadius: `${parseFloat(RADIUS_STEPS[step]) * 16}px` }}
           />
           {["None", "Small", "Medium", "Large", "Full"][i]}
         </button>

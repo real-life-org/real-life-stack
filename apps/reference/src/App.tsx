@@ -630,7 +630,15 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
    * sauber neu.
    */
   const [themeCardOpen, setThemeCardOpen] = useState(false)
-  const themeGroup = useCurrentGroup()
+  /**
+   * Fuer WELCHEN Space die Karte angefragt wurde. Der Wechsel dorthin laeuft
+   * ueber die URL und setzt die aktuelle Gruppe erst in einem Effekt; bis
+   * dahin liefert useCurrentGroup noch die vorige — und die Karte schriebe
+   * in den falschen Space. Gerendert wird erst, wenn beide uebereinstimmen.
+   */
+  const [themeGroupId, setThemeGroupId] = useState<string | null>(null)
+  const currentGroup = useCurrentGroup()
+  const themeGroup = currentGroup && currentGroup.id === themeGroupId ? currentGroup : null
   const [groupDialogMode, setGroupDialogMode] = useState<GroupDialogMode>({ type: "create" })
   const openCreateDialog = useCallback(() => {
     setGroupDialogMode({ type: "create" })
@@ -855,6 +863,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           // anderen geoeffnet, regelte man sonst an Farben, die gar nicht
           // auf dem Bildschirm sind — also erst hinspringen.
           if (activeWorkspace?.id !== group.id) handleWorkspaceChange({ id: group.id, name: group.name })
+          setThemeGroupId(group.id)
           setThemeCardOpen(true)
         }}
         onDeleteGroup={async (id) => {

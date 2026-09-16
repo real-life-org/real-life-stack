@@ -11,6 +11,8 @@ describe("readRadius / readSurfaces", () => {
   it("nimmt nur bekannte Stufen", () => {
     for (const step of RADIUS_ORDER) expect(readRadius(step)).toBe(step)
     for (const bad of ["huge", "", 0.5, null, undefined, {}]) expect(readRadius(bad), String(bad)).toBeNull()
+    // Geerbte Schluessel des Prototyps sind keine Stufen (Review #391).
+    for (const bad of ["constructor", "toString", "__proto__", "hasOwnProperty"]) expect(readRadius(bad), bad).toBeNull()
   })
 
   it("nimmt nur bekannte Flaechen", () => {

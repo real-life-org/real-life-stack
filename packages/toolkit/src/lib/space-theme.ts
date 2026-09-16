@@ -72,7 +72,9 @@ export type Surfaces = (typeof SURFACES)[number]
 
 /** Was in `data.radius` steht — oder null, wenn keine bekannte Stufe. */
 export function readRadius(value: unknown): RadiusStep | null {
-  return typeof value === "string" && value in RADIUS_STEPS ? (value as RadiusStep) : null
+  // hasOwn, nicht `in`: `in` faende auch "constructor" oder "toString" im
+  // Prototyp und liesse eine Funktion als Rundung durch (Review #391).
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(RADIUS_STEPS, value) ? (value as RadiusStep) : null
 }
 
 /** Was in `data.surfaces` steht — oder null, wenn kein bekannter Wert. */
