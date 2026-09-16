@@ -1,6 +1,11 @@
 import type { CSSProperties } from "react"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { contrastRatio, parseColor } from "./oklch"
+
+/** Die beiden Kandidaten fuer Text auf einer Farbflaeche, einmal geparst. */
+const BLACK = parseColor("#000000")!
+const WHITE = parseColor("#ffffff")!
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -93,17 +98,24 @@ export function getActivePanelGlow(color: string): CSSProperties {
 
 /**
  * Readable text color (`#000000` / `#ffffff`) for text on a colored accent
- * surface, chosen by perceived luminance so it works for light and dark
- * accents alike.
+ * surface — whichever of the two actually contrasts better.
+ *
+ * This used to approximate perceived luminance (YIQ) and switch at 0.6. The
+ * threshold sat in the wrong place: mid grey (`#999999`) landed just below
+ * it and got white text at 2.85:1, under the 3:1 WCAG asks of UI elements,
+ * while black would have reached 7.4:1 on the very same surface.
+ *
+ * With only two candidates there is nothing to estimate — compute both
+ * ratios and take the better one. Same answer as before wherever the old
+ * rule was right, and a correct one where it was not.
  */
 export function getReadableTextColor(hex: string): string {
   if (!HEX6.test(hex)) return "#ffffff"
-  const n = parseInt(hex.slice(1), 16)
-  const r = (n >> 16) & 255
-  const g = (n >> 8) & 255
-  const b = n & 255
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return luminance > 0.6 ? "#000000" : "#ffffff"
+  const background = parseColor(hex)
+  if (!background) return "#ffffff"
+  const onBlack = contrastRatio(BLACK, background)
+  const onWhite = contrastRatio(WHITE, background)
+  return onBlack >= onWhite ? "#000000" : "#ffffff"
 }
 
 /**

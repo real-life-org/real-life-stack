@@ -709,21 +709,29 @@ export function GroupDialog({
    * und sich das Bild aendert — nicht bei jedem Rendern (Spec 04, Regel 2).
    */
   const [imageColor, setImageColor] = useState<string | null>(null)
+  // Ob gerade extrahiert wird. Ohne das waere "noch keine Farbe" von "das
+  // Bild gibt keine her" nicht zu unterscheiden, und der Weg zurueck blitzte
+  // bei jedem Oeffnen kurz auf.
+  const [imageColorPending, setImageColorPending] = useState(false)
 
   useEffect(() => {
     if (!isEdit || activeSection !== "theme" || !groupImage) {
       setImageColor(null)
+      setImageColorPending(false)
       return
     }
     // Waehrend der Extraktion KEINE Farbe zeigen: sonst truege das Feld einen
     // Wert vom vorigen Bild.
     setImageColor(null)
+    setImageColorPending(true)
     let current = true
     void (async () => {
       const { dominantColor } = await import("../../lib/image-utils")
       const derived = await dominantColor(resolveAssetUrl(groupImage) ?? groupImage).catch(() => null)
       // Ein graustufiges Bild liefert keine Farbe; dann gibt es kein Feld.
-      if (current) setImageColor(derived)
+      if (!current) return
+      setImageColor(derived)
+      setImageColorPending(false)
     })()
     return () => { current = false }
   }, [isEdit, activeSection, groupImage, groupId])
@@ -1311,10 +1319,12 @@ export function GroupDialog({
                 </label>
               </div>
 
-              {/* Ohne Bild gibt es kein Feld, auf das man zurueckklicken
-                  koennte — die Farbe aus der Space-Id ist nichts, was man
-                  sich ansieht. Hier genuegt der Weg zurueck als Text. */}
-              {!groupImage && primaryColorChoice != null && (
+              {/* Der Weg zurueck als Text — immer dann, wenn es KEIN Feld
+                  gibt, auf das man klicken koennte. Das ist mehr als "kein
+                  Bild": ein graustufiges Logo liefert keine dominante Farbe,
+                  und ohne diesen Knopf waere die einmal gewaehlte Farbe dort
+                  nur noch durch Loeschen des Logos zurueckzunehmen. */}
+              {!imageColor && !imageColorPending && primaryColorChoice != null && (
                 <button
                   type="button"
                   onClick={() => { void resetPrimaryColor() }}

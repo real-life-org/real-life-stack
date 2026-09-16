@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { getSpacePrimaryColor, getReadableTextColor, getItemColor } from "../src/lib/utils"
+import { contrastRatio, parseColor } from "../src/lib/oklch"
 
 const HEX6 = /^#[0-9a-fA-F]{6}$/
 
@@ -53,5 +54,31 @@ describe("getReadableTextColor", () => {
 
   it("defaults to white for invalid input", () => {
     expect(getReadableTextColor("nope")).toBe("#ffffff")
+  })
+
+  /**
+   * Die Wahl faellt nach dem tatsaechlichen Kontrast, nicht nach einer
+   * Helligkeitsschwelle.
+   *
+   * Die alte Naeherung (YIQ, Schwelle 0.6) setzte auf mittleres Grau weissen
+   * Text: 2.85:1. WCAG verlangt fuer Bedienelemente 3:1 — und Schwarz haette
+   * dort 7.4:1 erreicht. Die Schwelle lag schlicht falsch; zwischen zwei
+   * Kandidaten muss man nicht schaetzen, man kann rechnen.
+   */
+  it("waehlt auf mittlerem Grau die Farbe mit dem besseren Kontrast", () => {
+    const grey = ["#999999", "#8c8c8c", "#a0a0a0", "#777777"]
+    for (const hex of grey) {
+      const chosen = getReadableTextColor(hex)
+      const bg = parseColor(hex)!
+      const better = contrastRatio(parseColor(chosen)!, bg)
+      const other = contrastRatio(parseColor(chosen === "#000000" ? "#ffffff" : "#000000")!, bg)
+      expect(better, `${hex}: ${chosen} = ${better.toFixed(2)}:1`).toBeGreaterThanOrEqual(other)
+      expect(better, `${hex} erreicht die Latte fuer Bedienelemente`).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it("bleibt bei den eindeutigen Faellen, wie sie waren", () => {
+    expect(getReadableTextColor("#ffff00")).toBe("#000000")
+    expect(getReadableTextColor("#1a1a1a")).toBe("#ffffff")
   })
 })

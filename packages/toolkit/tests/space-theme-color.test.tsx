@@ -395,6 +395,14 @@ describe("Farbzustand bleibt mit dem Gespeicherten im Gleichklang", () => {
     for (let i = 0; i < 10; i++) await act(async () => { await Promise.resolve() })
   }
 
+  /** Was zuletzt fuer `primaryColor` geschrieben wurde. */
+  const lastSavedColorOf = (entries: Array<Record<string, unknown>>) => {
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if ("primaryColor" in entries[i]) return entries[i].primaryColor as string | null
+    }
+    return undefined
+  }
+
   const pressedLabels = () =>
     Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Primärfarbe"]'))
       .filter((b) => b.getAttribute("aria-pressed") === "true")
@@ -479,6 +487,31 @@ describe("Farbzustand bleibt mit dem Gespeicherten im Gleichklang", () => {
     const back = Array.from(document.querySelectorAll("button"))
       .find((b) => b.textContent?.includes("Zurück zur Standardfarbe"))
     expect(back, "der Weg zurueck bleibt erreichbar").toBeDefined()
+  })
+
+  /**
+   * Ein graustufiges Logo liefert keine dominante Farbe. Dann gibt es kein
+   * Bildfeld — und es darf trotzdem keine Sackgasse entstehen: wer eine
+   * Farbe gewaehlt hat, muss sie zuruecknehmen koennen, ohne das Logo
+   * loeschen zu muessen.
+   */
+  it("laesst eine Wahl auch bei graustufigem Logo zuruecknehmen", async () => {
+    image.value = null
+    renderWith({ image: "data:image/png;base64,AAA", primaryColor: SPACE_COLOR_SWATCHES[1] })
+    await openAppearanceSettled()
+
+    expect(
+      document.querySelector('button[aria-label="Farbe aus dem Bild"]'),
+      "ohne Farbe im Bild kein Feld",
+    ).toBeNull()
+
+    const back = Array.from(document.querySelectorAll("button"))
+      .find((b) => b.textContent?.includes("Zurück zur Standardfarbe")) as HTMLButtonElement
+    expect(back, "aber ein Weg zurueck").toBeDefined()
+
+    await act(async () => { back.click() })
+    for (let i = 0; i < 10; i++) await act(async () => { await Promise.resolve() })
+    expect(lastSavedColorOf(saved), "die Wahl ist zurueckgenommen").toBeNull()
   })
 
   it("setzt die Farbe zurueck, wenn das Bild entfernt wird", async () => {

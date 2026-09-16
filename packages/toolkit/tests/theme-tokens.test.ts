@@ -25,6 +25,9 @@ const CASES: [string, string][] = [
   ["#3b82f6", "Blau"],
   ["#ffff00", "Gelb"],
   ["#000000", "Schwarz"],
+  // Mittleres Grau: hier waehlte die alte Helligkeitsschwelle weissen
+  // Knopftext mit 2.85:1.
+  ["#999999", "mittleres Grau"],
   ["#ffffff", "Weiss"],
 ]
 
