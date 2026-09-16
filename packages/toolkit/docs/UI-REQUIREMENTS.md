@@ -48,7 +48,7 @@ Jede Checkbox repräsentiert eine einzelne, aktivierbare Entscheidung.
 ## Navbar
 
 - [x] **navbar-fixed-sections**: NavbarStart/NavbarEnd haben feste Breite (`w-56`) für stabile Mitte
-- [x] **navbar-glass**: Navbar mit Glasmorphism (`backdrop-blur-12`, `bg-background/80`)
+- [x] **navbar-glass**: Navbar mit Glasmorphism (`.glass-navbar`; Deckkraft und Weichzeichnung aus `--surface-alpha`/`--surface-blur`, gesteuert von der Achse `surfaces: translucent | solid` des Space bzw. der Instanz)
 - [x] **navbar-sticky**: Navbar bleibt beim Scrollen oben (`sticky top-0`)
 
 ---

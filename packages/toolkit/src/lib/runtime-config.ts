@@ -1,5 +1,6 @@
 import { scalesForColor } from "./color-scales"
 import { themeTokens } from "./theme-tokens"
+import { layoutTokens, readRadius, readSurfaces, type RadiusStep, type Surfaces } from "./space-theme"
 /**
  * Runtime-Konfiguration einer RLS-Instanz.
  *
@@ -39,6 +40,10 @@ export interface BrandingTheme {
   accent?: string
   /** Tönung der Flächen, 0–1. 0 = neutral. */
   tint?: number
+  /** Rundung, fünf Stufen: none | small | medium | large | full. */
+  radius?: RadiusStep
+  /** Flächen der App-Hülle: translucent | solid. */
+  surfaces?: Surfaces
 }
 
 export interface Branding {
@@ -290,6 +295,18 @@ function pickTheme(value: unknown): BrandingTheme | undefined {
     if (typeof tint === "number" && Number.isFinite(tint)) out.tint = Math.min(1, Math.max(0, tint))
     else console.warn(`[rls] branding.theme.tint="${String(tint)}" ist keine Zahl — uebersprungen.`)
   }
+  const radius = (value as Record<string, unknown>).radius
+  if (radius !== undefined) {
+    const step = readRadius(radius)
+    if (step) out.radius = step
+    else console.warn(`[rls] branding.theme.radius="${String(radius)}" ist keine bekannte Stufe — uebersprungen.`)
+  }
+  const surfaces = (value as Record<string, unknown>).surfaces
+  if (surfaces !== undefined) {
+    const kind = readSurfaces(surfaces)
+    if (kind) out.surfaces = kind
+    else console.warn(`[rls] branding.theme.surfaces="${String(surfaces)}" ist weder solid noch translucent — uebersprungen.`)
+  }
   return Object.keys(out).length > 0 ? out : undefined
 }
 
@@ -421,9 +438,14 @@ export function applyBranding(branding: Branding | undefined, doc: Document = do
   // tokenweise, was aus `theme` entstand.
   const derived = (scheme: "light" | "dark"): [string, string][] => {
     const theme = branding.theme
-    if (!theme || (theme.accent === undefined && theme.tint === undefined)) return []
-    const scales = scalesForColor(theme.accent ?? TOOLKIT_ACCENT, scheme, { tint: theme.tint })
-    return Object.entries(themeTokens({ ...scales, scheme })).map(([n, v]) => [n.slice(2), v])
+    if (!theme) return []
+    const colors =
+      theme.accent === undefined && theme.tint === undefined
+        ? {}
+        : themeTokens({ ...scalesForColor(theme.accent ?? TOOLKIT_ACCENT, scheme, { tint: theme.tint }), scheme })
+    // Rundung und Flaechen kennen kein Schema; sie stehen in beiden Bloecken.
+    const layout = layoutTokens({ radius: theme.radius, surfaces: theme.surfaces })
+    return Object.entries({ ...colors, ...layout }).map(([n, v]) => [n.slice(2), v])
   }
   const light = [...derived("light"), ...filterTokens(branding.colors?.light, known)]
   const dark = [...derived("dark"), ...filterTokens(branding.colors?.dark, known)]

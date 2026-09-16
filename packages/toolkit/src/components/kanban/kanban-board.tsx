@@ -582,7 +582,7 @@ export function KanbanBoard({
           manual touch handling. */}
       {!readOnly && draggedItemId !== null && (
         <div className="fixed bottom-20 left-4 right-4 z-40 animate-in slide-in-from-bottom-4 fade-in @3xl:hidden">
-          <div className="flex flex-wrap gap-2 p-2 rounded-xl border bg-background/95 backdrop-blur shadow-lg">
+          <div className="flex flex-wrap gap-2 p-2 rounded-xl border surface-glass shadow-lg">
             {resolvedColumns.filter((col) => col.id !== draggedItemColumnId).map((column) => (
               <div
                 key={column.id}

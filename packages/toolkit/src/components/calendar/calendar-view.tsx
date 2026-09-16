@@ -1320,7 +1320,7 @@ function EventList({ events, onEventClick }: EventListProps) {
     <div className="max-h-[720px] overflow-y-auto">
       {groups.map((group) => (
         <div key={group.key} className="border-b">
-          <div className="sticky top-0 z-10 border-b bg-card/95 px-4 py-3 backdrop-blur">
+          <div className="sticky top-0 z-10 border-b surface-glass px-4 py-3">
             <h3 className="font-semibold">{formatDayLabel(group.date)}</h3>
             <p className="text-sm text-muted-foreground">
               {group.events.length === 1 ? "1 Event" : `${group.events.length} Events`}

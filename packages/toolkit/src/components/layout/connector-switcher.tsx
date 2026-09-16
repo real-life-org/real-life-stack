@@ -32,7 +32,7 @@ export function ConnectorSwitcher({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-mono bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-accent transition-colors cursor-pointer">
+      <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-mono surface-glass border border-border shadow-lg hover:bg-accent transition-colors cursor-pointer">
         <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
         <span className="font-semibold">{active?.name ?? activeConnector}</span>
       </DropdownMenuTrigger>

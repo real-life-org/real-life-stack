@@ -223,6 +223,41 @@ describe("SpaceThemePanel", () => {
     }
   })
 
+  it("setzt Rundung und Flaechen und nimmt sie mit dem Reset zurueck", async () => {
+    render({ primaryColor: COLOR })
+    const radio = (label: string) => document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!
+    expect(radio("Rundung medium").getAttribute("aria-checked"), "Standard medium").toBe("true")
+    expect(radio("Flächen translucent").getAttribute("aria-checked"), "Standard durchscheinend").toBe("true")
+
+    await act(async () => { radio("Rundung large").click() })
+    expect(last("radius")).toBe("large")
+    expect(radio("Rundung large").getAttribute("aria-checked")).toBe("true")
+
+    await act(async () => { radio("Flächen solid").click() })
+    expect(last("surfaces")).toBe("solid")
+
+    await act(async () => { resetButton()!.click() })
+    for (let i = 0; i < 5; i++) await act(async () => { await Promise.resolve() })
+    const patch = saved.at(-1)!
+    expect(patch.radius).toBeNull()
+    expect(patch.surfaces).toBeNull()
+  })
+
+  it("erbt Rundung und Flaechen von der Instanz", async () => {
+    resetRuntimeConfigForTests()
+    await loadRuntimeConfig({
+      fetchImpl: (async () => ({ ok: true, status: 200, json: async () => ({ branding: { theme: { radius: "large", surfaces: "solid" } } }) })) as unknown as typeof fetch,
+    })
+    try {
+      render({})
+      expect(document.querySelector('button[aria-label="Rundung large"]')!.getAttribute("aria-checked")).toBe("true")
+      expect(document.querySelector('button[aria-label="Flächen solid"]')!.getAttribute("aria-checked")).toBe("true")
+      expect(resetButton(), "geerbt ist nicht gesetzt").toBeUndefined()
+    } finally {
+      resetRuntimeConfigForTests()
+    }
+  })
+
   /**
    * Das Panel bekommt die lebende Gruppe. Aendert sie sich von aussen —
    * anderes Geraet, Reset im Dialog — ziehen die Regler nach.

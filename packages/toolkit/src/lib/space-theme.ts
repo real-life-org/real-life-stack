@@ -49,3 +49,52 @@ export function colorFromAxes(axes: ColorAxes): string {
     h: ((axes.hue % 360) + 360) % 360,
   })
 }
+
+/**
+ * Rundung — fünf Stufen in Radix' Wortlaut. `--radius` ist bereits die eine
+ * Variable, aus der das Toolkit `sm`/`md`/`lg`/`xl` ableitet; die Stufe
+ * setzt nur diese eine.
+ */
+export const RADIUS_STEPS = {
+  none: "0rem",
+  small: "0.25rem",
+  medium: "0.5rem",
+  large: "0.75rem",
+  full: "1.25rem",
+} as const
+export type RadiusStep = keyof typeof RADIUS_STEPS
+export const RADIUS_ORDER: readonly RadiusStep[] = ["none", "small", "medium", "large", "full"]
+
+/** Flächen der App-Hülle (Navbar, Bottom-Nav, schwebende Leisten): durchscheinend oder deckend. */
+export const SURFACES = ["translucent", "solid"] as const
+export type Surfaces = (typeof SURFACES)[number]
+
+/** Was in `data.radius` steht — oder null, wenn keine bekannte Stufe. */
+export function readRadius(value: unknown): RadiusStep | null {
+  return typeof value === "string" && value in RADIUS_STEPS ? (value as RadiusStep) : null
+}
+
+/** Was in `data.surfaces` steht — oder null, wenn kein bekannter Wert. */
+export function readSurfaces(value: unknown): Surfaces | null {
+  return typeof value === "string" && (SURFACES as readonly string[]).includes(value) ? (value as Surfaces) : null
+}
+
+/**
+ * Die Variablen, die Rundung und Flächen tragen. Neben den Farbtokens die
+ * zweite Gruppe, die ein Space (oder die Instanz) am Wurzelelement setzt.
+ *
+ *   --radius          die eine Rundung, aus der alle anderen entstehen
+ *   --surface-alpha   Deckkraft durchscheinender Flächen (1 = deckend)
+ *   --surface-blur    Weichzeichnung dahinter (0 = keine)
+ */
+export const LAYOUT_TOKENS: readonly string[] = ["--radius", "--surface-alpha", "--surface-blur"]
+
+export function layoutTokens(axes: { radius?: RadiusStep | null; surfaces?: Surfaces | null }): Record<string, string> {
+  const out: Record<string, string> = {}
+  if (axes.radius) out["--radius"] = RADIUS_STEPS[axes.radius]
+  if (axes.surfaces) {
+    out["--surface-alpha"] = axes.surfaces === "solid" ? "1" : "0.8"
+    out["--surface-blur"] = axes.surfaces === "solid" ? "0px" : "12px"
+  }
+  return out
+}

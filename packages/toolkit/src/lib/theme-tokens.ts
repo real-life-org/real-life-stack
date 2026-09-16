@@ -23,6 +23,7 @@
  */
 
 import { type ColorScale, type ColorScheme } from "./color-scales"
+import { LAYOUT_TOKENS } from "./space-theme"
 import { contrastRatio, parseColor } from "./oklch"
 import { getReadableTextColor } from "./utils"
 
@@ -231,5 +232,5 @@ export function applyThemeTokens(element: HTMLElement, tokens: ThemeTokens): voi
 
 /** Nimmt zurück, was {@link applyThemeTokens} gesetzt hat. */
 export function clearThemeTokens(element: HTMLElement): void {
-  for (const name of SEMANTIC_TOKENS) element.style.removeProperty(name)
+  for (const name of [...SEMANTIC_TOKENS, ...LAYOUT_TOKENS]) element.style.removeProperty(name)
 }

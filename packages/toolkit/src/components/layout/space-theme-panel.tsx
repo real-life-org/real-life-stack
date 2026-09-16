@@ -19,7 +19,7 @@ import type { Group } from "@real-life-stack/data-interface"
 import { useColorScheme } from "../../hooks/use-color-scheme"
 import { scalesForColor } from "../../lib/color-scales"
 import { contrastChecks, themeTokens } from "../../lib/theme-tokens"
-import { colorAxes, colorFromAxes, readTint } from "../../lib/space-theme"
+import { colorAxes, colorFromAxes, RADIUS_ORDER, readRadius, readSurfaces, readTint, type RadiusStep, type Surfaces } from "../../lib/space-theme"
 import { cn, getSpacePrimaryColor } from "../../lib/utils"
 import { instanceTheme } from "../../lib/runtime-config"
 import { Button } from "../primitives/button"
@@ -38,10 +38,16 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
   // nach und gewinnt, sobald sie etwas anderes sagt (anderes Geraet, Reset).
   const storedColor = (group.data?.primaryColor as string | undefined) ?? null
   const storedTint = readTint(group.data?.tint)
+  const storedRadius = readRadius(group.data?.radius)
+  const storedSurfaces = readSurfaces(group.data?.surfaces)
   const [colorChoice, setColorChoice] = useState<string | null>(storedColor)
   const [tintChoice, setTintChoice] = useState<number | null>(storedTint)
+  const [radiusChoice, setRadiusChoice] = useState<RadiusStep | null>(storedRadius)
+  const [surfacesChoice, setSurfacesChoice] = useState<Surfaces | null>(storedSurfaces)
   useEffect(() => { setColorChoice(storedColor) }, [storedColor])
   useEffect(() => { setTintChoice(storedTint) }, [storedTint])
+  useEffect(() => { setRadiusChoice(storedRadius) }, [storedRadius])
+  useEffect(() => { setSurfacesChoice(storedSurfaces) }, [storedSurfaces])
 
   const [error, setError] = useState<string | null>(null)
 
@@ -75,6 +81,8 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
           pendingRef.current = null
           setColorChoice(storedColorRef.current)
           setTintChoice(storedTintRef.current)
+          setRadiusChoice(readRadius(groupRef.current.data?.radius))
+          setSurfacesChoice(readSurfaces(groupRef.current.data?.surfaces))
           setError(err instanceof Error ? err.message : "Aussehen konnte nicht gespeichert werden")
         }
       }
@@ -90,16 +98,19 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
         : { groupId: group.id, data }
     void flush()
   }
+  const groupRef = useRef(group)
+  groupRef.current = group
   const storedColorRef = useRef(storedColor)
   storedColorRef.current = storedColor
   const storedTintRef = useRef(storedTint)
   storedTintRef.current = storedTint
 
   const effectiveColor = getSpacePrimaryColor(group.id, colorChoice)
-  // Ohne eigene Toenung erbt der Space die der Instanz (Kaskade). Der Regler
-  // zeigt, was gilt. Eine explizite 0 bleibt 0 ("keine Toenung"); nur der
-  // Reset schreibt null und stellt die Vererbung wieder her.
-  const inheritedTint = instanceTheme().tint ?? 0
+  // Ohne eigene Achsen erbt der Space die der Instanz (Kaskade). Die Regler
+  // zeigen, was gilt. Eine explizite Toenung 0 bleibt 0 ("keine Toenung");
+  // nur der Reset schreibt null und stellt die Vererbung wieder her.
+  const inherited = instanceTheme()
+  const inheritedTint = inherited.tint ?? 0
   const effectiveTint = tintChoice ?? inheritedTint
   const axes = colorAxes(effectiveColor)
   const setAxis = (key: keyof typeof axes, value: number) => {
@@ -111,11 +122,23 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
     setTintChoice(tint)
     write({ tint })
   }
+  const effectiveRadius: RadiusStep = radiusChoice ?? inherited.radius ?? "medium"
+  const effectiveSurfaces: Surfaces = surfacesChoice ?? inherited.surfaces ?? "translucent"
+  const setRadius = (radius: RadiusStep) => {
+    setRadiusChoice(radius)
+    write({ radius })
+  }
+  const setSurfaces = (surfaces: Surfaces) => {
+    setSurfacesChoice(surfaces)
+    write({ surfaces })
+  }
   /** EIN Reset fuer alles, was der Space am Aussehen gesetzt hat. */
   const reset = () => {
     setColorChoice(null)
     setTintChoice(null)
-    write({ primaryColor: null, tint: null })
+    setRadiusChoice(null)
+    setSurfacesChoice(null)
+    write({ primaryColor: null, tint: null, radius: null, surfaces: null })
   }
 
   const scheme = useColorScheme()
@@ -181,6 +204,55 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
           </label>
         </div>
 
+        {/* Rundung und Flaechen — die zwei Achsen, die Radix `radius` und
+            `panelBackground` nennt. Knoepfe statt Regler: fuenf benannte
+            Stufen, zwei Zustaende. */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="w-20 shrink-0 text-muted-foreground">Rundung</span>
+            <div className="flex flex-1 gap-1" role="radiogroup" aria-label="Rundung">
+              {RADIUS_ORDER.map((step) => (
+                <button
+                  key={step}
+                  type="button"
+                  role="radio"
+                  aria-checked={effectiveRadius === step}
+                  aria-label={`Rundung ${step}`}
+                  onClick={() => setRadius(step)}
+                  className={cn(
+                    "h-7 flex-1 border text-[11px] transition-colors",
+                    effectiveRadius === step ? "border-primary bg-accent text-accent-foreground" : "border-border text-muted-foreground hover:text-foreground",
+                  )}
+                  style={{ borderRadius: ["0", "3px", "6px", "9px", "999px"][RADIUS_ORDER.indexOf(step)] }}
+                >
+                  {["–", "S", "M", "L", "XL"][RADIUS_ORDER.indexOf(step)]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-xs">
+            <span className="w-20 shrink-0 text-muted-foreground">Flächen</span>
+            <div className="flex flex-1 gap-1" role="radiogroup" aria-label="Flächen">
+              {([["translucent", "Durchscheinend"], ["solid", "Deckend"]] as const).map(([kind, label]) => (
+                <button
+                  key={kind}
+                  type="button"
+                  role="radio"
+                  aria-checked={effectiveSurfaces === kind}
+                  aria-label={`Flächen ${kind}`}
+                  onClick={() => setSurfaces(kind)}
+                  className={cn(
+                    "h-7 flex-1 rounded-md border text-[11px] transition-colors",
+                    effectiveSurfaces === kind ? "border-primary bg-accent text-accent-foreground" : "border-border text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Was das fuer die Lesbarkeit bedeutet. Die Knopfschrift ist mit
             Absicht weiss (siehe getReadableTextColor) und kann darum unter
             3:1 liegen — gezeigt wird es trotzdem. */}
@@ -196,7 +268,7 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
           ))}
         </div>
 
-        {(colorChoice != null || tintChoice != null) && (
+        {(colorChoice != null || tintChoice != null || radiusChoice != null || surfacesChoice != null) && (
           <Button variant="outline" size="sm" onClick={reset}>
             <RotateCcw className="h-3.5 w-3.5" />
             Zurücksetzen

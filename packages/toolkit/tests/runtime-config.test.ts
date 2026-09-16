@@ -499,3 +499,28 @@ describe("branding.theme — Achsen der Instanz", () => {
     expect(block).not.toContain("--chart-1")
   })
 })
+
+describe("branding.theme — Rundung und Flaechen", () => {
+  beforeEach(() => {
+    resetRuntimeConfigForTests()
+    brandingZuruecksetzen()
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  it("liest bekannte Stufen und verwirft unbekannte", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const cfg = await loadRuntimeConfig({
+      fetchImpl: stubFetch({ ok: true, json: { branding: { theme: { radius: "large", surfaces: "glass" } } } }),
+    })
+    expect(cfg.branding?.theme).toEqual({ radius: "large" })
+    expect(warn).toHaveBeenCalled()
+  })
+
+  it("legt Rundung und Flaechen in beide Bloecke — sie kennen kein Schema", () => {
+    applyBranding({ theme: { radius: "large", surfaces: "solid" } })
+    const block = document.getElementById("rls-branding")?.textContent ?? ""
+    expect(block.split("--radius: 0.75rem").length - 1).toBe(2)
+    expect(block.split("--surface-alpha: 1").length - 1).toBe(2)
+    expect(wirksam("--radius")).toBe("0.75rem")
+  })
+})
