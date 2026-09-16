@@ -155,6 +155,7 @@ Regeln:
 2. Neue Metadatenfelder MÜSSEN demselben Muster folgen: Wert in `Group.data.<feld>`, Abbildung nach `_meta` über `updateGroup`. Ein Feld, das das Sync-Vokabular als Framework-Feld führt, wird auf dessen festen Schlüssel abgebildet; jedes andere Feld wandert nach `_meta.appData.<feld>`.
 3. `updateGroup` behandelt `data` als flachen PATCH, nicht als Ersetzung: gelistete Schlüssel werden über die gespeicherten gemergt, `null` löscht einen Schlüssel (JSON Merge Patch, RFC 7386, Tiefe 1). Nicht genannte Felder bleiben unangetastet — nur so können mehrere unabhängige Schreiber (etwa Logo-Upload und Modul-Sortierung in derselben Dialog-Sitzung) sich nicht gegenseitig überschreiben. Connectoren MÜSSEN diese Semantik über die gemeinsame Implementierung `applyGroupDataPatch` erfüllen.
 4. Abgeleitete Anzeigefelder (z.B. `scope`) sind KEINE Metadaten und werden nicht gesynct.
+5. `image` MUSS eine **selbsttragende** Bildquelle sein: eine Data-URL, wie sie der Space-Dialog beim Hochladen schreibt, oder eine absolute URL. Ein relativer Pfad ist unzulässig — seine Auflösung bräuchte den Basispfad, und der ist nach [Spec 11](11-runtime-config-und-branding.md) Build-Zeit-Sache des Auslieferungs-Layouts, die eine Lesefläche im Toolkit nicht kennt. Für dasselbe Bild DARF es kein zweites Feld geben: `avatar` stand bis 09/2026 daneben, wurde an genau einer Stelle aufgelöst und blieb überall sonst unsichtbar — unter anderem im Space-Dialog (rls#382).
 
 ### Space-Primärfarbe
 
