@@ -8,6 +8,7 @@ import {
   GRAY_SCALE_OPTIONS,
   namedScale,
   pickTemplate,
+  withOverrides,
   type ColorScheme,
 } from "../src/lib/color-scales"
 import { parseColor } from "../src/lib/oklch"
@@ -240,5 +241,48 @@ describe("grayFor — Paarung von Akzent und Neutral", () => {
       grayFor({ l: 0.6, c: 0.15, h: i * 10 }))
     const wechsel = picks.filter((g, i) => i > 0 && g !== picks[i - 1]).length
     expect(wechsel, `Wechsel: ${picks.join(" ")}`).toBeLessThanOrEqual(GRAY_SCALE_OPTIONS.length)
+  })
+})
+
+/**
+ * Einzelne Stufen von Hand setzen.
+ *
+ * Die Ableitung trifft nicht jeden Geschmack, und manchmal will ein Space
+ * genau diesen einen Ton. Ueberschrieben wird darum stufenweise: was
+ * gesetzt ist, gilt; was fehlt, kommt weiter aus der Ableitung. So bleibt
+ * eine Aenderung der Ableitung auch spaeter noch wirksam — anders als beim
+ * Einfrieren aller zwoelf Werte.
+ */
+describe("withOverrides — einzelne Stufen von Hand", () => {
+  const base = deriveColorScale("#e87520", "light")
+
+  it("laesst ohne Ueberschreibungen alles, wie es war", () => {
+    expect(withOverrides(base, {})).toEqual(base)
+    expect(withOverrides(base, undefined)).toEqual(base)
+  })
+
+  it("setzt genau die genannte Stufe", () => {
+    const got = withOverrides(base, { 9: "#123456" })
+    expect(got[8]).toBe("#123456")
+    for (let i = 0; i < 12; i++) if (i !== 8) expect(got[i], `Stufe ${i + 1}`).toBe(base[i])
+  })
+
+  it("nimmt mehrere Stufen auf einmal", () => {
+    const got = withOverrides(base, { 1: "#ffffff", 12: "#000000" })
+    expect(got[0]).toBe("#ffffff")
+    expect(got[11]).toBe("#000000")
+    expect(got[5]).toBe(base[5])
+  })
+
+  it("ignoriert Stufen, die es nicht gibt, und unlesbare Werte", () => {
+    // Die Werte kommen aus `Group.data` und damit aus dem Sync — was dort
+    // steht, ist nicht geprueft.
+    const got = withOverrides(base, { 0: "#fff", 13: "#000", 99: "#abc", 5: "kein hex" } as never)
+    expect(got).toEqual(base)
+  })
+
+  it("nimmt auch Schluessel als Zeichenkette", () => {
+    // Aus JSON kommen Objektschluessel immer als Zeichenketten zurueck.
+    expect(withOverrides(base, { "9": "#123456" } as never)[8]).toBe("#123456")
   })
 })

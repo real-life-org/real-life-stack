@@ -311,3 +311,38 @@ export function scalesForColor(
     gray: namedScale(parsed ? grayFor(parsed) : "gray", scheme),
   }
 }
+
+/** Was von Hand gesetzt wurde: Stufennummer (1–12) auf Hex-Wert. */
+export type ScaleOverrides = Record<number | string, string>
+
+/**
+ * Einzelne Stufen von Hand setzen.
+ *
+ * Die Ableitung ist gut, aber nicht allwissend — manchmal will ein Space
+ * genau diesen einen Ton. Überschrieben wird darum stufenweise und nicht
+ * als ganze Skala: was gesetzt ist, gilt; was fehlt, kommt weiter aus der
+ * Ableitung. Wird die Ableitung später besser, wirkt das auch in Spaces,
+ * die eine Stufe angefasst haben.
+ *
+ * Die Werte kommen über `Group.data` aus dem Sync und sind damit ungeprüft:
+ * unbekannte Stufen und unlesbare Farben werden still übergangen, statt die
+ * Oberfläche eines Space unbrauchbar zu machen.
+ */
+export function withOverrides(
+  scale: ColorScale,
+  overrides: ScaleOverrides | undefined,
+): ColorScale {
+  if (!overrides) return scale
+  const out = [...scale]
+  let touched = false
+  for (const [key, value] of Object.entries(overrides)) {
+    const n = Number(key)
+    if (!Number.isInteger(n) || n < 1 || n > 12) continue
+    const parsed = typeof value === "string" ? parseColor(value) : null
+    if (!parsed) continue
+    // Normalisiert, damit die Skala durchgehend dasselbe Format trägt.
+    out[n - 1] = oklchToHex(parsed)
+    touched = true
+  }
+  return touched ? (out as unknown as ColorScale) : scale
+}
