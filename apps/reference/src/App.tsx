@@ -105,7 +105,6 @@ import { useItemFocus } from "./hooks/use-item-focus"
  * Der Host holt sie sich je Render aus `useGroups`.
  */
 function SpaceThemePanelHost({ groupId }: { groupId: string }) {
-  const panel = useModulePanel()
   const { data: groups } = useGroups()
   const updateGroup = useUpdateGroup()
   const group = groups.find((g) => g.id === groupId)
@@ -114,7 +113,6 @@ function SpaceThemePanelHost({ groupId }: { groupId: string }) {
     <SpaceThemePanel
       group={group}
       onUpdateGroup={async (id, updates) => { await updateGroup(id, updates) }}
-      onClose={() => panel.close()}
     />
   )
 }

@@ -13,7 +13,7 @@
  * kleinen Host, der die Gruppe je Render neu heraussucht.
  */
 import { useEffect, useMemo, useRef, useState } from "react"
-import { RotateCcw, SlidersHorizontal, X } from "lucide-react"
+import { RotateCcw, SlidersHorizontal } from "lucide-react"
 import type { Group } from "@real-life-stack/data-interface"
 
 import { useColorScheme } from "../../hooks/use-color-scheme"
@@ -27,11 +27,10 @@ import { createLatestWinsSaver } from "./group-dialog"
 export interface SpaceThemePanelProps {
   group: Group
   onUpdateGroup: (id: string, updates: { data?: Record<string, unknown> }) => Promise<void> | void
-  onClose?: () => void
   className?: string
 }
 
-export function SpaceThemePanel({ group, onUpdateGroup, onClose, className }: SpaceThemePanelProps) {
+export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemePanelProps) {
   const onUpdateRef = useRef(onUpdateGroup)
   onUpdateRef.current = onUpdateGroup
 
@@ -111,11 +110,6 @@ export function SpaceThemePanel({ group, onUpdateGroup, onClose, className }: Sp
           <div className="truncate text-sm font-semibold">Feineinstellung</div>
           <div className="truncate text-xs text-muted-foreground">{group.name}</div>
         </div>
-        {onClose && (
-          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Schließen">
-            <X className="h-4 w-4" />
-          </Button>
-        )}
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
