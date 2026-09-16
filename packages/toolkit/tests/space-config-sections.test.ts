@@ -4,6 +4,8 @@ import {
   groupMembersForDisplay,
   resolveConfigSection,
   activeSpaceSwatch,
+  countAccentSteps,
+  readAccentSteps,
   filterInvitableContacts,
   showsMemberSearch,
   spaceConfigSections,
@@ -291,5 +293,53 @@ describe("activeSpaceSwatch", () => {
     // Wer den Waehler benutzt, kann jeden Wert setzen — auch einen, der
     // aussieht wie eine Bildfarbe. Entscheidend ist, dass gewaehlt wurde.
     expect(activeSpaceSwatch("#7a3b21", "#112233")).toBe("custom")
+  })
+})
+
+/**
+ * Was aus `data.accentSteps` gelesen wird.
+ *
+ * Der Wert kommt durch den WoT-Sync: ein anderes Geraet, eine aeltere
+ * Fassung oder ein Tippfehler von Hand koennen alles Moegliche hineinlegen.
+ * Unbrauchbares faellt weg, statt den Bereich "Aussehen" mitzureissen.
+ */
+describe("readAccentSteps", () => {
+  it("nimmt Stufen 1 bis 12 mit lesbarem Farbwert", () => {
+    expect(readAccentSteps({ 1: "#ffffff", 9: "#123456", 12: "#000000" }))
+      .toEqual({ 1: "#ffffff", 9: "#123456", 12: "#000000" })
+  })
+
+  it("vereinheitlicht die Schreibweise", () => {
+    expect(readAccentSteps({ 9: "#AABBCC" })).toEqual({ 9: "#aabbcc" })
+  })
+
+  it("wirft weg, was keine Stufe ist", () => {
+    expect(readAccentSteps({ 0: "#ffffff", 13: "#ffffff", x: "#ffffff", "1.5": "#ffffff" }))
+      .toEqual({})
+  })
+
+  it("wirft weg, was keine Farbe ist", () => {
+    expect(readAccentSteps({ 9: "rot", 8: "#abc", 7: 42, 6: null, 5: { hex: "#ffffff" } }))
+      .toEqual({})
+  })
+
+  it("vertraegt alles, was kein Objekt ist", () => {
+    for (const value of [null, undefined, 42, "nope", [1, 2], true]) {
+      expect(readAccentSteps(value), String(value)).toEqual({})
+    }
+  })
+
+  it("laesst sich nicht ueber den Prototyp vergiften", () => {
+    // `{}` erbt von Object.prototype; ohne Vorsicht taucht dort Fremdes auf.
+    const steps = readAccentSteps(JSON.parse('{"9":"#123456","__proto__":{"12":"#ff0000"}}'))
+    expect(steps).toEqual({ 9: "#123456" })
+    expect(Object.keys(steps)).toEqual(["9"])
+  })
+})
+
+describe("countAccentSteps", () => {
+  it("zaehlt, was gesetzt ist", () => {
+    expect(countAccentSteps({})).toBe(0)
+    expect(countAccentSteps({ 9: "#123456", 12: "#000000" })).toBe(2)
   })
 })

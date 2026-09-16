@@ -8,6 +8,7 @@ import {
   GRAY_SCALE_OPTIONS,
   namedScale,
   pickTemplate,
+  scalesForColor,
   withOverrides,
   type ColorScheme,
 } from "../src/lib/color-scales"
@@ -284,5 +285,30 @@ describe("withOverrides — einzelne Stufen von Hand", () => {
   it("nimmt auch Schluessel als Zeichenkette", () => {
     // Aus JSON kommen Objektschluessel immer als Zeichenketten zurueck.
     expect(withOverrides(base, { "9": "#123456" } as never)[8]).toBe("#123456")
+  })
+})
+
+/**
+ * Die Ueberschreibungen gehoeren an die eine Stelle, an der beide Skalen
+ * entstehen. Sonst muss jeder Aufrufer daran denken, sie anzuwenden — und
+ * genau das vergisst irgendwann einer.
+ */
+describe("scalesForColor mit gesetzten Stufen", () => {
+  it("legt gesetzte Stufen ueber die Akzentskala", () => {
+    const plain = scalesForColor("#e87520", "light")
+    const fixed = scalesForColor("#e87520", "light", { 9: "#123456" })
+    expect(fixed.accent[8]).toBe("#123456")
+    expect(fixed.accent[0]).toBe(plain.accent[0])
+  })
+
+  it("laesst die neutrale Skala unberuehrt", () => {
+    // Die Graustufen sind Radix' Paarung zur Akzentfarbe, keine Gestaltung.
+    const plain = scalesForColor("#e87520", "light")
+    const fixed = scalesForColor("#e87520", "light", { 9: "#123456" })
+    expect(fixed.gray).toEqual(plain.gray)
+  })
+
+  it("aendert ohne Angabe nichts", () => {
+    expect(scalesForColor("#e87520", "dark", {})).toEqual(scalesForColor("#e87520", "dark"))
   })
 })

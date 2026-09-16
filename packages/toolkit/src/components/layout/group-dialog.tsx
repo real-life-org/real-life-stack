@@ -1,10 +1,16 @@
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, RotateCcw, Check as CheckIcon, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
 import { cn, getReadableTextColor, getSpacePrimaryColor, resolveAssetUrl, SPACE_COLOR_SWATCHES } from "../../lib/utils"
+import { scalesForColor, type ScaleOverrides } from "../../lib/color-scales"
+import { contrastChecks, themeTokens } from "../../lib/theme-tokens"
+import { useColorScheme } from "../../hooks/use-color-scheme"
+
+/** Genau `#rrggbb` — das Format, in dem Farben hier gespeichert werden. */
+const HEX6 = /^#[0-9a-fA-F]{6}$/
 import {
   Dialog,
   DialogContent,
@@ -132,6 +138,31 @@ export function spaceConfigSections({
   if (canTheme) sections.push({ id: "theme", label: "Aussehen", icon: Contrast })
   if (isAdmin) sections.push({ id: "modules", label: "Module", icon: LayoutGrid })
   return sections
+}
+
+/**
+ * Was in `data.accentSteps` steht, als brauchbare Ueberschreibungen.
+ *
+ * Der Wert kommt durch den WoT-Sync und ist ungeprueft: ein anderes Geraet,
+ * eine aeltere Fassung oder ein Tippfehler von Hand koennen alles Moegliche
+ * hineinlegen. Was nicht Stufe 1–12 mit einem lesbaren Farbwert ist, faellt
+ * weg — die Skala hat dann eben eine Stufe weniger gesetzt, statt dass der
+ * Bereich "Aussehen" unbrauchbar wird.
+ */
+export function readAccentSteps(value: unknown): ScaleOverrides {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  const out: ScaleOverrides = {}
+  for (const [key, hex] of Object.entries(value as Record<string, unknown>)) {
+    const n = Number(key)
+    if (!Number.isInteger(n) || n < 1 || n > 12) continue
+    if (typeof hex === "string" && HEX6.test(hex)) out[n] = hex.toLowerCase()
+  }
+  return out
+}
+
+/** Wie viele Stufen von Hand gesetzt sind. */
+export function countAccentSteps(steps: ScaleOverrides): number {
+  return Object.keys(steps).length
 }
 
 /**
@@ -494,6 +525,49 @@ export function GroupDialog({
       () => setColorError(null),
     )
   }
+  /**
+   * Einzelne Stufen der Akzentskala, von Hand gesetzt.
+   *
+   * Ein eigener Saver neben dem fuer die Farbe, obwohl beide in dieselbe
+   * `data` schreiben: "der letzte gewinnt" gilt je Wert, und die beiden sind
+   * unabhaengig. Teilten sie sich einen, verdraengte eine Farbwahl eine kurz
+   * zuvor eingereihte Stufenaenderung.
+   */
+  const [accentSteps, setAccentSteps] = useState<ScaleOverrides>(() =>
+    mode.type === "edit" ? readAccentSteps(mode.group.data?.accentSteps) : {},
+  )
+  const saveAccentStepsRef = useRef<((v: { groupId: string; steps: ScaleOverrides }) => void) | null>(null)
+  if (!saveAccentStepsRef.current) {
+    saveAccentStepsRef.current = createLatestWinsSaver<{ groupId: string; steps: ScaleOverrides }>(
+      ({ groupId: target, steps }) =>
+        // `Group.data` ist ein Merge-Patch der Tiefe 1: das Objekt wird als
+        // Ganzes ersetzt, nicht Stufe fuer Stufe gemischt. Ohne gesetzte
+        // Stufe loescht `null` den Schluessel.
+        onUpdateGroupRef.current(target, {
+          data: { accentSteps: countAccentSteps(steps) > 0 ? steps : null },
+        }),
+      (err, failed, lastSaved) => {
+        const current = modeRef.current
+        if (current.type === "edit" && failed.groupId === current.group.id) {
+          setAccentSteps(
+            lastSaved?.groupId === current.group.id
+              ? lastSaved.steps
+              : readAccentSteps(current.group.data?.accentSteps),
+          )
+        }
+        setColorError(err instanceof Error ? err.message : "Stufe konnte nicht gespeichert werden")
+      },
+      () => setColorError(null),
+    )
+  }
+
+  /** Die EINE Stelle, an der gesetzte Stufen umgesetzt werden. */
+  const rememberAccentSteps = (next: ScaleOverrides) => {
+    if (!isEdit) return
+    setAccentSteps(next)
+    saveAccentStepsRef.current?.({ groupId: mode.group.id, steps: next })
+  }
+
   const applyModules = useCallback((next: string[]) => {
     setActiveModules(next)
     saveModulesRef.current?.(next)
@@ -784,6 +858,51 @@ export function GroupDialog({
     const derived = await dominantColor(resolveAssetUrl(groupImage) ?? groupImage).catch(() => null)
     if (ticket !== colorRequestRef.current) return
     applyPrimaryColor(derived)
+  }
+
+  /**
+   * Die Skala, wie der Space sie gerade traegt — Ableitung plus das, was von
+   * Hand gesetzt ist. Dieselbe Rechnung wie in der App, damit die Anzeige
+   * hier nicht etwas anderes behauptet als die Flaechen daneben.
+   *
+   * Das Schema kommt vom Menschen: wer auf dunkel schaltet, sieht die
+   * dunklen Stufen — es gibt keine zweite Wahrheit fuer den Dialog.
+   */
+  const scheme = useColorScheme()
+  const scales = useMemo(
+    () => scalesForColor(effectiveColor, scheme, accentSteps),
+    [effectiveColor, scheme, accentSteps],
+  )
+  /**
+   * Was die gesetzten Stufen fuer die Lesbarkeit bedeuten.
+   *
+   * Nur die Paare, die an der Akzentskala haengen — die neutralen kann der
+   * Space hier gar nicht anfassen, und sie zu zeigen hiesse, Aufmerksamkeit
+   * auf etwas zu lenken, woran niemand drehen kann.
+   */
+  const accentChecks = useMemo(
+    () => contrastChecks(themeTokens({ ...scales, scheme }), { accentOnly: true }),
+    [scales, scheme],
+  )
+
+  /** Die Skala, wie sie OHNE gesetzte Stufen aussaehe — der Vergleichsmassstab. */
+  const derived = useMemo(() => scalesForColor(effectiveColor, scheme).accent, [effectiveColor, scheme])
+
+  const setStepCount = countAccentSteps(accentSteps)
+
+  /**
+   * Eine einzelne Stufe setzen — oder sie wieder der Ableitung ueberlassen.
+   *
+   * Trifft der gewaehlte Wert genau das, was die Ableitung ohnehin liefert,
+   * wird nichts gespeichert. Eine Ueberschreibung, die nichts ueberschreibt,
+   * fiele nur auf: sie friere die Stufe auf ihrem heutigen Wert ein und
+   * naehme ihr jede spaetere Verbesserung der Ableitung.
+   */
+  const setAccentStep = (step: number, hex: string) => {
+    const next = { ...accentSteps }
+    if (derived[step - 1] === hex.toLowerCase()) delete next[step]
+    else next[step] = hex.toLowerCase()
+    rememberAccentSteps(next)
   }
 
   /** Zahlen am Menue — die Suche aendert sie nicht, sie zaehlen den Bestand. */
@@ -1332,6 +1451,67 @@ export function GroupDialog({
                 >
                   <RotateCcw className="h-3 w-3" />
                   Zurück zur Standardfarbe
+                </button>
+              )}
+
+              {/* Die zwoelf Stufen, die aus der Farbe entstehen.
+                  Radix gibt ihnen feste Rollen: 1 ist der App-Hintergrund, 3
+                  die ruhende Flaeche, 6 der Rahmen, 9 die Fuellung unter
+                  Knoepfen, 12 der starke Text. Die Ableitung trifft das meist
+                  — und wo nicht, setzt man die eine Stufe von Hand, statt die
+                  ganze Farbe zu wechseln. */}
+              <MemberGroupLabel>Stufen</MemberGroupLabel>
+
+              <div className="flex items-stretch gap-0.5 px-2.5 py-2">
+                {scales.accent.map((hex, index) => {
+                  const step = index + 1
+                  const set = accentSteps[step] != null
+                  return (
+                    <label
+                      key={step}
+                      title={`Stufe ${step} · ${hex}${set ? " · von Hand gesetzt" : ""}`}
+                      style={{ backgroundColor: hex }}
+                      className={cn(
+                        "relative flex h-9 flex-1 cursor-pointer items-center justify-center rounded-sm text-[10px] transition-transform hover:scale-y-110",
+                        set && "ring-1 ring-foreground ring-offset-1 ring-offset-background",
+                      )}
+                    >
+                      <span style={{ color: getReadableTextColor(hex) }}>{step}</span>
+                      <input
+                        type="color"
+                        aria-label={`Stufe ${step}`}
+                        value={hex}
+                        onChange={(e) => setAccentStep(step, e.target.value)}
+                        className="sr-only"
+                      />
+                    </label>
+                  )
+                })}
+              </div>
+
+              {/* Was die Aenderung fuer die Lesbarkeit bedeutet. Ohne diese
+                  Zeilen merkt man erst im Betrieb, dass eine Beschriftung in
+                  ihrem Knopf verschwunden ist. */}
+              <div className="space-y-0.5 px-2.5 pt-1">
+                {accentChecks.map((check) => (
+                  <div key={check.label} className="flex items-baseline justify-between text-xs">
+                    <span className="text-muted-foreground">{check.label}</span>
+                    <span className={cn("tabular-nums", check.ok ? "text-muted-foreground" : "text-destructive")}>
+                      {check.ratio.toFixed(1)}:1
+                      {!check.ok && <span className="ml-1">· {check.minimum}:1 nötig</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {setStepCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => rememberAccentSteps({})}
+                  className="mx-2.5 mt-2 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  {setStepCount === 1 ? "Eine Stufe" : `${setStepCount} Stufen`} von Hand · zurücksetzen
                 </button>
               )}
 

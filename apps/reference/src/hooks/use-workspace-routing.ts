@@ -7,6 +7,7 @@ import {
   useItem,
   getSpacePrimaryColor,
   scalesForColor,
+  readAccentSteps,
   themeTokens,
   applyThemeTokens,
   clearThemeTokens,
@@ -172,6 +173,7 @@ export function useWorkspaceRouting(): WorkspaceRouting {
         avatar: g.data?.image as string | undefined,
         scope: g.data?.scope as string | undefined,
         primaryColor: g.data?.primaryColor as string | undefined,
+        accentSteps: readAccentSteps(g.data?.accentSteps),
       })),
     ],
     [groups]
@@ -318,9 +320,12 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     // `scalesForColor` waehlt zur Akzentskala den Grauton, der sie ergaenzt
     // — Radix paart beides automatisch. Der Unterschied ist klein und soll
     // es sein: er gestaltet nicht, er stimmt ab.
-    applyThemeTokens(root, themeTokens({ ...scalesForColor(seed, scheme), scheme }))
+    // Von Hand gesetzte Stufen gelten ueber der Ableitung — stufenweise, so
+    // dass alles Uebrige weiter mitzieht.
+    const scales = scalesForColor(seed, scheme, activeWorkspace.accentSteps)
+    applyThemeTokens(root, themeTokens({ ...scales, scheme }))
     return () => clearThemeTokens(root)
-  }, [activeWorkspace?.id, activeWorkspace?.primaryColor, isOverview, scheme])
+  }, [activeWorkspace?.id, activeWorkspace?.primaryColor, activeWorkspace?.accentSteps, isOverview, scheme])
 
   // Switch workspace (keep the module if offered). Item focus is space-scoped → dropped.
   const handleWorkspaceChange = useCallback((workspace: Workspace) => {

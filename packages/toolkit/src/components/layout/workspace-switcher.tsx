@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/primitives/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
+import { type ScaleOverrides } from "../../lib/color-scales"
 
 export interface Workspace {
   id: string
@@ -20,6 +21,11 @@ export interface Workspace {
   scope?: string
   /** Cached accent color (`#rrggbb`); falls back to a deterministic id color. */
   primaryColor?: string
+  /**
+   * Einzelne Stufen der Akzentskala, die der Space von Hand gesetzt hat
+   * (Stufe 1–12 auf `#rrggbb`). Was fehlt, kommt aus der Ableitung.
+   */
+  accentSteps?: ScaleOverrides
 }
 
 interface WorkspaceSwitcherProps {

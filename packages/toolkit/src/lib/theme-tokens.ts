@@ -171,6 +171,65 @@ export function themeTokens({ accent, gray, scheme }: ThemeTokenInput): ThemeTok
   }
 }
 
+/**
+ * Welcher Text auf welcher Flaeche steht — und wie viel Kontrast er braucht.
+ *
+ * WCAG 2 unterscheidet: Fliesstext 4.5:1, Bedienelemente und grosse Schrift
+ * 3:1. Die Fuellflaeche (Stufe 9) traegt Knoepfe und Abzeichen, dort ist 3:1
+ * die richtige Latte — eine pauschale 4.5 waere kein Mehr an Strenge,
+ * sondern ein falscher Massstab: sie verboete jede kraeftige Akzentfarbe.
+ *
+ * Die Liste steht hier und nicht im Test, weil zwei Seiten sie brauchen: die
+ * Zusicherung, dass eine frei gewaehlte Farbe nichts unlesbar macht, und die
+ * Anzeige im Space, die beim Setzen einzelner Stufen zeigt, was gerade kippt.
+ * `accent` markiert die Paare, an denen die Akzentskala haengt.
+ */
+export interface TokenPair {
+  label: string
+  foreground: string
+  background: string
+  minimum: number
+  /** Haengt dieses Paar an der Akzentskala (und damit an gesetzten Stufen)? */
+  accent: boolean
+}
+
+export const TOKEN_PAIRS: readonly TokenPair[] = [
+  { label: "Text", foreground: "--foreground", background: "--background", minimum: 4.5, accent: false },
+  { label: "Text auf Karten", foreground: "--card-foreground", background: "--card", minimum: 4.5, accent: false },
+  { label: "Text in Aufklappern", foreground: "--popover-foreground", background: "--popover", minimum: 4.5, accent: false },
+  { label: "Schwacher Text", foreground: "--muted-foreground", background: "--background", minimum: 4.5, accent: false },
+  { label: "Schwacher Text auf Flaeche", foreground: "--muted-foreground", background: "--muted", minimum: 4.5, accent: false },
+  { label: "Text auf Nebenflaeche", foreground: "--secondary-foreground", background: "--secondary", minimum: 4.5, accent: false },
+  { label: "Knopfbeschriftung", foreground: "--primary-foreground", background: "--primary", minimum: 3, accent: true },
+  { label: "Text auf Akzentflaeche", foreground: "--accent-foreground", background: "--accent", minimum: 4.5, accent: true },
+  { label: "Text im Seitenmenue", foreground: "--sidebar-foreground", background: "--sidebar", minimum: 4.5, accent: false },
+  { label: "Knopf im Seitenmenue", foreground: "--sidebar-primary-foreground", background: "--sidebar-primary", minimum: 3, accent: true },
+  { label: "Auswahl im Seitenmenue", foreground: "--sidebar-accent-foreground", background: "--sidebar-accent", minimum: 4.5, accent: true },
+  // WCAG 2.2: Fokusindikatoren brauchen 3:1 gegen ihre Umgebung.
+  { label: "Fokusring", foreground: "--ring", background: "--background", minimum: 3, accent: true },
+]
+
+export interface ContrastCheck extends TokenPair {
+  ratio: number
+  ok: boolean
+}
+
+/**
+ * Was die Paare in einem konkreten Tokensatz erreichen.
+ *
+ * Fuer die Anzeige im Space gedacht: wer eine Stufe von Hand setzt, sieht
+ * sofort, ob dabei etwas unlesbar wird — statt es erst im Betrieb zu merken.
+ */
+export function contrastChecks(
+  tokens: ThemeTokens,
+  options: { accentOnly?: boolean } = {},
+): ContrastCheck[] {
+  return TOKEN_PAIRS.filter((pair) => !options.accentOnly || pair.accent).map((pair) => {
+    const ratio = contrast(tokens[pair.foreground], tokens[pair.background])
+    return { ...pair, ratio, ok: ratio >= pair.minimum }
+  })
+}
+
 /** Schreibt die Tokens auf ein Element — üblicherweise das Wurzelelement. */
 export function applyThemeTokens(element: HTMLElement, tokens: ThemeTokens): void {
   for (const [name, value] of Object.entries(tokens)) {

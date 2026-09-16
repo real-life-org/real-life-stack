@@ -304,10 +304,15 @@ export function deriveColorScale(
 export function scalesForColor(
   color: string,
   scheme: ColorScheme,
+  overrides?: ScaleOverrides,
 ): { accent: ColorScale; gray: ColorScale } {
   const parsed = parseColor(color)
   return {
-    accent: deriveColorScale(color, scheme),
+    // Von Hand gesetzte Stufen gelten hier, nicht erst beim Aufrufer: sonst
+    // muesste jeder daran denken, und einer vergisst es.
+    accent: withOverrides(deriveColorScale(color, scheme), overrides),
+    // Die neutrale Skala bleibt, wie Radix sie paart. Sie gestaltet nicht,
+    // sie stimmt ab — dort etwas zu setzen, waere ein anderes Thema.
     gray: namedScale(parsed ? grayFor(parsed) : "gray", scheme),
   }
 }
