@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.3.2](https://github.com/real-life-org/real-life-stack/compare/app-v0.3.1...app-v0.3.2) (2026-09-16)
+
+
+### Features
+
+* **toolkit:** Aussehen als Achsen — Farbe mit drei Reglern, Tönung, ein Reset ([#389](https://github.com/real-life-org/real-life-stack/issues/389)) ([f3a5722](https://github.com/real-life-org/real-life-stack/commit/f3a572283b19e817fb9f330b6972438d022b8e66))
+* **toolkit:** Rundung und Flächen als Achsen des Aussehens ([#391](https://github.com/real-life-org/real-life-stack/issues/391)) ([66f2e07](https://github.com/real-life-org/real-life-stack/commit/66f2e07f4656ebc59cbc04a274e77ae3797c0a55))
+* **toolkit:** zwölfstufige Farbskalen aus einer frei gewählten Farbe ([#387](https://github.com/real-life-org/real-life-stack/issues/387)) ([9b6e298](https://github.com/real-life-org/real-life-stack/commit/9b6e298f51339471cd71df70c80e1bdabd738561))
+
+
+### Bug Fixes
+
+* ein Feld für das Space-Bild — data.image ([#382](https://github.com/real-life-org/real-life-stack/issues/382)) ([750397a](https://github.com/real-life-org/real-life-stack/commit/750397ae8be2a6d8c59741b3e57dd0566ca7f17e))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.2.1
+    * @real-life-stack/local-connector bumped to 0.1.6
+    * @real-life-stack/mock-connector bumped to 0.1.6
+    * @real-life-stack/supabase-connector bumped to 0.2.1
+    * @real-life-stack/toolkit bumped to 0.1.9
+    * @real-life-stack/wot-connector bumped to 0.1.9
+
 ## [0.3.1](https://github.com/real-life-org/real-life-stack/compare/app-v0.3.0...app-v0.3.1) (2026-09-15)
 
 

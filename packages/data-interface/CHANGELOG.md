@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.2.0...data-interface-v0.2.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* ein Feld für das Space-Bild — data.image ([#382](https://github.com/real-life-org/real-life-stack/issues/382)) ([750397a](https://github.com/real-life-org/real-life-stack/commit/750397ae8be2a6d8c59741b3e57dd0566ca7f17e))
+* **toolkit:** Space-Bild — Regel in Spec 04 und ihre Einlösung im Dialog ([#385](https://github.com/real-life-org/real-life-stack/issues/385)) ([50005cb](https://github.com/real-life-org/real-life-stack/commit/50005cbd88d804c165f9ff0e6af58f5b9d418b00))
+
 ## [0.2.0](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.1.4...data-interface-v0.2.0) (2026-09-13)
 
 

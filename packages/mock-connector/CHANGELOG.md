@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.6](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.1.5...mock-connector-v0.1.6) (2026-09-16)
+
+
+### Features
+
+* **toolkit:** Rundung und Flächen als Achsen des Aussehens ([#391](https://github.com/real-life-org/real-life-stack/issues/391)) ([66f2e07](https://github.com/real-life-org/real-life-stack/commit/66f2e07f4656ebc59cbc04a274e77ae3797c0a55))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.2.1
+
 ## [0.1.5](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.1.4...mock-connector-v0.1.5) (2026-09-13)
 
 

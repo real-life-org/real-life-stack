@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.9](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.1.8...toolkit-v0.1.9) (2026-09-16)
+
+
+### Features
+
+* **toolkit:** Aussehen als Achsen — Farbe mit drei Reglern, Tönung, ein Reset ([#389](https://github.com/real-life-org/real-life-stack/issues/389)) ([f3a5722](https://github.com/real-life-org/real-life-stack/commit/f3a572283b19e817fb9f330b6972438d022b8e66))
+* **toolkit:** Bereich Aussehen — Space-Primärfarbe wählen ([#381](https://github.com/real-life-org/real-life-stack/issues/381)) ([84461f0](https://github.com/real-life-org/real-life-stack/commit/84461f0e9e92d88ebe903a5bc258d7e099afee4c))
+* **toolkit:** Farbmathematik in OKLCH — aus [#361](https://github.com/real-life-org/real-life-stack/issues/361) herausgelöst ([#386](https://github.com/real-life-org/real-life-stack/issues/386)) ([6507fcb](https://github.com/real-life-org/real-life-stack/commit/6507fcbd18f7490d2e0defee4ceada5bd8f8a336))
+* **toolkit:** Rundung und Flächen als Achsen des Aussehens ([#391](https://github.com/real-life-org/real-life-stack/issues/391)) ([66f2e07](https://github.com/real-life-org/real-life-stack/commit/66f2e07f4656ebc59cbc04a274e77ae3797c0a55))
+* **toolkit:** zwölfstufige Farbskalen aus einer frei gewählten Farbe ([#387](https://github.com/real-life-org/real-life-stack/issues/387)) ([9b6e298](https://github.com/real-life-org/real-life-stack/commit/9b6e298f51339471cd71df70c80e1bdabd738561))
+
+
+### Bug Fixes
+
+* **toolkit:** Space-Bild — Regel in Spec 04 und ihre Einlösung im Dialog ([#385](https://github.com/real-life-org/real-life-stack/issues/385)) ([50005cb](https://github.com/real-life-org/real-life-stack/commit/50005cbd88d804c165f9ff0e6af58f5b9d418b00))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.2.1
+
 ## [0.1.8](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.1.7...toolkit-v0.1.8) (2026-09-15)
 
 

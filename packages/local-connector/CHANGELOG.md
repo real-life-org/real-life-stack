@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.6](https://github.com/real-life-org/real-life-stack/compare/local-connector-v0.1.5...local-connector-v0.1.6) (2026-09-16)
+
+
+### Bug Fixes
+
+* ein Feld für das Space-Bild — data.image ([#382](https://github.com/real-life-org/real-life-stack/issues/382)) ([750397a](https://github.com/real-life-org/real-life-stack/commit/750397ae8be2a6d8c59741b3e57dd0566ca7f17e))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.2.1
+
 ## [0.1.5](https://github.com/real-life-org/real-life-stack/compare/local-connector-v0.1.4...local-connector-v0.1.5) (2026-09-13)
 
 
