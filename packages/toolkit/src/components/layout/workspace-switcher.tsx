@@ -20,6 +20,8 @@ export interface Workspace {
   scope?: string
   /** Cached accent color (`#rrggbb`); falls back to a deterministic id color. */
   primaryColor?: string
+  /** Tönung der Flächen, 0–1 (`data.tint`); fehlt sie, bleiben sie neutral. */
+  tint?: number
 }
 
 interface WorkspaceSwitcherProps {

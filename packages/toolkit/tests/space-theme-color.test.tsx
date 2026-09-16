@@ -485,7 +485,7 @@ describe("Farbzustand bleibt mit dem Gespeicherten im Gleichklang", () => {
 
     expect(document.querySelector('button[aria-label="Farbe aus dem Bild"]')).toBeNull()
     const back = Array.from(document.querySelectorAll("button"))
-      .find((b) => b.textContent?.includes("Zurück zur Standardfarbe"))
+      .find((b) => b.textContent?.includes("Zurücksetzen"))
     expect(back, "der Weg zurueck bleibt erreichbar").toBeDefined()
   })
 
@@ -506,7 +506,7 @@ describe("Farbzustand bleibt mit dem Gespeicherten im Gleichklang", () => {
     ).toBeNull()
 
     const back = Array.from(document.querySelectorAll("button"))
-      .find((b) => b.textContent?.includes("Zurück zur Standardfarbe")) as HTMLButtonElement
+      .find((b) => b.textContent?.includes("Zurücksetzen")) as HTMLButtonElement
     expect(back, "aber ein Weg zurueck").toBeDefined()
 
     await act(async () => { back.click() })

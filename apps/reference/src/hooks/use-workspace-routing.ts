@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 import {
   useConnector,
@@ -7,6 +7,7 @@ import {
   useItem,
   getSpacePrimaryColor,
   scalesForColor,
+  useColorScheme,
   themeTokens,
   applyThemeTokens,
   clearThemeTokens,
@@ -146,22 +147,11 @@ export function useWorkspaceRouting(): WorkspaceRouting {
   // The space the URL names (aggregate slug → internal overview id).
   const urlSpaceId = urlScope ? slugToScope(urlScope) : undefined
 
-  // Hell oder dunkel entscheidet der Mensch, nicht der Space — die App legt
-  // die Klasse `dark` auf das Wurzelelement. Beobachtet statt durchgereicht,
-  // weil dieser Hook vor dem Schalter aufgerufen wird.
-  const [scheme, setScheme] = useState<"light" | "dark">(() =>
-    typeof document !== "undefined" && document.documentElement.classList.contains("dark")
-      ? "dark"
-      : "light",
-  )
-  useEffect(() => {
-    const root = document.documentElement
-    const read = () => setScheme(root.classList.contains("dark") ? "dark" : "light")
-    read()
-    const observer = new MutationObserver(read)
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] })
-    return () => observer.disconnect()
-  }, [])
+  // Hell oder dunkel entscheidet der Mensch, nicht der Space. Gelesen wird das
+  // im Toolkit: der Space-Dialog zeigt die Kontraste derselben Skala und
+  // braucht dasselbe Schema — zwei Leser mit eigenem Code waeren zwei
+  // Wahrheiten.
+  const scheme = useColorScheme()
 
   const workspaces: Workspace[] = useMemo(
     () => [
@@ -172,6 +162,8 @@ export function useWorkspaceRouting(): WorkspaceRouting {
         avatar: g.data?.image as string | undefined,
         scope: g.data?.scope as string | undefined,
         primaryColor: g.data?.primaryColor as string | undefined,
+        // Ungeprueft durchgereicht; `scalesForColor` kappt und verwirft.
+        tint: g.data?.tint as number | undefined,
       })),
     ],
     [groups]
@@ -318,9 +310,12 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     // `scalesForColor` waehlt zur Akzentskala den Grauton, der sie ergaenzt
     // — Radix paart beides automatisch. Der Unterschied ist klein und soll
     // es sein: er gestaltet nicht, er stimmt ab.
-    applyThemeTokens(root, themeTokens({ ...scalesForColor(seed, scheme), scheme }))
+    // Die Toenung ist die zweite Achse des Space: wie stark die Flaechen die
+    // Farbe tragen. Ohne sie bleibt alles neutral, der Akzent traegt allein.
+    const scales = scalesForColor(seed, scheme, { tint: activeWorkspace.tint })
+    applyThemeTokens(root, themeTokens({ ...scales, scheme }))
     return () => clearThemeTokens(root)
-  }, [activeWorkspace?.id, activeWorkspace?.primaryColor, isOverview, scheme])
+  }, [activeWorkspace?.id, activeWorkspace?.primaryColor, activeWorkspace?.tint, isOverview, scheme])
 
   // Switch workspace (keep the module if offered). Item focus is space-scoped → dropped.
   const handleWorkspaceChange = useCallback((workspace: Workspace) => {

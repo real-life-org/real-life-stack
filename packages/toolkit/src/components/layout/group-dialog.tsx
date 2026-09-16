@@ -1,10 +1,14 @@
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, RotateCcw, Check as CheckIcon, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
 import { cn, getReadableTextColor, getSpacePrimaryColor, resolveAssetUrl, SPACE_COLOR_SWATCHES } from "../../lib/utils"
+import { scalesForColor } from "../../lib/color-scales"
+import { contrastChecks, themeTokens } from "../../lib/theme-tokens"
+import { oklchToHex, parseColor } from "../../lib/oklch"
+import { useColorScheme } from "../../hooks/use-color-scheme"
 import {
   Dialog,
   DialogContent,
@@ -132,6 +136,40 @@ export function spaceConfigSections({
   if (canTheme) sections.push({ id: "theme", label: "Aussehen", icon: Contrast })
   if (isAdmin) sections.push({ id: "modules", label: "Module", icon: LayoutGrid })
   return sections
+}
+
+/** Was in `data.tint` steht, als Zahl 0–1 — oder null, wenn nichts Brauchbares. */
+export function readTint(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null
+  const t = Math.min(1, Math.max(0, value))
+  return t > 0 ? t : null
+}
+
+/** Groesste Buntheit, die ein Regler anbietet — jenseits davon ist kaum etwas im Farbraum. */
+export const CHROMA_MAX = 0.37
+
+/**
+ * Die drei Achsen der Akzentfarbe als Reglerstellungen, 0–100 (Farbton 0–360).
+ *
+ * Kein eigener Zustand: die Regler zeigen die Farbe, die gilt, und schreiben
+ * sie zurueck. So gibt es genau EINEN Wert (`primaryColor`) und einen Reset.
+ */
+export function colorAxes(hex: string): { hue: number; chroma: number; lightness: number } {
+  const c = parseColor(hex) ?? { l: 0.5, c: 0, h: 0 }
+  return {
+    hue: Math.round(c.h),
+    chroma: Math.round(Math.min(1, c.c / CHROMA_MAX) * 100),
+    lightness: Math.round(c.l * 100),
+  }
+}
+
+/** Die Umkehrung: aus Reglerstellungen wieder eine Farbe (im Farbraum gehalten). */
+export function colorFromAxes(axes: { hue: number; chroma: number; lightness: number }): string {
+  return oklchToHex({
+    l: Math.min(1, Math.max(0, axes.lightness / 100)),
+    c: Math.min(1, Math.max(0, axes.chroma / 100)) * CHROMA_MAX,
+    h: ((axes.hue % 360) + 360) % 360,
+  })
 }
 
 /**
@@ -494,6 +532,40 @@ export function GroupDialog({
       () => setColorError(null),
     )
   }
+  /**
+   * Toenung der Flaechen, 0–1 — die zweite Achse neben der Farbe.
+   *
+   * Eigener Saver, obwohl beide in dieselbe `data` schreiben: "der letzte
+   * gewinnt" gilt je Wert, und die beiden sind unabhaengig. Teilten sie sich
+   * einen, verdraengte eine Farbwahl eine kurz zuvor eingereihte Toenung.
+   */
+  const [tintChoice, setTintChoice] = useState<number | null>(() =>
+    mode.type === "edit" ? readTint(mode.group.data?.tint) : null,
+  )
+  const saveTintRef = useRef<((v: { groupId: string; tint: number | null }) => void) | null>(null)
+  if (!saveTintRef.current) {
+    saveTintRef.current = createLatestWinsSaver<{ groupId: string; tint: number | null }>(
+      // `null` loescht den Schluessel — Merge-Patch der Tiefe 1 (Spec 04).
+      ({ groupId: target, tint }) => onUpdateGroupRef.current(target, { data: { tint } }),
+      (err, failed, lastSaved) => {
+        const current = modeRef.current
+        if (current.type === "edit" && failed.groupId === current.group.id) {
+          setTintChoice(
+            lastSaved?.groupId === current.group.id ? lastSaved.tint : readTint(current.group.data?.tint),
+          )
+        }
+        setColorError(err instanceof Error ? err.message : "Tönung konnte nicht gespeichert werden")
+      },
+      () => setColorError(null),
+    )
+  }
+  /** Die EINE Stelle, an der die Toenung umgesetzt wird. */
+  const applyTint = (tint: number | null) => {
+    if (!isEdit) return
+    setTintChoice(tint)
+    saveTintRef.current?.({ groupId: mode.group.id, tint })
+  }
+
   const applyModules = useCallback((next: string[]) => {
     setActiveModules(next)
     saveModulesRef.current?.(next)
@@ -709,29 +781,21 @@ export function GroupDialog({
    * und sich das Bild aendert — nicht bei jedem Rendern (Spec 04, Regel 2).
    */
   const [imageColor, setImageColor] = useState<string | null>(null)
-  // Ob gerade extrahiert wird. Ohne das waere "noch keine Farbe" von "das
-  // Bild gibt keine her" nicht zu unterscheiden, und der Weg zurueck blitzte
-  // bei jedem Oeffnen kurz auf.
-  const [imageColorPending, setImageColorPending] = useState(false)
 
   useEffect(() => {
     if (!isEdit || activeSection !== "theme" || !groupImage) {
       setImageColor(null)
-      setImageColorPending(false)
       return
     }
     // Waehrend der Extraktion KEINE Farbe zeigen: sonst truege das Feld einen
     // Wert vom vorigen Bild.
     setImageColor(null)
-    setImageColorPending(true)
     let current = true
     void (async () => {
       const { dominantColor } = await import("../../lib/image-utils")
       const derived = await dominantColor(resolveAssetUrl(groupImage) ?? groupImage).catch(() => null)
       // Ein graustufiges Bild liefert keine Farbe; dann gibt es kein Feld.
-      if (!current) return
-      setImageColor(derived)
-      setImageColorPending(false)
+      if (current) setImageColor(derived)
     })()
     return () => { current = false }
   }, [isEdit, activeSection, groupImage, groupId])
@@ -743,6 +807,22 @@ export function GroupDialog({
    */
   const effectiveColor = getSpacePrimaryColor(groupId, primaryColorChoice)
   const currentSwatch = activeSpaceSwatch(effectiveColor, imageColor)
+
+  /**
+   * Was der Space gerade traegt — dieselbe Rechnung wie in der App, damit die
+   * Kontrastzeilen hier nicht etwas anderes behaupten als die Flaechen
+   * daneben. Hell oder dunkel kommt vom Menschen (`useColorScheme`).
+   */
+  const scheme = useColorScheme()
+  const accentChecks = useMemo(() => {
+    const scales = scalesForColor(effectiveColor, scheme, { tint: tintChoice ?? 0 })
+    // Nur die Paare, die an der Akzentskala haengen — an den neutralen kann
+    // der Space nichts drehen, sie zu zeigen lenkte nur ab.
+    return contrastChecks(themeTokens({ ...scales, scheme }), { accentOnly: true })
+  }, [effectiveColor, scheme, tintChoice])
+  const axes = colorAxes(effectiveColor)
+  const setAxis = (key: "hue" | "chroma" | "lightness", value: number) =>
+    applyPrimaryColor(colorFromAxes({ ...axes, [key]: value }))
 
   /**
    * Erst die Anzeige, dann das Speichern: der Haken springt sofort, der
@@ -769,6 +849,10 @@ export function GroupDialog({
    */
   const resetPrimaryColor = async () => {
     if (!isEdit) return
+    // EIN Reset: Farbe und Toenung zusammen. Zwei Knoepfe fuer zwei Werte
+    // hiessen, dass der eine stehen bleibt, wenn man den anderen drueckt —
+    // genau das fiel bei den Stufen auf.
+    if (tintChoice != null) applyTint(null)
     if (!groupImage) {
       applyPrimaryColor(null)
       return
@@ -1319,19 +1403,86 @@ export function GroupDialog({
                 </label>
               </div>
 
-              {/* Der Weg zurueck als Text — immer dann, wenn es KEIN Feld
-                  gibt, auf das man klicken koennte. Das ist mehr als "kein
-                  Bild": ein graustufiges Logo liefert keine dominante Farbe,
-                  und ohne diesen Knopf waere die einmal gewaehlte Farbe dort
-                  nur noch durch Loeschen des Logos zurueckzunehmen. */}
-              {!imageColor && !imageColorPending && primaryColorChoice != null && (
+              {/* Die Farbe feinstellen — drei Achsen von OKLCH in Worten. Kein
+                  eigener Zustand: die Regler zeigen die geltende Farbe und
+                  schreiben sie zurueck, also gibt es genau einen Wert und
+                  einen Reset. "Ein bisschen ruhiger" ist so ein Handgriff,
+                  und die App zieht live mit. */}
+              <div className="space-y-2 px-2.5 pt-2">
+                {(
+                  [
+                    ["hue", "Farbton", 0, 360, `hsl(${axes.hue} 70% 50%)`],
+                    ["chroma", "Kräftigkeit", 0, 100, undefined],
+                    ["lightness", "Helligkeit", 0, 100, undefined],
+                  ] as const
+                ).map(([key, label, min, max]) => (
+                  <label key={key} className="flex items-center gap-3 text-xs">
+                    <span className="w-20 shrink-0 text-muted-foreground">{label}</span>
+                    <input
+                      type="range"
+                      aria-label={label}
+                      min={min}
+                      max={max}
+                      value={axes[key]}
+                      onChange={(e) => setAxis(key, Number(e.target.value))}
+                      className="h-1.5 flex-1 cursor-pointer accent-primary"
+                    />
+                    <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
+                      {axes[key]}{key === "hue" ? "°" : ""}
+                    </span>
+                  </label>
+                ))}
+
+                {/* Die Toenung: wie stark die Flaechen die Farbe tragen. Bei 0
+                    bleibt alles neutral, der Akzent traegt die Farbe allein;
+                    weiter oben bekommt der Space eine eigene Atmosphaere —
+                    reallife.network liegt mit seinem Creme bei etwa 50. */}
+                <label className="flex items-center gap-3 text-xs">
+                  <span className="w-20 shrink-0 text-muted-foreground">Tönung</span>
+                  <input
+                    type="range"
+                    aria-label="Tönung"
+                    min={0}
+                    max={100}
+                    value={Math.round((tintChoice ?? 0) * 100)}
+                    onChange={(e) => applyTint(readTint(Number(e.target.value) / 100))}
+                    className="h-1.5 flex-1 cursor-pointer accent-primary"
+                  />
+                  <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
+                    {Math.round((tintChoice ?? 0) * 100)}
+                  </span>
+                </label>
+              </div>
+
+              {/* Was das fuer die Lesbarkeit bedeutet. Ohne diese Zeilen merkt
+                  man erst im Betrieb, dass eine Beschriftung in ihrem Knopf
+                  verschwunden ist. Die Knopfschrift ist mit Absicht weiss
+                  (siehe getReadableTextColor) und kann darum unter 3:1 liegen
+                  — gezeigt wird es trotzdem. */}
+              <div className="space-y-0.5 px-2.5 pt-3">
+                {accentChecks.map((check) => (
+                  <div key={check.label} className="flex items-baseline justify-between text-xs">
+                    <span className="text-muted-foreground">{check.label}</span>
+                    <span className={cn("tabular-nums", check.ok ? "text-muted-foreground" : "text-destructive")}>
+                      {check.ratio.toFixed(1)}:1
+                      {!check.ok && <span className="ml-1">· {check.minimum}:1 nötig</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* EIN Weg zurueck fuer alles, was der Space am Aussehen
+                  gesetzt hat. Spec 04 Regel 2/3: ohne eigenen Wert stammt
+                  die Farbe aus dem Logo, sonst deterministisch aus der
+                  Space-Id; die Toenung faellt auf 0. */}
+              {(primaryColorChoice != null || tintChoice != null) && (
                 <button
                   type="button"
                   onClick={() => { void resetPrimaryColor() }}
-                  className="mx-2.5 mt-1 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  className="mx-2.5 mt-2 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <RotateCcw className="h-3 w-3" />
-                  Zurück zur Standardfarbe
+                  Zurücksetzen
                 </button>
               )}
 
