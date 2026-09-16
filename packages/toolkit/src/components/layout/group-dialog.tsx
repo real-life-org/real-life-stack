@@ -749,6 +749,28 @@ export function GroupDialog({
       <DialogContent
         className="flex h-[85vh] max-h-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]"
         aria-describedby={undefined}
+        // Dieser Dialog ist ein FENSTER IN DEN SPACE und traegt darum dessen
+        // Primaerfarbe — auch wenn gerade ein anderer Space oder die
+        // Uebersicht aktiv ist. Sonst stuenden zwei Farben nebeneinander: das
+        // Menue in der Farbe des bearbeiteten Space, der Einladen-Knopf in
+        // der der laufenden App.
+        //
+        // Gesetzt werden dieselben Variablen, die `use-workspace-routing` auf
+        // `:root` legt, nur lokal. Alle Flaechen darin ziehen dadurch mit,
+        // statt dass jede fuer sich eine Farbe inline bekommt — und ein
+        // Farbwechsel im Bereich "Aussehen" faerbt den ganzen Dialog um,
+        // nicht bloss den Menueeintrag.
+        style={
+          {
+            "--primary": effectiveColor,
+            "--primary-foreground": getReadableTextColor(effectiveColor),
+            "--ring": effectiveColor,
+            "--accent": `color-mix(in srgb, ${effectiveColor} 14%, transparent)`,
+            // Text auf der schwach getoenten Flaeche muss in hell UND dunkel
+            // lesbar bleiben; die rohe Space-Farbe waere es nicht.
+            "--accent-foreground": "var(--foreground)",
+          } as React.CSSProperties
+        }
         // Ohne das faengt der Name als erstes Feld den Fokus und steht
         // markiert da — ein Tastendruck ueberschriebe den Space-Namen. Der
         // Fokus bleibt im Dialog (Tab und Escape wirken), nur eben nicht
@@ -850,22 +872,12 @@ export function GroupDialog({
                       // ("Verwendung der Primaerfarbe", Regel 1) nennt aktive
                       // Navigations- und Sidebar-Items ausdruecklich. Damit
                       // spricht das Menue dieselbe Sprache wie die Modulleiste
-                      // in der Navbar, und eine Farbaenderung im Bereich
-                      // "Aussehen" zeigt sich sofort daneben.
-                      //
-                      // Die Farbe kommt aus dem Dialog, NICHT aus `--primary`:
-                      // wird die Konfiguration aus der Uebersicht heraus
-                      // geoeffnet, ist der bearbeitete Space nicht der aktive
-                      // und das Token truege eine fremde Farbe.
-                      style={
-                        active
-                          ? { backgroundColor: effectiveColor, color: getReadableTextColor(effectiveColor) }
-                          : undefined
-                      }
+                      // in der Navbar. Die Farbe kommt aus den Tokens, die der
+                      // Dialog setzt — keine zweite Mechanik daneben.
                       className={cn(
                         "flex items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors",
                         active
-                          ? "font-semibold shadow-sm"
+                          ? "bg-primary font-semibold text-primary-foreground shadow-sm"
                           : "font-medium text-muted-foreground hover:bg-muted/60",
                       )}
                     >

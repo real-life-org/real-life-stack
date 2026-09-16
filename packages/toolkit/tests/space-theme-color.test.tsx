@@ -103,17 +103,16 @@ describe("Primärfarbe im Bereich Aussehen", () => {
 })
 
 /**
- * Der aktive Menueeintrag traegt die Farbe des Space — Spec 04, "Verwendung
- * der Primaerfarbe", Regel 1 nennt "aktive Navigations- und Sidebar-Items"
- * ausdruecklich. Damit ist das Menue dieselbe Sprache wie die Modulleiste in
- * der Navbar, und ein Farbwechsel im Bereich "Aussehen" zeigt sich sofort an
- * der Flaeche daneben.
+ * Der Dialog ist ein FENSTER IN DEN SPACE: er traegt dessen Primaerfarbe,
+ * auch wenn gerade ein anderer Space (oder die Uebersicht) aktiv ist. Sonst
+ * stuenden im selben Dialog zwei Farben — das Menue in der Farbe des
+ * bearbeiteten Space, der Einladen-Knopf in der der laufenden App.
  *
- * Die Farbe kommt aus dem DIALOG, nicht aus `--primary`: wird die
- * Konfiguration aus der Uebersicht heraus geoeffnet, ist der bearbeitete
- * Space gar nicht der aktive, und das Token truege eine fremde Farbe.
+ * Gesetzt werden dieselben Variablen, die `use-workspace-routing` auf
+ * `:root` legt, nur lokal. Damit ziehen alle Flaechen darin mit, statt dass
+ * jede fuer sich eine Farbe inline bekommt.
  */
-describe("Menue-Hervorhebung in der Space-Farbe", () => {
+describe("Dialog traegt die Farbe des bearbeiteten Space", () => {
   let root: Root
 
   const renderDialog = () => {
@@ -124,14 +123,17 @@ describe("Menue-Hervorhebung in der Space-Farbe", () => {
           onOpenChange: () => {},
           mode: { type: "edit", group: { id: "g1", name: "Gartenprojekt", data: {} } } as never,
           currentUserId: "did:key:zME",
+          contacts: [{ id: "did:key:zTOM", name: "Tom", status: "active" as const }],
           onCreateGroup: async () => {},
           onUpdateGroup: async () => {},
           onDeleteGroup: async () => {},
+          onInviteMember: async () => {},
         } as never),
       )
     })
   }
 
+  const dialog = () => document.querySelector<HTMLElement>('[data-slot="dialog-content"]')!
   const activeEntry = () =>
     Array.from(document.querySelectorAll<HTMLButtonElement>("nav button"))
       .find((b) => b.getAttribute("aria-current") === "page")!
@@ -144,11 +146,12 @@ describe("Menue-Hervorhebung in der Space-Farbe", () => {
     renderDialog()
   })
 
-  it("faerbt den aktiven Eintrag ueberhaupt ein", () => {
-    expect(activeEntry().style.backgroundColor).not.toBe("")
+  it("setzt die Primaerfarbe des Space auf dem Dialog", () => {
+    expect(dialog().style.getPropertyValue("--primary")).not.toBe("")
+    expect(dialog().style.getPropertyValue("--primary-foreground")).not.toBe("")
   })
 
-  it("folgt einem Farbwechsel sofort", async () => {
+  it("fuehrt sie bei einem Farbwechsel nach", async () => {
     const entry = Array.from(document.querySelectorAll("nav button"))
       .find((b) => b.textContent?.startsWith("Aussehen")) as HTMLButtonElement
     act(() => { entry.click() })
@@ -157,13 +160,21 @@ describe("Menue-Hervorhebung in der Space-Farbe", () => {
     await act(async () => {
       document.querySelector<HTMLButtonElement>(`button[aria-label="Primärfarbe ${hex}"]`)!.click()
     })
-
-    // rgb(22, 163, 74) === #16a34a
-    const rgb = activeEntry().style.backgroundColor.replace(/\s/g, "")
-    expect(rgb).toBe("rgb(22,163,74)")
+    expect(dialog().style.getPropertyValue("--primary")).toBe(hex)
   })
 
-  it("setzt eine lesbare Textfarbe dazu", () => {
-    expect(activeEntry().style.color).not.toBe("")
+  it("laesst den aktiven Menueeintrag aus denselben Tokens schoepfen", () => {
+    // Keine Inline-Farbe mehr: eine zweite Mechanik neben den Tokens waere
+    // genau der Bruch, den dieser Dialog aufloest.
+    expect(activeEntry().style.backgroundColor).toBe("")
+    expect(activeEntry().className).toContain("bg-primary")
+    expect(activeEntry().className).toContain("text-primary-foreground")
+  })
+
+  it("faerbt auch den Einladen-Knopf aus derselben Quelle", () => {
+    const invite = Array.from(document.querySelectorAll("button"))
+      .find((b) => b.textContent?.trim() === "Einladen" && !b.closest("nav"))
+    expect(invite, "der Knopf im Mitglieder-Bereich").toBeTruthy()
+    expect(invite!.style.backgroundColor).toBe("")
   })
 })
