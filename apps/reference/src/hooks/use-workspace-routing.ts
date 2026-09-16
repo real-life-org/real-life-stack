@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 import {
   useConnector,
@@ -6,7 +6,11 @@ import {
   useCurrentGroup,
   useItem,
   getSpacePrimaryColor,
-  getReadableTextColor,
+  deriveColorScale,
+  namedScale,
+  themeTokens,
+  applyThemeTokens,
+  clearThemeTokens,
   moduleIds,
   getModule,
   resolveSpaceModules,
@@ -142,6 +146,23 @@ export function useWorkspaceRouting(): WorkspaceRouting {
   const urlItemId = urlItemIdParam
   // The space the URL names (aggregate slug → internal overview id).
   const urlSpaceId = urlScope ? slugToScope(urlScope) : undefined
+
+  // Hell oder dunkel entscheidet der Mensch, nicht der Space — die App legt
+  // die Klasse `dark` auf das Wurzelelement. Beobachtet statt durchgereicht,
+  // weil dieser Hook vor dem Schalter aufgerufen wird.
+  const [scheme, setScheme] = useState<"light" | "dark">(() =>
+    typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+      ? "dark"
+      : "light",
+  )
+  useEffect(() => {
+    const root = document.documentElement
+    const read = () => setScheme(root.classList.contains("dark") ? "dark" : "light")
+    read()
+    const observer = new MutationObserver(read)
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] })
+    return () => observer.disconnect()
+  }, [])
 
   const workspaces: Workspace[] = useMemo(
     () => [
@@ -286,36 +307,22 @@ export function useWorkspaceRouting(): WorkspaceRouting {
   // state keep the default brand color.
   useEffect(() => {
     const root = document.documentElement
-    const PRIMARY_VARS = [
-      "--primary", "--primary-foreground", "--ring",
-      "--accent", "--accent-foreground",
-      "--sidebar-primary", "--sidebar-primary-foreground", "--sidebar-ring",
-      "--sidebar-accent", "--sidebar-accent-foreground",
-    ]
-    if (activeWorkspace && !isOverview) {
-      const c = getSpacePrimaryColor(activeWorkspace.id, activeWorkspace.primaryColor)
-      const fg = getReadableTextColor(c)
-      const tint = `color-mix(in srgb, ${c} 14%, transparent)`
-      root.style.setProperty("--primary", c)
-      root.style.setProperty("--primary-foreground", fg)
-      root.style.setProperty("--ring", c)
-      root.style.setProperty("--accent", tint)
-      // Text on the faint tinted accent surface must stay readable in both
-      // light and dark mode — the surface is only a 14% tint of `c`, so the
-      // raw space color (esp. a dark one in dark mode) would be unreadable.
-      // `.dark` lives on <html> (App.tsx), so var(--foreground) resolves to
-      // the active mode's foreground on this same element.
-      root.style.setProperty("--accent-foreground", "var(--foreground)")
-      root.style.setProperty("--sidebar-primary", c)
-      root.style.setProperty("--sidebar-primary-foreground", fg)
-      root.style.setProperty("--sidebar-ring", c)
-      root.style.setProperty("--sidebar-accent", tint)
-      root.style.setProperty("--sidebar-accent-foreground", "var(--sidebar-foreground)")
-    } else {
-      PRIMARY_VARS.forEach((v) => root.style.removeProperty(v))
+    if (!activeWorkspace || isOverview) {
+      clearThemeTokens(root)
+      return
     }
-    return () => PRIMARY_VARS.forEach((v) => root.style.removeProperty(v))
-  }, [activeWorkspace?.id, activeWorkspace?.primaryColor, isOverview])
+    // Aus der Space-Farbe wird eine zwoelfstufige Skala, aus ihr und einer
+    // neutralen Skala die Tokens, aus denen jede Flaeche schoepft. Frueher
+    // wurden nur Primaer- und Akzent-Token gesetzt und der Rest blieb fest;
+    // jetzt zieht der ganze Satz mit — Flaechen, Rahmen, Text.
+    const seed = getSpacePrimaryColor(activeWorkspace.id, activeWorkspace.primaryColor)
+    applyThemeTokens(root, themeTokens({
+      accent: deriveColorScale(seed, scheme),
+      gray: namedScale("slate", scheme),
+      scheme,
+    }))
+    return () => clearThemeTokens(root)
+  }, [activeWorkspace?.id, activeWorkspace?.primaryColor, isOverview, scheme])
 
   // Switch workspace (keep the module if offered). Item focus is space-scoped → dropped.
   const handleWorkspaceChange = useCallback((workspace: Workspace) => {
