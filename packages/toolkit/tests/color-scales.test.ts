@@ -93,11 +93,24 @@ describe("deriveColorScale — Pruefstein an allen Radix-Skalen", () => {
 })
 
 describe("deriveColorScale — Form der Skala", () => {
-  it("trifft die Wunschfarbe auf Stufe 9", () => {
-    for (const hex of ["#e87520", "#2d5a3d", "#16a34a", "#123456"]) {
+  it("trifft eine Wunschfarbe, die als Fuellflaeche taugt, auf Stufe 9", () => {
+    for (const hex of ["#e87520", "#2d5a3d", "#16a34a"]) {
       const scale = deriveColorScale(hex, "light")
       expect(colorDistance(oklch(scale[8]), oklch(hex)), hex).toBeLessThan(0.01)
     }
+  })
+
+  /**
+   * Eine Fuellflaeche kann nicht fast schwarz sein — sie traegt Text, und
+   * unter ihr liegen weitere Stufen. Eine solche Wunschfarbe wird in der
+   * HELLIGKEIT angehoben; Farbton und Buntheit bleiben, denn sie machen die
+   * Identitaet aus.
+   */
+  it("hebt eine zu dunkle Wunschfarbe an, behaelt aber ihren Ton", () => {
+    const wish = oklch("#123456")
+    const got = oklch(deriveColorScale("#123456", "light")[8])
+    expect(got.l, "heller geworden").toBeGreaterThan(wish.l)
+    expect(Math.abs(got.h - wish.h), "Farbton gehalten").toBeLessThan(6)
   })
 
   it("laesst die Enden bei der Vorlage — sonst liefe die Skala aus dem Bereich", () => {
@@ -131,5 +144,53 @@ describe("deriveColorScale — Form der Skala", () => {
     expect(pickTemplate(oklch(orange9))).toBe("orange")
     // Beide liegen im Farbton dicht beieinander, in der Buntheit weit.
     expect(Math.abs(oklch(bronze9).h - oklch(orange9).h)).toBeLessThan(5)
+  })
+})
+
+/**
+ * Der Pruefstein oben misst nur Radix-Farben — die sind allesamt bunt und
+ * mittelhell. Eine frei gewaehlte Farbe ist das nicht: Weiss, Schwarz und
+ * Grau liegen ausserhalb von allem, was dort vorkommt, und genau dort brach
+ * die Ableitung.
+ */
+describe("deriveColorScale — Randfaelle freier Farben", () => {
+  const chroma = (hex: string) => oklch(hex).c
+
+  it("bleibt bei unbunten Eingaben unbunt", () => {
+    // Die Vorlage brachte ihre eigene Buntheit mit: aus Weiss wurde eine
+    // Skala, deren Textstufe rosa war (#512f38).
+    for (const neutral of ["#ffffff", "#000000", "#808080", "#f5f5f5"]) {
+      for (const scheme of ["light", "dark"] as const) {
+        const scale = deriveColorScale(neutral, scheme)
+        for (const [i, step] of scale.entries()) {
+          expect(chroma(step), `${neutral} ${scheme} Stufe ${i + 1} = ${step}`).toBeLessThan(0.03)
+        }
+      }
+    }
+  })
+
+  it("haelt die Stufen auch bei extremen Eingaben auseinander", () => {
+    // Bei Schwarz in Dunkel fielen Stufe 7 und 8 auf denselben Wert: der
+    // normale und der hervorgehobene Rahmen waren nicht zu unterscheiden.
+    for (const extreme of ["#000000", "#ffffff", "#0d0d0d", "#fdfdfd"]) {
+      for (const scheme of ["light", "dark"] as const) {
+        const scale = deriveColorScale(extreme, scheme)
+        const seen = new Set(scale)
+        expect(seen.size, `${extreme} ${scheme}: ${scale.join(" ")}`).toBe(12)
+      }
+    }
+  })
+
+  it("bleibt in der Helligkeit durchgehend gerichtet", () => {
+    for (const hex of ["#000000", "#ffffff", "#808080", "#e87520"]) {
+      for (const scheme of ["light", "dark"] as const) {
+        const steps = deriveColorScale(hex, scheme).map(oklch)
+        for (let i = 0; i < 11; i++) {
+          // Hell laeuft von hell nach dunkel, Dunkel andersherum.
+          const ordered = scheme === "light" ? steps[i].l > steps[i + 1].l : steps[i].l < steps[i + 1].l
+          expect(ordered, `${hex} ${scheme} Stufe ${i + 1}→${i + 2}`).toBe(true)
+        }
+      }
+    }
   })
 })

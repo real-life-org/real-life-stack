@@ -67,6 +67,12 @@ export const ACCENT_SCALE_NAMES: readonly string[] = Object.keys(radix)
 export const GRAY_SCALE_OPTIONS: readonly GrayScaleName[] = GRAY_SCALE_NAMES
 
 /**
+ * Ab welcher Buntheit eine Farbe als bunt gilt. Die neutralen Radix-Skalen
+ * bleiben unter diesem Wert; alles darunter wird wie Grau behandelt.
+ */
+const NEUTRAL_CHROMA = 0.03
+
+/**
  * Eine benannte Radix-Skala als Hex-Werte.
  *
  * Die Dark-Variante nutzt DIESELBEN Schlüsselnamen wie die helle
@@ -110,6 +116,11 @@ function toOklch(hex: string): Oklch {
  * Skala trifft, die sie NICHT als Vorlage haben darf.
  */
 export function pickTemplate(target: Oklch, exclude?: string): string {
+  // Eine unbunte Wunschfarbe braucht eine unbunte Vorlage. Jede Akzentskala
+  // traegt ihre eigene Buntheit in den Enden mit, die die Verschiebung nicht
+  // erreicht — aus Weiss wurde so eine Skala mit rosa Textstufe.
+  if (target.c < NEUTRAL_CHROMA) return "gray"
+
   let best = ACCENT_SCALE_NAMES[0]
   let bestDistance = Infinity
   for (const name of ACCENT_SCALE_NAMES) {
@@ -124,8 +135,8 @@ export function pickTemplate(target: Oklch, exclude?: string): string {
 }
 
 /**
- * Wie stark eine Stufe der Verschiebung folgt. Stufe 9 ganz, die beiden
- * Enden gar nicht, dazwischen linear.
+ * Wie stark eine Stufe der Buntheits-Verschiebung folgt. Stufe 9 ganz, die
+ * beiden Enden gar nicht, dazwischen linear.
  *
  * Nach unten sind es acht Stufen bis zum Ende, nach oben nur drei — die
  * Textstufen 11 und 12 liegen dichter an der Füllung und müssen schneller
@@ -135,6 +146,71 @@ function weightFor(index: number): number {
   const anchor = 8
   const span = index < anchor ? anchor : 11 - anchor
   return 1 - Math.min(1, Math.abs(index - anchor) / span)
+}
+
+/**
+ * Wie weit sich die Helligkeitskurve verschieben lässt.
+ *
+ * Zwei Schranken wirken zusammen. Die erste ist inhaltlich: Stufe 9 ist eine
+ * FÜLLFLÄCHE, sie trägt Text und hat Stufen über wie unter sich. Radix' eigene
+ * Stufe 9 liegt darum ausnahmslos zwischen 0.540 und 0.918 — fast schwarz oder
+ * fast weiß kann sie nicht sein. `FILL_LIGHTNESS_MIN`/`MAX` lassen etwas mehr
+ * Spielraum nach unten (0.42), weil dunkle Wunschfarben verbreitet sind: der
+ * Demo-Space „Money Printer" trägt `#2d5a3d` mit 0.44.
+ *
+ * Die zweite ist rechnerisch: keine Stufe darf aus dem darstellbaren Bereich
+ * laufen.
+ *
+ * Das ist die eigentliche Schranke — keine gesetzte Zahl, sondern eine, die
+ * aus der Vorlage folgt. Verschöbe man weiter, klemmten die äußeren Stufen
+ * bei 0 oder 1 und fielen auf denselben Wert: bei `#ffffff` waren die
+ * Stufen 2 bis 8 alle reines Weiß, bei `#000000` die Stufen 7 und 8 beide
+ * `#010000` — normaler und hervorgehobener Rahmen nicht mehr zu
+ * unterscheiden.
+ *
+ * Die Wunschfarbe behält dabei Farbton und Buntheit; nur ihre Helligkeit
+ * wird so weit zurückgenommen, dass die Skala ihre Rollen noch trägt. Eine
+ * Fläche, die Text tragen soll und über wie unter sich weitere Stufen hat,
+ * kann eben nicht fast schwarz oder fast weiß sein.
+ */
+const FILL_LIGHTNESS_MIN = 0.42
+const FILL_LIGHTNESS_MAX = 0.92
+
+/** Kleinster Abstand, bei dem zwei Stufen verschiedene Hex-Werte ergeben. */
+const MIN_LIGHTNESS_STEP = 0.004
+
+/**
+ * Hält die Reihenfolge der Vorlage ein.
+ *
+ * Die Verschiebung ist nach Stufe gewichtet — Stufe 9 folgt ihr ganz, die
+ * Enden gar nicht. Dadurch kann eine Stufe ihre Vorgängerin überholen: bei
+ * `#ffffff` blieb Stufe 1 bei der Vorlage stehen, während Stufe 2 nach oben
+ * wanderte und heller wurde als sie. Hier bekommt jede Stufe mindestens
+ * einen Hex-Schritt Abstand zur vorigen, in der Richtung, die die Vorlage
+ * vorgibt. Im Normalfall ist der Abstand ohnehin größer und nichts ändert
+ * sich.
+ */
+function keepOrder(lightness: readonly number[], template: readonly Oklch[]): number[] {
+  const out = [...lightness]
+  for (let i = 1; i < out.length; i++) {
+    const direction = Math.sign(template[i].l - template[i - 1].l)
+    if (direction === 0) continue
+    const bound = out[i - 1] + direction * MIN_LIGHTNESS_STEP
+    out[i] = direction > 0 ? Math.max(out[i], bound) : Math.min(out[i], bound)
+  }
+  return out.map((l) => Math.max(0, Math.min(1, l)))
+}
+
+function allowedShift(template: readonly Oklch[], wanted: number): number {
+  let limit = Infinity
+  template.forEach((step, index) => {
+    const weight = weightFor(index)
+    if (weight <= 0) return
+    const room = wanted > 0 ? 1 - step.l : step.l
+    limit = Math.min(limit, room / weight)
+  })
+  const magnitude = Math.min(Math.abs(wanted), limit)
+  return wanted > 0 ? magnitude : -magnitude
 }
 
 export interface DeriveOptions {
@@ -156,16 +232,25 @@ export function deriveColorScale(
   const template = namedScale(templateName, scheme).map(toOklch)
   const anchor = template[8]
 
-  const deltaL = target.l - anchor.l
+  // Erst auf den Bereich ziehen, in dem eine Füllfläche liegen kann, dann
+  // die Verschiebung so begrenzen, dass keine Stufe klemmt.
+  const fillL = Math.min(FILL_LIGHTNESS_MAX, Math.max(FILL_LIGHTNESS_MIN, target.l))
+  const deltaL = allowedShift(template, fillL - anchor.l)
   const deltaH = target.h - anchor.h
   // Buntheit wird verhältnismäßig verschoben; eine Vorlage mit nahezu
   // unbunter Stufe 9 hat kein brauchbares Verhältnis und bleibt, wie sie ist.
   const ratioC = anchor.c > 0.001 ? target.c / anchor.c : 1
 
+
+  const lightness = keepOrder(
+    template.map((step, index) => step.l + deltaL * weightFor(index)),
+    template,
+  )
+
   return template.map((step, index) => {
     const weight = weightFor(index)
     return oklchToHex({
-      l: Math.max(0, Math.min(1, step.l + deltaL * weight)),
+      l: lightness[index],
       c: Math.max(0, step.c * (1 + (ratioC - 1) * weight)),
       // Der Farbton dreht UNGEDAEMPFT mit: eine Skala ist eine Farbfamilie,
       // und ihre Textstufen gehoeren derselben an wie ihre Flaechen. Gedaempft
