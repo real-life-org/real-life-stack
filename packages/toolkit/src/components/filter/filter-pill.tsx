@@ -103,7 +103,7 @@ export function FilterPill({
         className={cn(
           "overflow-hidden border border-border bg-card text-foreground",
           // Die Form steht sofort; nur der Inhalt blendet kurz ein (unten).
-          offen ? "w-[232px] rounded-2xl shadow-xl" : "w-auto rounded-full shadow-lg",
+          offen ? "w-[232px] rounded-2xl shadow-xl" : "w-auto rounded-pill shadow-lg",
         )}
       >
         {offen ? (

@@ -90,7 +90,7 @@ export function CreateFab({ onClick, label = "Erstellen", hideWhileVisible, clas
       className={cn(
         // Desktop offset is 1rem on both axes so it matches the right inline
         // offset (1rem) and lines up with the other module/map corner controls.
-        "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-center rounded-full transition-[right] duration-300 ease-out in-[.adaptive-panel-resizing]:transition-none md:bottom-[calc(1rem+env(safe-area-inset-bottom))]",
+        "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-center rounded-pill transition-[right] duration-300 ease-out in-[.adaptive-panel-resizing]:transition-none md:bottom-[calc(1rem+env(safe-area-inset-bottom))]",
         // Weiss mit Rand und Karten-Schatten, 48px am Desktop, 52px am
         // Telefon (Design-Board 1.3). Vorher: 56px, primaerfarben, mit
         // Hover-Lift — er schrie lauter als alles andere auf der Flaeche und
