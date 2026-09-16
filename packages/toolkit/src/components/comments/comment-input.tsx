@@ -101,10 +101,11 @@ export function CommentInput({
   if (disabled) return null
 
   return (
-    // Die Glasflaeche, nicht festes bg-card: der Fuss klebt unten im Panel,
-    // und bei durchscheinenden Flaechen war er die eine undurchsichtige
-    // Stelle in einem sonst durchscheinenden Rahmen.
-    <div className={cn("border-t surface-glass", className)}>
+    // Innenflaeche des Glasrahmens, nicht festes bg-card und auch nicht die
+    // Glasflaeche selbst: der Fuss klebt unten IM Panel, und eine zweite
+    // Glasschicht ueber der ersten (80 % auf 80 %) ist praktisch deckend —
+    // genau die eine undurchsichtige Stelle im durchscheinenden Rahmen.
+    <div className={cn("border-t surface-glass-inner", className)}>
       {/* Quote preview when replying */}
       {replyTo && (
         <div className="flex items-start gap-2 px-3 pt-2 pb-1">

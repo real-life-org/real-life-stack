@@ -84,17 +84,20 @@ export function readSurfaces(value: unknown): Surfaces | null {
  * zweite Gruppe, die ein Space (oder die Instanz) am Wurzelelement setzt.
  *
  *   --radius          die eine Rundung, aus der alle anderen entstehen
- *   --surface-alpha   Deckkraft durchscheinender Flächen (1 = deckend)
- *   --surface-blur    Weichzeichnung dahinter (0 = keine)
+ *   --surface-alpha        Deckkraft durchscheinender Flächen (1 = deckend)
+ *   --surface-inner-alpha  Flächen IN einem Glasrahmen: 0, sonst stapeln sich zwei Schichten
+ *   --surface-blur         Weichzeichnung dahinter (0 = keine)
  */
-export const LAYOUT_TOKENS: readonly string[] = ["--radius", "--surface-alpha", "--surface-blur"]
+export const LAYOUT_TOKENS: readonly string[] = ["--radius", "--surface-alpha", "--surface-inner-alpha", "--surface-blur"]
 
 export function layoutTokens(axes: { radius?: RadiusStep | null; surfaces?: Surfaces | null }): Record<string, string> {
   const out: Record<string, string> = {}
   if (axes.radius) out["--radius"] = RADIUS_STEPS[axes.radius]
   if (axes.surfaces) {
-    out["--surface-alpha"] = axes.surfaces === "solid" ? "1" : "0.8"
-    out["--surface-blur"] = axes.surfaces === "solid" ? "0px" : "12px"
+    const solid = axes.surfaces === "solid"
+    out["--surface-alpha"] = solid ? "1" : "0.8"
+    out["--surface-inner-alpha"] = solid ? "1" : "0"
+    out["--surface-blur"] = solid ? "0px" : "12px"
   }
   return out
 }

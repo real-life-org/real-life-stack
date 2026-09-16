@@ -105,6 +105,11 @@
      die Instanz `surfaces: solid` setzt (siehe lib/space-theme.ts). */
   --surface-alpha: 0.8;
   --surface-blur: 12px;
+  /* Flaechen INNERHALB eines Glasrahmens (klebender Kommentar-Fuss): keine
+     zweite Farbschicht — zwei mal 80 % waeren 96 %, also deckend — nur die
+     Weichzeichnung gegen den darunter scrollenden Inhalt. Erst im Modus
+     "deckend" wird auch die Innenflaeche deckend (1). */
+  --surface-inner-alpha: 0;
 
   /*
    * Hoehe der Navbar. Bisher stand sie als `top-14` an jeder Stelle, die
@@ -339,6 +344,12 @@
 .glass-navbar,
 .surface-glass {
   background-color: oklch(from var(--card) l c h / var(--surface-alpha));
+  backdrop-filter: blur(var(--surface-blur));
+  -webkit-backdrop-filter: blur(var(--surface-blur));
+}
+
+.surface-glass-inner {
+  background-color: oklch(from var(--card) l c h / var(--surface-inner-alpha));
   backdrop-filter: blur(var(--surface-blur));
   -webkit-backdrop-filter: blur(var(--surface-blur));
 }

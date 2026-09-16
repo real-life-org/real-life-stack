@@ -35,8 +35,10 @@ describe("layoutTokens", () => {
   })
 
   it("macht Flaechen deckend oder durchscheinend", () => {
-    expect(layoutTokens({ surfaces: "solid" })).toEqual({ "--surface-alpha": "1", "--surface-blur": "0px" })
-    expect(layoutTokens({ surfaces: "translucent" })).toEqual({ "--surface-alpha": "0.8", "--surface-blur": "12px" })
+    expect(layoutTokens({ surfaces: "solid" })).toEqual({ "--surface-alpha": "1", "--surface-inner-alpha": "1", "--surface-blur": "0px" })
+    // Innenflaechen (Kommentar-Fuss im Panel) tragen durchscheinend KEINE
+    // eigene Farbschicht — zwei mal 80 % waeren deckend.
+    expect(layoutTokens({ surfaces: "translucent" })).toEqual({ "--surface-alpha": "0.8", "--surface-inner-alpha": "0", "--surface-blur": "12px" })
   })
 
   it("nennt jedes Token, das es setzen kann", () => {
