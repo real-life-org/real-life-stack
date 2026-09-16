@@ -8,8 +8,9 @@
  *
  * Die Zuordnung folgt den Rollen, die Radix seinen zwölf Stufen gibt:
  *
- *   1  App-Hintergrund          →  --background
- *   2  Flächen darauf           →  --card, --popover, --sidebar
+ *   1/2 App-Hintergrund und Karten  →  --background, --card, --popover
+ *       (hell: Grund 2, Karten 1; dunkel: Grund 1, Karten 2 — Karten immer heller)
+ *   Grund                        →  --sidebar
  *   3  Komponente in Ruhe       →  --muted, --secondary, --accent
  *   6  Rahmen                   →  --border
  *   7  Rahmen, interaktiv       →  --input
@@ -102,7 +103,7 @@ function visibleAgainst(scale: ColorScale, background: string, minimum: number):
   return step(scale, 12)
 }
 
-export function themeTokens({ accent, gray }: ThemeTokenInput): ThemeTokens {
+export function themeTokens({ accent, gray, scheme }: ThemeTokenInput): ThemeTokens {
   const fill = step(accent, 9)
   // Die Schrift auf der Füllfläche ist WEISS — reines Weiß, nicht das helle
   // Ende der Grauskala (im dunklen Schema wäre das ein sichtbares Grau).
@@ -119,16 +120,22 @@ export function themeTokens({ accent, gray }: ThemeTokenInput): ThemeTokens {
   const tint = step(accent, 3)
   const onTint = step(accent, 12)
 
-  const background = step(gray, 1)
+  // Karten liegen in BEIDEN Schemata heller als der Grund — so war das
+  // Toolkit vor der Skalenschicht (hell 0.975 → 1.0, dunkel 0.15 → 0.20),
+  // und so las es sich besser. Radix legt Stufe 1 als App-Grund und 2 als
+  // Flaeche darauf fest; im Dunklen ist 2 die hellere, im Hellen aber die
+  // dunklere. Darum hell vertauscht: Grund = 2, Karten = 1.
+  const [ground, surface] = scheme === "dark" ? [step(gray, 1), step(gray, 2)] : [step(gray, 2), step(gray, 1)]
+  const background = ground
   const ring = visibleAgainst(accent, background, 3)
 
   return {
-    "--background": step(gray, 1),
+    "--background": ground,
     "--foreground": step(gray, 12),
 
-    "--card": step(gray, 2),
+    "--card": surface,
     "--card-foreground": step(gray, 12),
-    "--popover": step(gray, 2),
+    "--popover": surface,
     "--popover-foreground": step(gray, 12),
 
     "--primary": fill,
@@ -146,7 +153,9 @@ export function themeTokens({ accent, gray }: ThemeTokenInput): ThemeTokens {
     "--input": step(gray, 7),
     "--ring": ring,
 
-    "--sidebar": step(gray, 2),
+    // Die Seitenleiste folgt dem Grund, nicht den Karten (Original: hell
+    // 0.98 nahe 0.975, dunkel gleich dem Grund).
+    "--sidebar": ground,
     "--sidebar-foreground": step(gray, 12),
     "--sidebar-primary": fill,
     "--sidebar-primary-foreground": onFill,
