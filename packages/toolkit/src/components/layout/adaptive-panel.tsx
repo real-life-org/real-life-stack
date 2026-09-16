@@ -812,11 +812,14 @@ export function AdaptivePanel({
               isLeft ? "border-r" : "border-l",
             ),
             // Drawer styling
-            mode === "drawer" && "bg-card rounded-t-xl shadow-xl flex flex-col",
+            // Die Glasflaeche der App-Huelle (Achse `surfaces`): deckend oder
+            // durchscheinend, wie Navbar und Bottom-Nav. Radix nennt genau das
+            // `panelBackground` — Panels sind die Flaechen, um die es geht.
+            mode === "drawer" && "surface-glass rounded-t-xl shadow-xl flex flex-col",
             // Schwebende Karte: eigene Huelle mit Rand und Schatten; Kopf und
             // Fuss bleiben stehen, der Body scrollt darin (flex + overflow).
             mode === "floating" && cn(
-              "h-full bg-card border rounded-2xl shadow-xl overflow-hidden flex flex-col",
+              "h-full surface-glass border rounded-2xl shadow-xl overflow-hidden flex flex-col",
               // Hereinfahren von der Seite. Bei reduzierter Bewegung bleibt die
               // Karte stehen und blendet nur ein.
               "transition-[transform,opacity] duration-300 ease-out",
