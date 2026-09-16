@@ -1,0 +1,10 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro'
+import version from '../../../../docs/reference/build-info.json'
+---
+<aside class="build-note" aria-label="Dokumentationsstand">
+  <strong>Werkstattfassung</strong> · App {version.app} · Toolkit {version.toolkit}<br />
+  Gemeinsam mit den Beispielen gebaut aus <code>{version.commit.slice(0, 8)}</code>{version.dirty ? ' mit lokalen Änderungen' : ''}.
+  <a href="/docs/de/pflege/">Wie wir die Dokumentation aktuell halten →</a>
+</aside>
+<Default><slot /></Default>

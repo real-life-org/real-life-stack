@@ -1,0 +1,38 @@
+---
+{
+  "title": "Fähigkeiten, Rechte und Herkunft",
+  "description": "Drei verschiedene Fragen, die in der Oberfläche zusammenkommen.",
+  "sources": [
+    "docs/spec/03-capabilities.md",
+    "docs/spec/09-mirror-bridge.md",
+    "docs/spec/12-profile.md"
+  ],
+  "terms": [
+    "capability",
+    "mirror"
+  ],
+  "stories": [
+    "rls-handbook-app--read-only"
+  ]
+}
+---
+
+import Story from '../../../apps/docs/src/components/Story.astro';
+
+**Kann der Connector schreiben? Darf ich dieses Item bearbeiten? Woher stammt es?** Diese Fragen dürfen nicht zu einer einzigen Prüfung verkürzt werden.
+
+## Capability: was die Datenquelle technisch anbietet
+
+Der DataInterface-Core kann lesen und beobachten. Schreiben ist eine zusätzliche Capability, etwa `ItemWriter`. Der Type Guard `isWritable` prüft diese Fähigkeit. Er entscheidet nicht über die Mitgliedschaft oder die Berechtigung für ein bestimmtes Item.
+
+## Berechtigung: was ich hier tun darf
+
+Die App und der Connector müssen die geltenden Rechte berücksichtigen. Die Oberfläche zeigt passende Aktionen; der Schreibpfad muss die Regeln weiterhin durchsetzen. Einen Button auszublenden ist keine serverseitige oder kryptografische Autorisierung.
+
+<Story id="rls-handbook-app--read-only" title="Derselbe Garten mit einem Connector ohne Schreibfähigkeit" height={650} />
+
+## Herkunft: wo das Item zu Hause ist
+
+Ein Spiegel zeigt Inhalte aus einem Home-Space. Er ist nicht allein aufgrund seiner Herkunft schreibbar oder read-only. Für konkrete Aktionen gelten die Verträge der Mirror-Bridge, des Profilmodells und des jeweiligen Connectors.
+
+Das neue Detailkonzept beschreibt Herkunfts-Badges und Hinweise. Welche Schreibaktionen im aktuellen Release am Spiegel angeboten werden, muss gegen die Implementierung geprüft werden; der Simulator allein ist dafür kein Nachweis.

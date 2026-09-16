@@ -1,0 +1,47 @@
+---
+{
+  "title": "Gemeinschaft braucht gute Werkzeuge.",
+  "description": "Das Handbuch für Menschen, die Real Life Stack nutzen, gestalten und weiterentwickeln.",
+  "sources": [
+    "docs/spec/00-architecture.md"
+  ],
+  "terms": [
+    "app",
+    "instance",
+    "space-module",
+    "item"
+  ],
+  "stories": []
+}
+---
+
+import { LinkCard, CardGrid } from '../../../apps/docs/src/components/cards';
+
+**Real Life Stack ist ein modularer Baukasten für Community-Apps.** Eine gemeinsame Grundlage verbindet Kalender, Karte, Aufgaben und weitere Module. Deine App bestimmt, wie diese Bausteine zusammenkommen; ein Connector verbindet sie mit ihrer Datenquelle.
+
+Dieses Handbuch führt vom ersten Start bis zu den Verträgen hinter der Oberfläche. Du brauchst nicht alles auf einmal zu lesen.
+
+<CardGrid>
+  <LinkCard title="Eine eigene Instanz starten" description="Die fertige App ausprobieren, einen Namen geben und für deine Community betreiben." href="/docs/de/instanz/" />
+  <LinkCard title="Mit dem Stack entwickeln" description="Entwicklungsumgebung, Storybook und eine erste Änderung – mit oder ohne Agent." href="/docs/de/entwickeln/" />
+  <LinkCard title="Die Oberfläche verstehen" description="Vom Space bis zur Detailansicht. Echte Bausteine zum Ausprobieren." href="/docs/de/oberflaeche/" />
+  <LinkCard title="Begriffe nachschlagen" description="Was wir mit App, Instanz, Modul und Item meinen. Mit visuellen Beispielen." href="/docs/de/glossar/" />
+</CardGrid>
+
+## Ein Beispiel begleitet dich
+
+Ein Gemeinschaftsgarten organisiert ein Erntefest. Es hat ein Datum und einen Ort. Deshalb kann **dasselbe Item** im Kalender und auf der Karte erscheinen. Eine Änderung am Titel verändert nicht zwei Kopien: Beide Ansichten lesen dasselbe Objekt.
+
+## Wie du hier lesen kannst
+
+**Gestalten und ausprobieren:** Beginne bei der Oberfläche. Die eingebetteten Beispiele verwenden echte Toolkit-Komponenten. Öffne sie in Storybook, um weitere Zustände zu vergleichen.
+
+**Verstehen und entwickeln:** Folge von dort zu Datenfluss, Specs und Quellcode. Technische Bezeichnungen bleiben neben den deutschen Begriffen sichtbar.
+
+**Mit Agenten arbeiten:** Gib deinem Agenten den [Arbeitskontext](/docs/de/agenten/) und einen konkreten Auftrag. Der Agent muss den gleichen Daten- und Komponentenverträgen folgen wie ein Mensch.
+
+## Stand dieser Fassung
+
+Dies ist die deutsche Werkstattfassung. Sie beschreibt den zugehörigen Quellstand; die vollständige neue Detail-Registry ist als Zielbild gekennzeichnet. Die englische Veröffentlichung folgt nach der gemeinsamen Prüfung der deutschen Fassung. Die [Pflegeregeln](/docs/de/pflege/) erklären, wie Beispiele, Begriffe und Texte zusammen aktualisiert werden.
+
+[Zur Projekt-Webseite](/) · [Referenz-App](/app/) · [Storybook](/storybook/)

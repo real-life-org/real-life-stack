@@ -16,7 +16,8 @@ const TYPES: FilterTypeOption[] = [
 ]
 
 const meta: Meta<typeof FilterBar> = {
-  title: "Module Components / FilterBar",
+  id: "module-components-filterbar",
+  title: "RLS/Module/Gemeinsame Werkzeuge/Suche und Filter",
   component: FilterBar,
   decorators: [
     (Story) => (

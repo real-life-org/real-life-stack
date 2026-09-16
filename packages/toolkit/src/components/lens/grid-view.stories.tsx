@@ -12,7 +12,8 @@ const items: Item[] = [
 ]
 
 const meta: Meta<typeof GridView> = {
-  title: "RLS/Module Components/Lenses/GridView",
+  id: "rls-module-components-lenses-gridview",
+  title: "RLS/Module/Gemeinsame Ansichten/Raster",
   component: GridView,
   tags: ["autodocs"],
   parameters: {

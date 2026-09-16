@@ -118,7 +118,8 @@ function StandaloneDetails({ reactions, users, initialEmoji }: StandaloneDetails
 }
 
 const meta: Meta<typeof StandaloneDetails> = {
-  title: "RLS/Module Components/Reactions/ReactionDetails",
+  id: "rls-module-components-reactions-reactiondetails",
+  title: "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionDetails",
   component: StandaloneDetails,
   tags: ["autodocs"],
   parameters: {

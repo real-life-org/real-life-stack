@@ -1,0 +1,67 @@
+---
+{
+  "title": "App zuerst. Dann Instanz.",
+  "description": "Die Landkarte des Stack: Anwendung, Betrieb, Daten und Protokolle.",
+  "sources": [
+    "docs/spec/00-architecture.md",
+    "docs/spec/01-app-composition.md",
+    "docs/spec/03-capabilities.md"
+  ],
+  "terms": [
+    "app",
+    "instance",
+    "space",
+    "connector"
+  ],
+  "stories": []
+}
+---
+
+import Flow from '../../../apps/docs/src/components/Flow.astro';
+
+<Flow />
+
+## App und Instanz
+
+Eine **App** ist die Anwendung mit ihren Modulen, Funktionen und ihrer Oberfläche. Die RLS-Referenz-App zeigt viele Möglichkeiten des Baukastens. Eine eigene App kann eine kleinere Auswahl zusammenstellen.
+
+Eine **Instanz** ist eine konkret betriebene Ausprägung einer App. Name, Farben, Landingpage und Dienstanbindung können anders sein, obwohl beide Instanzen dasselbe App-Image verwenden.
+
+Ein **Space** ist dagegen der gemeinsame Arbeitskontext innerhalb einer App: etwa der Gemeinschaftsgarten oder die offene Werkstatt. Er ist kein weiterer Webserver.
+
+## Die Schichten arbeiten zusammen
+
+```text
+App Shell + Module + Komponenten
+                ↓
+          React-Hooks
+                ↓
+ DataInterface + optionale Capabilities
+                ↓
+             Connector
+                ↓
+     Datenquelle und ihre Dienste
+```
+
+| Schicht | Ihre Aufgabe | Was sie nicht entscheidet |
+| --- | --- | --- |
+| App Shell | Kontext, Navigation, Auswahl und übergreifende Flächen | Speicherung und Verschlüsselung |
+| Modul | Passende Items darstellen und Aktionen anbieten | Eigene Kopien derselben Items verwalten |
+| Hooks | Reaktive Daten in React-Zustand übersetzen | Ein zweites Backend aufbauen |
+| DataInterface | Einheitlicher Vertrag zum Lesen und Beobachten | Ob eine Datenquelle alle Zusatzfunktionen besitzt |
+| Connector | Datenvertrag gegen eine konkrete Quelle implementieren | Das Layout deiner App |
+
+## Welche Datenquelle passt zum Einstieg?
+
+- **Mock:** fiktive Daten im Arbeitsspeicher. Ideal zum Lernen; ein Reload startet neu.
+- **Local:** Daten im Browser auf einem Gerät. Eine öffentlich erreichbare Website macht daraus noch keine gemeinsam synchronisierte Community.
+- **Supabase:** zentrale Dienste für Daten, Authentifizierung und Realtime. Benötigt ein eingerichtetes Backend.
+- **Web of Trust:** dezentrale Identität und verschlüsselter Austausch. Verwendet zusätzliche Dienste wie Relay und Profile.
+
+Connectoren bieten unterschiedliche **Capabilities**. Ein Wechsel der Datenquelle ist an dieser Grenze vorgesehen; die App muss fehlende Fähigkeiten trotzdem berücksichtigen. Gleiche Komponenten garantieren nicht automatisch dieselben Rechte oder Protokoll-Kompatibilität.
+
+## Die Protokollgrenze
+
+RLS beschreibt den App- und UI-Vertrag. Identität, signierte Aussagen und Sync liegen hinter dem Connector. Die soziale Bedeutung von Kreisen und Rollen liegt im Real Life Network Protocol. Wer ein eigenes Protokoll anbinden möchte, beginnt mit dem DataInterface und prüft anschließend jede benötigte Capability.
+
+[Normative Architektur](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/00-architecture.md)

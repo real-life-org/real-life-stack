@@ -1,0 +1,39 @@
+:root {
+  --sl-color-accent-low: #112e38;
+  --sl-color-accent: #41b8ac;
+  --sl-color-accent-high: #bce8da;
+  --sl-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sl-content-width: 54rem;
+  --sl-text-5xl: 3.7rem;
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: #d8eee6;
+  --sl-color-accent: #167364;
+  --sl-color-accent-high: #174d43;
+  --sl-color-bg: #fbfaf6;
+  --sl-color-bg-nav: #fbfaf6;
+  --sl-color-bg-sidebar: #f3f2eb;
+}
+h1 { letter-spacing: -.045em; line-height: 1.1 !important; }
+h2, h3 { letter-spacing: -.025em; }
+.site-title { letter-spacing: -.04em; font-weight: 750; }
+.hero { padding-block: 2rem 3rem; }
+.hero .tagline { max-width: 40rem; line-height: 1.7; }
+.card { border-radius: .7rem; box-shadow: none; }
+.sl-markdown-content table { font-size: .92rem; }
+.story-example { margin-block: 2rem; border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; overflow: hidden; }
+.story-example figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; padding: .8rem 1rem; font-size: .78rem; background: var(--sl-color-bg-sidebar); }
+.story-example iframe { display: block; width: 100%; border: 0; background: white; }
+.story-example p { padding: .65rem 1rem; font-size: .8rem; color: var(--sl-color-gray-2); margin: 0; }
+.build-note { font-size: .78rem; line-height: 1.7; border-top: 1px solid var(--sl-color-gray-5); margin-block: 2rem; padding-top: 1rem; color: var(--sl-color-gray-2); }
+.build-note a { display: block; }
+.term-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,19rem),1fr)); gap: 1rem; }
+.term { border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; padding: 1.25rem; scroll-margin-top: 6rem; }
+.term h2 { font-size: 1.25rem; margin: .25rem 0 .65rem; }
+.term small { font-family: var(--sl-font-mono); color: var(--sl-color-accent-high); }
+.term p { font-size: .92rem; margin-block: .5rem; }
+.term-links { display: flex; flex-wrap: wrap; gap: .8rem; font-size: .82rem; }
+.flow-map { display: flex; flex-wrap: wrap; gap: .5rem; padding: 1rem 0 2rem; }
+.flow-map a { border: 1px solid var(--sl-color-gray-5); border-radius: 3rem; padding: .5rem 1rem; text-decoration: none; }
+.flow-map a:hover { border-color: var(--sl-color-accent); }
+@media (max-width: 50rem) { :root { --sl-text-5xl: 2.5rem; } .story-example { margin-inline: -.5rem; } }

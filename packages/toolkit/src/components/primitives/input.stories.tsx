@@ -3,7 +3,8 @@ import { Input } from './input'
 import { Label } from './label'
 
 const meta: Meta<typeof Input> = {
-  title: 'RLS/Primitives/Input',
+  id: "rls-primitives-input",
+  title: "RLS/Grundlagen/UI-Primitives/Input",
   component: Input,
   tags: ['autodocs'],
   argTypes: {

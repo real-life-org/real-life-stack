@@ -188,7 +188,8 @@ function FeedModuleOverview() {
 }
 
 const meta: Meta<typeof FeedModuleOverview> = {
-  title: "RLS/Space Modules/Feed/Overview",
+  id: "rls-space-modules-feed-overview",
+  title: "RLS/Module/Feed/Übersicht",
   component: FeedModuleOverview,
   tags: ["autodocs"],
   parameters: {

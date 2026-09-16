@@ -8,6 +8,33 @@ Wenn ein Begriff hier und in einer Spec divergiert, gewinnt die Spec; bitte den 
 
 ---
 
+## App
+
+Eine Anwendung, die RLS-Bausteine zu zusammenhängenden Nutzerwegen komponiert.
+Sie bestimmt Funktionen, Module und Oberfläche.
+
+## Instanz
+
+Eine konkret betriebene Ausprägung einer App mit eigener Konfiguration,
+Branding und Dienstanbindung. Eine App kann mehrere Instanzen besitzen.
+Eine eigene Instanz bedeutet nicht automatisch eigene Sync-Dienste.
+
+## Begriffe für die Oberfläche
+
+Das [gemeinsame Begriffsregister](../reference/terms.json) definiert deutsche
+und englische UI-Bezeichnungen, historische Aliase und technische Symbole.
+Das [visuelle Glossar](../handbook/de/glossar.mdx) verknüpft sie mit Stories.
+
+- **Modul** ist der gemeinsame Begriff; **Space-Modul** präzisiert bei Bedarf
+  die Architektur. „Linse“ ist ein historischer Alias, kein paralleler Oberbegriff.
+- **Ansicht** bezeichnet eine Darstellungsvariante innerhalb eines Moduls.
+- **Item-Vorschau** (`ItemPreview`) ist die kompakte Darstellung eines Items.
+- **Detailansicht** (`ItemDetail`) bezeichnet die vollständige Darstellung
+  jedes Item-Typs. Die heutigen Bausteine heißen unter anderem `ItemDetailBody`
+  und `ItemDetailPanel`; dies behauptet keine bereits implementierte Registry.
+- **Personenprofil** ist fachlicher Inhalt einer Person. „Profil“ wurde früher
+  auch allgemein für ItemDetail verwendet; neue UI-Texte nutzen Detailansicht.
+
 ## Adapter
 
 Library-agnostisches Interface, das ein *Space Module* von der Wahl einer konkreten JS-Library trennt. Das *Map*-Modul definiert z.B. den `MapAdapter` mit Methoden wie `mount`, `setMarkers`, `setView`; konkrete Implementierungen (Leaflet, MapLibre, …) leben hinter derselben Oberfläche.
@@ -82,7 +109,7 @@ Spec: [04-items-relations-groups-spaces.md → §Data-Felder](04-items-relations
 
 ## DataInterface
 
-Read-only RLS-Kernvertrag zwischen UI/Hooks und *Connector*. Definiert nur `getItems`, `getItem`, `observe`, `observeItem`. Alles, was schreibt, authentifiziert oder Trust-Aussagen trifft, lebt in *Capabilities*.
+Read-only RLS-Kernvertrag zwischen UI/Hooks und *Connector*. Definiert `init`, `dispose`, `getItems`, `getItem`, `observe`, `observeItem`. Alles, was schreibt, authentifiziert oder Trust-Aussagen trifft, lebt in *Capabilities*.
 
 Spec: [02-data-interface.md](02-data-interface.md)
 
@@ -94,7 +121,7 @@ Spec: [02-data-interface.md → §Filter](02-data-interface.md)
 
 ## FullConnector
 
-Convenience-Typ, der *DataInterface* + die frühen Capabilities (`ItemWriter`, `RelationCapable`, `GroupCapable`) vereinigt. Bedeutet *nicht*, dass der Connector alle heutigen Capabilities implementiert — nur eine pragmatische Bündelung.
+Convenience-Typ, der *DataInterface* + die frühen Capabilities (`ItemWriter`, `RelationCapable`, `GroupManager`, `Authenticatable`, `MultiSource`) vereinigt. Bedeutet *nicht*, dass der Connector alle heutigen Capabilities implementiert — nur eine pragmatische Bündelung.
 
 Spec: [03-capabilities.md → §FullConnector](03-capabilities.md)
 
@@ -168,9 +195,10 @@ Spec: [05-confirmations-and-trust.md → §Trust-Level](05-confirmations-and-tru
 
 ## `type`
 
-> **Offene Frage.** Wird zwischen Anton und Sebastian diskutiert (siehe PR #37, Branch `spec/type-primary-reading`).
-
-Bis dahin gilt der Stand aus 06: `type` ist ein optionaler UI-Hint, kein struktureller Filter. Die fachliche Bedeutung eines *Items* kommt aus dem `@context`, nicht aus `type`.
+Pflichtfeld: als was ein Item erstellt wurde. Es beeinflusst seine Darstellung
+und bewusste Typfilter. Die fachliche Struktur seiner Felder kommt aus den
+Vokabularen in `@context`. Modulaktivierung folgt grundsätzlich passenden
+Feldern; die in Spec 06 genannten Marker-Vokabulare sind die Ausnahme.
 
 Spec: [06-schema-composition.md → §Item mit `@context` Regel 5](06-schema-composition.md)
 

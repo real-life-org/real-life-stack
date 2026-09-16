@@ -3,7 +3,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 
 const meta: Meta<typeof Tabs> = {
-  title: 'RLS/Primitives/Tabs',
+  id: "rls-primitives-tabs",
+  title: "RLS/Grundlagen/UI-Primitives/Tabs",
   component: Tabs,
   tags: ['autodocs'],
 }

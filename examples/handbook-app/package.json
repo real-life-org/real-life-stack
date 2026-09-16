@@ -1,0 +1,25 @@
+{
+  "name": "rls-handbook-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build"
+  },
+  "dependencies": {
+    "@real-life-stack/data-interface": "0.2.0",
+    "@real-life-stack/mock-connector": "0.1.5",
+    "@real-life-stack/toolkit": "0.1.8",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.2.2",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "tailwindcss": "4.2.2",
+    "typescript": "5.7.3",
+    "vite": "6.4.3"
+  }
+}

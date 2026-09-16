@@ -2,7 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import { ProfilePanelContent } from "./profile-panel-content"
 
 const meta: Meta<typeof ProfilePanelContent> = {
-  title: "Module Components / ProfilePanelContent",
+  id: "module-components-profilepanelcontent",
+  title: "RLS/Items/Typbeispiele/Personenprofil",
   component: ProfilePanelContent,
   parameters: { layout: "centered" },
   decorators: [

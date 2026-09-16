@@ -111,6 +111,7 @@ function Header() {
   const { t } = useLanguage()
 
   const navItems = [
+    { label: 'Handbuch · DE', href: '/docs/de/' },
     { label: t.nav.modules, href: '#module' },
     { label: t.nav.dataInterface, href: '#schnittstelle' },
     { label: t.nav.connectors, href: '#connectoren' },

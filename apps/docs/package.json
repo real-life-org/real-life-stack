@@ -1,0 +1,17 @@
+{
+  "name": "@real-life-stack/handbook",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../scripts/handbook/prepare.mjs && astro dev --host 127.0.0.1",
+    "build": "node ../../scripts/handbook/prepare.mjs && astro build",
+    "preview": "astro preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.42.1",
+    "astro": "7.2.10"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

@@ -1,0 +1,16 @@
+---
+import terms from '../../../../docs/reference/terms.json'
+const label = (id: string) => terms.find(t => t.id === id)?.label.de ?? id
+---
+<figure class="anatomy">
+  <figcaption>Strukturkarte · vom Rahmen zum Inhalt</figcaption>
+  <div class="anatomy-shell">
+    <a class="anatomy-caption" href="#app-shell">{label('app-shell')}</a>
+    <div class="anatomy-nav"><a href="#space-switcher">← {label('space-switcher')}</a><a href="#user-menu">{label('user-menu')} →</a></div>
+    <div class="anatomy-context"><a href="#space">{label('space')}</a><span>bestimmt den Kontext</span></div>
+    <div class="anatomy-body"><div><a href="#space-module">{label('space-module')}</a><p>Feed · Kalender · Karte</p><a class="anatomy-preview" href="#item-preview">{label('item-preview')}</a><small>wählt ein Item aus →</small></div><a class="anatomy-detail" href="#item-detail">{label('item-detail')}<small>Kopf<br/>Fakten<br/>Inhalt<br/>Aktionen</small></a></div>
+  </div>
+</figure>
+<style>
+.anatomy{margin-block:2rem}.anatomy figcaption{font-size:.85rem;margin-bottom:.8rem}.anatomy-shell{border:2px solid var(--sl-color-accent);border-radius:1rem;padding:1rem;background:var(--sl-color-bg-sidebar)}.anatomy a{text-decoration:none;font-weight:650}.anatomy-caption{display:block;margin-bottom:1rem}.anatomy-nav{display:flex;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--sl-color-gray-5);padding-bottom:1rem}.anatomy-context{display:flex;gap:1rem;font-size:.9rem;padding:1rem 0}.anatomy-context span{color:var(--sl-color-gray-2)}.anatomy-body{display:grid;grid-template-columns:1.3fr 1fr;gap:1rem}.anatomy-body>div,.anatomy-detail{padding:1rem;border:1px solid var(--sl-color-gray-5);border-radius:.5rem;background:var(--sl-color-bg)}.anatomy-body p{font-size:.85rem}.anatomy-preview{display:block;padding:1rem;border:1px dashed var(--sl-color-accent);border-radius:.5rem;margin-block:1rem}.anatomy small{display:block;font-size:.8rem;color:var(--sl-color-gray-2);font-weight:400}.anatomy-detail small{margin-top:1.5rem;line-height:2}@media(max-width:35rem){.anatomy-nav,.anatomy-context{flex-wrap:wrap}.anatomy-body{grid-template-columns:1fr}}
+</style>

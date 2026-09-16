@@ -1,0 +1,87 @@
+---
+{
+  "title": "B · Die Entwicklungsumgebung starten",
+  "description": "Quelltext holen, Pakete bauen, Referenz-App und Storybook starten.",
+  "sources": [
+    "package.json",
+    "packages/toolkit/package.json",
+    "apps/reference/package.json",
+    "AGENTS.md"
+  ],
+  "terms": [
+    "app",
+    "component"
+  ],
+  "stories": []
+}
+---
+
+## Voraussetzungen
+
+Node.js **22.12 oder neuer** für das Handbuch; der Stack verlangt Node 22 oder neuer. Verwende die in `package.json` festgelegte pnpm-Version über Corepack. Git und ein Terminal reichen für den Web-Einstieg; Android-Werkzeuge sind dafür nicht nötig.
+
+```bash
+git clone https://github.com/real-life-org/real-life-stack.git
+cd real-life-stack
+corepack enable
+corepack pnpm install --frozen-lockfile
+```
+
+## Abhängigkeiten zuerst bauen
+
+In einem frischen Checkout fehlen noch die `dist`-Verzeichnisse der Workspace-Pakete. Baue die Abhängigkeiten der Referenz-App, bevor du ihren Dev-Server startest:
+
+```bash
+corepack pnpm --filter 'reference^...' build
+corepack pnpm dev:reference
+```
+
+Öffne die im Terminal angezeigte URL. Die Referenz-App kann unterschiedliche Connectoren verwenden. Beginne mit Mock-Daten; du brauchst dafür keine produktive Identität.
+
+## Storybook daneben öffnen
+
+In einem zweiten Terminal, ebenfalls im Repository:
+
+```bash
+corepack pnpm storybook
+```
+
+Storybook läuft auf **http://localhost:6006/**. Beginne bei **RLS → Einstieg** oder **RLS → App → Gemeinschaftsgarten**. Der interaktive Gemeinschaftsgarten zeigt dir Space-Wechsel, Module, Vorschau und Detail in ihrem Zusammenhang.
+
+## Die erste Änderung
+
+Öffne `packages/toolkit/src/handbook/garden.stories.tsx`. Verändere einen erklärenden Story-Text oder die Beispieldaten in `garden-data.ts`. Beobachte das Ergebnis in Storybook. Diese Fixtures sind fiktiv und Teil der Dokumentation, nicht Daten deiner Community.
+
+Für eine funktionale Änderung lies zuerst die verknüpfte Spec. Wiederverwendbare UI gehört ins Toolkit; die App komponiert die Bausteine. Ein neuer Backend-Aufruf aus einer UI-Komponente wäre eine Verletzung der Schichtengrenze.
+
+## Änderungen prüfen
+
+```bash
+corepack pnpm --filter @real-life-stack/toolkit typecheck
+corepack pnpm --filter @real-life-stack/toolkit test
+corepack pnpm build:storybook
+corepack pnpm build:docs
+corepack pnpm check:docs
+git diff --check
+```
+
+Wähle im Alltag die zur Änderung passenden Checks. Vor einer Änderung an Einstieg oder Navigation gehören Storybook- und Handbuch-Build dazu.
+
+## Am Handbuch arbeiten
+
+```bash
+corepack pnpm dev:docs
+```
+
+Die Erklärtexte liegen in `docs/handbook/de/`, die Begriffe in `docs/reference/terms.json`. Die Website rendert dieselben Quellen, die Agenten lesen. Für eine lokale Vorschau **einschließlich** der eingebetteten Beispiele baue Storybook und Handbuch und starte `corepack pnpm preview:handbook`.
+
+## Welcher Beitrag gehört wohin?
+
+| Ziel | Ort |
+| --- | --- |
+| Eigene Community-App | [Eigenes App-Projekt](/docs/de/eigene-app/) mit veröffentlichten Paketen |
+| Geteilte Oberfläche verbessern | `packages/toolkit` und passende Stories |
+| Datenquelle anbinden | Connector gegen `data-interface` |
+| Verhalten verbindlich ändern | Relevante Spec, Code, Checks und Erklärung im selben PR |
+
+[Arbeitsweise und Review](/docs/de/beitragen/)

@@ -1,0 +1,73 @@
+---
+{
+  "title": "Vom Space zum Item",
+  "description": "Die UI-Logik an einer echten App-Komposition entdecken.",
+  "sources": [
+    "docs/spec/01-app-composition.md",
+    "docs/spec/06-schema-composition.md",
+    "packages/toolkit/src/handbook/garden.tsx"
+  ],
+  "terms": [
+    "app-shell",
+    "space",
+    "space-module",
+    "view",
+    "item-preview",
+    "item-detail"
+  ],
+  "stories": [
+    "rls-handbook-app--garden",
+    "rls-app-shell-layout-adaptivepanel--drawer"
+  ]
+}
+---
+
+import Story from '../../../apps/docs/src/components/Story.astro';
+import Flow from '../../../apps/docs/src/components/Flow.astro';
+
+<Flow />
+
+## Ein Rahmen, ein aktueller Kontext
+
+Die **App Shell** bleibt der Rahmen. Links wählst du den Space, rechts öffnest du persönliche Funktionen. Dazwischen beziehungsweise auf kleinen Bildschirmen darunter liegt die Modulnavigation.
+
+Der **Space** bestimmt den Arbeitskontext. Ein Modul ist eine Oberfläche in diesem Kontext. **Ansicht** nennen wir Varianten innerhalb eines Moduls – im Kalender etwa Monat und Woche. „Linse“ ist die bisherige Bezeichnung; im Handbuch verwenden wir konsequent „Modul“.
+
+<Story id="rls-handbook-app--garden" title="Gemeinschaftsgarten: Space wechseln, Item auswählen und Detail öffnen" height={690} />
+
+## Probiere diese vier Schritte
+
+1. Öffne das **Erntefest** über seine Item-Vorschau.
+2. Wechsle zum **Kalender**. Die Auswahl gehört zur App-Komposition und bleibt erhalten.
+3. Wechsle zur **Karte**. Dieselbe Item-ID besitzt neben einem Termin auch eine Position.
+4. Wähle links die **Offene Werkstatt**. In diesem Beispiel wird die Auswahl beim Kontextwechsel geleert, damit kein altes Item unter einem neuen Space-Namen stehen bleibt.
+
+Die Karte verwendet eine leere lokale Hintergrundkarte mit echten geografischen Markern. Für dieses Lernbeispiel wird kein externer Kartendienst geladen.
+
+## Vorschau und Detail sind zwei Darstellungen
+
+Die **Item-Vorschau** hilft beim Erkennen und Auswählen. Die **Detailansicht** zeigt das Item vollständig und bietet passende Aktionen. Auch eine Person verwendet die allgemeine Detailansicht; „Personenprofil“ beschreibt dabei den fachlichen Inhalt.
+
+Die Modulfläche, das Item und seine Detaildarstellung sind verschiedene Dinge. Ein Event gehört nicht exklusiv dem Kalender. Seine Zeit macht es im Kalender darstellbar, seine Position auf der Karte.
+
+## Was liegt auf welcher Ebene?
+
+| Ebene | Verantwortung |
+| --- | --- |
+| App Shell | Aktueller Space, Modulwahl, ausgewähltes Item, übergreifende Flächen |
+| Modul | Seine Darstellung und modulbezogene Interaktionen |
+| Detail-Host | Öffnen, Schließen und Präsentation der Detailfläche |
+| Detailinhalt | Titel, Fakten, Inhalt und passende Aktionen |
+| Connector | Lesen, Beobachten und erlaubtes Schreiben |
+
+In der Referenz-App teilen sich Detail, Editor und Filter ein Inhalts-Panel. Dialoge sind eine eigene Ebene; Hinweise dürfen den geöffneten Inhalt nicht verdrängen. Desktop und Mobile können dieselbe Aufgabe als Sidebar beziehungsweise Drawer darstellen.
+
+<Story id="rls-app-shell-layout-adaptivepanel--drawer" title="Ein Inhalts-Panel als Drawer" height={480} />
+
+## Technisch nachvollziehen
+
+Das Gartenbeispiel verwendet `AppShell`, `WorkspaceSwitcher`, `UserMenu`, `ItemPreview`, `CalendarView`, `MapView`, `AdaptivePanel` und `ItemDetailBody`. Die Daten kommen über einen MockConnector und `useItems`. Der MockConnector wird für jede Instanz der Story neu erzeugt und beim Verlassen freigegeben.
+
+Die Auswahl bleibt beim Modulwechsel in der Komposition. Eine gespeicherte Änderung geht an den Connector; dessen Observable aktualisiert danach Vorschau, Kalender und Detail. Es gibt keine zweite Liste nur für das Detail.
+
+[Zum Datenfluss](/docs/de/datenfluss/) · [Die Detailanatomie verstehen](/docs/de/item-detail/)

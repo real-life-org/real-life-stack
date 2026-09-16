@@ -1,0 +1,16 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import terms from '../../../../docs/reference/terms.json';
+
+<Meta title="RLS/Einstieg/Orientierung" />
+
+# Vom Ganzen zum Detail
+
+**App → Instanz → App Shell → Space → Modul → Item-Vorschau → Detailansicht**
+
+Starte bei **App / Gemeinschaftsgarten**. Wechsle Module, öffne das Erntefest und bearbeite den Titel. Alle Darstellungen beobachten dieselbe Datenquelle. Unter **App Shell** findest du die äußere Navigation, unter **Module** ganze Arbeitsflächen, unter **Items** deren gemeinsame Inhalte.
+
+[Zum deutschen Handbuch](/docs/de/) · [Glossar](/docs/de/glossar/)
+
+## Gemeinsame Begriffe
+
+{terms.map(term => <section key={term.id}><h3>{term.label.de}</h3><p>{term.definition.de}</p><a href={`?path=/story/${term.story}`}>Im Beispiel ansehen →</a></section>)}

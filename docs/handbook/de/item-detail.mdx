@@ -1,0 +1,64 @@
+---
+{
+  "title": "Eine Detailansicht für alle Items",
+  "description": "Anatomie, gemeinsame Bausteine und der Unterschied zwischen Ist und Zielbild.",
+  "sources": [
+    "docs/spec/modules/shared-components.md",
+    "docs/spec/12-profile.md",
+    "packages/toolkit/src/components/detail/item-detail-body.tsx"
+  ],
+  "terms": [
+    "item-detail",
+    "profile",
+    "field-widget",
+    "relation"
+  ],
+  "stories": [
+    "detail-itemdetailbody--event",
+    "detail-itemdetailbody--laedt",
+    "rls-module-components-widgets-textwidget--default"
+  ]
+}
+---
+
+import Story from '../../../apps/docs/src/components/Story.astro';
+
+## Zuerst sehen, was das Item ist
+
+Eine geöffnete Detailansicht beginnt mit dem Item. Die kompakte Vorschau und die vollständige Detailansicht verwenden deshalb unterschiedliche Anordnungen. `ItemDetailBody` liefert den Leseinhalt, `ItemDetailPanel` verbindet Inhalt und Diskussion; der Host entscheidet, wie die Fläche geöffnet wird.
+
+<Story id="detail-itemdetailbody--event" title="Veranstaltung: Kopf, Meta-Box, Beschreibung, Tags und Urheber" height={540} />
+
+| Bereich | Frage, die er beantwortet |
+| --- | --- |
+| Kopf und Badges | Was sehe ich? Welcher Typ und welche Herkunft? |
+| Meta-Box | Wann, wo, mit wem und womit verbunden? |
+| Inhalt | Was muss ich dazu wissen? |
+| Tags und Urheber | Welche Themen, von wem und wann? |
+| Aktionen und Diskussion | Was kann ich tun oder beitragen? |
+
+Leere Fakten sollen keine leere Meta-Box hinterlassen. Der Baustein erwartet von leeren Slots `null` statt leerer Hüllen. Das zeigt, weshalb eine gemeinsame UI-Regel auch einen technischen Vertrag braucht.
+
+## Das gemeinsame Zielbild
+
+Das abgestimmte Oberflächenkonzept erweitert die Anatomie um klar abgegrenzte Selbstaktionen, Rückverweislisten und gemeinsame Lese-/Schreibpaare. **Die vollständige registerbasierte Umsetzung dieses Konzepts ist hier noch nicht als ausgeliefert bestätigt.**
+
+Die Zielreihenfolge lautet: **Kopf → Meta-Box → Selbstaktionen → Inhalt → Rückverweislisten → Tags und Urheber → Aktionsleiste → Kommentare.**
+
+Eine Selbstaktion verändert meine Beziehung zum Item, etwa „Zusagen“ oder „Übernehmen“. Ein allgemeiner Befehl wie „Nachricht senden“ ist eine andere Art von Aktion. Eine Rückverweisliste zeigt zum Beispiel die Aufgaben, die auf dieses Projekt verweisen.
+
+## Lesen und Schreiben zusammen erklären
+
+Ein Datum wird lesend als Zeitangabe mit einem passenden Navigationsziel sichtbar und schreibend als Datumsfeld. Beides gehört zu demselben Datenvertrag. Der Editor verwendet heute `ContentComposer` mit konfigurierten Widgets. Wie der Editor geöffnet wird, entscheidet der Host; die im Konzept beschriebene vollständige Umwandlung derselben Detailfläche ist kein pauschales Versprechen für alle aktuellen Apps.
+
+<Story id="rls-module-components-widgets-textwidget--default" title="Textbaustein für die Bearbeitung" height={430} />
+
+## Personen sind kein zweites UI-System
+
+Ein Personenprofil trägt andere Felder und Aktionen als ein Termin. Der Begriff **Detailansicht** gilt trotzdem für beide. Bestehende Exports wie `ProfilePanelContent` bleiben als technische Namen nachvollziehbar. „Profil“ als allgemeiner historischer Name für ItemDetail steht nur noch als Alias im Glossar.
+
+## Zustände gehören zur Erklärung
+
+Leer, ladend, fehlerhaft und read-only sind reguläre Zustände. Das Handbuch zeigt sie beim jeweiligen Baustein. Es behauptet nicht, dass ein Fehler automatisch fehlende Daten bedeutet oder ein technisch vorhandener Writer jedes Item schreibbar macht.
+
+<Story id="detail-itemdetailbody--laedt" title="Ladezustand derselben Detailanatomie" height={440} />

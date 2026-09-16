@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { TagChip } from './tag-chip'
 
 const meta: Meta<typeof TagChip> = {
-  title: 'RLS/Module Components/Tag/TagChip',
+  id: "rls-module-components-tag-tagchip",
+  title: "RLS/Items/Detailansicht/Tags und Urheber/TagChip",
   component: TagChip,
   tags: ['autodocs'],
   argTypes: {

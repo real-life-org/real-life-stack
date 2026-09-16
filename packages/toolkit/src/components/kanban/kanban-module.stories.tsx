@@ -145,7 +145,8 @@ function KanbanModuleOverview() {
 }
 
 const meta: Meta<typeof KanbanModuleOverview> = {
-  title: "RLS/Space Modules/Kanban/Overview",
+  id: "rls-space-modules-kanban-overview",
+  title: "RLS/Module/Kanban/Übersicht",
   component: KanbanModuleOverview,
   tags: ["autodocs"],
   parameters: {
