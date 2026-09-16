@@ -168,7 +168,7 @@ Regeln:
 3. Ohne Logo MUSS `primaryColor` deterministisch aus der Space-ID abgeleitet werden, analog zu `getTagColor` / `getTagAccentColor` in `packages/toolkit/src/lib/utils.ts`. Die Ableitung MUSS über Geräte und Sessions stabil sein und DARF NICHT echtes Random verwenden. Ein Space erbt seine Akzentfarbe also **nicht** von der Instanz — jeder Space hat seine eigene.
 4. Wird ein Logo entfernt, SOLL `primaryColor` wieder auf den deterministischen ID-Fallback zurückfallen.
 5. `primaryColor` ist Cache und Default, kein Pflicht-Eingabefeld. Fehlt der Wert, MÜSSEN Leseflächen den deterministischen ID-Fallback berechnen.
-6. `Group.data.tint` ist eine Zahl 0–1. Fehlt sie, erbt der Space die Tönung der Instanz. Der Wert 0 wird nicht gespeichert, sondern gelöscht (`null`, Regel 3 der Space-Metadaten); ein gespeicherter Wert außerhalb des Bereichs wird gekappt, ein anderer Typ ignoriert.
+6. `Group.data.tint` ist eine Zahl 0–1. Fehlt sie, erbt der Space die Tönung der Instanz. Eine explizite 0 ist ein Wert („keine Tönung, obwohl die Instanz eine hat") und wird gespeichert; `null` löscht den Schlüssel (Regel 3 der Space-Metadaten) und stellt die Vererbung wieder her. Ein Wert außerhalb des Bereichs wird gekappt, ein anderer Typ ignoriert.
 
 ### Wirkung des Aussehens
 
