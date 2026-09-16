@@ -861,7 +861,13 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
         onUpdateGroup={async (id, updates) => {
           await updateGroup(id, updates)
         }}
-        onOpenThemePanel={openThemePanel}
+        onOpenThemePanel={(group) => {
+          // Die Tokens gehoeren dem AKTIVEN Space. Aus dem Menue eines
+          // anderen geoeffnet, regelte man sonst an Farben, die gar nicht
+          // auf dem Bildschirm sind — also erst hinspringen.
+          if (activeWorkspace?.id !== group.id) handleWorkspaceChange({ id: group.id, name: group.name })
+          openThemePanel(group)
+        }}
         onDeleteGroup={async (id) => {
           await deleteGroup(id)
           // If deleted group was active, switch to first remaining
