@@ -426,10 +426,18 @@ export interface GroupData {
   scope?: string
   /** Enabled UI modules for this group (e.g. ["feed", "kanban", "calendar", "map"]). */
   modules?: string[]
-  /** Group image URL or filename. */
+  /**
+   * Das Bild des Space als SELBSTTRAGENDE Quelle — eine Data-URL, wie sie
+   * der Space-Dialog beim Hochladen schreibt, oder eine absolute URL.
+   *
+   * KEIN relativer Pfad: der muesste mit dem Basispfad aufgeloest werden,
+   * und der ist laut Spec 11 Build-Zeit-Sache des Auslieferungs-Layouts,
+   * die eine Toolkit-Komponente nicht kennt. Ein zweites Feld `avatar` fuer
+   * denselben Zweck gab es bis 09/2026; es trug Dateinamen, wurde nur an
+   * einer einzigen Stelle aufgeloest und blieb darum ueberall sonst
+   * unsichtbar — unter anderem im Space-Dialog.
+   */
   image?: string
-  /** Group avatar URL or filename (alternative to image). */
-  avatar?: string
 }
 
 // ============================================================
