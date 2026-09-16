@@ -87,6 +87,8 @@ Entwurf: Claude-Design-Projekt „RLS System Design", Datei `Space Menu.dc.html`
 - [x] **space-config-section-list**: Menü, Inhalt und Startwert lesen **eine** Liste (`spaceConfigSections`); keine zweite Aufzählung der Bereiche
 - [x] **space-config-identity-in-header**: Bild und Name stehen über den Bereichen und bleiben in jedem Bereich änderbar; es gibt keinen Bereich „Allgemein"
 - [x] **space-config-fixed-frame**: Fester Rahmen, nur der Inhalt scrollt — Kopf, Menü und Fußzeile stehen
+- [x] **space-config-active-in-space-color**: Der aktive Menüeintrag trägt die Primärfarbe des Space. Spec 04 nennt „aktive Navigations- und Sidebar-Items" ausdrücklich; damit spricht das Menü dieselbe Sprache wie die Modulleiste, und eine Farbänderung zeigt sich sofort daneben. Die Farbe kommt aus dem Dialog, nicht aus `--primary`: aus der Übersicht geöffnet wäre der bearbeitete Space nicht der aktive
+- [x] **space-config-no-section-heading**: Kein Bereichsname als Überschrift über dem Inhalt — der Menüeintrag daneben nennt ihn auf gleicher Höhe und hebt ihn farbig hervor; für Screenreader trägt ihn die Fläche als `role="region"` mit `aria-label`
 - [x] **space-config-single-section-no-menu**: Bleibt genau ein Bereich übrig, entfällt das Menü; ein einzelner Eintrag wäre eine Wahl ohne Alternative
 - [x] **space-config-section-fallback**: Fällt der gewählte Bereich weg (Adminrecht steht beim Öffnen noch nicht fest), fällt die Auswahl auf den ersten zurück statt eine leere Fläche zu zeigen
 - [x] **space-config-reset-on-close**: Beim Schließen fallen Bereich, Suche und Kontaktfilter zurück — der Dialog bleibt montiert und öffnete sonst für den nächsten Space im Bereich des vorigen
