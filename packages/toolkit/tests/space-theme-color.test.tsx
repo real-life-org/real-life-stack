@@ -469,3 +469,106 @@ describe("Farb-Erfolg loescht keine fremden Meldungen", () => {
       .toContain("Umbenennen ging schief")
   })
 })
+
+/**
+ * `primaryColor` hat DREI Schreibwege: die bewusste Wahl, das Entfernen des
+ * Bildes und der Upload. Jeder muss die Anzeige mitfuehren — sonst zeigt der
+ * Dialog etwas anderes als die App daneben.
+ *
+ * Die ersten beiden wurden einzeln nachgezogen, der dritte blieb dabei
+ * liegen. Dieser Block prueft darum nicht einen Weg, sondern den VERTRAG:
+ * nach jedem Schreiben stimmt der Haken mit dem Gespeicherten ueberein.
+ */
+describe("Jeder Schreibweg fuehrt die Anzeige mit", () => {
+  let root: Root
+  const saved: Array<Record<string, unknown>> = []
+
+  const render = (data: Record<string, unknown>) => {
+    act(() => {
+      root.render(
+        createElement(GroupDialog, {
+          open: true,
+          onOpenChange: () => {},
+          mode: { type: "edit", group: { id: "g1", name: "G", data } } as never,
+          currentUserId: "did:key:zME",
+          onCreateGroup: async () => {},
+          onUpdateGroup: async (_id: string, u: { data?: Record<string, unknown> }) => {
+            if (u.data) saved.push(u.data)
+          },
+          onDeleteGroup: async () => {},
+        } as never),
+      )
+    })
+  }
+
+  const openAppearance = () => {
+    const entry = Array.from(document.querySelectorAll("nav button"))
+      .find((b) => b.textContent?.startsWith("Aussehen")) as HTMLButtonElement
+    act(() => { entry.click() })
+  }
+
+  /** Der Haken folgt der geltenden Farbe; ohne Palettentreffer gilt "custom". */
+  const shownColor = () => {
+    const hit = Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Primärfarbe"]'))
+      .find((b) => b.getAttribute("aria-pressed") === "true")
+    return hit?.getAttribute("aria-label")?.replace("Primärfarbe ", "") ?? "custom"
+  }
+
+  /** Was zuletzt fuer `primaryColor` gespeichert wurde. */
+  const lastSavedColor = () => {
+    for (let i = saved.length - 1; i >= 0; i--) {
+      if ("primaryColor" in saved[i]) return saved[i].primaryColor as string | null
+    }
+    return undefined
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = ""
+    saved.length = 0
+    const host = document.createElement("div")
+    document.body.appendChild(host)
+    root = createRoot(host)
+  })
+
+  it("Weg 1 — bewusste Wahl", async () => {
+    render({})
+    openAppearance()
+    const hex = SPACE_COLOR_SWATCHES[1]
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>(`button[aria-label="Primärfarbe ${hex}"]`)!.click()
+    })
+    expect(lastSavedColor()).toBe(hex)
+    expect(shownColor()).toBe(hex)
+  })
+
+  it("Weg 2 — Bild entfernen", async () => {
+    render({ image: "data:image/png;base64,AAA", primaryColor: SPACE_COLOR_SWATCHES[1] })
+    openAppearance()
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>('button[aria-label="Bild entfernen"]')!.click()
+    })
+    expect(lastSavedColor()).toBeNull()
+    // Nach `null` gilt der Id-Rueckfall — nicht mehr die vorige Wahl.
+    expect(shownColor()).not.toBe(SPACE_COLOR_SWATCHES[1])
+  })
+
+  it("Weg 3 — Bild hochladen", async () => {
+    render({ primaryColor: SPACE_COLOR_SWATCHES[1] })
+    openAppearance()
+
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]')!
+    const file = new File([new Uint8Array([1, 2, 3])], "logo.png", { type: "image/png" })
+    Object.defineProperty(fileInput, "files", { value: [file], configurable: true })
+    await act(async () => {
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }))
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const stored = lastSavedColor()
+    expect(stored, "der Upload speichert eine Farbe").toBeDefined()
+    // Und die Anzeige zeigt genau sie — nicht mehr die vorige Wahl.
+    expect(shownColor()).toBe(stored === null ? shownColor() : stored)
+    expect(shownColor()).not.toBe(SPACE_COLOR_SWATCHES[1])
+  })
+})

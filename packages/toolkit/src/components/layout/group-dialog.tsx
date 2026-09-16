@@ -446,6 +446,22 @@ export function GroupDialog({
    * eintrifft, erkennt daran, dass es ueberholt ist.
    */
   const colorRequestRef = useRef(0)
+
+  /**
+   * Die EINE Stelle, an der die angezeigte Farbe umgesetzt wird.
+   *
+   * `primaryColor` hat drei Schreibwege — die bewusste Wahl, das Entfernen
+   * des Bildes und der Upload. Jeder MUSS hier durch, sonst zeigt der Dialog
+   * eine andere Farbe als die App daneben. Genau das passierte, als die
+   * ersten beiden einzeln nachgezogen wurden und der dritte liegen blieb.
+   *
+   * Die laufende Nummer entwertet zugleich ein Zuruecksetzen, dessen
+   * Bildfarbe erst danach eintrifft: sie gehoerte zu einem frueheren Stand.
+   */
+  const rememberPrimaryColor = (hex: string | null) => {
+    colorRequestRef.current++
+    setPrimaryColorChoice(hex)
+  }
   const savePrimaryColorRef = useRef<((v: { groupId: string; hex: string | null }) => void) | null>(null)
   if (!savePrimaryColorRef.current) {
     savePrimaryColorRef.current = createLatestWinsSaver<{ groupId: string; hex: string | null }>(
@@ -585,6 +601,10 @@ export function GroupDialog({
       // grayscale logo dominantColor returns null -> clear it so reads fall
       // back to the deterministic id color.
       const primaryColor = await dominantColor(dataUrl).catch(() => null)
+      // Derselbe Weg wie die beiden anderen Schreiber: erst merken, dann
+      // speichern. Ohne das behielt der Dialog die vorige Farbe, waehrend
+      // die App schon die des neuen Logos trug.
+      rememberPrimaryColor(primaryColor)
       // Minimal patch — updateGroup merges per key (null removes), so this
       // cannot clobber e.g. a module order saved meanwhile (rls#234).
       void onUpdateGroup(mode.group.id, {
@@ -599,12 +619,8 @@ export function GroupDialog({
   const handleImageRemove = () => {
     if (!isEdit) return
     setGroupImage("")
-    // Der Patch unten verwirft `primaryColor`; ohne diese Zeile behielte der
-    // Dialog die alte Farbe und zeigte etwas anderes als die App daneben.
-    // Der Zaehler entwertet zugleich ein laufendes Zuruecksetzen, dessen
-    // Bildfarbe jetzt zu einem Bild gehoerte, das es nicht mehr gibt.
-    colorRequestRef.current++
-    setPrimaryColorChoice(null)
+    // Der Patch unten verwirft `primaryColor` — die Anzeige muss mit.
+    rememberPrimaryColor(null)
     // Drop the cached accent too, so it falls back to the deterministic id
     // color — `null` removes the key (patch contract), `undefined` would be
     // dropped by JSON transports and leave the stale accent behind.
@@ -685,8 +701,7 @@ export function GroupDialog({
    */
   const applyPrimaryColor = (hex: string | null) => {
     if (!isEdit) return
-    colorRequestRef.current++
-    setPrimaryColorChoice(hex)
+    rememberPrimaryColor(hex)
     savePrimaryColorRef.current?.({ groupId: mode.group.id, hex })
   }
 
