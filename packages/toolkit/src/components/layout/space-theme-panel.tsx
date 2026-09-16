@@ -21,6 +21,7 @@ import { scalesForColor } from "../../lib/color-scales"
 import { contrastChecks, themeTokens } from "../../lib/theme-tokens"
 import { colorAxes, colorFromAxes, readTint } from "../../lib/space-theme"
 import { cn, getSpacePrimaryColor } from "../../lib/utils"
+import { instanceTheme } from "../../lib/runtime-config"
 import { Button } from "../primitives/button"
 import { createLatestWinsSaver } from "./group-dialog"
 
@@ -73,6 +74,10 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
   }
 
   const effectiveColor = getSpacePrimaryColor(group.id, colorChoice)
+  // Ohne eigene Toenung erbt der Space die der Instanz (Kaskade). Der Regler
+  // zeigt, was gilt — und ein Reset fuehrt dorthin zurueck, nicht auf 0.
+  const inheritedTint = instanceTheme().tint ?? 0
+  const effectiveTint = tintChoice ?? inheritedTint
   const axes = colorAxes(effectiveColor)
   const setAxis = (key: keyof typeof axes, value: number) => {
     const hex = colorFromAxes({ ...axes, [key]: value })
@@ -92,9 +97,9 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
 
   const scheme = useColorScheme()
   const checks = useMemo(() => {
-    const scales = scalesForColor(effectiveColor, scheme, { tint: tintChoice ?? 0 })
+    const scales = scalesForColor(effectiveColor, scheme, { tint: effectiveTint })
     return contrastChecks(themeTokens({ ...scales, scheme }), { accentOnly: true })
-  }, [effectiveColor, scheme, tintChoice])
+  }, [effectiveColor, scheme, effectiveTint])
 
   const sliders = [
     ["hue", "Farbton", 0, 360],
@@ -143,12 +148,12 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
               aria-label="Tönung"
               min={0}
               max={100}
-              value={Math.round((tintChoice ?? 0) * 100)}
+              value={Math.round(effectiveTint * 100)}
               onChange={(e) => setTint(readTint(Number(e.target.value) / 100))}
               className="h-1.5 flex-1 cursor-pointer accent-primary"
             />
             <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
-              {Math.round((tintChoice ?? 0) * 100)}
+              {Math.round(effectiveTint * 100)}
             </span>
           </label>
         </div>

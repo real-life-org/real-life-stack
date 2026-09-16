@@ -93,11 +93,13 @@ describe("themeTokens — Lesbarkeit", () => {
  * Bedeutung genau dann, wenn es darauf ankommt.
  */
 describe("themeTokens — was dem Space nicht gehoert", () => {
-  it("haelt Fehler- und Warnfarbe unabhaengig von der Akzentfarbe", () => {
-    const a = build("#e87520", "light")
-    const b = build("#3b82f6", "light")
-    expect(a["--destructive"]).toBe(b["--destructive"])
-    expect(a["--warning"]).toBe(b["--warning"])
+  it("setzt Fehler-, Warn- und Diagrammfarben gar nicht — sie gehoeren der Instanz", () => {
+    // Schriebe die Schicht sie mit, ueberschriebe ein fester Standard in
+    // jedem Space das Ocker einer Instanz.
+    const t = build("#e87520", "light")
+    for (const name of ["--destructive", "--warning", "--pink", "--chart-1", "--chart-5"]) {
+      expect(t[name], name).toBeUndefined()
+    }
   })
 
   it("laesst die Akzentfarbe dagegen wirklich durchschlagen", () => {

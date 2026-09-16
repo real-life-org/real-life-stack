@@ -24,6 +24,7 @@ const { SpaceThemePanel } = await import("../src/components/layout/space-theme-p
 const { GroupDialog } = await import("../src/components/layout/group-dialog")
 const { colorAxes, colorFromAxes, readTint } = await import("../src/lib/space-theme")
 const { parseColor } = await import("../src/lib/oklch")
+const { loadRuntimeConfig, resetRuntimeConfigForTests } = await import("../src/lib/runtime-config")
 
 const COLOR = "#e87520"
 
@@ -142,6 +143,26 @@ describe("SpaceThemePanel", () => {
     expect(patch.primaryColor).toBeNull()
     expect(patch.tint).toBeNull()
     expect(resetButton(), "verschwindet, wenn nichts mehr gesetzt ist").toBeUndefined()
+  })
+
+  /**
+   * Ohne eigene Toenung erbt der Space die der Instanz. Der Regler zeigt,
+   * was gilt; ein Reset fuehrt dorthin zurueck, nicht auf 0.
+   */
+  it("zeigt die geerbte Toenung der Instanz, solange der Space keine setzt", async () => {
+    resetRuntimeConfigForTests()
+    await loadRuntimeConfig({
+      fetchImpl: (async () => ({ ok: true, status: 200, json: async () => ({ branding: { theme: { tint: 0.5 } } }) })) as unknown as typeof fetch,
+    })
+    try {
+      render({})
+      expect(Number(slider("Tönung").value)).toBe(50)
+      expect(resetButton(), "geerbt ist nicht gesetzt — kein Reset").toBeUndefined()
+      render({ primaryColor: COLOR, tint: 0.2 })
+      expect(Number(slider("Tönung").value)).toBe(20)
+    } finally {
+      resetRuntimeConfigForTests()
+    }
   })
 
   /**

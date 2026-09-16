@@ -35,25 +35,13 @@ export interface ThemeTokenInput {
 export type ThemeTokens = Record<string, string>
 
 /**
- * Fehler-, Warn- und Diagrammfarben gehören NICHT dem Space.
- *
- * Rot muss rot bleiben, auch wenn jemand seinen Space rot färbt: sonst
- * verlöre die Fehlerfarbe ihre Bedeutung genau dann, wenn es darauf
- * ankommt. Dasselbe gilt für die Diagrammreihen, die sich voneinander
- * unterscheiden müssen und nicht vom Akzent.
+ * Fehler-, Warn- und Diagrammfarben entstehen NICHT aus Achsen und werden
+ * hier auch nicht gesetzt. Sie gehören der Instanz (`globals.css`, dann
+ * `branding.colors`): Rot muss rot bleiben, auch wenn jemand seinen Space
+ * rot färbt — und das Ocker einer Instanz darf nicht in jedem Space von
+ * einem festen Standard überschrieben werden. Genau das tat diese Schicht,
+ * solange sie die Werte selbst mitschrieb.
  */
-const FIXED_TOKENS: ThemeTokens = {
-  "--destructive": "#dc2626",
-  "--warning": "#d97706",
-  "--warning-foreground": "#ffffff",
-  "--pink": "#db2777",
-  "--pink-foreground": "#ffffff",
-  "--chart-1": "#2563eb",
-  "--chart-2": "#16a34a",
-  "--chart-3": "#d97706",
-  "--chart-4": "#9333ea",
-  "--chart-5": "#e11d48",
-}
 
 /** Jedes Token, das diese Schicht setzt — die Liste, gegen die sie geprüft wird. */
 export const SEMANTIC_TOKENS: readonly string[] = [
@@ -82,7 +70,6 @@ export const SEMANTIC_TOKENS: readonly string[] = [
   "--sidebar-accent-foreground",
   "--sidebar-border",
   "--sidebar-ring",
-  ...Object.keys(FIXED_TOKENS),
 ]
 
 /** Stufe n einer Skala, 1-basiert wie bei Radix. */
@@ -166,8 +153,6 @@ export function themeTokens({ accent, gray }: ThemeTokenInput): ThemeTokens {
     "--sidebar-accent-foreground": onTint,
     "--sidebar-border": step(gray, 6),
     "--sidebar-ring": ring,
-
-    ...FIXED_TOKENS,
   }
 }
 

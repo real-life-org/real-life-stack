@@ -17,12 +17,15 @@ export {
 } from "./lib/color-scheme"
 export {
   loadRuntimeConfig,
+  instanceTheme,
+  TOOLKIT_ACCENT,
   getRuntimeConfig,
   applyBranding,
   DEFAULT_RUNTIME_CONFIG,
   type RuntimeConfig,
   type RuntimeEndpoints,
   type Branding,
+  type BrandingTheme,
 } from "./lib/runtime-config"
 export {
   deriveColorScale,

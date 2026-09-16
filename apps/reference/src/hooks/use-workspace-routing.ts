@@ -7,6 +7,7 @@ import {
   useItem,
   getSpacePrimaryColor,
   scalesForColor,
+  instanceTheme,
   useColorScheme,
   themeTokens,
   applyThemeTokens,
@@ -311,8 +312,9 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     // — Radix paart beides automatisch. Der Unterschied ist klein und soll
     // es sein: er gestaltet nicht, er stimmt ab.
     // Die Toenung ist die zweite Achse des Space: wie stark die Flaechen die
-    // Farbe tragen. Ohne sie bleibt alles neutral, der Akzent traegt allein.
-    const scales = scalesForColor(seed, scheme, { tint: activeWorkspace.tint })
+    // Farbe tragen. Setzt der Space keine, erbt er die der Instanz — so
+    // bleibt eine cremefarbene Instanz auch in jedem Space cremefarben.
+    const scales = scalesForColor(seed, scheme, { tint: activeWorkspace.tint ?? instanceTheme().tint })
     applyThemeTokens(root, themeTokens({ ...scales, scheme }))
     return () => clearThemeTokens(root)
   }, [activeWorkspace?.id, activeWorkspace?.primaryColor, activeWorkspace?.tint, isOverview, scheme])

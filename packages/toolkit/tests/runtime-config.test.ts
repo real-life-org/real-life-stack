@@ -5,6 +5,7 @@ import {
   getRuntimeConfig,
   resetRuntimeConfigForTests,
   applyBranding,
+  instanceTheme,
   DEFAULT_RUNTIME_CONFIG,
   type RuntimeConfig,
 } from "../src/lib/runtime-config"
@@ -438,5 +439,63 @@ describe("Ungueltiges faellt DURCH die Kette (Re-Review #276)", () => {
     expect(Object.isFrozen(cfg.branding?.colors)).toBe(true)
     expect(Object.isFrozen(cfg.branding?.colors?.light)).toBe(true)
     expect(Object.isFrozen(cfg.branding?.colors?.dark)).toBe(true)
+  })
+})
+
+/**
+ * Die Achsen der Instanz (Spec-Entwurf #390): `branding.theme` mit `accent`
+ * und `tint`. Geprueft, bevor sie gelten; abgeleitet in den Branding-Block,
+ * vor den Handkorrekturen.
+ */
+describe("branding.theme — Achsen der Instanz", () => {
+  beforeEach(() => {
+    resetRuntimeConfigForTests()
+    brandingZuruecksetzen()
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  it("liest Akzent und Toenung", async () => {
+    const cfg = await loadRuntimeConfig({
+      fetchImpl: stubFetch({ ok: true, json: { branding: { theme: { accent: "#3E5E2E", tint: 0.5 } } } }),
+    })
+    expect(cfg.branding?.theme).toEqual({ accent: "#3e5e2e", tint: 0.5 })
+    expect(instanceTheme()).toEqual({ accent: "#3e5e2e", tint: 0.5 })
+  })
+
+  it("verwirft, was kein #rrggbb oder keine Zahl ist, und kappt die Toenung", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const cfg = await loadRuntimeConfig({
+      fetchImpl: stubFetch({ ok: true, json: { branding: { theme: { accent: "gruen", tint: 7 } } } }),
+    })
+    expect(cfg.branding?.theme).toEqual({ tint: 1 })
+    expect(warn).toHaveBeenCalled()
+  })
+
+  it("ist ohne Konfiguration leer", () => {
+    expect(instanceTheme()).toEqual({})
+  })
+
+  it("leitet aus den Achsen den ganzen Tokensatz ab — hell und dunkel", () => {
+    applyBranding({ theme: { accent: "#3e5e2e", tint: 0.5 } })
+    const block = document.getElementById("rls-branding")?.textContent ?? ""
+    expect(block).toContain(":root:not(.dark)")
+    expect(block).toContain(":root.dark")
+    for (const name of ["--background", "--card", "--primary", "--muted-foreground", "--ring"]) {
+      expect(block, name).toContain(`${name}:`)
+    }
+    expect(wirksam("--primary")).toBe("#3e5e2e")
+  })
+
+  it("laesst Handkorrekturen ueber die Ableitung stechen", () => {
+    applyBranding({ theme: { accent: "#3e5e2e" }, colors: { light: { ring: "#8c9a5b" } } })
+    expect(wirksam("--ring")).toBe("#8c9a5b")
+    expect(wirksam("--primary")).toBe("#3e5e2e")
+  })
+
+  it("schreibt keine Warn- oder Diagrammfarben aus der Ableitung", () => {
+    applyBranding({ theme: { accent: "#3e5e2e" } })
+    const block = document.getElementById("rls-branding")?.textContent ?? ""
+    expect(block).not.toContain("--warning")
+    expect(block).not.toContain("--chart-1")
   })
 })
