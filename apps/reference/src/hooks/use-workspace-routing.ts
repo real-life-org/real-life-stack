@@ -143,19 +143,18 @@ export function useWorkspaceRouting(): WorkspaceRouting {
   // The space the URL names (aggregate slug → internal overview id).
   const urlSpaceId = urlScope ? slugToScope(urlScope) : undefined
 
-  const basePath = import.meta.env.BASE_URL
   const workspaces: Workspace[] = useMemo(
     () => [
       OVERVIEW_WORKSPACE,
       ...groups.map((g) => ({
         id: g.id,
         name: g.name,
-        avatar: g.data?.image as string | undefined ?? (g.data?.avatar ? `${basePath}${g.data.avatar}` : undefined),
+        avatar: g.data?.image as string | undefined,
         scope: g.data?.scope as string | undefined,
         primaryColor: g.data?.primaryColor as string | undefined,
       })),
     ],
-    [groups, basePath]
+    [groups]
   )
 
   // Derive active workspace from the URL scope (fallback localStorage → first space).
