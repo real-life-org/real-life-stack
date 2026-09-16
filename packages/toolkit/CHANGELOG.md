@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.1.9...toolkit-v0.1.10) (2026-09-16)
+
+
+### Bug Fixes
+
+* **toolkit:** Blur der Glasflaechen im Produktionsbuild ([#392](https://github.com/real-life-org/real-life-stack/issues/392)) ([8f9188d](https://github.com/real-life-org/real-life-stack/commit/8f9188d2c59c1a55c84d7d93af7327d60c35d65b))
+
 ## [0.1.9](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.1.8...toolkit-v0.1.9) (2026-09-16)
 
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.3](https://github.com/real-life-org/real-life-stack/compare/app-v0.3.2...app-v0.3.3) (2026-09-16)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/toolkit bumped to 0.1.10
+    * @real-life-stack/wot-connector bumped to 0.1.10
+
 ## [0.3.2](https://github.com/real-life-org/real-life-stack/compare/app-v0.3.1...app-v0.3.2) (2026-09-16)
 
 
