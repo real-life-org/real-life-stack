@@ -1,14 +1,10 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react"
-import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, RotateCcw, Check as CheckIcon, type LucideIcon } from "lucide-react"
+import { useState, useCallback, useEffect, useRef } from "react"
+import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, RotateCcw, SlidersHorizontal, Check as CheckIcon, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
 import { cn, getReadableTextColor, getSpacePrimaryColor, resolveAssetUrl, SPACE_COLOR_SWATCHES } from "../../lib/utils"
-import { scalesForColor } from "../../lib/color-scales"
-import { contrastChecks, themeTokens } from "../../lib/theme-tokens"
-import { oklchToHex, parseColor } from "../../lib/oklch"
-import { useColorScheme } from "../../hooks/use-color-scheme"
 import {
   Dialog,
   DialogContent,
@@ -136,40 +132,6 @@ export function spaceConfigSections({
   if (canTheme) sections.push({ id: "theme", label: "Aussehen", icon: Contrast })
   if (isAdmin) sections.push({ id: "modules", label: "Module", icon: LayoutGrid })
   return sections
-}
-
-/** Was in `data.tint` steht, als Zahl 0–1 — oder null, wenn nichts Brauchbares. */
-export function readTint(value: unknown): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value)) return null
-  const t = Math.min(1, Math.max(0, value))
-  return t > 0 ? t : null
-}
-
-/** Groesste Buntheit, die ein Regler anbietet — jenseits davon ist kaum etwas im Farbraum. */
-export const CHROMA_MAX = 0.37
-
-/**
- * Die drei Achsen der Akzentfarbe als Reglerstellungen, 0–100 (Farbton 0–360).
- *
- * Kein eigener Zustand: die Regler zeigen die Farbe, die gilt, und schreiben
- * sie zurueck. So gibt es genau EINEN Wert (`primaryColor`) und einen Reset.
- */
-export function colorAxes(hex: string): { hue: number; chroma: number; lightness: number } {
-  const c = parseColor(hex) ?? { l: 0.5, c: 0, h: 0 }
-  return {
-    hue: Math.round(c.h),
-    chroma: Math.round(Math.min(1, c.c / CHROMA_MAX) * 100),
-    lightness: Math.round(c.l * 100),
-  }
-}
-
-/** Die Umkehrung: aus Reglerstellungen wieder eine Farbe (im Farbraum gehalten). */
-export function colorFromAxes(axes: { hue: number; chroma: number; lightness: number }): string {
-  return oklchToHex({
-    l: Math.min(1, Math.max(0, axes.lightness / 100)),
-    c: Math.min(1, Math.max(0, axes.chroma / 100)) * CHROMA_MAX,
-    h: ((axes.hue % 360) + 360) % 360,
-  })
 }
 
 /**
@@ -353,6 +315,12 @@ export type GroupDialogMode =
   | { type: "edit"; group: Group }
 
 export interface GroupDialogProps {
+  /**
+   * Oeffnet die Feineinstellung des Aussehens (drei Achsen, Toenung,
+   * Kontraste) im Modul-Panel. Der Dialog schliesst sich dabei. Ohne Handler
+   * gibt es den Knopf nicht.
+   */
+  onOpenThemePanel?: (group: Group) => void
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: GroupDialogMode
@@ -376,6 +344,7 @@ export function GroupDialog({
   currentUserId,
   onCreateGroup,
   onUpdateGroup,
+  onOpenThemePanel,
   onDeleteGroup,
   onInviteMember,
   onRemoveMember,
@@ -532,47 +501,6 @@ export function GroupDialog({
       () => setColorError(null),
     )
   }
-  /**
-   * Toenung der Flaechen, 0–1 — die zweite Achse neben der Farbe.
-   *
-   * Eigener Saver, obwohl beide in dieselbe `data` schreiben: "der letzte
-   * gewinnt" gilt je Wert, und die beiden sind unabhaengig. Teilten sie sich
-   * einen, verdraengte eine Farbwahl eine kurz zuvor eingereihte Toenung.
-   */
-  const [tintChoice, setTintChoice] = useState<number | null>(() =>
-    mode.type === "edit" ? readTint(mode.group.data?.tint) : null,
-  )
-  const saveTintRef = useRef<((v: { groupId: string; tint: number | null }) => void) | null>(null)
-  if (!saveTintRef.current) {
-    saveTintRef.current = createLatestWinsSaver<{ groupId: string; tint: number | null }>(
-      // `null` loescht den Schluessel — Merge-Patch der Tiefe 1 (Spec 04).
-      ({ groupId: target, tint }) => onUpdateGroupRef.current(target, { data: { tint } }),
-      (err, failed, lastSaved) => {
-        const current = modeRef.current
-        if (current.type === "edit" && failed.groupId === current.group.id) {
-          setTintChoice(
-            lastSaved?.groupId === current.group.id ? lastSaved.tint : readTint(current.group.data?.tint),
-          )
-        }
-        setColorError(err instanceof Error ? err.message : "Tönung konnte nicht gespeichert werden")
-      },
-      () => setColorError(null),
-    )
-  }
-  /**
-   * Die Feineinstellung ist standardmaessig zu. Wer seinen Space einstellt,
-   * waehlt eine Farbe; die drei Achsen, die Toenung und die Kontrastzahlen
-   * sind fuer die, die genauer hinschauen wollen.
-   */
-  const [advanced, setAdvanced] = useState(false)
-
-  /** Die EINE Stelle, an der die Toenung umgesetzt wird. */
-  const applyTint = (tint: number | null) => {
-    if (!isEdit) return
-    setTintChoice(tint)
-    saveTintRef.current?.({ groupId: mode.group.id, tint })
-  }
-
   const applyModules = useCallback((next: string[]) => {
     setActiveModules(next)
     saveModulesRef.current?.(next)
@@ -816,22 +744,6 @@ export function GroupDialog({
   const currentSwatch = activeSpaceSwatch(effectiveColor, imageColor)
 
   /**
-   * Was der Space gerade traegt — dieselbe Rechnung wie in der App, damit die
-   * Kontrastzeilen hier nicht etwas anderes behaupten als die Flaechen
-   * daneben. Hell oder dunkel kommt vom Menschen (`useColorScheme`).
-   */
-  const scheme = useColorScheme()
-  const accentChecks = useMemo(() => {
-    const scales = scalesForColor(effectiveColor, scheme, { tint: tintChoice ?? 0 })
-    // Nur die Paare, die an der Akzentskala haengen — an den neutralen kann
-    // der Space nichts drehen, sie zu zeigen lenkte nur ab.
-    return contrastChecks(themeTokens({ ...scales, scheme }), { accentOnly: true })
-  }, [effectiveColor, scheme, tintChoice])
-  const axes = colorAxes(effectiveColor)
-  const setAxis = (key: "hue" | "chroma" | "lightness", value: number) =>
-    applyPrimaryColor(colorFromAxes({ ...axes, [key]: value }))
-
-  /**
    * Erst die Anzeige, dann das Speichern: der Haken springt sofort, der
    * Saver holt es nach und rollt bei einem Fehlschlag zurueck.
    */
@@ -856,10 +768,6 @@ export function GroupDialog({
    */
   const resetPrimaryColor = async () => {
     if (!isEdit) return
-    // EIN Reset: Farbe und Toenung zusammen. Zwei Knoepfe fuer zwei Werte
-    // hiessen, dass der eine stehen bleibt, wenn man den anderen drueckt —
-    // genau das fiel bei den Stufen auf.
-    if (tintChoice != null) applyTint(null)
     if (!groupImage) {
       applyPrimaryColor(null)
       return
@@ -1410,96 +1318,29 @@ export function GroupDialog({
                 </label>
               </div>
 
-              <button
-                type="button"
-                aria-expanded={advanced}
-                onClick={() => setAdvanced((v) => !v)}
-                className="mx-2.5 mt-2 flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {advanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                Erweitert
-              </button>
-
-              {advanced && (
-                <>
-                  {/* Die Farbe feinstellen — drei Achsen von OKLCH in Worten.
-                      Kein eigener Zustand: die Regler zeigen die geltende
-                      Farbe und schreiben sie zurueck, also gibt es genau
-                      einen Wert und einen Reset. "Ein bisschen ruhiger" ist
-                      so ein Handgriff, und die App zieht live mit. */}
-                  <div className="space-y-2 px-2.5 pt-2">
-                    {(
-                      [
-                        ["hue", "Farbton", 0, 360],
-                        ["chroma", "Kräftigkeit", 0, 100],
-                        ["lightness", "Helligkeit", 0, 100],
-                      ] as const
-                    ).map(([key, label, min, max]) => (
-                      <label key={key} className="flex items-center gap-3 text-xs">
-                        <span className="w-20 shrink-0 text-muted-foreground">{label}</span>
-                        <input
-                          type="range"
-                          aria-label={label}
-                          min={min}
-                          max={max}
-                          value={axes[key]}
-                          onChange={(e) => setAxis(key, Number(e.target.value))}
-                          className="h-1.5 flex-1 cursor-pointer accent-primary"
-                        />
-                        <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
-                          {axes[key]}{key === "hue" ? "°" : ""}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-
-                  {/* Die Toenung: wie stark die Flaechen die Farbe tragen. Bei
-                      0 bleibt alles neutral, der Akzent traegt die Farbe
-                      allein; weiter oben bekommt der Space eine eigene
-                      Atmosphaere — reallife.network liegt mit seinem Creme
-                      bei etwa 50. */}
-                  <div className="px-2.5 pt-2">
-                    <label className="flex items-center gap-3 text-xs">
-                      <span className="w-20 shrink-0 text-muted-foreground">Tönung</span>
-                      <input
-                        type="range"
-                        aria-label="Tönung"
-                        min={0}
-                        max={100}
-                        value={Math.round((tintChoice ?? 0) * 100)}
-                        onChange={(e) => applyTint(readTint(Number(e.target.value) / 100))}
-                        className="h-1.5 flex-1 cursor-pointer accent-primary"
-                      />
-                      <span className="w-8 shrink-0 text-right tabular-nums text-muted-foreground">
-                        {Math.round((tintChoice ?? 0) * 100)}
-                      </span>
-                    </label>
-                  </div>
-
-                  {/* Was das fuer die Lesbarkeit bedeutet. Ohne diese Zeilen
-                      merkt man erst im Betrieb, dass eine Beschriftung in
-                      ihrem Knopf verschwunden ist. Die Knopfschrift ist mit
-                      Absicht weiss (siehe getReadableTextColor) und kann
-                      darum unter 3:1 liegen — gezeigt wird es trotzdem. */}
-                  <div className="space-y-0.5 px-2.5 pt-3">
-                    {accentChecks.map((check) => (
-                      <div key={check.label} className="flex items-baseline justify-between text-xs">
-                        <span className="text-muted-foreground">{check.label}</span>
-                        <span className={cn("tabular-nums", check.ok ? "text-muted-foreground" : "text-destructive")}>
-                          {check.ratio.toFixed(1)}:1
-                          {!check.ok && <span className="ml-1">· {check.minimum}:1 nötig</span>}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </>
+              {/* Die Feineinstellung (drei Achsen, Toenung, Kontraste) lebt im
+                  Modul-Panel, nicht hier: dort bleibt die App sichtbar und
+                  bedienbar, waehrend man regelt. Der Dialog schliesst sich
+                  dafuer — ein Dialog und ein Panel zugleich waeren zwei
+                  Flaechen, die um denselben Wert streiten. */}
+              {onOpenThemePanel && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenChange(false)
+                    onOpenThemePanel(mode.group)
+                  }}
+                  className="mx-2.5 mt-2 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <SlidersHorizontal className="h-3 w-3" />
+                  Feineinstellung öffnen
+                </button>
               )}
 
-              {/* EIN Weg zurueck fuer alles, was der Space am Aussehen
-                  gesetzt hat. Spec 04 Regel 2/3: ohne eigenen Wert stammt
+              {/* Der Weg zurueck. Spec 04 Regel 2/3: ohne eigenen Wert stammt
                   die Farbe aus dem Logo, sonst deterministisch aus der
-                  Space-Id; die Toenung faellt auf 0. */}
-              {(primaryColorChoice != null || tintChoice != null) && (
+                  Space-Id. Die Toenung setzt das Panel zurueck. */}
+              {primaryColorChoice != null && (
                 <button
                   type="button"
                   onClick={() => { void resetPrimaryColor() }}
