@@ -130,8 +130,33 @@ describe("SpaceThemePanel", () => {
     expect(document.querySelector('button[aria-label="Gray auto"]')!.getAttribute("aria-checked")).toBe("true")
     await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Gray sand"]')!.click() })
     expect(last("gray")).toBe("sand")
+    // "auto" ist ein Wert, kein Loeschen — sonst griffe eine geerbte Neutrale wieder.
     await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Gray auto"]')!.click() })
-    expect(last("gray")).toBeNull()
+    expect(last("gray")).toBe("auto")
+  })
+
+  /**
+   * Review #391: Bei branding.theme.gray = "sand" schrieb "auto" nur null —
+   * und damit griff sofort wieder "sand". Auto und Erben brauchen
+   * verschiedene Werte.
+   */
+  it("laesst auto waehlen, auch wenn die Instanz ein Grau vorgibt", async () => {
+    resetRuntimeConfigForTests()
+    await loadRuntimeConfig({
+      fetchImpl: (async () => ({ ok: true, status: 200, json: async () => ({ branding: { theme: { gray: "sand" } } }) })) as unknown as typeof fetch,
+    })
+    try {
+      render({})
+      expect(document.querySelector('button[aria-label="Gray sand"]')!.getAttribute("aria-checked"), "geerbt").toBe("true")
+      await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Gray auto"]')!.click() })
+      expect(last("gray")).toBe("auto")
+      expect(document.querySelector('button[aria-label="Gray auto"]')!.getAttribute("aria-checked")).toBe("true")
+      expect(document.querySelector('button[aria-label="Gray sand"]')!.getAttribute("aria-checked")).toBe("false")
+      render({ gray: "auto" })
+      expect(document.querySelector('button[aria-label="Gray auto"]')!.getAttribute("aria-checked"), "auch nach dem Nachziehen").toBe("true")
+    } finally {
+      resetRuntimeConfigForTests()
+    }
   })
 
   it("stellt die Regler auf die geltende Farbe", () => {
@@ -340,6 +365,31 @@ describe("GroupDialog → Feineinstellung", () => {
     expect(opener()).toBeUndefined()
     renderDialog({ onOpenThemePanel: () => {} })
     expect(opener()).toBeDefined()
+  })
+
+  /**
+   * Review #391: Waehrend "Rundung small" gespeichert wird, "Solid" und dann
+   * "Rundung large" waehlen — der Saver verwarf den wartenden Solid-Patch.
+   * Wartende Aenderungen werden jetzt feldweise zusammengefuehrt.
+   */
+  it("fuehrt wartende Layout-Aenderungen feldweise zusammen", async () => {
+    const releases: Array<() => void> = []
+    const saved: Array<Record<string, unknown>> = []
+    renderDialog({
+      onUpdateGroup: (_id: string, u: { data?: Record<string, unknown> }) =>
+        new Promise<void>((resolve) => { releases.push(() => { if (u.data) saved.push(u.data); resolve() }) }),
+    })
+    const click = async (label: string) => { await act(async () => { document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click() }) }
+    await click("Rundung small")
+    await click("Flächen solid")
+    await click("Rundung large")
+    while (releases.length) {
+      const next = releases.shift()!
+      await act(async () => { next(); await Promise.resolve(); await Promise.resolve() })
+    }
+    const merged = Object.assign({}, ...saved)
+    expect(merged.surfaces, "Solid ist nicht verloren").toBe("solid")
+    expect(merged.radius, "und die letzte Rundung gilt").toBe("large")
   })
 
   it("schliesst sich und uebergibt die Gruppe", () => {

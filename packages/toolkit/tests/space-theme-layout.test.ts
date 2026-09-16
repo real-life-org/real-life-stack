@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest"
 
-import { layoutTokens, LAYOUT_TOKENS, RADIUS_ORDER, RADIUS_STEPS, readRadius, readSurfaces } from "../src/lib/space-theme"
+import { layoutTokens, LAYOUT_TOKENS, RADIUS_ORDER, RADIUS_STEPS, readGray, readRadius, readSurfaces } from "../src/lib/space-theme"
 
 describe("readRadius / readSurfaces", () => {
   it("nimmt nur bekannte Stufen", () => {
@@ -44,5 +44,13 @@ describe("layoutTokens", () => {
   it("nennt jedes Token, das es setzen kann", () => {
     const all = layoutTokens({ radius: "full", surfaces: "solid" })
     expect(Object.keys(all).sort()).toEqual([...LAYOUT_TOKENS].sort())
+  })
+})
+
+describe("readGray", () => {
+  it("kennt die Neutralen, \"auto\" als eigenen Wert, und sonst nichts", () => {
+    expect(readGray("sand")).toBe("sand")
+    expect(readGray("auto")).toBe("auto")
+    for (const bad of ["", "cream", null, undefined, 3]) expect(readGray(bad), String(bad)).toBeNull()
   })
 })

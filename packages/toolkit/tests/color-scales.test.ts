@@ -384,8 +384,9 @@ describe("scalesForColor — Grau ausdruecklich gewaehlt", () => {
     expect(slate).not.toEqual(auto)
   })
 
-  it("faellt bei null auf die Paarung zurueck", () => {
+  it("faellt bei null und bei \"auto\" auf die Paarung zurueck", () => {
     expect(scalesForColor("#e87520", "light", { gray: null }).gray).toEqual(scalesForColor("#e87520", "light").gray)
+    expect(scalesForColor("#e87520", "light", { gray: "auto" }).gray).toEqual(scalesForColor("#e87520", "light").gray)
   })
 })
 

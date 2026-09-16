@@ -253,6 +253,16 @@ export function createLatestWinsSaver<T>(
   onError: (error: unknown, failedValue: T, lastSavedValue: T | undefined) => void,
   /** A save was confirmed — the moment to clear a stale failure notice. */
   onSaved?: (value: T) => void,
+  options: {
+    /**
+     * Wie ein wartender Wert mit dem naechsten zusammengeht. Ohne `merge`
+     * gewinnt der letzte als Ganzes — richtig fuer EINEN Wert (die Farbe),
+     * falsch fuer einen Patch mit mehreren Feldern: "Solid" waere verloren,
+     * sobald "Rundung large" nachkam (Review #391). Mit `merge` gewinnt der
+     * letzte je Feld.
+     */
+    merge?: (queued: T, next: T) => T
+  } = {},
 ): (value: T) => void {
   let inFlight = false
   let queued: { value: T } | null = null
@@ -292,7 +302,7 @@ export function createLatestWinsSaver<T>(
     )
   }
   return (value: T) => {
-    if (inFlight) queued = { value }
+    if (inFlight) queued = { value: queued && options.merge ? options.merge(queued.value, value) : value }
     else run(value)
   }
 }
@@ -530,6 +540,13 @@ export function GroupDialog({
         setColorError(err instanceof Error ? err.message : "Aussehen konnte nicht gespeichert werden")
       },
       () => setColorError(null),
+      {
+        // Wartende Patches feldweise zusammenfuehren — sonst verdraengt
+        // "Rundung large" ein noch wartendes "Solid". Ein anderes Ziel
+        // (anderer Space) wird nicht gemischt.
+        merge: (queued, next) =>
+          queued.groupId === next.groupId ? { groupId: next.groupId, patch: { ...queued.patch, ...next.patch } } : next,
+      },
     )
   }
   const applyRadius = (radius: RadiusStep) => {

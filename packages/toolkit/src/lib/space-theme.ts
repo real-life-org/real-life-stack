@@ -103,8 +103,17 @@ export function layoutTokens(axes: { radius?: RadiusStep | null; surfaces?: Surf
   return out
 }
 
-/** Was in `data.gray` steht — eine der sechs Neutralen, oder null (= auto). */
-export function readGray(value: unknown): GrayScaleName | null {
+/**
+ * Die Grauwahl eines Space: eine der sechs Neutralen, oder ausdruecklich
+ * `"auto"` (Radix' Paarung). `null` heisst dagegen "nichts gesetzt" und
+ * erbt von der Instanz — erbte die ein Grau, liesse sich "auto" sonst nie
+ * waehlen (Review #391).
+ */
+export type GrayChoice = GrayScaleName | "auto"
+
+/** Was in `data.gray` steht — Neutrale oder "auto", sonst null (= erbt). */
+export function readGray(value: unknown): GrayChoice | null {
+  if (value === "auto") return "auto"
   return typeof value === "string" && (GRAY_SCALE_OPTIONS as readonly string[]).includes(value)
     ? (value as GrayScaleName)
     : null

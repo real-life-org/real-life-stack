@@ -19,9 +19,8 @@ import type { Group } from "@real-life-stack/data-interface"
 import { useColorScheme } from "../../hooks/use-color-scheme"
 import { scalesForColor } from "../../lib/color-scales"
 import { contrastChecks, themeTokens } from "../../lib/theme-tokens"
-import { colorAxes, colorFromAxes, graySwatches, matchAccentScale, readGray, readRadius, readSurfaces, readTint, type RadiusStep, type Surfaces } from "../../lib/space-theme"
+import { colorAxes, colorFromAxes, graySwatches, matchAccentScale, readGray, readRadius, readSurfaces, readTint, type GrayChoice, type RadiusStep, type Surfaces } from "../../lib/space-theme"
 import { AccentGrid, RadiusTiles, SurfacesToggle, ThemeSectionLabel } from "./space-theme-controls"
-import { type GrayScaleName } from "../../lib/color-scales"
 import { cn, getSpacePrimaryColor } from "../../lib/utils"
 import { instanceTheme } from "../../lib/runtime-config"
 import { Button } from "../primitives/button"
@@ -46,7 +45,7 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
   const storedSurfaces = readSurfaces(group.data?.surfaces)
   const [colorChoice, setColorChoice] = useState<string | null>(storedColor)
   const [tintChoice, setTintChoice] = useState<number | null>(storedTint)
-  const [grayChoice, setGrayChoice] = useState<GrayScaleName | null>(storedGray)
+  const [grayChoice, setGrayChoice] = useState<GrayChoice | null>(storedGray)
   const [radiusChoice, setRadiusChoice] = useState<RadiusStep | null>(storedRadius)
   const [surfacesChoice, setSurfacesChoice] = useState<Surfaces | null>(storedSurfaces)
   useEffect(() => { setColorChoice(storedColor) }, [storedColor])
@@ -129,8 +128,10 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
     setTintChoice(tint)
     write({ tint })
   }
-  const effectiveGray: GrayScaleName | null = grayChoice ?? inherited.gray ?? null
-  const setGray = (gray: GrayScaleName | null) => {
+  // "auto" ist ein Wert, kein Nichts: erbt der Space von der Instanz ein
+  // Grau, muss er "auto" ausdruecklich waehlen koennen. null erbt.
+  const effectiveGray: GrayChoice = grayChoice ?? inherited.gray ?? "auto"
+  const setGray = (gray: GrayChoice) => {
     setGrayChoice(gray)
     write({ gray })
   }
@@ -232,13 +233,13 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
             <button
               type="button"
               role="radio"
-              aria-checked={effectiveGray === null}
+              aria-checked={effectiveGray === "auto"}
               aria-label="Gray auto"
               title="auto"
-              onClick={() => setGray(null)}
+              onClick={() => setGray("auto")}
               className={cn(
                 "h-7 rounded-full border px-2 text-[11px] text-muted-foreground transition-colors hover:text-foreground",
-                effectiveGray === null && "border-foreground text-foreground",
+                effectiveGray === "auto" && "border-foreground text-foreground",
               )}
             >
               auto

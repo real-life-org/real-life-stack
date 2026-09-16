@@ -322,7 +322,7 @@ export interface ScaleOptions {
    * Die neutrale Skala, ausdrücklich gewählt (Radix' `grayColor`). Fehlt
    * sie, paart {@link grayFor} automatisch (`auto`).
    */
-  gray?: GrayScaleName | null
+  gray?: GrayScaleName | "auto" | null
 }
 
 export function scalesForColor(
@@ -331,7 +331,8 @@ export function scalesForColor(
   options: ScaleOptions = {},
 ): { accent: ColorScale; gray: ColorScale } {
   const parsed = parseColor(color)
-  const grayName = options.gray ?? (parsed ? grayFor(parsed) : "gray")
+  const chosen = options.gray === "auto" ? null : options.gray
+  const grayName = chosen ?? (parsed ? grayFor(parsed) : "gray")
   const gray = namedScale(grayName, scheme)
   const tint = clampTint(options.tint)
   // In welche Richtung getoent wird: Ist eine Neutrale ausdruecklich gewaehlt,
@@ -340,7 +341,7 @@ export function scalesForColor(
   // und die haette keine Wirkung mehr. Bei `auto` toent der Akzent. Ohne
   // bedeutungsvollen Ton (reines gray, unbunter Akzent wie #808080) wird
   // nicht getoent: dessen Farbton ist Zufall.
-  const hue = tintHue(options.gray ? toOklch(gray[8]) : parsed, options.gray ? 0.005 : NEUTRAL_CHROMA)
+  const hue = tintHue(chosen ? toOklch(gray[8]) : parsed, chosen ? 0.005 : NEUTRAL_CHROMA)
   return {
     accent: deriveColorScale(color, scheme),
     gray: hue !== null && tint > 0 ? tintGray(gray, hue, tint) : gray,

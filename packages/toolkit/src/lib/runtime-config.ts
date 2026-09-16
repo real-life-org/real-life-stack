@@ -1,7 +1,6 @@
 import { scalesForColor } from "./color-scales"
 import { themeTokens } from "./theme-tokens"
-import { layoutTokens, readGray, readRadius, readSurfaces, type RadiusStep, type Surfaces } from "./space-theme"
-import { type GrayScaleName } from "./color-scales"
+import { layoutTokens, readGray, readRadius, readSurfaces, type GrayChoice, type RadiusStep, type Surfaces } from "./space-theme"
 /**
  * Runtime-Konfiguration einer RLS-Instanz.
  *
@@ -41,8 +40,8 @@ export interface BrandingTheme {
   accent?: string
   /** Tönung der Flächen, 0–1. 0 = neutral. */
   tint?: number
-  /** Die neutrale Skala (Radix' grayColor); fehlt sie: auto. */
-  gray?: GrayScaleName
+  /** Die neutrale Skala (Radix' grayColor) oder "auto"; fehlt sie: auto. */
+  gray?: GrayChoice
   /** Rundung, fünf Stufen: none | small | medium | large | full. */
   radius?: RadiusStep
   /** Flächen der App-Hülle: translucent | solid. */
