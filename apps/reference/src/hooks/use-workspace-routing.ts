@@ -6,8 +6,7 @@ import {
   useCurrentGroup,
   useItem,
   getSpacePrimaryColor,
-  deriveColorScale,
-  namedScale,
+  scalesForColor,
   themeTokens,
   applyThemeTokens,
   clearThemeTokens,
@@ -316,11 +315,10 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     // wurden nur Primaer- und Akzent-Token gesetzt und der Rest blieb fest;
     // jetzt zieht der ganze Satz mit — Flaechen, Rahmen, Text.
     const seed = getSpacePrimaryColor(activeWorkspace.id, activeWorkspace.primaryColor)
-    applyThemeTokens(root, themeTokens({
-      accent: deriveColorScale(seed, scheme),
-      gray: namedScale("slate", scheme),
-      scheme,
-    }))
+    // `scalesForColor` waehlt zur Akzentskala den Grauton, der sie ergaenzt
+    // — Radix paart beides automatisch. Der Unterschied ist klein und soll
+    // es sein: er gestaltet nicht, er stimmt ab.
+    applyThemeTokens(root, themeTokens({ ...scalesForColor(seed, scheme), scheme }))
     return () => clearThemeTokens(root)
   }, [activeWorkspace?.id, activeWorkspace?.primaryColor, isOverview, scheme])
 

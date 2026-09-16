@@ -26,6 +26,8 @@ export {
 } from "./lib/runtime-config"
 export {
   deriveColorScale,
+  grayFor,
+  scalesForColor,
   namedScale,
   ACCENT_SCALE_NAMES,
   GRAY_SCALE_OPTIONS,

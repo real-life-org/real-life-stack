@@ -4,6 +4,8 @@ import {
   ACCENT_SCALE_NAMES,
   colorDistance,
   deriveColorScale,
+  grayFor,
+  GRAY_SCALE_OPTIONS,
   namedScale,
   pickTemplate,
   type ColorScheme,
@@ -192,5 +194,51 @@ describe("deriveColorScale — Randfaelle freier Farben", () => {
         }
       }
     }
+  })
+})
+
+/**
+ * Radix paart jede Akzentfarbe mit einem Grauton, der sie ergaenzt
+ * ("Your accent color will be automatically paired with a gray shade that
+ * complements it"). Die sechs Neutralen tragen dafuer je einen Hauch
+ * Farbton — mauve roetlich, slate blaeulich, sage gruenlich, sand gelblich
+ * — und `gray` gar keinen.
+ *
+ * Der Unterschied ist klein: die Neutralen liegen untereinander rund
+ * siebenmal enger als zwei benachbarte Stufen einer Skala. Radix nennt ihn
+ * selbst "subtil, aber wirkungsvoll bei textlastigen Seiten". Er ersetzt
+ * keine Gestaltung — er verhindert, dass warme Akzente auf kalten Flaechen
+ * stehen.
+ */
+describe("grayFor — Paarung von Akzent und Neutral", () => {
+  it("waehlt ein Grau, das es wirklich gibt", () => {
+    for (const hex of ["#e87520", "#2d5a3d", "#3b82f6", "#9333ea", "#dc2626"]) {
+      expect(GRAY_SCALE_OPTIONS).toContain(grayFor(oklch(hex)))
+    }
+  })
+
+  it("paart nach Farbton: warm zu warm, kuehl zu kuehl", () => {
+    // Gelb/Orange → sand (h≈106), Gruen → sage/olive, Blau/Violett → slate,
+    // Rot/Pink → mauve. Geprueft wird die Richtung, nicht der Einzelfall.
+    const warm = grayFor(oklch("#e87520"))
+    const cool = grayFor(oklch("#3b82f6"))
+    expect(warm).not.toBe(cool)
+    expect(["sand", "olive"]).toContain(warm)
+    expect(["slate", "mauve"]).toContain(cool)
+  })
+
+  it("nimmt fuer eine unbunte Farbe das reine Grau", () => {
+    // Ohne Farbton gibt es nichts zu ergaenzen.
+    for (const neutral of ["#ffffff", "#000000", "#808080"]) {
+      expect(grayFor(oklch(neutral))).toBe("gray")
+    }
+  })
+
+  it("bleibt ueber den Farbkreis hinweg stetig", () => {
+    // Benachbarte Farbtoene duerfen nicht wild zwischen Neutralen springen.
+    const picks = Array.from({ length: 36 }, (_, i) =>
+      grayFor({ l: 0.6, c: 0.15, h: i * 10 }))
+    const wechsel = picks.filter((g, i) => i > 0 && g !== picks[i - 1]).length
+    expect(wechsel, `Wechsel: ${picks.join(" ")}`).toBeLessThanOrEqual(GRAY_SCALE_OPTIONS.length)
   })
 })

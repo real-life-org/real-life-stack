@@ -110,6 +110,39 @@ function toOklch(hex: string): Oklch {
 }
 
 /**
+ * Der Grauton, der eine Akzentfarbe ergänzt.
+ *
+ * Radix paart beides automatisch („Your accent color will be automatically
+ * paired with a gray shade that complements it"): die sechs Neutralen tragen
+ * je einen Hauch Farbton — `mauve` rötlich, `slate` bläulich, `sage`
+ * grünlich, `olive` gelbgrün, `sand` gelb — und `gray` gar keinen.
+ *
+ * Gewählt wird nach dem Farbton der eigenen Stufe 9. Der Unterschied ist
+ * klein: die Neutralen liegen untereinander rund siebenmal enger als zwei
+ * benachbarte Stufen einer Skala. Er gestaltet darum nichts, er verhindert
+ * nur, dass ein warmer Akzent auf kalten Flächen steht.
+ */
+export function grayFor(accent: Oklch): GrayScaleName {
+  // Ohne Farbton gibt es nichts zu ergänzen.
+  if (accent.c < NEUTRAL_CHROMA) return "gray"
+
+  let best: GrayScaleName = "gray"
+  let bestDistance = Infinity
+  for (const name of GRAY_SCALE_NAMES) {
+    const reference = toOklch(namedScale(name, "light")[8])
+    // `gray` ist unbunt und hat keinen sinnvollen Farbton — es bleibt der
+    // Fall für unbunte Akzente, nicht die Ergänzung für bunte.
+    if (reference.c < 0.0005) continue
+    const distance = hueDistance(accent.h, reference.h)
+    if (distance < bestDistance) {
+      bestDistance = distance
+      best = name
+    }
+  }
+  return best
+}
+
+/**
  * Die Vorlage für eine Wunschfarbe: die Skala mit der ähnlichsten Stufe 9.
  *
  * `exclude` dient dem Prüfstein — er misst, wie gut die Ableitung eine
@@ -259,4 +292,22 @@ export function deriveColorScale(
       h: (step.h + deltaH + 360) % 360,
     })
   }) as unknown as ColorScale
+}
+
+/**
+ * Beide Skalen für eine Farbe — das, was die Anwendung wirklich braucht.
+ *
+ * Die Akzentskala entsteht aus der Farbe, die neutrale wird dazu gewählt.
+ * Als eine Funktion, damit kein Aufrufer die Paarung vergisst und damit
+ * niemand außerhalb mit OKLCH hantieren muss.
+ */
+export function scalesForColor(
+  color: string,
+  scheme: ColorScheme,
+): { accent: ColorScale; gray: ColorScale } {
+  const parsed = parseColor(color)
+  return {
+    accent: deriveColorScale(color, scheme),
+    gray: namedScale(parsed ? grayFor(parsed) : "gray", scheme),
+  }
 }
