@@ -336,14 +336,22 @@ export function scalesForColor(
   const grayName = options.gray ?? (parsed ? grayFor(parsed) : "gray")
   const gray = namedScale(grayName, scheme)
   const tint = clampTint(options.tint)
-  // Eine unbunte Akzentfarbe hat keinen Farbton, der etwas bedeutet — bei
-  // #808080 liegt er zufaellig bei Rosa. Getoent wird nur, wenn der Akzent
-  // wirklich einen Ton hat (dieselbe Schwelle wie bei der Vorlagenwahl).
-  const tintable = parsed !== null && parsed.c >= NEUTRAL_CHROMA
+  // In welche Richtung getoent wird: Ist eine Neutrale ausdruecklich gewaehlt,
+  // gibt SIE den Ton vor (sand warm, slate kuehl, sage gruenlich) und die
+  // Toenung nur die Staerke — sonst ueberschriebe die Toenung die Grauwahl
+  // und die haette keine Wirkung mehr. Bei `auto` toent der Akzent. Ohne
+  // bedeutungsvollen Ton (reines gray, unbunter Akzent wie #808080) wird
+  // nicht getoent: dessen Farbton ist Zufall.
+  const hue = tintHue(options.gray ? toOklch(gray[8]) : parsed, options.gray ? 0.005 : NEUTRAL_CHROMA)
   return {
     accent: deriveColorScale(color, scheme),
-    gray: tintable && tint > 0 ? tintGray(gray, parsed.h, tint) : gray,
+    gray: hue !== null && tint > 0 ? tintGray(gray, hue, tint) : gray,
   }
+}
+
+/** Der Farbton, in den getönt wird — oder null, wenn er nichts bedeutet. */
+function tintHue(source: Oklch | null, minChroma: number): number | null {
+  return source !== null && source.c >= minChroma ? source.h : null
 }
 
 /** Der Wert kommt aus `Group.data` und ist ungeprüft. */

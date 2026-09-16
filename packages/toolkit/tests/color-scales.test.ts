@@ -408,3 +408,28 @@ describe("scalesForColor — Grau ausdruecklich gewaehlt", () => {
     expect(scalesForColor("#e87520", "light", { gray: null }).gray).toEqual(scalesForColor("#e87520", "light").gray)
   })
 })
+
+/**
+ * Grauwahl und Toenung duerfen sich nicht gegenseitig aufheben: die Neutrale
+ * gibt die RICHTUNG vor, die Toenung die STAERKE. Sonst haette die Grauwahl
+ * keine Wirkung, sobald die Toenung ueber 0 steht.
+ */
+describe("scalesForColor — Grauwahl gibt der Toenung die Richtung", () => {
+  it("toent bei gewaehlter Neutraler in deren Ton, nicht im Akzentton", () => {
+    const sand = scalesForColor("#3e63dd", "light", { gray: "sand", tint: 0.6 }).gray
+    const slate = scalesForColor("#3e63dd", "light", { gray: "slate", tint: 0.6 }).gray
+    const hSand = parseColor(sand[0])!.h, hSlate = parseColor(slate[0])!.h
+    expect(Math.abs(hSand - hSlate), "warm und kuehl liegen weit auseinander").toBeGreaterThan(90)
+    // Und beide sind wirklich getoent.
+    expect(parseColor(sand[2])!.c).toBeGreaterThan(0.012)
+  })
+
+  it("toent bei auto im Akzentton", () => {
+    const auto = scalesForColor("#3e63dd", "light", { tint: 0.6 }).gray
+    expect(Math.abs(parseColor(auto[2])!.h - parseColor("#3e63dd")!.h)).toBeLessThan(15)
+  })
+
+  it("laesst reines gray auch bei voller Toenung neutral", () => {
+    expect(scalesForColor("#3e63dd", "light", { gray: "gray", tint: 1 }).gray).toEqual(namedScale("gray", "light"))
+  })
+})
