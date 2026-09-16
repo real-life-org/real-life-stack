@@ -134,3 +134,51 @@ describe("oklch: Kontrast", () => {
     expect(contrastLevel(2.99)).toBe("fail")
   })
 })
+
+/**
+ * `parseColor` nimmt Eingaben aus einem Textfeld entgegen — es muss auf jede
+ * Zeichenkette mit einer Farbe oder mit `null` antworten, niemals mit einem
+ * Fehler und niemals mit einer Farbe, die nicht dasteht.
+ */
+describe("parseColor gegen fiese Eingaben", () => {
+  it("wirft nicht bei geerbten Objekt-Eigenschaften", () => {
+    // Der Namenslookup lief ueber ein Objektliteral, das von
+    // Object.prototype erbt: `named["constructor"]` lieferte eine Funktion,
+    // und der Spread darueber warf einen TypeError.
+    for (const key of ["constructor", "toString", "hasOwnProperty", "__proto__", "valueOf"]) {
+      expect(() => parseColor(key), key).not.toThrow()
+      expect(parseColor(key), key).toBeNull()
+    }
+  })
+
+  it("nimmt weiterhin die bekannten Namen", () => {
+    expect(parseColor("white")).not.toBeNull()
+    expect(parseColor("BLACK")).not.toBeNull()
+  })
+
+  it("weist angebrochene Zahlen-Tokens zurueck", () => {
+    // parseFloat("255oops") ist 255 — das darf hier nicht durchgehen.
+    expect(parseColor("rgb(255oops 0 0)")).toBeNull()
+    expect(parseColor("rgb(12px, 0, 0)")).toBeNull()
+    expect(parseColor("hsl(120abc 50% 50%)")).toBeNull()
+  })
+
+  it("weist unbrauchbares Alpha zurueck", () => {
+    expect(parseColor("rgba(0,0,0,garbage)")).toBeNull()
+    expect(parseColor("rgb(0 0 0 / nonsense)")).toBeNull()
+  })
+
+  it("weist eine falsche Anzahl von Komponenten zurueck", () => {
+    expect(parseColor("rgb(1,2)")).toBeNull()
+    expect(parseColor("rgb(1,2,3,4,5)")).toBeNull()
+  })
+
+  it("laesst gueltige Schreibweisen unangetastet", () => {
+    expect(parseColor("rgb(255 0 0)")).not.toBeNull()
+    expect(parseColor("rgb(255, 0, 0)")).not.toBeNull()
+    expect(parseColor("rgba(255, 0, 0, 0.5)")).not.toBeNull()
+    expect(parseColor("rgb(100% 0% 0%)")).not.toBeNull()
+    expect(parseColor("hsl(120 50% 50%)")).not.toBeNull()
+    expect(parseColor("hsl(120deg 50% 50% / 50%)")).not.toBeNull()
+  })
+})

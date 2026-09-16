@@ -177,6 +177,34 @@ const OKLCH_RE = new RegExp(
 const HEX_RE = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i
 const FN_RE = /^(rgba?|hsla?)\(\s*(.+?)\s*\)$/i
 
+/** Prototyplos — siehe `parseColor`. */
+const NAMED_COLORS: Record<string, [number, number, number]> = Object.assign(
+  Object.create(null) as Record<string, [number, number, number]>,
+  { white: [1, 1, 1], black: [0, 0, 0] },
+)
+
+/**
+ * Ein VOLLSTAENDIGES Zahlen-Token, optional mit Prozent.
+ *
+ * `parseFloat` liest nur den Anfang: aus "255oops" wird 255, aus "12px"
+ * wird 12. Eine Farbe, die halb aus Unsinn besteht, waere damit gueltig.
+ * Hier muss die ganze Zeichenkette aufgehen oder gar nichts.
+ */
+function numToken(token: string): { value: number; percent: boolean } | null {
+  const m = /^([+-]?(?:\d+\.?\d*|\.\d+))(%?)$/.exec(token)
+  if (!m) return null
+  const value = parseFloat(m[1])
+  return Number.isFinite(value) ? { value, percent: m[2] === "%" } : null
+}
+
+/** Wie {@link numToken}, erlaubt aber die Winkeleinheiten aus CSS Color 4. */
+function angleToken(token: string): number | null {
+  const m = /^([+-]?(?:\d+\.?\d*|\.\d+))(deg|grad|rad|turn)?$/i.exec(token)
+  if (!m) return null
+  const value = parseFloat(m[1])
+  return Number.isFinite(value) ? hueToDeg(value, m[2]?.toLowerCase()) : null
+}
+
 function parseAlpha(v: string | undefined, pct: string | undefined): number | undefined {
   if (v === undefined) return undefined
   const n = parseFloat(v)
@@ -225,23 +253,36 @@ export function parseColor(input: string): Oklch | null {
   if (fn) {
     // Beide Schreibweisen: `rgb(1 2 3 / 0.5)` und `rgb(1, 2, 3, 0.5)`.
     const parts = fn[2].split(/\s*[,/]\s*|\s+/).filter(Boolean)
-    if (parts.length < 3) return null
-    const num = (s: string, scale: number) => (s.endsWith("%") ? parseFloat(s) / 100 : parseFloat(s) / scale)
-    const alpha = parts[3] !== undefined ? parseAlpha(parts[3], parts[3].endsWith("%") ? "%" : undefined) : undefined
+    // Genau drei Komponenten, optional Alpha — `rgb(1,2)` ist ebenso
+    // unbrauchbar wie `rgb(1,2,3,4,5)`.
+    if (parts.length < 3 || parts.length > 4) return null
+
+    const alphaToken = parts[3] !== undefined ? numToken(parts[3]) : undefined
+    if (parts[3] !== undefined && !alphaToken) return null
+    const alpha = alphaToken
+      ? clamp01(alphaToken.percent ? alphaToken.value / 100 : alphaToken.value)
+      : undefined
+
     if (fn[1].toLowerCase().startsWith("rgb")) {
-      const [r, g, b] = parts.slice(0, 3).map((p) => clamp01(num(p, 255)))
-      if ([r, g, b].some(Number.isNaN)) return null
+      const tokens = parts.slice(0, 3).map(numToken)
+      if (tokens.some((t) => t === null)) return null
+      const [r, g, b] = (tokens as { value: number; percent: boolean }[]).map((t) =>
+        clamp01(t.percent ? t.value / 100 : t.value / 255),
+      )
       return rgbToOklch(r, g, b, alpha)
     }
-    const h = hueToDeg(parseFloat(parts[0]), /[a-z]+$/i.exec(parts[0])?.[0])
-    const s = clamp01(parseFloat(parts[1]) / 100)
-    const l = clamp01(parseFloat(parts[2]) / 100)
-    if ([h, s, l].some(Number.isNaN)) return null
-    const [r, g, b] = hslToRgb(h, s, l)
+
+    const h = angleToken(parts[0])
+    const sTok = numToken(parts[1])
+    const lTok = numToken(parts[2])
+    if (h === null || !sTok || !lTok) return null
+    const [r, g, b] = hslToRgb(h, clamp01(sTok.value / 100), clamp01(lTok.value / 100))
     return rgbToOklch(r, g, b, alpha)
   }
 
-  const named: Record<string, [number, number, number]> = { white: [1, 1, 1], black: [0, 0, 0] }
-  const rgb = named[v.toLowerCase()]
+  // Ohne Prototyp: ueber ein gewoehnliches Objektliteral lieferte
+  // `named["constructor"]` eine Funktion, und der Spread darueber warf.
+  // Eine Eingabe aus einem Textfeld darf nie einen Fehler ausloesen.
+  const rgb = NAMED_COLORS[v.toLowerCase()]
   return rgb ? rgbToOklch(...rgb) : null
 }
