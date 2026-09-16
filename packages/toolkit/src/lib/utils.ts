@@ -39,6 +39,16 @@ export function getTagAccentColor(tag: string): string {
   return paletteEntry(tag).accent
 }
 
+/**
+ * Die waehlbaren Primaerfarben eines Space — dieselbe Palette wie die Tags.
+ *
+ * Spec 04 ("Space-Primaerfarbe", Regel 1) bindet `primaryColor` ausdruecklich
+ * an `TAG_PALETTE.accent`. Eine zweite Farbwelt neben den Tags waere genau die
+ * Doppelliste, die das Modul-Register einmal eingesammelt hat: sie liefe
+ * lautlos auseinander, sobald jemand eine Farbe ergaenzt.
+ */
+export const SPACE_COLOR_SWATCHES: readonly string[] = TAG_PALETTE.map((e) => e.accent)
+
 const HEX6 = /^#[0-9a-fA-F]{6}$/
 
 /**

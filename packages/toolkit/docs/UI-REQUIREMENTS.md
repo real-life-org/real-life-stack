@@ -103,6 +103,19 @@ Entwurf: Claude-Design-Projekt „RLS System Design", Datei `Space Menu.dc.html`
 - [x] **space-members-search-sticky**: Ein eingegebener Suchbegriff hält das Feld sichtbar, auch wenn die Zahl unter die Schwelle fällt — sonst bliebe ein wirksamer Filter ohne Bedienteil zurück (rls#377)
 - [ ] **space-members-invited-by**: Herkunftszeile „eingeladen von …" je Mitglied und Gruppe „Offene Einladungen" (Entwurf 4c) — braucht `invitedBy` und einen Einladungszustand im `data-interface`
 
+### Aussehen
+
+- [x] **space-theme-own-section**: Aussehen ist ein eigener Bereich zwischen Einladen und Modulen
+- [x] **space-theme-admin-gated**: Nur Admins ändern das Aussehen — das Design eines Space ist geteilte Wirklichkeit, kein persönlicher Geschmack
+- [x] **space-theme-house-palette**: Die Farbvorschläge sind `TAG_PALETTE.accent`, dieselbe Palette wie die Tags (Spec 04, Regel 1) — keine zweite Farbwelt
+- [x] **space-theme-custom-color**: Neben der Palette steht der native Farbwähler; eine geltende Farbe außerhalb der Palette wird als „eigene" markiert, nicht als „keine"
+- [x] **space-theme-reset-to-fallback**: „Zurück zur Farbe aus dem Bild" schreibt `null` und stellt den Rückfall her (Logo-Farbe, sonst deterministisch aus der Space-Id), statt eine Farbe einzufrieren
+- [x] **space-theme-accent-only**: Die Space-Farbe bleibt Akzent — Hintergründe und Karten unberührt (Spec 04, „Verwendung der Primärfarbe", Regel 1)
+- [ ] **space-theme-scheme-tiles**: Theme-Kacheln Standard / Dunkel / Eigenes mit Datei-Upload (Entwurf 3c) — wartet auf die Entscheidung zur Theme-Kaskade
+- [ ] **space-theme-manual-vs-derived**: Eine von Hand gewählte Farbe überlebt Logo-Upload und Logo-Entfernen. Heute überschreibt der Upload sie mit der Bildfarbe, das Entfernen setzt `null`; beide Pfade unterscheiden nicht zwischen gewählt und abgeleitet
+
+---
+
 ### Einladen
 
 - [x] **space-invite-own-section**: Einladen ist ein eigener Bereich, kein Unterzustand von Mitgliedern; „Einladen" bei den Mitgliedern springt dorthin statt aufzuklappen
@@ -224,3 +237,4 @@ Entwurf: Claude-Design-Projekt „RLS System Design", Datei `Space Menu.dc.html`
 | 2026-07-17 | Vollbreite Linsen-Scroller, gemeinsamer Inhaltsrahmen und gemessene Raster-Zeilenabstände dokumentiert |
 | 2026-07-17 | CollectionView-Toggle erhält den Linsen-Innenabstand oben; Rasterkarten nutzen reihenfolgestabile, gemessene Masonry-Lanes |
 | 2026-09-15 | Space-Konfiguration als Seitenmenü mit Bereichen Mitglieder, Einladen, Module (Entwurf „Space Menu") |
+| 2026-09-16 | Bereich „Aussehen“: Space-Primärfarbe aus der Haus-Palette, eigene Farbe, Rückweg zum Rückfall |

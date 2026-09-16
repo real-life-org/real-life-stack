@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef } from "react"
-import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, type LucideIcon } from "lucide-react"
+import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, Check as CheckIcon, RotateCcw, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
-import { cn } from "../../lib/utils"
+import { cn, getSpacePrimaryColor, SPACE_COLOR_SWATCHES } from "../../lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -87,7 +87,7 @@ export function knownModules(modules: readonly string[]): string[] {
 const defaults = () => defaultModuleIds()
 
 /** Die Bereiche der Space-Konfiguration (Entwurf "Space Menu", Turn 3/4). */
-export type SpaceConfigSectionId = "members" | "modules" | "invite"
+export type SpaceConfigSectionId = "members" | "modules" | "invite" | "theme"
 
 export interface SpaceConfigSection {
   id: SpaceConfigSectionId
@@ -111,20 +111,40 @@ export interface SpaceConfigSection {
  * Einladen ist ein eigener Bereich, kein Unterzustand von Mitgliedern
  * (Entwurf Turn 4), und haengt NICHT am Adminrecht: im WoT laedt jedes
  * Mitglied ein, nur der Creator entfernt.
+ *
+ * Aussehen dagegen IST Admin-Sache wie die Module: das Design eines Space ist
+ * geteilte Wirklichkeit, kein persoenlicher Geschmack. Reihenfolge: erst die
+ * Menschen, dann das Aussehen, dann die Flaechen.
  */
 export function spaceConfigSections({
   isAdmin,
   canInvite,
+  canTheme,
 }: {
   isAdmin: boolean
   canInvite: boolean
+  canTheme: boolean
 }): SpaceConfigSection[] {
   const sections: SpaceConfigSection[] = [
     { id: "members", label: "Mitglieder", icon: Users },
   ]
   if (canInvite) sections.push({ id: "invite", label: "Einladen", icon: UserPlus })
+  if (canTheme) sections.push({ id: "theme", label: "Aussehen", icon: Contrast })
   if (isAdmin) sections.push({ id: "modules", label: "Module", icon: LayoutGrid })
   return sections
+}
+
+/**
+ * Welcher Farbvorschlag den Haken traegt.
+ *
+ * Die geltende Farbe kann aus dem Space-Bild stammen (`dominantColor`) oder
+ * deterministisch aus der Id abgeleitet sein — beides trifft die Palette in
+ * aller Regel nicht. Dann ist "custom" die richtige Antwort, nicht "keine":
+ * es gilt ja eine Farbe, sie steht nur nicht zur Auswahl.
+ */
+export function activeSpaceSwatch(effectiveColor: string): string {
+  const hex = effectiveColor.toLowerCase()
+  return SPACE_COLOR_SWATCHES.includes(hex) ? hex : "custom"
 }
 
 /**
@@ -355,6 +375,7 @@ export function GroupDialog({
   const sections = spaceConfigSections({
     isAdmin: isCurrentUserAdmin,
     canInvite: Boolean(onInviteMember),
+    canTheme: isCurrentUserAdmin,
   })
   const activeSection = resolveConfigSection(requestedSection, sections)
   /** Suche in der Mitgliederliste (Entwurf 3a). */
@@ -591,11 +612,35 @@ export function GroupDialog({
 
   const shownInvitable = filterInvitableContacts(invitableContacts, inviteSearch)
 
+  /**
+   * Die Farbe, die gerade GILT — gesetzter Wert, sonst die aus dem Logo
+   * gewonnene, sonst der deterministische Rueckfall aus der Space-Id
+   * (Spec 04, "Space-Primaerfarbe", Regel 3/5).
+   */
+  const effectiveColor = getSpacePrimaryColor(
+    groupId,
+    (isEdit ? (mode.group.data?.primaryColor as string | undefined) : undefined) ?? null,
+  )
+  const currentSwatch = activeSpaceSwatch(effectiveColor)
+
+  /**
+   * `null` loescht den Schluessel (Merge-Patch, Spec 04 Regel 3) und stellt
+   * damit den Rueckfall wieder her, statt eine Farbe einzufrieren.
+   */
+  const applyPrimaryColor = (hex: string | null) => {
+    if (!isEdit) return
+    setError(null)
+    onUpdateGroup(mode.group.id, { data: { primaryColor: hex } }).catch((err) => {
+      setError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden")
+    })
+  }
+
   /** Zahlen am Menue — die Suche aendert sie nicht, sie zaehlen den Bestand. */
   const sectionCounts: Record<SpaceConfigSectionId, number | undefined> = {
     members: members.length || undefined,
     modules: visibleModules.length || undefined,
     invite: undefined,
+    theme: undefined,
   }
 
   const renderMemberRow = (member: (typeof members)[number]) => (
@@ -977,6 +1022,81 @@ export function GroupDialog({
                   </div>
                 </>
               )}
+            </>
+          )}
+
+          {/* Aussehen (Entwurf "Space Menu", 3c): die Primaerfarbe des Space.
+              Sie wirkt, solange dieser Space aktiv ist — Spec 04
+              ("Verwendung der Primaerfarbe"): Akzent, keine vollflaechige
+              Themefarbe. Hintergruende und Karten bleiben unberuehrt. */}
+          {activeSection === "theme" && isCurrentUserAdmin && (
+            <>
+              <h3 className="mb-3 text-sm font-semibold">Aussehen</h3>
+              <MemberGroupLabel>Primärfarbe</MemberGroupLabel>
+
+              <div className="flex flex-wrap items-center gap-2 px-2.5 py-2">
+                {SPACE_COLOR_SWATCHES.map((hex) => {
+                  const active = currentSwatch === hex
+                  return (
+                    <button
+                      key={hex}
+                      type="button"
+                      aria-label={`Primärfarbe ${hex}`}
+                      aria-pressed={active}
+                      onClick={() => applyPrimaryColor(hex)}
+                      style={{ backgroundColor: hex }}
+                      className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110",
+                        active && "ring-2 ring-foreground ring-offset-2 ring-offset-background",
+                      )}
+                    >
+                      {active && <CheckIcon className="h-3.5 w-3.5 text-white drop-shadow" />}
+                    </button>
+                  )
+                })}
+
+                {/* Eigene Farbe. Der native Farbwaehler ist hier der richtige:
+                    er kennt die Bedienhilfen des Systems, und ein eigener
+                    Farbkreis waere eine zweite Farbwelt neben der Palette. */}
+                <label
+                  title="Eigene Farbe"
+                  className={cn(
+                    "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-primary",
+                    currentSwatch === "custom" && "border-solid border-foreground",
+                  )}
+                  style={currentSwatch === "custom" ? { backgroundColor: effectiveColor } : undefined}
+                >
+                  {currentSwatch === "custom" ? (
+                    <CheckIcon className="h-3.5 w-3.5 text-white drop-shadow" />
+                  ) : (
+                    <span className="text-sm leading-none">+</span>
+                  )}
+                  <input
+                    type="color"
+                    value={effectiveColor}
+                    onChange={(e) => applyPrimaryColor(e.target.value)}
+                    className="sr-only"
+                  />
+                </label>
+              </div>
+
+              {/* Der Rueckweg. Spec 04 Regel 2/3: ohne eigenen Wert stammt die
+                  Farbe aus dem Logo, sonst deterministisch aus der Space-Id —
+                  `null` stellt genau das wieder her. */}
+              {mode.group.data?.primaryColor != null && (
+                <button
+                  type="button"
+                  onClick={() => applyPrimaryColor(null)}
+                  className="mx-2.5 mt-1 flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  {groupImage ? "Zurück zur Farbe aus dem Bild" : "Zurück zur Standardfarbe"}
+                </button>
+              )}
+
+              <p className="mt-3 px-2.5 text-xs text-muted-foreground">
+                Die Farbe gilt für alle im Space und wirkt, solange er geöffnet ist.
+              </p>
             </>
           )}
 

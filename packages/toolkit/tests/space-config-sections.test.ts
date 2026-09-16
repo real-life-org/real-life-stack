@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest"
 import {
   groupMembersForDisplay,
   resolveConfigSection,
+  activeSpaceSwatch,
   filterInvitableContacts,
   showsMemberSearch,
   spaceConfigSections,
   type SpaceConfigSectionId,
 } from "../src/components/layout/group-dialog"
+import { SPACE_COLOR_SWATCHES } from "../src/lib/utils"
 
 /**
  * Die Bereiche des Space-Dialogs sind EINE Liste, keine drei. Vorher haetten
@@ -17,12 +19,12 @@ import {
  */
 describe("spaceConfigSections", () => {
   it("zeigt jedem Mitglied die Mitglieder", () => {
-    const ids = spaceConfigSections({ isAdmin: false, canInvite: false }).map((s) => s.id)
+    const ids = spaceConfigSections({ isAdmin: false, canInvite: false, canTheme: false }).map((s) => s.id)
     expect(ids).toEqual(["members"])
   })
 
   it("haengt Module nur fuer Admins an", () => {
-    const ids = spaceConfigSections({ isAdmin: true, canInvite: false }).map((s) => s.id)
+    const ids = spaceConfigSections({ isAdmin: true, canInvite: false, canTheme: false }).map((s) => s.id)
     expect(ids).toEqual(["members", "modules"])
   })
 
@@ -32,22 +34,22 @@ describe("spaceConfigSections", () => {
    * laedt jedes Mitglied ein, nur der Creator entfernt.
    */
   it("haengt Einladen an, sobald eingeladen werden kann — auch ohne Adminrecht", () => {
-    expect(spaceConfigSections({ isAdmin: false, canInvite: true }).map((s) => s.id))
+    expect(spaceConfigSections({ isAdmin: false, canInvite: true, canTheme: false }).map((s) => s.id))
       .toEqual(["members", "invite"])
-    expect(spaceConfigSections({ isAdmin: true, canInvite: true }).map((s) => s.id))
+    expect(spaceConfigSections({ isAdmin: true, canInvite: true, canTheme: false }).map((s) => s.id))
       .toEqual(["members", "invite", "modules"])
   })
 
   it("beginnt immer mit Mitgliedern — der Startwert braucht keine Sonderregel", () => {
     for (const isAdmin of [true, false]) {
       for (const canInvite of [true, false]) {
-        expect(spaceConfigSections({ isAdmin, canInvite })[0].id).toBe("members")
+        expect(spaceConfigSections({ isAdmin, canInvite, canTheme: false })[0].id).toBe("members")
       }
     }
   })
 
   it("gibt jedem Bereich Beschriftung und Symbol", () => {
-    for (const section of spaceConfigSections({ isAdmin: true, canInvite: true })) {
+    for (const section of spaceConfigSections({ isAdmin: true, canInvite: true, canTheme: false })) {
       expect(section.label.trim()).not.toBe("")
       expect(section.icon).toBeTruthy()
     }
@@ -60,8 +62,8 @@ describe("spaceConfigSections", () => {
    * dieser Zahl.
    */
   it("laesst ohne Modulrecht und ohne Einladen nur einen Bereich uebrig", () => {
-    expect(spaceConfigSections({ isAdmin: false, canInvite: false })).toHaveLength(1)
-    expect(spaceConfigSections({ isAdmin: true, canInvite: false }).length).toBeGreaterThan(1)
+    expect(spaceConfigSections({ isAdmin: false, canInvite: false, canTheme: false })).toHaveLength(1)
+    expect(spaceConfigSections({ isAdmin: true, canInvite: false, canTheme: false }).length).toBeGreaterThan(1)
   })
 })
 
@@ -72,8 +74,8 @@ describe("spaceConfigSections", () => {
  * Eintrags, den es nicht mehr gibt: eine leere Flaeche.
  */
 describe("resolveConfigSection", () => {
-  const memberSections = spaceConfigSections({ isAdmin: false, canInvite: false })
-  const adminSections = spaceConfigSections({ isAdmin: true, canInvite: false })
+  const memberSections = spaceConfigSections({ isAdmin: false, canInvite: false, canTheme: false })
+  const adminSections = spaceConfigSections({ isAdmin: true, canInvite: false, canTheme: false })
 
   it("laesst einen vorhandenen Bereich unangetastet", () => {
     expect(resolveConfigSection("members", memberSections)).toBe("members")
@@ -193,5 +195,77 @@ describe("filterInvitableContacts", () => {
 
   it("gibt eine leere Liste zurueck, wenn nichts passt", () => {
     expect(filterInvitableContacts(contacts, "xyz")).toEqual([])
+  })
+})
+
+/**
+ * Aussehen ist Admin-Sache wie die Module: das Design eines Space ist
+ * geteilte Wirklichkeit, kein persoenlicher Geschmack. Es steht hinter
+ * Einladen und vor den Modulen — erst die Menschen, dann das Aussehen,
+ * dann die Flaechen.
+ */
+describe("spaceConfigSections — Aussehen", () => {
+  it("haengt Aussehen nur an, wenn es gesetzt werden darf", () => {
+    expect(spaceConfigSections({ isAdmin: true, canInvite: false, canTheme: true }).map((s) => s.id))
+      .toEqual(["members", "theme", "modules"])
+  })
+
+  it("steht in der vollen Liste zwischen Einladen und Modulen", () => {
+    expect(spaceConfigSections({ isAdmin: true, canInvite: true, canTheme: true }).map((s) => s.id))
+      .toEqual(["members", "invite", "theme", "modules"])
+  })
+
+  it("bleibt ohne Recht ganz weg", () => {
+    expect(spaceConfigSections({ isAdmin: false, canInvite: false, canTheme: false }).map((s) => s.id))
+      .toEqual(["members"])
+  })
+})
+
+/**
+ * Die Farbvorschlaege sind die Haus-Palette: Spec 04 ("Space-Primaerfarbe",
+ * Regel 1) bindet `primaryColor` ausdruecklich an `TAG_PALETTE.accent`. Eine
+ * zweite Farbwelt neben den Tags waere genau die Doppelliste, die das
+ * Modul-Register einmal eingesammelt hat.
+ */
+describe("SPACE_COLOR_SWATCHES", () => {
+  it("enthaelt nur wohlgeformte Hex-Werte", () => {
+    for (const hex of SPACE_COLOR_SWATCHES) {
+      expect(hex).toMatch(/^#[0-9a-f]{6}$/)
+    }
+  })
+
+  it("nennt keine Farbe doppelt", () => {
+    expect(new Set(SPACE_COLOR_SWATCHES).size).toBe(SPACE_COLOR_SWATCHES.length)
+  })
+
+  it("bietet ueberhaupt eine Auswahl", () => {
+    expect(SPACE_COLOR_SWATCHES.length).toBeGreaterThan(2)
+  })
+})
+
+/**
+ * Welcher Vorschlag traegt den Haken. Die geltende Farbe kann aus dem
+ * Space-Bild stammen oder deterministisch aus der Id abgeleitet sein — beides
+ * trifft die Palette in aller Regel NICHT. Dann ist "eigene" richtig, nicht
+ * "keine": es gilt ja eine Farbe.
+ */
+describe("activeSpaceSwatch", () => {
+  it("findet den Vorschlag, der genau passt", () => {
+    const hex = SPACE_COLOR_SWATCHES[1]
+    expect(activeSpaceSwatch(hex)).toBe(hex)
+  })
+
+  it("ignoriert Gross- und Kleinschreibung", () => {
+    const hex = SPACE_COLOR_SWATCHES[0]
+    expect(activeSpaceSwatch(hex.toUpperCase())).toBe(hex)
+  })
+
+  it("meldet 'custom' fuer eine Farbe ausserhalb der Palette", () => {
+    expect(activeSpaceSwatch("#123456")).toBe("custom")
+  })
+
+  it("meldet 'custom' auch fuer die aus dem Bild gewonnene Farbe", () => {
+    // dominantColor liefert beliebige Werte, keine Palettenfarben.
+    expect(activeSpaceSwatch("#7a3b21")).toBe("custom")
   })
 })
