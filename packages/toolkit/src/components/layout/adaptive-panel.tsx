@@ -774,7 +774,7 @@ export function AdaptivePanel({
         className={cn(
           mode === "modal" && "fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none",
           mode === "sidebar" && cn(
-            "fixed top-[var(--navbar-h)] bottom-0 bg-card shadow-xl flex overflow-hidden z-55",
+            "fixed top-[var(--navbar-h)] bottom-0 surface-glass shadow-xl flex overflow-hidden z-55",
             isLeft ? "left-0" : "right-0",
           ),
           mode === "drawer" && "fixed inset-x-0 bottom-0 z-[60] pointer-events-auto",

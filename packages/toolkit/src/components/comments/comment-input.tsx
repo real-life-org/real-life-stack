@@ -101,7 +101,10 @@ export function CommentInput({
   if (disabled) return null
 
   return (
-    <div className={cn("border-t bg-card", className)}>
+    // Die Glasflaeche, nicht festes bg-card: der Fuss klebt unten im Panel,
+    // und bei durchscheinenden Flaechen war er die eine undurchsichtige
+    // Stelle in einem sonst durchscheinenden Rahmen.
+    <div className={cn("border-t surface-glass", className)}>
       {/* Quote preview when replying */}
       {replyTo && (
         <div className="flex items-start gap-2 px-3 pt-2 pb-1">
