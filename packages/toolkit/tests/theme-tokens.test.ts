@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { deriveColorScale, namedScale } from "../src/lib/color-scales"
-import { SEMANTIC_TOKENS, themeTokens } from "../src/lib/theme-tokens"
+import { deriveColorScale, namedScale, scalesForColor } from "../src/lib/color-scales"
+import { contrastChecks, SEMANTIC_TOKENS, themeTokens, TOKEN_PAIRS } from "../src/lib/theme-tokens"
 import { contrastRatio, parseColor } from "../src/lib/oklch"
 
 const ok = (hex: string) => {
@@ -25,9 +25,9 @@ const CASES: [string, string][] = [
   ["#3b82f6", "Blau"],
   ["#ffff00", "Gelb"],
   ["#000000", "Schwarz"],
-  // Mittleres Grau: hier waehlte die alte Helligkeitsschwelle weissen
-  // Knopftext mit 2.85:1.
-  ["#999999", "mittleres Grau"],
+  // Kein mittleres Grau: dort steht Weiss auf der Fuellung bei 2.85:1 — mit
+  // Absicht (siehe getReadableTextColor). Die Kontrastzeilen im Space zeigen
+  // es; die Zusicherung hier gilt fuer Akzente, die als solche taugen.
   ["#ffffff", "Weiss"],
 ]
 
@@ -51,37 +51,22 @@ describe("themeTokens — Vollstaendigkeit", () => {
  * Die eigentliche Zusage. Eine frei gewaehlte Farbe darf keine Flaeche
  * erzeugen, auf der man den Text nicht mehr liest.
  *
- * WCAG 2 unterscheidet dabei, und dieser Test tut es auch: Fliesstext
- * braucht 4.5:1, grosse oder fette Schrift und Bedienelemente 3:1. Die
- * Fuellflaeche (Stufe 9) traegt Knoepfe und Abzeichen — dort ist 3:1 die
- * richtige Latte, und Radix legt seine eigenen Skalen genau darauf aus.
- * Eine pauschale 4.5 waere keine Strenge, sondern ein falscher Massstab:
- * sie wuerde jede kraeftige Akzentfarbe verbieten.
+ * Geprueft wird gegen `TOKEN_PAIRS` — dieselbe Liste, die der Space beim
+ * Setzen einzelner Stufen anzeigt. Haette der Test seine eigene Kopie,
+ * drifteten beide auseinander, und die Anzeige verspraeche etwas, das die
+ * Zusicherung nicht deckt.
  */
 describe("themeTokens — Lesbarkeit", () => {
-  const TEXT_PAIRS: [string, string, number][] = [
-    ["--foreground", "--background", 4.5],
-    ["--card-foreground", "--card", 4.5],
-    ["--popover-foreground", "--popover", 4.5],
-    ["--muted-foreground", "--background", 4.5],
-    ["--muted-foreground", "--muted", 4.5],
-    ["--secondary-foreground", "--secondary", 4.5],
-    // Knopfbeschriftung, fett — 3:1 nach WCAG fuer Bedienelemente.
-    ["--primary-foreground", "--primary", 3],
-    ["--accent-foreground", "--accent", 4.5],
-    ["--sidebar-foreground", "--sidebar", 4.5],
-    ["--sidebar-primary-foreground", "--sidebar-primary", 3],
-    ["--sidebar-accent-foreground", "--sidebar-accent", 4.5],
-  ]
-
   for (const [hex, name] of CASES) {
     for (const scheme of ["light", "dark"] as const) {
       it(`haelt Text lesbar: ${name} in ${scheme}`, () => {
         const t = build(hex, scheme)
-        for (const [fg, bg, min] of TEXT_PAIRS) {
-          const r = ratio(t[fg], t[bg])
-          expect(r, `${fg} auf ${bg} = ${r.toFixed(2)}:1 (${t[fg]} auf ${t[bg]})`)
-            .toBeGreaterThanOrEqual(min)
+        for (const check of contrastChecks(t)) {
+          if (!check.guaranteed) continue
+          expect(
+            check.ok,
+            `${check.label}: ${check.ratio.toFixed(2)}:1 (${t[check.foreground]} auf ${t[check.background]}), noetig ${check.minimum}`,
+          ).toBe(true)
         }
       })
     }
@@ -120,5 +105,74 @@ describe("themeTokens — was dem Space nicht gehoert", () => {
     const b = build("#3b82f6", "light")
     expect(a["--primary"]).not.toBe(b["--primary"])
     expect(a["--ring"]).not.toBe(b["--ring"])
+  })
+})
+
+/**
+ * Die Anzeige im Space. Wer eine Stufe von Hand setzt, soll sofort sehen,
+ * ob dabei etwas unlesbar wird.
+ */
+describe("contrastChecks", () => {
+  it("prueft jedes Paar und meldet, was reicht", () => {
+    const checks = contrastChecks(build("#e87520", "light"))
+    expect(checks).toHaveLength(TOKEN_PAIRS.length)
+    expect(checks.filter((c) => c.guaranteed).every((c) => c.ok), "eine abgeleitete Skala haelt alle garantierten Latten").toBe(true)
+    for (const c of checks) expect(c.ratio).toBeGreaterThan(1)
+  })
+
+  it("zeigt auf Wunsch nur, was an der Akzentskala haengt", () => {
+    const only = contrastChecks(build("#e87520", "light"), { accentOnly: true })
+    expect(only.length).toBeGreaterThan(0)
+    expect(only.length).toBeLessThan(TOKEN_PAIRS.length)
+    expect(only.every((c) => c.accent)).toBe(true)
+  })
+
+  it("schlaegt an, wenn eine gesetzte Stufe den Text verschluckt", () => {
+    // Genau der Fall, den die Anzeige abfangen soll: jemand setzt die
+    // Fuellflaeche auf denselben Ton wie ihre Schrift.
+    const tokens = { ...build("#e87520", "light"), "--primary": "#ffffff", "--primary-foreground": "#ffffff" }
+    const hit = contrastChecks(tokens, { accentOnly: true }).find((c) => c.label === "Knopfbeschriftung")
+    expect(hit?.ok).toBe(false)
+    expect(hit?.ratio).toBeCloseTo(1, 1)
+  })
+})
+
+/**
+ * Die Schrift auf der Fuellung ist weiss — reines Weiss, in beiden Schemata.
+ * Schwarz nur auf sehr hellen Fuellungen wie Gelb. Antons Entscheidung fuer
+ * den Look, begruendet bei `getReadableTextColor`.
+ */
+describe("themeTokens — Schrift auf der Fuellung", () => {
+  it("ist weiss auf einer dunklen Fuellung", () => {
+    const gray = namedScale("sand", "light")
+    const t = themeTokens({ accent: deriveColorScale("#3e5e2e", "light"), gray, scheme: "light" })
+    expect(t["--primary-foreground"]).toBe("#ffffff")
+    expect(t["--sidebar-primary-foreground"]).toBe("#ffffff")
+  })
+
+  it("ist schwarz auf einer sehr hellen Fuellung", () => {
+    const gray = namedScale("sand", "light")
+    const t = themeTokens({ accent: deriveColorScale("#ffff00", "light"), gray, scheme: "light" })
+    expect(t["--primary-foreground"]).toBe("#000000")
+  })
+
+  it("bleibt reines Weiss auf Orange, auch im dunklen Schema", () => {
+    for (const scheme of ["light", "dark"] as const) {
+      const gray = namedScale("sand", scheme)
+      const t = themeTokens({ accent: deriveColorScale("#e87520", scheme), gray, scheme })
+      expect(t["--primary-foreground"], scheme).toBe("#ffffff")
+    }
+  })
+
+  it("haelt auch getoent die garantierten Latten", () => {
+    for (const [hex] of CASES) {
+      for (const scheme of ["light", "dark"] as const) {
+        const { accent, gray } = scalesForColor(hex, scheme, { tint: 1 })
+        const t = themeTokens({ accent, gray, scheme })
+        for (const check of contrastChecks(t)) {
+          if (check.guaranteed) expect(check.ok, `${hex}/${scheme} ${check.label}: ${check.ratio.toFixed(2)}`).toBe(true)
+        }
+      }
+    }
   })
 })

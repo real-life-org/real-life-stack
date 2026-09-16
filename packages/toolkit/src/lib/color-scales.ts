@@ -71,6 +71,10 @@ export const GRAY_SCALE_OPTIONS: readonly GrayScaleName[] = GRAY_SCALE_NAMES
  * bleiben unter diesem Wert; alles darunter wird wie Grau behandelt.
  */
 const NEUTRAL_CHROMA = 0.03
+/** Unter dieser Helligkeit ist eine Füllung auf dunklem Grund dumpf. */
+const DARK_FILL_LIGHTNESS_MIN = 0.6
+/** Buntheit der neutralen Skala bei voller Tönung — gerade noch "neutral". */
+const TINT_CHROMA_MAX = 0.03
 
 /**
  * Eine benannte Radix-Skala als Hex-Werte.
@@ -267,7 +271,14 @@ export function deriveColorScale(
 
   // Erst auf den Bereich ziehen, in dem eine Füllfläche liegen kann, dann
   // die Verschiebung so begrenzen, dass keine Stufe klemmt.
-  const fillL = Math.min(FILL_LIGHTNESS_MAX, Math.max(FILL_LIGHTNESS_MIN, target.l))
+  //
+  // Im dunklen Schema liegt die Untergrenze höher: eine dunkle Farbe auf
+  // dunklem Grund ist dumpf. Radix umgeht das, weil seine kuratierten Skalen
+  // Stufe 9 nie so tief legen; wir lassen jede Farbe zu, also steht die Regel
+  // hier. reallife.network/app macht es von Hand — hell Forest (L 0.42),
+  // dunkel Sage (L 0.64). Im hellen Schema bleibt die Farbe, wie gewählt.
+  const floor = scheme === "dark" ? DARK_FILL_LIGHTNESS_MIN : FILL_LIGHTNESS_MIN
+  const fillL = Math.min(FILL_LIGHTNESS_MAX, Math.max(floor, target.l))
   const deltaL = allowedShift(template, fillL - anchor.l)
   const deltaH = target.h - anchor.h
   // Buntheit wird verhältnismäßig verschoben; eine Vorlage mit nahezu
@@ -301,15 +312,44 @@ export function deriveColorScale(
  * Als eine Funktion, damit kein Aufrufer die Paarung vergisst und damit
  * niemand außerhalb mit OKLCH hantieren muss.
  */
+export interface ScaleOptions {
+  /**
+   * Tönung der neutralen Skala, 0–1. Bei 0 bleibt Radix' Paarung; bei 1
+   * tragen alle Flächen den Farbton des Akzents so kräftig, wie es noch als
+   * neutral durchgeht. reallife.network/app liegt mit seinem Creme bei
+   * ungefähr 0.5.
+   */
+  tint?: number
+}
+
 export function scalesForColor(
   color: string,
   scheme: ColorScheme,
+  options: ScaleOptions = {},
 ): { accent: ColorScale; gray: ColorScale } {
   const parsed = parseColor(color)
+  const gray = namedScale(parsed ? grayFor(parsed) : "gray", scheme)
+  const tint = clampTint(options.tint)
   return {
     accent: deriveColorScale(color, scheme),
-    gray: namedScale(parsed ? grayFor(parsed) : "gray", scheme),
+    gray: parsed && tint > 0 ? tintGray(gray, parsed.h, tint) : gray,
   }
+}
+
+/** Der Wert kommt aus `Group.data` und ist ungeprüft. */
+function clampTint(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0
+}
+
+/**
+ * Färbt eine neutrale Skala im gegebenen Farbton. Die Helligkeit jeder Stufe
+ * bleibt, wie Radix sie gesetzt hat — getönt wird, nicht verschoben; so
+ * gelten alle Kontraste der Paarung weiter.
+ */
+function tintGray(gray: ColorScale, hue: number, tint: number): ColorScale {
+  return gray.map((hex) =>
+    oklchToHex({ l: toOklch(hex).l, c: TINT_CHROMA_MAX * tint, h: hue }),
+  ) as unknown as ColorScale
 }
 
 /** Was von Hand gesetzt wurde: Stufennummer (1–12) auf Hex-Wert. */

@@ -8,6 +8,7 @@ import {
   GRAY_SCALE_OPTIONS,
   namedScale,
   pickTemplate,
+  scalesForColor,
   withOverrides,
   type ColorScheme,
 } from "../src/lib/color-scales"
@@ -284,5 +285,103 @@ describe("withOverrides — einzelne Stufen von Hand", () => {
   it("nimmt auch Schluessel als Zeichenkette", () => {
     // Aus JSON kommen Objektschluessel immer als Zeichenketten zurueck.
     expect(withOverrides(base, { "9": "#123456" } as never)[8]).toBe("#123456")
+  })
+})
+
+/**
+ * Toenung: die neutrale Skala traegt den Farbton des Akzents, so stark, wie
+ * der Space es will. 0 ist Radix' Paarung, unveraendert; 1 ist die kraeftigste
+ * Toenung, die noch als "neutral" durchgeht.
+ *
+ * Gemessen an reallife.network/app: deren Creme (#F6F1E7) hat C 0.014, das
+ * ist ungefaehr die Haelfte des Maximums. Die Helligkeit jeder Stufe bleibt
+ * dabei, wie Radix sie gesetzt hat — getoent wird, nicht verschoben.
+ */
+describe("scalesForColor — Toenung der neutralen Skala", () => {
+  const accent = "#3e5e2e"
+
+  it("laesst bei 0 die Radix-Paarung unangetastet", () => {
+    expect(scalesForColor(accent, "light", { tint: 0 }).gray)
+      .toEqual(scalesForColor(accent, "light").gray)
+  })
+
+  it("faerbt bei 1 jede Stufe im Farbton des Akzents", () => {
+    const { gray } = scalesForColor(accent, "light", { tint: 1 })
+    const h = parseColor(accent)!.h
+    for (const hex of gray) {
+      const c = parseColor(hex)!
+      expect(c.c, `${hex} ist getoent`).toBeGreaterThan(0.02)
+      expect(Math.abs(c.h - h), `${hex} traegt den Akzentton`).toBeLessThan(12)
+    }
+  })
+
+  it("aendert die Helligkeit der Stufen nicht", () => {
+    const plain = scalesForColor(accent, "dark").gray
+    const tinted = scalesForColor(accent, "dark", { tint: 1 }).gray
+    for (let i = 0; i < 12; i++) {
+      expect(Math.abs(parseColor(tinted[i])!.l - parseColor(plain[i])!.l), `Stufe ${i + 1}`)
+        .toBeLessThan(0.012)
+    }
+  })
+
+  it("liefert gueltige Farben, auch wenn die Toenung den Farbraum ankratzt", () => {
+    for (const seed of ["#ffff00", "#0000ff", "#ff00ff"]) {
+      for (const scheme of ["light", "dark"] as const) {
+        for (const hex of scalesForColor(seed, scheme, { tint: 1 }).gray) {
+          expect(hex).toMatch(/^#[0-9a-f]{6}$/)
+        }
+      }
+    }
+  })
+
+  it("kappt auf 0 bis 1 und nimmt Nicht-Zahlen als 0", () => {
+    // Der Wert kommt aus `Group.data` und ist ungeprueft. Ausserhalb des
+    // Bereichs wird gekappt — ein Regler, der 1.2 meldet, meint "voll",
+    // nicht "gar nicht". Was keine Zahl ist, meint gar nichts.
+    const plain = scalesForColor(accent, "light").gray
+    const full = scalesForColor(accent, "light", { tint: 1 }).gray
+    expect(scalesForColor(accent, "light", { tint: -1 }).gray).toEqual(plain)
+    expect(scalesForColor(accent, "light", { tint: 2 }).gray).toEqual(full)
+    for (const tint of [Number.NaN, undefined, "0.5"]) {
+      expect(scalesForColor(accent, "light", { tint: tint as number }).gray, String(tint)).toEqual(plain)
+    }
+  })
+})
+
+/**
+ * Eine dunkle Akzentfarbe auf dunklem Grund ist dumpf. Radix umgeht das,
+ * indem seine kuratierten Skalen Stufe 9 nie unter L 0.54 legen; wir lassen
+ * jede Farbe zu, also muss die Regel hier stehen: im dunklen Schema wird die
+ * Fuellung angehoben, im hellen bleibt sie, wie gewaehlt.
+ *
+ * reallife.network/app macht genau das von Hand — hell Forest (L 0.42),
+ * dunkel Sage (L 0.64).
+ */
+describe("deriveColorScale — dunkle Fuellung im dunklen Schema", () => {
+  const forest = "#3e5e2e"
+
+  it("hebt eine dunkle Farbe im dunklen Schema an", () => {
+    const l = parseColor(deriveColorScale(forest, "dark")[8])!.l
+    expect(l).toBeGreaterThanOrEqual(0.58)
+  })
+
+  it("behaelt den Farbton dabei", () => {
+    const seed = parseColor(forest)!
+    const fill = parseColor(deriveColorScale(forest, "dark")[8])!
+    expect(Math.abs(fill.h - seed.h)).toBeLessThan(8)
+  })
+
+  it("laesst sie im hellen Schema exakt, wie gewaehlt", () => {
+    expect(deriveColorScale(forest, "light")[8]).toBe(forest)
+  })
+
+  it("laesst eine ohnehin helle Farbe auch dunkel in Ruhe", () => {
+    const sage = "#8c9a5b"
+    expect(deriveColorScale(sage, "dark")[8]).toBe(sage)
+  })
+
+  it("haelt die Reihenfolge der Stufen", () => {
+    const l = deriveColorScale(forest, "dark").map((h) => parseColor(h)!.l)
+    for (let i = 1; i < 12; i++) expect(l[i], `Stufe ${i + 1} > ${i}`).toBeGreaterThan(l[i - 1])
   })
 })
