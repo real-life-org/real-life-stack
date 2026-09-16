@@ -427,15 +427,20 @@ export interface GroupData {
   /** Enabled UI modules for this group (e.g. ["feed", "kanban", "calendar", "map"]). */
   modules?: string[]
   /**
-   * Das Bild des Space als SELBSTTRAGENDE Quelle — eine Data-URL, wie sie
-   * der Space-Dialog beim Hochladen schreibt, oder eine absolute URL.
+   * Das Bild des Space als AUFLOESBARE Quelle — eine Data-URL, wie sie der
+   * Space-Dialog beim Hochladen schreibt, eine absolute URL, oder ein
+   * wurzel-relativer Pfad, den `resolveAssetUrl` gegen den Basispfad der
+   * Auslieferung aufloest.
    *
-   * KEIN relativer Pfad: der muesste mit dem Basispfad aufgeloest werden,
-   * und der ist laut Spec 11 Build-Zeit-Sache des Auslieferungs-Layouts,
-   * die eine Toolkit-Komponente nicht kennt. Ein zweites Feld `avatar` fuer
-   * denselben Zweck gab es bis 09/2026; es trug Dateinamen, wurde nur an
-   * einer einzigen Stelle aufgeloest und blieb darum ueberall sonst
-   * unsichtbar — unter anderem im Space-Dialog.
+   * KEIN blosser Dateiname: er traegt seinen Ablageort nicht, und
+   * `resolveAssetUrl` reicht ihn unveraendert durch — jede Leseflaeche
+   * muesste ihn selbst zusammensetzen. Ein zweites Feld `avatar` fuer
+   * denselben Zweck gab es bis 09/2026; es trug genau solche Dateinamen,
+   * wurde an einer einzigen Stelle mit dem Basispfad verbunden und blieb
+   * ueberall sonst unsichtbar — unter anderem im Space-Dialog.
+   *
+   * Der leere String bedeutet "kein Bild" und ist der Zustand nach dem
+   * Entfernen des Logos; `null` loescht den Schluessel (Merge-Patch).
    */
   image?: string
 }
