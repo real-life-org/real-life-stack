@@ -563,15 +563,8 @@ export function GroupDialog({
    * Die Feineinstellung ist standardmaessig zu. Wer seinen Space einstellt,
    * waehlt eine Farbe; die drei Achsen, die Toenung und die Kontrastzahlen
    * sind fuer die, die genauer hinschauen wollen.
-   *
-   * Ist sie offen, gibt der Dialog die Mitte frei: er dockt am rechten Rand
-   * an und wird nicht-modal — kein Backdrop, die App dahinter bleibt
-   * bedienbar. Man sieht, was ein Regler tut, auf der ganzen App, mit
-   * Hover-Zustaenden und Menues, nicht auf einer Vorschau. (Ein Dimmen des
-   * Dialogs beim Ziehen war der erste Versuch und wirkte komisch.)
    */
   const [advanced, setAdvanced] = useState(false)
-  const docked = advanced && activeSection === "theme"
 
   /** Die EINE Stelle, an der die Toenung umgesetzt wird. */
   const applyTint = (tint: number | null) => {
@@ -965,13 +958,9 @@ export function GroupDialog({
 
   // --- Edit Mode ---
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange} modal={!docked}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className={cn(
-          "flex h-[85vh] max-h-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]",
-          // Am rechten Rand, volle Hoehe, ohne Zentrierung.
-          docked && "sm:top-4 sm:right-4 sm:bottom-4 sm:left-auto sm:h-auto sm:max-h-none sm:translate-x-0 sm:translate-y-0 sm:max-w-[420px]",
-        )}
+        className="flex h-[85vh] max-h-[560px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[620px]"
         aria-describedby={undefined}
         // Dieser Dialog ist ein FENSTER IN DEN SPACE und traegt darum dessen
         // Primaerfarbe — auch wenn gerade ein anderer Space oder die
@@ -999,11 +988,6 @@ export function GroupDialog({
         // markiert da — ein Tastendruck ueberschriebe den Space-Namen. Der
         // Fokus bleibt im Dialog (Tab und Escape wirken), nur eben nicht
         // in einem Eingabefeld.
-        // Angedockt, solange die Feineinstellung offen ist (siehe `docked`).
-        // Ohne das Preventing schloesse ein Klick in die App den Dialog —
-        // dabei will man dort gerade herumklicken, um die Farbe zu sehen.
-        data-docked={docked || undefined}
-        onInteractOutside={docked ? (e) => e.preventDefault() : undefined}
         onOpenAutoFocus={(e) => {
           e.preventDefault()
           ;(e.currentTarget as HTMLElement | null)?.focus()

@@ -197,23 +197,4 @@ describe("Achsen im Bereich Aussehen", () => {
     expect(text).toContain("Fokusring")
     expect(text).toMatch(/\d\.\d:1/)
   })
-
-  /**
-   * Der Dialog verdeckt genau das, was ein Regler veraendert. Ist die
-   * Feineinstellung offen, gibt er die Mitte frei: angedockt, ohne Backdrop,
-   * die App dahinter bedienbar.
-   */
-  it("dockt an und laesst den Backdrop weg, sobald Erweitert offen ist", () => {
-    render({ primaryColor: COLOR })
-    const content = () => document.querySelector('[data-slot="dialog-content"]')!
-    expect(content().getAttribute("data-docked")).toBeNull()
-    expect(document.querySelector('[data-slot="dialog-overlay"]'), "modal: Backdrop da").not.toBeNull()
-
-    openAdvanced()
-    expect(content().getAttribute("data-docked"), "angedockt").toBe("true")
-    expect(document.querySelector('[data-slot="dialog-overlay"]'), "nicht-modal: kein Backdrop").toBeNull()
-
-    openAdvanced()
-    expect(content().getAttribute("data-docked"), "und zurueck in die Mitte").toBeNull()
-  })
 })
