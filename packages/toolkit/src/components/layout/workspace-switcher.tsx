@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/primitives/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
+import { type RadiusStep, type Surfaces } from "../../lib/space-theme"
 
 export interface Workspace {
   id: string
@@ -22,6 +23,10 @@ export interface Workspace {
   primaryColor?: string
   /** Tönung der Flächen, 0–1 (`data.tint`); fehlt sie, bleiben sie neutral. */
   tint?: number
+  /** Rundung (`data.radius`), fünf Stufen; fehlt sie, erbt der Space von der Instanz. */
+  radius?: RadiusStep
+  /** Flächen der App-Hülle (`data.surfaces`): translucent | solid. */
+  surfaces?: Surfaces
 }
 
 interface WorkspaceSwitcherProps {

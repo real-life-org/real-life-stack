@@ -8,6 +8,9 @@ import {
   getSpacePrimaryColor,
   scalesForColor,
   instanceTheme,
+  readRadius,
+  readSurfaces,
+  layoutTokens,
   useColorScheme,
   themeTokens,
   applyThemeTokens,
@@ -165,6 +168,8 @@ export function useWorkspaceRouting(): WorkspaceRouting {
         primaryColor: g.data?.primaryColor as string | undefined,
         // Ungeprueft durchgereicht; `scalesForColor` kappt und verwirft.
         tint: g.data?.tint as number | undefined,
+        radius: readRadius(g.data?.radius) ?? undefined,
+        surfaces: readSurfaces(g.data?.surfaces) ?? undefined,
       })),
     ],
     [groups]
@@ -314,10 +319,17 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     // Die Toenung ist die zweite Achse des Space: wie stark die Flaechen die
     // Farbe tragen. Setzt der Space keine, erbt er die der Instanz — so
     // bleibt eine cremefarbene Instanz auch in jedem Space cremefarben.
-    const scales = scalesForColor(seed, scheme, { tint: activeWorkspace.tint ?? instanceTheme().tint })
-    applyThemeTokens(root, themeTokens({ ...scales, scheme }))
+    const inherited = instanceTheme()
+    const scales = scalesForColor(seed, scheme, { tint: activeWorkspace.tint ?? inherited.tint })
+    // Rundung und Flaechen gehoeren zum selben Satz: gesetzt und weggeraeumt
+    // mit den Farben, sonst bliebe die Rundung eines Space in der Uebersicht.
+    const layout = layoutTokens({
+      radius: activeWorkspace.radius ?? inherited.radius,
+      surfaces: activeWorkspace.surfaces ?? inherited.surfaces,
+    })
+    applyThemeTokens(root, { ...themeTokens({ ...scales, scheme }), ...layout })
     return () => clearThemeTokens(root)
-  }, [activeWorkspace?.id, activeWorkspace?.primaryColor, activeWorkspace?.tint, isOverview, scheme])
+  }, [activeWorkspace?.id, activeWorkspace?.primaryColor, activeWorkspace?.tint, activeWorkspace?.radius, activeWorkspace?.surfaces, isOverview, scheme])
 
   // Switch workspace (keep the module if offered). Item focus is space-scoped → dropped.
   const handleWorkspaceChange = useCallback((workspace: Workspace) => {
