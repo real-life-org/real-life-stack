@@ -94,6 +94,32 @@ import { useItemFocus } from "./hooks/use-item-focus"
 
 
 /**
+ * Links ODER rechts, nie beide. Die Feineinstellung (links) und das
+ * Modul-Panel (rechts: Details, Composer, Debug) schliessen einander aus:
+ * oeffnet das eine, geht das andere zu. Zwei offene Panels liessen dem
+ * Inhalt auf dem Laptop kaum Platz und waeren auf dem Handy zwei Drawer.
+ *
+ * Sitzt im Provider-Baum, weil `useModulePanel` nur dort geht; `Home`
+ * selbst steht ausserhalb.
+ */
+function PanelExclusivity({ themeOpen, onCloseTheme }: { themeOpen: boolean; onCloseTheme: () => void }) {
+  const panel = useModulePanel()
+  const rightOpen = panel.current !== null
+  const rightKey = panel.current ? `${panel.current.kind}:${panel.current.itemId ?? ""}` : null
+  const prevRightKey = useRef(rightKey)
+  const prevThemeOpen = useRef(themeOpen)
+  useEffect(() => {
+    // Die Feineinstellung ist gerade aufgegangen → rechts schliessen.
+    if (themeOpen && !prevThemeOpen.current && rightOpen) panel.close()
+    // Rechts ist gerade etwas (Neues) aufgegangen → Feineinstellung schliessen.
+    if (rightKey !== null && rightKey !== prevRightKey.current && themeOpen) onCloseTheme()
+    prevThemeOpen.current = themeOpen
+    prevRightKey.current = rightKey
+  }, [themeOpen, rightOpen, rightKey, panel, onCloseTheme])
+  return null
+}
+
+/**
  * Renders the single app-level ModulePanel and suspends it (hidden, kept
  * mounted) while the user picks a location on the map — so the drawer steps
  * aside on mobile. Lives inside LocationPickProvider to read `isPicking`.
@@ -851,6 +877,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
           await removeMember(groupId, userId)
         }}
       />
+      <PanelExclusivity themeOpen={themeCardOpen} onCloseTheme={() => setThemeCardOpen(false)} />
       {themeCardOpen && themeGroup && (
         <SpaceThemeCard
           key={themeGroup.id}

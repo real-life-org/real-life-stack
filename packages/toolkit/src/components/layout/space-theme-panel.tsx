@@ -13,7 +13,7 @@
  * kleinen Host, der die Gruppe je Render neu heraussucht.
  */
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Check, RotateCcw, SlidersHorizontal, X } from "lucide-react"
+import { Check, RotateCcw, SlidersHorizontal } from "lucide-react"
 import type { Group } from "@real-life-stack/data-interface"
 
 import { useColorScheme } from "../../hooks/use-color-scheme"
@@ -25,15 +25,15 @@ import { type GrayScaleName } from "../../lib/color-scales"
 import { cn, getSpacePrimaryColor } from "../../lib/utils"
 import { instanceTheme } from "../../lib/runtime-config"
 import { Button } from "../primitives/button"
+import { AdaptivePanel } from "./adaptive-panel"
 
 export interface SpaceThemePanelProps {
   group: Group
   onUpdateGroup: (id: string, updates: { data?: Record<string, unknown> }) => Promise<void> | void
-  onClose?: () => void
   className?: string
 }
 
-export function SpaceThemePanel({ group, onUpdateGroup, onClose, className }: SpaceThemePanelProps) {
+export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemePanelProps) {
   const onUpdateRef = useRef(onUpdateGroup)
   onUpdateRef.current = onUpdateGroup
 
@@ -176,21 +176,18 @@ export function SpaceThemePanel({ group, onUpdateGroup, onClose, className }: Sp
   ] as const
 
   return (
-    <div className={cn("flex h-full flex-col", className)} data-testid="space-theme-panel">
+    // min-h-0: in einem hoehenbegrenzten Rahmen darf der Inhalt schrumpfen,
+    // sonst laeuft er unsichtbar ueber statt zu scrollen.
+    <div className={cn("flex min-h-0 flex-1 flex-col", className)} data-testid="space-theme-panel">
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold">Theme</div>
           <div className="truncate text-xs text-muted-foreground">{group.name}</div>
         </div>
-        {onClose && (
-          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Schließen">
-            <X className="h-4 w-4" />
-          </Button>
-        )}
       </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
         {/* Die Form des Radix-Playgrounds, Block fuer Block und mit seinen
             Woertern — wer den Playground kennt, findet sich sofort zurecht.
             Ohne Appearance und Scaling: die gehoeren dem Menschen am Geraet,
@@ -327,19 +324,28 @@ export function SpaceThemePanel({ group, onUpdateGroup, onClose, className }: Sp
 }
 
 /**
- * Die Feineinstellung als schwebende Karte ueber dem Inhalt — unten links,
- * dort, wo sonst der Filter liegt (Entwurf 5b). Bewusst KEIN Dialog und
- * kein Modul-Panel: die Karte darf nichts verdecken, was man beim Regeln
- * sehen will, und sie liegt auf der Seite, auf der die App ihre Werkzeuge
- * hat. Rahmen wie die Filter-Karte, nur breiter.
+ * Die Feineinstellung als LINKES AdaptivePanel — das Gegenstueck zum
+ * rechten, in dem Item-Details liegen (Entwurf 5b: "links ueber dem
+ * Content"). Volle Hoehe, eigenes Scrollen, schwebend auf dem Desktop,
+ * Drawer auf dem Handy, ohne Backdrop: die App bleibt sichtbar und
+ * bedienbar, und rechts kann ein Item-Detail offen bleiben, waehrend man
+ * links regelt — genau das, was man beim Einstellen sehen will. Eine
+ * lose Karte unten links verdeckte Filter und Plus und konnte nicht
+ * wachsen.
  */
-export function SpaceThemeCard(props: SpaceThemePanelProps) {
+export function SpaceThemeCard({ onClose, ...props }: SpaceThemePanelProps & { onClose: () => void }) {
   return (
-    <div
-      data-space-theme-card
-      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 z-40 flex max-h-[min(70vh,640px)] w-[min(300px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border surface-glass shadow-xl md:bottom-4"
+    <AdaptivePanel
+      open
+      onClose={onClose}
+      side="left"
+      allowedModes={["floating", "drawer"]}
+      sidebarWidth="320px"
+      sidebarMinWidth="280px"
+      sidebarMaxWidth="50vw"
+      backdrop={false}
     >
       <SpaceThemePanel {...props} />
-    </div>
+    </AdaptivePanel>
   )
 }
