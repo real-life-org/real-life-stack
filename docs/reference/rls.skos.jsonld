@@ -198,11 +198,11 @@
    ],
    "skos:definition": [
     {
-     "@value": "Vorgeschlagen: wer zu einem Space gehört. Der Stack liest Mitgliedschaft aus der Datenquelle und speichert sie nie selbst; die Konstruktion (Zustand im Gruppen-Log plus Schlüssel) liegt bei RLTP.",
+     "@value": "Vorgeschlagen: wer zu einem Space gehört. Die Anwendungsschicht liest Mitgliedschaft über den Connector und konstruiert sie nicht selbst; wie sie gespeichert und belegt wird, entscheidet der jeweilige Connector (der lokale Connector hält sie in groupMembers, der RLTP-Connector leitet sie aus Gruppen-Log und Schlüssel ab).",
      "@language": "de"
     },
     {
-     "@value": "Proposed: who belongs to a space. The stack reads membership from the data source and never stores it itself; the construction (state in the group log plus key) belongs to RLTP.",
+     "@value": "Proposed: who belongs to a space. The application layer reads membership through the connector and does not construct it; how it is stored and proven is decided by the connector in use (the local connector keeps it in groupMembers, the RLTP connector derives it from the group log and key).",
      "@language": "en"
     }
    ],
@@ -211,7 +211,8 @@
    ],
    "rl:status": "proposed",
    "rl:symbol": [
-    "_members"
+    "_members",
+    "groupMembers"
    ]
   },
   {
