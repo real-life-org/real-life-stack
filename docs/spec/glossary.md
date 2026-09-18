@@ -201,3 +201,9 @@ Spec: [code-and-storybook-mapping.md](code-and-storybook-mapping.md)
 Code-Speak für die UI-State-Auswahl eines *Space* plus dessen Modul-Konfiguration. Häufig mit dem `WorkspaceSwitcher`. Bedeutet kein separates Backend; ist reine View-Wahl über *Groups*/*Spaces*.
 
 Spec: [code-and-storybook-mapping.md](code-and-storybook-mapping.md)
+
+## Maschinenlesbare Form und Verknüpfung mit den anderen Welten
+
+Die Begriffe liegen zusätzlich als SKOS-Konzeptschema in [`docs/reference/rls.skos.jsonld`](../reference/rls.skos.jsonld) (JSON-LD, Namensraum `https://real-life.org/rls/v1#`, Name und Definition auf Deutsch und Englisch, Quelle, Codesymbole). Normativ bleiben die Specs. Die Verknüpfungen zu den Begriffen des Real Life Network Protocol und des Real Life Trust Protocol liegen im gemeinsamen Register [real-life-org/meta](https://github.com/real-life-org/meta); die Kennungen lösen unter <https://real-life.org/rls/v1/> auf.
+
+Stand: fünf Begriffe (Space, Spiegel, Relation, Personenprofil, Connector) und zwei Vorschläge (Mitglied, Sichtbarkeit, `rl:status: proposed`), weil beide hier zentral sind und noch kein Wort haben. Das Begriffsregister aus rls#383 (`terms.json`) und diese Datei sollen aus einer Quelle kommen; welche, ist mit dem Handbuch zu entscheiden.
