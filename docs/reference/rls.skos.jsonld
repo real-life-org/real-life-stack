@@ -1,0 +1,248 @@
+{
+ "@context": "https://real-life.org/meta/v1/context.jsonld",
+ "@graph": [
+  {
+   "@id": "rls:",
+   "@type": "skos:ConceptScheme",
+   "dct:title": [
+    {
+     "@value": "Real Life Stack · Oberfläche und Code",
+     "@language": "de"
+    },
+    {
+     "@value": "Real Life Stack · interface and code",
+     "@language": "en"
+    }
+   ]
+  },
+  {
+   "@id": "rls:space",
+   "@type": "skos:Concept",
+   "skos:inScheme": "rls:",
+   "skos:prefLabel": [
+    {
+     "@value": "Space",
+     "@language": "de"
+    },
+    {
+     "@value": "Space",
+     "@language": "en"
+    }
+   ],
+   "skos:definition": [
+    {
+     "@value": "Der gemeinsame Arbeits-, Mitgliedschafts- und Sichtbarkeitskontext. Im Datenvertrag heißt er Group.",
+     "@language": "de"
+    },
+    {
+     "@value": "The shared context for work, membership and visibility. In the data contract it is called Group.",
+     "@language": "en"
+    }
+   ],
+   "dct:source": [
+    "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/04-items-relations-groups-spaces.md"
+   ],
+   "skos:altLabel": [
+    {
+     "@value": "Group",
+     "@language": "en"
+    },
+    {
+     "@value": "Gruppe",
+     "@language": "de"
+    }
+   ],
+   "rl:symbol": [
+    "Group"
+   ],
+   "skos:editorialNote": "English text: draft; terms.json currently has German only"
+  },
+  {
+   "@id": "rls:mirror",
+   "@type": "skos:Concept",
+   "skos:inScheme": "rls:",
+   "skos:prefLabel": [
+    {
+     "@value": "Spiegel",
+     "@language": "de"
+    },
+    {
+     "@value": "Mirror",
+     "@language": "en"
+    }
+   ],
+   "skos:definition": [
+    {
+     "@value": "Die Projektion eines Items aus seinem Home-Space. Herkunft, Aktualität und erlaubte Aktionen werden getrennt betrachtet.",
+     "@language": "de"
+    },
+    {
+     "@value": "The projection of an item from its home space. Origin, freshness and permitted actions are considered separately.",
+     "@language": "en"
+    }
+   ],
+   "dct:source": [
+    "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/09-mirror-bridge.md"
+   ],
+   "skos:editorialNote": "English text: draft, not normative"
+  },
+  {
+   "@id": "rls:relation",
+   "@type": "skos:Concept",
+   "skos:inScheme": "rls:",
+   "skos:prefLabel": [
+    {
+     "@value": "Relation",
+     "@language": "de"
+    },
+    {
+     "@value": "Relation",
+     "@language": "en"
+    }
+   ],
+   "skos:definition": [
+    {
+     "@value": "Eine gerichtete Beziehung zwischen Items mit Prädikat und Ziel. Rückverweise zeigen sie aus der Gegenrichtung.",
+     "@language": "de"
+    },
+    {
+     "@value": "A directed link between items with predicate and target. Back-references show it from the opposite direction.",
+     "@language": "en"
+    }
+   ],
+   "dct:source": [
+    "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/04-items-relations-groups-spaces.md"
+   ],
+   "rl:symbol": [
+    "Relation"
+   ],
+   "skos:editorialNote": "English text: draft, not normative"
+  },
+  {
+   "@id": "rls:profile",
+   "@type": "skos:Concept",
+   "skos:inScheme": "rls:",
+   "skos:prefLabel": [
+    {
+     "@value": "Personenprofil",
+     "@language": "de"
+    },
+    {
+     "@value": "Person profile",
+     "@language": "en"
+    }
+   ],
+   "skos:definition": [
+    {
+     "@value": "Die fachliche Darstellung einer Person als Item nach Profilvertrag. Die User-Identität ist ein eigener Begriff.",
+     "@language": "de"
+    },
+    {
+     "@value": "The domain representation of a person as an item under the profile contract. The user identity is a separate term.",
+     "@language": "en"
+    }
+   ],
+   "dct:source": [
+    "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/12-profile.md"
+   ],
+   "rl:symbol": [
+    "ProfilePanelContent"
+   ],
+   "skos:editorialNote": "English text: draft, not normative"
+  },
+  {
+   "@id": "rls:connector",
+   "@type": "skos:Concept",
+   "skos:inScheme": "rls:",
+   "skos:prefLabel": [
+    {
+     "@value": "Connector",
+     "@language": "de"
+    },
+    {
+     "@value": "Connector",
+     "@language": "en"
+    }
+   ],
+   "skos:definition": [
+    {
+     "@value": "Die Implementierung des DataInterface für eine konkrete Datenquelle, ergänzt um unterstützte Capabilities. Die Steckstelle des Stacks nach unten.",
+     "@language": "de"
+    },
+    {
+     "@value": "The implementation of the DataInterface for one data source, plus the capabilities it supports. The stack's socket downward.",
+     "@language": "en"
+    }
+   ],
+   "dct:source": [
+    "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/02-data-interface.md"
+   ],
+   "rl:symbol": [
+    "DataInterface"
+   ],
+   "skos:editorialNote": "English text: draft, not normative"
+  },
+  {
+   "@id": "rls:member",
+   "@type": "skos:Concept",
+   "skos:inScheme": "rls:",
+   "skos:prefLabel": [
+    {
+     "@value": "Mitglied",
+     "@language": "de"
+    },
+    {
+     "@value": "Member",
+     "@language": "en"
+    }
+   ],
+   "skos:definition": [
+    {
+     "@value": "Vorgeschlagen: wer zu einem Space gehört. Die Anwendungsschicht liest Mitgliedschaft über den Connector und konstruiert sie nicht selbst; wie sie gespeichert und belegt wird, entscheidet der jeweilige Connector (der lokale Connector hält sie in groupMembers, der RLTP-Connector leitet sie aus Gruppen-Log und Schlüssel ab).",
+     "@language": "de"
+    },
+    {
+     "@value": "Proposed: who belongs to a space. The application layer reads membership through the connector and does not construct it; how it is stored and proven is decided by the connector in use (the local connector keeps it in groupMembers, the RLTP connector derives it from the group log and key).",
+     "@language": "en"
+    }
+   ],
+   "dct:source": [
+    "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/04-items-relations-groups-spaces.md"
+   ],
+   "rl:status": "proposed",
+   "rl:symbol": [
+    "_members",
+    "groupMembers"
+   ]
+  },
+  {
+   "@id": "rls:visibility",
+   "@type": "skos:Concept",
+   "skos:inScheme": "rls:",
+   "skos:prefLabel": [
+    {
+     "@value": "Sichtbarkeit",
+     "@language": "de"
+    },
+    {
+     "@value": "Visibility",
+     "@language": "en"
+    }
+   ],
+   "skos:definition": [
+    {
+     "@value": "Vorgeschlagen: wo ein Item liegt und wer es deshalb sieht: im Space, gespiegelt in einen anderen Space, oder veröffentlicht ohne Anmeldung. Welches Backend ein veröffentlichtes Item ausliefert, entscheidet der Connector.",
+     "@language": "de"
+    },
+    {
+     "@value": "Proposed: where an item lives and who therefore sees it: within its space, mirrored into another space, or published without sign-in. Which backend serves a published item is the connector's decision.",
+     "@language": "en"
+    }
+   ],
+   "dct:source": [
+    "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/09-mirror-bridge.md"
+   ],
+   "rl:status": "proposed"
+  }
+ ]
+}
