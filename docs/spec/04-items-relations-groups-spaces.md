@@ -114,7 +114,7 @@ Regeln:
 
 1. Wenige, feste Beziehungen dürfen Forward-Relations sein.
 2. Eigenständige oder unbegrenzt wachsende Inhalte sollen eigene Items mit Reverse-Relation sein.
-3. UI soll Reverse-Relations über Hooks wie `useRelatedItems()` laden, nicht durch manuelles Filtern aller Items.
+3. UI soll Reverse-Relations über den Hook der jeweiligen Beziehungsart laden (`useComments`, `useReactions`, `useVotes`, `useRelationRecords`) oder, wo es noch keinen gibt, über `connector.observeRelatedItems()` — nicht durch manuelles Filtern aller Items.
 4. Details zur Reaktivität stehen in [reaktivitaet.md](reaktivitaet.md).
 
 ## Groups und Spaces

@@ -83,7 +83,7 @@ export function hasAuthorization(c: DataInterface): c is DataInterface & Authori
 ```ts
 // toolkit — ergonomische Hooks darüber
 useItemPermissions(item)      // → { canEdit, canDelete }   (can("item/edit"/"item/delete", item))
-useCanCreate(spaceId, type?)  // → boolean                   (can("item/create", { space }))
+useCanCreate(spaceId, type?)  // → boolean  (entfallen 19.09.2026, siehe Hinweis unten)
 ```
 
 - **Auflösung je Connector:** UCAN-Connector matcht die gehaltene Kette (`with` + `can` + Attenuation); Directus/Supabase liest die mit den Daten gelieferten Permission-Flags (bzw. owner-Spalte + Rolle); `!isWritable(connector)` ⇒ alles `false`.
@@ -151,3 +151,12 @@ Layout (Bottom-Sheet mobil / Sidebar Desktop) liegt schon im `AdaptivePanel`/`Mo
 - **Keine** App-seitige Permission-Regel (folgt dem Connector als Capability — Antons Entscheidung).
 - Soft-Delete/Archiv ist Connector-Sache, kein UI-Konzept in Phase 1.
 - Offen: **Resource-Adressierung** — wie Items/Spaces als UCAN-`with`-URIs adressiert werden (WoT hat schon Identifier; Schema festzulegen). Reihenfolge der Felder im Edit-Composer pro Typ (heute `WIDGET_ORDER`); ob die Typ-Registry in `data-interface` (geteilt) oder `toolkit` (UI-nah) lebt — Tendenz toolkit, da UI-Konfiguration.
+
+
+---
+
+> **Nachtrag 19.09.2026.** `useCanCreate` wurde nie von einer Fläche benutzt und ist
+> mit real-life-stack#400 entfallen. Ob erstellt werden darf, entscheidet
+> `isWritable(connector)`. `useItemPermissions` bleibt, sein Default steht in
+> `resolveItemPermissions` und lautet inzwischen „Space-Mitglieder dürfen einander
+> bearbeiten", nicht mehr creator-owns.

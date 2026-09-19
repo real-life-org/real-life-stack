@@ -154,7 +154,7 @@ Bedeutung: Item ist nur Match, wenn die Tag-Sammlung des Items **jede** der gena
 
 Hierarchische Tag-Auflösung (Eltern-Tag inkludiert Kinder) ist eine UI-Optimierung und kein DataInterface-Vertrag.
 
-> **Status:** `hasTag` ist im `data-interface` implementiert (siehe `matchesFilter` in `base-connector.ts`). Connectoren, die `BaseConnector` erben, unterstützen es automatisch. UI-seitige Convenience-Filter (z.B. `applyItemListFilter` im Toolkit) verwenden weiterhin clientseitiges Matching gegen `item.tags`, können den Filter aber an `data-interface` weiterreichen.
+> **Status:** `hasTag` ist im `data-interface` implementiert (siehe `matchesFilter` in `base-connector.ts`). Connectoren, die `BaseConnector` erben, unterstützen es automatisch. UI-seitige Convenience-Filter im Toolkit (`applyFilterBarValue`, `applyItemSearch`, `useModuleFilteredItems`) verwenden weiterhin clientseitiges Matching gegen `item.tags`, können den Filter aber an `data-interface` weiterreichen. (`applyItemListFilter` hatte keinen Aufrufer und ist am 19.09.2026 entfallen, real-life-stack#400; die Zuweisungslogik steckt jetzt in `filterByAssignee`.)
 
 ## Migrationspfad
 

@@ -165,6 +165,6 @@ Diese Spec ist in der RLS-Codeoberfläche durch folgende Typen und Guards verank
 - `ConfirmationWriterCapable` mit `issueConfirmation()` und `setConfirmationAccepted()`,
 - `EncounterVerificationCapable` mit `createVerificationChallenge()`, `prepareVerificationResponse()` und `confirmVerificationResponse()`,
 - Type Guards `hasConfirmations()`, `hasConfirmationWriter()` und `hasEncounterVerification()`,
-- Toolkit-Hook `useConfirmations()`.
+- Auf Connector-Ebene: die Bestätigungs-Methoden des `DataInterface` (im WoT-Connector `packages/wot-connector/src/confirmations.ts`). Einen Toolkit-Hook `useConfirmations()` gibt es nicht mehr — er hatte keine Fläche und wurde am 19.09.2026 entfernt (real-life-stack#400). Für signierte Beziehungssätze nimmt die UI `useRelationRecords` bzw. `useVerifiedRelationRecords`.
 
 Der WoTConnector projiziert WoT-Verifikationen und WoT-Attestations als `signed-attested` Confirmations. Andere Connectoren dürfen dieselbe View mit `demo`, `local` oder `server-confirmed` liefern, wenn die darunterliegende Quelle keine portable Signatur ist.

@@ -102,8 +102,9 @@ Phase (P2), nicht Gratis-Beigabe**.
 | Map | EXISTIERT → in P3 verdrahten; **Bild-Karten-Modus erst P3.1** (Camp-JPG, Pixel-Koordinaten, Karten-Kontext pro Space) | Place-gebunden |
 | Kalender | EXISTIERT → verdrahten | Events |
 
-Prinzip: Views konsumieren Hooks (`useItems`, später `useRelations`),
-besitzen keine Daten.
+Prinzip: Views konsumieren Hooks (`useItems` und die Hooks der jeweiligen
+Beziehungsart — `useComments`, `useReactions`, `useVotes`,
+`useRelationRecords`), besitzen keine Daten.
 
 ## AppShell
 
