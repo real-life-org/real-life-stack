@@ -3,11 +3,11 @@ import { EMPTY_NOTIFICATION_STATE, hasNotificationState, hasScopedActivityLog, t
 import { projectNotifications, unreadHighPriorityKeys } from "../components/activity/notification-center"
 import { useConnector } from "./connector-context"
 import { useGroups } from "./use-groups"
-import { useCurrentUser } from "./use-auth"
+import { useOptionalCurrentUser } from "./use-auth"
 
 /** Optional shell enhancement; raw activity remains available without it. */
 export function useNotifications() {
-  const connector = useConnector(); const { data: groups } = useGroups(); const { data: user } = useCurrentUser()
+  const connector = useConnector(); const { data: groups } = useGroups(); const { data: user } = useOptionalCurrentUser()
   const scoped = useMemo(() => hasScopedActivityLog(connector) ? connector.observeScopedActivity() : null, [connector])
   const notificationState = useMemo(() => hasNotificationState(connector) ? connector.observeNotificationState() : null, [connector])
   // Observable instances are cached by connectors; their `.current` values are

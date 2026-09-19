@@ -66,7 +66,6 @@ import {
   useMarkNotificationsSeen,
   useItems,
   type Workspace,
-  type UserData,
   type ConnectorOption,
   type GroupDialogMode,
   AuthScreen,
@@ -161,7 +160,8 @@ function extractProfileId(input: string): string {
 }
 
 /** Meta-item types the shell has no detail projection for (log stays visible, not clickable). */
-const UNPROJECTABLE_TARGET_TYPES = new Set(["relation", "comment"])
+// Welche Typen keine eigene Karte bekommen, sagt der Datenvertrag —
+// früher stand hier eine eigene Liste, der „reaction" fehlte.
 
 /** Activity deliberately shares the module panel instead of adding a second shell overlay. */
 function ActivityPanelController({ open, onClose, onOpenNotification, onOpenGroup, onOpenEntryTarget }: { open: boolean; onClose: () => void; onOpenNotification: (notification: import("@real-life-stack/toolkit").NotificationCandidate) => void; onOpenGroup: (groupId: string) => void; onOpenEntryTarget: (targetId: string) => void }) {
@@ -225,7 +225,7 @@ function ReferenceActivityPanelContent({ onOpenTarget }: { onOpenTarget: (entry:
   // A reaction entry opens its PARENT (the reacted-to item) — the reaction
   // itself has no detail projection.
   const resolveOpenId = useCallback((entry: import("@real-life-stack/data-interface").ActivityEntry) => {
-    if (UNPROJECTABLE_TARGET_TYPES.has(entry.targetType) || entry.action === "delete") return undefined
+    if (!isAggregateVisibleItemType(entry.targetType) || entry.action === "delete") return undefined
     if (entry.targetType === "reaction") {
       const reaction = itemById.get(entry.targetId)
       const target = reaction?.relations?.find((relation) => relation.predicate === "reactsTo")?.target
@@ -653,13 +653,9 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     setGroupDialogOpen(true)
   }, [groups])
 
-  const userData: UserData = useMemo(
-    () => ({
-      id: currentUser?.id ?? "",
-      name: currentUser?.displayName ?? "Laden...",
-      email: "",
-      avatar: currentUser?.avatarUrl,
-    }),
+  // UserMenu nimmt den User des Datenmodells; keine zweite Personenform mehr.
+  const userData: User = useMemo(
+    () => currentUser ?? { id: "", displayName: "Laden..." },
     [currentUser]
   )
 

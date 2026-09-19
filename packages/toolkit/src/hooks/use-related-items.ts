@@ -3,6 +3,8 @@ import type { Item, RelatedItemsOptions } from "@real-life-stack/data-interface"
 import { hasRelations } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
+const NO_ITEMS: Item[] = []
+
 export function useRelatedItems(
   itemId: string,
   predicate?: string,
@@ -21,7 +23,10 @@ export function useRelatedItems(
   const update = useCallback((items: Item[]) => startTransition(() => setData(items)), [])
 
   useEffect(() => {
-    if (!observable) return
+    if (!observable) {
+      setData(NO_ITEMS)
+      return
+    }
     setData(observable.current)
     return observable.subscribe(update)
   }, [observable, update])

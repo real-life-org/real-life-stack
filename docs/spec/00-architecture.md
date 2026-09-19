@@ -20,7 +20,7 @@ App
       └─ Module Components
 ```
 
-Die App Shell ist der space-übergreifende Rahmen: Navigation, Space-Wechsel, User/Profile, Contacts, Verification, Notifications und globale Dialoge. Space Modules sind pro Space aktivierbare Oberflächen wie Feed, Map, Calendar, Kanban, Marketplace, Quests oder Campaign View. Module Components sind wiederverwendbare Bausteine innerhalb dieser Module.
+Die App Shell ist der space-übergreifende Rahmen: Navigation, Space-Wechsel, User/Profile, Contacts, Verification, Notifications und globale Dialoge. Space Modules sind pro Space aktivierbare Oberflächen; registriert sind heute Feed, Kanban, Calendar, Map, Resonance, Collection und Graph. Module Components sind wiederverwendbare Bausteine innerhalb dieser Module.
 
 Details: [01-app-composition.md](01-app-composition.md).
 

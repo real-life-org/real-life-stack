@@ -236,8 +236,10 @@ Aktivierung durch Map-Modul: Items mit `data.position` werden auf der Map gerend
 
 ### `event/v1`
 
-- `start` (ISO-8601-DateTime oder -Date) — Beginn
-- `end` (ISO-8601-DateTime oder -Date, optional) — Ende
+- `start` (ISO-8601-DateTime **mit UTC-Offset**, z. B. `2026-09-19T14:00:00+02:00`, oder -Date `2026-09-19` für ganztägig) — Beginn
+- `end` (gleiche Form, optional) — Ende
+
+Ein Zeitpunkt trägt den Offset des Autors: jeder Leser sieht denselben Augenblick, die Wanduhrzeit des Autors bleibt ablesbar. Ein Datum ohne Uhrzeit ist ganztägig und ohne Zone. Werte ohne Offset aus älteren Items werden in der Zone des Lesers gedeutet und beim nächsten Speichern mit Offset geschrieben. (Entschieden 2026-09-19; eine eigene Zonenangabe für Wiederholungen über Zeitumstellungen hinweg bleibt offen.)
 - `duration` (ISO-8601-Duration, optional; gegenseitig exklusiv mit `end`)
 - `rrule` (RFC 5545 RRULE-String, optional)
 - `meetingLink` (URL, optional) — siehe Discussion zur Frage „wohin gehört Online-Treffen"

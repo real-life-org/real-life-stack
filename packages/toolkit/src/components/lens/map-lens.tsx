@@ -1,3 +1,4 @@
+import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 
@@ -80,7 +81,7 @@ export function mapLensMarkers(
 /** Marker-click lookup deliberately excludes relation records and display-only overlays. */
 export function mapLensClickableItemsById(items: readonly Item[], nonClickableItemIds: readonly string[] = []): Map<string, Item> {
   return new Map(items
-    .filter(({ id, type }) => type !== "relation" && !nonClickableItemIds.includes(id))
+    .filter(({ id, type }) => isAggregateVisibleItemType(type) && !nonClickableItemIds.includes(id))
     .map((item) => [item.id, item]))
 }
 

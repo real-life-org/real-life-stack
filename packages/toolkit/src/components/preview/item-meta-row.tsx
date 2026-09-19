@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 import { Calendar, MapPin } from "lucide-react"
 import { cn } from "../../lib/utils"
-import { isAllDayDate, parseEventDate } from "../../lib/date-utils"
+import { formatClock, formatDay, isAllDayDate, parseEventDate } from "../../lib/date-utils"
 import { useFieldLink } from "../navigation/field-navigation"
 
 /**
@@ -120,10 +120,10 @@ export function formatEventRange(start: string, end?: string): string {
   const s = parseEventDate(start)
   if (Number.isNaN(s.getTime())) return start
 
-  const dateStr = s.toLocaleDateString("de-DE", { day: "numeric", month: "short" })
+  const dateStr = formatDay(s)
   const timeStr = startAllDay
     ? null
-    : s.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+    : formatClock(s)
 
   if (!end) return timeStr ? `${dateStr}, ${timeStr}` : dateStr
 
@@ -133,7 +133,7 @@ export function formatEventRange(start: string, end?: string): string {
 
   const endTimeStr = endAllDay
     ? null
-    : e.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+    : formatClock(e)
 
   // Same day — four cases, handle the mixed ones explicitly so a null
   // side doesn't get interpolated into the string.
@@ -144,7 +144,7 @@ export function formatEventRange(start: string, end?: string): string {
     return `${dateStr}, bis ${endTimeStr}`
   }
 
-  const endDateStr = e.toLocaleDateString("de-DE", { day: "numeric", month: "short" })
+  const endDateStr = formatDay(e)
   const startPart = timeStr ? `${dateStr}, ${timeStr}` : dateStr
   const endPart = endTimeStr ? `${endDateStr}, ${endTimeStr}` : endDateStr
   return `${startPart} – ${endPart}`

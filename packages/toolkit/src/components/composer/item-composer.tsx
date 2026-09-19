@@ -10,7 +10,7 @@ import {
   type WidgetData,
 } from "./content-composer"
 import { useItemEditor, type ItemEditorMapper } from "../../hooks/use-item-editor"
-import { useCurrentUser } from "../../hooks/use-auth"
+import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { useSetDraftItem, DRAFT_ITEM_ID } from "../../hooks/use-draft-item"
 import { useSetUnsavedDirty } from "../../hooks/use-unsaved-changes"
 
@@ -56,7 +56,9 @@ export function ItemComposer({
   onDone,
   onCancel,
 }: ItemComposerProps) {
-  const { data: currentUser } = useCurrentUser()
+  // Ohne Anmeldung gibt es keinen Urheber; das Anlegen scheitert dann am
+  // Connector, nicht schon beim Rendern des Formulars.
+  const { data: currentUser } = useOptionalCurrentUser()
   const editor = useItemEditor({ currentUserId: currentUser?.id, mapSubmission: mapper })
 
   // Live preview: publish the in-progress item as a draft (via the same mapper

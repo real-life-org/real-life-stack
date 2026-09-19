@@ -3,7 +3,7 @@
 import type { Item } from "@real-life-stack/data-interface"
 import { Clock, MapPin } from "lucide-react"
 import { cn } from "../../lib/utils"
-import { isAllDayDate, parseEventDate } from "../../lib/date-utils"
+import { formatClock, formatDay, isAllDayDate, parseEventDate } from "../../lib/date-utils"
 
 /**
  * `ItemTimeRange` — inline row showing the time-of-day for an event
@@ -82,7 +82,7 @@ export function formatTimeRange(start: string, end?: string): string {
 
   const startTime = startAllDay
     ? "Ganztägig"
-    : s.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+    : formatClock(s)
 
   if (!end) return startTime
 
@@ -94,20 +94,20 @@ export function formatTimeRange(start: string, end?: string): string {
   // festival — the surrounding UI implies the *current* day, never the range.
   if (startAllDay) {
     if (s.toDateString() === e.toDateString()) return startTime
-    const endDay = e.toLocaleDateString("de-DE", { day: "numeric", month: "short" })
+    const endDay = formatDay(e)
     return `Ganztägig, bis ${endDay}`
   }
 
   if (s.toDateString() === e.toDateString()) {
     if (isAllDayDate(end)) return startTime
-    const endTime = e.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+    const endTime = formatClock(e)
     return `${startTime} – ${endTime}`
   }
 
   // Multi-day — hint at the end date so the user knows it isn't same-day.
-  const endDate = e.toLocaleDateString("de-DE", { day: "numeric", month: "short" })
+  const endDate = formatDay(e)
   const endTime = isAllDayDate(end)
     ? null
-    : e.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+    : formatClock(e)
   return endTime ? `${startTime} – ${endDate}, ${endTime}` : `${startTime} – ${endDate}`
 }

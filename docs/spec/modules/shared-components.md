@@ -32,7 +32,7 @@ Sie deckt *nicht*:
 
 - visuelle Spezifikation (Spacings, Farben, Hover-States) — folgt im UI-Polish,
 - modul-spezifische Komponenten (z.B. `KanbanBoard`, `CalendarView`) — bleiben in ihrem Modul,
-- App-Shell-Flächen (Navbar, ProfileDialog) — eigene Verträge in `01-app-composition.md`.
+- App-Shell-Flächen (Navbar, ProfilePanelContent) — eigene Verträge in `01-app-composition.md`.
 
 ## Komponenten
 

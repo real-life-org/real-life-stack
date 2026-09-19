@@ -31,3 +31,10 @@ export {
   type ComposerFullscreenShellProps,
 } from "./composer-fullscreen-shell"
 export { ItemComposer, type ItemComposerProps } from "./item-composer"
+export {
+  createComposerMapping,
+  textFieldFor,
+  withGroupOptions,
+  type ComposerMapping,
+} from "./composer-mapping"
+export { toDateInputValue, toStoredDateTime } from "./date-widget-state"

@@ -1,6 +1,7 @@
 "use client"
 
-import { LogOut, QrCode, Settings, User, Users } from "lucide-react"
+import type { User } from "@real-life-stack/data-interface"
+import { LogOut, QrCode, Settings, User as UserIcon, Users } from "lucide-react"
 
 import {
   DropdownMenu,
@@ -12,15 +13,19 @@ import {
 } from "@/components/primitives/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
 
-export interface UserData {
-  id: string
-  name: string
-  email?: string
-  avatar?: string
-}
+/**
+ * Das Menü sprach lange eine eigene Personenform (`name`, `avatar`), während
+ * das Datenmodell überall `User` benutzt (`displayName`, `avatarUrl`). Beide
+ * Apps rechneten sie deshalb von Hand um. Jetzt nimmt es `User`; `subtitle`
+ * ersetzt das frühere `email` und lässt die App sagen, was unter dem Namen
+ * stehen soll.
+ */
+export type UserData = User
 
 interface UserMenuProps {
-  user: UserData
+  user: User
+  /** Zweite Zeile unter dem Namen, z. B. eine Kennung oder eine Rolle. */
+  subtitle?: string
   onProfile?: () => void
   onContacts?: () => void
   contactCount?: number
@@ -31,6 +36,7 @@ interface UserMenuProps {
 
 export function UserMenu({
   user,
+  subtitle,
   onProfile,
   onContacts,
   contactCount,
@@ -38,6 +44,7 @@ export function UserMenu({
   onSettings,
   onLogout,
 }: UserMenuProps) {
+  const displayName = user.displayName ?? user.id
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -51,23 +58,23 @@ export function UserMenu({
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-2 rounded-full" data-testid="user-menu-trigger">
         <Avatar className="h-8 w-8">
-          <AvatarImage src={user.avatar} alt={user.name} />
-          <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+          <AvatarImage src={user.avatarUrl} alt={displayName} />
+          <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium">{user.name}</p>
-            {user.email && (
-              <p className="text-xs text-muted-foreground">{user.email}</p>
+            <p className="text-sm font-medium">{displayName}</p>
+            {subtitle && (
+              <p className="text-xs text-muted-foreground">{subtitle}</p>
             )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {onProfile && (
           <DropdownMenuItem onClick={onProfile} className="flex items-center gap-2">
-            <User className="h-4 w-4" />
+            <UserIcon className="h-4 w-4" />
             <span>Profil</span>
           </DropdownMenuItem>
         )}

@@ -3,6 +3,13 @@ import type { AuthState, User } from "@real-life-stack/data-interface"
 import { isAuthenticatable } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
+/**
+ * Anmeldung ist eine Fähigkeit, kein Muss (`Authenticatable`). Ein Connector,
+ * der nur liest, hat keine — „niemand angemeldet" ist dann die wahre Antwort,
+ * kein Fehler. Deshalb antworten die lesenden Hooks hier leer, statt zu werfen.
+ * Nur `useCurrentUser` besteht weiter auf der Fähigkeit: wer den angemeldeten
+ * Menschen ohne Fallunterscheidung braucht, soll es früh merken.
+ */
 function useAuthConnector() {
   const connector = useConnector()
   if (!isAuthenticatable(connector)) {
@@ -11,14 +18,49 @@ function useAuthConnector() {
   return connector
 }
 
-export function useAuthState() {
-  const connector = useAuthConnector()
-  const observable = connector.getAuthState()
-  const [data, setData] = useState<AuthState>(observable.current)
+const NOT_SIGNED_IN: AuthState = { status: "unauthenticated" }
 
-  useEffect(() => observable.subscribe(setData), [observable])
+export function useAuthState(): AuthState {
+  const connector = useConnector()
+  const observable = useMemo(
+    () => (isAuthenticatable(connector) ? connector.getAuthState() : null),
+    [connector],
+  )
+  const [data, setData] = useState<AuthState>(observable?.current ?? NOT_SIGNED_IN)
+
+  useEffect(() => {
+    if (!observable) {
+      setData(NOT_SIGNED_IN)
+      return
+    }
+    setData(observable.current)
+    return observable.subscribe(setData)
+  }, [observable])
 
   return data
+}
+
+/**
+ * Like {@link useCurrentUser}, but a connector without authentication yields no
+ * user instead of throwing. For code that only needs to know *whether* someone
+ * is signed in, e.g. permission checks on a read-only connector.
+ */
+export function useOptionalCurrentUser(): { data: User | null; isLoading: boolean } {
+  const connector = useConnector()
+  const observable = useMemo(
+    () => (isAuthenticatable(connector) ? connector.observeCurrentUser() : null),
+    [connector],
+  )
+  const [data, setData] = useState<User | null>(observable?.current ?? null)
+  useEffect(() => {
+    if (!observable) {
+      setData(null)
+      return
+    }
+    setData(observable.current)
+    return observable.subscribe(setData)
+  }, [observable])
+  return { data, isLoading: !!observable && data === null }
 }
 
 export function useCurrentUser() {

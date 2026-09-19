@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { AdaptivePanel, type PanelMode } from "../layout/adaptive-panel"
+import { AdaptivePanel, DEFAULT_PANEL_MODES, type PanelMode } from "../layout/adaptive-panel"
 
 /**
  * Identifies what's currently rendered inside the shared module panel.
@@ -57,7 +57,7 @@ export interface ModulePanelProviderProps {
   children: ReactNode
   /** Side for sidebar mode. Defaults to "right" — convention for module detail. */
   side?: "left" | "right"
-  /** Allowed AdaptivePanel modes. Defaults to sidebar (desktop) + drawer (mobile). */
+  /** Allowed AdaptivePanel modes. Defaults to the stack's standard: floating card (desktop) + drawer (mobile). */
   allowedModes?: PanelMode[]
   sidebarWidth?: string
   sidebarMinWidth?: string
@@ -84,7 +84,7 @@ export interface ModulePanelProviderProps {
 export function ModulePanelProvider({
   children,
   side = "right",
-  allowedModes = ["sidebar", "drawer"],
+  allowedModes = DEFAULT_PANEL_MODES as PanelMode[],
   sidebarWidth = "420px",
   sidebarMinWidth,
   sidebarMaxWidth,

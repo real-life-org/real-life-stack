@@ -53,7 +53,8 @@ function MapLensStory() {
 }
 
 const meta: Meta<typeof MapLensStory> = {
-  title: "RLS/Module Components/Lenses/MapLens",
+  id: "rls-module-components-lenses-maplens",
+  title: "RLS/Module/Karte/Read-only-Ansicht (MapLens)",
   component: MapLensStory,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

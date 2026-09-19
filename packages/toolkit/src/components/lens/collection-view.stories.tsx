@@ -10,7 +10,8 @@ const items: Item[] = [
 ]
 
 const meta: Meta<typeof CollectionView> = {
-  title: "RLS/Module Components/Lenses/CollectionView",
+  id: "rls-module-components-lenses-collectionview",
+  title: "RLS/Module/Gemeinsame Ansichten/Sammlung",
   component: CollectionView,
   tags: ["autodocs"],
   parameters: {

@@ -122,14 +122,15 @@ const SEED: Item[] = [
 ]
 
 const meta: Meta<typeof ItemDetailPanel> = {
-  title: "RLS/Module Components/Detail/ItemDetailPanel",
+  id: "rls-module-components-detail-itemdetailpanel",
+  title: "RLS/Items/Detailansicht/Inhalt und Diskussion",
   component: ItemDetailPanel,
   parameters: {
     layout: "fullscreen",
     docs: {
       description: {
         component:
-          "Modul-agnostisches Detail-Panel: Top-Slot (children) + Kommentarliste + unten gepinnter CommentInput. Das Modul entscheidet, was \"Detail\" bedeutet — der Feed rendert eine read-only Item-Card, Kanban einen Edit-Composer. Das Framing (AdaptivePanel, Dialog, Route) bleibt beim Consumer. Die Story nutzt einen In-Memory-Connector: Kommentieren und Antworten funktionieren live.",
+          "Der innere Baustein der Detailansicht: Top-Slot (children) plus Kommentarliste plus unten gepinnte Eingabe. Die Apps benutzen ihn nicht direkt, sondern über `ItemDetailView`, das Lesen und Bearbeiten umschaltet und das ⋮-Menü einsetzt — zu sehen unter „App Shell → Die Modulfläche\". Was im Top-Slot steht, folgt dem ITEM, nicht dem Modul: ein Task ist ein Task, ob aus dem Kanban oder aus der Sammlung geöffnet (die frühere Regel je Modul hat #183 und #196 ausgelöst). Kommentieren und Antworten funktionieren hier live.",
       },
     },
   },
@@ -163,7 +164,12 @@ export const FeedDetail: Story = {
   ),
 }
 
-/** Beliebiger Top-Slot — das Panel besitzt nur das Kommentar-Wiring. */
+/**
+ * Der Top-Slot ist technisch frei — das Panel besitzt nur die Kommentar-Verdrahtung.
+ * In einer App gehört dort trotzdem immer `ItemDetailBody` hinein, gefüllt nach dem
+ * Typ des Items. Diese Story zeigt die Grenze des Bausteins, nicht eine Einladung,
+ * je Modul etwas anderes zu rendern.
+ */
 export const CustomTopSlot: Story = {
   render: () => (
     <ItemDetailPanel itemId={POST.id}>

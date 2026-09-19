@@ -35,3 +35,26 @@ export function parseEventDate(value: string): Date {
   }
   return new Date(value)
 }
+
+/**
+ * Die zwei Schreibweisen, in denen der Stack Zeitpunkte zeigt: „19. Sept."
+ * und „14:00". Sie standen als Optionsobjekt an acht Stellen; eine Änderung
+ * hätte sie einzeln finden müssen.
+ *
+ * Das Gebietsschema steht hier bewusst fest auf Deutsch, wie überall sonst im
+ * Toolkit. Sobald die Oberfläche mehrsprachig wird (rls#288), ist das die eine
+ * Stelle, an der es sich ändert.
+ */
+const DAY_FORMAT: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" }
+const TIME_FORMAT: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" }
+const LOCALE = "de-DE"
+
+/** „19. Sept." */
+export function formatDay(date: Date): string {
+  return date.toLocaleDateString(LOCALE, DAY_FORMAT)
+}
+
+/** „14:00" */
+export function formatClock(date: Date): string {
+  return date.toLocaleTimeString(LOCALE, TIME_FORMAT)
+}

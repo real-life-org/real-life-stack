@@ -87,6 +87,7 @@ export {
 } from "./lib/geocode"
 
 // Components
+export { itemTitle, itemText } from "./lib/item-text"
 export * from "./components"
 
 // Hooks

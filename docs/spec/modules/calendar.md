@@ -23,7 +23,7 @@ Es unterstützt:
 |---|---|
 | Space Module? | Ja |
 | App-Shell-Fläche? | Nein |
-| Module Components | CalendarView, CalendarHeader, CalendarFilters, MonthView, WeekView, DayView, ListView; geteilt: ItemPreview + Adornments (ItemTypeBadge, ItemTimeRange) für die Listen-Card |
+| Module Components | CalendarView mit den internen Teilen MonthCalendar, WeekCalendar, DayCalendar und EventList (alle in `calendar-view.tsx`); geteilt: FilterBar, ItemPreview + Adornments (ItemTypeBadge, ItemTimeRange) für die Listen-Card |
 | Primäre Datenbasis | Items |
 | Externe Semantik | optional RLNP/Game/WoT-Projektionen, aber nicht durch Calendar definiert |
 
@@ -173,11 +173,12 @@ Die konkrete Navigation ist App- oder Shell-Verantwortung.
 |---|---|---|
 | `CalendarView` | Container für Zeitraum, Ansicht, Filter und Projektion | ja |
 | `CalendarHeader` / DateNavigation | Wechsel zwischen Zeitraum und Ansicht | ja |
-| `CalendarFilters` | Filter nach Typ, Ort und eigenen Items | ja |
-| `MonthView` | Monatsraster mit Event-Pills pro Tag | ja |
-| `WeekView` | Wochenraster mit Zeitslots | ja |
-| `DayView` | Tagesraster mit Zeitslots | ja |
-| `ListView` | gruppierte Terminliste im sichtbaren Zeitraum | ja |
+| Filterteil in `calendar-view.tsx` | Ort- und „Nur meine"-Filter; Typ, Tag und Text kommen aus der geteilten Filterleiste | nein, Teil von `CalendarView` |
+| `MonthCalendar` | Monatsraster mit Event-Pills pro Tag | nein, intern in `calendar-view.tsx` |
+| `WeekCalendar` | Wochenraster mit Zeitslots | nein, intern in `calendar-view.tsx` |
+| `DayCalendar` | Tagesraster mit Zeitslots | nein, intern in `calendar-view.tsx` |
+| `EventList` | gruppierte Terminliste im sichtbaren Zeitraum | nein, intern in `calendar-view.tsx` |
+| `ListView` (`components/lens/list-view.tsx`) | generische Listen-Linse, nicht kalenderspezifisch | ja, modulübergreifend |
 | `EventPreview` | kompakte Darstellung eines zeitgebundenen Items | ja |
 | `ContentComposer` | Event-Erstellung oder Bearbeitung | ja, aber als Shell-/Composer-Integration |
 
@@ -207,6 +208,6 @@ Das Calendar Module definiert nicht:
 
 1. Wo liegt langfristig die Calendar-Konfiguration: App-Konfiguration, `Group.data.modules` oder eigenes Item?
 2. Wie werden Teilnehmer, Zusagen und bestätigte Teilnahme backend-agnostisch angezeigt?
-3. Wie werden Zeitzonen und ganztägige Events modelliert?
+3. ~~Wie werden Zeitzonen und ganztägige Events modelliert?~~ Entschieden 2026-09-19, siehe `06-schema-composition.md` (`event/v1`): Zeitpunkt mit UTC-Offset des Autors, ganztägig als Datum ohne Zone. Offen bleibt nur die Zonenangabe für Wiederholungen über Zeitumstellungen.
 4. Welche Item-Typen sollen in der Reference App standardmäßig calendar-fähig sein?
 5. Welche Calendar-Filter gehören ins Modul selbst und welche in die App Shell?

@@ -9,7 +9,8 @@ import {
 } from "lucide-react"
 
 const meta: Meta<typeof ContentComposer> = {
-  title: "RLS/Module Components/ContentComposer",
+  id: "rls-module-components-contentcomposer",
+  title: "RLS/Items/Anlegen und Bearbeiten/ContentComposer",
   component: ContentComposer,
   tags: ["autodocs"],
   decorators: [

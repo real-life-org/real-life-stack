@@ -5,6 +5,8 @@ import {
   dateWidgetToggles,
   dateWidgetValue,
   NO_DATE_TOGGLES,
+  toDateInputValue,
+  toStoredDateTime,
   type DateWidgetToggles,
 } from "../src/components/composer/date-widget-state"
 import type { WidgetData } from "../src/components/composer/content-composer"
@@ -106,5 +108,78 @@ describe("date widget state", () => {
       end: undefined,
       rrule: undefined,
     })
+  })
+})
+
+/**
+ * Spec 06 allows `start`/`end` as any ISO-8601 DateTime or Date. The input can
+ * only show `YYYY-MM-DDTHH:mm` in local time; a value with a zone from another
+ * client therefore has to be converted, or the field shows up empty in edit.
+ */
+describe("ISO values in the date input", () => {
+  const pad2 = (n: number) => String(n).padStart(2, "0")
+  const local = (iso: string) => {
+    const d = new Date(iso)
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+  }
+
+  it("converts a zoned datetime to the local input form", () => {
+    expect(toDateInputValue("2026-09-19T14:00:00+02:00")).toBe(local("2026-09-19T14:00:00+02:00"))
+    expect(toDateInputValue("2026-09-19T12:00:00Z")).toBe(local("2026-09-19T12:00:00Z"))
+  })
+
+  it("passes a date-only value and a local input value through unchanged", () => {
+    expect(toDateInputValue("2026-09-19")).toBe("2026-09-19")
+    expect(toDateInputValue("2026-09-19T14:00")).toBe("2026-09-19T14:00")
+    expect(toDateInputValue(undefined)).toBeUndefined()
+  })
+
+  it("shows a zoned start and end in the widget", () => {
+    const value = dateWidgetValue(
+      { start: "2026-09-19T14:00:00+02:00", end: "2026-09-19T18:00:00+02:00" },
+      NO_DATE_TOGGLES,
+    )
+    expect(value.start).toBe(local("2026-09-19T14:00:00+02:00"))
+    expect(value.end).toBe(local("2026-09-19T18:00:00+02:00"))
+    expect(value.showTime).toBe(true)
+    expect(value.showEnd).toBe(true)
+  })
+})
+
+/**
+ * Decision 2026-09-19 (spec 06): a timed value is stored with the author's
+ * offset, so two people in two zones see the same instant. All-day stays a
+ * bare date. What the widget hands over is the local input form; the patch
+ * converts.
+ */
+describe("stored form of a timed value", () => {
+  const offsetOf = (local: string) => {
+    const o = -new Date(local).getTimezoneOffset()
+    const sign = o >= 0 ? "+" : "-"
+    const abs = Math.abs(o)
+    return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`
+  }
+
+  it("appends the browser's offset to a local input value", () => {
+    expect(toStoredDateTime("2026-09-19T14:00")).toBe(`2026-09-19T14:00:00${offsetOf("2026-09-19T14:00")}`)
+    expect(toStoredDateTime("2026-01-19T14:00:30")).toBe(`2026-01-19T14:00:30${offsetOf("2026-01-19T14:00")}`)
+  })
+
+  it("leaves all-day and already zoned values alone", () => {
+    expect(toStoredDateTime("2026-09-19")).toBe("2026-09-19")
+    expect(toStoredDateTime("2026-09-19T12:00:00Z")).toBe("2026-09-19T12:00:00Z")
+    expect(toStoredDateTime("2026-09-19T14:00:00+02:00")).toBe("2026-09-19T14:00:00+02:00")
+    expect(toStoredDateTime(undefined)).toBeUndefined()
+  })
+
+  it("round-trips: the stored value shows as the same local time in the input", () => {
+    const stored = toStoredDateTime("2026-09-19T14:00")!
+    expect(toDateInputValue(stored)).toBe("2026-09-19T14:00")
+  })
+
+  it("is what the widget patch writes", () => {
+    const patch = dateWidgetPatch({ start: "2026-09-19T14:00", end: "2026-09-19", showTime: true })
+    expect(patch.start).toBe(`2026-09-19T14:00:00${offsetOf("2026-09-19T14:00")}`)
+    expect(patch.end).toBe("2026-09-19")
   })
 })

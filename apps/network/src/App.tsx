@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react"
 import type { DataInterface, Item, User } from "@real-life-stack/data-interface"
-import { hasGroups, isAuthenticatable, isWritable, moduleHintsFor } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType, hasGroups, isAuthenticatable, isWritable, moduleHintsFor } from "@real-life-stack/data-interface"
 import {
   AdaptivePanel,
   AppShell,
@@ -58,7 +58,6 @@ import {
   type GraphTypeDescriptor,
   type GraphViewHandle,
   type PanelMode,
-  type UserData,
   type Workspace,
   type NavItem,
 } from "@real-life-stack/toolkit"
@@ -551,7 +550,7 @@ function NetworkShell() {
     [groups],
   )
   const activeWorkspace = workspaces.find(({ id }) => id === currentGroup?.id) ?? null
-  const domainItems = useMemo(() => items.filter(({ type }) => type !== "relation"), [items])
+  const domainItems = useMemo(() => items.filter(({ type }) => isAggregateVisibleItemType(type)), [items])
   const graph = useMemo(
     () => projectRelationGraph(domainItems, relationRecords),
     [domainItems, relationRecords],
@@ -589,14 +588,7 @@ function NetworkShell() {
       : [],
     [graph.edges, selectedNodeId],
   )
-  const userData: UserData | null = useMemo(
-    () => currentUser ? {
-      id: currentUser.id,
-      name: currentUser.displayName ?? currentUser.id,
-      avatar: currentUser.avatarUrl,
-    } : null,
-    [currentUser],
-  )
+  const userData: User | null = currentUser
 
   const searchResults = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("de")

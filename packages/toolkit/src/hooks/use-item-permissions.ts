@@ -2,7 +2,7 @@ import { useMemo } from "react"
 import type { DataInterface, Item } from "@real-life-stack/data-interface"
 import { SYSTEM_ITEM_TYPES, hasAuthorization, isWritable } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
-import { useCurrentUser } from "./use-auth"
+import { useOptionalCurrentUser } from "./use-auth"
 
 export interface ItemPermissions {
   canEdit: boolean
@@ -82,7 +82,8 @@ export function resolveCanCreate(
  */
 export function useItemPermissions(item: Item | null | undefined): ItemPermissions {
   const connector = useConnector()
-  const { data: currentUser } = useCurrentUser()
+  // A read-only connector has no sign-in; the resolver then grants nothing anyway.
+  const { data: currentUser } = useOptionalCurrentUser()
   return useMemo(
     () => resolveItemPermissions(connector, item, currentUser?.id),
     [connector, item, currentUser?.id],

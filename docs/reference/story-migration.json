@@ -1,0 +1,544 @@
+[
+  {
+    "$comment": "alt → neu je Story-Datei. `storyIds` sind die Kennungen, die weiter auflösen müssen; `removed` nennt einzelne Stories, die es nicht mehr gibt, samt Grund — die Datei selbst kann trotzdem weiterleben."
+  },
+  {
+    "file": "packages/toolkit/src/components/activity/activity-panel.stories.tsx",
+    "oldTitle": "RLS/Shell/Activity Panel",
+    "title": "RLS/App Shell/Aktivität und Benachrichtigungen/ActivityPanel",
+    "id": "rls-shell-activity-panel",
+    "storyIds": [
+      "rls-shell-activity-panel--full",
+      "rls-shell-activity-panel--empty",
+      "rls-shell-activity-panel--delete-without-create"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/activity/notification-center.stories.tsx",
+    "oldTitle": "RLS/Activity/NotificationCenter",
+    "title": "RLS/App Shell/Aktivität und Benachrichtigungen/NotificationCenter",
+    "id": "rls-activity-notificationcenter",
+    "storyIds": [
+      "rls-activity-notificationcenter--full",
+      "rls-activity-notificationcenter--empty",
+      "rls-activity-notificationcenter--degraded-read-only"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/calendar/calendar-module.stories.tsx",
+    "oldTitle": "RLS/Space Modules/Calendar/Overview",
+    "title": "RLS/Module/Kalender/Übersicht",
+    "id": "rls-space-modules-calendar-overview",
+    "storyIds": [
+      "rls-space-modules-calendar-overview--docs",
+      "rls-space-modules-calendar-overview--default"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/comments/comment-section.stories.tsx",
+    "oldTitle": "RLS/Module Components/Comments/CommentSection",
+    "title": "RLS/Items/Detailansicht/Reaktionen und Kommentare/CommentSection",
+    "id": "rls-module-components-comments-commentsection",
+    "storyIds": [
+      "rls-module-components-comments-commentsection--docs",
+      "rls-module-components-comments-commentsection--full-section",
+      "rls-module-components-comments-commentsection--input-default",
+      "rls-module-components-comments-commentsection--input-with-reply",
+      "rls-module-components-comments-commentsection--single-bubble",
+      "rls-module-components-comments-commentsection--bubble-with-quote",
+      "rls-module-components-comments-commentsection--thread-with-replies",
+      "rls-module-components-comments-commentsection--thread-collapsed"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/composer/content-composer.stories.tsx",
+    "oldTitle": "RLS/Module Components/ContentComposer",
+    "title": "RLS/Items/Anlegen und Bearbeiten/ContentComposer",
+    "id": "rls-module-components-contentcomposer",
+    "storyIds": [
+      "rls-module-components-contentcomposer--docs",
+      "rls-module-components-contentcomposer--multi-typ",
+      "rls-module-components-contentcomposer--post-only",
+      "rls-module-components-contentcomposer--event-vorausgefuellt",
+      "rls-module-components-contentcomposer--task-einzel-typ",
+      "rls-module-components-contentcomposer--edit-modus",
+      "rls-module-components-contentcomposer--mit-abbrechen",
+      "rls-module-components-contentcomposer--ohne-vorschau",
+      "rls-module-components-contentcomposer--projekt-mit-medien",
+      "rls-module-components-contentcomposer--mit-quick-suggestions",
+      "rls-module-components-contentcomposer--zwei-personenfelder"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/composer/widgets/text-widget.stories.tsx",
+    "oldTitle": "RLS/Module Components/Widgets/TextWidget",
+    "title": "RLS/Items/Feldbausteine/TextWidget",
+    "id": "rls-module-components-widgets-textwidget",
+    "storyIds": [
+      "rls-module-components-widgets-textwidget--docs",
+      "rls-module-components-widgets-textwidget--default",
+      "rls-module-components-widgets-textwidget--mit-inhalt",
+      "rls-module-components-widgets-textwidget--mit-widget-toggles"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/create-fab/create-fab.stories.tsx",
+    "oldTitle": "Module Components / CreateFab",
+    "title": "RLS/Module/Gemeinsame Werkzeuge/Erstellen-Auslöser",
+    "id": "module-components-createfab",
+    "storyIds": [
+      "module-components-createfab--default",
+      "module-components-createfab--kanban-label"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/dashboard/action-card.stories.tsx",
+    "oldTitle": "RLS/Module Components/Dashboard/ActionCard",
+    "title": "RLS/App/Dashboard-Bausteine/ActionCard",
+    "id": "rls-module-components-dashboard-actioncard",
+    "storyIds": [],
+    "removed": {
+      "why": "Es gibt kein Dashboard-Modul im Register. Story entfernt am 19.09.2026.",
+      "storyIds": [
+        "rls-module-components-dashboard-actioncard--docs",
+        "rls-module-components-dashboard-actioncard--primary",
+        "rls-module-components-dashboard-actioncard--secondary",
+        "rls-module-components-dashboard-actioncard--without-description",
+        "rls-module-components-dashboard-actioncard--quick-actions"
+      ]
+    }
+  },
+  {
+    "file": "packages/toolkit/src/components/dashboard/stat-card.stories.tsx",
+    "oldTitle": "RLS/Module Components/Dashboard/StatCard",
+    "title": "RLS/App/Dashboard-Bausteine/StatCard",
+    "id": "rls-module-components-dashboard-statcard",
+    "storyIds": [],
+    "removed": {
+      "why": "Es gibt kein Dashboard-Modul im Register; die Kategorie zeigte etwas, das die Referenz nicht hat. Story entfernt am 19.09.2026.",
+      "storyIds": [
+        "rls-module-components-dashboard-statcard--docs",
+        "rls-module-components-dashboard-statcard--blue",
+        "rls-module-components-dashboard-statcard--green",
+        "rls-module-components-dashboard-statcard--orange",
+        "rls-module-components-dashboard-statcard--purple",
+        "rls-module-components-dashboard-statcard--red",
+        "rls-module-components-dashboard-statcard--dashboard"
+      ]
+    }
+  },
+  {
+    "file": "packages/toolkit/src/components/detail/item-detail-body.stories.tsx",
+    "oldTitle": "Detail/ItemDetailBody",
+    "title": "RLS/Items/Detailansicht/Anatomie und Inhalt",
+    "id": "detail-itemdetailbody",
+    "storyIds": [
+      "detail-itemdetailbody--event",
+      "detail-itemdetailbody--nur-text",
+      "detail-itemdetailbody--viele-tags",
+      "detail-itemdetailbody--laedt"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/detail/item-detail-panel.stories.tsx",
+    "oldTitle": "RLS/Module Components/Detail/ItemDetailPanel",
+    "title": "RLS/Items/Detailansicht/Inhalt und Diskussion",
+    "id": "rls-module-components-detail-itemdetailpanel",
+    "storyIds": [
+      "rls-module-components-detail-itemdetailpanel--feed-detail",
+      "rls-module-components-detail-itemdetailpanel--custom-top-slot"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/feed/feed-module.stories.tsx",
+    "oldTitle": "RLS/Space Modules/Feed/Overview",
+    "title": "RLS/Module/Feed/Übersicht",
+    "id": "rls-space-modules-feed-overview",
+    "storyIds": [
+      "rls-space-modules-feed-overview--docs",
+      "rls-space-modules-feed-overview--default"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/feed/post-card.stories.tsx",
+    "oldTitle": "RLS/Module Components/Feed/PostCard",
+    "title": "RLS/Items/Typbeispiele/Beitrag/PostCard (ältere Darstellung)",
+    "id": "rls-module-components-feed-postcard",
+    "storyIds": [],
+    "removed": {
+      "why": "PostCard ist die ältere Darstellung, ItemPreview hat sie ersetzt; kein Aufrufer im Monorepo (apps/prototype hat eine eigene Kopie). Story entfernt am 19.09.2026.",
+      "storyIds": [
+        "rls-module-components-feed-postcard--docs",
+        "rls-module-components-feed-postcard--text",
+        "rls-module-components-feed-postcard--event",
+        "rls-module-components-feed-postcard--request",
+        "rls-module-components-feed-postcard--with-avatar",
+        "rls-module-components-feed-postcard--feed"
+      ]
+    }
+  },
+  {
+    "file": "packages/toolkit/src/components/filter/filter-bar.stories.tsx",
+    "oldTitle": "Module Components / FilterBar",
+    "title": "RLS/Module/Gemeinsame Werkzeuge/Suche und Filter",
+    "id": "module-components-filterbar",
+    "storyIds": [
+      "module-components-filterbar--default",
+      "module-components-filterbar--pre-selected",
+      "module-components-filterbar--kanban-shape",
+      "module-components-filterbar--calendar-shape",
+      "module-components-filterbar--with-search-leading",
+      "module-components-filterbar--no-available-tags"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/graph/graph-view.stories.tsx",
+    "oldTitle": "RLS/Space Modules/Graph/Overview",
+    "title": "RLS/Module/Graph/Übersicht",
+    "id": "rls-space-modules-graph-overview",
+    "storyIds": [
+      "rls-space-modules-graph-overview--default",
+      "rls-space-modules-graph-overview--selected",
+      "rls-space-modules-graph-overview--empty",
+      "rls-space-modules-graph-overview--dense"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/kanban/kanban-board.stories.tsx",
+    "oldTitle": "RLS/Space Modules/Kanban/Board",
+    "title": "RLS/Module/Kanban/Board",
+    "id": "rls-space-modules-kanban-board",
+    "storyIds": [
+      "rls-space-modules-kanban-board--docs",
+      "rls-space-modules-kanban-board--default",
+      "rls-space-modules-kanban-board--interactive",
+      "rls-space-modules-kanban-board--custom-columns",
+      "rls-space-modules-kanban-board--empty",
+      "rls-space-modules-kanban-board--without-users",
+      "rls-space-modules-kanban-board--mobile-layout",
+      "rls-space-modules-kanban-board--multiple-assignees",
+      "rls-space-modules-kanban-board--many-columns",
+      "rls-space-modules-kanban-board--resources-by-kind-read-only"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/kanban/kanban-module.stories.tsx",
+    "oldTitle": "RLS/Space Modules/Kanban/Overview",
+    "title": "RLS/Module/Kanban/Übersicht",
+    "id": "rls-space-modules-kanban-overview",
+    "storyIds": [
+      "rls-space-modules-kanban-overview--docs",
+      "rls-space-modules-kanban-overview--default"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/kanban/kanban-toolbar.stories.tsx",
+    "oldTitle": "RLS/Space Modules/Kanban/Toolbar",
+    "title": "RLS/Module/Kanban/Werkzeuge",
+    "id": "rls-space-modules-kanban-toolbar",
+    "storyIds": [],
+    "removed": {
+      "why": "KanbanToolbar hat keinen Aufrufer mehr; Kanban baut seinen Kopf aus ModuleToolbar. Story entfernt am 19.09.2026.",
+      "storyIds": [
+        "rls-space-modules-kanban-toolbar--docs",
+        "rls-space-modules-kanban-toolbar--default",
+        "rls-space-modules-kanban-toolbar--with-current-user",
+        "rls-space-modules-kanban-toolbar--toolbar-with-board"
+      ]
+    }
+  },
+  {
+    "file": "packages/toolkit/src/components/layout/adaptive-panel.stories.tsx",
+    "oldTitle": "RLS/App Shell/Layout/AdaptivePanel",
+    "title": "RLS/App Shell/Inhalts-Panel und Dialoge/AdaptivePanel",
+    "id": "rls-app-shell-layout-adaptivepanel",
+    "storyIds": [
+      "rls-app-shell-layout-adaptivepanel--docs",
+      "rls-app-shell-layout-adaptivepanel--default",
+      "rls-app-shell-layout-adaptivepanel--floating-left",
+      "rls-app-shell-layout-adaptivepanel--drawer",
+      "rls-app-shell-layout-adaptivepanel--modal",
+      "rls-app-shell-layout-adaptivepanel--with-pin-toggle",
+      "rls-app-shell-layout-adaptivepanel--pinned-by-default",
+      "rls-app-shell-layout-adaptivepanel--custom-drawer-height",
+      "rls-app-shell-layout-adaptivepanel--scrollable-content",
+      "rls-app-shell-layout-adaptivepanel--with-form-content",
+      "rls-app-shell-layout-adaptivepanel--custom-width"
+    ],
+    "removed": {
+      "why": "Die Sidebar ist nicht mehr der Standard des Stacks; die schwebende Karte ersetzt sie (19.09.2026).",
+      "storyIds": [
+        "rls-app-shell-layout-adaptivepanel--sidebar",
+        "rls-app-shell-layout-adaptivepanel--sidebar-left",
+        "rls-app-shell-layout-adaptivepanel--floating",
+        "rls-app-shell-layout-adaptivepanel--custom-sidebar-width",
+        "rls-app-shell-layout-adaptivepanel--sidebar-and-modal"
+      ]
+    }
+  },
+  {
+    "file": "packages/toolkit/src/components/layout/bottom-nav.stories.tsx",
+    "oldTitle": "RLS/App Shell/Layout/BottomNav",
+    "title": "RLS/App Shell/Navigation/BottomNav",
+    "id": "rls-app-shell-layout-bottomnav",
+    "storyIds": [
+      "rls-app-shell-layout-bottomnav--docs",
+      "rls-app-shell-layout-bottomnav--default",
+      "rls-app-shell-layout-bottomnav--four-items",
+      "rls-app-shell-layout-bottomnav--overflow",
+      "rls-app-shell-layout-bottomnav--interactive"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/layout/navbar.stories.tsx",
+    "oldTitle": "RLS/App Shell/Navigation/Navbar",
+    "title": "RLS/App Shell/Navigation/Navbar",
+    "id": "rls-app-shell-navigation-navbar",
+    "storyIds": [
+      "rls-app-shell-navigation-navbar--docs",
+      "rls-app-shell-navigation-navbar--default",
+      "rls-app-shell-navigation-navbar--with-menu-button",
+      "rls-app-shell-navigation-navbar--simple"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/layout/workspace-switcher.stories.tsx",
+    "oldTitle": "RLS/App Shell/Navigation/WorkspaceSwitcher",
+    "title": "RLS/App Shell/Space-Steuerung links/WorkspaceSwitcher",
+    "id": "rls-app-shell-navigation-workspaceswitcher",
+    "storyIds": [
+      "rls-app-shell-navigation-workspaceswitcher--group-active",
+      "rls-app-shell-navigation-workspaceswitcher--overview-active",
+      "rls-app-shell-navigation-workspaceswitcher--no-active-workspace"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/lens/collection-view.stories.tsx",
+    "oldTitle": "RLS/Module Components/Lenses/CollectionView",
+    "title": "RLS/Module/Gemeinsame Ansichten/Sammlung",
+    "id": "rls-module-components-lenses-collectionview",
+    "storyIds": [
+      "rls-module-components-lenses-collectionview--docs",
+      "rls-module-components-lenses-collectionview--list",
+      "rls-module-components-lenses-collectionview--grid",
+      "rls-module-components-lenses-collectionview--thousand-items"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/lens/grid-view.stories.tsx",
+    "oldTitle": "RLS/Module Components/Lenses/GridView",
+    "title": "RLS/Module/Gemeinsame Ansichten/Raster",
+    "id": "rls-module-components-lenses-gridview",
+    "storyIds": [],
+    "removed": {
+      "why": "Dieselbe Rasteransicht wie „Sammlung/Grid\"; GridView wird nur intern von CollectionView benutzt. Story entfernt am 19.09.2026.",
+      "storyIds": [
+        "rls-module-components-lenses-gridview--docs",
+        "rls-module-components-lenses-gridview--type-specific-adornments"
+      ]
+    }
+  },
+  {
+    "file": "packages/toolkit/src/components/lens/list-view.stories.tsx",
+    "oldTitle": "RLS/Module Components/Lenses/ListView",
+    "title": "RLS/Module/Gemeinsame Ansichten/Liste",
+    "id": "rls-module-components-lenses-listview",
+    "storyIds": [
+      "rls-module-components-lenses-listview--docs",
+      "rls-module-components-lenses-listview--default"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/lens/map-lens.stories.tsx",
+    "oldTitle": "RLS/Module Components/Lenses/MapLens",
+    "title": "RLS/Module/Karte/Read-only-Ansicht (MapLens)",
+    "id": "rls-module-components-lenses-maplens",
+    "storyIds": [
+      "rls-module-components-lenses-maplens--docs",
+      "rls-module-components-lenses-maplens--default"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/map/map-view.stories.tsx",
+    "oldTitle": "RLS/Space Modules/MapView",
+    "title": "RLS/Module/Karte/MapView",
+    "id": "rls-space-modules-mapview",
+    "storyIds": [
+      "rls-space-modules-mapview--bbox-module",
+      "rls-space-modules-mapview--lens-auto-fit"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/preview/item-preview.stories.tsx",
+    "oldTitle": "Module Components / ItemPreview",
+    "title": "RLS/Items/Item-Vorschau/ItemPreview",
+    "id": "module-components-itempreview",
+    "storyIds": [
+      "module-components-itempreview--bare",
+      "module-components-itempreview--with-header-badge",
+      "module-components-itempreview--task-card",
+      "module-components-itempreview--anonymous-author",
+      "module-components-itempreview--no-author-row",
+      "module-components-itempreview--kanban-card-shape",
+      "module-components-itempreview--compact-with-description",
+      "module-components-itempreview--header-adornment-without-author",
+      "module-components-itempreview--no-title-no-description",
+      "module-components-itempreview--long-description-clamped"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/primitives/avatar.stories.tsx",
+    "oldTitle": "RLS/Primitives/Avatar",
+    "title": "RLS/Grundlagen/UI-Primitives/Avatar",
+    "id": "rls-primitives-avatar",
+    "storyIds": [
+      "rls-primitives-avatar--docs",
+      "rls-primitives-avatar--with-image",
+      "rls-primitives-avatar--with-fallback",
+      "rls-primitives-avatar--sizes",
+      "rls-primitives-avatar--group"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/primitives/button.stories.tsx",
+    "oldTitle": "RLS/Primitives/Button",
+    "title": "RLS/Grundlagen/UI-Primitives/Button",
+    "id": "rls-primitives-button",
+    "storyIds": [
+      "rls-primitives-button--docs",
+      "rls-primitives-button--default",
+      "rls-primitives-button--secondary",
+      "rls-primitives-button--destructive",
+      "rls-primitives-button--outline",
+      "rls-primitives-button--ghost",
+      "rls-primitives-button--link",
+      "rls-primitives-button--with-icon",
+      "rls-primitives-button--icon-only",
+      "rls-primitives-button--loading",
+      "rls-primitives-button--all-variants",
+      "rls-primitives-button--all-sizes"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/primitives/card.stories.tsx",
+    "oldTitle": "RLS/Primitives/Card",
+    "title": "RLS/Grundlagen/UI-Primitives/Card",
+    "id": "rls-primitives-card",
+    "storyIds": [
+      "rls-primitives-card--docs",
+      "rls-primitives-card--default",
+      "rls-primitives-card--with-action",
+      "rls-primitives-card--simple-content",
+      "rls-primitives-card--with-form"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/primitives/input.stories.tsx",
+    "oldTitle": "RLS/Primitives/Input",
+    "title": "RLS/Grundlagen/UI-Primitives/Input",
+    "id": "rls-primitives-input",
+    "storyIds": [
+      "rls-primitives-input--docs",
+      "rls-primitives-input--default",
+      "rls-primitives-input--email",
+      "rls-primitives-input--password",
+      "rls-primitives-input--disabled",
+      "rls-primitives-input--with-label",
+      "rls-primitives-input--file"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/primitives/relative-time.stories.tsx",
+    "oldTitle": "RLS/Primitives/RelativeTime",
+    "title": "RLS/Grundlagen/UI-Primitives/RelativeTime",
+    "id": "rls-primitives-relativetime",
+    "storyIds": [
+      "rls-primitives-relativetime--docs",
+      "rls-primitives-relativetime--just-now",
+      "rls-primitives-relativetime--minutes",
+      "rls-primitives-relativetime--hours",
+      "rls-primitives-relativetime--yesterday",
+      "rls-primitives-relativetime--days",
+      "rls-primitives-relativetime--older-same-year",
+      "rls-primitives-relativetime--different-year",
+      "rls-primitives-relativetime--all-variants"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/primitives/tabs.stories.tsx",
+    "oldTitle": "RLS/Primitives/Tabs",
+    "title": "RLS/Grundlagen/UI-Primitives/Tabs",
+    "id": "rls-primitives-tabs",
+    "storyIds": [
+      "rls-primitives-tabs--docs",
+      "rls-primitives-tabs--default",
+      "rls-primitives-tabs--three-tabs",
+      "rls-primitives-tabs--disabled"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/profile/profile-panel-content.stories.tsx",
+    "oldTitle": "Module Components / ProfilePanelContent",
+    "title": "RLS/Items/Typbeispiele/Personenprofil",
+    "id": "module-components-profilepanelcontent",
+    "storyIds": [
+      "module-components-profilepanelcontent--view-foreign",
+      "module-components-profilepanelcontent--view-no-bio",
+      "module-components-profilepanelcontent--edit-own"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/reactions/reaction-bar.stories.tsx",
+    "oldTitle": "RLS/Module Components/Reactions/ReactionBar",
+    "title": "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionBar",
+    "id": "rls-module-components-reactions-reactionbar",
+    "storyIds": [
+      "rls-module-components-reactions-reactionbar--docs",
+      "rls-module-components-reactions-reactionbar--default",
+      "rls-module-components-reactions-reactionbar--single-reaction",
+      "rls-module-components-reactions-reactionbar--no-reactions",
+      "rls-module-components-reactions-reactionbar--many-reactions",
+      "rls-module-components-reactions-reactionbar--overflow",
+      "rls-module-components-reactions-reactionbar--in-post-card"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/reactions/reaction-details.stories.tsx",
+    "oldTitle": "RLS/Module Components/Reactions/ReactionDetails",
+    "title": "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionDetails",
+    "id": "rls-module-components-reactions-reactiondetails",
+    "storyIds": [
+      "rls-module-components-reactions-reactiondetails--docs",
+      "rls-module-components-reactions-reactiondetails--all-reactions",
+      "rls-module-components-reactions-reactiondetails--filtered-by-emoji",
+      "rls-module-components-reactions-reactiondetails--few-reactions"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/reactions/reaction-picker.stories.tsx",
+    "oldTitle": "RLS/Module Components/Reactions/ReactionPicker",
+    "title": "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionPicker",
+    "id": "rls-module-components-reactions-reactionpicker",
+    "storyIds": [
+      "rls-module-components-reactions-reactionpicker--docs",
+      "rls-module-components-reactions-reactionpicker--default",
+      "rls-module-components-reactions-reactionpicker--opens-upward",
+      "rls-module-components-reactions-reactionpicker--opens-left",
+      "rls-module-components-reactions-reactionpicker--opens-upward-left",
+      "rls-module-components-reactions-reactionpicker--all-corners"
+    ]
+  },
+  {
+    "file": "packages/toolkit/src/components/tag/tag-chip.stories.tsx",
+    "oldTitle": "RLS/Module Components/Tag/TagChip",
+    "title": "RLS/Items/Detailansicht/Tags und Urheber/TagChip",
+    "id": "rls-module-components-tag-tagchip",
+    "storyIds": [
+      "rls-module-components-tag-tagchip--docs",
+      "rls-module-components-tag-tagchip--static",
+      "rls-module-components-tag-tagchip--palette",
+      "rls-module-components-tag-tagchip--picker",
+      "rls-module-components-tag-tagchip--removable"
+    ]
+  }
+]

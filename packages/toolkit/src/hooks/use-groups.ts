@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, startTransition } from "react"
-import type { Group } from "@real-life-stack/data-interface"
+import type { DataInterface, Group, GroupManager, User } from "@real-life-stack/data-interface"
 import { hasGroups, hasItemGroups } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 import { useInitialSync } from "./use-initial-sync"
@@ -15,17 +15,42 @@ export function usePersonalGroupId(): string | null {
   return connector.getPersonalGroupId?.() ?? null
 }
 
-function useGroupConnector() {
+/**
+ * Groups are a capability, not a given (`GroupManager`). A connector that only
+ * reads items — the handbook's example, a public view, an embed — has none, and
+ * „no groups" is then the true answer, not an error. The reading hooks below
+ * therefore answer empty instead of throwing, the same way `useInitialSync`
+ * answers „not syncing" for backends without that notion.
+ *
+ * The writing hooks keep throwing, but only when the returned function is
+ * actually called: preparing a callback must never break a render.
+ */
+function useOptionalGroupConnector() {
   const connector = useConnector()
-  if (!hasGroups(connector)) {
-    throw new Error("Connector does not support groups")
-  }
-  return connector
+  return hasGroups(connector) ? connector : null
 }
 
+function useGroupMutation<A extends unknown[], R>(
+  run: (c: DataInterface & GroupManager, ...args: A) => Promise<R>,
+): (...args: A) => Promise<R> {
+  const connector = useConnector()
+  return useCallback(
+    (...args: A) => {
+      if (!hasGroups(connector)) throw new Error("Connector does not support groups")
+      return run(connector, ...args)
+    },
+    // `run` is a module-level function per hook, stable by construction.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [connector],
+  )
+}
+
+const NO_GROUPS: Group[] = []
+const NO_MEMBERS: User[] = []
+
 export function useGroups() {
-  const connector = useGroupConnector()
-  const observable = useMemo(() => connector.observeGroups(), [connector])
+  const connector = useOptionalGroupConnector()
+  const observable = useMemo(() => connector?.observeGroups() ?? null, [connector])
   // Read fresh each render (no stale snapshot across observable change); the
   // subscription only triggers re-renders. `isLoading` reflects the real
   // `loaded` flag, so "loaded, zero groups" is distinguishable from "still
@@ -33,6 +58,7 @@ export function useGroups() {
   // without the flag (sync Mock/Local) count as loaded.
   const [, rerender] = useReducer((n: number) => n + 1, 0)
   useEffect(() => {
+    if (!observable) return
     rerender()
     return observable.subscribe(() => startTransition(rerender))
   }, [observable])
@@ -41,81 +67,55 @@ export function useGroups() {
   // Space „kein Zugriff", nur weil die Gruppenliste dieses Geräts noch
   // unterwegs ist (rls#265).
   const initialSync = useInitialSync()
+  if (!observable) return { data: NO_GROUPS, isLoading: false }
   return { data: observable.current, isLoading: observable.loaded === false || initialSync.active }
 }
 
-export function useCurrentGroup() {
-  const connector = useGroupConnector()
-  const observable = useMemo(() => connector.observeCurrentGroup(), [connector])
+export function useCurrentGroup(): Group | null {
+  const connector = useOptionalGroupConnector()
+  const observable = useMemo(() => connector?.observeCurrentGroup() ?? null, [connector])
   const [, rerender] = useReducer((n: number) => n + 1, 0)
   useEffect(() => {
+    if (!observable) return
     rerender()
     return observable.subscribe(() => startTransition(rerender))
   }, [observable])
 
-  return observable.current
+  return observable?.current ?? null
 }
 
 export function useCreateGroup() {
-  const connector = useGroupConnector()
-  return useCallback(
-    async (name: string, data?: Record<string, unknown>) => {
-      return connector.createGroup(name, data)
-    },
-    [connector],
-  )
+  return useGroupMutation((c, name: string, data?: Record<string, unknown>) => c.createGroup(name, data))
 }
 
 export function useUpdateGroup() {
-  const connector = useGroupConnector()
-  return useCallback(
-    async (id: string, updates: Partial<Group>) => {
-      return connector.updateGroup(id, updates)
-    },
-    [connector],
-  )
+  return useGroupMutation((c, id: string, updates: Partial<Group>) => c.updateGroup(id, updates))
 }
 
 export function useDeleteGroup() {
-  const connector = useGroupConnector()
-  return useCallback(
-    async (id: string) => {
-      return connector.deleteGroup(id)
-    },
-    [connector],
-  )
+  return useGroupMutation((c, id: string) => c.deleteGroup(id))
 }
 
 export function useMembers(groupId: string | null) {
-  const connector = useGroupConnector()
-  const observable = useMemo(() => connector.observeMembers(groupId), [connector, groupId])
+  const connector = useOptionalGroupConnector()
+  const observable = useMemo(() => connector?.observeMembers(groupId) ?? null, [connector, groupId])
   // Read fresh each render (no stale snapshot across groupId change); `isLoading`
   // from the real `loaded` flag, so "loaded, no members" ≠ "still loading".
   const [, rerender] = useReducer((n: number) => n + 1, 0)
   useEffect(() => {
+    if (!observable) return
     rerender()
     return observable.subscribe(() => startTransition(rerender))
   }, [observable])
 
+  if (!observable) return { data: NO_MEMBERS, isLoading: false }
   return { data: observable.current, isLoading: observable.loaded === false }
 }
 
 export function useInviteMember() {
-  const connector = useGroupConnector()
-  return useCallback(
-    async (groupId: string, userId: string) => {
-      return connector.inviteMember(groupId, userId)
-    },
-    [connector],
-  )
+  return useGroupMutation((c, groupId: string, userId: string) => c.inviteMember(groupId, userId))
 }
 
 export function useRemoveMember() {
-  const connector = useGroupConnector()
-  return useCallback(
-    async (groupId: string, userId: string) => {
-      return connector.removeMember(groupId, userId)
-    },
-    [connector],
-  )
+  return useGroupMutation((c, groupId: string, userId: string) => c.removeMember(groupId, userId))
 }

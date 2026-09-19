@@ -153,7 +153,8 @@ function CalendarModuleOverview() {
 }
 
 const meta: Meta<typeof CalendarModuleOverview> = {
-  title: "RLS/Space Modules/Calendar/Overview",
+  id: "rls-space-modules-calendar-overview",
+  title: "RLS/Module/Kalender/Übersicht",
   component: CalendarModuleOverview,
   tags: ["autodocs"],
   parameters: {

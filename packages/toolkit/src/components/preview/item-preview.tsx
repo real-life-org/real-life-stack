@@ -7,6 +7,7 @@ import { RelativeTime } from "../primitives/relative-time"
 import { ProfileLink } from "../profile/profile-link"
 import { TagFilterChip } from "../tag/tag-filter-chip"
 import { MarkdownText } from "./markdown-text"
+import { editedLabel } from "@/lib/item-text"
 import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
 import { useUserNameResolver } from "../../hooks/use-user-names"
@@ -251,9 +252,7 @@ export const ItemPreview = memo(function ItemPreview({
   const authorId = author?.id ?? item.createdBy
   // Who edited it, resolved like any other user id; falls back to the raw id.
   const resolveName = useUserNameResolver()
-  const editedTitle = item.updatedAt
-    ? `Bearbeitet von ${resolveName(item.updatedBy ?? item.createdBy)} am ${new Date(item.updatedAt).toLocaleString("de-DE")}`
-    : undefined
+  const editedTitle = editedLabel(item, resolveName)
   const isCompact = density === "compact"
 
   // Keyboard activation: when the card is interactive, treat Enter and

@@ -1,0 +1,12 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import * as Garden from './garden.stories';
+
+<Meta title="RLS/Spaces/Kontext und Zugehörigkeit" />
+
+# Der Space ist der aktuelle Arbeitskontext
+
+Links im Gemeinschaftsgarten wechselst du zur Offenen Werkstatt. Die App lädt den neuen Bestand und leert ihre bisherige Auswahl. Module und Detail-Host bleiben dieselben Bausteine.
+
+<Canvas of={Garden.Garden} />
+
+Ein Space ist keine Instanz. Mehrere Spaces können in derselben laufenden App erreichbar sein. Gruppe beschreibt im Datenmodell Zugehörigkeit; Space beschreibt den konfigurierten Arbeitskontext. [Vertrag und Beispiele](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/00-architecture.md).
