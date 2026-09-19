@@ -48,6 +48,26 @@ export function toDateInputValue(iso: string | undefined): string | undefined {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
+const LOCAL_INPUT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/
+
+/**
+ * What gets stored (decision 2026-09-19, spec 06): a timed value carries the
+ * author's UTC offset, `2026-09-19T14:00:00+02:00`, so every reader sees the
+ * same instant and the author's wall-clock time stays legible. A date-only
+ * value stays `YYYY-MM-DD` (all-day, floating). A value that already carries a
+ * zone passes through. The offset is the browser's at that instant, so DST is
+ * respected per value.
+ */
+export function toStoredDateTime(value: string | undefined): string | undefined {
+  if (!value || !LOCAL_INPUT_RE.test(value)) return value
+  const d = new Date(value) // a zone-less string is local time in JS
+  if (Number.isNaN(d.getTime())) return value
+  const offset = -d.getTimezoneOffset()
+  const sign = offset >= 0 ? "+" : "-"
+  const abs = Math.abs(offset)
+  return `${value.length === 16 ? `${value}:00` : value}${sign}${pad2(Math.floor(abs / 60))}:${pad2(abs % 60)}`
+}
+
 /** View model for the DateWidget: a field is visible if opened OR already filled. */
 export function dateWidgetValue(data: WidgetData, toggles: DateWidgetToggles): DateRange {
   return {
@@ -76,8 +96,8 @@ export function dateWidgetToggles(value: DateRange): DateWidgetToggles {
  */
 export function dateWidgetPatch(value: DateRange): Pick<WidgetData, "start" | "end" | "rrule"> {
   return {
-    start: value.start || undefined,
-    end: value.end || undefined,
+    start: toStoredDateTime(value.start || undefined),
+    end: toStoredDateTime(value.end || undefined),
     rrule: value.rrule && value.rrule !== RRULE_NONE ? value.rrule : undefined,
   }
 }

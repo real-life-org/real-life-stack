@@ -21,6 +21,7 @@ import {
   dateWidgetValue,
   NO_DATE_TOGGLES,
   type DateWidgetToggles,
+  toDateInputValue,
 } from "./date-widget-state"
 import { LocationWidget } from "./widgets/location-widget"
 import type { Geocoder, ReverseGeocoder } from "@/lib/geocode"
@@ -1001,8 +1002,8 @@ function DefaultPreview({
       )}
       {has("date") && data.start && (
         <div className="text-sm text-muted-foreground">
-          {data.start}
-          {data.end && ` — ${data.end}`}
+          {toDateInputValue(data.start)}
+          {data.end && ` — ${toDateInputValue(data.end)}`}
         </div>
       )}
       {has("location") && (data.address || data.locationName || data.meetingLink) && (

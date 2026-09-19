@@ -6,6 +6,7 @@ import {
   peopleRelationsFromWidgetData,
   peopleRelationsToWidgetData,
 } from "./people-relations"
+import { toStoredDateTime } from "./date-widget-state"
 
 /**
  * Composer ↔ item: the one mapping every module and every app shares.
@@ -98,6 +99,12 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
       } else if (existingItem && CLEARABLE_DATA_FIELDS.has(key)) {
         delete itemData[key]
       }
+    }
+
+    // Timed start/end are stored with the author's offset (spec 06); a value
+    // prefilled from a calendar click may still be a zone-less local string.
+    for (const key of ["start", "end"] as const) {
+      if (typeof itemData[key] === "string") itemData[key] = toStoredDateTime(itemData[key] as string)
     }
 
     // Free text maps to content/description by type. Clearing it in edit removes

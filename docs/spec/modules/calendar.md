@@ -207,6 +207,6 @@ Das Calendar Module definiert nicht:
 
 1. Wo liegt langfristig die Calendar-Konfiguration: App-Konfiguration, `Group.data.modules` oder eigenes Item?
 2. Wie werden Teilnehmer, Zusagen und bestätigte Teilnahme backend-agnostisch angezeigt?
-3. Wie werden Zeitzonen und ganztägige Events modelliert?
+3. ~~Wie werden Zeitzonen und ganztägige Events modelliert?~~ Entschieden 2026-09-19, siehe `06-schema-composition.md` (`event/v1`): Zeitpunkt mit UTC-Offset des Autors, ganztägig als Datum ohne Zone. Offen bleibt nur die Zonenangabe für Wiederholungen über Zeitumstellungen.
 4. Welche Item-Typen sollen in der Reference App standardmäßig calendar-fähig sein?
 5. Welche Calendar-Filter gehören ins Modul selbst und welche in die App Shell?

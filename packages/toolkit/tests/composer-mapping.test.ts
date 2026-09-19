@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
 import { createComposerMapping, textFieldFor } from "../src/components/composer/composer-mapping"
+import { toStoredDateTime } from "../src/components/composer/date-widget-state"
 import type { ContentTypeConfig } from "../src/components/composer/content-composer"
 
 const TYPES: ContentTypeConfig[] = [
@@ -68,7 +69,8 @@ describe("edit", () => {
       { contentType: "event", isPublic: true, data: { ...editInitialData(event), title: "Erntedank", status: "", group: "" } },
       edit(event),
     )
-    expect(payload?.data).toEqual({ title: "Erntedank", description: "Wir teilen.", start: "2026-09-19T14:00", end: "2026-09-19T18:00" })
+    // An older item's zone-less times are written back with the author's offset.
+    expect(payload?.data).toEqual({ title: "Erntedank", description: "Wir teilen.", start: toStoredDateTime("2026-09-19T14:00"), end: toStoredDateTime("2026-09-19T18:00") })
     expect(payload?.data).not.toHaveProperty("status")
   })
 
@@ -81,6 +83,21 @@ describe("edit", () => {
       { predicate: "commentOn", target: "item:x" },
       { predicate: "assignedTo", target: "global:u1" },
     ])
+  })
+})
+
+describe("timed values", () => {
+  it("stores a zone-less start from a calendar click with the author's offset", () => {
+    const payload = mapSubmission({ contentType: "event", isPublic: true, data: { title: "Treffen", start: "2026-09-19T14:00" } }, create)
+    const o = -new Date("2026-09-19T14:00").getTimezoneOffset()
+    const sign = o >= 0 ? "+" : "-"
+    const abs = Math.abs(o)
+    expect(payload?.data.start).toBe(`2026-09-19T14:00:00${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`)
+  })
+
+  it("keeps an all-day start as a bare date", () => {
+    const payload = mapSubmission({ contentType: "event", isPublic: true, data: { title: "Fest", start: "2026-09-19" } }, create)
+    expect(payload?.data.start).toBe("2026-09-19")
   })
 })
 

@@ -6,6 +6,7 @@ import {
   dateWidgetValue,
   NO_DATE_TOGGLES,
   toDateInputValue,
+  toStoredDateTime,
   type DateWidgetToggles,
 } from "../src/components/composer/date-widget-state"
 import type { WidgetData } from "../src/components/composer/content-composer"
@@ -142,5 +143,43 @@ describe("ISO values in the date input", () => {
     expect(value.end).toBe(local("2026-09-19T18:00:00+02:00"))
     expect(value.showTime).toBe(true)
     expect(value.showEnd).toBe(true)
+  })
+})
+
+/**
+ * Decision 2026-09-19 (spec 06): a timed value is stored with the author's
+ * offset, so two people in two zones see the same instant. All-day stays a
+ * bare date. What the widget hands over is the local input form; the patch
+ * converts.
+ */
+describe("stored form of a timed value", () => {
+  const offsetOf = (local: string) => {
+    const o = -new Date(local).getTimezoneOffset()
+    const sign = o >= 0 ? "+" : "-"
+    const abs = Math.abs(o)
+    return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`
+  }
+
+  it("appends the browser's offset to a local input value", () => {
+    expect(toStoredDateTime("2026-09-19T14:00")).toBe(`2026-09-19T14:00:00${offsetOf("2026-09-19T14:00")}`)
+    expect(toStoredDateTime("2026-01-19T14:00:30")).toBe(`2026-01-19T14:00:30${offsetOf("2026-01-19T14:00")}`)
+  })
+
+  it("leaves all-day and already zoned values alone", () => {
+    expect(toStoredDateTime("2026-09-19")).toBe("2026-09-19")
+    expect(toStoredDateTime("2026-09-19T12:00:00Z")).toBe("2026-09-19T12:00:00Z")
+    expect(toStoredDateTime("2026-09-19T14:00:00+02:00")).toBe("2026-09-19T14:00:00+02:00")
+    expect(toStoredDateTime(undefined)).toBeUndefined()
+  })
+
+  it("round-trips: the stored value shows as the same local time in the input", () => {
+    const stored = toStoredDateTime("2026-09-19T14:00")!
+    expect(toDateInputValue(stored)).toBe("2026-09-19T14:00")
+  })
+
+  it("is what the widget patch writes", () => {
+    const patch = dateWidgetPatch({ start: "2026-09-19T14:00", end: "2026-09-19", showTime: true })
+    expect(patch.start).toBe(`2026-09-19T14:00:00${offsetOf("2026-09-19T14:00")}`)
+    expect(patch.end).toBe("2026-09-19")
   })
 })
