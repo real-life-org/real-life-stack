@@ -5,57 +5,56 @@ import { Search } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 import { Input } from "../primitives/input"
-import { useSharedFilter } from "./filter-store"
+import { useOptionalSharedFilter } from "./filter-store"
 
 export interface ModuleSearchBarProps {
-  /**
-   * Zeigt die Zeile ein Suchfeld? Standard ja.
-   *
-   * Getrennt von den Aktionen schaltbar: Eine Flaeche, in der eine Suche
-   * nichts zu tun haette, soll trotzdem ihre Modul-Aktionen zeigen koennen.
-   */
-  search?: boolean
-  /** Beschriftung des Suchfelds — benennt die Flaeche, die es durchsucht. */
+  /** Beschriftung des Suchfelds — benennt, was es durchsucht. */
   searchLabel?: string
-  /** Rechtsbuendige Modul-Aktionen (Ansichtswechsel, Einstellungen, „Heute"). */
-  trailingActions?: ReactNode
+  /**
+   * Rechtsbuendiger Platz fuer die Steuerelemente des Moduls.
+   *
+   * Die Flaeche reicht hier ihr Portal-Ziel herein, das Modul portalt seine
+   * Knoepfe hinein. Sie stehen damit in DERSELBEN Zeile wie die Suche, ohne
+   * dass die Suche dem Modul gehoert.
+   */
+  trailing?: ReactNode
   className?: string
 }
 
 /**
- * Suche links, Modul-Aktionen rechts — der ganze Inhalt des Modulkopfes.
+ * Die Suche der Modulflaeche — eine Zeile, links das Feld, rechts die
+ * Steuerelemente des Moduls.
  *
- * Der Filter ist hier NICHT mehr dabei: Er schwebt als Pille unten links
- * (`FilterPill`, Design-Board 2a/2g). Was bleibt, ist die Zeile, die im Board
- * oben links steht: ein 220px breites Feld, 32px hoch.
+ * **Die Suche gehoert der Flaeche, nicht dem Modul** (Anton, 19.09.2026). Sie
+ * zieht sich ausnahmslos durch alle Module und Linsen, hat mit dem
+ * `FilterProvider` ohnehin schon einen flaechenweiten Zustand und wird deshalb
+ * genau einmal gerendert: von der `ModuleFrame`. Vorher brachte jedes Modul
+ * sie mit, und wo zwei Beitraege in denselben Kopf portalten — eine Fassung
+ * vom Modul, eine von der Linse — standen zwei Suchfelder untereinander.
  *
- * Sie liest den geteilten Suchtext (`FilterProvider`), damit ein Wort, das im
- * Feed eingetippt wurde, im Kanban weiterfiltert.
+ * Was das Modul beitraegt, sind seine EIGENEN Steuerelemente: Ansichtswechsel,
+ * „Heute", der Ortungsknopf. Die kommen ueber `trailing` in dieselbe Zeile.
+ *
+ * Ohne Filter-Besitzer rendert sie nichts. Eine Flaeche ohne Besitzer hat
+ * keine Suche; das ist kein Fehler, sondern der Fall „nackter `ModuleFrame` im
+ * Test".
  */
-export function ModuleSearchBar({
-  search = true,
-  searchLabel = "Inhalte durchsuchen",
-  trailingActions,
-  className,
-}: ModuleSearchBarProps) {
-  const { searchText, setSearchText } = useSharedFilter()
+export function ModuleSearchBar({ searchLabel = "Inhalte durchsuchen", trailing, className }: ModuleSearchBarProps) {
+  const filter = useOptionalSharedFilter()
+  if (!filter) return null
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      {search && (
       <div className="relative min-w-0 flex-1 sm:flex-none">
         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Suche…"
           aria-label={searchLabel}
-          value={searchText}
-          onChange={(event) => setSearchText(event.target.value)}
+          value={filter.searchText}
+          onChange={(event) => filter.setSearchText(event.target.value)}
           className="h-8 w-full rounded-md pl-8 text-[13px] sm:w-[220px]"
         />
       </div>
-      )}
-      {trailingActions && (
-        <div className="ml-auto flex shrink-0 items-center gap-2">{trailingActions}</div>
-      )}
+      {trailing}
     </div>
   )
 }

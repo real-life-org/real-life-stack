@@ -66,7 +66,8 @@ describe("Die Breite der Liste", () => {
         ),
       )
     })
-    const kopf = host.querySelector("[data-module-head-slot]")
+    // Die Geometrie traegt der Kopfbereich (Suchzeile plus Chip-Zeile).
+    const kopf = host.querySelector("[data-module-head-content]")
     const liste = host.querySelector("[aria-label='Listenansicht'] > div")
     expect(breite(kopf)).toBe("max-w-4xl")
     expect(breite(liste)).toBe("max-w-4xl")

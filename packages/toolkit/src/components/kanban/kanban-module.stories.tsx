@@ -88,7 +88,6 @@ function KanbanInhalt({ items, onMove }: { items: Item[]; onMove: (id: string, s
   return (
     <ModuleFrame fill="container" maxWidth="72rem">
       <ModuleToolbar
-        searchLabel="Aufgaben durchsuchen"
         availableTags={["hochbeet", "projekt", "doku", "orga"]}
         drawerExtra={
           <FilterSection label="Zuweisung">

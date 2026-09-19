@@ -152,7 +152,6 @@ function FeedInhalt() {
           bringen ihre eigene mit, der Feed diese hier. Zwei Leisten
           übereinander wären zwei Suchfelder. */}
       <ModuleToolbar
-        searchLabel="Im Gemeinschaftsgarten suchen"
         availableTags={["garten", "planung"]}
         availableTypes={[
           { id: "post", label: "Beiträge" },

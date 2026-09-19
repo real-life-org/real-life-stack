@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react"
 
+import { useOptionalSharedFilter } from "../filter/filter-store"
+import { ModuleSearchBar } from "../filter/module-search-bar"
 import { getModule, type ModuleFill, type ModulePanelFit } from "../../lib/module-register"
 import { cn } from "../../lib/utils"
 import { PanelSafeArea } from "./panel-safe-area"
@@ -111,8 +113,12 @@ export function useModuleContentClass(): string {
 }
 
 /**
- * Die zwei Slots, in die ein Modul seine Steuerung reicht: die Zeile OBEN
- * (Suche, Modul-Aktionen) und die schwebende Ecke UNTEN LINKS (Filter-Pille).
+ * Die Slots, in die ein Modul seine Steuerung reicht: rechts NEBEN der Suche
+ * (eigene Knoepfe), darunter die Chip-Zeile, und die schwebende Ecke UNTEN
+ * LINKS (Filter-Pille).
+ *
+ * Die Suche selbst ist KEIN Slot — sie gehoert der Flaeche und wird von ihr
+ * gerendert (Anton, 19.09.2026).
  *
  * Beide Elemente werden immer gerendert, auch leer: Sie sind die Portal-Ziele,
  * und ein Ziel, das erst entsteht, wenn jemand hineinportalt, gibt es nie.
@@ -120,7 +126,16 @@ export function useModuleContentClass(): string {
  * nicht daran, sie steht auch ueber einer Flaeche ohne Kopf.
  */
 interface ModuleHeadValue {
+  /** Die Chip-Zeile unter der Suche. */
   element: HTMLElement | null
+  /**
+   * Der rechtsbuendige Platz NEBEN der Suche, fuer die Steuerelemente des
+   * Moduls (Ansichtswechsel, „Heute", Ortungsknopf).
+   *
+   * Die Suche selbst gehoert der Flaeche und steht links davon; das Modul
+   * portalt nur seine eigenen Knoepfe hierher.
+   */
+  actionsElement: HTMLElement | null
   /** Die schwebende Ecke unten links. */
   controlsElement: HTMLElement | null
   /**
@@ -148,6 +163,14 @@ export interface ModuleFrameProps extends Partial<ModuleLayout> {
    * keine Id und gibt `fill`/`panelFit`/`maxWidth` direkt an.
    */
   moduleId?: string
+  /**
+   * Beschriftung des Suchfelds — sie benennt, was die Suche durchsucht.
+   *
+   * Nicht das Modul, sondern die Flaeche: Die Suche zieht sich durch alle
+   * Module, also heisst sie sinnvollerweise nach dem Space und nicht nach dem
+   * Modul, in dem man gerade steht.
+   */
+  searchLabel?: string
   children: ReactNode
 }
 
@@ -169,19 +192,21 @@ export interface ModuleFrameProps extends Partial<ModuleLayout> {
  * die volle Breite und der Inhalt auf die um die Leiste verminderte — die
  * halbe Leistenbreite Versatz, sichtbar an jeder Kartenkante.
  */
-export function ModuleFrame({ moduleId, children, ...vorgaben }: ModuleFrameProps) {
+export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: ModuleFrameProps) {
   const layout = resolveModuleLayout({ moduleId, ...vorgaben })
   const bleed = layout.fill === "bleed"
   const overlay = layout.panelFit === "overlay"
   const geometrie = moduleContainerClass(layout)
 
   const [kopfElement, setKopfElement] = useState<HTMLElement | null>(null)
+  const [actionsElement, setActionsElement] = useState<HTMLElement | null>(null)
   const [controlsElement, setControlsElement] = useState<HTMLElement | null>(null)
   const [leisten, setLeisten] = useState(0)
   const [raeumtObenLinks, setRaeumtObenLinks] = useState(false)
   const kopf = useMemo<ModuleHeadValue>(
     () => ({
       element: kopfElement,
+      actionsElement,
       controlsElement,
       anmelden(optionen) {
         setLeisten((n) => n + 1)
@@ -189,13 +214,30 @@ export function ModuleFrame({ moduleId, children, ...vorgaben }: ModuleFrameProp
         return () => setLeisten((n) => n - 1)
       },
     }),
-    [kopfElement, controlsElement],
+    [kopfElement, actionsElement, controlsElement],
   )
 
-  const hatKopf = leisten > 0
+  // Der Kopf steht, sobald es die Suche gibt — sie zieht sich ausnahmslos
+  // durch alle Module (Anton, 19.09.2026). Ohne Filter-Besitzer rendert die
+  // Suche nichts; dann entscheiden wieder allein die Beitraege der Module, ob
+  // der Kopf ueberhaupt eine Zeile bekommt (Spec 01, Regel 4).
+  const hatSuche = !!useOptionalSharedFilter()
+  const hatKopf = hatSuche || leisten > 0
 
   const kopfSlot = (klasse?: string) => (
-    <div data-module-head-slot ref={setKopfElement} className={cn(klasse)} />
+    <div data-module-head-content className={cn("flex flex-col gap-2", klasse)}>
+      <ModuleSearchBar
+        searchLabel={searchLabel}
+        trailing={
+          <div
+            data-module-head-actions
+            ref={setActionsElement}
+            className="ml-auto flex shrink-0 items-center gap-2 empty:hidden"
+          />
+        }
+      />
+      <div data-module-head-slot ref={setKopfElement} />
+    </div>
   )
   const controlsSlot = <div data-module-controls ref={setControlsElement} />
 

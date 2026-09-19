@@ -59,8 +59,11 @@ export function ModuleOutlet({
   // Die Flaeche ist eine Spalte: Kopf, darunter der Scrollbereich (Spec 01).
   // Was Geometrie, Fuellmodus und Panel-Regel daraus machen, entscheidet der
   // Frame anhand des Registereintrags — nicht dieser Dispatch.
+  // Die Suche gehoert der Flaeche und zieht sich durch alle Module (Spec 01,
+  // Regel 2). Ihre Beschriftung nennt darum den Space, nicht das Modul.
+  const searchLabel = activeWorkspace ? `In ${activeWorkspace.name} suchen` : undefined
   const wrap = (id: string, node: React.ReactNode) => (
-    <ModuleFrame moduleId={id}>{node}</ModuleFrame>
+    <ModuleFrame moduleId={id} searchLabel={searchLabel}>{node}</ModuleFrame>
   )
 
   return (

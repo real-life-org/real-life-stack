@@ -157,7 +157,6 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
       {/* Wie in jedem anderen Modul: EIN Beitrag, verteilt wird er von der
           Flaeche (hier schwebend, weil der Graph seine Flaeche ist). */}
       <ModuleToolbar
-        searchLabel="Graph durchsuchen"
         availableTags={availableTags}
         availableTypes={availableTypes}
       />
