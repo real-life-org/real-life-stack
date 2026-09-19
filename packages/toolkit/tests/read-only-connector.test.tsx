@@ -106,3 +106,59 @@ describe("Schreiben vorbereiten", () => {
     await expect(async () => create?.({} as never)).rejects.toThrow("does not support writing")
   })
 })
+
+/**
+ * Der Connector kann während der Laufzeit wechseln — beim Abmelden, beim
+ * Wechsel der Quelle. Hooks, die ihre Antwort in einem State halten, müssen
+ * dann zurücksetzen: Ein Connector ohne die Fähigkeit hat eine leere Antwort,
+ * nicht die alte des Vorgängers.
+ */
+function authConnector() {
+  const items = createObservable<Item[]>([item])
+  const user = createObservable<{ id: string; name: string } | null>({ id: "mira", name: "Mira" })
+  const comment: Item = { ...item, id: "c1", type: "comment", data: { text: "Hallo" } }
+  const related = createObservable<Item[]>([comment])
+  return {
+    init: async () => {}, dispose: async () => {},
+    getItems: async () => items.current, getItem: async () => item,
+    observe: () => items, observeItem: () => createObservable<Item | null>(item),
+    authenticate: async () => {}, signOut: async () => {},
+    getAuthState: () => createObservable({ status: "authenticated" as const }),
+    observeCurrentUser: () => user,
+    observeRelatedItems: () => related,
+    getRelatedItems: async () => related.current,
+  }
+}
+
+async function renderSwap(Probe: () => ReactNode) {
+  const m = mount(null)
+  const wrap = (connector: unknown) =>
+    createElement(ConnectorProvider, { connector: connector as never }, createElement(Probe))
+  await act(async () => m.root.render(wrap(authConnector())))
+  const vorher = { ...m.host.querySelector("output")?.dataset }
+  await act(async () => m.root.render(wrap(readerConnector())))
+  const nachher = { ...m.host.querySelector("output")?.dataset }
+  m.cleanup()
+  return { vorher, nachher }
+}
+
+describe("Wechsel auf einen Connector ohne die Fähigkeit", () => {
+  it("vergisst den angemeldeten Menschen", async () => {
+    const { vorher, nachher } = await renderSwap(() => {
+      const { data: user, isLoading } = useOptionalCurrentUser()
+      return <output data-user={String(user?.name ?? null)} data-loading={String(isLoading)} />
+    })
+    expect(vorher).toMatchObject({ user: "Mira" })
+    expect(nachher).toMatchObject({ user: "null", loading: "false" })
+  })
+
+  it("vergisst die Kommentare", async () => {
+    const { useComments } = await import("../src/hooks/use-comments")
+    const { vorher, nachher } = await renderSwap(() => {
+      const { comments } = useComments("i1")
+      return <output data-n={String(comments.length)} />
+    })
+    expect(vorher).toMatchObject({ n: "1" })
+    expect(nachher).toMatchObject({ n: "0" })
+  })
+})

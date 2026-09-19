@@ -3,6 +3,8 @@ import type { Item, RelatedItemsOptions } from "@real-life-stack/data-interface"
 import { isWritable, hasRelations, isAuthenticatable, deriveContext } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
+const NO_COMMENT_ITEMS: Item[] = []
+
 /** A comment with resolved author info, for UI rendering. */
 export interface CommentWithAuthor {
   item: Item
@@ -54,7 +56,10 @@ export function useComments(itemId: string): UseCommentsResult {
   const update = useCallback((items: Item[]) => startTransition(() => setAllComments(items)), [])
 
   useEffect(() => {
-    if (!observable) return
+    if (!observable) {
+      setAllComments(NO_COMMENT_ITEMS)
+      return
+    }
     setAllComments(observable.current)
     return observable.subscribe(update)
   }, [observable, update])
