@@ -12,7 +12,6 @@ export {
   FilterProvider,
   FilterScope,
   useSharedFilter,
-  useOptionalSharedFilter,
   type SharedFilterValue,
 } from "./filter-store"
 export {

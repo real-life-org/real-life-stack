@@ -567,7 +567,7 @@ describe("Map and Calendar lenses", () => {
     const relationItem = item("relation-1", "relation", { title: "Unsichtbare Kante", start: "2026-07-08T20:00:00+02:00" })
     const invalidItem = item("event-invalid", "event", { title: "Unparsebar", start: "kein Datum" })
     const markup = renderToStaticMarkup(createElement(CalendarView, {
-      events: [calendarItem, relationItem, invalidItem],
+      items: [calendarItem, relationItem, invalidItem],
       initialDate: "2026-07-08T12:00:00+02:00",
       initialVisibleDate: "2026-07-08T12:00:00+02:00",
     }))
@@ -604,7 +604,7 @@ describe("Map and Calendar lenses", () => {
       start: `2026-07-08T${String(10 + index).padStart(2, "0")}:00:00`,
     }))
     const hiddenActiveMarkup = renderToStaticMarkup(createElement(CalendarView, {
-      events,
+      items: events,
       initialDate: "2026-07-08T12:00:00",
       initialVisibleDate: "2026-07-08T12:00:00",
       activeItemId: "event-4",
@@ -622,7 +622,7 @@ describe("Map and Calendar lenses", () => {
     expect(monthShowsActiveEvent(byDay, day, null)).toBe(true)
 
     const visibleActiveMarkup = renderToStaticMarkup(createElement(CalendarView, {
-      events,
+      items: events,
       initialDate: "2026-07-08T12:00:00",
       initialVisibleDate: "2026-07-08T12:00:00",
       activeItemId: "event-1",
@@ -659,7 +659,7 @@ describe("Map and Calendar lenses", () => {
     expect(monthShowsActiveEvent(byDay, monday, "multi-a")).toBe(true)
 
     const markup = renderToStaticMarkup(createElement(CalendarView, {
-      events: [short, ...week],
+      items: [short, ...week],
       initialDate: "2026-07-20T12:00:00",
       initialVisibleDate: "2026-07-20T12:00:00",
       activeItemId: "kurz",
@@ -686,7 +686,7 @@ describe("Map and Calendar lenses", () => {
 
   it("Calendar initialVisibleDate opens the requested period without replacing initialDate's today value", () => {
     const markup = renderToStaticMarkup(createElement(CalendarView, {
-      events: [],
+      items: [],
       initialDate: "2025-01-15T12:00:00+01:00",
       initialVisibleDate: "2026-07-08T12:00:00+02:00",
     }))

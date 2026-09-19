@@ -34,12 +34,12 @@ const Graph = ({ groupId }: ModuleViewProps) => (
   <GraphViewWrapper groupId={groupId || "__overview__"} />
 )
 const Kanban = ({ groupId, groups }: ModuleViewProps) => (
-  <KanbanView activeWorkspaceId={groupId || null} groups={(groups ?? []) as Group[]} />
+  <KanbanView activeWorkspaceId={groupId || null} groups={[...(groups ?? [])]} />
 )
 const Collection = ({ groupId, selectionFocusVisibleArea }: ModuleViewProps) => (
   <CollectionView
     groupId={groupId}
-    selectionFocusVisibleArea={selectionFocusVisibleArea as SelectionFocusVisibleArea | undefined}
+    selectionFocusVisibleArea={selectionFocusVisibleArea}
   />
 )
 

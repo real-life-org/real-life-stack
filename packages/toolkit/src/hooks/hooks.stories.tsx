@@ -7,7 +7,7 @@ import { useItems, useItem } from "./use-items"
 import { useItemAuthor } from "./use-item-author"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useItemPermissions } from "./use-item-permissions"
-import { useOptionalCurrentUser, useAuthState } from "./use-auth"
+import { useOptionalCurrentUser } from "./use-auth"
 import { useGroups, useCurrentGroup, useMembers } from "./use-groups"
 import { useComments } from "./use-comments"
 import { useReactions } from "./use-reactions"
@@ -139,14 +139,12 @@ function ItemsSchreiben() {
 function Rechte() {
   const rechte = useItemPermissions(STORY_POST)
   const { data: user } = useOptionalCurrentUser()
-  const auth = useAuthState()
   const { data: groups } = useGroups()
   const space = useCurrentGroup()
   const { data: members } = useMembers(null)
   return (
     <>
       <Zeile name="useOptionalCurrentUser()">{user ? user.displayName : "niemand angemeldet"}</Zeile>
-      <Zeile name="useAuthState()">{auth.status}</Zeile>
       <Zeile name="useGroups()">{groups.length} Spaces</Zeile>
       <Zeile name="useCurrentGroup()">{space?.name ?? "keiner"}</Zeile>
       <Zeile name="useMembers(null)">{members.length} Menschen</Zeile>

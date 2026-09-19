@@ -1,14 +1,13 @@
 // Utilities
-export { cn, getTagColor, getTagAccentColor, getSpacePrimaryColor, getReadableTextColor, getItemColor, getActivePanelGlow, resolveAssetUrl } from "./lib/utils"
+export { cn, getTagColor, getTagAccentColor, getSpacePrimaryColor, getReadableTextColor, getItemColor, resolveAssetUrl } from "./lib/utils"
 export {
   focusActiveItemOnce,
   focusVirtualItemOnce,
-  focusActiveItemInVisibleAreaOnce,
   selectionFocusScrollMarginBlockEnd,
   type SelectionFocusVisibleArea,
   type SelectionFocusVirtualizer,
 } from "./lib/selection-focus"
-export { applyItemListFilter, type ItemListFilter } from "./lib/item-filter"
+export { filterByAssignee, assigneeIds, type AssigneeFilter } from "./lib/item-filter"
 export {
   observeColorScheme,
   resolveColorScheme,

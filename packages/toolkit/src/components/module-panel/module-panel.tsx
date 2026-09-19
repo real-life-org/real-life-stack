@@ -151,11 +151,3 @@ export function useModulePanel(): ModulePanelContextValue {
   return ctx
 }
 
-/**
- * Soft variant — returns null when no provider is present. Use only in
- * components that have to work both inside and outside the provider
- * (e.g. shared components rendered in Storybook decorators).
- */
-export function useOptionalModulePanel(): ModulePanelContextValue | null {
-  return useContext(ModulePanelContext)
-}
