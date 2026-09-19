@@ -1,0 +1,398 @@
+[
+  {
+    "id": "app",
+    "label": {
+      "de": "App",
+      "en": "App"
+    },
+    "definition": {
+      "de": "Eine Anwendung mit ihren Modulen, Funktionen und ihrer Oberfläche. Sie setzt RLS-Bausteine zu zusammenhängenden Nutzerwegen zusammen."
+    },
+    "aliases": [],
+    "spec": "docs/spec/01-app-composition.md",
+    "symbols": [
+      "AppShell"
+    ],
+    "story": "rls-handbook-app--garden"
+  },
+  {
+    "id": "instance",
+    "label": {
+      "de": "Instanz",
+      "en": "Instance"
+    },
+    "definition": {
+      "de": "Eine konkret betriebene Ausprägung einer App mit eigener Konfiguration, Branding und Dienstanbindung. Ein eigenes Web-Hosting ist noch keine eigene Sync-Infrastruktur."
+    },
+    "aliases": [],
+    "spec": "docs/spec/11-runtime-config-und-branding.md",
+    "symbols": [],
+    "story": "rls-handbook-app--garden"
+  },
+  {
+    "id": "app-shell",
+    "label": {
+      "de": "App Shell",
+      "en": "App shell"
+    },
+    "definition": {
+      "de": "Der dauerhafte Rahmen der App: Space-Steuerung, Modulnavigation, User-Menü und übergreifende Flächen."
+    },
+    "aliases": [],
+    "spec": "docs/spec/01-app-composition.md",
+    "symbols": [
+      "AppShell",
+      "Navbar"
+    ],
+    "story": "rls-handbook-app--garden"
+  },
+  {
+    "id": "space",
+    "label": {
+      "de": "Space",
+      "en": "Space"
+    },
+    "definition": {
+      "de": "Der gemeinsame Arbeits-, Mitgliedschafts- und Sichtbarkeitskontext. Im Datenvertrag heißt er Group."
+    },
+    "aliases": [
+      "Group",
+      "Gruppe"
+    ],
+    "spec": "docs/spec/04-items-relations-groups-spaces.md",
+    "symbols": [
+      "Group"
+    ],
+    "story": "rls-handbook-app--garden"
+  },
+  {
+    "id": "space-switcher",
+    "label": {
+      "de": "Space-Wechsler",
+      "en": "Space switcher"
+    },
+    "definition": {
+      "de": "Wählt den aktuellen Space. Seine Auswahl verändert den Datenkontext der Module."
+    },
+    "aliases": [],
+    "spec": "docs/spec/01-app-composition.md",
+    "symbols": [
+      "WorkspaceSwitcher"
+    ],
+    "story": "rls-app-shell-navigation-workspaceswitcher--group-active"
+  },
+  {
+    "id": "user-menu",
+    "label": {
+      "de": "User-Menü",
+      "en": "User menu"
+    },
+    "definition": {
+      "de": "Der Einstieg in persönliche Funktionen. Space-Einstellungen gehören zur Space-Steuerung."
+    },
+    "aliases": [],
+    "spec": "docs/spec/01-app-composition.md",
+    "symbols": [
+      "UserMenu"
+    ],
+    "story": "rls-handbook-app--garden"
+  },
+  {
+    "id": "space-module",
+    "label": {
+      "de": "Modul",
+      "en": "Module"
+    },
+    "definition": {
+      "de": "Eine Oberfläche innerhalb eines Space, die passende Items darstellt und dazugehörige Aktionen anbietet. Ein Item kann in mehreren Modulen erscheinen."
+    },
+    "aliases": [
+      "Linse",
+      "Lens",
+      "Space Module"
+    ],
+    "spec": "docs/spec/01-app-composition.md",
+    "symbols": [
+      "CalendarView",
+      "MapView"
+    ],
+    "story": "rls-handbook-app--calendar"
+  },
+  {
+    "id": "view",
+    "label": {
+      "de": "Ansicht",
+      "en": "View"
+    },
+    "definition": {
+      "de": "Eine Darstellungsvariante innerhalb eines Moduls, etwa Monat und Woche im Kalender oder Liste und Raster einer Sammlung."
+    },
+    "aliases": [],
+    "spec": "docs/spec/code-and-storybook-mapping.md",
+    "symbols": [
+      "CollectionView"
+    ],
+    "story": "rls-module-components-lenses-collectionview--list"
+  },
+  {
+    "id": "component",
+    "label": {
+      "de": "Komponente",
+      "en": "Component"
+    },
+    "definition": {
+      "de": "Ein wiederverwendbarer Baustein. Eine Komponente wird nicht allein durch ihre Darstellung zu einem aktivierbaren Modul."
+    },
+    "aliases": [],
+    "spec": "docs/spec/01-app-composition.md",
+    "symbols": [
+      "Button",
+      "ItemPreview"
+    ],
+    "story": "rls-primitives-button--all-variants"
+  },
+  {
+    "id": "item",
+    "label": {
+      "de": "Item",
+      "en": "Item"
+    },
+    "definition": {
+      "de": "Ein Inhaltsobjekt mit ID, Typ, Feldern und gegebenenfalls Beziehungen. Vorschau und Detailansicht zeigen dasselbe Item."
+    },
+    "aliases": [],
+    "spec": "docs/spec/02-data-interface.md",
+    "symbols": [
+      "Item"
+    ],
+    "story": "module-components-itempreview--bare"
+  },
+  {
+    "id": "item-type",
+    "label": {
+      "de": "Item-Typ",
+      "en": "Item type"
+    },
+    "definition": {
+      "de": "Die Art, als die ein Item erstellt wurde. type steuert Darstellung und bewusste Typfilter; ob das Item zu einem Modul passt, bestimmen seine Felder beziehungsweise ein Marker-Vokabular."
+    },
+    "aliases": [],
+    "spec": "docs/spec/06-schema-composition.md",
+    "symbols": [
+      "Item"
+    ],
+    "story": "module-components-itempreview--task-card"
+  },
+  {
+    "id": "item-preview",
+    "label": {
+      "de": "Item-Vorschau",
+      "en": "Item preview"
+    },
+    "definition": {
+      "de": "Die kompakte Darstellung eines Items in einer Sammlung. Ihre Auswahl öffnet gewöhnlich die vollständige Detailansicht."
+    },
+    "aliases": [
+      "ItemCard"
+    ],
+    "spec": "docs/spec/modules/shared-components.md",
+    "symbols": [
+      "ItemPreview"
+    ],
+    "story": "module-components-itempreview--bare"
+  },
+  {
+    "id": "item-detail",
+    "label": {
+      "de": "Detailansicht",
+      "en": "Item detail"
+    },
+    "definition": {
+      "de": "Die vollständige Darstellung eines Items mit den dazugehörigen Aktionen. Der Begriff gilt für Veranstaltungen, Aufgaben, Orte und Personen gleichermaßen. ItemDetail ist der Architekturbegriff; im Toolkit teilen sich Body und Panel die Aufgaben."
+    },
+    "aliases": [
+      "ItemDetail",
+      "Profil (historisch für alle Items)"
+    ],
+    "spec": "docs/spec/modules/shared-components.md",
+    "symbols": [
+      "ItemDetailBody",
+      "ItemDetailPanel"
+    ],
+    "story": "detail-itemdetailbody--event"
+  },
+  {
+    "id": "profile",
+    "label": {
+      "de": "Personenprofil",
+      "en": "Person profile"
+    },
+    "definition": {
+      "de": "Die fachliche Darstellung einer Person. Es ist ein Item gemäß Profilvertrag und wird in einer Detailansicht dargestellt; die User-Identität ist ein eigener Begriff."
+    },
+    "aliases": [],
+    "spec": "docs/spec/12-profile.md",
+    "symbols": [
+      "ProfilePanelContent"
+    ],
+    "story": "module-components-profilepanelcontent--view-foreign"
+  },
+  {
+    "id": "composer",
+    "label": {
+      "de": "Item-Editor",
+      "en": "Item editor"
+    },
+    "definition": {
+      "de": "Die Oberfläche zum Anlegen und Bearbeiten eines Items. ContentComposer kombiniert konfigurierte Eingabebausteine."
+    },
+    "aliases": [],
+    "spec": "docs/spec/modules/shared-components.md",
+    "symbols": [
+      "ContentComposer"
+    ],
+    "story": "rls-module-components-contentcomposer--multi-typ"
+  },
+  {
+    "id": "content-panel",
+    "label": {
+      "de": "Inhalts-Panel",
+      "en": "Content panel"
+    },
+    "definition": {
+      "de": "Die gemeinsam genutzte Fläche für Detail, Editor oder Filter. Ihr Inhalt kann wechseln, ohne ein zweites gleichartiges Panel zu stapeln."
+    },
+    "aliases": [],
+    "spec": "docs/spec/01-app-composition.md",
+    "symbols": [
+      "AdaptivePanel"
+    ],
+    "story": "rls-app-shell-layout-adaptivepanel--sidebar"
+  },
+  {
+    "id": "dialog",
+    "label": {
+      "de": "Dialog",
+      "en": "Dialog"
+    },
+    "definition": {
+      "de": "Eine fokussierte Aufgabe auf einer eigenen Overlay-Ebene, etwa ein Kontakt- oder Verifikationsablauf."
+    },
+    "aliases": [],
+    "spec": "docs/spec/01-app-composition.md",
+    "symbols": [
+      "Dialog"
+    ],
+    "story": "rls-app-shell-layout-adaptivepanel--modal"
+  },
+  {
+    "id": "drawer",
+    "label": {
+      "de": "Drawer",
+      "en": "Drawer"
+    },
+    "definition": {
+      "de": "Eine Darstellungsform, die vom Rand in die Oberfläche gleitet. Auf kleinen Bildschirmen kann ein Inhalts-Panel als Drawer erscheinen."
+    },
+    "aliases": [],
+    "spec": "docs/spec/01-app-composition.md",
+    "symbols": [
+      "AdaptivePanel"
+    ],
+    "story": "rls-app-shell-layout-adaptivepanel--drawer"
+  },
+  {
+    "id": "field-widget",
+    "label": {
+      "de": "Feldbaustein",
+      "en": "Field widget"
+    },
+    "definition": {
+      "de": "Eine Darstellung oder Eingabe für ein Feld beziehungsweise einen Feldverbund, etwa Text oder Datum. Die vollständige Paar-Registry des Detailkonzepts ist noch ein Zielbild."
+    },
+    "aliases": [],
+    "spec": "docs/spec/modules/shared-components.md",
+    "symbols": [
+      "ContentComposer"
+    ],
+    "story": "rls-module-components-widgets-textwidget--default"
+  },
+  {
+    "id": "relation",
+    "label": {
+      "de": "Relation",
+      "en": "Relation"
+    },
+    "definition": {
+      "de": "Eine gerichtete Beziehung mit Prädikat und Ziel. Rückverweise zeigen Beziehungen aus der entgegengesetzten Richtung."
+    },
+    "aliases": [],
+    "spec": "docs/spec/04-items-relations-groups-spaces.md",
+    "symbols": [
+      "Relation"
+    ],
+    "story": "detail-itemdetailbody--event"
+  },
+  {
+    "id": "capability",
+    "label": {
+      "de": "Capability",
+      "en": "Capability"
+    },
+    "definition": {
+      "de": "Eine optionale technische Fähigkeit des Connectors. Sie sagt, welche Operationen er anbietet; sie ersetzt nicht die Berechtigungsprüfung für ein konkretes Item."
+    },
+    "aliases": [],
+    "spec": "docs/spec/03-capabilities.md",
+    "symbols": [
+      "ItemWriter"
+    ],
+    "story": "rls-handbook-app--read-only"
+  },
+  {
+    "id": "connector",
+    "label": {
+      "de": "Connector",
+      "en": "Connector"
+    },
+    "definition": {
+      "de": "Die Implementierung des DataInterface für eine konkrete Datenquelle, ergänzt um unterstützte Capabilities."
+    },
+    "aliases": [],
+    "spec": "docs/spec/02-data-interface.md",
+    "symbols": [
+      "DataInterface"
+    ],
+    "story": "rls-handbook-app--garden"
+  },
+  {
+    "id": "vocabulary",
+    "label": {
+      "de": "Vokabular",
+      "en": "Vocabulary"
+    },
+    "definition": {
+      "de": "Die Definition von Feldnamen und ihrer Bedeutung. Ein Item deklariert seine Vokabulare über @context; JSON-Schemas prüfen die Struktur."
+    },
+    "aliases": [],
+    "spec": "docs/spec/06-schema-composition.md",
+    "symbols": [
+      "Item"
+    ],
+    "story": "rls-handbook-app--garden"
+  },
+  {
+    "id": "mirror",
+    "label": {
+      "de": "Spiegel",
+      "en": "Mirror"
+    },
+    "definition": {
+      "de": "Die Projektion eines Items aus seinem Home-Space. Herkunft, Aktualität und erlaubte Aktionen werden getrennt betrachtet."
+    },
+    "aliases": [],
+    "spec": "docs/spec/09-mirror-bridge.md",
+    "symbols": [],
+    "story": "module-components-profilepanelcontent--view-foreign"
+  }
+]

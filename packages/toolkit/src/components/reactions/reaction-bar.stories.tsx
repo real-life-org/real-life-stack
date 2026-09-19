@@ -211,7 +211,8 @@ function StandaloneReactionBar({ initialReactions, maxVisible = 6, className }: 
 // ---- Stories ----
 
 const meta: Meta<typeof StandaloneReactionBar> = {
-  title: "RLS/Module Components/Reactions/ReactionBar",
+  id: "rls-module-components-reactions-reactionbar",
+  title: "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionBar",
   component: StandaloneReactionBar,
   tags: ["autodocs"],
   parameters: {

@@ -1,0 +1,8 @@
+---
+import appSource from '../../../../examples/handbook-app/src/App.tsx?raw'
+import { Code } from '@astrojs/starlight/components'
+const { file } = Astro.props
+if (file !== 'examples/handbook-app/src/App.tsx') throw new Error('Unsupported source file')
+const code = appSource
+---
+<Code code={code} lang="tsx" title={file} />

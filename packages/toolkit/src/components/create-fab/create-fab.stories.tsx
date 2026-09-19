@@ -2,7 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import { CreateFab } from "./create-fab"
 
 const meta: Meta<typeof CreateFab> = {
-  title: "Module Components / CreateFab",
+  id: "module-components-createfab",
+  title: "RLS/Module/Gemeinsame Werkzeuge/Erstellen-Auslöser",
   component: CreateFab,
   parameters: {
     layout: "fullscreen",

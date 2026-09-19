@@ -1,0 +1,36 @@
+---
+{
+  "title": "Mit einem Agenten arbeiten",
+  "description": "Gleiche Quellen, klare Aufgaben, überprüfbare Ergebnisse.",
+  "sources": [
+    "AGENTS.md",
+    "docs/templates/AGENTS.md",
+    "docs/agent-workspace.md"
+  ],
+  "terms": [
+    "component",
+    "connector"
+  ],
+  "stories": []
+}
+---
+
+## Gib dem Agenten den passenden Einstieg
+
+Für eine App auf veröffentlichten Paketen verwende die [App-Vorlage](https://github.com/real-life-org/real-life-stack/blob/master/docs/templates/AGENTS.md). Für einen Beitrag am Stack beginnt er mit `AGENTS.md` und `docs/agent-workspace.md`.
+
+Der maschinenlesbare Einstieg dieses Handbuchs liegt unter [/docs/llms.txt](/docs/llms.txt). Er verweist auf dieselben Texte und Begriffe wie die Website, nicht auf eine separat geschriebene Kurzfassung der Architektur.
+
+## Ein brauchbarer erster Auftrag
+
+> Baue eine kleine Community-App mit den veröffentlichten RLS-Paketen. Beginne mit dem MockConnector. Zeige eine Veranstaltung über ItemPreview und öffne eine Detailansicht. Verwende das bestehende Datenmodell und die Toolkit-Komponenten. Prüfe die installierten Exports und führe Typecheck und Build aus. Dokumentiere fehlende Fähigkeiten ausdrücklich.
+
+## Was in jeden Auftrag gehört
+
+**Ziel:** ein beobachtbares Ergebnis. **Umfang:** betroffene App oder Bausteine. **Vertrag:** relevante Spec und Begriffe. **Prüfung:** was laufen muss. **Übergabe:** Änderungen, Nachweise und verbleibende Fragen.
+
+Ein Agent sollte bestehende Komponenten komponieren, bevor er neue erfindet. Ein Backend-Aufruf gehört nicht direkt in die UI, und ein fehlender Export sollte nicht durch Kopieren interner Dateien verborgen werden.
+
+## Zusammenarbeit bleibt sichtbar
+
+Ein PR enthält Problem, Verhalten nach der Änderung und die tatsächlich ausgeführten Checks. Menschliche Review und Merge-Entscheidung bleiben Teil des Arbeitsablaufs. Ein bestimmter Agent, ein Runner oder Eli-Zugang ist keine Voraussetzung für einen normalen Beitrag.

@@ -13,3 +13,8 @@ packages/toolkit/storybook-static/
 # TS incremental build info
 *.tsbuildinfo
 /out/
+
+# Generated handbook assets
+apps/docs/.astro/
+apps/docs/public/
+docs/reference/build-info.json

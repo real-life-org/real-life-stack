@@ -1,0 +1,37 @@
+name: Handbook
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter '@real-life-stack/toolkit^...' build
+      - run: pnpm --filter @real-life-stack/toolkit typecheck
+      - run: pnpm --filter @real-life-stack/toolkit build-storybook
+      - run: pnpm build:docs && pnpm check:docs && pnpm test:docs
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify handbook interactions
+        run: |
+          pnpm preview:handbook &
+          pnpm test:docs:browser
+      - run: npm ci && npm run build
+        working-directory: examples/handbook-app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: handbook-${{ github.sha }}
+          path: |
+            apps/docs/dist/
+            packages/toolkit/storybook-static/
+            examples/handbook-app/dist/

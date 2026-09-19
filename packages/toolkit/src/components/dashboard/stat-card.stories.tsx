@@ -3,7 +3,8 @@ import { StatCard } from './stat-card'
 import { Users, Calendar, MessageCircle, Heart, TrendingUp } from 'lucide-react'
 
 const meta: Meta<typeof StatCard> = {
-  title: 'RLS/Module Components/Dashboard/StatCard',
+  id: "rls-module-components-dashboard-statcard",
+  title: "RLS/App/Dashboard-Bausteine/StatCard",
   component: StatCard,
   tags: ['autodocs'],
   argTypes: {

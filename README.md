@@ -238,3 +238,15 @@ pnpm build:storybook
 ---
 
 **Together we shape the future – locally connected, globally minded.**
+
+## Handbuch und Storybook
+
+Das [deutsche Handbuch](docs/handbook/de/index.mdx) erklärt Betrieb, Entwicklung
+und UI-Logik. `pnpm dev:docs` startet die Website, `pnpm --filter
+@real-life-stack/toolkit storybook` die interaktiven Beispiele. Für die gemeinsame
+statische Vorschau: `pnpm build:docs`, `pnpm --filter @real-life-stack/toolkit
+build-storybook`, danach `pnpm preview:handbook` (Port 4322).
+
+`pnpm check:docs` prüft die gebauten Referenzen; `pnpm test:docs` prüft den Wächter.
+[Pflege und Übersetzungen](docs/handbook/de/pflege.mdx) ·
+[Eigenständige npm-App](examples/handbook-app/).

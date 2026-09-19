@@ -1,0 +1,51 @@
+---
+{
+  "title": "Wie dieses Handbuch aktuell bleibt",
+  "description": "Quellen, Prüfungen, Versionen und Übersetzungen.",
+  "sources": [
+    "docs/reference/terms.json",
+    "scripts/handbook/check.mjs",
+    "scripts/handbook/prepare.mjs"
+  ],
+  "terms": [],
+  "stories": []
+}
+---
+
+## Ein Inhalt, mehrere Zugänge
+
+Die Website liest `docs/handbook/de/`. Der Agenten-Index exportiert dieselben Texte. `docs/reference/terms.json` liefert die Begriffe. Storybook verwendet die echten Toolkit-Komponenten. API-Beispiele werden aus den ausführbaren Quelldateien eingebunden.
+
+## Welche Quelle entscheidet?
+
+| Inhalt | Quelle |
+| --- | --- |
+| Verbindliches Verhalten | Normative Specs |
+| Tatsächlicher Umsetzungsstand | Code und ausgeführte Prüfungen |
+| Begriffe und Aliase | Gemeinsames Begriffsregister mit Spec-Verweisen |
+| Komponentendarstellung | Stories aus dem Toolkit |
+| Installation | Deployment-Dateien und ausführbares Beispiel |
+
+## Die Prüfung im PR
+
+`pnpm check:docs` prüft Quellen, Begriffsreferenzen, Story-IDs, erlaubte Storybook-Kategorien, bestehende Story-Links und interne Seitenlinks. `pnpm test:docs` prüft, dass der Wächter absichtlich beschädigte Referenzen erkennt.
+
+Jede Seite nennt ihre Quellen im Frontmatter. `node scripts/handbook/impact.mjs <Basis-Commit>` zeigt, welche Seiten von Änderungen betroffen sein können. Der PR erklärt anschließend die Dokumentationswirkung; eine beliebige Änderung im docs-Ordner reicht nicht.
+
+`pnpm test:docs:browser` prüft die Lernwege mit Chromium: Bearbeiten, Modulwechsel, Space-Wechsel, fehlende Schreibfähigkeit und mobile Darstellung. Dazu muss `pnpm preview:handbook` laufen; einmalig installiert `pnpm exec playwright install chromium` den Testbrowser.
+
+## Was automatisch mitwandert
+
+Wenn sich eine Komponente ändert, ändert sich ihre Story. Technische Beispiele stammen aus derselben Datei, die gebaut wird. Der Build schreibt App-Version, Toolkit-Version und Commit in ein Manifest und zeigt sie in der Fußzeile.
+
+Das beweist nicht, dass jeder Satz noch stimmt. Verhaltensänderungen brauchen eine fachliche Prüfung, besonders bei Berechtigungen, Datenhaltung und Deployment.
+
+## Deutsch zuerst, Englisch danach
+
+Seiten besitzen sprachunabhängige IDs. Eine englische Übersetzung nennt den Hash ihrer geprüften deutschen Quelle. Bei einer Änderung wird die Übersetzung als prüfbedürftig erkannt. Englisch wird erst nach Review der deutschen Fassung veröffentlicht; die technische Vorschau ist über `HANDBOOK_PREVIEW_EN=1` aktivierbar.
+
+Die normale Veröffentlichung enthält keine englischen Platzhalterseiten. Der Preview-Build kennzeichnet fehlende Übersetzungen ausdrücklich. Komponenten und Beispiele werden für beide Sprachen gemeinsam gepflegt.
+
+## Vor der Veröffentlichung
+
+Build und Links prüfen, die dokumentierten Startwege in einer sauberen Umgebung durchlaufen und die wesentlichen UI-Wege auf Desktop und Mobile erproben. Release-Snapshots werden zusammen mit ihrem Build-Manifest als Artefakt aufgehoben. Ein neuer Build ist keine automatische fachliche Freigabe.

@@ -1,0 +1,7 @@
+---
+import terms from '../../../../docs/reference/terms.json'
+const ids = ['app', 'instance', 'app-shell', 'space', 'space-module', 'item-preview', 'item-detail']
+---
+<nav class="flow-map" aria-label="Vom Ganzen zum Detail">
+  {ids.map((id, i) => <a href={`/docs/de/glossar/#${id}`}><small>{String(i + 1).padStart(2, '0')}</small> {terms.find(t => t.id === id)?.label.de}</a>)}
+</nav>

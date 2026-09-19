@@ -3,7 +3,8 @@ import { Button } from './button'
 import { Mail, Loader2, ChevronRight } from 'lucide-react'
 
 const meta: Meta<typeof Button> = {
-  title: 'RLS/Primitives/Button',
+  id: "rls-primitives-button",
+  title: "RLS/Grundlagen/UI-Primitives/Button",
   component: Button,
   tags: ['autodocs'],
   argTypes: {

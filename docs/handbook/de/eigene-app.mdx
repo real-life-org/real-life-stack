@@ -1,0 +1,50 @@
+---
+{
+  "title": "Eine eigene App bauen",
+  "description": "Komponieren statt die Referenz-App kopieren.",
+  "sources": [
+    "docs/templates/AGENTS.md",
+    "examples/handbook-app/src/App.tsx"
+  ],
+  "terms": [
+    "app",
+    "connector",
+    "capability"
+  ],
+  "stories": []
+}
+---
+
+## Klein beginnen
+
+Eine eigene App kann veröffentlichte RLS-Pakete verwenden. Sie muss das Monorepo nicht forken. Du kombinierst React, Toolkit, DataInterface und zunächst den MockConnector. Ein vollständiges Beispiel liegt unter `examples/handbook-app/`.
+
+```bash
+cd examples/handbook-app
+npm install
+npm run dev
+```
+
+Dieses Beispiel ist bewusst außerhalb des pnpm-Workspaces und verwendet exakte veröffentlichte Versionen. Es prüft damit auch, ob die öffentlich ausgelieferten Exports funktionieren. Sein Lockfile hält die aufgelösten Abhängigkeiten fest.
+
+## Die Aufgaben der App
+
+1. Connector erzeugen und `init()` abwarten.
+2. Ihn dem `ConnectorProvider` übergeben.
+3. Items über `useItems` lesen und Toolkit-Komponenten komponieren.
+4. Erlaubte Änderungen über den Writer ausführen.
+5. Globale Navigation, Auswahl und Konfiguration besitzen.
+
+import Source from '../../../apps/docs/src/components/Source.astro';
+
+<Source file="examples/handbook-app/src/App.tsx" />
+
+## Was du erweitern kannst
+
+Die App wählt ihre Module und ihre Datenquelle. Sie kann eigene fachliche Typen und Darstellungen registrieren. Ein neuer Typ erfordert keine Kopie von Karte, Kalender und Detailansicht. Prüfe zuerst die vorhandenen Felder und Vokabulare.
+
+Wenn ein wiederverwendbares Verhalten im Toolkit fehlt, beschreibe die Lücke als Upstream-Beitrag. Ein stiller Fork einer Toolkit-Komponente erschwert spätere Updates.
+
+## Grenzen des Beispiels
+
+Mock-Daten bleiben im Arbeitsspeicher. Das Beispiel ist keine vollständige Community mit Authentifizierung, Berechtigungsverwaltung und verschlüsseltem Sync. Diese Fähigkeiten kommen über einen geeigneten Connector und die entsprechende App-Komposition hinzu.

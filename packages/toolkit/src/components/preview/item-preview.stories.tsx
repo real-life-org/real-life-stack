@@ -65,7 +65,8 @@ const taskItem: Item = {
 }
 
 const meta: Meta<typeof ItemPreview> = {
-  title: "Module Components / ItemPreview",
+  id: "module-components-itempreview",
+  title: "RLS/Items/Item-Vorschau/ItemPreview",
   component: ItemPreview,
   decorators: [
     (Story) => (

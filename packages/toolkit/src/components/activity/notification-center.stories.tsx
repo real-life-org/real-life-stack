@@ -7,7 +7,8 @@ const notification = {
   ts: "2026-07-18T11:00:00.000Z", targetExists: true, readKeys: { '["garten","entry-1"]': "2026-07-18T11:00:00.000Z" }, actorCount: 1, isRead: false,
 }
 
-const meta = { title: "RLS/Activity/NotificationCenter", component: NotificationCenter, args: { onOpenSubject: () => {}, onOpenGroup: () => {}, onMarkRead: () => {}, onMarkAllRead: () => {}, onMuteGroup: () => {}, onOpenActivity: () => {} } } satisfies Meta<typeof NotificationCenter>
+const meta = { id: "rls-activity-notificationcenter",
+  title: "RLS/App Shell/Aktivität und Benachrichtigungen/NotificationCenter", component: NotificationCenter, args: { onOpenSubject: () => {}, onOpenGroup: () => {}, onMarkRead: () => {}, onMarkAllRead: () => {}, onMuteGroup: () => {}, onOpenActivity: () => {} } } satisfies Meta<typeof NotificationCenter>
 export default meta
 type Story = StoryObj<typeof meta>
 

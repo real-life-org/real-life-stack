@@ -111,3 +111,12 @@ If the work uses RLAP or `wot-agent-runner`, include the task, run ID, PR summar
 - Real Life Network Protocol: <https://github.com/real-life-org/real-life-network-protocol>
 
 These systems support agentic work, but they do not replace normal contributor judgment or maintainer review.
+
+## Handbuch mitpflegen
+
+Bei Änderungen an öffentlichen APIs, UI-Verhalten oder Deployment: prüfe
+`node scripts/handbook/impact.mjs <Basis-Commit>` und aktualisiere die betroffenen
+Seiten in `docs/handbook/de/`. Begriffe stammen aus `docs/reference/terms.json`.
+Neue Stories folgen `docs/spec/code-and-storybook-mapping.md`. Nach dem Build
+`pnpm check:docs && pnpm test:docs` ausführen. Übersetzungen dürfen erst nach
+inhaltlicher Prüfung einen neuen `sourceHash` erhalten.

@@ -8,6 +8,9 @@ on:
       - 'apps/**'
       - 'packages/**'
       - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'docs/**'
+      - 'scripts/handbook/**'
       - '.github/workflows/deploy-prototypes.yml'
   workflow_dispatch:
     inputs:
@@ -212,9 +215,13 @@ jobs:
           done
           echo "Rolling back OTA to ${TAG}"
 
+      - name: Build and verify handbook
+        run: pnpm build:docs && pnpm check:docs && pnpm test:docs
+
       - name: Prepare deployment
         run: |
-          mkdir -p gh-pages/app gh-pages/edge gh-pages/storybook
+          mkdir -p gh-pages/app gh-pages/edge gh-pages/storybook gh-pages/docs
+          cp -R apps/docs/dist/. gh-pages/docs/
           cp -R apps/landing/dist/. gh-pages/
           cp -R apps/reference/dist/. gh-pages/app/
           cp apps/reference/public/404.html gh-pages/404.html

@@ -1,0 +1,93 @@
+---
+{
+  "title": "A · Eine eigene Instanz starten",
+  "description": "Von der lokalen Docker-Vorschau zum Betrieb unter einer eigenen Domain.",
+  "sources": [
+    "deploy/app/docker-compose.preview.yml",
+    "deploy/app/docker-compose.yml",
+    "deploy/app/entrypoint.sh",
+    "docs/spec/11-runtime-config-und-branding.md"
+  ],
+  "terms": [
+    "instance",
+    "connector"
+  ],
+  "stories": []
+}
+---
+
+## Das brauchst du
+
+Docker mit dem Compose-Plugin, einen freien lokalen Port und Internetzugang zum Laden des Images. Prüfe zuerst `docker --version` und `docker compose version`.
+
+Die App kommt als fertiges Image. Für die Vorschau brauchst du weder Node.js noch einen Build des Stack. Der folgende Download holt die kleinen Deployment-Dateien aus einem festgelegten Release. Prüfe vor einem dauerhaften Betrieb die [verfügbaren Image-Tags](https://github.com/real-life-org/real-life-stack/pkgs/container/rls-app).
+
+## 1. Deployment-Dateien beziehen
+
+```bash
+mkdir rls-instanz
+cd rls-instanz
+curl -fL https://github.com/real-life-org/real-life-stack/archive/refs/tags/app-v0.3.1.tar.gz -o rls-release.tar.gz
+tar -xzf rls-release.tar.gz --strip-components=3 real-life-stack-app-v0.3.1/deploy/app
+cp .env.example .env
+```
+
+Der Download enthält das Release-Archiv; extrahiert wird nur `deploy/app`. Öffne anschließend `.env` und setze für den Einstieg:
+
+```dotenv
+RLS_IMAGE_TAG=0.3.1
+RLS_APP_NAME=Unser Gemeinschaftsgarten
+RLS_DEFAULT_CONNECTOR=local
+RLS_PORT=8080
+```
+
+`local` hält die Daten in diesem Browser. Es ist eine einfache erste Erprobung, noch kein gemeinsamer Mehrbenutzerbetrieb. Der öffentliche Betrieb benötigt eine bewusste Connector- und Dienstwahl.
+
+## 2. Vorschau starten
+
+```bash
+docker compose -f docker-compose.preview.yml pull
+docker compose -f docker-compose.preview.yml up -d
+```
+
+Öffne **http://localhost:8080/** für die Landingpage und **http://localhost:8080/app/** für die App. Unter `/app/config.json` kannst du kontrollieren, welche Konfiguration der Browser erhält.
+
+Die Vorschau-Datei veröffentlicht den Port auf dem Docker-Host. Verwende sie in einer vertrauenswürdigen lokalen Umgebung; sie richtet kein TLS ein.
+
+## 3. Die Instanz gestalten
+
+| Datei | Wirkung |
+| --- | --- |
+| `.env` | Name, Connector, Dienstendpunkte und Image-Tag |
+| `landing/index.html` | Deine Landingpage auf `/` |
+| `branding/theme.json` | Design-Tokens für helles und dunkles Theme |
+| `branding/logo.svg`, `branding/favicon.svg` | Eigene Bildmarken, soweit von der Konfiguration eingebunden |
+
+Landingpage und Branding werden in den Container eingebunden. Änderungen an Assets wirken beim erneuten Laden. Nach Änderungen an `.env` führe `docker compose -f docker-compose.preview.yml up -d` erneut aus.
+
+Eine eigene `branding/config.json` überschreibt die aus Umgebungsvariablen erzeugte Konfiguration. Diese Datei wird an jeden Browser ausgeliefert; private Schlüssel und Service-Zugangsdaten gehören nicht hinein.
+
+## 4. Unter einer Domain betreiben
+
+Die mitgelieferte `docker-compose.yml` erwartet bereits laufendes **Traefik**, ein externes Docker-Netzwerk `web`, den EntryPoint `websecure` und den Zertifikatsresolver `letsencrypt`. Sie installiert diesen Reverse Proxy nicht.
+
+Setze `RLS_DOMAIN`, `RLS_APP_NAME`, `RLS_IMAGE_TAG` und die passenden Connector-Endpunkte in `.env`. Richte DNS auf deinen Server. Bei anderem Netzwerk passe `TRAEFIK_NETWORK` an. Starte dann `docker compose up -d` und prüfe HTTPS, Landingpage und App.
+
+Die App-Instanz hostet statische Dateien. Relay, Profil-Service oder Supabase sind zusätzliche Dienste. Welche davon benötigt werden, hängt vom Connector ab. Branding allein migriert keine Nutzerdaten.
+
+## Aktualisieren und zurückkehren
+
+Sichere zuerst Konfiguration und Assets sowie die Daten des gewählten Backends. Notiere den bisherigen Image-Tag. Teste einen neuen exakten Tag in einer separaten Vorschau, ändere danach `RLS_IMAGE_TAG` und führe `docker compose pull` sowie `docker compose up -d` aus.
+
+Das alte Image kann wieder gestartet werden. Ob ältere Software mit inzwischen veränderten Daten funktioniert, muss vor dem Update geprüft werden. Ein Image-Rollback ist kein Daten-Restore.
+
+## Wenn etwas nicht funktioniert
+
+- **Port belegt:** `RLS_PORT` ändern und die Vorschau erneut starten.
+- **Konfiguration unverändert:** prüfen, ob `branding/config.json` die Umgebungsvariablen überschreibt.
+- **App erreichbar, Zusammenarbeit fehlt:** Connector, Dienstendpunkte und Mitgliedschaft prüfen.
+- **Container startet nicht:** `docker compose -f docker-compose.preview.yml logs app` lesen.
+
+Zum Stoppen: `docker compose -f docker-compose.preview.yml down`. Browserdaten und gemountete Dateien werden dadurch nicht automatisch gelöscht.
+
+[Deployment-Vertrag](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/11-runtime-config-und-branding.md)

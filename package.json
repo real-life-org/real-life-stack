@@ -16,10 +16,17 @@
     "build:toolkit": "pnpm --filter @real-life-stack/toolkit build",
     "storybook": "pnpm --filter @real-life-stack/toolkit storybook",
     "test": "turbo test",
-    "build:storybook": "pnpm --filter @real-life-stack/toolkit build-storybook"
+    "build:storybook": "pnpm --filter @real-life-stack/toolkit build-storybook",
+    "dev:docs": "pnpm --filter @real-life-stack/handbook dev",
+    "build:docs": "pnpm --filter @real-life-stack/handbook build",
+    "check:docs": "node scripts/handbook/check.mjs",
+    "test:docs": "node --test scripts/handbook/check.test.mjs",
+    "preview:handbook": "node scripts/handbook/serve.mjs",
+    "test:docs:browser": "node scripts/handbook/browser.mjs"
   },
   "devDependencies": {
     "turbo": "^2.3.3",
-    "typescript": "~5.7.2"
+    "typescript": "~5.7.2",
+    "playwright": "1.63.0"
   }
 }

@@ -1,0 +1,13 @@
+---
+import terms from '../../../../docs/reference/terms.json'
+const base = import.meta.env.PUBLIC_STORYBOOK_URL || (import.meta.env.DEV ? 'http://localhost:6006' : '/storybook')
+---
+<div class="term-grid">
+  {terms.map((term, i) => <section class="term" id={term.id}>
+    <small>{String(i + 1).padStart(2, '0')} / {term.label.en}</small>
+    <h2>{term.label.de}</h2><p>{term.definition.de}</p>
+    {term.symbols.length > 0 && <p>{term.symbols.map(s => <code>{s} </code>)}</p>}
+    {term.aliases.length > 0 && <p><small>Auch auffindbar als: {term.aliases.join(', ')}</small></p>}
+    <div class="term-links"><a href={`${base}/?path=/story/${term.story}`}>Ansehen ↗</a><a href={`https://github.com/real-life-org/real-life-stack/blob/master/${term.spec}`}>Vertrag ↗</a></div>
+  </section>)}
+</div>

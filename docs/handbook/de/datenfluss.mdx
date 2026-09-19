@@ -1,0 +1,68 @@
+---
+{
+  "title": "Vom Klick zur gemeinsamen Änderung",
+  "description": "Wie die UI über Hooks und Connectoren reaktiv bleibt.",
+  "sources": [
+    "docs/spec/02-data-interface.md",
+    "docs/spec/03-capabilities.md",
+    "docs/spec/06-schema-composition.md",
+    "docs/spec/reaktivitaet.md"
+  ],
+  "terms": [
+    "item",
+    "item-type",
+    "vocabulary",
+    "connector",
+    "relation"
+  ],
+  "stories": []
+}
+---
+
+## Ein Datenobjekt, mehrere Darstellungen
+
+Ein Item besitzt `id`, `type`, `createdAt`, `createdBy` und `data`. Fachliche Felder wie Titel, Termin und Position liegen in `data`. `tags`, `relations` und `@context` sind eigene Achsen.
+
+```json
+{
+  "id": "erntefest",
+  "type": "event",
+  "createdAt": "2026-09-01T09:00:00.000Z",
+  "createdBy": "mira",
+  "data": {
+    "title": "Erntefest im Garten",
+    "start": "2026-09-19T14:00:00+02:00",
+    "position": { "type": "Point", "coordinates": [13.405, 52.52] }
+  },
+  "tags": ["garten"]
+}
+```
+
+Das Beispiel zeigt die Kernform. Für fachliche Validierung kommen die passenden `@context`-Vokabulare hinzu. GeoJSON verwendet **Längengrad vor Breitengrad**.
+
+## Vier Begriffe, vier Aufgaben
+
+- **Typ:** als was das Item erstellt wurde; beeinflusst Darstellung und bewusste Typfilter.
+- **Vokabular:** Bedeutung und Struktur seiner Felder.
+- **Tag:** thematische Kategorisierung.
+- **Modul:** passende Oberfläche; Karte prüft Position, Kalender Zeit. Marker-Vokabulare sind die ausdrücklich spezifizierte Ausnahme zur Feldaktivierung.
+
+## Der Weg durch die Schichten
+
+1. Eine UI-Komponente ruft einen Hook auf, etwa `useItems`.
+2. Der Hook abonniert das Observable des Connectors.
+3. Eine erlaubte Bearbeitung verwendet die Writer-Capability.
+4. Der Connector aktualisiert seine Daten und meldet die Änderung.
+5. Die abonnierten Darstellungen lesen den neuen Stand.
+
+`getItems` liest einmal. `observe` liefert eine reaktive Datenquelle. Hooks besitzen keine unabhängige Kopie der fachlichen Wahrheit. Aufräumen gehört dazu: Subscriptions beenden, Connector beim Ende seiner Lebensdauer freigeben.
+
+## Relations
+
+Eine Relation verbindet ein Item mit einem Ziel über ein Prädikat. Kommentare und Reaktionen sind eigene Items mit Beziehungen; sie werden nicht als immer größere Arrays im ursprünglichen Item angehängt. Für Rückverweise gibt es die Relations-Capability und passende Hooks.
+
+## Loading ist nicht dasselbe wie leer
+
+Ein leeres Ergebnis kann vollständig geladen sein. Der Datenvertrag besitzt deshalb ein Readiness-Signal. Daneben können Connectoren Sync-Informationen anbieten. Diese Signale sind im aktuellen Hook-Code und in der zugehörigen Spec zu prüfen; ein leerer Array ist kein ausreichender Ladezustand.
+
+[DataInterface](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/02-data-interface.md) · [Schema-Komposition](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/06-schema-composition.md)
