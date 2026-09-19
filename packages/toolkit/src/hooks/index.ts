@@ -24,7 +24,7 @@ export { useRelationRecords, useRelationNeighbors } from "./use-relation-records
 export { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 export { useItemPermissions, useCanCreate, type ItemPermissions } from "./use-item-permissions"
 export { useGroups, usePersonalGroupId, useCurrentGroup, useCreateGroup, useUpdateGroup, useDeleteGroup, useMembers, useInviteMember, useRemoveMember } from "./use-groups"
-export { useAuthState, useCurrentUser } from "./use-auth"
+export { useAuthState, useCurrentUser, useOptionalCurrentUser } from "./use-auth"
 export { useFeatures, useFeature } from "./use-features"
 export { useContacts } from "./use-contacts"
 export { useVerification } from "./use-verification"

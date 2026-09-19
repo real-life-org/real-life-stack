@@ -47,7 +47,7 @@ import {
 } from "@real-life-stack/data-interface"
 
 import { useMembers } from "../../hooks/use-groups"
-import { useCurrentUser } from "../../hooks/use-auth"
+import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { ItemAssignees } from "./item-assignees"
 import { ItemMetaRow } from "./item-meta-row"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
@@ -126,8 +126,11 @@ export interface ResolvedTypePresentation {
  *  resolves even when they are not a member of the surface's current space —
  *  including the signed-in user in their personal space. */
 function TaskAssigneesFooter({ item }: ItemSlotProps) {
+  // Dieser Slot rendert in jeder Fläche, die renderTypeFooter aufruft — auch
+  // unter einem Connector ohne Gruppen und ohne Anmeldung. Beide Quellen dürfen
+  // deshalb leer sein; dann bleibt die Zeile einfach aus.
   const { data: members } = useMembers(null)
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser } = useOptionalCurrentUser()
   if (!isTask(item)) return null
   const users = (item.relations ?? [])
     .filter((relation) => relation.predicate === "assignedTo")
