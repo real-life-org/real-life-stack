@@ -8,7 +8,22 @@
  * Zusammenspiel eines Connectors beobachtbar zu sein.
  */
 export { canonicalItemString, canonicalSnapshotBytes, canonicalSnapshotString, itemHash, signedSnapshotFields } from "./canonical.js"
-export { mirrorMapKey, mirrorRegistryKey, parseMirrorMapKey, parseMirrorRegistryKey } from "./keys.js"
+export {
+  mirrorMapKey,
+  mirrorRegistryEntryKey,
+  mirrorRegistryKey,
+  parseMirrorMapKey,
+  parseMirrorRegistryEntryKey,
+  parseMirrorRegistryKey,
+} from "./keys.js"
+export { groupRegistryByEntry } from "./registry-group.js"
+export {
+  MIRROR_REGISTRY_ROOT,
+  PROFILE_MIGRATION_KEY,
+  profileMigrationMark,
+  registryContributionsOf,
+} from "./roots.js"
+export type { MirrorRegistryRoot, ProfileMigrationMark } from "./roots.js"
 export { InMemoryMirrorMarkStore } from "./mark-store-memory.js"
 export { evaluateSnapshot } from "./receiver.js"
 export type { EvaluateSnapshotInput, MirrorEvaluation } from "./receiver.js"
@@ -40,3 +55,14 @@ export type {
   VerifySnapshotOptions,
 } from "./snapshot.js"
 export { compareVersion, tiebreakOf } from "./version.js"
+export {
+  maxAdmission,
+  membershipOf,
+  mergeProfileData,
+  planMembershipTransition,
+  planStockGrants,
+  profileItemInput,
+  supersedesOf,
+} from "./profile-home.js"
+export { normalizeProfileFields } from "./profile-home.js"
+export type { MembershipTransition, ProfileItemFields, SpaceMembership } from "./profile-home.js"
