@@ -16,6 +16,8 @@
 // an die Ids.
 
 import type { ComponentType } from "react"
+import type { Group } from "@real-life-stack/data-interface"
+import type { SelectionFocusVisibleArea } from "./selection-focus"
 import {
   Calendar,
   Columns3,
@@ -56,9 +58,9 @@ export interface ModuleViewProps {
   /** Ob dieses Modul gerade sichtbar ist — relevant fuer `keepMounted`. */
   active: boolean
   /** Alle sichtbaren Spaces — fuer Module, die spaceuebergreifend zeigen. */
-  groups?: readonly unknown[]
+  groups?: readonly Group[]
   /** Sichtbarer Bereich fuer Fokus-Scrolling (siehe selection-focus.ts). */
-  selectionFocusVisibleArea?: unknown
+  selectionFocusVisibleArea?: SelectionFocusVisibleArea
 }
 
 export interface ModuleEntry {

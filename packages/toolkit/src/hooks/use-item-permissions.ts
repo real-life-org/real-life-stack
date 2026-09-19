@@ -54,7 +54,7 @@ export function resolveItemPermissions(
 }
 
 /**
- * Pure resolver behind {@link useCanCreate}. A non-writable connector can't
+ * Pure resolver for „may I create here". A non-writable connector can't
  * create; a connector with an authorization model decides; otherwise any
  * writable connector may create (space membership is enforced backend-side).
  */
@@ -90,8 +90,3 @@ export function useItemPermissions(item: Item | null | undefined): ItemPermissio
   )
 }
 
-/** Whether the current user may create an item in a space (optionally typed). */
-export function useCanCreate(spaceId: string | null | undefined, type?: string): boolean {
-  const connector = useConnector()
-  return useMemo(() => resolveCanCreate(connector, spaceId, type), [connector, spaceId, type])
-}

@@ -1,64 +1,51 @@
 /**
- * Client-side list filter for items already loaded into the UI.
+ * Auswahl nach Zuweisung, für Listen, die schon geladen sind.
  *
- * Distinct from `ItemFilter` in @real-life-stack/data-interface: that one is
- * the **query** filter (what the connector hands back — `hasField`, `type`,
- * `limit`, …). This one is the **display** filter (what the view chooses to
- * show from what it already has).
+ * Nicht zu verwechseln mit `ItemFilter` aus @real-life-stack/data-interface:
+ * das ist der **Abfrage**-Filter (was der Connector überhaupt herausgibt).
+ * Dieser hier ist ein **Anzeige**-Filter (was die Fläche aus dem Geladenen
+ * zeigt). Tags, Typen und Suchtext macht die geteilte Leiste
+ * (`useModuleFilteredItems`); hier bleibt nur, was an Relationen hängt.
  *
- * The filter dimensions are intentionally generic: search across
- * `data.title` / `data.description`, assignee membership via the
- * `assignedTo` relation, and tags. None of these are Kanban-specific —
- * the same logic applies to any item list in any module.
+ * Vorher stand hier ein größerer Filter, den niemand rief, während das Kanban
+ * dieselbe Zuweisungslogik noch einmal ausformulierte. Jetzt nur noch diese
+ * eine Regel, und sie hat einen Aufrufer.
  */
 
 import type { Item, Relation } from "@real-life-stack/data-interface"
 
-export interface ItemListFilter {
-  /** Free-text search; matches data.title and data.description. */
-  searchText: string
-  /** Restrict to items assigned to this specific user id. */
-  assignedTo: string | null
-  /** Restrict to items where the current user is in the assignee set. */
-  myItemsOnly: boolean
-  /** AND-filter: every tag must be present on the item. */
-  tags: string[]
+export interface AssigneeFilter {
+  /** Nur Items, die mindestens einer dieser Personen zugewiesen sind. Leer heißt: alle. */
+  assignedTo?: readonly string[]
+  /** Nur Items, die mir zugewiesen sind. */
+  myItemsOnly?: boolean
 }
 
-function getAssigneeIds(item: Item): string[] {
+/** Die Kennungen, denen ein Item zugewiesen ist (`assignedTo`, ohne das `global:`-Präfix). */
+export function assigneeIds(item: Item): string[] {
   return (item.relations ?? [])
     .filter((r: Relation) => r.predicate === "assignedTo")
     .map((r: Relation) => r.target.replace(/^global:/, ""))
 }
 
-export function applyItemListFilter(
-  items: Item[],
-  filter: ItemListFilter,
+/**
+ * Filtert nach Zuweisung.
+ *
+ * Bei `myItemsOnly` ohne bekannte eigene Kennung bleibt die Liste leer, nicht
+ * voll: Solange nicht feststeht, wer ich bin, ist „meine Aufgaben" nicht
+ * beantwortbar, und alles zu zeigen wäre die falsche Hälfte des Zweifels.
+ */
+export function filterByAssignee(
+  items: readonly Item[],
+  filter: AssigneeFilter,
   currentUserId?: string,
 ): Item[] {
+  const gewuenscht = new Set(filter.assignedTo ?? [])
+  if (gewuenscht.size === 0 && !filter.myItemsOnly) return [...items]
   return items.filter((item) => {
-    if (filter.searchText) {
-      const q = filter.searchText.toLowerCase()
-      const title = String(item.data.title ?? "").toLowerCase()
-      const description = String(item.data.description ?? "").toLowerCase()
-      if (!title.includes(q) && !description.includes(q)) return false
-    }
-
-    if (filter.myItemsOnly && currentUserId) {
-      const assignees = getAssigneeIds(item)
-      if (!assignees.includes(currentUserId)) return false
-    }
-
-    if (filter.assignedTo) {
-      const assignees = getAssigneeIds(item)
-      if (!assignees.includes(filter.assignedTo)) return false
-    }
-
-    if (filter.tags.length > 0) {
-      const itemTags = item.tags ?? []
-      if (!filter.tags.every((t) => itemTags.includes(t))) return false
-    }
-
+    const ids = assigneeIds(item)
+    if (gewuenscht.size > 0 && !ids.some((id) => gewuenscht.has(id))) return false
+    if (filter.myItemsOnly && (!currentUserId || !ids.includes(currentUserId))) return false
     return true
   })
 }

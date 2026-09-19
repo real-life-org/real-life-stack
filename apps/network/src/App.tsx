@@ -790,10 +790,10 @@ function NetworkShell() {
               // und die braucht eine bestimmte Hoehe, um sie zu teilen.
               <div className="h-full min-h-0">
                 <CalendarView
-                  events={domainItems}
+                  items={domainItems}
                   initialVisibleDate="2026-07-08T12:00:00+02:00"
                   activeItemId={selectedNodeId ?? undefined}
-                  onEventClick={(item) => selectItem(item.id)}
+                  onItemClick={(item) => selectItem(item.id)}
                 />
               </div>
             )}

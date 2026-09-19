@@ -69,10 +69,6 @@ export function useSharedFilter(): SharedFilterValue {
   return ctx
 }
 
-/** Weiche Variante — `null` ohne Provider. */
-export function useOptionalSharedFilter(): SharedFilterValue | null {
-  return useContext(FilterContext)
-}
 
 /**
  * Der Besitzer fuer eine Flaeche, die auch AUSSERHALB der App laeuft.

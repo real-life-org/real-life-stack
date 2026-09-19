@@ -183,10 +183,10 @@ function Garden({
           </div>
         ) : module === 'Kalender' ? (
           <CalendarView
-            events={items}
+            items={items}
             initialVisibleDate="2026-09-19"
             activeItemId={selected}
-            onEventClick={(i) => {
+            onItemClick={(i) => {
               setSelected(i.id)
             }}
           />
