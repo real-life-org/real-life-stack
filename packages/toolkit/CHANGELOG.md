@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.1.10...toolkit-v0.1.11) (2026-09-19)
+
+
+### Features
+
+* **storybook:** Ordnung nach UI-Konzepten, feste Story-IDs, Gemeinschaftsgarten ([#398](https://github.com/real-life-org/real-life-stack/issues/398)) ([6099993](https://github.com/real-life-org/real-life-stack/commit/6099993dc56aee0643fbd5084b0ef92a0a333b4d))
+
 ## [0.1.10](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.1.9...toolkit-v0.1.10) (2026-09-16)
 
 

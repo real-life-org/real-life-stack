@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.4](https://github.com/real-life-org/real-life-stack/compare/app-v0.3.3...app-v0.3.4) (2026-09-19)
+
+
+### Features
+
+* **storybook:** Ordnung nach UI-Konzepten, feste Story-IDs, Gemeinschaftsgarten ([#398](https://github.com/real-life-org/real-life-stack/issues/398)) ([6099993](https://github.com/real-life-org/real-life-stack/commit/6099993dc56aee0643fbd5084b0ef92a0a333b4d))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/toolkit bumped to 0.1.11
+    * @real-life-stack/wot-connector bumped to 0.1.11
+
 ## [0.3.3](https://github.com/real-life-org/real-life-stack/compare/app-v0.3.2...app-v0.3.3) (2026-09-16)
 
 
