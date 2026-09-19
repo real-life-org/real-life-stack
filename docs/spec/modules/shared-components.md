@@ -307,7 +307,7 @@ interface ReactionBarProps {
 **Vertrag:**
 
 ```ts
-type ItemPreviewDensity = "comfortable" | "compact"
+type ItemPreviewDensity = "comfortable" | "compact" | "dense"
 
 interface ItemPreviewProps {
   item: Item
@@ -328,10 +328,12 @@ interface ItemPreviewProps {
   metaAdornment?: ReactNode
   /** Slot unter den Tag-Chips (z.B. Assignees, Comment-Count, ReactionBar). */
   footerAdornment?: ReactNode
-  /** Layout-Density (siehe unten). Default `comfortable`. */
+  /** Layout-Density (siehe unten): `comfortable` | `compact` | `dense`. Default `comfortable`. */
   density?: ItemPreviewDensity
   /** Hebt eine Karten-Linse als aktuell selektiert hervor. */
   active?: boolean
+  /** Erledigt: „✓ " vor dem Title, Karte auf Opazität 0.55 gedimmt. */
+  completed?: boolean
   /** Optionaler `#rrggbb`-Override für den Active-Glow; Default ist neutral. */
   activeGlowColor?: string
   className?: string
@@ -342,6 +344,17 @@ interface ItemPreviewProps {
 
 - `comfortable` (Default) — Feed-Card-Form: Avatar 10×10, font-base Title, p-4 Spacing, Description wird angezeigt, Footer mit Border-Top.
 - `compact` — Kanban-/Liste-Form: Avatar 6×6, font-sm Title, p-3 Spacing, **Description wird ausgeblendet**, Footer ohne Border. Tauglich für dichte Board-Spalten, wo mehrere Cards zugleich sichtbar bleiben sollen.
+- `dense` — **Matrix-Kachel** für Raster und Bretter mit 12+ Spalten. Maße aus dem Design (*RLS System Design → Dragon Dreaming.dc.html*, Variante 1a): **112 px breit, ca. 62 px hoch**, Innenabstand 6 px, Radius 6 px (`rounded-md`), Rahmen über das `border`-Token. Die Kachel zeigt **nur**:
+  - den **Title**: 10.5 px, Gewicht 600, Zeilenhöhe 1.3, auf **drei Zeilen** begrenzt (Auslassung danach), mit `overflow-wrap: anywhere`, `hyphens: auto` und `lang="de"` — deutsche Komposita müssen in 112 px brechen dürfen,
+  - die `footerAdornment`-Zeile, ohne Border-Top — im Regelfall genau ein `ItemAssignees size="xs"`.
+
+  Sie lässt weg: Description/Body, `metaAdornment`, Tags, die Author-Zeile **und den Kommentar-Zähler**. `active`/`activeColor`, `onClick` und die Keyboard-Aktivierung sind identisch mit `compact`.
+
+  **Typ-getriebenes Rendering:** Der Vertrag bleibt, aber `dense` rendert von den Typ-Slots nur den Title. `metaAdornment` (also `ItemMetaRow`, `ItemTimeRange`, `ItemProfileMeta` und Geschwister) wird nicht gerendert; Caller legen in `dense` keinen `ItemTypeBadge` in den `headerAdornment`-Slot — eine Matrix-Zelle trägt ihn nicht. Die Slots selbst (`headerAdornment`, `footerAdornment`) bleiben bestehen und werden gerendert.
+
+  **Erledigt:** `completed` setzt ein „✓ " vor den Title (plus `sr-only`-Text „Erledigt: ") und dimmt die ganze Karte auf Opazität 0.55. Erledigtes verschwindet nicht, es tritt zurück. Was „erledigt" heißt, entscheidet die Fläche — das Toolkit zeigt es nur an. Der Prop gilt für alle Dichten.
+
+  **Tags:** `dense` zeigt **keine** Tags. Ein Farbpunkt ohne Namen wäre eine zweite Tag-Darstellung neben `TagChip` und verletzt die Regel aus [07-tags.md](../07-tags.md), dass das Default-Display über alle Flächen identisch ist.
 
 **Default-Body:** Author-Row (Avatar + Name + `RelativeTime`), Title, Description (`data.content ?? data.description`, max 4 Zeilen), Tags (chips, top-level `item.tags`, Color via `getTagColor`).
 
@@ -465,13 +478,28 @@ Zwei Render-Modi je nach `onClick`:
 **Zweck:** Overlapping Avatar-Stack mit kompakter Namens-Zusammenfassung. Belongs in `footerAdornment`. Rendert `null` bei leerer User-Liste.
 
 ```ts
+type ItemAssigneeUser = User & { variant?: "solid" | "outline" }
+
 interface ItemAssigneesProps {
-  users: readonly User[]
+  users: readonly ItemAssigneeUser[]
+  /** `sm` (Default) mit Namens-Summary, `xs` nur Avatare (für `dense`). */
+  size?: "sm" | "xs"
   className?: string
 }
 ```
 
 Caller löst die User-Objekte auf (typischerweise aus `assignedTo`-Relations + Member-Liste) und übergibt sie als resolved Array. Komponente ist rein präsentational. Namens-Summary: einzelner Name, „A, B" für zwei, „A + N weitere" ab drei; voller Kommaseparierter Liste im Hover-Tooltip.
+
+**Größe:** `size="sm"` (Default) — Avatare 5×5 plus Namens-Summary. `size="xs"` — Avatare 14 px, Initialen 6.5 px fett, Überlappung 4 px, heller Ring 1.5 px, **ohne** Namens-Summary; die Variante für `ItemPreview density="dense"`, wo keine Textzeile mehr in die Kachel passt. Die Namen bleiben über den Tooltip erreichbar. Keine zweite Komponente, damit beide Stapel nicht auseinanderlaufen.
+
+**Anzahl:** höchstens **fünf** Avatare; ab dem sechsten stehen die übrigen Namen nur noch im Tooltip. Mehr Gesichter nebeneinander sind kein Stapel mehr, sondern ein Band.
+
+**Farbe und Stil:** Die Initialen tragen die **Personenfarbe** — `getUserColor(userId)`, dieselbe deterministische Palette wie Tags und Spaces, stabil über Geräte und Sitzungen. Jeder Eintrag in `users` wählt optional einen von zwei Stilen:
+
+- `solid` (Default) — gefüllt in der Personenfarbe, Schrift in der lesbaren Gegenfarbe (`getReadableTextColor`),
+- `outline` — heller Grund, innenliegender Ring und Schrift in der Personenfarbe.
+
+Die Stile tragen **keine Bedeutung**. Welche Aussage sie ausdrücken — „kann ich" / „will lernen" im Karabirrdt, Zusage / Vielleicht anderswo — entscheidet die App. Das Toolkit liefert nur die zwei Formen; deshalb auch keine zweite Komponente und kein Semantik-Prop.
 
 **Code:** `packages/toolkit/src/components/preview/item-{type-badge,meta-row,comment-count,assignees}.tsx`.
 

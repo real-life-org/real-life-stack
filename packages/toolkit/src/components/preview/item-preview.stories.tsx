@@ -68,8 +68,10 @@ const meta: Meta<typeof ItemPreview> = {
   title: "Module Components / ItemPreview",
   component: ItemPreview,
   decorators: [
-    (Story) => (
-      <div className="max-w-2xl mx-auto p-6 bg-background">
+    // Die Karten-Stories zeigen eine Feed-Spalte; die Dichte-Stories brauchen
+    // die ganze Breite, sonst faellt das Raster in Zeilen auseinander.
+    (Story, ctx) => (
+      <div className={ctx.parameters.breit ? "p-6 bg-background" : "max-w-2xl mx-auto p-6 bg-background"}>
         <Story />
       </div>
     ),
@@ -204,5 +206,164 @@ export const LongDescriptionClamped: Story = {
       },
     },
     author: lena,
+  },
+}
+
+/**
+ * Dieselbe Karte in allen drei Dichten nebeneinander — derselbe Vorgang,
+ * dreimal verschieden viel Platz.
+ */
+export const DreiDichten: Story = {
+  name: "Drei Dichten nebeneinander",
+  parameters: { layout: "fullscreen", breit: true },
+  render: () => {
+    const item: Item = {
+      ...taskItem,
+      data: {
+        ...taskItem.data,
+        description: "Erde umgraben und Kompost einarbeiten — bis zum Wochenende.",
+      },
+      tags: ["garten", "werkstatt", "nachbarschaft"],
+    }
+    const fuss = (dicht: boolean) => (
+      <>
+        <ItemAssignees users={[lena, anton]} size={dicht ? "xs" : "sm"} />
+        {!dicht && (
+          <div className="ml-auto">
+            <ItemCommentCount count={3} />
+          </div>
+        )}
+      </>
+    )
+    return (
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="w-[420px] space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">comfortable — Feed</p>
+          <ItemPreview item={item} author={lena} footerAdornment={fuss(false)} />
+        </div>
+        <div className="w-[276px] space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">compact — Kanban</p>
+          <ItemPreview item={item} author={null} density="compact" footerAdornment={fuss(false)} />
+        </div>
+        <div className="w-[112px] space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">dense — Matrix</p>
+          <ItemPreview item={item} author={null} density="dense" footerAdornment={fuss(true)} />
+        </div>
+      </div>
+    )
+  },
+}
+
+/**
+ * Wofuer die dichte Karte gebaut ist: zwoelf Spalten mal vier Zeilen auf
+ * einen Schirm, ohne zu scrollen.
+ */
+export const RasterZwoelfSpalten: Story = {
+  name: "Raster 12 Spalten dense",
+  parameters: { layout: "fullscreen", breit: true },
+  render: () => {
+    const spalten = [
+      "Material",
+      "Werkzeug",
+      "Termine",
+      "Orte",
+      "Leute",
+      "Geld",
+      "Technik",
+      "Garten",
+      "Kueche",
+      "Doku",
+      "Aussen",
+      "Rest",
+    ]
+    return (
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(12, 112px)" }}>
+        {spalten.map((spalte) => (
+          <div key={spalte} className="text-[10px] font-medium text-muted-foreground">
+            {spalte}
+          </div>
+        ))}
+        {Array.from({ length: 48 }, (_, i) => {
+          const item: Item = {
+            ...taskItem,
+            id: `matrix-${i}`,
+            data: {
+              ...taskItem.data,
+              title:
+                i % 3 === 0
+                  ? `Gemeinschaftsgarten ${i + 1} vorbereiten und bepflanzen`
+                  : `Aufgabe ${i + 1}`,
+            },
+          }
+          return (
+            <ItemPreview
+              key={item.id}
+              item={item}
+              author={null}
+              density="dense"
+              // Jede vierte gilt als erledigt: Haekchen plus gedimmte Kachel.
+              completed={i % 4 === 3}
+              footerAdornment={
+                <ItemAssignees
+                  users={
+                    i % 2 === 0
+                      ? [lena, { ...anton, variant: "outline" as const }]
+                      : [lena]
+                  }
+                  size="xs"
+                />
+              }
+              onClick={() => console.log("click", item.id)}
+            />
+          )
+        })}
+      </div>
+    )
+  },
+}
+
+/**
+ * Zwei Avatar-Stile, keine Bedeutung: Das Karabirrdt liest gefuellt als „kann
+ * ich" und umrandet als „will lernen"; eine andere App liest sie als Zusage
+ * und Vielleicht. Das Toolkit liefert nur die beiden Stile.
+ */
+export const AvatarStile: Story = {
+  name: "Zugewiesene — gefuellt und umrandet",
+  parameters: { layout: "fullscreen", breit: true },
+  render: () => {
+    const leute = [lena, anton, { id: "user-emil", displayName: "Emil Kranz" }]
+    return (
+      <div className="flex flex-wrap items-start gap-8">
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">gefuellt (Default)</p>
+          <ItemAssignees users={leute} />
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">umrandet</p>
+          <ItemAssignees users={leute.map((u) => ({ ...u, variant: "outline" as const }))} />
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">gemischt, Groesse xs</p>
+          <ItemAssignees
+            users={[lena, { ...anton, variant: "outline" as const }, leute[2]]}
+            size="xs"
+          />
+        </div>
+        <div className="w-[112px] space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">in der Kachel</p>
+          <ItemPreview
+            item={{ ...taskItem, data: { ...taskItem.data, title: "Gemeinschaftsgarten giessen" } }}
+            author={null}
+            density="dense"
+            footerAdornment={
+              <ItemAssignees
+                users={[lena, { ...anton, variant: "outline" as const }]}
+                size="xs"
+              />
+            }
+          />
+        </div>
+      </div>
+    )
   },
 }

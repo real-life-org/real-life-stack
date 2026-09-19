@@ -3,6 +3,7 @@ export {
   DEFAULT_ACTIVE_ITEM_COLOR,
   DEFAULT_ACTIVE_ITEM_GLOW_COLOR,
   type ItemPreviewProps,
+  type ItemPreviewDensity,
 } from "./item-preview"
 export { ItemPreviewSkeleton } from "./item-preview-skeleton"
 export { MarkdownText } from "./markdown-text"
@@ -16,7 +17,11 @@ export { ItemPrivateBadge, type ItemPrivateBadgeProps } from "./item-private-bad
 export { ItemScopeBadge } from "./item-scope-badge"
 export { ItemMetaRow, formatEventRange, type ItemMetaRowProps } from "./item-meta-row"
 export { ItemCommentCount, type ItemCommentCountProps } from "./item-comment-count"
-export { ItemAssignees, type ItemAssigneesProps } from "./item-assignees"
+export {
+  ItemAssignees,
+  type ItemAssigneesProps,
+  type ItemAssigneeUser,
+} from "./item-assignees"
 export { ItemTimeRange, formatTimeRange, type ItemTimeRangeProps } from "./item-time-range"
 export {
   ItemProfileMeta,
