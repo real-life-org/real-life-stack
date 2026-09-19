@@ -73,18 +73,18 @@
    ],
    "skos:definition": [
     {
-     "@value": "Die Projektion eines Items aus seinem Home-Space. Herkunft, Aktualität und erlaubte Aktionen werden getrennt betrachtet.",
+     "@value": "Die Konstruktion des RLTP-Connectors für ein Item in mehreren Spaces: eine Kopie im zweiten Space, weil verschlüsselte Gruppen einander nicht lesen können; Herkunft, Aktualität und erlaubte Aktionen werden getrennt betrachtet. Eine zentrale Datenbank braucht keine Spiegel.",
      "@language": "de"
     },
     {
-     "@value": "The projection of an item from its home space. Origin, freshness and permitted actions are considered separately.",
+     "@value": "The RLTP connector's construction of an item in several spaces: a copy in the second space, because encrypted groups cannot read each other; origin, freshness and permitted actions are considered separately. A central database needs no mirrors.",
      "@language": "en"
     }
    ],
    "dct:source": [
     "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/09-mirror-bridge.md"
    ],
-   "skos:editorialNote": "English text: draft, not normative"
+   "skos:editorialNote": "Connector-level construction, not a layer-4 concept (2026-09-18). English text: draft, not normative."
   },
   {
    "@id": "rls:relation",
@@ -243,6 +243,70 @@
     "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/09-mirror-bridge.md"
    ],
    "rl:status": "proposed"
+  },
+  {
+   "@id": "rls:verification",
+   "@type": "skos:Concept",
+   "skos:inScheme": "rls:",
+   "skos:prefLabel": [
+    {
+     "@value": "Verifikation",
+     "@language": "de"
+    },
+    {
+     "@value": "Verification",
+     "@language": "en"
+    }
+   ],
+   "skos:definition": [
+    {
+     "@value": "Der Ablauf, in dem zwei Menschen eine Begegnung in der App festhalten, etwa per QR-Code; eine eigene Capability des Connectors. Kontakte und Verifikationen sind nicht dasselbe wie Profile.",
+     "@language": "de"
+    },
+    {
+     "@value": "The flow in which two people record an encounter in the app, for example by QR code; a capability of the connector in its own right. Contacts and verifications are not the same as profiles.",
+     "@language": "en"
+    }
+   ],
+   "dct:source": [
+    "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/03-capabilities.md",
+    "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/04-items-relations-groups-spaces.md"
+   ],
+   "rl:symbol": [
+    "EncounterVerificationCapable",
+    "VerificationDialog"
+   ],
+   "skos:editorialNote": "English text: draft, not normative"
+  },
+  {
+   "@id": "rls:multi-space-item",
+   "@type": "skos:Concept",
+   "skos:inScheme": "rls:",
+   "skos:prefLabel": [
+    {
+     "@value": "Item in mehreren Spaces",
+     "@language": "de"
+    },
+    {
+     "@value": "Item in several spaces",
+     "@language": "en"
+    }
+   ],
+   "skos:definition": [
+    {
+     "@value": "Vorgeschlagen: ein Item liegt in mehr als einem Space und hat einen Heimat-Space, der es verantwortet. Wie das gemacht wird, per Zuordnung in einer zentralen Datenbank oder per Kopie mit Brücke bei verteilten Gruppen, entscheidet der Connector.",
+     "@language": "de"
+    },
+    {
+     "@value": "Proposed: an item lies in more than one space and has a home space responsible for it. How this is done, by association in a central database or by copy with a bridge across distributed groups, is the connector's decision.",
+     "@language": "en"
+    }
+   ],
+   "dct:source": [
+    "https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/09-mirror-bridge.md"
+   ],
+   "rl:status": "proposed",
+   "skos:editorialNote": "Layer-4 term; the mirror is one construction of it. Proposed 2026-09-18."
   }
  ]
 }
