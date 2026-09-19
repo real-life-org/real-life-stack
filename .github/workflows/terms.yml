@@ -1,0 +1,27 @@
+name: terms
+
+# docs/reference/rls.skos.jsonld is the stack's concept scheme. The mappings to the other
+# parts of Real Life live in real-life-org/meta; a change here must still fit them, so the
+# register's guard runs against the working copy before it is merged.
+
+on:
+  pull_request:
+    paths: [docs/reference/rls.skos.jsonld]
+  push:
+    branches: [master]
+    paths: [docs/reference/rls.skos.jsonld]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: real-life-org/meta
+          path: meta-src            # the register, beside the working copy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: concept scheme matches the shared register
+        run: python3 meta-src/scripts/guard.py --scheme rls=docs/reference/rls.skos.jsonld
