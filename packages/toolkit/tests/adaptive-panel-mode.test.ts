@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { resolveAdaptivePanelMode } from "../src/components/layout/adaptive-panel"
+import { DEFAULT_PANEL_MODES, resolveAdaptivePanelMode } from "../src/components/layout/adaptive-panel"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
@@ -33,6 +33,19 @@ describe("Darstellung eines AdaptivePanels", () => {
 
   it("nimmt den ersten erlaubten Modus, wenn nichts Bevorzugtes dabei ist", () => {
     expect(resolveAdaptivePanelMode(["drawer"], false)).toBe("drawer")
+  })
+})
+
+// Wer keine Modi nennt, bekommt den Standard des Stacks: die schwebende Karte,
+// auf schmalen Schirmen den Drawer. Die Sidebar ist seit 19.09.2026 opt-in.
+describe("Standard, wenn keine Modi genannt sind", () => {
+  it("ist schwebende Karte und Drawer, sonst nichts", () => {
+    expect([...DEFAULT_PANEL_MODES]).toEqual(["floating", "drawer"])
+  })
+
+  it("zeigt breit die Karte und schmal den Drawer", () => {
+    expect(resolveAdaptivePanelMode([...DEFAULT_PANEL_MODES], false)).toBe("floating")
+    expect(resolveAdaptivePanelMode([...DEFAULT_PANEL_MODES], true)).toBe("drawer")
   })
 })
 
