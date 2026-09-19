@@ -9,7 +9,8 @@ const items: Item[] = [
 ]
 
 const meta: Meta<typeof ListView> = {
-  title: "RLS/Module Components/Lenses/ListView",
+  id: "rls-module-components-lenses-listview",
+  title: "RLS/Module/Gemeinsame Ansichten/Liste",
   component: ListView,
   tags: ["autodocs"],
   parameters: {

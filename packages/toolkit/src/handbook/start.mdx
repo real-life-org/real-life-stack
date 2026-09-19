@@ -1,0 +1,18 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import schemeText from '../../../../docs/reference/rls.skos.jsonld?raw';
+export const scheme = JSON.parse(schemeText);
+export const terms = scheme['@graph'].filter(n => n['@type'] === 'skos:Concept').map(n => ({ id: n['@id'], label: n['skos:prefLabel'].find(v => v['@language'] === 'de')?.['@value'], definition: n['skos:definition'].find(v => v['@language'] === 'de')?.['@value'] }));
+
+<Meta title="RLS/Einstieg/Orientierung" />
+
+# Vom Ganzen zum Detail
+
+**App → Instanz → App Shell → Space → Modul → Item-Vorschau → Detailansicht**
+
+Starte bei **App / Gemeinschaftsgarten**. Wechsle Module, öffne das Erntefest und bearbeite den Titel. Alle Darstellungen beobachten dieselbe Datenquelle. Unter **App Shell** findest du die äußere Navigation, unter **Module** ganze Arbeitsflächen, unter **Items** deren gemeinsame Inhalte.
+
+Die Begriffe des Stack mit ihren Verknüpfungen zu Netzwerk und Trust Protocol: [real-life.org/rls/v1](https://real-life.org/rls/v1/).
+
+## Gemeinsame Begriffe
+
+{terms.map(term => <section key={term.id}><h3>{term.label}</h3><p>{term.definition}</p></section>)}

@@ -3,7 +3,8 @@ import { ActionCard } from './action-card'
 import { Plus, Users, Calendar, Settings, MessageSquare } from 'lucide-react'
 
 const meta: Meta<typeof ActionCard> = {
-  title: 'RLS/Module Components/Dashboard/ActionCard',
+  id: "rls-module-components-dashboard-actioncard",
+  title: "RLS/App/Dashboard-Bausteine/ActionCard",
   component: ActionCard,
   tags: ['autodocs'],
   argTypes: {

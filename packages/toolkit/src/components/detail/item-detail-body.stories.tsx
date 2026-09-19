@@ -34,7 +34,8 @@ const META = (
  * bleiben die Aktionen in der Kopfzeile, statt in dessen Knopfleiste zu wandern.
  */
 const meta: Meta<typeof ItemDetailBody> = {
-  title: "Detail/ItemDetailBody",
+  id: "detail-itemdetailbody",
+  title: "RLS/Items/Detailansicht/Anatomie und Inhalt",
   component: ItemDetailBody,
   parameters: { layout: "centered" },
   decorators: [
