@@ -157,29 +157,33 @@ Regeln:
 4. Abgeleitete Anzeigefelder (z.B. `scope`) sind KEINE Metadaten und werden nicht gesynct.
 5. `image` MUSS eine **auflösbare** Bildquelle sein: eine Data-URL, wie sie der Space-Dialog beim Hochladen schreibt, eine absolute URL, oder ein wurzel-relativer Pfad, den `resolveAssetUrl` gegen den Basispfad der Auslieferung auflöst. Ein **bloßer Dateiname** ist unzulässig — er trägt seinen Ablageort nicht, und `resolveAssetUrl` reicht ihn unverändert durch, sodass jede Lesefläche ihn selbst zusammensetzen müsste. Der leere String bedeutet „kein Bild" und ist der Zustand nach dem Entfernen des Logos; `null` löscht den Schlüssel nach Regel 3. Für dasselbe Bild DARF es kein zweites Feld geben: `avatar` stand bis 09/2026 daneben, trug Dateinamen, wurde an genau einer Stelle mit dem Basispfad zusammengesetzt und blieb überall sonst unsichtbar — unter anderem im Space-Dialog (rls#382).
 
-### Space-Primärfarbe
+### Aussehen eines Space
 
-Jeder Space hat eine `primaryColor` — ein weiteres Space-Metadatenfeld nach obigem Muster: Wert in `Group.data.primaryColor`, Spiegelung nach `_meta.appData.primaryColor` über `updateGroup`. Anders als `image` / `modules` ist `primaryColor` kein Framework-Feld des Sync-Vokabulars, sondern ein App-Feld im offenen `appData`-Namensraum.
+Ein Space stellt sein Aussehen über **Achsen** ein, nicht über einzelne Farbwerte. Die Achsen sind App-Felder im offenen `appData`-Namensraum nach obigem Muster (Wert in `Group.data`, Spiegelung nach `_meta.appData` über `updateGroup`): `primaryColor` (die Akzentfarbe) und `tint` (die Tönung der Flächen). Aus ihnen leitet das Toolkit den Tokensatz ab; die Kaskade Space → Instanz → Toolkit und die Ableitung definiert [11](11-runtime-config-und-branding.md).
 
 Regeln:
 
-1. `Group.data.primaryColor` ist die kanonische Quelle; `_meta.appData.primaryColor` ist die synchronisierte Projektion. `primaryColor` MUSS ein Hex-Farbwert der Form `#rrggbb` sein (passend zu `TAG_PALETTE.accent` in `packages/toolkit/src/lib/utils.ts`, zum Beispiel `#2563eb`).
+1. `Group.data.primaryColor` ist die kanonische Quelle; `_meta.appData.primaryColor` ist die synchronisierte Projektion. `primaryColor` MUSS ein Hex-Farbwert der Form `#rrggbb` sein. Jede Farbe ist zulässig; die Ableitung macht aus jeder eine brauchbare Skala.
 2. Beim Logo-Upload MUSS der Client die dominanteste Farbe des Logos extrahieren und das Ergebnis in `Group.data.primaryColor` cachen. Die Extraktion läuft client-seitig genau einmal beim Upload, nicht bei jedem Render und nicht auf jedem Gerät neu.
-3. Ohne Logo MUSS `primaryColor` deterministisch aus der Space-ID abgeleitet werden, analog zu `getTagColor` / `getTagAccentColor` in `packages/toolkit/src/lib/utils.ts`. Die Ableitung MUSS über Geräte und Sessions stabil sein und DARF NICHT echtes Random verwenden.
+3. Ohne Logo MUSS `primaryColor` deterministisch aus der Space-ID abgeleitet werden, analog zu `getTagColor` / `getTagAccentColor` in `packages/toolkit/src/lib/utils.ts`. Die Ableitung MUSS über Geräte und Sessions stabil sein und DARF NICHT echtes Random verwenden. Ein Space erbt seine Akzentfarbe also **nicht** von der Instanz — jeder Space hat seine eigene.
 4. Wird ein Logo entfernt, SOLL `primaryColor` wieder auf den deterministischen ID-Fallback zurückfallen.
 5. `primaryColor` ist Cache und Default, kein Pflicht-Eingabefeld. Fehlt der Wert, MÜSSEN Leseflächen den deterministischen ID-Fallback berechnen.
+6. `Group.data.tint` ist eine Zahl 0–1. Fehlt sie, erbt der Space die Tönung der Instanz. Eine explizite 0 ist ein Wert („keine Tönung, obwohl die Instanz eine hat") und wird gespeichert; `null` löscht den Schlüssel (Regel 3 der Space-Metadaten) und stellt die Vererbung wieder her. Ein Wert außerhalb des Bereichs wird gekappt, ein anderer Typ ignoriert.
 
-### Verwendung der Primärfarbe
+### Wirkung des Aussehens
 
-Solange ein Space aktiv ist, ist seine `primaryColor` die Primär-/Akzentfarbe der App und gibt jedem Space eine eigene visuelle Identität.
+Solange ein Space aktiv ist, speisen seine Achsen den Tokensatz der App und geben ihm eine eigene visuelle Identität — Akzent **und** Stimmung der Flächen.
 
 Regeln:
 
-1. Während ein Space aktiv ist, SOLL `primaryColor` die Primär-/Akzent-Tokens der App speisen (Primär-Buttons, Fokus-Ringe, aktive Navigations- und Sidebar-Items, Hover-Tints). Sie SOLL am App-Root gesetzt werden, sodass auch portalte Flächen (Dialoge, Dropdowns) sie übernehmen. Hintergrund-, Karten- und Vordergrundflächen bleiben unberührt — `primaryColor` ist ein Akzent, keine vollflächige Themefarbe.
-2. Ist kein Space aktiv (Overview „Mein Netzwerk", No-Access), SOLL die Standard-Markenfarbe gelten.
-3. Map-Marker KÖNNEN `primaryColor` als Default-Markerfarbe verwenden, wenn kein item- oder tag-spezifischer Akzent greift (Tag-Akzent über `getTagAccentColor` hat Vorrang).
-4. UI-Flächen MÜSSEN ohne `primaryColor` robust bleiben und den deterministischen ID-Fallback verwenden.
-5. Kontraste (Text/Icon auf Akzentfläche) MÜSSEN lesbar bleiben; Flächen SOLLEN nicht annehmen, dass `primaryColor` hell oder dunkel ist.
+1. Während ein Space aktiv ist, MÜSSEN seine Achsen (nach der Kaskade in [11](11-runtime-config-und-branding.md)) den Tokensatz der App speisen: Akzent, Fokusring, aktive Navigations- und Sidebar-Elemente aus der Akzentskala; Hintergrund, Karten, Rahmen und Text aus der neutralen Skala, die der Tönung folgt. Der Satz wird am App-Root gesetzt, sodass auch portalte Flächen ihn übernehmen.
+2. Ist kein Space aktiv (Übersicht „Mein Netzwerk", No-Access), gelten die Achsen der Instanz.
+3. Fehler-, Warn- und Diagrammfarben gehören nicht dem Space ([11](11-runtime-config-und-branding.md), Regel 4).
+4. Map-Marker KÖNNEN `primaryColor` als Default-Markerfarbe verwenden, wenn kein item- oder tag-spezifischer Akzent greift (Tag-Akzent über `getTagAccentColor` hat Vorrang).
+5. UI-Flächen MÜSSEN ohne gesetzte Achsen robust bleiben (ID-Fallback, Instanz-Tönung).
+6. Text auf Flächen MUSS 4.5:1 halten, der Fokusring 3:1 — für jede Farbe; die Ableitung garantiert das. Die Schrift auf der Akzentfläche ist **weiß**, schwarz nur auf sehr hellen Akzenten: eine Gestaltungsentscheidung, kein Kontrastoptimum. Ihr Kontrast wird gemessen und im Space angezeigt, nicht erzwungen.
+7. Im dunklen Schema MUSS die Akzentfläche hell genug sein, um auf dunklem Grund zu wirken; die Ableitung hebt dunkle Akzente dort an. Im hellen Schema bleibt die Akzentfarbe exakt, wie gewählt.
+8. Hell oder dunkel entscheidet der Mensch am Gerät. Ein Space DARF das Schema nicht vorschreiben.
 
 ## Profile
 
