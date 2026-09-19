@@ -1,0 +1,148 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="RLS/Grundlagen/Alle Hooks" />
+
+# Alle Hooks
+
+Jede Fläche im Real Life Stack fragt Hooks, nie den Connector. Diese Seite listet
+alle, die das Toolkit nach außen gibt, mit der Frage, die sie beantworten, und
+mit dem, was passiert, wenn der Connector die nötige Fähigkeit nicht hat.
+
+**Die Spalte „ohne Fähigkeit" ist die wichtigste.** Lesende Hooks antworten leer:
+„keine Gruppen", „niemand angemeldet", „null Kommentare" sind wahre Antworten,
+kein Fehler. Schreibende Hooks scheitern beim Aufruf, nicht beim Vorbereiten —
+einen Knopf darf jede Fläche bauen. Wo dennoch „wirft beim Rendern" steht, ist
+das Absicht: Die Fläche kann ohne diese Fähigkeit gar nicht bestehen.
+
+Lebende Beispiele stehen unter [Grundlagen → Hooks](?path=/story/rls-grundlagen-hooks--lesen).
+
+## Items lesen
+
+| Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
+|---|---|---|---|
+| `useItems(filter?)` | `{data, isLoading}` | Welche Items passen zu diesem Filter, und läuft die Liste noch ein? | — |
+| `useItem(id)` | `{data, isLoading}` | Gibt es dieses eine Item, und ist „nicht gefunden" schon entschieden? | — |
+| `useItemsWithDraft(filter?)` | `{data, isLoading}` | Dieselbe Liste, mit dem gerade getippten Entwurf schon als Karte darin. | — |
+| `useModuleFilteredItems(items)` | `Item[]` | Genau das, was die Steuerleiste im Modulkopf verspricht: Filter plus Suchtext. | wirft ohne `FilterProvider` |
+| `useRelatedItems(id, predicate)` | `{data}` | Welche Items hängen über dieses Prädikat an einem Item? | leer |
+| `useActivity(scope)` | `{data, supported}` | Was ist in diesem Space zuletzt passiert? | leer, `supported: false` |
+| `useNotifications()` | `{notifications, badgeCount, …}` | Was gibt es für mich Neues, und wieviel ist ungelesen? | leer |
+
+## Items schreiben
+
+| Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
+|---|---|---|---|
+| `useCreateItem()` | `{mutate}` | Ein neues Item anlegen. | wirft beim Aufruf |
+| `useUpdateItem()` | `{mutate}` | Ein bestehendes Item ändern. | wirft beim Aufruf |
+| `useDeleteItem()` | `{mutate}` | Ein Item löschen. | wirft beim Aufruf |
+| `useItemEditor(options)` | `{isOpen, mode, submit, remove, …}` | Den Composer öffnen und eine Eingabe als Item speichern, samt Space-Zuordnung. | wirft beim Aufruf |
+| `useDraftItem()` | `Item \| null` | Was tippt gerade jemand, das die Module als Vorschau zeigen sollen? | `null` ohne Provider |
+| `useSetDraftItem()` | `(draft) => void` | Den laufenden Entwurf veröffentlichen oder verwerfen. | still untätig |
+| `useUnsavedChanges()` | `{dirty, setDirty} \| null` | Gibt es ungespeicherte Eingaben, die ein Verlassen abfangen müssen? | `null` ohne Provider |
+| `useSetUnsavedDirty()` | `(dirty) => void` | Melden, dass etwas Ungespeichertes im Formular steht. | still untätig |
+
+## Menschen, Spaces und Mitgliedschaft
+
+| Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
+|---|---|---|---|
+| `useOptionalCurrentUser()` | `{data, isLoading}` | Wer bin ich, wenn überhaupt jemand? | `null` |
+| `useCurrentUser()` | `{data, isLoading}` | Wer bin ich? Für Flächen, die ohne Anmeldung sinnlos wären. | wirft beim Rendern |
+| `useAuthState()` | `AuthState` | Angemeldet, nicht angemeldet, oder läuft es noch? | `unauthenticated` |
+| `useGroups()` | `{data, isLoading}` | Welche Spaces sehe ich? | leer |
+| `useCurrentGroup()` | `Group \| null` | In welchem Space bin ich gerade? | `null` |
+| `usePersonalGroupId()` | `string \| null` | Wohin gehört ein Item, das mit niemandem geteilt wird? | `null` |
+| `useMembers(groupId)` | `{data, isLoading}` | Wer gehört zu diesem Space, oder mit `null` zu allen meinen? | leer |
+| `useCreateGroup()` | `(name, data?) => Promise` | Einen Space anlegen. | wirft beim Aufruf |
+| `useUpdateGroup()` | `(id, patch) => Promise` | Namen oder Daten eines Space ändern. | wirft beim Aufruf |
+| `useDeleteGroup()` | `(id) => Promise` | Einen Space löschen. | wirft beim Aufruf |
+| `useInviteMember()` | `(groupId, userId) => Promise` | Jemanden in einen Space einladen. | wirft beim Aufruf |
+| `useRemoveMember()` | `(groupId, userId) => Promise` | Jemanden aus einem Space entfernen. | wirft beim Aufruf |
+| `useContacts()` | `{contacts, addContact, …}` | Wen kenne ich, wer wartet auf Bestätigung? | leer, Aktionen untätig |
+| `useResolvedUsers(ids)` | `Map<string, User>` | Zu welchen Ids kenne ich einen Namen? | leere Karte |
+| `useItemAuthor(item, users)` | `User \| undefined` | Wer hat dieses Item verfasst? | — |
+| `useOpenProfile()` | `(userId) => void` | Das Profil eines Menschen öffnen. | still untätig |
+| `useVerification()` | `{supported, createChallenge, …}` | Zwei Menschen, die sich real begegnen, gegenseitig bestätigen. | leer, `supported: false` |
+| `useIncomingEvents()` | `{current, dismiss, …}` | Welcher hereingekommene Vorgang wartet auf Antwort? | wirft ohne Provider |
+
+## Rechte und Fähigkeiten
+
+| Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
+|---|---|---|---|
+| `useItemPermissions(item)` | `{canEdit, canDelete}` | Darf ich hier das ⋮-Menü zeigen? | beides `false` |
+| `useCanCreate(spaceId, type?)` | `boolean` | Darf ich in diesem Space etwas anlegen? | `false` |
+| `useConnector()` | `DataInterface` | Welcher Datenzugang gilt hier? | wirft ohne Provider |
+| `useOptionalConnector()` | `DataInterface \| null` | Dasselbe für Flächen, die auch ohne Datenzugang rendern. | `null` |
+| `useFeature(pfad)` | `boolean` | Ist dieses Merkmal eingeschaltet? | `false` |
+
+Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
+`isWritable`, `hasGroups`, `isAuthenticatable`, `hasRelations`, `hasItemGroups`,
+`hasActivityLog`, `hasRelationRecords`, `hasMessaging`, `hasAuthorization`.
+
+## Beziehungen
+
+| Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
+|---|---|---|---|
+| `useComments(itemId)` | `{comments, createComment, canComment}` | Was wurde gesagt, von wem, und darf ich antworten? | leer, Schreiben untätig |
+| `useCommentCount(itemId)` | `number` | Gibt es zu dieser Karte ein Gespräch? | `0` |
+| `useReplies(commentId)` | `{replies, isLoading}` | Welche Antworten hängen an diesem Kommentar? | leer |
+| `useReactions(itemId)` | `{reactions, react, canReact}` | Wie wurde reagiert, und kann ich meine Reaktion setzen? | leer, `react` untätig |
+| `useReactionUsers(itemId)` | `{users, isLoading}` | Wer hat mit welchem Emoji reagiert? | leer |
+| `useVotes(itemId)` | `{summary, vote, canVote}` | Wie steht die Resonanz, und wie stimme ich ab? | leer; ohne Signaturprüfung zählt keine Stimme |
+| `useVoteUsers(itemId)` | `{users, isLoading}` | Wer hat wie gestimmt? | leer |
+| `useRelationRecords(filter)` | `{data, supported}` | Welche signierten Beziehungsdatensätze passen? | leer, `supported: false` |
+| `useRelationNeighbors(ref)` | `{data, supported}` | Welche Items liegen im Graph daneben? | leer |
+| `useVerifiedRelationRecords(records)` | `RelationRecord[]` | Welche davon sind kryptografisch gedeckt? | leer, auch während der Prüfung |
+
+## Flächen und Zustand der Oberfläche
+
+| Hook | Antwortet | Beantwortet | Ohne Provider |
+|---|---|---|---|
+| `useModulePanel()` | `{current, open, close}` | Ein Panel neben dem Modul öffnen. Es gibt nur eines. | wirft |
+| `useOptionalModulePanel()` | `… \| null` | Dasselbe für Komponenten ohne Panel-Hülle. | `null` |
+| `useSharedFilter()` | `{value, searchText, setSearchText, clear}` | Der app-weite Filter, der den Modulwechsel überdauert. | wirft |
+| `useOptionalSharedFilter()` | `… \| null` | Dasselbe, wenn die Fläche auch allein steht. | `null` |
+| `useModuleLayout()` | `ModuleLayout \| null` | Welche Geometrie gibt die Modulfläche vor? | `null` |
+| `useModuleContentClass()` | `string` | In welcher Breite steht der Inhalt? | Vorgabe |
+| `useOptionalModuleHead()` | `… \| null` | Wohin portalt ein Modul seine Steuerleiste? | `null` |
+| `usePanelEdges()` | `{left, right}` | Wieviel verdeckt ein offenes Panel gerade? | — |
+| `useLocationPick()` | `{isPicking, startPick, …}` | Aus dem Formular heraus einen Ort auf der Karte wählen. | `canPick: false` |
+| `useFieldLink(item, feld)` | `(() => void) \| null` | Führt dieses Feld zu einer Sicht, die es darstellt? | `null` |
+| `useCommentLink(itemId)` | `(() => void) \| null` | Führt der Kommentar-Hinweis ins Eingabefeld? | `null` |
+| `useTagLink(tag)` | `{onClick, active} \| null` | Filtert ein Klick auf dieses Tag die Ansicht? | `null` |
+
+## Umgebung
+
+| Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
+|---|---|---|---|
+| `useColorScheme()` | `"light" \| "dark"` | Gilt gerade hell oder dunkel? | — |
+| `useIsMobile()` | `boolean` | Schmaler als 768px? | — |
+| `useIsCompact()` | `boolean` | Unter 1024px, wo das Panel zur Schublade wird? | — |
+| `useInitialSync()` | `{active, loadedGroups, expectedGroups}` | Läuft die Erstbefüllung noch, darf „nichts da" gesagt werden? | dauerhaft `active: false` |
+| `useRelayStatus()` | `{state, isConnected, pendingCount}` | Hängt dieses Gerät am Relay, wartet Ungesendetes? | wirft beim Rendern |
+| `useMarkNotificationsSeen(result)` | — | Die gesehene Grenze einmal pro Öffnen vorrücken. | still untätig |
+
+## Item-Eigenschaften
+
+| Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
+|---|---|---|---|
+| `useItemTags(item)` | `string[]` | Welche Tags trägt dieses Item? | — |
+| `useItemDateHint(item)` | `{start, end, isAllDay, hasTime}` | Wann findet es statt, ganztägig oder mit Uhrzeit? | — |
+| `useItemPosition(item)` | `{isPlace, point}` | Liegt es an einem Ort, und wo setze ich den Marker? | — |
+| `useItemGroupColorResolver(scope)` | `(item) => string` | In welcher Farbe erscheint ein Item, nach seinem Space? | Palettenfarbe |
+| `useItemGroupResolver(scope)` | `(item) => Group \| undefined` | Aus welchem Space stammt es? | `undefined` |
+| `useItemPrivacyResolver()` | `(item) => boolean` | Ist es privat, also mit niemandem geteilt? | immer `false` |
+
+## Paare, die man verwechseln kann
+
+- `useCurrentUser` und `useOptionalCurrentUser` unterscheiden sich nur darin, ob
+  eine fehlende Anmeldung wirft oder `null` liefert. Dasselbe Muster bei
+  `useConnector`, `useSharedFilter`, `useModulePanel`.
+- `useComments` liefert die Antworten bereits mit; `useReplies` lädt dieselbe
+  Liste ein zweites Mal.
+- `useReactions` trägt in `reactions[].userIds` schon, was `useReactionUsers`
+  erneut holt.
+- `useCommentCount` ist die billige Hälfte von `useComments`.
+- `useItems` und `useItemsWithDraft` sind dieselbe Liste, letztere mit dem
+  laufenden Entwurf.
+- `useIsMobile` und `useIsCompact` sind dieselbe Mechanik mit anderer Schwelle:
+  768px für die Navigation, 1024px für die Panelform.

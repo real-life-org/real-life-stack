@@ -89,3 +89,21 @@ describe("Nur-Lese-Connector", () => {
     await expect(async () => create?.("Neu")).rejects.toThrow("does not support groups")
   })
 })
+
+describe("Schreiben vorbereiten", () => {
+  it("baut die Mutation, ohne dass der Nur-Lese-Connector die Fläche mitreißt", async () => {
+    // Eine Fläche darf ihren Knopf bauen; erst das Drücken ist der Fehler.
+    // Vorher warf schon useCreateItem im Render und nahm alles mit.
+    const { useCreateItem, useUpdateItem, useDeleteItem } = await import("../src/hooks/use-mutations")
+    let create: ((i: never) => Promise<unknown>) | undefined
+    const data = await render(() => {
+      const c = useCreateItem()
+      const u = useUpdateItem()
+      const d = useDeleteItem()
+      create = c.mutate as never
+      return <output data-ready={String([c, u, d].every((m) => typeof m.mutate === "function"))} />
+    })
+    expect(data).toMatchObject({ ready: "true" })
+    await expect(async () => create?.({} as never)).rejects.toThrow("does not support writing")
+  })
+})
