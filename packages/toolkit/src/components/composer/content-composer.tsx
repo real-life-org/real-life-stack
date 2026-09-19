@@ -118,6 +118,8 @@ export interface ContentTypeConfig {
   groupOptions?: GroupOption[]
   defaultGroup?: string
   groupRequired?: boolean
+  /** Where this type keeps its free text. Default: `content` for `post`, else `description`. */
+  textField?: "content" | "description"
   /**
    * How this type links people: the relation predicate the `people` widget
    * maps to (task → `assignedTo`, event → `invited`, …). Declared per type so

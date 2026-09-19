@@ -15,7 +15,7 @@ export const seed: MockConnectorSeed = {
       createdAt: '2026-09-01T10:00:00Z',
       data: {
         title: 'Erntefest',
-        content:
+        description:
           'Wir teilen unsere Ernte. Bring eine Schüssel und eine Idee mit.',
         start: '2026-09-19T14:00:00+02:00',
         end: '2026-09-19T18:00:00+02:00',
@@ -30,7 +30,7 @@ export const seed: MockConnectorSeed = {
       createdAt: '2026-09-02T10:00:00Z',
       data: {
         title: 'Beete gießen',
-        content: 'Wer übernimmt die Abendrunde?',
+        description: 'Wer übernimmt die Abendrunde?',
         status: 'todo',
       },
     },
@@ -41,7 +41,7 @@ export const seed: MockConnectorSeed = {
       createdAt: '2026-09-03T10:00:00Z',
       data: {
         title: 'Reparaturtreff',
-        content: 'Gemeinsam Dinge wieder nutzbar machen.',
+        description: 'Gemeinsam Dinge wieder nutzbar machen.',
         start: '2026-09-20T10:00:00+02:00',
         position: { type: 'Point', coordinates: [13.41, 52.522] },
       },

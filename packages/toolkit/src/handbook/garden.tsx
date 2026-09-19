@@ -21,7 +21,7 @@ import { ItemPreview } from '../components/preview/item-preview'
 import { ItemDetailBody } from '../components/detail/item-detail-body'
 import { ItemDetailView } from '../components/detail/item-detail-view'
 import type { ContentTypeConfig } from '../components/composer/content-composer'
-import type { ItemEditorMapper } from '../hooks/use-item-editor'
+import { createComposerMapping } from '../components/composer/composer-mapping'
 import { CalendarView } from '../components/calendar/calendar-view'
 import { MapView } from '../components/map/map-view'
 import { MapLibreMapAdapter } from '../maplibre'
@@ -73,29 +73,8 @@ const contentTypeFor = (type: string): ContentTypeConfig => ({
   icon: Calendar,
   defaultWidgets: ['title', 'text', 'date'],
 })
-// Composer ↔ item, the small version: title, text (stored as content), start, end,
-// rrule. Only these fields are written; a field the person cleared is removed.
-// The reference app keeps the full mapping in apps/reference/composer-mapping.ts;
-// the toolkit has none of its own yet.
-const EDITED_FIELDS = ['title', 'start', 'end', 'rrule'] as const
-const gardenMapper: ItemEditorMapper = ({ data }, { existingItem }) => {
-  if (!existingItem) return null
-  const next: Record<string, unknown> = { ...existingItem.data }
-  for (const key of EDITED_FIELDS) {
-    if (data[key]) next[key] = data[key]
-    else delete next[key]
-  }
-  if (data.text) next.content = data.text
-  else delete next.content
-  return { type: existingItem.type, data: next }
-}
-const gardenEditData = (item: { data: Record<string, unknown> }) => ({
-  ...(typeof item.data.title === 'string' ? { title: item.data.title } : {}),
-  ...(typeof item.data.content === 'string' ? { text: item.data.content } : {}),
-  ...(typeof item.data.start === 'string' ? { start: item.data.start } : {}),
-  ...(typeof item.data.end === 'string' ? { end: item.data.end } : {}),
-  ...(typeof item.data.rrule === 'string' ? { rrule: item.data.rrule } : {}),
-})
+// Composer ↔ item comes from the toolkit; the garden only names its types.
+const mapping = createComposerMapping(['event', 'task'].map(contentTypeFor))
 export function GardenDemo({
   readOnly = false,
   initialModule = 'Feed',
@@ -255,8 +234,8 @@ function Garden({
               />
             )}
             contentTypes={[contentTypeFor(item.type)]}
-            mapper={gardenMapper}
-            editInitialData={gardenEditData}
+            mapper={mapping.mapSubmission}
+            editInitialData={mapping.editInitialData}
             composerProps={{ showVisibility: false }}
             onClose={() => setSelected(undefined)}
           />
