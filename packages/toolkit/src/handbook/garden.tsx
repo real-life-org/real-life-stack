@@ -204,7 +204,7 @@ function Garden({
           setSelected(undefined)
           setEditing(false)
         }}
-        allowedModes={['sidebar', 'drawer']}
+        allowedModes={['floating', 'drawer']}
       >
         {item && (
           <div className="p-5">

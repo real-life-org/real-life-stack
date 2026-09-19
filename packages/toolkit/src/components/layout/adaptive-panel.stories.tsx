@@ -16,15 +16,17 @@ const meta: Meta<typeof AdaptivePanel> = {
 export default meta
 type Story = StoryObj<typeof AdaptivePanel>
 
+/** The stack's standard: a floating card beside the content on wide screens, a drawer below 1024px. */
+const STANDARD_MODES: PanelMode[] = ["floating", "drawer"]
+
 /** Sample content used across stories */
 function SampleContent({ title = "Panel-Inhalt" }: { title?: string }) {
   return (
     <div className="space-y-4 p-4">
       <h2 className="text-lg font-semibold">{title}</h2>
       <p className="text-sm text-muted-foreground">
-        Das AdaptivePanel wechselt je nach Viewport-Breite automatisch zwischen Sidebar, Drawer und Modal.
-        Unter 1024px wird der Drawer verwendet, darüber die Sidebar. Über den Mode-Switch-Button kann manuell
-        zum Modal gewechselt werden.
+        Das AdaptivePanel wählt seine Form nach der Viewport-Breite: ab 1024px die schwebende Karte
+        neben dem Inhalt, darunter der Drawer von unten. Ein Modal gibt es nur, wo es ausdrücklich erlaubt ist.
       </p>
       <div className="space-y-2">
         {Array.from({ length: 8 }).map((_, i) => (
@@ -40,7 +42,7 @@ function SampleContent({ title = "Panel-Inhalt" }: { title?: string }) {
 
 /** Wrapper that provides open/close state and a trigger button */
 function PanelDemo({
-  allowedModes,
+  allowedModes = STANDARD_MODES,
   side,
   sidebarWidth,
   sidebarMinWidth,
@@ -72,7 +74,7 @@ function PanelDemo({
       <div className="max-w-2xl mx-auto space-y-4">
         <h1 className="text-xl font-bold">AdaptivePanel Demo</h1>
         <p className="text-sm text-muted-foreground">
-          Fensterbreite ändern, um zwischen Sidebar (&ge;1024px) und Drawer (&lt;1024px) zu wechseln.
+          Fensterbreite ändern, um zwischen schwebender Karte (&ge;1024px) und Drawer (&lt;1024px) zu wechseln.
         </p>
         <Button onClick={() => setOpen(true)}>Panel öffnen</Button>
 
@@ -85,7 +87,7 @@ function PanelDemo({
             <div key={i} className="rounded-lg border p-4">
               <p className="font-medium">Seiteninhalt {i + 1}</p>
               <p className="text-sm text-muted-foreground">
-                Dieser Inhalt wird verdrängt wenn die Sidebar geöffnet ist.
+                Dieser Inhalt rückt ein, wenn die Karte geöffnet ist.
               </p>
             </div>
           ))}
@@ -111,34 +113,17 @@ function PanelDemo({
   )
 }
 
-export const Default: Story = {
-  render: () => <PanelDemo />,
-}
-
-export const Sidebar: Story = {
-  render: () => (
-    <PanelDemo allowedModes={["sidebar"]} title="Nur Sidebar" />
-  ),
-}
-
-export const SidebarLeft: Story = {
-  render: () => (
-    <PanelDemo allowedModes={["sidebar"]} side="left" title="Sidebar Links" />
-  ),
-}
-
 /**
- * Die schwebende Detail-Karte: liegt als Karte ueber dem Inhalt statt als
- * Spalte daneben, rueckt ihn aber genauso ein (360px + 2x16px Rand).
+ * Der Standard im Stack: die schwebende Karte liegt über dem Inhalt statt als
+ * Spalte daneben und rückt ihn genauso ein (360px + 2x16px Rand); unter 1024px
+ * der Drawer.
  */
-export const Floating: Story = {
-  render: () => <PanelDemo allowedModes={["floating", "drawer"]} title="Schwebende Karte" />,
+export const Default: Story = {
+  render: () => <PanelDemo title="Schwebende Karte" />,
 }
 
 export const FloatingLeft: Story = {
-  render: () => (
-    <PanelDemo allowedModes={["floating", "drawer"]} side="left" title="Schwebend, links" />
-  ),
+  render: () => <PanelDemo side="left" title="Schwebend, links" />,
 }
 
 export const Drawer: Story = {
@@ -168,8 +153,8 @@ export const WithPinToggle: Story = {
           explizites Schließen (X-Button oder Drawer-Herunterziehen) geschlossen.
         </p>
         <p className="text-sm text-muted-foreground">
-          Bei der Sidebar verschwindet der Backdrop nicht (da es keinen gibt),
-          beim Drawer wird der Backdrop entfernt und die Seite bleibt interaktiv.
+          Bei der schwebenden Karte gibt es keinen Backdrop; beim Drawer wird er
+          entfernt und die Seite bleibt interaktiv.
         </p>
         <div className="rounded-lg bg-muted p-3">
           <p className="text-sm font-medium">Beispiel-Aktion</p>
@@ -189,13 +174,13 @@ export const PinnedByDefault: Story = {
   ),
 }
 
-export const CustomSidebarWidth: Story = {
+export const CustomWidth: Story = {
   render: () => (
     <PanelDemo
       sidebarWidth="500px"
       sidebarMinWidth="350px"
       sidebarMaxWidth="700px"
-      title="Breite Sidebar (500px)"
+      title="Breite Karte (500px)"
     />
   ),
 }
@@ -214,28 +199,6 @@ export const CustomDrawerHeight: Story = {
   ),
 }
 
-export const SidebarAndModal: Story = {
-  render: () => (
-    <PanelDemo
-      allowedModes={["sidebar", "modal"]}
-      title="Sidebar + Modal"
-    >
-      <div className="space-y-4 p-4">
-        <h2 className="text-lg font-semibold">Sidebar ↔ Modal</h2>
-        <p className="text-sm text-muted-foreground">
-          Kein Drawer erlaubt — auf schmalen Viewports fällt das Panel auf Modal zurück.
-          Der Mode-Switch-Button erlaubt das Wechseln zwischen Sidebar und Modal.
-        </p>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="rounded-lg bg-muted p-3">
-            <p className="text-sm">Inhalt {i + 1}</p>
-          </div>
-        ))}
-      </div>
-    </PanelDemo>
-  ),
-}
-
 export const ScrollableContent: Story = {
   render: () => (
     <PanelDemo title="Scrollbarer Inhalt">
@@ -248,7 +211,7 @@ export const ScrollableContent: Story = {
           <div key={i} className="rounded-lg bg-muted p-3">
             <p className="text-sm font-medium">Element {i + 1}</p>
             <p className="text-xs text-muted-foreground">
-              Langer Inhalt zum Testen des Scroll-Verhaltens im Drawer und in der Sidebar.
+              Langer Inhalt zum Testen des Scroll-Verhaltens im Drawer und in der Karte.
             </p>
           </div>
         ))}
@@ -290,6 +253,7 @@ export const WithFormContent: Story = {
         <AdaptivePanel
           open={open}
           onClose={() => setOpen(false)}
+          allowedModes={STANDARD_MODES}
           pinned={pinned}
           onPinnedChange={setPinned}
         >

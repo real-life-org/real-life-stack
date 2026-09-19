@@ -236,20 +236,26 @@
     "storyIds": [
       "rls-app-shell-layout-adaptivepanel--docs",
       "rls-app-shell-layout-adaptivepanel--default",
-      "rls-app-shell-layout-adaptivepanel--sidebar",
-      "rls-app-shell-layout-adaptivepanel--sidebar-left",
-      "rls-app-shell-layout-adaptivepanel--floating",
       "rls-app-shell-layout-adaptivepanel--floating-left",
       "rls-app-shell-layout-adaptivepanel--drawer",
       "rls-app-shell-layout-adaptivepanel--modal",
       "rls-app-shell-layout-adaptivepanel--with-pin-toggle",
       "rls-app-shell-layout-adaptivepanel--pinned-by-default",
-      "rls-app-shell-layout-adaptivepanel--custom-sidebar-width",
       "rls-app-shell-layout-adaptivepanel--custom-drawer-height",
-      "rls-app-shell-layout-adaptivepanel--sidebar-and-modal",
       "rls-app-shell-layout-adaptivepanel--scrollable-content",
-      "rls-app-shell-layout-adaptivepanel--with-form-content"
-    ]
+      "rls-app-shell-layout-adaptivepanel--with-form-content",
+      "rls-app-shell-layout-adaptivepanel--custom-width"
+    ],
+    "removed": {
+      "why": "Die Sidebar ist nicht mehr der Standard des Stacks; die schwebende Karte ersetzt sie (19.09.2026).",
+      "storyIds": [
+        "rls-app-shell-layout-adaptivepanel--sidebar",
+        "rls-app-shell-layout-adaptivepanel--sidebar-left",
+        "rls-app-shell-layout-adaptivepanel--floating",
+        "rls-app-shell-layout-adaptivepanel--custom-sidebar-width",
+        "rls-app-shell-layout-adaptivepanel--sidebar-and-modal"
+      ]
+    }
   },
   {
     "file": "packages/toolkit/src/components/layout/bottom-nav.stories.tsx",
