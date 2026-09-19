@@ -14,6 +14,11 @@ Dein Ansatz funktioniert hervorragend für GraphQL. Aber für den WoT-Connector 
 
 Wenn die Counts am Item angereichert werden, muss der Connector bei **jeder Änderung eines Reaction-Items** das **Ziel-Item neu ausliefern** — mit aktualisierten Counts. Dafür braucht der Connector Dependency-Tracking: "Reaction auf Post X erstellt → Post X neu enrichen → Observable für Post X neu feuern, obwohl sich Post X selbst nicht geändert hat."
 
+> **Zeitstempel.** Dieses Papier nennt einen allgemeinen `useRelatedItems`-Hook. Den gibt es
+> seit dem 19.09.2026 nicht mehr (real-life-stack#400); an seine Stelle sind Hooks je
+> Beziehungsart getreten (`useComments`, `useReactions`, `useVotes`, `useRelationRecords`).
+> Das Argument des Papiers bleibt davon unberührt.
+
 Das macht den Connector zur State Machine. Im Hook-Ansatz ist das trivial — `useRelatedItems` subscribt auf Änderungen, `useMemo` rechnet neu. Das React-System übernimmt das Dependency-Tracking automatisch.
 
 ## Wo jeder Ansatz glänzt

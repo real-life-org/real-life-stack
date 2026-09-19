@@ -91,10 +91,10 @@ Regeln:
 1. `can` ist **synchron** und löst nur aus bereits geladenem Zustand auf (gehaltene UCANs, per-Row-Permission-Flags, owner-Spalte) — nie ein Netzwerk-Roundtrip. So kann die UI pro Item in einer Liste gaten, ohne N Aufrufe.
 2. Die Resource ist, **worauf die Aktion zielt:** das Item bei `item/edit`/`item/delete`, der Space (+ optional Typ) bei `item/create`. `Item` hat kein Top-Level-`space` → `"space" in resource` diskriminiert.
 3. **Durchsetzung** liegt im Backend/Protokoll (Relay/Peer lehnt nicht-autorisierte Writes ab; RLS lehnt ab). `can` ist eine **UI-Affordance**, keine Sicherheitsgrenze.
-4. Connectors ohne Autorisierungsmodell lassen die Capability weg (`hasAuthorization()` ⇒ `false`). Die UI fällt dann über `useItemPermissions`/`useCanCreate` auf einen **creator-owns**-Default zurück (eigenes Item editier-/löschbar; jeder schreibfähige Connector darf erstellen).
+4. Connectors ohne Autorisierungsmodell lassen die Capability weg (`hasAuthorization()` ⇒ `false`). Die UI fällt dann über `useItemPermissions` auf den Default in `resolveItemPermissions` zurück. Ob erstellt werden darf, entscheidet allein `isWritable(connector)` — dafür gibt es keinen eigenen Hook mehr (`useCanCreate` am 19.09.2026 entfernt, real-life-stack#400).
 5. `!isWritable()` ⇒ keine Edit/Delete/Create-Rechte.
 
-Konzept + UX: [concepts/item-edit-delete-2026-06.md](../concepts/item-edit-delete-2026-06.md). Hooks: toolkit `useItemPermissions(item)` → `{ canEdit, canDelete }`, `useCanCreate(space, type?)`.
+Konzept + UX: [concepts/item-edit-delete-2026-06.md](../concepts/item-edit-delete-2026-06.md). Hooks: toolkit `useItemPermissions(item)` → `{ canEdit, canDelete }`. Für das Erstellen: `isWritable(connector)`.
 
 ## FullConnector
 

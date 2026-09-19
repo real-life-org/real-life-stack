@@ -20,11 +20,11 @@ Der Toolkit-Code muss die RLS-Taxonomie nicht in jedem Ordnernamen exakt spiegel
 |---|---|---|
 | App Shell | `packages/toolkit/src/components/layout/`, `auth/`, `contacts/`, `debug/` | Navbar, BottomNav, WorkspaceSwitcher, UserMenu, ProfilePanelContent, ContactsDialog, VerificationDialog, DebugDashboard |
 | Space Modules | `packages/toolkit/src/components/feed/`, `kanban/`, `calendar/`, `map/`, `resonance/`, `lens/` (CollectionView als Modul `collection`), `graph/` | Feed, Kanban / Tasks, Calendar, Map, Resonance, Collection, Graph |
-| Module Components | geteilte Top-Level-Ordner (`comments/`, `reactions/`, `composer/`, `detail/`, `preview/`) oder Unterordner innerhalb von Space Modules | ItemPreview + Adornments (ItemTypeBadge, ItemMetaRow, ItemCommentCount), ContentComposer, ReactionBar, CommentSection, ItemDetailPanel, KanbanCard, KanbanToolbar |
+| Module Components | geteilte Top-Level-Ordner (`comments/`, `reactions/`, `composer/`, `detail/`, `preview/`) oder Unterordner innerhalb von Space Modules | ItemPreview + Adornments (ItemTypeBadge, ItemMetaRow, ItemCommentCount), ContentComposer, ReactionBar, CommentSection, ItemDetailPanel, KanbanCard |
 | Read-only Lenses | `packages/toolkit/src/components/lens/` | CollectionView (List/Grid-Dichte), ListView, GridView; Apps kombinieren sie mit ihren Presets |
 | Primitives | `packages/toolkit/src/components/primitives/` | Button, Card, Dialog, Input, Tabs |
-| Hooks | `packages/toolkit/src/hooks/` | useItems, useComments, useReactions, useConfirmations |
-| Logik-Helfer (modulübergreifend) | `packages/toolkit/src/lib/` | applyItemListFilter (Display-Filter), parseEventDate / isAllDayDate |
+| Hooks | `packages/toolkit/src/hooks/` | useItems, useComments, useReactions, useVotes |
+| Logik-Helfer (modulübergreifend) | `packages/toolkit/src/lib/` | filterByAssignee (Zuweisungsfilter), itemTitle / itemText, parseEventDate / isAllDayDate, moduleForItem |
 | Logik-Helfer (modulgebunden) | im jeweiligen Modul-Ordner, z.B. `components/kanban/reorder.ts` | computeColumnReorder, normalizeStatus |
 
 In der Reference-App spiegelt sich die Taxonomie so:
@@ -170,7 +170,6 @@ Diese Code-Flächen existieren, werden aber von keinem Spec-Dokument beschrieben
 - `components/graph/` ist als Modul `graph` im Register; ein Modul-Spec-Dokument fehlt.
 - `components/lens/collection-view.tsx` ist als Modul `collection` im Register, in der Spec aber nur als Linse beschrieben; die Modul-Spec fehlt.
 - `components/activity/` liefert ActivityBell, ActivityPanel und NotificationCenter; eine Spec fehlt.
-- `components/dashboard/` liefert StatCard und ActionCard, die kein registriertes Modul benutzt; eine Spec fehlt.
 - `components/debug/` liefert DebugDashboard, StoreInspector und TraceTimeline; eine Spec fehlt.
 - `components/contacts/` liefert Kontaktliste, Kontakt- und Verifizierungsdialoge sowie RelayStatusBadge; eine Spec fehlt.
 - `layout/space-theme-panel.tsx` stellt die Farbeinstellung eines Space im Modul-Panel; eine Spec fehlt.

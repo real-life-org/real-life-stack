@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
-import {
+import { aggregateVoteStats,
+  sortStatements,
+  type ResonanceSortMode,
   CreateFab,
   EmptyState,
   ModuleToolbar,
@@ -36,7 +38,7 @@ import { RESONANCE_CREATE_TYPES } from "../content-types"
 import { withGroupOptions } from "../composer-mapping"
 import { useCreate, useRegisterCreate, type CreateConfig } from "../create-host"
 import { useRegisterDetail, type DetailConfig } from "../detail-host"
-import { aggregateVoteStats, sortStatements, type ResonanceSortMode } from "../resonance-sort"
+
 
 const SORT_LABELS: Record<ResonanceSortMode, string> = {
   newest: "Neueste",

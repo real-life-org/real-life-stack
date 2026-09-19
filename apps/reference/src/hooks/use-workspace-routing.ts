@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import {
+import { moduleForItem,
   useConnector,
   useGroups,
   useCurrentGroup,
@@ -24,7 +24,7 @@ import {
   type Module,
 } from "@real-life-stack/toolkit"
 import type { Group, Item } from "@real-life-stack/data-interface"
-import { hasGroups, moduleHintsFor, type ModuleHints } from "@real-life-stack/data-interface"
+import { hasGroups, type ModuleHints } from "@real-life-stack/data-interface"
 
 export const STORAGE_KEY_GROUP = "rls-active-group"
 export const STORAGE_KEY_MODULE = "rls-active-module"
@@ -52,27 +52,14 @@ const slugToScope = (slug: string) => (slug === OVERVIEW_SLUG ? OVERVIEW_ID : sl
 const OVERVIEW_WORKSPACE: Workspace = { id: OVERVIEW_ID, name: "Mein Netzwerk", scope: "overview" }
 
 /**
- * Default module for a module-less item link (`/{scope}/{itemId}`), by field
- * presence: position→map, start→calendar, status/task→kanban, content→feed.
- * Falls back to the first module the space offers. (Decided with Anton: position
- * has priority — an event-at-a-place opens on the map.) Only the module-less
- * default; an explicit `/{scope}/{module}/{itemId}` always wins.
+ * Das Modul für einen Item-Link ohne Modul (`/{scope}/{itemId}`). Die Regel
+ * selbst liegt im Modul-Register (`moduleForItem`); hier bleibt nur der
+ * Aufruf. Ein ausdrückliches `/{scope}/{module}/{itemId}` gewinnt immer.
  */
 export function resolveDefaultModule(itemOrHints: Item | ModuleHints, available: string[]): string {
-  const hints = moduleHintsFor(itemOrHints)
-  // Statements have no discriminator field; their schema hint (statement/v1,
-  // spec 06) routes them — a module-less statement link must not fall
-  // through to the feed, which never lists them standalone.
-  if (hints.hasStatement && available.includes("resonance")) return "resonance"
-  const preferred =
-    hints.hasPosition
-      ? "map"
-      : hints.hasStart
-        ? "calendar"
-        : hints.hasStatus
-          ? "kanban"
-          : "feed"
-  return available.includes(preferred) ? preferred : (available[0] ?? "feed")
+  const gewaehlt = moduleForItem(itemOrHints, available)
+  if (gewaehlt) return gewaehlt
+  return available.includes("feed") ? "feed" : (available[0] ?? "feed")
 }
 
 /**

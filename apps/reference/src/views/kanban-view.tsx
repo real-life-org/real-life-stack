@@ -6,7 +6,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 
-import {
+import { filterByAssignee,
   KanbanBoard,
   computeColumnReorder,
   useModulePanel,
@@ -121,25 +121,12 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
   const filteredByBar = useModuleFilteredItems(tasks)
 
   // Darauf die Extras des Kanban: Zuweisung ueber Relationen, „Nur meine".
-  const filteredTasks = useMemo(() => {
-    const assigneeSet = new Set(assignedTo)
-    return filteredByBar.filter((task) => {
-      const relations = task.relations ?? []
-      const taskAssignees = relations
-        .filter((r) => r.predicate === "assignedTo")
-        .map((r) => r.target.replace(/^global:/, ""))
-      if (assigneeSet.size > 0) {
-        if (!taskAssignees.some((id) => assigneeSet.has(id))) return false
-      }
-      // Fail-closed: while the toggle is on but currentUser hasn't
-      // resolved yet, show nothing rather than leaking every task.
-      if (myItemsOnly) {
-        if (!currentUser?.id) return false
-        if (!taskAssignees.includes(currentUser.id)) return false
-      }
-      return true
-    })
-  }, [filteredByBar, assignedTo, myItemsOnly, currentUser?.id])
+  // Die Regel selbst liegt im Toolkit (filterByAssignee), samt der
+  // Fail-closed-Entscheidung: „Nur meine" ohne bekannte Kennung zeigt nichts.
+  const filteredTasks = useMemo(
+    () => filterByAssignee(filteredByBar, { assignedTo, myItemsOnly }, currentUser?.id),
+    [filteredByBar, assignedTo, myItemsOnly, currentUser?.id],
+  )
 
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>()

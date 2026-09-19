@@ -25,7 +25,7 @@ echten Camp-Aufgaben als schreibbaren Standard-Workflow.
 |---|---|
 | Space Module? | Ja |
 | App-Shell-Fläche? | Nein |
-| Module Components | KanbanBoard, KanbanCard, KanbanToolbar, KanbanTaskForm, KanbanCardDetail |
+| Module Components | KanbanBoard, KanbanCard, KanbanTaskForm |
 | Primäre Datenbasis | Nicht-Relation-Items, optional Relations und Profile/User |
 | Externe Semantik | optional RLNP/Game/WoT-Projektionen, aber nicht durch Kanban definiert |
 
@@ -157,11 +157,13 @@ Regeln:
 |---|---|---|
 | `KanbanBoard` | Spalten, Karten, optionales Drag-and-drop und Board-Layout; `statusField` + `readOnly` | ja |
 | `KanbanCard` | kompakte Item-Karte im Board | ja |
-| `KanbanToolbar` | Filter und Board-Werkzeuge für vollständige, schreibbare Module | ja |
 | `KanbanTaskForm` | Task erstellen oder bearbeiten | ja |
-| `KanbanCardDetail` | Detailansicht einer Karte | ja |
 
-Eine read-only Lens bindet keine `KanbanToolbar` ein.
+`KanbanToolbar` und `KanbanCardDetail` sind am 19.09.2026 entfallen
+(real-life-stack#400). Das Kanban baut seinen Kopf aus `ModuleToolbar` wie jede
+andere Linse, und die Detailansicht einer Karte ist typgetrieben und liegt im
+geteilten Panel (`ItemDetailView`). Eine read-only Lens gibt entsprechend keine
+Werkzeuge in den Kopf.
 
 ## Nicht-Ziele
 

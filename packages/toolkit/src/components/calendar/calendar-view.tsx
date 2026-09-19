@@ -328,7 +328,9 @@ function formatDayLabel(date: Date): string {
 }
 
 export interface CalendarViewProps {
-  events: Item[]
+  /** Die Items, die der Kalender zeigt. Heißt wie in jeder anderen Linse `items`
+   *  (bis 19.09.2026 `events`); der Kalender ist keine Sonderform. */
+  items: Item[]
   initialDate?: Date | string
   /** Initial period only. Unlike initialDate, it never changes the "today" highlight. */
   initialVisibleDate?: Date | string
@@ -344,7 +346,8 @@ export interface CalendarViewProps {
   /** One-way: jump the visible period to this date when it changes (e.g. to reveal
    *  a URL-focused event's month). Doesn't fight the user's manual navigation. */
   focusDate?: Date
-  onEventClick?: (event: Item) => void
+  /** Klick auf ein Item. Heißt wie in jeder anderen Linse `onItemClick`. */
+  onItemClick?: (item: Item) => void
   onCreateEvent?: (date: Date) => void
   className?: string
 }
@@ -366,7 +369,7 @@ export function CalendarView(props: CalendarViewProps) {
 }
 
 function CalendarViewInner({
-  events,
+  items,
   initialDate,
   initialVisibleDate,
   initialViewMode = "month",
@@ -375,7 +378,7 @@ function CalendarViewInner({
   resolveItemGroupColor,
   activeItemId,
   focusDate,
-  onEventClick,
+  onItemClick,
   onCreateEvent,
   className,
 }: CalendarViewProps) {
@@ -411,7 +414,7 @@ function CalendarViewInner({
     setSelectedDate(focusDate)
   }, [focusDate])
 
-  const calendarItems = useMemo(() => calendarFilterItems(events), [events])
+  const calendarItems = useMemo(() => calendarFilterItems(items), [items])
   const eventsAfterBar = useModuleFilteredItems(calendarItems)
 
   const calendarEvents = useMemo(
@@ -623,7 +626,7 @@ function CalendarViewInner({
             setVisibleDate(d)
             setViewMode("day")
           }}
-          onEventClick={onEventClick}
+          onItemClick={onItemClick}
           onCreateEvent={onCreateEvent}
         />
       )
@@ -639,7 +642,7 @@ function CalendarViewInner({
             setVisibleDate(d)
             setViewMode("day")
           }}
-          onEventClick={onEventClick}
+          onItemClick={onItemClick}
           onCreateEvent={onCreateEvent}
         />
       )
@@ -649,7 +652,7 @@ function CalendarViewInner({
         <DayCalendar
           visibleDate={date}
           eventsByDay={eventsByDay}
-          onEventClick={onEventClick}
+          onItemClick={onItemClick}
           onCreateEvent={onCreateEvent}
         />
       )
@@ -657,7 +660,7 @@ function CalendarViewInner({
     return (
       <EventList
         events={getPeriodEvents(filteredEvents, date, viewMode).sort(compareEvents)}
-        onEventClick={onEventClick}
+        onItemClick={onItemClick}
       />
     )
   }
@@ -844,7 +847,7 @@ interface MonthCalendarProps {
   eventsByDay: Map<string, CalendarEvent[]>
   onSelectDate: (date: Date) => void
   onOpenDay: (date: Date) => void
-  onEventClick?: (event: Item) => void
+  onItemClick?: (item: Item) => void
   onCreateEvent?: (date: Date) => void
 }
 
@@ -855,7 +858,7 @@ function MonthCalendar({
   eventsByDay,
   onSelectDate,
   onOpenDay,
-  onEventClick,
+  onItemClick,
   onCreateEvent,
 }: MonthCalendarProps) {
   const days = useMemo(
@@ -964,7 +967,7 @@ function MonthCalendar({
                     gridRow: bar.lane + 1,
                   }}
                 >
-                  <EventPill event={bar.event} bar={bar} compact onClick={onEventClick} />
+                  <EventPill event={bar.event} bar={bar} compact onClick={onItemClick} />
                 </div>
               ))}
               {overflowing &&
@@ -978,7 +981,7 @@ function MonthCalendar({
                       <DayEventsMenu
                         date={rowDays[col].date}
                         events={rowDays[col].events}
-                        onEventClick={onEventClick}
+                        onItemClick={onItemClick}
                       >
                         <button
                           type="button"
@@ -1034,12 +1037,12 @@ export function monthWeekLayout(
 function DayEventsMenu({
   date,
   events,
-  onEventClick,
+  onItemClick,
   children,
 }: {
   date: Date
   events: CalendarEvent[]
-  onEventClick?: (event: Item) => void
+  onItemClick?: (item: Item) => void
   children: ReactNode
 }) {
   const resolveGroupColor = useContext(CalendarGroupColorContext)
@@ -1053,7 +1056,7 @@ function DayEventsMenu({
         {events.map((event) => (
           <DropdownMenuItem
             key={event.item.id}
-            onSelect={() => onEventClick?.(event.item)}
+            onSelect={() => onItemClick?.(event.item)}
             className="gap-2"
           >
             <span
@@ -1100,7 +1103,7 @@ interface WeekCalendarProps {
   /** Full filtered list — needed for all-day/multi-day spanning across the week. */
   events: CalendarEvent[]
   onSelectDate: (date: Date) => void
-  onEventClick?: (event: Item) => void
+  onItemClick?: (item: Item) => void
   onCreateEvent?: (date: Date) => void
 }
 
@@ -1109,7 +1112,7 @@ function WeekCalendar({
   eventsByDay,
   events,
   onSelectDate,
-  onEventClick,
+  onItemClick,
   onCreateEvent,
 }: WeekCalendarProps) {
   const weekStart = startOfWeek(visibleDate)
@@ -1165,7 +1168,7 @@ function WeekCalendar({
               // +2: column 1 is the time gutter.
               style={{ gridColumn: `${bar.startCol + 2} / span ${bar.span}`, gridRow: bar.lane + 1 }}
             >
-              <EventPill event={bar.event} bar={bar} onClick={onEventClick} />
+              <EventPill event={bar.event} bar={bar} onClick={onItemClick} />
             </div>
           ))}
         </div>
@@ -1198,7 +1201,7 @@ function WeekCalendar({
                       <EventPill
                         key={event.item.id}
                         event={event}
-                        onClick={onEventClick}
+                        onClick={onItemClick}
                       />
                     ))}
                   </div>
@@ -1215,11 +1218,11 @@ function WeekCalendar({
 interface DayCalendarProps {
   visibleDate: Date
   eventsByDay: Map<string, CalendarEvent[]>
-  onEventClick?: (event: Item) => void
+  onItemClick?: (item: Item) => void
   onCreateEvent?: (date: Date) => void
 }
 
-function DayCalendar({ visibleDate, eventsByDay, onEventClick, onCreateEvent }: DayCalendarProps) {
+function DayCalendar({ visibleDate, eventsByDay, onItemClick, onCreateEvent }: DayCalendarProps) {
   const dayEvents = getEventsForDay(eventsByDay, visibleDate)
   // All-day and multi-day events have no hour to sit in on this day: an all-day
   // event starts below the 06:00 first slot, and on the second day of a
@@ -1264,7 +1267,7 @@ function DayCalendar({ visibleDate, eventsByDay, onEventClick, onCreateEvent }: 
                 key={event.item.id}
                 ref={event.item.id === activeItemId ? activeCardRef : undefined}
               >
-                <EventCard event={event} onClick={onEventClick} />
+                <EventCard event={event} onClick={onItemClick} />
               </div>
             ))}
           </div>
@@ -1293,7 +1296,7 @@ function DayCalendar({ visibleDate, eventsByDay, onEventClick, onCreateEvent }: 
                     key={event.item.id}
                     ref={event.item.id === activeItemId ? activeCardRef : undefined}
                   >
-                    <EventCard event={event} onClick={onEventClick} />
+                    <EventCard event={event} onClick={onItemClick} />
                   </div>
                 ))}
               </div>
@@ -1307,10 +1310,10 @@ function DayCalendar({ visibleDate, eventsByDay, onEventClick, onCreateEvent }: 
 
 interface EventListProps {
   events: CalendarEvent[]
-  onEventClick?: (event: Item) => void
+  onItemClick?: (item: Item) => void
 }
 
-function EventList({ events, onEventClick }: EventListProps) {
+function EventList({ events, onItemClick }: EventListProps) {
   const groups = useMemo(() => groupEventsByDay(events), [events])
 
   if (events.length === 0) {
@@ -1337,7 +1340,7 @@ function EventList({ events, onEventClick }: EventListProps) {
               <EventCard
                 key={event.item.id}
                 event={event}
-                onClick={onEventClick}
+                onClick={onItemClick}
               />
             ))}
           </div>

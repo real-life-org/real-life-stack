@@ -353,8 +353,9 @@ interface ItemPreviewProps {
 oder einer künftigen Linse MUSS `ItemPreview` plus dessen Adornments
 komponieren; eigene parallele Card-Markups sind nicht zulässig. Bei
 Shell-Selektion setzt eine Karten-Linse `active` auf dem korrespondierenden
-Preview. `active` nutzt `getActivePanelGlow` mit neutraler Default-Farbe;
-ein Caller darf per `activeGlowColor` z. B. seine Gruppenfarbe weiterreichen.
+Preview. `active` zeichnet den Schein intern; ein Caller darf per `activeGlowColor`
+z. B. seine Gruppenfarbe weiterreichen. (`getActivePanelGlow` war bis zum
+19.09.2026 öffentlich und ist seither ein Internum, real-life-stack#400.)
 
 **Daten-Pfad:** `useItemTags(item)` intern. Author-Resolution liegt beim Caller (`useItemAuthor` empfohlen).
 
@@ -665,10 +666,15 @@ Pure Hooks, die Item-Felder normalisiert ausliefern. Module benutzen sie statt m
 |---|---|---|
 | `useItemAuthor` | `(item, users) => User \| undefined` | Resolved `createdBy` gegen User-Liste |
 | `useItemTags` | `(item) => readonly string[]` | Normalisierte Tag-Liste; stabile Identity (Spec [07-tags.md](../07-tags.md)) |
-| `useItemDateHint` | `(item) => ItemDateHint` | Strukturiertes `data.start`/`data.end` (Spec [event/v1](../schemas/vocab/event/v1/schema.json)) |
-| `useItemPosition` | `(item) => ItemPosition` | GeoJSON-Position; isPlace + Point (Spec [place/v1](../schemas/vocab/place/v1/schema.json)) |
 
-Plus der Default-Formatter `formatItemDateHint(hint)` für eine kompakte Date-Anzeige.
+`useItemDateHint`, `useItemPosition` und `formatItemDateHint` gab es hier bis zum
+19.09.2026. Sie wurden entfernt (real-life-stack#400), weil keine Fläche sie las:
+Zeit und Ort werden dort gebraucht, wo sie angezeigt werden, und das ist
+`ItemMetaRow` (Spec [event/v1](../schemas/vocab/event/v1/schema.json) und
+[place/v1](../schemas/vocab/place/v1/schema.json)). Wer die rohen Werte selbst
+braucht, nimmt die reinen Funktionen: `isAllDayDate`, `parseEventDate`, `formatDay`
+und `formatClock` aus `lib/date-utils`, `isPoint` und `latLngFromPoint` aus `lib/geo`.
+Sie sind keine Hooks, weil daran nichts reaktiv ist.
 
 ### `useOpenProfile` + `OpenProfileProvider`
 
@@ -698,7 +704,7 @@ function useOpenProfile(): OpenProfile  // no-op fallback ohne Provider
 Module nutzen mehrere shared Components zusammen. Die Verträge sind so geschnitten, dass Komposition direkt funktioniert — keine impliziten Annahmen über Render-Reihenfolge oder DOM-Struktur:
 
 - **Detail mit Edit-Modus:** `ItemDetailPanel` mit `ContentComposer` als `children`, `useItemEditor` für Submit-Routing.
-- **Preview mit Adornments:** `ItemPreview` (Phase 2) mit Modul-Adornments und `useItemAuthor`/`useItemTags`/`useItemDateHint` als Datenquelle.
+- **Preview mit Adornments:** `ItemPreview` (Phase 2) mit Modul-Adornments, `useItemAuthor`/`useItemTags` als Datenquelle und `ItemMetaRow` für Zeit und Ort.
 - **Filter:** Module nutzen `useItemTags` für die verfügbare Tag-Aggregation und übergeben das an die `FilterBar` (Phase 3).
 
 ## Nicht-Ziele

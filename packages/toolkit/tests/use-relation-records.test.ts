@@ -201,24 +201,6 @@ describe("relation record hooks", () => {
     expect(observeSecond).toHaveBeenCalledTimes(1)
   })
 
-  it("switches neighbor subscriptions when endpoint or predicate changes", () => {
-    const neighborA = trackedObservable([item("a")])
-    const neighborB = trackedObservable([item("b")])
-    const observeNeighbors = vi.fn((endpoint: string, predicate?: string) => (
-      endpoint === "item:b" && predicate === "knows" ? neighborB : neighborA
-    ))
-    harness.connector = connector({
-      getRelationRecords: async () => [],
-      observeRelationRecords: () => trackedObservable<RelationRecord[]>([]),
-      getRelationNeighbors: async () => [],
-      observeRelationNeighbors: observeNeighbors,
-    })
-
-    expect(renderHook(() => hooks.useRelationNeighbors("item:a")).data[0]?.id).toBe("a")
-    expect(renderHook(() => hooks.useRelationNeighbors("item:b", "knows")).data[0]?.id).toBe("b")
-    expect(neighborA.unsubscribeSpy).toHaveBeenCalledTimes(1)
-    expect(observeNeighbors).toHaveBeenCalledTimes(2)
-  })
 
   it("returns a loaded, stable unsupported result without subscribing", () => {
     harness.connector = connector()

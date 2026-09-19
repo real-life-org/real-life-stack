@@ -523,7 +523,7 @@ const comments = await connector.getRelatedItems("post-abc", "commentOn")
 const subtasks = await connector.getRelatedItems("task-100", "childOf", { depth: 2 })
 ```
 
-In React-Komponenten wird dafür `useRelatedItems()` genutzt. So bleiben Relations reaktiv, ohne dass Connectoren Items mit abgeleiteten `_included`-Feldern anreichern müssen.
+In React-Komponenten wird dafür der Hook der jeweiligen Beziehungsart genutzt (`useComments`, `useReactions`, `useVotes`, `useRelationRecords`), der auf `observeRelatedItems()` aufsitzt. So bleiben Relations reaktiv, ohne dass Connectoren Items mit abgeleiteten `_included`-Feldern anreichern müssen.
 
 ### Backend-Umsetzung
 
@@ -693,6 +693,11 @@ Der Connector liefert ein Item vom Typ `"feature"` mit einem verschachtelten Obj
 **Regel:** Truthy = unterstützt, falsy = nicht unterstützt. Die UI muss keine komplexen Untersuchungen vornehmen.
 
 ### Hook
+
+> **Nicht im Toolkit.** `useFeatures` und `useFeature` sind hier als Entwurf
+> beschrieben und waren nie Teil der öffentlichen Schnittstelle; die Reste wurden
+> am 19.09.2026 entfernt (real-life-stack#400). Der Code unten zeigt, wie eine App
+> sich das selbst schreibt, solange der Feature-Baum kein Toolkit-Baustein ist.
 
 ```typescript
 function useFeatures() {

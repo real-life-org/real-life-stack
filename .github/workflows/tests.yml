@@ -111,5 +111,8 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Jedes Paket und jede App, die ein typecheck-Skript hat. Vorher lief nur
+      # das Toolkit, und ein toter Import in apps/reference kam erst im Review
+      # heraus (real-life-stack#403).
       - name: Typecheck
-        run: pnpm --filter @real-life-stack/toolkit typecheck
+        run: pnpm -r typecheck

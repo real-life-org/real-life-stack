@@ -77,7 +77,7 @@ import {
 import { initialDarkMode, rememberColorScheme } from "./initial-color-scheme"
 import type { DataInterface, User } from "@real-life-stack/data-interface"
 import {
-  type Item, isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
+  type Item, isAggregateVisibleItemType, isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
 import { MockConnector } from "@real-life-stack/mock-connector"
 import { LocalConnector } from "@real-life-stack/local-connector"

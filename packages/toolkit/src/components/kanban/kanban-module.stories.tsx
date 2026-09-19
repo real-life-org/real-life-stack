@@ -2,8 +2,24 @@ import { useMemo, useState } from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import type { Item, User } from "@real-life-stack/data-interface"
 import { KanbanBoard } from "./kanban-board"
-import { KanbanToolbar } from "./kanban-toolbar"
-import { applyItemListFilter, type ItemListFilter } from "../../lib/item-filter"
+import { ModuleFrame } from "../layout/module-frame"
+import { ModuleToolbar } from "../layout/module-toolbar"
+import { FilterProvider } from "../filter/filter-store"
+import { FilterChip, FilterToggle, FilterSection } from "../filter/filter-building-blocks"
+import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
+import { filterByAssignee } from "../../lib/item-filter"
+
+/**
+ * **Das Kanban-Modul als Fläche.**
+ *
+ * Das Board ist nur der Inhalt. Kopf und Filter gehören der Fläche: Suche und
+ * die geteilten Filter kommen aus `ModuleToolbar`, und was nur im Kanban
+ * bedeutet (Zuweisung, „Nur meine") reicht das Modul als `drawerExtra` und
+ * `chipsExtra` hinein. Genauso macht es `apps/reference/src/views/kanban-view.tsx`.
+ *
+ * Eine frühere Fassung zeigte hier eine eigene `KanbanToolbar`. Die hatte in
+ * keiner App mehr einen Aufrufer und ist entfallen.
+ */
 
 const users: User[] = [
   { id: "user-1", displayName: "Anna Schmidt", avatarUrl: "https://randomuser.me/api/portraits/women/44.jpg" },
@@ -65,20 +81,30 @@ const initialItems: Item[] = [
   },
 ]
 
-function KanbanModuleOverview() {
-  const [items, setItems] = useState(initialItems)
-  const [filter, setFilter] = useState<ItemListFilter>({
-    searchText: "",
-    assignedTo: null,
-    myItemsOnly: false,
-    tags: [],
-  })
-
-  const filteredItems = useMemo(
-    () => applyItemListFilter(items, filter, "user-1"),
-    [items, filter]
+function KanbanInhalt({ items, onMove }: { items: Item[]; onMove: (id: string, status: string, pos: number) => void }) {
+  const [nurMeine, setNurMeine] = useState(false)
+  const geteilt = useModuleFilteredItems(items)
+  const gezeigt = useMemo(() => filterByAssignee(geteilt, { myItemsOnly: nurMeine }, "user-1"), [geteilt, nurMeine])
+  return (
+    <ModuleFrame fill="container" maxWidth="72rem">
+      <ModuleToolbar
+        searchLabel="Aufgaben durchsuchen"
+        availableTags={["hochbeet", "projekt", "doku", "orga"]}
+        drawerExtra={
+          <FilterSection label="Zuweisung">
+            <FilterToggle label="Nur meine Aufgaben" value={nurMeine} onChange={setNurMeine} />
+          </FilterSection>
+        }
+        chipsExtra={nurMeine ? <FilterChip label="Nur meine" onRemove={() => setNurMeine(false)} /> : undefined}
+      />
+      <div className="p-4">
+        <KanbanBoard items={gezeigt} users={users} onMoveItem={onMove} />
+      </div>
+    </ModuleFrame>
   )
+}
 
+function KanbanModuleOverview() {  const [items, setItems] = useState(initialItems)
   const handleMoveItem = (itemId: string, newStatus: string, position: number) => {
     setItems((prev) => {
       const item = prev.find((candidate) => candidate.id === itemId)
@@ -103,44 +129,12 @@ function KanbanModuleOverview() {
     })
   }
 
-  const handleCreateItem = () => {
-    const id = `task-${Date.now()}`
-    setItems((prev) => {
-      const openItems = prev.filter((item) => (item.data.status as string) === "open")
-      return [
-        ...prev,
-        {
-          id,
-          type: "task",
-          createdAt: new Date().toISOString(),
-          createdBy: "user-1",
-          data: {
-            title: "Neuer Task",
-            description: "",
-            status: "open",
-            order: openItems.length
-          }, tags: [],
-          relations: [{ predicate: "assignedTo", target: "global:user-1" }],
-        },
-      ]
-    })
-  }
-
   return (
-    <div className="space-y-4">
-      <KanbanToolbar
-        items={items}
-        users={users}
-        currentUserId="user-1"
-        onFilterChange={setFilter}
-        onCreateItem={handleCreateItem}
-      />
-      <KanbanBoard
-        items={filteredItems}
-        users={users}
-        onMoveItem={handleMoveItem}
-      />
-    </div>
+    <FilterProvider>
+      <div className="h-[36rem]">
+        <KanbanInhalt items={items} onMove={handleMoveItem} />
+      </div>
+    </FilterProvider>
   )
 }
 

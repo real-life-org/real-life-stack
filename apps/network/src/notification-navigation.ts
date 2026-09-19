@@ -1,5 +1,6 @@
-import type { DataInterface } from "@real-life-stack/data-interface"
+import type { DataInterface, ModuleHints } from "@real-life-stack/data-interface"
 import { hasGroups } from "@real-life-stack/data-interface"
+import { moduleForItem, modulePresentsItem } from "@real-life-stack/toolkit"
 
 export type NetworkLensId = "graph" | "list" | "kanban" | "map" | "calendar" | "marketplace"
 
@@ -9,22 +10,35 @@ export interface ModuleHintsLike {
   hasStatus: boolean
 }
 
+/**
+ * Welche Linse zeigt was: Die Regel liegt im Modul-Register des Toolkits
+ * (`moduleForItem`, `modulePresentsItem`), abgeleitet aus dem, was ein Modul
+ * darstellt. Vorher stand sie hier ein viertes Mal im Monorepo, und diese
+ * Fassung kannte `resonance` nicht.
+ *
+ * Die Netzwerk-App nennt ihre Flächen anders als das Register: `list` statt
+ * `collection`, dazu ein `marketplace`, den es als Modul nicht gibt. Diese
+ * Übersetzung bleibt hier, die Regel nicht.
+ */
+const LENS_TO_MODULE: Partial<Record<NetworkLensId, string>> = {
+  map: "map", calendar: "calendar", kanban: "kanban", graph: "graph", list: "collection",
+}
+const MODULE_TO_LENS: Record<string, NetworkLensId> = { map: "map", calendar: "calendar", kanban: "kanban", graph: "graph", collection: "list" }
+
 /** Lens choice from connector-resolved hints — the one shared truth for clicks. */
 export function lensForHints(hints: ModuleHintsLike | undefined): NetworkLensId {
-  if (hints?.hasPosition) return "map"
-  if (hints?.hasStart) return "calendar"
-  if (hints?.hasStatus) return "kanban"
-  return "list"
+  if (!hints) return "list"
+  const modul = moduleForItem(hints as ModuleHints, ["map", "calendar", "kanban"])
+  return (modul ? MODULE_TO_LENS[modul] : undefined) ?? "list"
 }
 
 /** Can the given lens actually SHOW an item with these hints? */
 export function lensCanDisplay(lens: NetworkLensId, hints: ModuleHintsLike | undefined, itemType?: string): boolean {
-  if (lens === "map") return Boolean(hints?.hasPosition)
-  if (lens === "calendar") return Boolean(hints?.hasStart)
-  if (lens === "kanban") return Boolean(hints?.hasStatus)
-  // The marketplace lens renders resource items exclusively.
+  // Der Marktplatz ist app-eigen: Er zeigt ausschließlich Ressourcen.
   if (lens === "marketplace") return itemType === "resource"
-  return true
+  const modul = LENS_TO_MODULE[lens]
+  if (!modul) return true
+  return modulePresentsItem(modul, hints as ModuleHints | undefined, itemType)
 }
 
 /**
