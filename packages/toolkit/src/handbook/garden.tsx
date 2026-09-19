@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Calendar } from 'lucide-react'
+import { Calendar, Map as MapIcon, Newspaper } from 'lucide-react'
 import { isWritable, type DataInterface } from '@real-life-stack/data-interface'
 import { MockConnector } from '@real-life-stack/mock-connector'
 import {
@@ -7,17 +7,21 @@ import {
   AppShellMain,
   Navbar,
   NavbarStart,
+  NavbarCenter,
   NavbarEnd,
   WorkspaceSwitcher,
   UserMenu,
+  ModuleTabs,
+  BottomNav,
   AdaptivePanel,
 } from '../components/layout'
-import { Button } from '../components/primitives/button'
 import { ItemMetaRow } from '../components/preview/item-meta-row'
 import { ItemTypeBadge } from '../components/preview/item-type-badge'
 import { ItemPreview } from '../components/preview/item-preview'
 import { ItemDetailBody } from '../components/detail/item-detail-body'
-import { ContentComposer } from '../components/composer/content-composer'
+import { ItemDetailView } from '../components/detail/item-detail-view'
+import type { ContentTypeConfig } from '../components/composer/content-composer'
+import type { ItemEditorMapper } from '../hooks/use-item-editor'
 import { CalendarView } from '../components/calendar/calendar-view'
 import { MapView } from '../components/map/map-view'
 import { MapLibreMapAdapter } from '../maplibre'
@@ -53,6 +57,45 @@ const mapStyle =
     }),
   )
 const createAdapter = () => new MapLibreMapAdapter()
+
+// The three modules of this example, as the app shell lists them: tabs in the
+// navbar on wide screens, the bottom bar on narrow ones.
+const MODULES = [
+  { id: 'Feed', label: 'Feed', icon: Newspaper },
+  { id: 'Kalender', label: 'Kalender', icon: Calendar },
+  { id: 'Karte', label: 'Karte', icon: MapIcon },
+]
+
+// The edit form shows title, text and date for every type of this example.
+const contentTypeFor = (type: string): ContentTypeConfig => ({
+  id: type,
+  label: 'Inhalt',
+  icon: Calendar,
+  defaultWidgets: ['title', 'text', 'date'],
+})
+// Composer ↔ item, the small version: title, text (stored as content), start, end,
+// rrule. Only these fields are written; a field the person cleared is removed.
+// The reference app keeps the full mapping in apps/reference/composer-mapping.ts;
+// the toolkit has none of its own yet.
+const EDITED_FIELDS = ['title', 'start', 'end', 'rrule'] as const
+const gardenMapper: ItemEditorMapper = ({ data }, { existingItem }) => {
+  if (!existingItem) return null
+  const next: Record<string, unknown> = { ...existingItem.data }
+  for (const key of EDITED_FIELDS) {
+    if (data[key]) next[key] = data[key]
+    else delete next[key]
+  }
+  if (data.text) next.content = data.text
+  else delete next.content
+  return { type: existingItem.type, data: next }
+}
+const gardenEditData = (item: { data: Record<string, unknown> }) => ({
+  ...(typeof item.data.title === 'string' ? { title: item.data.title } : {}),
+  ...(typeof item.data.content === 'string' ? { text: item.data.content } : {}),
+  ...(typeof item.data.start === 'string' ? { start: item.data.start } : {}),
+  ...(typeof item.data.end === 'string' ? { end: item.data.end } : {}),
+  ...(typeof item.data.rrule === 'string' ? { rrule: item.data.rrule } : {}),
+})
 export function GardenDemo({
   readOnly = false,
   initialModule = 'Feed',
@@ -96,7 +139,6 @@ function Garden({
   const [space, setSpace] = useState(seed.groups[0])
   const [module, setModule] = useState(initialModule)
   const [selected, setSelected] = useState<string>()
-  const [editing, setEditing] = useState(false)
   const [notice, setNotice] = useState('')
   const item = items.find((i) => i.id === selected)
   return (
@@ -110,10 +152,16 @@ function Garden({
               source.setCurrentGroup(next.id)
               setSpace(next)
               setSelected(undefined)
-              setEditing(false)
             }}
           />
         </NavbarStart>
+        <NavbarCenter>
+          <ModuleTabs
+            modules={MODULES}
+            activeModule={module}
+            onModuleChange={setModule}
+          />
+        </NavbarCenter>
         <NavbarEnd>
           <UserMenu
             user={{ id: 'mira', name: 'Mira Beispiel' }}
@@ -125,25 +173,13 @@ function Garden({
           />
         </NavbarEnd>
       </Navbar>
-      <nav aria-label="Module" className="flex gap-2 border-b px-4 py-2">
-        {['Feed', 'Kalender', 'Karte'].map((name) => (
-          <Button
-            key={name}
-            variant={module === name ? 'default' : 'ghost'}
-            aria-pressed={module === name}
-            onClick={() => setModule(name)}
-          >
-            {name}
-          </Button>
-        ))}
-      </nav>
       <div className="px-4 py-2 text-xs text-muted-foreground">
         Lernbeispiel · September 2026 ·{' '}
         {isWritable(connector)
           ? 'Änderungen nur für diese Sitzung'
           : 'Connector ohne Schreibfähigkeit'}
       </div>
-      <AppShellMain className="relative" inset={module !== 'Karte'}>
+      <AppShellMain className="relative" inset={module !== 'Karte'} withBottomNav={module !== 'Karte'}>
         {isLoading ? (
           <p role="status">Lädt …</p>
         ) : module === 'Feed' ? (
@@ -162,7 +198,6 @@ function Garden({
                 active={i.id === selected}
                 onClick={() => {
                   setSelected(i.id)
-                  setEditing(false)
                 }}
               />
             ))}
@@ -174,7 +209,6 @@ function Garden({
             activeItemId={selected}
             onEventClick={(i) => {
               setSelected(i.id)
-              setEditing(false)
             }}
           />
         ) : (
@@ -193,70 +227,39 @@ function Garden({
             focusedItem={item}
             onItemClick={(i) => {
               setSelected(i.id)
-              setEditing(false)
             }}
           />
         )}
       </AppShellMain>
+      <BottomNav items={MODULES} activeItem={module} onItemChange={setModule} />
       <AdaptivePanel
         open={!!item}
-        onClose={() => {
-          setSelected(undefined)
-          setEditing(false)
-        }}
+        onClose={() => setSelected(undefined)}
         allowedModes={['floating', 'drawer']}
       >
         {item && (
-          <div className="p-5">
-            {editing && isWritable(connector) ? (
-              <ContentComposer
-                key={item.id}
-                contentTypes={[
-                  {
-                    id: item.type,
-                    label: 'Inhalt',
-                    icon: Calendar,
-                    defaultWidgets: ['title', 'text', 'date'],
-                  },
-                ]}
-                initialData={{
-                  ...item.data,
-                  text: String(item.data.content ?? ''),
-                }}
-                editMode
-                showVisibility={false}
-                onCancel={() => setEditing(false)}
-                onSubmit={async ({ data }) => {
-                  // Only the fields of the three widgets shown are written back; the composer's
-                  // defaults for the others (status, group, …) must not land on the item, or a
-                  // task would suddenly carry status: "" and match hasField: ["status"].
-                  // A field the person cleared stays cleared.
-                  const next: typeof item.data = { ...item.data, content: data.text }
-                  for (const key of ['title', 'start', 'end', 'rrule'] as const) {
-                    if (key in data) next[key] = data[key]
-                  }
-                  await connector.updateItem(item.id, { data: next })
-                  setEditing(false)
-                }}
-              />
-            ) : (
+          <ItemDetailView
+            key={item.id}
+            itemId={item.id}
+            renderRead={(live, actions) => (
               <ItemDetailBody
-                item={item}
+                item={live}
                 author={seed.users[0]}
-                headerAdornment={<ItemTypeBadge type={item.type} />}
+                headerAdornment={<ItemTypeBadge type={live.type} />}
+                actions={actions}
                 meta={
-                  typeof item.data.start === 'string' ? (
-                    <ItemMetaRow item={item} />
+                  typeof live.data.start === 'string' ? (
+                    <ItemMetaRow item={live} />
                   ) : null
-                }
-                actions={
-                  isWritable(connector) ? (
-                    <Button onClick={() => setEditing(true)}>Bearbeiten</Button>
-                  ) : undefined
                 }
               />
             )}
-          </div>
+            contentTypes={[contentTypeFor(item.type)]}
+            mapper={gardenMapper}
+            editInitialData={gardenEditData}
+            composerProps={{ showVisibility: false }}
+            onClose={() => setSelected(undefined)}
+          />
         )}
       </AdaptivePanel>
       <AdaptivePanel

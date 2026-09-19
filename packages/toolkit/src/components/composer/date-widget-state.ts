@@ -31,11 +31,28 @@ export const NO_DATE_TOGGLES: DateWidgetToggles = { end: false, time: false, rec
 /** Sentinel the widget's recurrence picker uses for "no repetition". Never data. */
 const RRULE_NONE = "none"
 
+const pad2 = (n: number) => String(n).padStart(2, "0")
+
+/**
+ * What the `<input type="datetime-local">` can show: `YYYY-MM-DDTHH:mm`, local
+ * time, no zone. Spec 06 allows `start`/`end` as any ISO-8601 DateTime or Date,
+ * so an item written by another client (`…T14:00:00+02:00`, `…T12:00:00Z`) has
+ * to be converted or the field shows up empty. A date-only value and a value
+ * that already is a local input string pass through unchanged.
+ */
+export function toDateInputValue(iso: string | undefined): string | undefined {
+  if (!iso) return iso
+  if (!iso.includes("T") || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(iso)) return iso
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
 /** View model for the DateWidget: a field is visible if opened OR already filled. */
 export function dateWidgetValue(data: WidgetData, toggles: DateWidgetToggles): DateRange {
   return {
-    start: data.start ?? "",
-    end: data.end,
+    start: toDateInputValue(data.start) ?? "",
+    end: toDateInputValue(data.end),
     rrule: data.rrule,
     showEnd: toggles.end || data.end !== undefined,
     showTime: toggles.time || (typeof data.start === "string" && data.start.includes("T")),
