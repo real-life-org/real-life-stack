@@ -118,7 +118,7 @@ interface ContentTypeConfig {
 **Daten-Vertrag (geschriebene Felder):**
 
 - `data.position` MUSS ein GeoJSON `Point` sein (`pointFromLatLng(lat, lng)` aus `lib/geo`), konform zu [place/v1](../schemas/vocab/place/v1/schema.json). Beide Eingabewege (a) und (b) schreiben in dasselbe Feld.
-- `data.address` SOLL den menschlichen Adresstext halten (aus Geocoding-Auswahl oder Reverse-Geocoding).
+- `data.address` SOLLTE den menschlichen Adresstext halten (aus Geocoding-Auswahl oder Reverse-Geocoding).
 - `data.locationName` KANN einen benannten Ort halten (z.B. „Markthalle 7").
 
 **Auslieferung:** Adress-Geocoding (a) und Map-Pick (b) sind zusammen mit dem `MapLibreMapAdapter` (Vektorkarte, [map.md → Bereitgestellte Adapter](map.md)) implementiert. Ohne bereitgestellten Geocoder/Karten-Adapter funktioniert das Widget weiter als reiner Adress-Freitext (kein `data.position`, kein Pick-Button).
@@ -546,7 +546,7 @@ interface FilterTypeOption {
 
 Regeln:
 
-1. Der geteilte State SOLL **neben dem persistenten Content-Panel** leben (App-Shell-Ebene, [01-app-composition.md → Overlay-Flächen Ebene 1](../01-app-composition.md)). Er ist app-weit und nicht modulgebunden, analog dazu, dass das Content-Panel beim Modul-Wechsel offen bleibt.
+1. Der geteilte State SOLLTE **neben dem persistenten Content-Panel** leben (App-Shell-Ebene, [01-app-composition.md → Overlay-Flächen Ebene 1](../01-app-composition.md)). Er ist app-weit und nicht modulgebunden, analog dazu, dass das Content-Panel beim Modul-Wechsel offen bleibt.
 2. Geteilt wird der gemeinsame `FilterBarValue` (`tags`, `types`). Modul-spezifische Extras (`chipsExtra`/`drawerExtra`, z.B. Map-`bounds` oder Kanban-View-Toggle) bleiben beim jeweiligen Modul und werden NICHT app-weit geteilt.
 3. Die `FilterBar` selbst ist die **geteilte Fläche**: jedes Modul rendert dieselbe `FilterBar` gegen denselben `value`/`onChange`. Tag-Filter nutzen durchgängig `TagChip` mit `getTagColor`, sodass ein Tag in Picker, aktiven Chips und auf den Cards modulübergreifend identisch eingefärbt ist (siehe [`TagChip`](#tagchip), [07-tags.md](../07-tags.md)).
 4. Typen sind modulabhängig: ein in Feed gesetzter `types`-Filter KANN in einem Modul ohne diesen Typ zu einer leeren Auswahl führen. Das ist erwartet; die `availableTypes` jedes Moduls bestimmen, welche Typ-Chips dort sichtbar/abwählbar sind. Der geteilte `tags`-Filter ist davon unberührt.

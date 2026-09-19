@@ -100,7 +100,7 @@ interface ActivityEntry {
    Verhaltensmetadaten** — wer hat wann editiert oder gelöscht —, die über
    `item.createdBy` hinausgehen. Begrenzt wird das durch die
    E2EE-Sichtbarkeitsgrenze (nur Mitglieder) und die Retention
-   (Historientiefe); UI-Flächen SOLLEN den Log als das ausweisen, was er
+   (Historientiefe); UI-Flächen SOLLTEN den Log als das ausweisen, was er
    ist: eine für alle Mitglieder sichtbare Verlaufsansicht.
 9. RelationRecords sind Items ([08-relation-records.md](08-relation-records.md));
    Kanten-CRUD erscheint dadurch automatisch im Log

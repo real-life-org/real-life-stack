@@ -106,8 +106,8 @@ Diese Regeln gelten für die mobile Darstellung (kein `md`-Breakpoint) von `Mont
 1. In mobiler Monats- **und** Wochenansicht MÜSSEN Events einzeln per Tap anklickbar sein.
 2. Ein Tap auf ein Event MUSS dieselbe Detail-Route auslösen wie auf Desktop: `onItemClick(item)`, das in der Reference App den geteilten `ItemDetailView`-Host (read↔edit + Aktionsmenü, intern `ItemDetailPanel`) im **Ebene-1-Content-Panel** öffnet (`useModulePanel().open({ kind: "detail" })`, siehe [01-app-composition.md](../01-app-composition.md)). Ein Event-Tap DARF KEINEN eigenen Dialog oder eine zweite gleichartige Fläche öffnen.
 3. Ein mobiles Event-Element MUSS mindestens den Titel-Anfang zeigen (Titel-Truncate über eine Zeile). Eine reine Punkt- oder farblose Pill-Darstellung ohne Text erfüllt diese Regel nicht.
-4. Bei mehr als der pro Tag darstellbaren Anzahl SOLL ein `+N weitere`-Element den Tag öffnen (mobil bevorzugt die Tagesansicht), analog zum Desktop-Verhalten der Monatsansicht.
-5. Das Tap-Target SOLL mindestens etwa 44px in der Höhe der Touch-Trefferfläche erreichen; die sichtbare Event-Pill SOLL mindestens 24px hoch sein. Liegt die sichtbare Höhe darunter, SOLL die Trefferfläche über Padding auf das Mindestmaß vergrößert werden.
+4. Bei mehr als der pro Tag darstellbaren Anzahl SOLLTE ein `+N weitere`-Element den Tag öffnen (mobil bevorzugt die Tagesansicht), analog zum Desktop-Verhalten der Monatsansicht.
+5. Das Tap-Target SOLLTE mindestens etwa 44px in der Höhe der Touch-Trefferfläche erreichen; die sichtbare Event-Pill SOLLTE mindestens 24px hoch sein. Liegt die sichtbare Höhe darunter, SOLLTE die Trefferfläche über Padding auf das Mindestmaß vergrößert werden.
 6. Die Event-Pill (`EventPill`) bleibt die geteilte Darstellung; Mobil unterscheidet sich nur in Dichte und Truncate, nicht in einem eigenen Komponenten-Pfad. Die Pill-Farbe folgt der einheitlichen Item-Farblogik (siehe unten). In der Wochenansicht steht die Uhrzeit bereits in der Zeit-Spalte, darum zeigt die Pill dort nur den Titel — identisch zu den Monats-Pills; ein Uhrzeit-Präfix entfällt.
 
 ## Wochenansicht ohne horizontalen Scroll
