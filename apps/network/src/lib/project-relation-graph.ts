@@ -1,3 +1,4 @@
+import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
 import type { Item, RelationRecord } from "@real-life-stack/data-interface"
 import type { GraphEdge, GraphNode } from "@real-life-stack/toolkit"
 
@@ -44,7 +45,7 @@ export function projectRelationGraph(
   items: readonly Item[],
   records: readonly RelationRecord[],
 ): RelationGraphProjection {
-  const domainItems = items.filter(({ type }) => type !== "relation")
+  const domainItems = items.filter(({ type }) => isAggregateVisibleItemType(type))
   const itemIds = new Set(domainItems.map(({ id }) => id))
   const edges: GraphEdge[] = []
 

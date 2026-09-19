@@ -7,6 +7,7 @@ import { RelativeTime } from "../primitives/relative-time"
 import { ProfileLink } from "../profile/profile-link"
 import { TagFilterChip } from "../tag/tag-filter-chip"
 import { MarkdownText } from "../preview/markdown-text"
+import { editedLabel } from "@/lib/item-text"
 import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
 import { useUserNameResolver } from "../../hooks/use-user-names"
@@ -93,9 +94,7 @@ export function ItemDetailBody({
   const authorName = author?.displayName ?? item.createdBy
   const authorId = author?.id ?? item.createdBy
   const resolveName = useUserNameResolver()
-  const editedTitle = item.updatedAt
-    ? `Bearbeitet von ${resolveName(item.updatedBy ?? item.createdBy)} am ${new Date(item.updatedAt).toLocaleString("de-DE")}`
-    : undefined
+  const editedTitle = editedLabel(item, resolveName)
 
   return (
     <article className={cn("flex flex-col gap-3 p-4", className)}>

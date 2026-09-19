@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react"
-import {
+import { itemTitle,
   GraphView,
   ModuleToolbar,
   resolveTypePresentation,
@@ -77,7 +77,7 @@ export interface GraphProjection {
 }
 
 const label = (item: Item): string =>
-  String(item.data.title ?? item.data.displayName ?? item.data.name ?? "Ohne Titel")
+  itemTitle(item)
 
 /** `item:x` / `space:s/item:x` → item id (+ claimed space); `global:u` → user id. */
 function parseTarget(

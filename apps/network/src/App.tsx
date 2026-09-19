@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react"
 import type { DataInterface, Item, User } from "@real-life-stack/data-interface"
-import { hasGroups, isAuthenticatable, isWritable, moduleHintsFor } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType, hasGroups, isAuthenticatable, isWritable, moduleHintsFor } from "@real-life-stack/data-interface"
 import {
   AdaptivePanel,
   AppShell,
@@ -550,7 +550,7 @@ function NetworkShell() {
     [groups],
   )
   const activeWorkspace = workspaces.find(({ id }) => id === currentGroup?.id) ?? null
-  const domainItems = useMemo(() => items.filter(({ type }) => type !== "relation"), [items])
+  const domainItems = useMemo(() => items.filter(({ type }) => isAggregateVisibleItemType(type)), [items])
   const graph = useMemo(
     () => projectRelationGraph(domainItems, relationRecords),
     [domainItems, relationRecords],

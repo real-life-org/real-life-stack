@@ -1,3 +1,4 @@
+import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
 import { useEffect, useMemo, useRef } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { Item } from "@real-life-stack/data-interface"
@@ -23,7 +24,7 @@ export interface ListViewProps {
 
 /** The shared lens rule: relation records describe connections, not cards. */
 export function lensItems(items: readonly Item[]): Item[] {
-  return items.filter(({ type }) => type !== "relation")
+  return items.filter(({ type }) => isAggregateVisibleItemType(type))
 }
 
 /**

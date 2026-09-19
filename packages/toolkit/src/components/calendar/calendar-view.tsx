@@ -1,3 +1,4 @@
+import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
 "use client"
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent, type TransitionEvent } from "react"
@@ -20,6 +21,8 @@ import {
 } from "../primitives/dropdown-menu"
 import { ModuleToolbar } from "../layout/module-toolbar"
 import { cn, getItemColor, getReadableTextColor } from "../../lib/utils"
+import { itemTitle } from "@/lib/item-text"
+import { getSpacePrimaryColor } from "@/lib/utils"
 import { isAllDayDate, parseEventDate } from "../../lib/date-utils"
 import {
   addDays,
@@ -58,7 +61,8 @@ const TIME_SLOTS = Array.from({ length: 18 }, (_, index) => index + 6)
  *  created in (origin group), which is what makes the aggregate ("Mein Netzwerk")
  *  view show per-group colours instead of one active-group colour. */
 type GroupColorResolver = (item: Item) => string
-const CalendarGroupColorContext = createContext<GroupColorResolver>(() => "#2563eb")
+// Kein fester Blauwert: dieselbe Palette wie Karte und Vorschau (map-lens macht es vor).
+const CalendarGroupColorContext = createContext<GroupColorResolver>((item) => getSpacePrimaryColor(item.id))
 
 /** Id of the item currently open in the shared panel, so its pill/card is
  *  highlighted across the calendar (and stays in sync with map/feed/kanban). */
@@ -181,7 +185,7 @@ function toCalendarEvent(item: Item): CalendarEvent | null {
     start,
     end,
     allDay,
-    title: String(item.data.title ?? item.data.displayName ?? item.data.name ?? "Ohne Titel"),
+    title: itemTitle(item),
     description: typeof description === "string" ? description : undefined,
     location: getLocationLabel(item.data.locationName, item.data.address),
     tags: item.tags ?? [],
@@ -190,7 +194,7 @@ function toCalendarEvent(item: Item): CalendarEvent | null {
 
 /** Calendar filters only expose items that can become an event in this view. */
 export function calendarFilterItems(events: readonly Item[]): Item[] {
-  return events.filter((item) => item.type !== "relation" && toCalendarEvent(item) !== null)
+  return events.filter((item) => isAggregateVisibleItemType(item.type) && toCalendarEvent(item) !== null)
 }
 
 function compareEvents(a: CalendarEvent, b: CalendarEvent): number {
@@ -367,7 +371,7 @@ function CalendarViewInner({
   initialVisibleDate,
   initialViewMode = "month",
   currentUserId,
-  groupColor = "#2563eb",
+  groupColor,
   resolveItemGroupColor,
   activeItemId,
   focusDate,
@@ -658,7 +662,9 @@ function CalendarViewInner({
     )
   }
 
-  const resolveGroupColor = resolveItemGroupColor ?? (() => groupColor)
+  // Ohne Angabe die Palettenfarbe des Items — wie in der Karte und der Vorschau.
+  const resolveGroupColor: GroupColorResolver =
+    resolveItemGroupColor ?? ((item) => getSpacePrimaryColor(item.id, groupColor))
 
   return (
     <CalendarGroupColorContext.Provider value={resolveGroupColor}>
