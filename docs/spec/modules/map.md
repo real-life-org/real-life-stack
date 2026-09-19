@@ -25,7 +25,7 @@ Es unterstützt:
 |---|---|
 | Space Module? | Ja |
 | App-Shell-Fläche? | Nein |
-| Module Components | MapView, MapMarker, MapPopup, MapLegend, ItemPreview; Filter über generische `ItemFilters`-Komponente |
+| Module Components | MapView, Marker-Primitive aus `components/map/markers/`, ItemPreview; Filter über die geteilte `FilterBar` |
 | Primäre Datenbasis | Items |
 | Externe Semantik | optional RLNP/Game/WoT-Projektionen, aber nicht durch Map definiert |
 
@@ -358,7 +358,7 @@ Regeln:
 
 ## Standort („Wo bin ich")
 
-Die Karte führt neben ihrer Suche einen **Standort-Knopf** (32px, `LocateFixed`). Er ist ein **Umschalter**, keine einmalige Frage: Ein einzelner Fix veraltet, sobald man losgeht.
+Die Karte führt neben ihrer Suche einen **Standort-Knopf** (32px, `StandortIcon`). Er ist ein **Umschalter**, keine einmalige Frage: Ein einzelner Fix veraltet, sobald man losgeht.
 
 1. Zustände: **aus** → **suchend** (`aria-busy`, Spinner) → **aktiv** (`aria-pressed`, Icon in der Primärfarbe) → aus. Der Name wechselt mit („Standort verfolgen" / „Standortverfolgung beenden"), weil ein Klick zwei verschiedene Dinge tut.
 2. Aktiv läuft eine **fortlaufende Ortung** (`watchPosition`). Der eigene Standort wird gezeigt, wo der Adapter es kann: ein Punkt plus **Genauigkeitskreis** (Radius in *Metern*, wächst beim Zoomen mit) über die optionale Fähigkeit `UserPositionCapable.setUserPosition`. Der Standort ist dabei **kein Item** — keine Id, kein Detail, kein Klick, keine Cluster-Rechnung. Ein Adapter ohne die Fähigkeit fährt trotzdem hin.
@@ -398,9 +398,9 @@ Das Map Module füllt den verfügbaren Space-Bereich vollständig aus. Es hat **
 
 ## Filter
 
-Map nutzt die generische `ItemFilters`-Komponente, die modulübergreifend die gleiche Filter-UX liefert (gleiche Pills, gleicher Composer-Dialog). Filter sind in zwei Klassen:
+Map nutzt die geteilte `FilterBar` (`components/filter/filter-bar.tsx`), die modulübergreifend die gleiche Filter-UX liefert (gleiche Pills, gleicher Composer-Dialog). Filter sind in zwei Klassen:
 
-- **Generische Filter** (aus `ItemFilters`): `type`, `tag`, `schema`, `createdBy`, freie Suche.
+- **Generische Filter** (aus der `FilterBar`): `type`, `tag`, `schema`, `createdBy`, freie Suche.
 - **Viewport-Filter** (erstklassig im `ItemFilter`): `bbox` (nur Items im sichtbaren Ausschnitt) — Teil der Datenquelle, siehe oben.
 - **Map-spezifische Zusatzfilter** (vom Map Module ergänzt): `withinRadius`, `hasPosition`, `geometryType`.
 
@@ -411,11 +411,10 @@ Die Kombination wird in den `ItemFilter` der `DataInterface`-Observable abgebild
 | Komponente | Rolle | Wiederverwendbar? |
 |---|---|---|
 | `MapView` | Container für Adapter, Ausschnitt und Projektion (Vollbild im Space-Bereich) | ja |
-| `MapMarker` | Marker-Konfiguration (Icon, Color, Label) pro Item | ja |
-| `MapPopup` | kompakte Darstellung eines Items im Karten-Overlay | ja |
-| `MapLegend` | optionale Erklärung der Marker-Klassen oder Layer | ja |
-| `ItemPreview` | gleiche Vorschau wie in Feed/Calendar; im Map-Popup wiederverwendet | ja |
-| `ItemFilters` | generische, modulübergreifende Filter-Komponente mit Map-spezifischer Konfiguration | ja, cross-modul |
+| Marker-Primitive (`components/map/markers/`) | `renderMarkerSvg` und `MARKER_SHAPES` erzeugen das Pin-Bild pro Item | ja |
+| `StandortIcon` (`components/map/standort-icon.tsx`) | Fadenkreuz des Standort-Knopfes | ja |
+| `ItemPreview` | gleiche Vorschau wie in Feed/Calendar | ja |
+| `FilterBar` (`components/filter/filter-bar.tsx`) | geteilte, modulübergreifende Filterleiste | ja, cross-modul |
 | `ContentComposer` | Erstellung oder Bearbeitung eines verorteten Items | ja, aber als Shell-/Composer-Integration |
 
 ## Nicht-Ziele
@@ -446,7 +445,7 @@ Das Map Module definiert nicht:
 4. Wie werden Items mit `Polygon`-/`LineString`-Position dargestellt — als überlagerter Layer oder als reiche Marker?
 5. Welche Tile-Quellen sind Default in der Reference App (OSM-Standard, eigene Tile-Server, themed Tiles)?
 6. Soll der Adapter eine Möglichkeit haben, Karten-spezifische Custom-Controls zu hosten (Layer-Switcher, Zeichenwerkzeuge), oder bleibt die Map-UI im React-Layer?
-7. Die generische `ItemFilters`-Komponente gehört konzeptionell in eine Cross-Modul-Spec (App Composition oder eigenes Dokument). Der Vertrag, wie Module ihre modulspezifischen Filter registrieren, ist noch offen.
+7. Die geteilte `FilterBar` gehört konzeptionell in eine Cross-Modul-Spec (App Composition oder eigenes Dokument). Der Vertrag, wie Module ihre modulspezifischen Filter registrieren, ist noch offen.
 8. **Marker-Click-Flow: Popup vs. Detail-Panel.** Aktuell öffnet ein Marker-Click direkt den `ItemDetailView`-Host (read↔edit + Aktionsmenü, intern `ItemDetailPanel`) im `AdaptivePanel` — konsistent mit Feed und Calendar (Kanban nutzt vorerst sein eigenes `TaskEditPanel`).
 
    Diskussion mit Sebastian offen, drei mögliche Varianten:

@@ -46,7 +46,7 @@ Spec: [05-confirmations-and-trust.md → §Begriffe](05-confirmations-and-trust.
 
 ## Composer
 
-*Module Component* zum Erstellen oder Editieren eines *Items*. Setzt sich aus *Widgets* zusammen (Title, Date, Location, People, Tags) und übergibt das fertige Item an einen *Connector*. Im Code als `ContentComposer` im Toolkit. Boilerplate für Open/Close, `@context`-Ableitung und Mutations-Dispatch ist im `useItemEditor`-Hook gebündelt.
+*Module Component* zum Erstellen oder Editieren eines *Items*. Setzt sich aus *Widgets* zusammen (Group, Status, Title, Text, Media, Date, Location, People, Tags) und übergibt das fertige Item an einen *Connector*. Im Code als `ContentComposer` im Toolkit. Boilerplate für Open/Close, `@context`-Ableitung und Mutations-Dispatch ist im `useItemEditor`-Hook gebündelt.
 
 Spec: [modules/shared-components.md](modules/shared-components.md), [01-app-composition.md → §Module Components](01-app-composition.md)
 
@@ -88,7 +88,7 @@ Spec: [02-data-interface.md](02-data-interface.md)
 
 ## Filter (`ItemFilter`)
 
-Suchbedingung an *DataInterface*-Methoden: `type`, `hasField`, `hasTag` (siehe *Tag*), `createdBy`, `source`, `limit`, `offset`. Zukünftig auch `hasSchema` (siehe *Vocabulary*).
+Suchbedingung an *DataInterface*-Methoden: `type`, `hasField`, `hasTag` (siehe *Tag*), `hasSchema` (siehe *Vocabulary*), `createdBy`, `bbox`, `source`, `limit`, `offset`.
 
 Spec: [02-data-interface.md → §Filter](02-data-interface.md)
 
@@ -150,7 +150,7 @@ Spec: [04-items-relations-groups-spaces.md → §Groups und Spaces](04-items-rel
 
 ## Space Module
 
-Aktivierbare Oberfläche innerhalb eines *Space* (Feed, Map, Calendar, Kanban, Marketplace, Quests, …). Arbeitet gegen *DataInterface* und optionale *Capabilities*. Besitzt nicht die soziale Semantik von RLNP, die Spielregeln des Real Life Game oder die kryptografische Wahrheit von WoT.
+Aktivierbare Oberfläche innerhalb eines *Space* (Feed, Kanban, Calendar, Map, Resonance, Collection, Graph). Arbeitet gegen *DataInterface* und optionale *Capabilities*. Besitzt nicht die soziale Semantik von RLNP, die Spielregeln des Real Life Game oder die kryptografische Wahrheit von WoT.
 
 Spec: [01-app-composition.md → §Space Modules](01-app-composition.md), [modules/](modules/)
 
@@ -186,13 +186,13 @@ Spec: [03-capabilities.md → §Prinzip](03-capabilities.md)
 
 ## Vocabulary (Vocab)
 
-Additive Definition von Property-Namen und Strukturen über eine `context.jsonld` (JSON-LD) und ein `schema.json` (JSON-*Schema*). Standardvokabulare in v0.1: `base/v1`, `event/v1`, `place/v1`, `task/v1`, `person/v1`. *Items* deklarieren ihre aktiven Vocabularies über `@context`.
+Additive Definition von Property-Namen und Strukturen über eine `context.jsonld` (JSON-LD) und ein `schema.json` (JSON-*Schema*). Standardvokabulare in v0.1: `base/v1`, `event/v1`, `person/v1`, `place/v1`, `project/v1`, `relation/v1`, `resource/v1`, `statement/v1`, `task/v1`. *Items* deklarieren ihre aktiven Vocabularies über `@context`.
 
 Spec: [06-schema-composition.md](06-schema-composition.md), [schemas/README.md](schemas/README.md)
 
 ## Widget
 
-*Composer*-Baustein für ein einzelnes Datenfeld oder einen Feld-Cluster. Beispiele: `TitleWidget`, `DateWidget`, `LocationWidget`, `PeopleWidget`. Vom Composer zusammengesetzt; eigene Widgets können per Konfiguration ergänzt werden.
+*Composer*-Baustein für ein einzelnes Datenfeld oder einen Feld-Cluster. Beispiele: `GroupWidget`, `StatusWidget`, `TitleWidget`, `TextWidget`, `MediaWidget`, `DateWidget`, `LocationWidget`, `PeopleWidget`, `TagsWidget`. Vom Composer zusammengesetzt; eigene Widgets können per Konfiguration ergänzt werden.
 
 Spec: [code-and-storybook-mapping.md](code-and-storybook-mapping.md)
 
@@ -206,4 +206,4 @@ Spec: [code-and-storybook-mapping.md](code-and-storybook-mapping.md)
 
 Die Begriffe liegen zusätzlich als SKOS-Konzeptschema in [`docs/reference/rls.skos.jsonld`](../reference/rls.skos.jsonld) (JSON-LD, Namensraum `https://real-life.org/rls/v1#`, Name und Definition auf Deutsch und Englisch, Quelle, Codesymbole). Normativ bleiben die Specs. Die Verknüpfungen zu den Begriffen des Real Life Network Protocol und des Real Life Trust Protocol liegen im gemeinsamen Register [real-life-org/meta](https://github.com/real-life-org/meta); die Kennungen lösen unter <https://real-life.org/rls/v1/> auf.
 
-Stand: fünf Begriffe (Space, Spiegel, Relation, Personenprofil, Connector) und zwei Vorschläge (Mitglied, Sichtbarkeit, `rl:status: proposed`), weil beide hier zentral sind und noch kein Wort haben. Das Begriffsregister aus rls#383 (`terms.json`) und diese Datei sollen aus einer Quelle kommen; welche, ist mit dem Handbuch zu entscheiden.
+Stand: neun Begriffe (Space, Spiegel, Relation, Personenprofil, Connector, Verifikation, Mitglied, Sichtbarkeit, Item in mehreren Spaces), davon drei als Vorschlag markiert (Mitglied, Sichtbarkeit, Item in mehreren Spaces, `rl:status: proposed`), weil sie hier zentral sind und noch kein festes Wort haben. Das Begriffsregister aus rls#383 (`terms.json`) und diese Datei sollen aus einer Quelle kommen; welche, ist mit dem Handbuch zu entscheiden.

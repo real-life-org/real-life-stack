@@ -18,8 +18,8 @@ Der Toolkit-Code muss die RLS-Taxonomie nicht in jedem Ordnernamen exakt spiegel
 
 | RLS-Ebene | Typische Code-Orte | Beispiele |
 |---|---|---|
-| App Shell | `packages/toolkit/src/components/layout/`, `auth/`, `contacts/`, `debug/` | Navbar, BottomNav, WorkspaceSwitcher, UserMenu, ProfileDialog, ContactsDialog, VerificationDialog, DebugDashboard |
-| Space Modules | `packages/toolkit/src/components/feed/`, `kanban/`, `calendar/`, `map/` | Feed, Kanban / Tasks, Calendar, Map |
+| App Shell | `packages/toolkit/src/components/layout/`, `auth/`, `contacts/`, `debug/` | Navbar, BottomNav, WorkspaceSwitcher, UserMenu, ProfilePanelContent, ContactsDialog, VerificationDialog, DebugDashboard |
+| Space Modules | `packages/toolkit/src/components/feed/`, `kanban/`, `calendar/`, `map/`, `resonance/`, `lens/` (CollectionView als Modul `collection`), `graph/` | Feed, Kanban / Tasks, Calendar, Map, Resonance, Collection, Graph |
 | Module Components | geteilte Top-Level-Ordner (`comments/`, `reactions/`, `composer/`, `detail/`, `preview/`) oder Unterordner innerhalb von Space Modules | ItemPreview + Adornments (ItemTypeBadge, ItemMetaRow, ItemCommentCount), ContentComposer, ReactionBar, CommentSection, ItemDetailPanel, KanbanCard, KanbanToolbar |
 | Read-only Lenses | `packages/toolkit/src/components/lens/` | CollectionView (List/Grid-Dichte), ListView, GridView; Apps kombinieren sie mit ihren Presets |
 | Primitives | `packages/toolkit/src/components/primitives/` | Button, Card, Dialog, Input, Tabs |
@@ -32,7 +32,7 @@ In der Reference-App spiegelt sich die Taxonomie so:
 | App-Ebene | Code-Ort |
 |---|---|
 | Komposition (Provider, AuthGate, App Shell) | `apps/reference/src/App.tsx` |
-| Space-Module-Instanzen (eine Datei pro Modul) | `apps/reference/src/views/feed-view.tsx`, `kanban-view.tsx`, `calendar-view.tsx`, `map-view.tsx` |
+| Space-Module-Instanzen (eine Datei pro Modul) | `apps/reference/src/views/feed-view.tsx`, `kanban-view.tsx`, `calendar-view.tsx`, `map-view.tsx`, `resonance-view.tsx`, `collection-view.tsx`, `graph-view.tsx` |
 | Modul-Dispatch (welches Modul rendert, wie es den Space füllt) | `apps/reference/src/views/module-outlet.tsx` |
 | Space/Module-Routing (URL → aktiver Space + Modul) | `apps/reference/src/hooks/use-workspace-routing.ts` |
 
@@ -73,6 +73,12 @@ Die konkreten Titel und stabilen IDs der migrierten Stories stehen in
 Bestehende URLs bleiben durch explizite Meta-IDs erhalten. Neue Stories
 verwenden eine der obigen Kategorien; die Prüfung der IDs kommt mit den Handbuch-Skripten.
 
+Am 19.09.2026 sind fünf Stories entfallen: PostCard, StatCard, ActionCard,
+KanbanToolbar und das GridView-Duplikat. Die Begründung steht je Eintrag unter
+`removed` in `story-migration.json`. Neu hinzugekommen sind
+`RLS/App Shell/Die Modulfläche`, `RLS/Grundlagen/Hooks` und
+`RLS/Grundlagen/Alle Hooks`.
+
 ## Overview Stories
 
 Jedes Space Module soll langfristig eine Overview-Story haben.
@@ -95,7 +101,7 @@ Kanban / Tasks ist das erste abgerundete Referenzmodul für diese Mapping-Regeln
 |---|---|---|---|
 | Kanban / Tasks Space Module | `packages/toolkit/src/components/kanban/kanban-module.stories.tsx` | `RLS/Module/Kanban/Übersicht` | Items im Current Space mit Kanban-kompatiblem `data.status` |
 | Board-Layout | `kanban-board.tsx` | `RLS/Module/Kanban/Board` | `Item.data[statusField]` (Default `status`), schreibbar zusätzlich `Item.data.order`, optional `relations: assignedTo` und `users` |
-| Filter/Werkzeuge | `kanban-toolbar.tsx` | `RLS/Module/Kanban/Werkzeuge` | Items, optionale `users`, optionaler `currentUserId`; Mutationen werden über Callbacks/Capabilities angebunden |
+| Filter/Werkzeuge | `kanban-toolbar.tsx` | Story entfallen (19.09.2026); Kanban baut seinen Kopf aus `ModuleToolbar` | Items, optionale `users`, optionaler `currentUserId`; Mutationen werden über Callbacks/Capabilities angebunden |
 | Task-Erstellung/Bearbeitung | `kanban-task-create.tsx` | Modulkomponente; in späteren Stories direkt prüfbar | `ItemWriter` für persistente Erstellung/Bearbeitung; App entscheidet über erlaubte Felder |
 | Kartendetail | `kanban-card-detail.tsx` | Modulkomponente; in späteren Stories direkt prüfbar | Item-Daten, optional `users`, Tags, Status und Assignee-Relations |
 
@@ -111,8 +117,9 @@ Mutations-Callbacks ein.
 | Generische Sammlungs-Linse | `components/lens/collection-view.tsx` | `RLS/Module/Gemeinsame Ansichten/Sammlung` | alle Nicht-Relation-Items; session-lokaler Listen-/Raster-Toggle; `activeItemId?` und optionaler Sichtbereichs-Inset aus der Shell |
 | Generische Listen-Projektion | `components/lens/list-view.tsx` | `RLS/Module/Gemeinsame Ansichten/Liste` | Baustein der CollectionView: kompakte Dichte ohne lokalen Filter |
 | Generische Linsen-Karte | `components/preview/item-preview.tsx` + `preview/item-type-meta.tsx` | Linsen-Stories | ItemPreview: List kompakt, Grid komfortabel; `active` nutzt den geteilten Glow; Typ-Meta für Person, Projekt, Ressource und Event sowie Typ-Badge-Fallback |
-| Typspezifische Raster-Projektion | `components/lens/grid-view.tsx` | `RLS/Module/Gemeinsame Ansichten/Raster` | Baustein der CollectionView: komfortable Dichte mit geteilten Preview-Adornments |
+| Typspezifische Raster-Projektion | `components/lens/grid-view.tsx` | eigene Story entfallen (19.09.2026); sichtbar in `RLS/Module/Gemeinsame Ansichten/Sammlung` | Baustein der CollectionView: komfortable Dichte mit geteilten Preview-Adornments |
 | Read-only Karten-Linse | `components/lens/map-lens.tsx` | `RLS/Module/Karte/Read-only-Ansicht (MapLens)` | Nicht-Relation-Items mit gültigem GeoJSON-`Point`; `createAdapter` erzeugt pro Mount eine frische Engine; ein Marker zentriert im Shell-Sichtbereich bei Zoom 16, mehrere nutzen `fitBounds`; `viewportResetKey` re-armt beim Bestandswechsel; kein lokaler Filter |
+| MapView | `components/map/map-view.tsx` | `RLS/Module/Karte/MapView` | Die Kartenfläche selbst; rendert MapLens intern |
 
 Die CollectionView und die Map-Linse sind presentationale, read-only Module
 Components. List/Grid sind deren wiederverwendbare Dichte-Projektionen und komponieren keine eigene Card-Fläche; die Map-Linse
@@ -135,7 +142,7 @@ Feed ist das Referenzmodul für einen generischen Aktivitäts- und Inhaltsstrom 
 | Composer | `feed/feed-composer-trigger.tsx` (Feed-Trigger), `composer/content-composer.tsx` (geteilt) | `RLS/Items/Anlegen und Bearbeiten/ContentComposer` und Feed-Overview | Persistente Erstellung braucht später `ItemWriter`; die Story hält neue Items nur lokal |
 | Reaktionen | `components/reactions/` (geteilt) | `RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionBar` (auch ReactionPicker, ReactionDetails) | Optional über `RelationCapable`/`reactsTo`; Feed bleibt nutzbar ohne Relations |
 | Kommentare | `components/comments/` (geteilt) | `RLS/Items/Detailansicht/Reaktionen und Kommentare/CommentSection` | Optional über `RelationCapable`/`commentOn`; `ItemCommentCount` zeigt die Anzahl im Footer |
-| PostCard | `post-card.tsx` | `RLS/Items/Typbeispiele/Beitrag/PostCard (ältere Darstellung)` | Spezifische ältere Post-Projektion; nicht die kanonische generische Feed-Projektion |
+| PostCard | `post-card.tsx` | Story entfallen (19.09.2026) | Spezifische ältere Post-Projektion ohne Aufrufer; nicht die kanonische generische Feed-Projektion |
 
 Die Feed-Overview darf keine Backend-Simulation erzwingen. Sie zeigt das Zusammenspiel von Composer, `ItemPreview` und optionalen Social Slots; echte Mutationen, Relations und Confirmations werden über Connector-Capabilities angebunden.
 
@@ -147,7 +154,7 @@ Calendar ist das Referenzmodul für zeitliche Projektionen im Current Space. Es 
 |---|---|---|---|
 | Calendar Space Module | `packages/toolkit/src/components/calendar/calendar-module.stories.tsx` | `RLS/Module/Kalender/Übersicht` | Items im Current Space mit `data.start`, optional `data.end` |
 | Header und Ansichtsauswahl | `calendar-view.tsx` | `RLS/Module/Kalender/Übersicht` | UI-Zustand steuert Zeitraum, Monat/Woche/Tag/Liste und Heute-Sprung; `initialVisibleDate` öffnet additiv einen Startzeitraum ohne den Heute-Wert zu überschreiben |
-| Filter | `calendar-view.tsx` | `RLS/Module/Kalender/Übersicht` | Typ-, Orts- und Current-User-Filter bleiben lokal; ihre Optionen stammen nur aus zeitlich darstellbaren Items; Persistenz ist App-/Shell-Verantwortung |
+| Filter | `calendar-view.tsx` | `RLS/Module/Kalender/Übersicht` | Typ-, Tag- und Textfilter laufen über die geteilte Leiste (`useModuleFilteredItems`); Orts- und Current-User-Filter bleiben lokal; ihre Optionen stammen nur aus zeitlich darstellbaren Items; Persistenz ist App-/Shell-Verantwortung |
 | Monatsansicht | `calendar-view.tsx` | `RLS/Module/Kalender/Übersicht` | `Item.data.start` gruppiert Events nach Kalendertag; Event-Pills öffnen das Item |
 | Wochen-/Tagesansicht | `calendar-view.tsx` | `RLS/Module/Kalender/Übersicht` | Zeitgebundene Items werden auf einfache Zeitslots projiziert |
 | Eventliste | `calendar-view.tsx` | `RLS/Module/Kalender/Übersicht` | Zeitgebundene Items im sichtbaren Zeitraum, sortiert und nach Tag gruppiert |
@@ -155,6 +162,19 @@ Calendar ist das Referenzmodul für zeitliche Projektionen im Current Space. Es 
 | Teilnehmer/Bestätigungen | spätere Module Components | noch nicht abgebildet | Optional über `RelationCapable` und `ConfirmationCapable` |
 
 Die Calendar-Overview orientiert sich am Edge-Prototyp unter `https://real-life-stack.de/edge/` (Navigation `Kalender`), bleibt aber technisch eine backend-agnostische Projektion über generische Items.
+
+## Flächen ohne Spec-Dokument
+
+Diese Code-Flächen existieren, werden aber von keinem Spec-Dokument beschrieben. Die Liste hält die Lücke fest; sie ersetzt keine Spezifikation.
+
+- `components/graph/` ist als Modul `graph` im Register; ein Modul-Spec-Dokument fehlt.
+- `components/lens/collection-view.tsx` ist als Modul `collection` im Register, in der Spec aber nur als Linse beschrieben; die Modul-Spec fehlt.
+- `components/activity/` liefert ActivityBell, ActivityPanel und NotificationCenter; eine Spec fehlt.
+- `components/dashboard/` liefert StatCard und ActionCard, die kein registriertes Modul benutzt; eine Spec fehlt.
+- `components/debug/` liefert DebugDashboard, StoreInspector und TraceTimeline; eine Spec fehlt.
+- `components/contacts/` liefert Kontaktliste, Kontakt- und Verifizierungsdialoge sowie RelayStatusBadge; eine Spec fehlt.
+- `layout/space-theme-panel.tsx` stellt die Farbeinstellung eines Space im Modul-Panel; eine Spec fehlt.
+- `layout/connector-switcher.tsx` wechselt den aktiven Connector; eine Spec fehlt.
 
 ## Nicht-Ziele
 
@@ -171,6 +191,3 @@ Diese Spec definiert nicht:
 1. Ob `components/auth/` dauerhaft App Shell bleibt oder später stärker WoT-spezifisch ausgelagert wird.
 2. Ob einzelne Module Components, z.B. `ReactionBar`, eigene geteilte Code-Ordner bekommen sollen.
 3. Ob Storybook später automatisiert gegen die Spec-Module-Liste geprüft werden soll.
-# MapView
-
-- `MapView` → `packages/toolkit/src/components/map/map-view.tsx` → Storybook `RLS/Module/Karte/MapView` (bbox-module und lens-auto-fit, Auswahl und Cluster).

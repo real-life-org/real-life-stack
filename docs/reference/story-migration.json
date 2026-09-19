@@ -1,5 +1,8 @@
 [
   {
+    "$comment": "alt → neu je Story-Datei. `storyIds` sind die Kennungen, die weiter auflösen müssen; `removed` nennt einzelne Stories, die es nicht mehr gibt, samt Grund — die Datei selbst kann trotzdem weiterleben."
+  },
+  {
     "file": "packages/toolkit/src/components/activity/activity-panel.stories.tsx",
     "oldTitle": "RLS/Shell/Activity Panel",
     "title": "RLS/App Shell/Aktivität und Benachrichtigungen/ActivityPanel",

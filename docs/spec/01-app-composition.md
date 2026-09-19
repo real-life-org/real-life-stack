@@ -31,12 +31,12 @@ App
 └─ Current Space
    └─ Space Modules
       ├─ Feed
-      ├─ Map
-      ├─ Calendar
       ├─ Kanban
-      ├─ Marketplace
-      ├─ Quests
-      └─ Campaign View
+      ├─ Calendar
+      ├─ Map
+      ├─ Resonance
+      ├─ Collection
+      └─ Graph
 ```
 
 Jedes Space Module kann aus Module Components zusammengesetzt sein.
@@ -82,10 +82,10 @@ Overlays folgen einem Drei-Ebenen-Modell. Pro Ebene gibt es höchstens **eine** 
 | Ebene | Fläche | Form | Inhalt |
 |---|---|---|---|
 | 1 Content-Panel | eine app-weite Instanz | Sidebar (Desktop) ↔ Drawer (Mobile) | Item-Detail, Composer, Filter — Content wird getauscht, nie gestapelt |
-
-Der **Drawer endet oben an der Schutzzone** des Geräts (Statusleiste, Notch): Ganz aufgezogen reicht er bis an sie heran, nicht bis an den Fensterrand, und ein Zug darüber hinaus wird geklemmt. Sonst liegen Griff und Schließen darunter, und das Blatt lässt sich nicht mehr verkleinern (randlose Android-Geräte). Die Zone hat **eine Quelle** (`--safe-top`): Was die Plattform meldet, gilt — auf Android schreibt Capacitor sie in die Wurzel, weil `env()` dort nichts liefert; sonst löst `env(safe-area-inset-top)` sie auf. Ein fester Wert wäre auf dem nächsten Gerät falsch.
 | 2 Dialog | eine Instanz | zentriertes Modal + Backdrop (Desktop) / Sheet (Mobile) | fokussierte Tasks: Kontakte, Verifizieren, Gruppe, Profil |
 | 3 Notification | nicht-destruktiver Hinweis | Banner / Toast | zeitkritische Interrupts: eingehende Verifizierung, Space-Einladung |
+
+Der **Drawer endet oben an der Schutzzone** des Geräts (Statusleiste, Notch): Ganz aufgezogen reicht er bis an sie heran, nicht bis an den Fensterrand, und ein Zug darüber hinaus wird geklemmt. Sonst liegen Griff und Schließen darunter, und das Blatt lässt sich nicht mehr verkleinern (randlose Android-Geräte). Die Zone hat **eine Quelle** (`--safe-top`): Was die Plattform meldet, gilt — auf Android schreibt Capacitor sie in die Wurzel, weil `env()` dort nichts liefert; sonst löst `env(safe-area-inset-top)` sie auf. Ein fester Wert wäre auf dem nächsten Gerät falsch.
 
 Regeln:
 
@@ -165,12 +165,12 @@ Beispiele:
 | Space Module | Aufgabe | Grundlage |
 |---|---|---|
 | Feed | Aktivität, Posts, Events, Dokumentation, Kommentare, Reaktionen | Items und Relations |
-| Map | räumliche Ansicht auf Orte, Events, Ressourcen oder Quests | Items mit `location` |
-| Calendar | zeitliche Monats-, Wochen-, Tages- oder Listenansicht auf Events, Quests oder Campaign-Phasen | Items mit `start` / `end` |
+| Map | räumliche Ansicht auf Orte, Events und Ressourcen | Items mit `position` |
+| Calendar | zeitliche Monats-, Wochen-, Tages- oder Listenansicht | Items mit `start` / `end` |
 | Kanban / Tasks | Aufgaben- und Workflow-Ansicht | Items mit `status` |
-| Marketplace | Angebote, Bedürfnisse, Ressourcen und mögliche Matches | Items, Profilfelder, Tags oder Relations |
-| Quests | Quest-Übersicht, Questlog, QuestRuns, Evidence und Completion-Status | RLNP-Items und Confirmations |
-| Campaign View | Adventures, Campaigns und World State | Game-Projektionen über Items, Relations und Confirmations |
+| Resonance | Zustimmung und Vorbehalt zu Aussagen | Items vom Typ `statement` mit Stimmen als Relations-Datensätze |
+| Collection | Liste oder Raster über alles, was der Space hält | alle Items, die in einer aggregierenden Ansicht erscheinen |
+| Graph | Items und ihre Beziehungen als Netz | Items und Relations |
 
 ## Modul-Register
 
@@ -270,7 +270,7 @@ Nicht jedes sichtbare UI-Element ist ein Space Module.
 | AppShell, Navbar, BottomNav, ModuleTabs | App Shell / Layout |
 | WorkspaceSwitcher | App Shell |
 | UserMenu | App Shell |
-| ProfileDialog | App Shell, kann in Modulen referenziert werden |
+| ProfilePanelContent | App Shell, kann in Modulen referenziert werden |
 | ContactsDialog | App Shell |
 | VerificationDialog | App Shell |
 | RelayStatusBadge | App Shell / Connector-Status |
@@ -302,14 +302,12 @@ Aktuell:
 - [modules/feed.md](modules/feed.md)
 - [modules/kanban.md](modules/kanban.md)
 - [modules/calendar.md](modules/calendar.md)
+- [modules/map.md](modules/map.md)
+- [modules/resonance.md](modules/resonance.md)
+- [modules/shared-components.md](modules/shared-components.md)
 
 ## Offene Punkte
 
 Diese Spec definiert die Taxonomie. Detail-Specs für weitere Space Modules können später folgen.
 
-Mögliche spätere Dokumente:
-
-- `modules/map.md`,
-- `modules/marketplace.md`,
-- `modules/quests.md`,
-- `modules/campaign-view.md`.
+Ohne Detail-Spec sind bisher die registrierten Module `collection` und `graph`.
