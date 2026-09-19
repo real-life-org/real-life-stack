@@ -103,6 +103,11 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # Normative Woerter gegen meta/CONVENTIONS.md. Eine Konvention, die
+      # nichts prueft, driftet lautlos.
+      - name: Normative Woerter
+        run: python3 scripts/check-normative-words.py
+
       - name: Test
         run: pnpm test
 

@@ -285,7 +285,7 @@ Regeln:
 #### Tile-/Style-Quelle als austauschbarer Parameter
 
 1. Die Karten-Quelle ist ein **Parameter**, kein im Adapter fest verdrahteter Provider. Beim Raster-Adapter ist das `MapMountOptions.tileSource` (Tile-URL-Template) plus `MapMountOptions.attribution`. Beim Vektor-Adapter ist `tileSource` die **Style-/PMTiles-Quelle** (Style-URL, Style-JSON-URL oder PMTiles-URL).
-2. Fehlt `tileSource`, wählt der Adapter einen sinnvollen Default (Leaflet: OSM-Standard-Tiles). Ein Vektor-Adapter SOLL analog einen Default-Style wählen.
+2. Fehlt `tileSource`, wählt der Adapter einen sinnvollen Default (Leaflet: OSM-Standard-Tiles). Ein Vektor-Adapter SOLLTE analog einen Default-Style wählen.
 3. Diese Spec nagelt **keinen Provider normativ fest**. Protomaps/PMTiles, MapTiler und OpenFreeMap sind nur Beispiele möglicher Style-/Tile-Quellen für einen Vektor-Adapter; die konkrete Wahl ist App- oder Space-Konfiguration, nicht Teil des Contracts.
 
 #### Hell/Dunkel-Variante
@@ -373,7 +373,7 @@ Die Karte führt neben ihrer Suche einen **Standort-Knopf** (32px, `StandortIcon
 Die Karte fragt Items **viewport-begrenzt** ab statt den vollen Satz zu laden — der Seam für skalierende Karten (zehntausende Items) und das spätere GraphQL-Backend.
 
 1. Die Marker-Abfrage MUSS die sichtbare **Bounding-Box** als `ItemFilter.bbox` (`[west, south, east, north]`) mitgeben; bei Pan/Zoom (`observeView` → `moveend`) wird neu abgefragt (debounced). Siehe [02-data-interface.md](../02-data-interface.md) → Filter.
-2. Ein lokaler Connector DARF `bbox` clientseitig aus dem vollen Satz filtern; ein backend-gestützter Connector (GraphQL) SOLL serverseitig einschränken, sodass nur die Items im Ausschnitt übertragen werden.
+2. Ein lokaler Connector DARF `bbox` clientseitig aus dem vollen Satz filtern; ein backend-gestützter Connector (GraphQL) SOLLTE serverseitig einschränken, sodass nur die Items im Ausschnitt übertragen werden.
 3. **Serverseitiges Clustering** (Rückgabe aggregierter Cluster statt Einzel-Items, zoom-parametrisiert) ist die Antwort für sehr große Mengen (> ~100k). Es ist eine **zukünftige, separate Query** (nicht `ItemFilter`, der `Item[]` liefert) und Teil des GraphQL-Meilensteins, kein v0.2-Pflichtteil.
 4. Bis dahin gilt: lokaler/voller Satz → `bbox`-gefiltert → client-seitiges Clustering (`ClusterCapable`). Derselbe Modul-Code trägt später den server-geclusterten Pfad, ohne Umbau am Marker-/Adapter-Contract.
 
