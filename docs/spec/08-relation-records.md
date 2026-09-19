@@ -103,7 +103,7 @@ Regeln:
    `claim` (s. „Autorbindung: SignedClaims“) sind reserviert; neue
    Vertragsfelder kommen nur mit einer neuen Vokabular-Version
    (`relation/v2`), nie still in `v1`.
-7. Ein RelationRecord SOLL im selben Space liegen wie sein `from`-Ziel.
+7. Ein RelationRecord SOLLTE im selben Space liegen wie sein `from`-Ziel.
    Endpunkte in anderen Spaces werden über `space:{id}/item:` adressiert.
 8. Records mit nicht auflösbaren oder fehlerhaften Endpunkten (kein oder
    mehr als ein `from`-/`to`-Eintrag) MÜSSEN von Leseflächen ignoriert
@@ -117,7 +117,7 @@ Regeln:
    anderen Autor als das Trägeritem haben. Feste Beziehungen DÜRFEN
    ebenfalls als Records geführt werden (die Netzwerk-App tut das für alle
    Relationsarten, auch `takesPlaceAt`).
-10. Relation-Items SOLLEN das Vokabular `relation/v1` deklarieren
+10. Relation-Items SOLLTEN das Vokabular `relation/v1` deklarieren
     (`@context`, s. [06-schema-composition.md](06-schema-composition.md));
     die Schema-Definition folgt in `schemas/vocab/relation/v1/` (validiert
     u. a. genau einen `from`- und einen `to`-Eintrag, die ID-Regel und die
@@ -298,7 +298,7 @@ zentrale Autoritätsprüfung mutieren. Der Vertrag ist deshalb
 | Modus | wer | Pflichten |
 |---|---|---|
 | `signed` | Multi-Writer-Sync ohne zentrale Autorität (WoT/shared CRDT) | MUSS `authorial`-Claims schreiben, re-signieren und verifizieren |
-| `authoritative` | Backends mit erzwungener Autorbindung | `trusted` DARF ein Connector NUR beanspruchen, wenn **jeder Ingress-Pfad** seines Stores (`createItem`, Update, Import, Mirror/Bridge) `createdBy` verbindlich an die authentifizierte Identität bindet — das ist MUSS, nicht SOLL. Privilegierte Fixture-/Seed-Pfade sind ausgenommen, MÜSSEN aber als solche gekennzeichnet und im Produktionspfad unerreichbar sein (analog Fassaden-Regel 3). |
+| `authoritative` | Backends mit erzwungener Autorbindung | `trusted` DARF ein Connector NUR beanspruchen, wenn **jeder Ingress-Pfad** seines Stores (`createItem`, Update, Import, Mirror/Bridge) `createdBy` verbindlich an die authentifizierte Identität bindet — das ist MUSS, nicht SOLLTE. Privilegierte Fixture-/Seed-Pfade sind ausgenommen, MÜSSEN aber als solche gekennzeichnet und im Produktionspfad unerreichbar sein (analog Fassaden-Regel 3). |
 
 Ein Connector, der keinen der beiden Modi erfüllt (z. B. ein GraphQL-Server,
 dessen Store client-gesetztes `createdBy` akzeptiert), hat KEINEN Claim-Modus:

@@ -4,7 +4,9 @@
 
 Diese Spec beschreibt den stabilen technischen Vertrag des Real Life Stack. Sie ist der normative Bereich des Repositories. Konzeptdokumente dürfen weiterdenken, Beispiele sammeln oder offene Richtungen erkunden; die Dateien in `docs/spec/` definieren, worauf Code, Connectoren, Hooks und UI-Flächen sich verlassen dürfen.
 
-**Bei Konflikt zwischen Spec und Implementierung gewinnt die Spec.** Entweder Code anpassen oder Spec ändern + PR-Note. Code soll nicht stillschweigend neue Regeln einführen.
+**Bei Konflikt zwischen Spec und Implementierung gewinnt die Spec.** Entweder Code anpassen oder Spec ändern + PR-Note. Code führt keine Regeln stillschweigend ein.
+
+**Normative Wörter:** `MUSS`/`MÜSSEN`, `DARF NICHT`/`DÜRFEN NICHT`, `SOLLTE`/`SOLLTEN`, `DARF`/`DÜRFEN` — groß geschrieben, in der Bedeutung von RFC 2119. `SOLL` ist kein Schlüsselwort: Eine Empfehlung heißt `SOLLTE`, eine Pflicht `MUSS`. Die vollständige Konvention für alle Repositories der Familie steht in [real-life-org/meta → CONVENTIONS.md](https://github.com/real-life-org/meta/blob/main/CONVENTIONS.md); geprüft wird sie mit `scripts/check-normative-words.py`.
 
 ## Geltungsbereich
 
