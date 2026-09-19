@@ -1,10 +1,11 @@
-import { useState, useCallback } from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import type { CommentWithAuthor } from "@/hooks/use-comments"
 import type { Item } from "@real-life-stack/data-interface"
-import { CommentInput, type CommentQuote } from "./comment-input"
+import { CommentInput } from "./comment-input"
 import { CommentBubble } from "./comment-bubble"
 import { CommentThread } from "./comment-thread"
+import { CommentSection } from "./comment-section"
+import { STORY_POST, StoryWorld } from "../../story-support/story-world"
 
 // ---- Mock Data ----
 
@@ -52,95 +53,8 @@ const MOCK_REPLIES_C1: CommentWithAuthor[] = [
   },
 ]
 
-const MOCK_REPLIES_C3: CommentWithAuthor[] = [
-  {
-    item: mockItem("r3", "user-1", "2026-03-20T13:00:00Z", { content: "Lecker! Was für einen?", replyTo: "c3" }),
-    authorName: "Anna Schmidt",
-    authorAvatar: "https://randomuser.me/api/portraits/women/44.jpg",
-    replyCount: 0,
-  },
-]
-
-function getReplies(commentId: string): CommentWithAuthor[] {
-  if (commentId === "c1") return MOCK_REPLIES_C1
-  if (commentId === "c3") return MOCK_REPLIES_C3
-  return []
-}
-
 
 // ---- Standalone CommentSection for Storybook ----
-
-function StandaloneCommentSection() {
-  const [comments, setComments] = useState(MOCK_COMMENTS)
-  const [replyTo, setReplyTo] = useState<CommentQuote | null>(null)
-  const [replyToFirstLevel, setReplyToFirstLevel] = useState<string | null>(null)
-
-  const handleReply = useCallback((comment: CommentWithAuthor) => {
-    const data = comment.item.data as { content: string; replyTo?: string }
-    const isSecondLevel = !!data.replyTo
-
-    setReplyTo({
-      id: comment.item.id,
-      authorName: comment.authorName,
-      text: (data.content ?? "").slice(0, 80),
-    })
-    setReplyToFirstLevel(isSecondLevel ? data.replyTo! : comment.item.id)
-  }, [])
-
-  const handleSubmit = useCallback((text: string) => {
-    const newComment: CommentWithAuthor = {
-      item: mockItem(
-        `c-new-${Date.now()}`,
-        "user-current",
-        new Date().toISOString(),
-        {
-          content: text,
-          ...(replyToFirstLevel ? { replyTo: replyToFirstLevel } : {}),
-          ...(replyTo && replyTo.id !== replyToFirstLevel ? { replyToComment: replyTo.id } : {}),
-        }
-      ),
-      authorName: "Du",
-      replyCount: 0,
-    }
-
-    if (replyToFirstLevel) {
-      setComments((prev) =>
-        prev.map((c) =>
-          c.item.id === replyToFirstLevel ? { ...c, replyCount: c.replyCount + 1 } : c
-        )
-      )
-    } else {
-      setComments((prev) => [...prev, newComment])
-    }
-
-    setReplyTo(null)
-    setReplyToFirstLevel(null)
-  }, [replyTo, replyToFirstLevel])
-
-  return (
-    <div className="flex flex-col h-[500px] border rounded-lg bg-background">
-      <div className="flex-1 overflow-y-auto">
-        <div className="space-y-4 p-4">
-          {comments.map((comment) => (
-            <CommentThread
-              key={comment.item.id}
-              comment={comment}
-              replies={getReplies(comment.item.id)}
-              onReply={handleReply}
-
-            />
-          ))}
-        </div>
-      </div>
-
-      <CommentInput
-        onSubmit={handleSubmit}
-        replyTo={replyTo}
-        onCancelReply={() => { setReplyTo(null); setReplyToFirstLevel(null) }}
-      />
-    </div>
-  )
-}
 
 // ---- Stories ----
 
@@ -165,9 +79,21 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
+/**
+ * Der ganze Bereich an einer echten Datenquelle: Liste, Antworten, Eingabe.
+ * Schreiben wirkt — ein neuer Kommentar erscheint sofort, eine Antwort klappt
+ * ihren Strang auf. `CommentSection` holt sich alles über `useComments`; die
+ * Fläche gibt ihr nur die Kennung des Items.
+ */
 export const FullSection: Story = {
   name: "CommentSection",
-  render: () => <StandaloneCommentSection />,
+  render: () => (
+    <StoryWorld>
+      <div className="h-[32rem] overflow-hidden rounded-lg border bg-background">
+        <CommentSection itemId={STORY_POST.id} />
+      </div>
+    </StoryWorld>
+  ),
 }
 
 export const InputDefault: Story = {

@@ -66,7 +66,6 @@ import {
   useMarkNotificationsSeen,
   useItems,
   type Workspace,
-  type UserData,
   type ConnectorOption,
   type GroupDialogMode,
   AuthScreen,
@@ -653,13 +652,9 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     setGroupDialogOpen(true)
   }, [groups])
 
-  const userData: UserData = useMemo(
-    () => ({
-      id: currentUser?.id ?? "",
-      name: currentUser?.displayName ?? "Laden...",
-      email: "",
-      avatar: currentUser?.avatarUrl,
-    }),
+  // UserMenu nimmt den User des Datenmodells; keine zweite Personenform mehr.
+  const userData: User = useMemo(
+    () => currentUser ?? { id: "", displayName: "Laden..." },
     [currentUser]
   )
 

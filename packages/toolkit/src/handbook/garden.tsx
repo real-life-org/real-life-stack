@@ -143,7 +143,7 @@ function Garden({
         </NavbarCenter>
         <NavbarEnd>
           <UserMenu
-            user={{ id: 'mira', name: 'Mira Beispiel' }}
+            user={seed.users[0]}
             onProfile={() =>
               setNotice(
                 'Mira Beispiel · fiktive Identität dieses Lernbeispiels',

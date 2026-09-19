@@ -1,159 +1,88 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { Item, User } from "@real-life-stack/data-interface"
-import { useMemo, useState } from "react"
-import { ContentComposer, type ContentComposerSubmitData } from "../composer/content-composer"
+import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
+import { ContentComposer } from "../composer/content-composer"
 import { FeedComposerTrigger } from "./feed-composer-trigger"
-import {
-  ItemPreview,
-  ItemTypeBadge,
-  ItemMetaRow,
-  ItemCommentCount,
-} from "../preview"
+import { ItemPreview } from "../preview/item-preview"
+import { ItemCommentCount } from "../preview/item-comment-count"
+import { ItemMetaRow } from "../preview/item-meta-row"
+import { ItemTypeBadge } from "../preview/item-type-badge"
+import { ReactionBar } from "../reactions/reaction-bar"
+import { useItems } from "../../hooks/use-items"
+import { useCommentCount } from "../../hooks/use-comment-count"
+import { useMembers } from "../../hooks/use-groups"
+import { useItemAuthor } from "../../hooks/use-item-author"
+import { useCreateItem } from "../../hooks/use-mutations"
+import { STORY_ME, StoryWorld } from "../../story-support/story-world"
+import type { Item } from "@real-life-stack/data-interface"
 
-const now = new Date()
+/**
+ * Der Feed ist keine eigene Komponente, sondern eine Zusammenstellung: eine
+ * Liste von `ItemPreview`, jede mit den Beigaben ihres Typs, darüber der
+ * Auslöser für den Composer. Diese Story setzt sie genauso zusammen wie die
+ * Referenz-App, an einer echten Datenquelle — anlegen, reagieren und
+ * kommentieren wirken wirklich.
+ *
+ * Systemtypen (Kommentar, Reaktion, Relation) gehören nicht in eine
+ * aggregierende Ansicht; welche das sind, sagt `isAggregateVisibleItemType`,
+ * nicht eine Liste je Modul.
+ */
 
-type FeedEntry = {
-  item: Item
-  author: User
-  comments?: number
-  reactions?: Array<{ emoji: string; count: number }>
-}
-
-const currentUser = {
-  id: "user-1",
-  name: "Anna Schmidt",
-  avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-}
-
-const initialItems: FeedEntry[] = [
-  {
-    item: {
-      id: "post-1",
-      type: "post",
-      createdAt: new Date(now.getTime() - 1000 * 60 * 35).toISOString(),
-      createdBy: "user-1",
-      data: {
-        title: "Gemeinschaftsgarten: Samstagstreffen",
-        content: "Wir treffen uns am Samstag zum Beete vorbereiten und planen die nächsten Schritte."
-      }, tags: ["garten", "planung"],
-    },
-    author: { id: currentUser.id, displayName: currentUser.name, avatarUrl: currentUser.avatar },
-    comments: 4,
-    reactions: [
-      { emoji: "❤️", count: 5 },
-      { emoji: "👍", count: 3 },
-    ],
-  },
-  {
-    item: {
-      id: "event-1",
-      type: "event",
-      createdAt: new Date(now.getTime() - 1000 * 60 * 90).toISOString(),
-      createdBy: "user-2",
-      data: {
-        title: "Workshop: Kompost richtig anlegen",
-        content: "Kurzer Praxisworkshop mit Materialliste und offener Fragerunde.",
-        start: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 3).toISOString(),
-        address: "Gemeinschaftsgarten Nord"
-      }, tags: ["workshop"],
-    },
-    author: { id: "user-2", displayName: "Max Mustermann", avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg" },
-    comments: 2,
-    reactions: [{ emoji: "👍", count: 6 }],
-  },
-  {
-    item: {
-      id: "task-1",
-      type: "task",
-      createdAt: new Date(now.getTime() - 1000 * 60 * 140).toISOString(),
-      createdBy: "user-3",
-      data: {
-        title: "Wasserschlauch reparieren",
-        description: "Leck am Verbindungsstück abdichten und Materialbedarf dokumentieren.",
-        status: "in-progress"
-      }, tags: ["infrastruktur"],
-    },
-    author: { id: "user-3", displayName: "Thomas Müller", avatarUrl: "https://randomuser.me/api/portraits/men/67.jpg" },
-    comments: 1,
-  },
-]
-
-function getStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
-}
-
-function StaticReactionSlot({ reactions }: { reactions: Array<{ emoji: string; count: number }> }) {
+function FeedItem({ item }: { item: Item }) {
+  const { data: members } = useMembers(null)
+  const author = useItemAuthor(item, members)
+  const comments = useCommentCount(item.id)
   return (
-    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-      {reactions.map((reaction) => (
-        <span key={reaction.emoji} className="rounded-full border bg-muted/50 px-2 py-0.5">
-          {reaction.emoji} {reaction.count}
-        </span>
-      ))}
-    </div>
+    <ItemPreview
+      item={item}
+      author={author}
+      headerAdornment={<ItemTypeBadge type={item.type} />}
+      metaAdornment={<ItemMetaRow item={item} />}
+      footerAdornment={
+        <>
+          <ReactionBar itemId={item.id} />
+          {comments > 0 && (
+            <div className="ml-auto">
+              <ItemCommentCount count={comments} />
+            </div>
+          )}
+        </>
+      }
+    />
   )
 }
 
 function FeedModuleOverview() {
-  const [feedItems, setFeedItems] = useState(initialItems)
-  const sortedItems = useMemo(
-    () => [...feedItems].sort((a, b) => Date.parse(b.item.createdAt) - Date.parse(a.item.createdAt)),
-    [feedItems],
-  )
-
-  const handleCreatePost = (submitData: ContentComposerSubmitData) => {
-    const text = typeof submitData.data.text === "string" ? submitData.data.text.trim() : ""
-    const title = typeof submitData.data.title === "string" ? submitData.data.title.trim() : ""
-    const tags = getStringArray(submitData.data.tags)
-
-    if (!text && !title) return
-
-    const item: Item = {
-      id: `post-${Date.now()}`,
-      type: submitData.contentType,
-      createdAt: new Date().toISOString(),
-      createdBy: currentUser.id,
-      data: {
-        title,
-        content: text,
-      },
-      ...(tags.length > 0 ? { tags } : {}),
-    }
-
-    setFeedItems((current) => [
-      {
-        item,
-        author: { id: currentUser.id, displayName: currentUser.name, avatarUrl: currentUser.avatar },
-        comments: 0,
-      },
-      ...current,
-    ])
-  }
+  const { data: items } = useItems()
+  const { mutate: createItem } = useCreateItem()
+  const feed = items
+    .filter((item) => isAggregateVisibleItemType(item.type))
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
 
   return (
     <div className="mx-auto max-w-2xl space-y-3">
       <FeedComposerTrigger
-        userName={currentUser.name}
-        userAvatar={currentUser.avatar}
+        userName={STORY_ME.displayName}
+        userAvatar={STORY_ME.avatarUrl}
         placeholder="Was gibt es Neues im Gemeinschaftsgarten?"
       >
         {({ onClose, initialText }) => (
           <div className="p-4 sm:p-6">
             <ContentComposer
-              contentTypes={[
-                {
-                  id: "post",
-                  label: "Post",
-                  defaultWidgets: ["text", "tags"],
-                  submitLabel: "Posten",
-                },
-              ]}
+              contentTypes={[{ id: "post", label: "Beitrag", defaultWidgets: ["text", "tags"], submitLabel: "Posten" }]}
               initialData={{ text: initialText ?? "" }}
               showPreview={false}
               showVisibility={false}
               tagQuickSuggestions={["garten", "planung", "infrastruktur", "workshop"]}
-              onSubmit={(data) => {
-                handleCreatePost(data)
+              onSubmit={async ({ data }) => {
+                const text = typeof data.text === "string" ? data.text.trim() : ""
+                if (text) {
+                  await createItem({
+                    type: "post",
+                    createdBy: STORY_ME.id,
+                    data: { content: text },
+                    ...(Array.isArray(data.tags) && data.tags.length ? { tags: data.tags as string[] } : {}),
+                  })
+                }
                 onClose()
               }}
               onCancel={onClose}
@@ -162,26 +91,8 @@ function FeedModuleOverview() {
         )}
       </FeedComposerTrigger>
 
-      {sortedItems.map(({ item, author, comments, reactions }) => (
-        <ItemPreview
-          key={item.id}
-          item={item}
-          author={author}
-          headerAdornment={<ItemTypeBadge type={item.type} />}
-          metaAdornment={<ItemMetaRow item={item} />}
-          footerAdornment={
-            reactions || (comments && comments > 0) ? (
-              <>
-                {reactions && <StaticReactionSlot reactions={reactions} />}
-                {comments && comments > 0 ? (
-                  <div className="ml-auto">
-                    <ItemCommentCount count={comments} />
-                  </div>
-                ) : null}
-              </>
-            ) : undefined
-          }
-        />
+      {feed.map((item) => (
+        <FeedItem key={item.id} item={item} />
       ))}
     </div>
   )
@@ -192,9 +103,8 @@ const meta: Meta<typeof FeedModuleOverview> = {
   title: "RLS/Module/Feed/Übersicht",
   component: FeedModuleOverview,
   tags: ["autodocs"],
-  parameters: {
-    layout: "padded",
-  },
+  parameters: { layout: "padded" },
+  decorators: [(Story) => <StoryWorld>{Story()}</StoryWorld>],
 }
 
 export default meta

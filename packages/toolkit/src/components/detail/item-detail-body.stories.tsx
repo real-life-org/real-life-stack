@@ -1,38 +1,28 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { Item, User } from "@real-life-stack/data-interface"
-import { Calendar, MapPin, Users } from "lucide-react"
+import type { Item } from "@real-life-stack/data-interface"
 
 import { ItemDetailBody } from "./item-detail-body"
+import { ItemDetailActions } from "./item-detail-actions"
 import { ItemDetailSkeleton } from "./item-detail-skeleton"
-import { Button } from "../primitives/button"
-
-const AUTOR: User = { id: "u1", displayName: "Sebastian" } as User
-
-const EVENT: Item = {
-  id: "e1",
-  type: "event",
-  createdAt: "2026-06-05T10:00:00.000Z",
-  createdBy: "u1",
-  tags: ["repair", "community"],
-  data: {
-    title: "Repair-Café im Stadtteilzentrum",
-    content: "Bringt eure kaputten Geräte! Werkzeug und Expertise vor Ort.",
-  },
-  relations: [],
-} as Item
-
-const META = (
-  <div className="flex flex-col gap-1.5">
-    <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />4. Juli, 16:00 – 20:00</span>
-    <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />Stadtteilzentrum Friedrichshain</span>
-    <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />3 zugesagt · 2 eingeladen</span>
-  </div>
-)
+import { ItemMetaRow } from "../preview/item-meta-row"
+import { ItemTypeBadge } from "../preview/item-type-badge"
+import { ReactionBar } from "../reactions/reaction-bar"
+import { STORY_EVENT, STORY_ME, STORY_POST, StoryWorld, storyReaction } from "../../story-support/story-world"
 
 /**
- * Die Leseansicht im Detail-Panel. Ohne Panel darüber — hier in Storybook —
- * bleiben die Aktionen in der Kopfzeile, statt in dessen Knopfleiste zu wandern.
+ * Die Leseansicht im Detail-Panel.
+ *
+ * Sie bringt selbst keinen Rahmen mit und keine Aktionen: Beides reicht die
+ * Fläche durch. In der App ist das `ItemDetailView`, das oben rechts das
+ * ⋮-Menü (`ItemDetailActions`: Bearbeiten, Teilen, Löschen, je nach Recht) und
+ * unten die Reaktionsleiste einsetzt. Genau diese echten Bausteine stehen hier,
+ * damit die Story nicht zeigt, was die App nicht tut.
  */
+
+const REACTED = {
+  items: [STORY_EVENT, STORY_POST, storyReaction("r1", "jonas", "👍", STORY_EVENT.id), storyReaction("r2", "lea", "👍", STORY_EVENT.id), storyReaction("r3", "mira", "🎉", STORY_EVENT.id)],
+}
+
 const meta: Meta<typeof ItemDetailBody> = {
   id: "detail-itemdetailbody",
   title: "RLS/Items/Detailansicht/Anatomie und Inhalt",
@@ -40,11 +30,11 @@ const meta: Meta<typeof ItemDetailBody> = {
   parameters: { layout: "centered" },
   decorators: [
     (Story) => (
-      // Der Rahmen gehört dem Panel, nicht der Ansicht: hier nachgestellt,
-      // damit sichtbar wird, dass die Ansicht selbst keinen mitbringt.
-      <div className="w-[360px] overflow-hidden rounded-2xl border bg-background shadow-xl">
-        <Story />
-      </div>
+      <StoryWorld seed={REACTED}>
+        {/* Der Rahmen gehört dem Panel, nicht der Ansicht: hier nachgestellt,
+            damit sichtbar wird, dass die Ansicht selbst keinen mitbringt. */}
+        <div className="w-[360px] overflow-hidden rounded-2xl border bg-background shadow-xl">{Story()}</div>
+      </StoryWorld>
     ),
   ],
 }
@@ -52,33 +42,44 @@ export default meta
 
 type Story = StoryObj<typeof ItemDetailBody>
 
+/** Ein Termin mit allem, was die Fläche beisteuert: Typ, Fakten, Menü, Reaktionen. */
 export const Event: Story = {
-  args: {
-    item: EVENT,
-    author: AUTOR,
-    headerAdornment: <span className="rounded-full border border-primary/30 px-2 py-0.5 text-xs text-primary">Event</span>,
-    actions: <Button variant="ghost" size="sm" className="h-7 w-7 p-0">⋮</Button>,
-    meta: META,
-    footer: <span className="text-sm text-muted-foreground">👍 3 · 🎉 1</span>,
-  },
+  render: () => (
+    <ItemDetailBody
+      item={STORY_EVENT}
+      author={STORY_ME}
+      headerAdornment={<ItemTypeBadge type={STORY_EVENT.type} />}
+      actions={<ItemDetailActions item={STORY_EVENT} title={String(STORY_EVENT.data.title)} onEdit={() => {}} />}
+      meta={<ItemMetaRow item={STORY_EVENT} />}
+      footer={<ReactionBar itemId={STORY_EVENT.id} />}
+    />
+  ),
 }
 
-/** Ein Beitrag ohne Titel, ohne Fakten, ohne Tags — nur Text und Urheber. */
+/** Ein Beitrag ohne Titel, ohne Fakten, ohne Tags: nur Text und Urheber. */
 export const NurText: Story = {
-  args: {
-    item: { ...EVENT, type: "post", tags: undefined, data: { content: "Kurz notiert: der Schlüssel liegt wieder im Café." } } as Item,
-    author: AUTOR,
-  },
+  render: () => (
+    <ItemDetailBody
+      item={{ ...STORY_POST, tags: undefined, data: { content: "Kurz notiert: der Schlüssel liegt wieder im Café." } } as Item}
+      author={STORY_ME}
+    />
+  ),
 }
 
-/** Viele Tags: Sie kappen, der Urheber bleibt in seiner Zeile. */
+/** Viele Tags: sie kappen, der Urheber bleibt in seiner Zeile. */
 export const VieleTags: Story = {
-  args: {
-    ...Event.args,
-    item: { ...EVENT, tags: ["repair", "community", "nachbarschaft", "werkstatt", "offen"] } as Item,
-  },
+  render: () => (
+    <ItemDetailBody
+      item={{ ...STORY_EVENT, tags: ["repair", "community", "nachbarschaft", "werkstatt", "offen"] } as Item}
+      author={STORY_ME}
+      headerAdornment={<ItemTypeBadge type={STORY_EVENT.type} />}
+      actions={<ItemDetailActions item={STORY_EVENT} title={String(STORY_EVENT.data.title)} onEdit={() => {}} />}
+      meta={<ItemMetaRow item={STORY_EVENT} />}
+    />
+  ),
 }
 
+/** Solange das Item noch nicht da ist. */
 export const Laedt: Story = {
   render: () => <ItemDetailSkeleton />,
 }

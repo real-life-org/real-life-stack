@@ -58,7 +58,6 @@ import {
   type GraphTypeDescriptor,
   type GraphViewHandle,
   type PanelMode,
-  type UserData,
   type Workspace,
   type NavItem,
 } from "@real-life-stack/toolkit"
@@ -589,14 +588,7 @@ function NetworkShell() {
       : [],
     [graph.edges, selectedNodeId],
   )
-  const userData: UserData | null = useMemo(
-    () => currentUser ? {
-      id: currentUser.id,
-      name: currentUser.displayName ?? currentUser.id,
-      avatar: currentUser.avatarUrl,
-    } : null,
-    [currentUser],
-  )
+  const userData: User | null = currentUser
 
   const searchResults = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("de")
