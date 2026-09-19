@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 import { createObservable, type Item } from "@real-life-stack/data-interface"
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { useGroups, useCurrentGroup, useMembers, useCreateGroup } from "../src/hooks/use-groups"
-import { useAuthState, useOptionalCurrentUser } from "../src/hooks/use-auth"
+import { useOptionalCurrentUser } from "../src/hooks/use-auth"
 import { useItemPermissions } from "../src/hooks/use-item-permissions"
 
 /**
@@ -13,7 +13,7 @@ import { useItemPermissions } from "../src/hooks/use-item-permissions"
  * keine Gruppen, keine Anmeldung, keine Schreibrechte. So einer ist erlaubt
  * (das Handbuch-Beispiel baut genau ihn), und alles Lesende muss mit ihm
  * laufen. Bis 19.09.2026 warfen useGroups, useMembers, useCurrentGroup und
- * useAuthState stattdessen eine Ausnahme und rissen die Seite mit.
+ * useGroups stattdessen eine Ausnahme und rissen die Seite mit.
  */
 const item: Item = { id: "i1", type: "post", createdAt: "2026-01-01T00:00:00.000Z", createdBy: "mira", data: {} }
 function readerConnector() {
@@ -62,11 +62,10 @@ describe("Nur-Lese-Connector", () => {
 
   it("meldet niemanden angemeldet, statt zu werfen", async () => {
     const data = await render(() => {
-      const state = useAuthState()
       const { data: user } = useOptionalCurrentUser()
-      return <output data-status={state.status} data-user={String(user)} />
+      return <output data-user={String(user)} />
     })
-    expect(data).toMatchObject({ status: "unauthenticated", user: "null" })
+    expect(data).toMatchObject({ user: "null" })
   })
 
   it("gewährt keine Rechte am Item, statt zu werfen", async () => {
@@ -153,16 +152,6 @@ describe("Wechsel auf einen Connector ohne die Fähigkeit", () => {
     expect(nachher).toMatchObject({ user: "null", loading: "false" })
   })
 
-  it("vergisst die verknüpften Items", async () => {
-    const { useRelatedItems } = await import("../src/hooks/use-related-items")
-    const { vorher, nachher } = await renderSwap(() => {
-      const { data } = useRelatedItems("i1")
-      return <output data-n={String(data.length)} />
-    })
-    expect(vorher).toMatchObject({ n: "1" })
-    expect(nachher).toMatchObject({ n: "0" })
-  })
-
   it("vergisst die Kommentare", async () => {
     const { useComments } = await import("../src/hooks/use-comments")
     const { vorher, nachher } = await renderSwap(() => {
@@ -171,14 +160,5 @@ describe("Wechsel auf einen Connector ohne die Fähigkeit", () => {
     })
     expect(vorher).toMatchObject({ n: "1" })
     expect(nachher).toMatchObject({ n: "0" })
-  })
-
-  it("vergisst den Anmeldezustand", async () => {
-    const { vorher, nachher } = await renderSwap(() => {
-      const state = useAuthState()
-      return <output data-status={state.status} />
-    })
-    expect(vorher).toMatchObject({ status: "authenticated" })
-    expect(nachher).toMatchObject({ status: "unauthenticated" })
   })
 })

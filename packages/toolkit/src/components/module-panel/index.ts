@@ -1,7 +1,6 @@
 export {
   ModulePanelProvider,
   useModulePanel,
-  useOptionalModulePanel,
   type ModulePanelKind,
   type ModulePanelEntry,
   type ModulePanelContextValue,

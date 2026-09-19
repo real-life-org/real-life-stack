@@ -143,7 +143,7 @@ function CalendarModuleOverview() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <CalendarView
-        events={events}
+        items={events}
         initialDate="2026-05-22T12:00:00.000+02:00"
         currentUserId="user-1"
         onCreateEvent={() => undefined}

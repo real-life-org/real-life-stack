@@ -97,7 +97,7 @@ describe("Eine eingebettete Modulflaeche", () => {
   it("bringt sie auch dem Kalender mit", async () => {
     await rendere(
       createElement(CalendarView, {
-        events: [termin],
+        items: [termin],
         initialVisibleDate: "2026-07-08T12:00:00.000Z",
         initialDate: "2026-07-08T12:00:00.000Z",
       }),

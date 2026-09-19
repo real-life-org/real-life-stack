@@ -2,6 +2,33 @@ import './storybook.css'
 import type { Preview } from '@storybook/react-vite'
 import React from 'react'
 
+/**
+ * Hell und Dunkel als EIN Signal.
+ *
+ * Vorher hing der Dunkelmodus am Hintergrund-Addon, und der Dekorator verglich
+ * dessen Wert mit einem oklch-String — das Addon liefert aber den Schlüssel
+ * ("dark"). Der Vergleich stimmte nie, die `dark`-Klasse kam nie an: Die
+ * Leinwand wurde dunkel, die Bausteine blieben hell.
+ *
+ * Jetzt gibt es einen eigenen Umschalter, und er setzt die Klasse dort, wo die
+ * App sie auch setzt: am Wurzelelement. Nur so folgt auch, was das Schema in
+ * JavaScript liest (`resolveColorScheme`, `observeColorScheme` — die Karte).
+ * Die Leinwand nimmt ihre Farbe aus demselben Token statt aus einer zweiten
+ * Liste.
+ */
+function useSchema(dark: boolean) {
+  React.useEffect(() => {
+    const wurzel = document.documentElement
+    wurzel.classList.toggle('dark', dark)
+    wurzel.style.colorScheme = dark ? 'dark' : 'light'
+    document.body.style.background = 'var(--background)'
+    return () => {
+      wurzel.classList.remove('dark')
+      wurzel.style.colorScheme = ''
+    }
+  }, [dark])
+}
+
 const preview: Preview = {
   parameters: {
     controls: {
@@ -10,12 +37,9 @@ const preview: Preview = {
         date: /Date$/i,
       },
     },
-    backgrounds: {
-      options: {
-        light: { name: 'light', value: 'oklch(0.985 0.002 247.839)' },
-        dark: { name: 'dark', value: 'oklch(0.21 0.034 264.665)' },
-      },
-    },
+    // Kein Hintergrund-Addon: Die Leinwand folgt dem Token, nicht einer
+    // zweiten Farbliste, die mit ihm auseinanderlaufen kann.
+    backgrounds: { disable: true },
     options: {
       storySort: (a, b) => {
         const sections = [
@@ -43,13 +67,27 @@ const preview: Preview = {
     },
   },
 
+  globalTypes: {
+    theme: {
+      description: 'Erscheinungsbild',
+      toolbar: {
+        title: 'Erscheinungsbild',
+        icon: 'contrast',
+        items: [
+          { value: 'light', title: 'Hell', icon: 'sun' },
+          { value: 'dark', title: 'Dunkel', icon: 'moon' },
+        ],
+        dynamicTitle: true,
+      },
+    },
+  },
+
   decorators: [
     (Story, context) => {
-      const isDark =
-        context.globals.backgrounds?.value === 'oklch(0.21 0.034 264.665)'
+      useSchema(context.globals.theme === 'dark')
       return (
         <div
-          className={`font-sans ${context.parameters.layout === 'fullscreen' ? '' : 'p-4'} ${isDark ? 'dark' : ''}`}
+          className={`font-sans bg-background text-foreground ${context.parameters.layout === 'fullscreen' ? '' : 'p-4'}`}
         >
           <Story />
         </div>
@@ -57,11 +95,7 @@ const preview: Preview = {
     },
   ],
 
-  initialGlobals: {
-    backgrounds: {
-      value: 'light',
-    },
-  },
+  initialGlobals: { theme: 'light' },
 }
 
 export default preview

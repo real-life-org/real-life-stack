@@ -65,8 +65,6 @@ export type ItemPreviewSurface = "card" | "panel"
 const MAX_SICHTBARE_TAGS = 3
 
 export const DEFAULT_ACTIVE_ITEM_COLOR = "#64748b"
-/** @deprecated Frueherer Name von {@link DEFAULT_ACTIVE_ITEM_COLOR}. */
-export const DEFAULT_ACTIVE_ITEM_GLOW_COLOR = DEFAULT_ACTIVE_ITEM_COLOR
 
 export interface ItemPreviewProps {
   item: Item

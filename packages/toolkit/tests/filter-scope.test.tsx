@@ -66,7 +66,7 @@ describe("Eine eingebettete Flaeche bringt ihren Filter selbst mit", () => {
   it("filtert im Kalender ohne App-Provider", () => {
     rendere(
       createElement(CalendarView, {
-        events: [event("a", "Gartentreffen"), event("b", "Bauwagen streichen")],
+        items: [event("a", "Gartentreffen"), event("b", "Bauwagen streichen")],
         initialVisibleDate: "2026-07-08T12:00:00.000Z",
         initialDate: "2026-07-08T12:00:00.000Z",
         initialViewMode: "list" as const,

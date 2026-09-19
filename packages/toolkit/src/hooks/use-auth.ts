@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import type { AuthState, User } from "@real-life-stack/data-interface"
+import type { User } from "@real-life-stack/data-interface"
 import { isAuthenticatable } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
@@ -16,28 +16,6 @@ function useAuthConnector() {
     throw new Error("Connector does not support authentication")
   }
   return connector
-}
-
-const NOT_SIGNED_IN: AuthState = { status: "unauthenticated" }
-
-export function useAuthState(): AuthState {
-  const connector = useConnector()
-  const observable = useMemo(
-    () => (isAuthenticatable(connector) ? connector.getAuthState() : null),
-    [connector],
-  )
-  const [data, setData] = useState<AuthState>(observable?.current ?? NOT_SIGNED_IN)
-
-  useEffect(() => {
-    if (!observable) {
-      setData(NOT_SIGNED_IN)
-      return
-    }
-    setData(observable.current)
-    return observable.subscribe(setData)
-  }, [observable])
-
-  return data
 }
 
 /**

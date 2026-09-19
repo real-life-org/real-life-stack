@@ -143,12 +143,12 @@ export function CalendarViewWrapper({ groupId }: { groupId: string }) {
   return (
     <>
       <ToolkitCalendarView
-        events={events}
+        items={events}
         currentUserId={currentUser?.id}
         resolveItemGroupColor={resolveItemGroupColor}
         activeItemId={modulePanel.current?.itemId}
         focusDate={focusDate}
-        onEventClick={(event) => focusItem(event.id)}
+        onItemClick={(event) => focusItem(event.id)}
         onCreateEvent={openComposerAt}
       />
 

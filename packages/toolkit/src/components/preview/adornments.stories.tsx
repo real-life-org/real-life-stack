@@ -54,7 +54,7 @@ export const Alle: Story = {
         <ItemTypeBadge type="place" />
         <ItemTypeBadge type="unbekannt" fallback />
       </Reihe>
-      <Reihe titel="ItemMetaRow" erklaerung="Die Fakten des Typs in einer Zeile: Zeit und Ort, wenn es welche gibt.">
+      <Reihe titel="ItemMetaRow" erklaerung={'Die Fakten des Typs in einer Zeile: Zeit und Ort, wenn es welche gibt. Hier sind die Werte Text; anklickbar werden sie erst, wo eine App sagt, wohin ein Feld führt — siehe „App Shell → Die Modulfläche“.'}>
         <ItemMetaRow item={STORY_EVENT} />
       </Reihe>
       <Reihe titel="ItemGroupBadge" erklaerung="Aus welchem Space stammt es? Nur nötig, wo mehrere Spaces zusammenlaufen.">
