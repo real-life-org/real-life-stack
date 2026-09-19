@@ -13,3 +13,6 @@ packages/toolkit/storybook-static/
 # TS incremental build info
 *.tsbuildinfo
 /out/
+
+# Doku-Kopie im Toolkit-Paket, erzeugt von scripts/toolkit-docs-bundle.mjs beim Packen
+packages/toolkit/docs/stack/

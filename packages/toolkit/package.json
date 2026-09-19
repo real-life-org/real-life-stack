@@ -31,9 +31,11 @@
   },
   "files": [
     "dist",
-    "src/styles"
+    "src/styles",
+    "docs/stack"
   ],
   "scripts": {
+    "prepack": "node ../../scripts/toolkit-docs-bundle.mjs",
     "build": "vite build",
     "dev": "vite build --watch",
     "typecheck": "tsc --noEmit",
