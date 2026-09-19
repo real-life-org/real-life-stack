@@ -7,13 +7,11 @@
 //
 // Einmal importieren, vor dem ersten Render (main.tsx).
 
-import type { Group } from "@real-life-stack/data-interface"
 import {
   CORE_MODULE_LAYER,
   composeModules,
   setModuleRegistry,
   type ModuleViewProps,
-  type SelectionFocusVisibleArea,
 } from "@real-life-stack/toolkit"
 import { FeedView } from "./views/feed-view"
 import { MapView } from "./views/map-view"

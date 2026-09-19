@@ -2,9 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react"
 import {
   graphItemNodeId,
   graphNodeRef,
-  graphUserNodeId,
   projectSpaceGraph,
-  type GraphProjection,
   GraphView,
   ModuleToolbar,
   resolveTypePresentation,
@@ -12,17 +10,10 @@ import {
   useModuleFilteredItems,
   useMembers,
   useRelationRecords,
-  type GraphEdge,
-  type GraphNode,
-  type GraphTypeDescriptor,
   type GraphViewHandle,
   type FilterTypeOption,
 } from "@real-life-stack/toolkit"
-import {
-  type Item,
-  type RelationRecord,
-  type User,
-} from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
 import { ReactionBar, useItemGroupResolver, useOpenProfile } from "@real-life-stack/toolkit"
 import { useItemFocus } from "../hooks/use-item-focus"
 import { useItemDetailEdit } from "../hooks/use-item-detail-edit"
@@ -98,8 +89,9 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
     return Array.from(seen).sort()
   }, [alleItems])
   const availableTypes = useMemo<FilterTypeOption[]>(() => {
-    const systemTypes = new Set<string>(SYSTEM_ITEM_TYPES)
-    const present = new Set(alleItems.map(({ type }) => type).filter((type) => !systemTypes.has(type)))
+    // Dieselbe Regel wie Feed und Sammlung: nicht Typen aufzählen, sondern
+    // fragen, ob der Typ überhaupt ein eigener Eintrag ist.
+    const present = new Set(alleItems.map(({ type }) => type).filter(isAggregateVisibleItemType))
     return Array.from(present)
       .map((id) => {
         const presentation = resolveTypePresentation(id)
