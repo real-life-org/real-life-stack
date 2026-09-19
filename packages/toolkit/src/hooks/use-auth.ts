@@ -53,7 +53,10 @@ export function useOptionalCurrentUser(): { data: User | null; isLoading: boolea
   )
   const [data, setData] = useState<User | null>(observable?.current ?? null)
   useEffect(() => {
-    if (!observable) return
+    if (!observable) {
+      setData(null)
+      return
+    }
     setData(observable.current)
     return observable.subscribe(setData)
   }, [observable])
