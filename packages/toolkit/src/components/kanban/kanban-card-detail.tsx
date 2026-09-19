@@ -49,6 +49,9 @@ export interface KanbanCardDetailProps {
   className?: string
 }
 
+/**
+ * @deprecated Die Detailansicht ist typgetrieben und liegt im geteilten Panel (`ItemDetailView`), nicht beim Modul. Kein Aufrufer mehr; Entfernung mit der nächsten Minor.
+ */
 export function KanbanCardDetail({ item, users, className }: KanbanCardDetailProps) {
   const assigneeIds = getAssigneeIds(item)
   const assignees = (users ?? []).filter((u) => assigneeIds.includes(u.id))

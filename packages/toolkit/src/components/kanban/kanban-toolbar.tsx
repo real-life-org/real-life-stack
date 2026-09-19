@@ -28,6 +28,9 @@ export interface KanbanToolbarProps {
   className?: string
 }
 
+/**
+ * @deprecated Kanban baut seinen Kopf inzwischen aus `ModuleToolbar` mit `drawerExtra`/`chipsExtra`/`trailingActions`. Kein Aufrufer mehr; Entfernung mit der nächsten Minor.
+ */
 export function KanbanToolbar({
   items,
   users,

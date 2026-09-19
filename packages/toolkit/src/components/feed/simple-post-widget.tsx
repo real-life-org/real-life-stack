@@ -17,6 +17,9 @@ interface SimplePostWidgetProps {
   disabled?: boolean
 }
 
+/**
+ * @deprecated Gehört zu `PostCard` und hat wie diese keinen Aufrufer mehr. Entfernung mit der nächsten Minor.
+ */
 export function SimplePostWidget({
   placeholder = "Was gibt's Neues?",
   onSubmit,

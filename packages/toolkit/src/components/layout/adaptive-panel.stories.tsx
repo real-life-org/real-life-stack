@@ -157,10 +157,11 @@ export const WithPinToggle: Story = {
           entfernt und die Seite bleibt interaktiv.
         </p>
         <div className="rounded-lg bg-muted p-3">
-          <p className="text-sm font-medium">Beispiel-Aktion</p>
+          <p className="text-sm font-medium">Wofür</p>
           <p className="text-xs text-muted-foreground">
-            Im Kanban-Board bleibt das Formular nach dem Speichern offen,
-            wenn pinned aktiv ist.
+            Für Flächen, die mehrere Eingaben hintereinander aufnehmen. Die
+            Referenz-App nutzt es heute nirgends: im Detail-Panel wäre Anheften
+            ohne Wirkung, weil es ohnehin stehen bleibt.
           </p>
         </div>
       </div>

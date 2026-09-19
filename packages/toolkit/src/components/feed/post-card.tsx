@@ -72,6 +72,9 @@ function PostTypeBadge({ type }: { type: PostType }) {
   )
 }
 
+/**
+ * @deprecated Ältere Darstellung eines Beitrags. `ItemPreview` hat sie ersetzt und ist typoffen. Kein Aufrufer mehr im Monorepo; Entfernung mit der nächsten Minor.
+ */
 export function PostCard({
   post,
   onLike,

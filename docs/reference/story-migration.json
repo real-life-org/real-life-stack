@@ -93,28 +93,36 @@
     "oldTitle": "RLS/Module Components/Dashboard/ActionCard",
     "title": "RLS/App/Dashboard-Bausteine/ActionCard",
     "id": "rls-module-components-dashboard-actioncard",
-    "storyIds": [
-      "rls-module-components-dashboard-actioncard--docs",
-      "rls-module-components-dashboard-actioncard--primary",
-      "rls-module-components-dashboard-actioncard--secondary",
-      "rls-module-components-dashboard-actioncard--without-description",
-      "rls-module-components-dashboard-actioncard--quick-actions"
-    ]
+    "storyIds": [],
+    "removed": {
+      "why": "Es gibt kein Dashboard-Modul im Register. Story entfernt am 19.09.2026.",
+      "storyIds": [
+        "rls-module-components-dashboard-actioncard--docs",
+        "rls-module-components-dashboard-actioncard--primary",
+        "rls-module-components-dashboard-actioncard--secondary",
+        "rls-module-components-dashboard-actioncard--without-description",
+        "rls-module-components-dashboard-actioncard--quick-actions"
+      ]
+    }
   },
   {
     "file": "packages/toolkit/src/components/dashboard/stat-card.stories.tsx",
     "oldTitle": "RLS/Module Components/Dashboard/StatCard",
     "title": "RLS/App/Dashboard-Bausteine/StatCard",
     "id": "rls-module-components-dashboard-statcard",
-    "storyIds": [
-      "rls-module-components-dashboard-statcard--docs",
-      "rls-module-components-dashboard-statcard--blue",
-      "rls-module-components-dashboard-statcard--green",
-      "rls-module-components-dashboard-statcard--orange",
-      "rls-module-components-dashboard-statcard--purple",
-      "rls-module-components-dashboard-statcard--red",
-      "rls-module-components-dashboard-statcard--dashboard"
-    ]
+    "storyIds": [],
+    "removed": {
+      "why": "Es gibt kein Dashboard-Modul im Register; die Kategorie zeigte etwas, das die Referenz nicht hat. Story entfernt am 19.09.2026.",
+      "storyIds": [
+        "rls-module-components-dashboard-statcard--docs",
+        "rls-module-components-dashboard-statcard--blue",
+        "rls-module-components-dashboard-statcard--green",
+        "rls-module-components-dashboard-statcard--orange",
+        "rls-module-components-dashboard-statcard--purple",
+        "rls-module-components-dashboard-statcard--red",
+        "rls-module-components-dashboard-statcard--dashboard"
+      ]
+    }
   },
   {
     "file": "packages/toolkit/src/components/detail/item-detail-body.stories.tsx",
@@ -153,14 +161,18 @@
     "oldTitle": "RLS/Module Components/Feed/PostCard",
     "title": "RLS/Items/Typbeispiele/Beitrag/PostCard (ältere Darstellung)",
     "id": "rls-module-components-feed-postcard",
-    "storyIds": [
-      "rls-module-components-feed-postcard--docs",
-      "rls-module-components-feed-postcard--text",
-      "rls-module-components-feed-postcard--event",
-      "rls-module-components-feed-postcard--request",
-      "rls-module-components-feed-postcard--with-avatar",
-      "rls-module-components-feed-postcard--feed"
-    ]
+    "storyIds": [],
+    "removed": {
+      "why": "PostCard ist die ältere Darstellung, ItemPreview hat sie ersetzt; kein Aufrufer im Monorepo (apps/prototype hat eine eigene Kopie). Story entfernt am 19.09.2026.",
+      "storyIds": [
+        "rls-module-components-feed-postcard--docs",
+        "rls-module-components-feed-postcard--text",
+        "rls-module-components-feed-postcard--event",
+        "rls-module-components-feed-postcard--request",
+        "rls-module-components-feed-postcard--with-avatar",
+        "rls-module-components-feed-postcard--feed"
+      ]
+    }
   },
   {
     "file": "packages/toolkit/src/components/filter/filter-bar.stories.tsx",
@@ -221,12 +233,16 @@
     "oldTitle": "RLS/Space Modules/Kanban/Toolbar",
     "title": "RLS/Module/Kanban/Werkzeuge",
     "id": "rls-space-modules-kanban-toolbar",
-    "storyIds": [
-      "rls-space-modules-kanban-toolbar--docs",
-      "rls-space-modules-kanban-toolbar--default",
-      "rls-space-modules-kanban-toolbar--with-current-user",
-      "rls-space-modules-kanban-toolbar--toolbar-with-board"
-    ]
+    "storyIds": [],
+    "removed": {
+      "why": "KanbanToolbar hat keinen Aufrufer mehr; Kanban baut seinen Kopf aus ModuleToolbar. Story entfernt am 19.09.2026.",
+      "storyIds": [
+        "rls-space-modules-kanban-toolbar--docs",
+        "rls-space-modules-kanban-toolbar--default",
+        "rls-space-modules-kanban-toolbar--with-current-user",
+        "rls-space-modules-kanban-toolbar--toolbar-with-board"
+      ]
+    }
   },
   {
     "file": "packages/toolkit/src/components/layout/adaptive-panel.stories.tsx",
@@ -310,10 +326,14 @@
     "oldTitle": "RLS/Module Components/Lenses/GridView",
     "title": "RLS/Module/Gemeinsame Ansichten/Raster",
     "id": "rls-module-components-lenses-gridview",
-    "storyIds": [
-      "rls-module-components-lenses-gridview--docs",
-      "rls-module-components-lenses-gridview--type-specific-adornments"
-    ]
+    "storyIds": [],
+    "removed": {
+      "why": "Dieselbe Rasteransicht wie „Sammlung/Grid\"; GridView wird nur intern von CollectionView benutzt. Story entfernt am 19.09.2026.",
+      "storyIds": [
+        "rls-module-components-lenses-gridview--docs",
+        "rls-module-components-lenses-gridview--type-specific-adornments"
+      ]
+    }
   },
   {
     "file": "packages/toolkit/src/components/lens/list-view.stories.tsx",
