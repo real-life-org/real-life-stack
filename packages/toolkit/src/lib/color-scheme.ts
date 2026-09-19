@@ -7,10 +7,14 @@
  * vector style is JSON fetched at runtime, so it has to *read* the same signal.
  * That read lives here once instead of being re-sniffed per component.
  *
- * The class is deliberately the ONLY signal — `prefers-color-scheme` is not a
- * fallback. The app shell does not seed the class from the OS preference, so an
- * OS-dark user on a light-rendered app would otherwise get a dark map under a
- * light UI.
+ * Die Klasse ist das EINZIGE Signal, an dem sich Bestandteile ausrichten;
+ * `prefers-color-scheme` ist kein zweites. Gelesen wird die Systemvorgabe nur
+ * einmal, beim Start, um die Klasse zu setzen (`initialDarkMode` unten) — und
+ * genau deshalb folgen Oberfläche und Karte danach gemeinsam derselben Klasse.
+ *
+ * (Bis 19.09.2026 stand hier, die Hülle setze die Klasse NICHT aus der
+ * Systemvorgabe. Das stimmte nicht mehr: `applyInitialColorScheme` tut es seit
+ * Längerem, und ohne das startete die App immer hell.)
  */
 
 export type ColorScheme = "light" | "dark"
@@ -49,4 +53,79 @@ export function observeColorScheme(callback: (scheme: ColorScheme) => void): () 
   })
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
   return () => observer.disconnect()
+}
+
+// ── Der Startwert ───────────────────────────────────────────────────────────
+
+/**
+ * Erscheinungsbild beim Start: eine bewusst getroffene Wahl gewinnt, sonst
+ * gilt die Systemvorgabe.
+ *
+ * Ohne das startete eine App IMMER hell — auch auf einem dunkel eingestellten
+ * System und auch dann, wenn beim letzten Besuch dunkel gewählt worden war.
+ * Wer von einer Landingpage kommt, die der Systemvorgabe folgt, fiel damit
+ * beim Klick aus dem Dunkeln ins Helle.
+ *
+ * Stand bis 19.09.2026 zweimal im Monorepo, mit verschiedenen Schlüsseln und
+ * unterschiedlicher Behandlung von Fremdwerten.
+ */
+
+/**
+ * Bewusst instanzweit und nicht app-spezifisch: Landingpage und App einer
+ * Instanz liegen auf derselben Domain und teilen sich damit den Speicher —
+ * eine Wahl auf der einen Seite gilt auf der anderen mit. Eine App mit eigenem
+ * Erscheinungsbild gibt einen eigenen Schlüssel an.
+ */
+export const STORAGE_KEY_THEME = "rls-theme"
+
+/**
+ * Die gespeicherte Wahl, oder `null`, wenn keine vorliegt.
+ *
+ * Alles, was weder `"dark"` noch `"light"` ist, zählt als KEINE Wahl. Ein
+ * Fremdwert (etwa ein später ergänztes `"auto"`) darf nicht stillschweigend
+ * als hell gelten — dann folgte die App der Systemvorgabe nicht mehr, ohne
+ * dass jemand das je gewählt hätte.
+ */
+export function storedColorScheme(storageKey = STORAGE_KEY_THEME): ColorScheme | null {
+  try {
+    const wert = window.localStorage.getItem(storageKey)
+    return wert === "dark" || wert === "light" ? wert : null
+  } catch {
+    // In privaten Fenstern kann schon der Zugriff werfen.
+    return null
+  }
+}
+
+/**
+ * LIEST nur. Schreibt bewusst nichts: Würde der Startwert die Systemvorgabe
+ * gleich festschreiben, wäre sie ab dem ersten Besuch eine feste Wahl — ein
+ * späterer Wechsel des Systems auf hell bliebe wirkungslos.
+ */
+export function initialDarkMode(storageKey = STORAGE_KEY_THEME): boolean {
+  const wahl = storedColorScheme(storageKey)
+  if (wahl) return wahl === "dark"
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+}
+
+/**
+ * Setzt die `dark`-Klasse am Wurzelelement.
+ *
+ * Vor dem ersten Render aufrufen, nicht erst in einer Komponente: Anmeldung
+ * und Onboarding liegen vor der App-Hülle und blieben sonst hell, egal was
+ * System oder Wahl sagen.
+ */
+export function applyInitialColorScheme(storageKey = STORAGE_KEY_THEME): void {
+  document.documentElement.classList.toggle(DARK_CLASS, initialDarkMode(storageKey))
+}
+
+/**
+ * Hält eine BEWUSST getroffene Wahl fest — nur aus dem Umschalter heraus
+ * aufrufen, nie beim Start.
+ */
+export function rememberColorScheme(isDark: boolean, storageKey = STORAGE_KEY_THEME): void {
+  try {
+    window.localStorage.setItem(storageKey, isDark ? "dark" : "light")
+  } catch {
+    // Nicht speicherbar — kein Grund, das Umschalten selbst scheitern zu lassen.
+  }
 }

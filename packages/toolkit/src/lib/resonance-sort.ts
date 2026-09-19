@@ -1,6 +1,14 @@
 import type { Item, RelationRecord } from "@real-life-stack/data-interface"
 import { votesFromRelationRecords } from "@real-life-stack/data-interface"
 
+/**
+ * Reihenfolge der Aussagen im Resonanz-Modul.
+ *
+ * Resonanz ist ein Kernmodul (module-register), seine Sortierung folgt der
+ * Spezifikation (docs/spec/modules/resonance.md → Sortierungen). Sie lag bis
+ * 19.09.2026 in der Referenz-App; jede andere App hätte sie nachbauen müssen.
+ */
+
 /** Sort modes of the Resonance view (docs/spec/modules/resonance.md → Sortierungen). */
 export type ResonanceSortMode = "newest" | "votes" | "approval" | "activity"
 

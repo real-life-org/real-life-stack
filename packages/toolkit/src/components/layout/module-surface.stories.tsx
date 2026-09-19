@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { Calendar, Map as MapIcon, Newspaper } from "lucide-react"
 import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
@@ -11,6 +11,11 @@ import { BottomNav } from "./bottom-nav"
 import { ModuleFrame } from "./module-frame"
 import { ModuleToolbar } from "./module-toolbar"
 import { FilterProvider } from "../filter/filter-store"
+import { FieldNavigationProvider } from "../navigation/field-navigation"
+import { CalendarView } from "../calendar/calendar-view"
+import { MapView } from "../map/map-view"
+import { MapLibreMapAdapter } from "../../maplibre"
+import { findModulePresenting } from "../../lib/module-register"
 import { ModulePanelProvider, useModulePanel } from "../module-panel/module-panel"
 import { ItemDetailView } from "../detail/item-detail-view"
 import { ItemDetailBody } from "../detail/item-detail-body"
@@ -37,8 +42,7 @@ import { STORY_ME, STORY_SEED, StoryWorld } from "../../story-support/story-worl
  *     ModulePanelProvider     EIN Panel für Detail, Composer, Einstellungen
  *       AppShellMain
  *         ModuleFrame         Kopf oben fest, Inhalt scrollt darunter
- *           ModuleToolbar     Suche und Filterpille — der einzige Ort dafür
- *           <Inhalt des Moduls>
+ *           <Modul>           bringt seine ModuleToolbar selbst mit
  *     BottomNav               dieselben Module, schmal
  * ```
  *
@@ -46,6 +50,13 @@ import { STORY_ME, STORY_SEED, StoryWorld } from "../../story-support/story-worl
  * öffnet die Detailansicht im geteilten Panel; die Suche oben filtert die
  * Liste; auf schmalen Schirmen wird das Panel zum Drawer und die Modulreiter
  * zur unteren Leiste.
+ *
+ * Auch die Werte in der Faktenzeile führen irgendwohin: Ein Klick auf das
+ * Datum wechselt in den Kalender, einer auf den Ort auf die Karte. Welches
+ * Modul ein Feld zeigt, sagt das Register (`findModulePresenting`); WIE man
+ * dorthin kommt, weiß nur die Anwendung — deshalb reicht sie es über den
+ * `FieldNavigationProvider` hinein. Ohne ihn bleibt der Wert schlichter Text,
+ * und genau das sieht man in den einzelnen Beigaben-Stories.
  */
 
 const MODULES = [
@@ -54,11 +65,60 @@ const MODULES = [
   { id: "calendar", label: "Kalender", icon: Calendar },
 ]
 
+const mapStyle =
+  "data:application/json," +
+  encodeURIComponent(
+    JSON.stringify({
+      version: 8,
+      sources: {},
+      layers: [{ id: "background", type: "background", paint: { "background-color": "#e4ece5" } }],
+    }),
+  )
+const createAdapter = () => new MapLibreMapAdapter()
+
 const mapping = createComposerMapping([
   { id: "post", label: "Beitrag", defaultWidgets: ["title", "text", "tags"] },
   { id: "event", label: "Termin", defaultWidgets: ["title", "text", "date"] },
   { id: "task", label: "Aufgabe", defaultWidgets: ["title", "text"] },
 ])
+
+/**
+ * Detail im geteilten Panel öffnen. Eine Stelle für alle drei Module: Was
+ * „Detail" heißt, folgt dem ITEM, nicht dem Modul, aus dem geklickt wurde.
+ */
+function useOeffneDetail() {
+  const { data: items } = useItems()
+  const { data: members } = useMembers(null)
+  const panel = useModulePanel()
+  return (itemId: string) => {
+    const item = items.find((i) => i.id === itemId)
+    if (!item) return
+    const author = members.find((m) => m.id === item.createdBy)
+    panel.open({
+      kind: "detail",
+      itemId: item.id,
+      content: (
+        <ItemDetailView
+          itemId={item.id}
+          renderRead={(live, actions) => (
+            <ItemDetailBody
+              item={live}
+              author={author}
+              headerAdornment={<ItemTypeBadge type={live.type} />}
+              actions={actions}
+              meta={<ItemMetaRow item={live} />}
+            />
+          )}
+          contentTypes={[{ id: item.type, label: "Inhalt", defaultWidgets: ["title", "text", "date"] }]}
+          mapper={mapping.mapSubmission}
+          editInitialData={mapping.editInitialData}
+          composerProps={{ showVisibility: false }}
+          onClose={() => panel.close()}
+        />
+      ),
+    })
+  }
+}
 
 /** Eine Karte in der Liste. Der Klick geht an das geteilte Panel, nicht an das Modul. */
 function Karte({ itemId }: { itemId: string }) {
@@ -67,6 +127,7 @@ function Karte({ itemId }: { itemId: string }) {
   const item = items.find((i) => i.id === itemId)
   const author = useItemAuthor(item, members)
   const panel = useModulePanel()
+  const oeffne = useOeffneDetail()
   if (!item) return null
   return (
     <ItemPreview
@@ -75,31 +136,7 @@ function Karte({ itemId }: { itemId: string }) {
       active={panel.current?.itemId === item.id}
       headerAdornment={<ItemTypeBadge type={item.type} />}
       metaAdornment={<ItemMetaRow item={item} />}
-      onClick={() =>
-        panel.open({
-          kind: "detail",
-          itemId: item.id,
-          content: (
-            <ItemDetailView
-              itemId={item.id}
-              renderRead={(live, actions) => (
-                <ItemDetailBody
-                  item={live}
-                  author={author}
-                  headerAdornment={<ItemTypeBadge type={live.type} />}
-                  actions={actions}
-                  meta={<ItemMetaRow item={live} />}
-                />
-              )}
-              contentTypes={[{ id: item.type, label: "Inhalt", defaultWidgets: ["title", "text", "date"] }]}
-              mapper={mapping.mapSubmission}
-              editInitialData={mapping.editInitialData}
-              composerProps={{ showVisibility: false }}
-              onClose={() => panel.close()}
-            />
-          ),
-        })
-      }
+      onClick={() => oeffne(item.id)}
     />
   )
 }
@@ -110,22 +147,80 @@ function FeedInhalt() {
   const sichtbar = items.filter((item) => isAggregateVisibleItemType(item.type))
   const gefiltert = useModuleFilteredItems(sichtbar)
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-3 p-4">
+    <>
+      {/* Die Leiste gehört dem Modul, nicht der Fläche: Kalender und Karte
+          bringen ihre eigene mit, der Feed diese hier. Zwei Leisten
+          übereinander wären zwei Suchfelder. */}
+      <ModuleToolbar
+        searchLabel="Im Gemeinschaftsgarten suchen"
+        availableTags={["garten", "planung"]}
+        availableTypes={[
+          { id: "post", label: "Beiträge" },
+          { id: "event", label: "Termine" },
+          { id: "task", label: "Aufgaben" },
+        ]}
+      />
+      <div className="mx-auto flex max-w-2xl flex-col gap-3 p-4">
       {gefiltert.map((item) => (
         <Karte key={item.id} itemId={item.id} />
       ))}
       {gefiltert.length === 0 && (
         <p className="py-12 text-center text-sm text-muted-foreground">Nichts passt zur Suche.</p>
       )}
-    </div>
+      </div>
+    </>
   )
+}
+
+/** Der Inhalt wechselt mit dem Modul — sonst führte ein Feld-Klick ins Leere. */
+function Inhalt({ module }: { module: string }) {
+  const { data: items } = useItems()
+  const oeffne = useOeffneDetail()
+  if (module === "calendar") {
+    return (
+      <CalendarView
+        items={items}
+        initialVisibleDate="2026-09-19"
+        onItemClick={(item) => oeffne(item.id)}
+      />
+    )
+  }
+  if (module === "map") {
+    return (
+      <MapView
+        items={items}
+        itemsLoading={false}
+        inventoryKey="garden"
+        viewportMode="lens-auto-fit"
+        createAdapter={createAdapter}
+        initialView={{ center: [13.405, 52.52], zoom: 13, tileSource: mapStyle }}
+        onItemClick={(item) => oeffne(item.id)}
+      />
+    )
+  }
+  return <FeedInhalt />
 }
 
 function Modulflaeche() {
   const [space, setSpace] = useState(STORY_SEED.groups[0])
   const [module, setModule] = useState("feed")
+
+  // Welches Modul ein Feld zeigt, sagt das Register; wie man dorthin kommt,
+  // weiß nur diese Fläche. Genau diese Aufteilung macht die App auch.
+  const feldNavigation = useMemo(
+    () => ({
+      openField: (field: string) => {
+        const ziel = findModulePresenting(field, MODULES.map(({ id }) => id))
+        if (!ziel || ziel.id === module) return null
+        return () => setModule(ziel.id)
+      },
+    }),
+    [module],
+  )
+
   return (
     <FilterProvider>
+      <FieldNavigationProvider value={feldNavigation}>
       <AppShell>
         <Navbar>
           <NavbarStart>
@@ -140,22 +235,14 @@ function Modulflaeche() {
         </Navbar>
         <ModulePanelProvider allowedModes={["floating", "drawer"]}>
           <AppShellMain withBottomNav>
-            <ModuleFrame fill="container" maxWidth="48rem">
-              <ModuleToolbar
-                searchLabel="Im Gemeinschaftsgarten suchen"
-                availableTags={["garten", "planung"]}
-                availableTypes={[
-                  { id: "post", label: "Beiträge" },
-                  { id: "event", label: "Termine" },
-                  { id: "task", label: "Aufgaben" },
-                ]}
-              />
-              <FeedInhalt />
+            <ModuleFrame moduleId={module} fill={module === "map" ? "bleed" : "container"} maxWidth="48rem">
+              <Inhalt module={module} />
             </ModuleFrame>
           </AppShellMain>
         </ModulePanelProvider>
         <BottomNav items={MODULES} activeItem={module} onItemChange={setModule} />
       </AppShell>
+      </FieldNavigationProvider>
     </FilterProvider>
   )
 }

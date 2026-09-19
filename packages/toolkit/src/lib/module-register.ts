@@ -16,7 +16,8 @@
 // an die Ids.
 
 import type { ComponentType } from "react"
-import type { Group } from "@real-life-stack/data-interface"
+import type { Group, Item, ModuleHints } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType, moduleHintsFor } from "@real-life-stack/data-interface"
 import type { SelectionFocusVisibleArea } from "./selection-focus"
 import {
   Calendar,
@@ -113,11 +114,11 @@ export interface ModuleFragment extends Partial<Omit<ModuleEntry, "id">> {
 /** Die Module, die RLS selbst mitliefert. Reihenfolge = Tab-Reihenfolge. */
 export const CORE_MODULES: readonly ModuleEntry[] = Object.freeze([
   { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl" },
-  { id: "kanban", label: "Kanban", icon: Columns3, enabledByDefault: true, maxWidth: "max-w-5xl" },
+  { id: "kanban", label: "Kanban", icon: Columns3, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["status"] },
   { id: "calendar", label: "Kalender", icon: Calendar, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["start"] },
   { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay", presents: ["position"] },
   // Opt-in — spec: docs/spec/modules/resonance.md
-  { id: "resonance", label: "Resonanz", icon: Waves, maxWidth: "max-w-3xl" },
+  { id: "resonance", label: "Resonanz", icon: Waves, maxWidth: "max-w-3xl", presents: ["statement"] },
   // `maxWidth` auch ohne Container: Sie gilt fuer den Kopf der Flaeche UND
   // fuer den Inhalt — die Lens liest sie aus der Flaeche
   // (`useModuleContentClass`), statt eine eigene zu fuehren. Vorher stand die
@@ -360,4 +361,67 @@ export function findModulePresenting(
   return getModules().find(
     (modul) => modul.presents?.includes(field) && (!erlaubt || erlaubt.has(modul.id)),
   )
+}
+
+/**
+ * Welches Feld ein Modul auswählt, wenn ein Item mehrere trägt.
+ *
+ * Entschieden mit Anton: Der Ort schlägt die Zeit — ein Termin an einem Ort
+ * öffnet auf der Karte. Eine Aussage (Schema `statement/v1`, Spec 06) hat kein
+ * eigenes Feld und geht trotzdem vor, weil der Feed sie nicht einzeln listet.
+ *
+ * Dieselbe Regel stand vorher viermal im Monorepo: in `resolveDefaultModule`
+ * und `moduleCanDisplay` der Referenz-App und in `lensForHints` und
+ * `lensCanDisplay` der Netzwerk-App. Die vier kannten verschiedene Module —
+ * die eine kannte `resonance` nicht, die andere `marketplace` nicht.
+ */
+export const PRESENT_PRIORITY = ["statement", "position", "start", "status"] as const
+
+/** `position` → `hasPosition`: so heißt das Feld im Hinweis-Objekt. */
+function hintKey(field: string): keyof ModuleHints {
+  return `has${field[0].toUpperCase()}${field.slice(1)}` as keyof ModuleHints
+}
+
+/**
+ * Welches Modul zeigt dieses Item, wenn der Link keines nennt?
+ *
+ * `verfuegbar` sind die Module, die diese Fläche anbietet. Trägt das Item kein
+ * Feld, das eines davon auswählt, kommt `undefined` zurück — den Rückfall
+ * wählt die Anwendung, nicht die Regel: die Referenz-App den Feed, die
+ * Netzwerk-App die Liste. Ein erstes-aus-der-Liste wäre hier falsch, es hat
+ * einen Beitrag auf der Karte geöffnet.
+ */
+export function moduleForItem(
+  itemOrHints: Item | ModuleHints,
+  verfuegbar: readonly string[],
+): string | undefined {
+  const hints = moduleHintsFor(itemOrHints)
+  for (const field of PRESENT_PRIORITY) {
+    if (!hints[hintKey(field)]) continue
+    const modul = findModulePresenting(field, verfuegbar)
+    if (modul) return modul.id
+  }
+  return undefined
+}
+
+/**
+ * Kann dieses Modul ein Item mit diesen Hinweisen überhaupt zeigen?
+ *
+ * Ein Modul, das ein Feld darstellt, braucht dieses Feld. Der Feed ist die
+ * aggregierende Sicht: Er zeigt alles, was eine eigene Karte hat — welche
+ * Typen das sind, sagt `isAggregateVisibleItemType`, nicht eine zweite Liste.
+ * Module ohne `presents` (Sammlung, Graph) zeigen alles.
+ */
+export function modulePresentsItem(
+  moduleId: string,
+  itemOrHints: Item | ModuleHints | undefined,
+  itemType?: string,
+): boolean {
+  if (moduleId === "feed") return itemType === undefined || isAggregateVisibleItemType(itemType)
+  const modul = getModules().find((m) => m.id === moduleId)
+  const felder = modul?.presents
+  if (!felder?.length) return true
+  if (!itemOrHints) return false
+  const hints = moduleHintsFor(itemOrHints)
+  return felder.some((field) => Boolean(hints[hintKey(field)]))
 }

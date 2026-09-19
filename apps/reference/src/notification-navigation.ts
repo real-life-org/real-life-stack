@@ -1,5 +1,5 @@
-import { isAggregateVisibleItemType, type Group } from "@real-life-stack/data-interface"
-import { resolveSpaceModules, type NotificationCandidate } from "@real-life-stack/toolkit"
+import { type Group, type ModuleHints } from "@real-life-stack/data-interface"
+import { modulePresentsItem, resolveSpaceModules, type NotificationCandidate } from "@real-life-stack/toolkit"
 import { resolveDefaultModule } from "./hooks/use-workspace-routing"
 
 /**
@@ -34,22 +34,10 @@ export function buildNotificationRoute(
 export type ModuleHintsLike = { hasPosition: boolean; hasStart: boolean; hasStatus: boolean; hasStatement?: boolean }
 
 /**
- * Can the ACTIVE module actually show this item? Mirrors the lens escalation
- * rule (lens-active-item-escalates-view): a click in the raw history must
- * switch to a module that can display the target instead of focusing into a
- * view that will never render it.
+ * Kann dieses Modul ein Item mit diesen Hinweisen zeigen? Die Regel liegt im
+ * Modul-Register (`modulePresentsItem`), abgeleitet aus dem, was ein Modul
+ * darstellt (`presents`).
  */
 export function moduleCanDisplay(module: string, hints: ModuleHintsLike | undefined, itemType?: string): boolean {
-  if (module === "map") return Boolean(hints?.hasPosition)
-  if (module === "calendar") return Boolean(hints?.hasStart)
-  if (module === "kanban") return Boolean(hints?.hasStatus)
-  // Resonance shows statements only — activated by their schema hint (spec 06).
-  if (module === "resonance") return Boolean(hints?.hasStatement)
-  // The feed is the aggregating "what's new" view: it shows everything with a
-  // card of its own, so it can display any item the feed's own selection keeps
-  // (selectFeedItems in views/feed-view.tsx asks the SAME predicate — one rule,
-  // not two lists that drift). An unknown type is displayable: the feed renders
-  // it generically rather than escalating away from it.
-  if (module === "feed") return itemType === undefined || isAggregateVisibleItemType(itemType)
-  return true
+  return modulePresentsItem(module, hints as ModuleHints | undefined, itemType)
 }

@@ -13,6 +13,11 @@ export {
   resolveColorScheme,
   type ColorScheme,
   type ColorSchemePreference,
+  STORAGE_KEY_THEME,
+  storedColorScheme,
+  initialDarkMode,
+  applyInitialColorScheme,
+  rememberColorScheme,
 } from "./lib/color-scheme"
 export {
   loadRuntimeConfig,
@@ -63,6 +68,9 @@ export {
   type ModuleRegistry,
   type ModuleViewProps,
   type ModuleFill,
+  moduleForItem,
+  modulePresentsItem,
+  PRESENT_PRIORITY,
 } from "./lib/module-register"
 export {
   resolveIcon,
@@ -94,3 +102,4 @@ export * from "./hooks"
 export * from "./components/navigation"
 export { readRadius, readSurfaces, readGray, layoutTokens, RADIUS_ORDER, RADIUS_STEPS, SURFACES } from "./lib/space-theme"
 export type { GrayChoice, RadiusStep, Surfaces } from "./lib/space-theme"
+export { aggregateVoteStats, sortStatements, type ResonanceSortMode, type StatementVoteStats } from "./lib/resonance-sort"

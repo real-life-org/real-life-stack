@@ -55,3 +55,4 @@ export {
   applyItemSearch,
 } from "./use-filterable-items"
 export { useResolvedUsers } from "./use-resolved-users"
+export { useBeforeUnloadWarning, DiscardChangesDialog, type DiscardChangesDialogProps } from "./use-unsaved-warning"
