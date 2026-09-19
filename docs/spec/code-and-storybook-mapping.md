@@ -71,7 +71,7 @@ Darstellungsvariante. Allgemeine Item-Inhalte heißen „Detailansicht“;
 Die konkreten Titel und stabilen IDs der migrierten Stories stehen in
 [`../reference/story-migration.json`](../reference/story-migration.json).
 Bestehende URLs bleiben durch explizite Meta-IDs erhalten. Neue Stories
-verwenden eine der obigen Kategorien und werden von `pnpm check:docs` geprüft.
+verwenden eine der obigen Kategorien; die Prüfung der IDs kommt mit den Handbuch-Skripten.
 
 ## Overview Stories
 
@@ -133,7 +133,7 @@ Feed ist das Referenzmodul für einen generischen Aktivitäts- und Inhaltsstrom 
 | Feed Space Module | `packages/toolkit/src/components/feed/feed-module.stories.tsx` | `RLS/Module/Feed/Übersicht` | Feed-fähige Items im Current Space, sortiert nach `createdAt` |
 | Feed Item | `preview/item-preview.tsx` (shared) + Adornments (`item-type-badge.tsx`, `item-meta-row.tsx`, `item-comment-count.tsx`) | In der Overview als Standardprojektion verwendet | Generisches `Item` mit `data.title`, `data.content` oder `data.description`; type-spezifische Metadaten kommen über Adornments |
 | Composer | `feed/feed-composer-trigger.tsx` (Feed-Trigger), `composer/content-composer.tsx` (geteilt) | `RLS/Items/Anlegen und Bearbeiten/ContentComposer` und Feed-Overview | Persistente Erstellung braucht später `ItemWriter`; die Story hält neue Items nur lokal |
-| Reaktionen | `components/reactions/` (geteilt) | `RLS/Module Components/Reactions/...`; in der Overview als statischer Slot sichtbar | Optional über `RelationCapable`/`reactsTo`; Feed bleibt nutzbar ohne Relations |
+| Reaktionen | `components/reactions/` (geteilt) | `RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionBar` (auch ReactionPicker, ReactionDetails) | Optional über `RelationCapable`/`reactsTo`; Feed bleibt nutzbar ohne Relations |
 | Kommentare | `components/comments/` (geteilt) | `RLS/Items/Detailansicht/Reaktionen und Kommentare/CommentSection` | Optional über `RelationCapable`/`commentOn`; `ItemCommentCount` zeigt die Anzahl im Footer |
 | PostCard | `post-card.tsx` | `RLS/Items/Typbeispiele/Beitrag/PostCard (ältere Darstellung)` | Spezifische ältere Post-Projektion; nicht die kanonische generische Feed-Projektion |
 

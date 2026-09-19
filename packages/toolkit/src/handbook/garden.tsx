@@ -227,10 +227,15 @@ function Garden({
                 showVisibility={false}
                 onCancel={() => setEditing(false)}
                 onSubmit={async ({ data }) => {
-                  const { text, ...fields } = data
-                  await connector.updateItem(item.id, {
-                    data: { ...item.data, ...fields, content: text },
-                  })
+                  // Only the fields of the three widgets shown are written back; the composer's
+                  // defaults for the others (status, group, …) must not land on the item, or a
+                  // task would suddenly carry status: "" and match hasField: ["status"].
+                  // A field the person cleared stays cleared.
+                  const next: typeof item.data = { ...item.data, content: data.text }
+                  for (const key of ['title', 'start', 'end', 'rrule'] as const) {
+                    if (key in data) next[key] = data[key]
+                  }
+                  await connector.updateItem(item.id, { data: next })
                   setEditing(false)
                 }}
               />
