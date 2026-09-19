@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Item, RelationRecord } from "@real-life-stack/data-interface"
-import { aggregateVoteStats, sortStatements, type StatementVoteStats } from "./resonance-sort"
+import { aggregateVoteStats, sortStatements, type StatementVoteStats } from "../src/lib/resonance-sort"
 
 function statement(id: string, createdAt: string): Item {
   return { id, type: "statement", createdAt, createdBy: "did:key:author", data: { title: id } }

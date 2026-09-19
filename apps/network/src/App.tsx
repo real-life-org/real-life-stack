@@ -15,7 +15,7 @@ import {
 } from "lucide-react"
 import type { DataInterface, Item, User } from "@real-life-stack/data-interface"
 import { isAggregateVisibleItemType, hasGroups, isAuthenticatable, isWritable, moduleHintsFor } from "@real-life-stack/data-interface"
-import {
+import { initialDarkMode,
   AdaptivePanel,
   AppShell,
   AppShellMain,
@@ -96,16 +96,6 @@ const NETWORK_LENSES: ReadonlyArray<{ id: NetworkLens; label: string }> = [
 
 interface AppProps {
   connector: DataInterface
-}
-
-function initialDarkMode(): boolean {
-  try {
-    const stored = window.localStorage.getItem(THEME_KEY)
-    if (stored) return stored === "dark"
-  } catch {
-    // Storage can be unavailable in privacy-restricted browsing contexts.
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
 }
 
 function useOptionalCurrentUser(connector: DataInterface): User | null {
@@ -511,7 +501,7 @@ function NetworkShell() {
   const [query, setQuery] = useState("")
   const [filterOpen, setFilterOpen] = useState(false)
   const [enabledTypes, setEnabledTypes] = useState(() => new Set(ALL_GRAPH_TYPES))
-  const [isDark, setIsDark] = useState(initialDarkMode)
+  const [isDark, setIsDark] = useState(() => initialDarkMode(THEME_KEY))
   const [profileOpen, setProfileOpen] = useState(false)
   const [activityOpen, setActivityOpen] = useState(false)
   const closeActivity = useCallback(() => setActivityOpen(false), [])
