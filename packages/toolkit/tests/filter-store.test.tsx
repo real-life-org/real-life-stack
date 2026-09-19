@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import {
   FilterProvider,
-  useOptionalSharedFilter,
   useSharedFilter,
 } from "../src/components/filter/filter-store"
 
@@ -91,14 +90,3 @@ describe("Der geteilte Filter", () => {
   })
 })
 
-describe("Ohne Provider", () => {
-  it("gibt der weiche Zugriff null zurück, statt zu werfen", () => {
-    let gesehen: unknown = "nicht gelesen"
-    function Probe(): ReactNode {
-      gesehen = useOptionalSharedFilter()
-      return null
-    }
-    act(() => root.render(createElement(Probe)))
-    expect(gesehen).toBeNull()
-  })
-})

@@ -24,7 +24,6 @@ Lebende Beispiele stehen unter [Grundlagen → Hooks](?path=/story/rls-grundlage
 | `useItem(id)` | `{data, isLoading}` | Gibt es dieses eine Item, und ist „nicht gefunden" schon entschieden? | — |
 | `useItemsWithDraft(filter?)` | `{data, isLoading}` | Dieselbe Liste, mit dem gerade getippten Entwurf schon als Karte darin. | — |
 | `useModuleFilteredItems(items)` | `Item[]` | Genau das, was die Steuerleiste im Modulkopf verspricht: Filter plus Suchtext. | wirft ohne `FilterProvider` |
-| `useRelatedItems(id, predicate)` | `{data}` | Welche Items hängen über dieses Prädikat an einem Item? | leer |
 | `useActivity(scope)` | `{data, supported}` | Was ist in diesem Space zuletzt passiert? | leer, `supported: false` |
 | `useNotifications()` | `{notifications, badgeCount, …}` | Was gibt es für mich Neues, und wieviel ist ungelesen? | leer |
 
@@ -47,7 +46,6 @@ Lebende Beispiele stehen unter [Grundlagen → Hooks](?path=/story/rls-grundlage
 |---|---|---|---|
 | `useOptionalCurrentUser()` | `{data, isLoading}` | Wer bin ich, wenn überhaupt jemand? | `null` |
 | `useCurrentUser()` | `{data, isLoading}` | Wer bin ich? Für Flächen, die ohne Anmeldung sinnlos wären. | wirft beim Rendern |
-| `useAuthState()` | `AuthState` | Angemeldet, nicht angemeldet, oder läuft es noch? | `unauthenticated` |
 | `useGroups()` | `{data, isLoading}` | Welche Spaces sehe ich? | leer |
 | `useCurrentGroup()` | `Group \| null` | In welchem Space bin ich gerade? | `null` |
 | `usePersonalGroupId()` | `string \| null` | Wohin gehört ein Item, das mit niemandem geteilt wird? | `null` |
@@ -69,10 +67,8 @@ Lebende Beispiele stehen unter [Grundlagen → Hooks](?path=/story/rls-grundlage
 | Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
 |---|---|---|---|
 | `useItemPermissions(item)` | `{canEdit, canDelete}` | Darf ich hier das ⋮-Menü zeigen? | beides `false` |
-| `useCanCreate(spaceId, type?)` | `boolean` | Darf ich in diesem Space etwas anlegen? | `false` |
 | `useConnector()` | `DataInterface` | Welcher Datenzugang gilt hier? | wirft ohne Provider |
 | `useOptionalConnector()` | `DataInterface \| null` | Dasselbe für Flächen, die auch ohne Datenzugang rendern. | `null` |
-| `useFeature(pfad)` | `boolean` | Ist dieses Merkmal eingeschaltet? | `false` |
 
 Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 `isWritable`, `hasGroups`, `isAuthenticatable`, `hasRelations`, `hasItemGroups`,
@@ -84,13 +80,11 @@ Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 |---|---|---|---|
 | `useComments(itemId)` | `{comments, createComment, canComment}` | Was wurde gesagt, von wem, und darf ich antworten? | leer, Schreiben untätig |
 | `useCommentCount(itemId)` | `number` | Gibt es zu dieser Karte ein Gespräch? | `0` |
-| `useReplies(commentId)` | `{replies, isLoading}` | Welche Antworten hängen an diesem Kommentar? | leer |
 | `useReactions(itemId)` | `{reactions, react, canReact}` | Wie wurde reagiert, und kann ich meine Reaktion setzen? | leer, `react` untätig |
 | `useReactionUsers(itemId)` | `{users, isLoading}` | Wer hat mit welchem Emoji reagiert? | leer |
 | `useVotes(itemId)` | `{summary, vote, canVote}` | Wie steht die Resonanz, und wie stimme ich ab? | leer; ohne Signaturprüfung zählt keine Stimme |
 | `useVoteUsers(itemId)` | `{users, isLoading}` | Wer hat wie gestimmt? | leer |
 | `useRelationRecords(filter)` | `{data, supported}` | Welche signierten Beziehungsdatensätze passen? | leer, `supported: false` |
-| `useRelationNeighbors(ref)` | `{data, supported}` | Welche Items liegen im Graph daneben? | leer |
 | `useVerifiedRelationRecords(records)` | `RelationRecord[]` | Welche davon sind kryptografisch gedeckt? | leer, auch während der Prüfung |
 
 ## Flächen und Zustand der Oberfläche
@@ -98,9 +92,7 @@ Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 | Hook | Antwortet | Beantwortet | Ohne Provider |
 |---|---|---|---|
 | `useModulePanel()` | `{current, open, close}` | Ein Panel neben dem Modul öffnen. Es gibt nur eines. | wirft |
-| `useOptionalModulePanel()` | `… \| null` | Dasselbe für Komponenten ohne Panel-Hülle. | `null` |
 | `useSharedFilter()` | `{value, searchText, setSearchText, clear}` | Der app-weite Filter, der den Modulwechsel überdauert. | wirft |
-| `useOptionalSharedFilter()` | `… \| null` | Dasselbe, wenn die Fläche auch allein steht. | `null` |
 | `useModuleLayout()` | `ModuleLayout \| null` | Welche Geometrie gibt die Modulfläche vor? | `null` |
 | `useModuleContentClass()` | `string` | In welcher Breite steht der Inhalt? | Vorgabe |
 | `useOptionalModuleHead()` | `… \| null` | Wohin portalt ein Modul seine Steuerleiste? | `null` |
@@ -126,8 +118,6 @@ Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 | Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
 |---|---|---|---|
 | `useItemTags(item)` | `string[]` | Welche Tags trägt dieses Item? | — |
-| `useItemDateHint(item)` | `{start, end, isAllDay, hasTime}` | Wann findet es statt, ganztägig oder mit Uhrzeit? | — |
-| `useItemPosition(item)` | `{isPlace, point}` | Liegt es an einem Ort, und wo setze ich den Marker? | — |
 | `useItemGroupColorResolver(scope)` | `(item) => string` | In welcher Farbe erscheint ein Item, nach seinem Space? | Palettenfarbe |
 | `useItemGroupResolver(scope)` | `(item) => Group \| undefined` | Aus welchem Space stammt es? | `undefined` |
 | `useItemPrivacyResolver()` | `(item) => boolean` | Ist es privat, also mit niemandem geteilt? | immer `false` |
@@ -136,9 +126,7 @@ Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 
 - `useCurrentUser` und `useOptionalCurrentUser` unterscheiden sich nur darin, ob
   eine fehlende Anmeldung wirft oder `null` liefert. Dasselbe Muster bei
-  `useConnector`, `useSharedFilter`, `useModulePanel`.
-- `useComments` liefert die Antworten bereits mit; `useReplies` lädt dieselbe
-  Liste ein zweites Mal.
+  `useConnector`.
 - `useReactions` trägt in `reactions[].userIds` schon, was `useReactionUsers`
   erneut holt.
 - `useCommentCount` ist die billige Hälfte von `useComments`.

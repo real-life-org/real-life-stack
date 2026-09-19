@@ -7,7 +7,7 @@ import { RelativeTime } from "../primitives/relative-time"
 import { ProfileLink } from "../profile/profile-link"
 import { TagFilterChip } from "../tag/tag-filter-chip"
 import { MarkdownText } from "../preview/markdown-text"
-import { editedLabel } from "@/lib/item-text"
+import { editedLabel, itemText } from "@/lib/item-text"
 import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
 import { useUserNameResolver } from "../../hooks/use-user-names"
@@ -85,10 +85,7 @@ export function ItemDetailBody({
 }: ItemDetailBodyProps) {
   const data = item.data as Record<string, unknown>
   const title = typeof data.title === "string" ? data.title : undefined
-  const description =
-    (typeof data.content === "string" && data.content) ||
-    (typeof data.description === "string" && data.description) ||
-    ""
+  const description = itemText(item) ?? ""
   const tags = useItemTags(item)
 
   const authorName = author?.displayName ?? item.createdBy

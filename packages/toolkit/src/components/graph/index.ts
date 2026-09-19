@@ -12,3 +12,4 @@ export type {
   GraphViewHandle,
   GraphViewProps,
 } from "./types"
+export { projectSpaceGraph, graphItemNodeId, graphUserNodeId, graphNodeRef, type GraphProjection } from "./project-space-graph"

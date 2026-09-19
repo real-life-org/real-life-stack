@@ -7,13 +7,11 @@
 //
 // Einmal importieren, vor dem ersten Render (main.tsx).
 
-import type { Group } from "@real-life-stack/data-interface"
 import {
   CORE_MODULE_LAYER,
   composeModules,
   setModuleRegistry,
   type ModuleViewProps,
-  type SelectionFocusVisibleArea,
 } from "@real-life-stack/toolkit"
 import { FeedView } from "./views/feed-view"
 import { MapView } from "./views/map-view"
@@ -34,12 +32,12 @@ const Graph = ({ groupId }: ModuleViewProps) => (
   <GraphViewWrapper groupId={groupId || "__overview__"} />
 )
 const Kanban = ({ groupId, groups }: ModuleViewProps) => (
-  <KanbanView activeWorkspaceId={groupId || null} groups={(groups ?? []) as Group[]} />
+  <KanbanView activeWorkspaceId={groupId || null} groups={[...(groups ?? [])]} />
 )
 const Collection = ({ groupId, selectionFocusVisibleArea }: ModuleViewProps) => (
   <CollectionView
     groupId={groupId}
-    selectionFocusVisibleArea={selectionFocusVisibleArea as SelectionFocusVisibleArea | undefined}
+    selectionFocusVisibleArea={selectionFocusVisibleArea}
   />
 )
 

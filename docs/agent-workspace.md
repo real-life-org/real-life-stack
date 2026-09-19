@@ -111,7 +111,7 @@ Feature-Items (`type: "feature"`) können weiterhin als Demo-, Konfigurations- o
 
 - Connector liefert ein Item mit `id: "capabilities"`, `type: "feature"`, `createdBy: "system"`
 - `data` enthält einen verschachtelten Objektbaum: truthy = unterstützt, falsy = nicht unterstützt
-- Hooks: `useFeatures()` gibt den ganzen Baum, `useFeature("kanban.dragDrop")` prüft einen Pfad
+- Hooks dafür gibt es im Toolkit nicht: `useFeatures`/`useFeature` waren ein Entwurf und wurden am 19.09.2026 entfernt (real-life-stack#400). Eine App, die den Baum braucht, liest ihn selbst über `useItems({ type: "feature" })`
 - UI blendet Features dynamisch ein/aus basierend auf dem Feature-Baum
 - **Feature-Items gehören in die Demo-Daten** (`data/items.json`), nicht hardcoded in Connectors
 - Normativer Einstieg: `docs/spec/README.md` und `docs/spec/00-architecture.md`
@@ -155,8 +155,8 @@ Relation-Targets nutzen Scope-Prefixe:
 
 - UI-Komponenten basierend auf shadcn/ui (Radix + Tailwind)
 - Layout: AppShell, Navbar, WorkspaceSwitcher, ModuleTabs, BottomNav, UserMenu
-- Content: PostCard, StatCard, ActionCard, SimplePostWidget, KanbanBoard
-- Hooks: useItems, useItem, useCreateItem, useUpdateItem, useDeleteItem, useGroups, useMembers, useAuthState, useCurrentUser, useFeatures, useFeature
+- Content: ItemPreview, ItemDetailBody, KanbanBoard, CalendarView, MapView, GraphView
+- Hooks: useItems, useItem, useCreateItem, useUpdateItem, useDeleteItem, useGroups, useMembers, useCurrentUser, useOptionalCurrentUser, useComments, useReactions, useVotes, useItemPermissions — die vollständige Liste steht im Storybook unter „Alle Hooks"
 - ConnectorProvider für React Context
 - Storybook für Komponentenentwicklung (`pnpm storybook`)
 
@@ -234,8 +234,8 @@ Ausführliche Spezifikation in `docs/spec/reaktivitaet.md`. Die wichtigsten Rege
 - **Datenfluss:** wot-core (Subscribable) → Connector (Observable) → Hooks (React State) → UI. Keine Schicht überspringen.
 - **createdAt ist ein ISO-String** (`"2026-03-17T14:30:00.000Z"`), KEIN Date-Objekt. Bei Bedarf: `new Date(item.createdAt)`.
 - **Kommentare/Reaktionen** sind eigene Items mit `commentOn`-Relation, NICHT eingebettet in `data`.
-- **Related Items:** `useRelatedItems(postId, "commentOn", { direction: "to" })` in der Kind-Komponente. KEIN manueller Reverse-Lookup, KEIN `_included`.
-- **`_included` existiert NICHT MEHR.** Nutze `useRelatedItems` / `observeRelatedItems` stattdessen.
+- **Related Items:** den Hook der jeweiligen Beziehungsart in der Kind-Komponente — `useComments(postId)`, `useReactions`, `useVotes`, `useRelationRecords`. KEIN manueller Reverse-Lookup, KEIN `_included`. Einen allgemeinen `useRelatedItems` gibt es seit dem 19.09.2026 nicht mehr; für eine Beziehungsart ohne Hook ist `connector.observeRelatedItems()` der Weg.
+- **`_included` existiert NICHT MEHR.** Nutze die Beziehungs-Hooks bzw. `observeRelatedItems` stattdessen.
 - **Shared Helper:** `findRelatedItems()` aus data-interface nutzen, NICHT eigene Implementierung in Connectors.
 - **Anti-Patterns:** Kein Polling, kein direkter wot-core Import in UI, kein forceUpdate, keine eigene Datenhaltung in Hooks.
 

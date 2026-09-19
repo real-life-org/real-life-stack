@@ -16,7 +16,6 @@ export * from "./debug"
 // Space modules
 export * from "./feed"
 export * from "./kanban"
-export * from "./dashboard"
 export * from "./calendar"
 export * from "./map"
 

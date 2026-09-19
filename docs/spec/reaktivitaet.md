@@ -19,7 +19,7 @@
 │  → notifyAllObservers() bei jeder Mutation               │
 ├─────────────────────────────────────────────────────────┤
 │  Hooks              React State                          │
-│  (useItems, useItem, useRelatedItems, useGroups)         │
+│  (useItems, useItem, useComments, useGroups)             │
 │  → useState + useEffect + subscribe                      │
 ├─────────────────────────────────────────────────────────┤
 │  UI-Flächen         Reine Darstellung                    │
@@ -119,7 +119,7 @@ Alle Relations leben in `item.relations[]` — niemals in `data`. Es gibt zwei P
 }
 ```
 
-**Reverse-Relations** — ein **anderes Item** zeigt auf dieses Item. Muss aktiv gesucht werden per `useRelatedItems`. Das Item selbst weiß nichts davon.
+**Reverse-Relations** — ein **anderes Item** zeigt auf dieses Item. Muss aktiv gesucht werden über `observeRelatedItems()`. Das Item selbst weiß nichts davon.
 
 ```typescript
 // Kommentar zeigt auf den Task → Reverse-Relation
@@ -140,7 +140,7 @@ Alle Relations leben in `item.relations[]` — niemals in `data`. Es gibt zwei P
 | **Wann** | Gehört fest zum Item, wenige Einträge | Eigenständig, kann unbegrenzt wachsen |
 | **Beispiele** | Assignees, Tags, Verortung | Kommentare, Reaktionen, Sub-Tasks |
 | **Lifecycle** | Stirbt mit dem Item | Eigener Autor, editierbar, löschbar |
-| **Laden** | Gratis — kommt mit dem Item | Muss per `useRelatedItems` geladen werden |
+| **Laden** | Gratis — kommt mit dem Item | Muss über `observeRelatedItems()` geladen werden |
 
 ### Direction-Semantik
 
@@ -176,9 +176,21 @@ await connector.createItem({
 })
 ```
 
-### Reverse-Relations reaktiv laden — useRelatedItems
+### Reverse-Relations reaktiv laden
 
-Jede Komponente die Reverse-Relations anzeigt, nutzt `useRelatedItems` **in der Kind-Komponente**:
+Jede Komponente, die Reverse-Relations anzeigt, lädt sie **in der Kind-Komponente**.
+
+Das Toolkit hat dafür je einen Hook pro Bedeutung statt eines allgemeinen: `useComments`
+und `useReplies` für Kommentare, `useCommentCount` für die Zahl allein, `useReactions`
+und `useReactionUsers` für Reaktionen, `useVotes` für Stimmen, `useRelationRecords` für
+signierte Beziehungssätze. Jeder von ihnen sitzt auf `observeRelatedItems()` auf und
+bringt seine eigene Auflösung von Autoren, Antworten und Zählern mit.
+
+Einen allgemeinen `useRelatedItems` gibt es bewusst nicht mehr (entfernt am 19.09.2026,
+real-life-stack#400): Keine Fläche benutzte ihn, und jede Fläche, die Reverse-Relations
+zeigt, braucht ohnehin mehr als die rohe Liste. Für eine Beziehungsart, die noch keinen
+Hook hat, ist `connector.observeRelatedItems()` der Weg — und der neue Hook gehört dann
+ins Toolkit, nicht in die App.
 
 ```typescript
 // Feed.tsx — lädt nur Posts
@@ -189,7 +201,7 @@ function Feed() {
 
 // PostCard.tsx — lädt eigene Kommentare (Reverse-Lookup)
 function PostCard({ post }: { post: Item }) {
-  const { data: comments } = useRelatedItems(post.id, "commentOn", { direction: "to" })
+  const { comments } = useComments(post.id)
   return (
     <div>
       <h2>{post.data.title}</h2>
@@ -212,7 +224,7 @@ function KanbanCard({ item, users }) {
     .filter(r => r.predicate === "assignedTo")
     .map(r => r.target.replace(/^global:/, ""))
 
-  // Gegen Members-Liste matchen (kein useRelatedItems nötig)
+  // Gegen Members-Liste matchen (kein Reverse-Lookup nötig)
   const assignees = assigneeIds.map(id => users.find(u => u.id === id)).filter(Boolean)
 
   return <div>{assignees.map(u => <Avatar key={u.id} user={u} />)}</div>
@@ -329,9 +341,9 @@ const commentsForPost = allComments.filter(c =>
   c.relations?.some(r => r.target === `item:${post.id}`)
 )
 
-// RICHTIG — useRelatedItems in der Kind-Komponente
+// RICHTIG — der Hook für diese Beziehungsart, in der Kind-Komponente
 function PostCard({ post }) {
-  const { data: comments } = useRelatedItems(post.id, "commentOn", { direction: "to" })
+  const { comments } = useComments(post.id)
 }
 ```
 
@@ -445,11 +457,11 @@ async dispose(): Promise<void> {
 Wenn du ein neues reaktives Feature baust (z.B. Kommentare, Reaktionen, Benachrichtigungen):
 
 - [ ] Daten als **eigene Items** mit Relations modelliert (nicht eingebettet)?
-- [ ] `useRelatedItems()` in der Kind-Komponente statt manuellem Lookup?
+- [ ] Den Hook für diese Beziehungsart (`useComments`, `useReactions`, …) in der Kind-Komponente statt manuellem Lookup?
 - [ ] `getRelatedItems()` mit korrekter `direction` genutzt?
 - [ ] `createdAt` als ISO-String behandelt (kein `new Date()` beim Erstellen)?
 - [ ] Nur über Connector + Hooks auf Daten zugegriffen (kein wot-core Bypass)?
 - [ ] Capability-Check (`isWritable`, `hasRelations`, etc.) vor Nutzung?
 - [ ] Subscription-Cleanup in `dispose()`?
 - [ ] Kein Polling, kein setTimeout, kein forceUpdate?
-- [ ] Bei potenziell vielen Items: `limit` in `useItems()` oder `useRelatedItems()` gesetzt?
+- [ ] Bei potenziell vielen Items: `limit` in `useItems()` oder `observeRelatedItems()` gesetzt?

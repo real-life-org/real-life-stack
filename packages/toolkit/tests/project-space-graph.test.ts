@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { Item, RelationRecord, User } from "@real-life-stack/data-interface"
 
-import { graphNodeRef, projectSpaceGraph } from "./graph-view"
+import { graphNodeRef, projectSpaceGraph } from "../src/components/graph/project-space-graph"
 
 const item = (id: string, type: string, data: Record<string, unknown> = {}, relations: Item["relations"] = []): Item =>
   ({ id, type, createdAt: "2026-08-05T10:00:00.000Z", createdBy: "u1", data, relations }) as Item
