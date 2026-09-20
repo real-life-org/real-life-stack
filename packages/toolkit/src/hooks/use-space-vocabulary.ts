@@ -64,6 +64,13 @@ export function spaceVocabulary(items: readonly Item[]): SpaceVocabulary {
  *
  * Ohne Connector ist es leer, statt zu werfen: Eine Fläche ohne Daten hat kein
  * Vokabular, und das ist kein Fehler (Story, Test).
+ *
+ * **Zwischenstand, nicht Ziel.** Heute leitet der Haken das Vokabular aus den
+ * vorhandenen Items ab. Filter und Item-Typen sollen später **pro Space
+ * konfigurierbar** sein (Anton, 20.09.2026); dann kommt die Liste aus der
+ * Konfiguration des Space, und diese Ableitung bleibt höchstens der Rückfall
+ * für einen Space ohne eigene. Dass es überhaupt nur EINE Ableitung gibt, ist
+ * die Voraussetzung dafür: Es gibt genau eine Stelle umzustellen.
  */
 export function useSpaceVocabulary(): SpaceVocabulary {
   const connector = useOptionalConnector()
