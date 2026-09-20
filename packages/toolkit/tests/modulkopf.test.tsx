@@ -97,6 +97,11 @@ describe("Der Modulkopf", () => {
     // Leiste mitbrachte und die Flaeche darueber eine zweite. Seit die Suche
     // der Flaeche gehoert, kann das nicht mehr passieren — egal wie viele
     // Leisten hineinreichen.
+    //
+    // Nur fuer die SUCHE. Die Chip-Zeile kann weiter doppelt stehen, weil sie
+    // die geteilten Filterwerte liest, aber vom Modul gerendert wird — sie
+    // gehoert aus demselben Grund der Flaeche und wandert mit dem
+    // Typ-Vokabular hoch (Schritt A des Folge-PRs).
     rendere(
       createElement(
         ModuleFrame,
