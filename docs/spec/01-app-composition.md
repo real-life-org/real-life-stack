@@ -202,7 +202,7 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 | `keepMounted` | Fläche im Baum halten statt beim Wechsel abzubauen — für Module, deren Aufbau teuer ist (Map: WebGL-Kontext, Worker, entfernter Style) |
 | `panelFit` | ob ein offenes Panel die Fläche einrückt (`inset`, Standard) oder sich darüber legt (`overlay`) — siehe Content-Bereich |
 | `presents` | Item-Felder, die dieses Modul darstellen kann (Karte: `position`, Kalender: `start`) — siehe „Ein Feld führt zu seiner Sicht" |
-| `view` | die Fläche selbst; wird von der App beigesteuert, nicht vom Toolkit |
+| `view` | die Fläche selbst. Für die Kern-Module liefert sie das **Toolkit** — vollständig, lauffähig ohne eine Zeile in der App (siehe „Der Modul-Host"). Eine App DARF sie in ihrer Schicht ersetzen oder ein eigenes Modul mit eigener Fläche hinzufügen. *Entwurf 20.09.2026: Bis dahin steuerte die App jede Fläche bei; die Verdrahtung darum stand deshalb siebenmal in der Referenz-App.* |
 
 ### Regeln
 
@@ -215,7 +215,42 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 5. **Die Auswahl gehört ebenfalls an eine Stelle.** Aus einer gespeicherten Liste eine benutzbare zu machen und daraus ein aktives Modul zu wählen, sind zwei Operationen, die das Register anbietet und die jede Fläche benutzt — Routing, Tabs, Space-Wechsel und Benachrichtigungen. Sie selbst zusammenzusetzen ist derselbe Fehler wie eine zweite Modul-Liste: Es hat bereits dazu geführt, dass ein Sprung aus einer Benachrichtigung im Feed statt auf der Karte landete, weil eine Aufrufstelle den Leer-Fall anders behandelte als die andere.
 6. Eine `id` in `Group.data.modules` ohne Registereintrag ist **kein Fehler**: Sie stammt aus einer anderen App-Version oder einem Modul, das diese App nicht kennt. Sie MUSS erhalten bleiben (nie stillschweigend entfernt) und DARF NICHT dargestellt werden. Zählungen, Garantien — etwa „mindestens ein Modul bleibt aktiv" — **und jede Auswahl eines aktiven Moduls** MÜSSEN die darstellbaren Einträge nehmen, nie die rohe Liste: Sonst bestimmt eine fremde Id das Routing, und der Nutzer landet auf einem Tab ohne Fläche. Bleibt nach dem Filtern nichts übrig, greift der volle Satz — ein Space ganz ohne Tab wäre schlimmer als einer mit den Vorgaben.
 7. Ein Registereintrag ohne `view` MUSS sichtbar degradieren (Hinweis statt leerer Fläche). Ein Modul, das im Tab erscheint und dann nichts zeigt, ist schlimmer als eines, das fehlt.
-8. Das Register trägt **keine Aktivierungsregel**: Welche Items ein Modul zeigt, entscheidet Feld-Präsenz (siehe [06-schema-composition.md](06-schema-composition.md)), nie ein Eintrag hier.
+8. Das Register trägt **keine Aktivierungsregel**: Welche Items ein Modul zeigt, entscheidet Feld-Präsenz (siehe [06-schema-composition.md](06-schema-composition.md)), nie ein Eintrag hier. `presents` ist keine Ausnahme davon, sondern ihre Anwendung: Es nennt die Felder, und der Host leitet daraus den Filter ab — dieselbe Regel, die auch „Ein Feld führt zu seiner Sicht" trägt. Ein Modul ohne `presents` zeigt alles, was in einer aggregierenden Ansicht erscheint.
+
+### Der Modul-Host
+
+**Status: Entwurf, 20.09.2026.** Noch nicht umgesetzt; Anton liest, dann wird gebaut.
+
+Der Registereintrag beantwortet, *was folgt daraus, dass ein Space dieses Modul führt*. Der Host ist die Stelle, die aus der Antwort eine laufende Fläche macht — **einmal**, für alle Module.
+
+**Befund, der ihn nötig macht.** In der Referenz-App taten alle sieben Modul-Ansichten dieselben sieben Dinge in derselben Reihenfolge: Items mit dem Modulfilter laden, Mitglieder laden (mit dem Aggregat-Sonderfall, siebenmal abgeschrieben), die geteilte Bearbeitungs-Konfiguration bauen, Detail registrieren, Erstellen registrieren, den Fokus verdrahten, die Ansicht rendern. Die Detail-Blöcke von Kalender und Karte waren wörtlich gleich. Was sich je Modul unterschied, waren die Ansicht und der Filter — und der Filter stand bereits als `presents` im Register. Die Netzwerk-App hat dieselben sieben Dinge nicht übernommen, sondern ohne Fokus-Politik und ohne Erstellen-Host neu erfunden. Das ist die Regel aus Abschnitt 2a eine Ebene höher: Was sich Module teilen können, gehört nicht ins Modul — und was sich Apps teilen können, gehört nicht in die App.
+
+**Was der Host aus einem Eintrag herstellt.** Jedes Modul bekommt alles davon; kein Modul baut es selbst:
+
+| Der Host … | … und woher er es weiß |
+|---|---|
+| stellt die **Fläche** (Kopf, Suche, Vokabular, Filterkarte, Chips, schwebende Ecke) | `fill`, `panelFit`, `maxWidth` — wie heute |
+| lädt die **Items** des Moduls | aus `presents`, über eine Funktion in `data-interface`, die zu jedem darstellbaren Feld den Filter kennt (heute steht dieses Wissen in `moduleHintsFor`; die Umkehrung fehlt noch). Ein Modul, das anders laden muss (die Karte nach Ausschnitt), lädt selbst und sagt es dem Host |
+| löst den **Space-Kontext** auf: Mitglieder, Autoren, Gruppenfarben, das Aggregat „Mein Netzwerk" | aus dem aktiven Space; die Ausnahme `__overview__` gibt es damit an genau einer Stelle |
+| registriert das **Detail** (Lesen ↔ Bearbeiten im geteilten Panel) | aus der geteilten Bearbeitungs-Konfiguration: alle Inhaltstypen, der Composer-Mapper, die Vorbelegung. Der Hintergrund-Schleier folgt aus `panelFit`: `overlay` bleibt ohne, damit die Karte bewegbar bleibt |
+| registriert das **Erstellen** | mit **allen** Inhaltstypen des Space — der Plusknopf bietet immer alles an, das Modul schränkt nicht ein (Anton, 20.09.2026). Ein Modul DARF einen **Vorschlag** machen: Ein Klick auf einen leeren Kalendertag öffnet den Composer mit „Termin" vorgewählt und dem Datum vorbelegt. Ein Vorschlag ist eine Voreinstellung, kein Zaun — das Typmenü bleibt offen |
+| hält den **Fokus** (welches Item offen ist, ob es bearbeitet wird, ob gerade erstellt wird) | in der **URL**, als Voreinstellung: `/{scope}/{modul}/{itemId}`, `?edit`, `?compose=`. Zurück im Browser schließt das Panel; ein Link führt zum Item. Das ist keine Wahl der App, sondern Teil des Moduls |
+
+**Was beim Modul bleibt.** Die Ansicht, ihre eigenen Steuerelemente (Regel 2), ihr Vorschlag beim Erstellen, und — wo es das gibt — eigene Logik (Kanban: Spalten, Verschieben, Zuweisung). Das ist alles.
+
+**Was bei der App bleibt.** Der Router selbst und die Entscheidung, welche Module ihr Register führt. Die URL-Fokus-Politik braucht einen Router; sie liegt darum in einem eigenen Unterpfad des Toolkits (`@real-life-stack/toolkit/router`, nach dem Muster von `/maplibre`), damit der Kern routerfrei bleibt. Ohne Router — in einer Story, einem Test, einer Einbettung ohne eigene Adresse — hält der Host den Fokus im Speicher, mit demselben Vertrag. Eine App, die einen Router hat, MUSS die URL-Politik nehmen. Der Fokus im Speicher ist der Rückfall für den Fall ohne Router, keine zweite gleichwertige Betriebsart.
+
+Regeln:
+
+1. Ein Kern-Modul MUSS **ohne eine Zeile in der App** laufen: Register binden, Host rendern, fertig. Alles, was die Referenz-App heute je Modul verdrahtet, ist entweder Sache des Hosts oder Sache des Moduls im Toolkit.
+2. Ein Modul DARF **nicht** selbst laden, registrieren oder den Fokus verdrahten, was der Host aus dem Eintrag herstellt. Die Tabelle oben ist die Liste; wer etwas davon im Modul wiederfindet, hat einen Fehler gegen diese Spec vor sich.
+3. Das Erstellen bietet in jedem Modul **dieselben** Typen an. Eine je Modul verschiedene Liste ist eine zweite Typ-Liste und damit ein Verstoß gegen Regel 1 des Typ-Registers. Ein Modul DARF einen Typ **vorschlagen** und Felder **vorbelegen**; es DARF die Auswahl nicht **einschränken**.
+4. Der Fokus lebt in der URL, wo es eine gibt. Eine App mit Router, die den Fokus anders hält, weicht von der Spec ab und MUSS das im Pull Request begründen.
+5. Der Host ist **eine** Komponente im Toolkit. Eine zweite Fassung davon in einer App — auch eine teilweise, auch eine „vorläufige" — ist derselbe Fehler wie eine zweite Modul-Liste. Die Netzwerk-App hat heute eine; sie wird auf den Host umgestellt.
+
+Was ein Eintrag dafür **nicht** braucht: kein `items`-Feld (folgt aus `presents`), kein `backdrop` (folgt aus `panelFit`), keine Liste der Erstell-Typen (es sind alle), kein `createLabel` (der Knopf heißt „Erstellen", das Modul schlägt höchstens einen Typ vor). Der Eintrag wird durch den Host nicht länger, sondern die Ansichten werden kürzer.
+
+**Offen, bewusst.** Sobald Filter und Typen je Space konfigurierbar sind (angekündigt 20.09.2026), heißt „alle Typen" „alle, die dieser Space führt", und der Host liest sie aus der Space-Konfiguration statt aus dem Typ-Register. Dass es dann genau eine Stelle umzustellen gibt, ist der Grund, sie jetzt zusammenzuführen.
 
 ### Ein Feld führt zu seiner Sicht
 
