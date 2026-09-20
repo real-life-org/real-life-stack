@@ -5,7 +5,6 @@ import { createPortal } from "react-dom"
 
 import { FilterPill } from "../filter/filter-pill"
 import { ModuleFilterChips } from "../filter/module-filter-chips"
-import { ModuleSearchBar } from "../filter/module-search-bar"
 import { useSharedFilter } from "../filter/filter-store"
 import type { FilterTypeOption } from "../filter/types"
 import { cn } from "../../lib/utils"
@@ -30,8 +29,6 @@ export interface ModuleToolbarProps {
   chipsExtra?: ReactNode
   /** Rechtsbuendige Modul-Aktionen im Kopf (Ansicht, Einstellungen, „Heute"). */
   trailingActions?: ReactNode
-  /** Beschriftung des Suchfelds — benennt die Flaeche, die es durchsucht. */
-  searchLabel?: string
   /**
    * Hat dieses Modul oben links eigene Bedienelemente (Zoom der Karte)?
    *
@@ -39,24 +36,23 @@ export interface ModuleToolbarProps {
    * zweiter Kopf: Die Flaeche bleibt der einzige Wirt.
    */
   clearsTopLeft?: boolean
-  /**
-   * Sucht dieses Modul? Standard ja.
-   *
-   * `false` fuer Flaechen, in denen ein Suchfeld nichts zu tun haette — dann
-   * bleibt der Kopf leer und verschwindet, waehrend die Filter-Pille steht.
-   */
-  search?: boolean
   className?: string
 }
 
 /**
- * Der eine Beitrag eines Moduls zu seiner Flaeche — und ihre Verteilung auf
- * zwei Orte (Design-Board 2a/2g):
+ * Der Beitrag eines Moduls zu seiner Flaeche — und seine Verteilung auf zwei
+ * Orte (Design-Board 2a/2g):
  *
- *   - **Kopf** (oben): Suche und Modul-Aktionen in der ersten Zeile, darunter
- *     die aktiven Filter als entfernbare Chips.
+ *   - **Kopf** (oben): die eigenen Steuerelemente des Moduls rechts neben der
+ *     Suche, darunter die aktiven Filter als entfernbare Chips.
  *   - **Schwebende Ecke** (unten links): die Filter-Pille, die die Auswahl
  *     oeffnet.
+ *
+ * **Die Suche ist hier NICHT dabei.** Sie zieht sich ausnahmslos durch alle
+ * Module und Linsen und gehoert deshalb der Flaeche, die sie genau einmal
+ * rendert (Anton, 19.09.2026). Vorher brachte jedes Modul sie mit — und wo
+ * zwei Beitraege in denselben Kopf portalten, einer vom Modul und einer von
+ * der Linse, standen zwei Suchfelder untereinander.
  *
  * **Warum der Filter-KNOPF nicht mehr im Kopf steht.** Er ist ein Werkzeug,
  * kein Zustand: Im Ruhezustand nimmt er als Pille eine Ecke ein statt einer
@@ -79,34 +75,36 @@ export function ModuleToolbar({
   drawerExtra,
   chipsExtra,
   trailingActions,
-  searchLabel,
-  search = true,
   clearsTopLeft = false,
   className,
 }: ModuleToolbarProps) {
   const kopf = useOptionalModuleHead()
 
   const { value } = useSharedFilter()
-  // Der Kopf bekommt nur eine Zeile, wenn etwas hineingehoert (Spec 01,
-  // Regel 4): Suche, Modul-Aktionen oder ein aktiver Filter. Die Pille zaehlt
-  // nicht mit — sie haengt nicht am Kopf.
-  const hatZeile = search || !!trailingActions
+  // Der Kopf bekommt nur wegen des Moduls eine Zeile, wenn das Modul etwas
+  // beitraegt (Spec 01, Regel 4): eigene Steuerelemente oder ein aktiver
+  // Filter. Die Suche zaehlt hier NICHT mit — sie gehoert der Flaeche und
+  // steht ohnehin. Die Pille zaehlt auch nicht mit, sie haengt nicht am Kopf.
   const hatChips = value.tags.length > 0 || value.types.length > 0 || !!chipsExtra
-  const hatKopfInhalt = hatZeile || hatChips
+  const hatKopfInhalt = !!trailingActions || hatChips
 
   const anmelden = kopf?.anmelden
   useEffect(() => {
     if (!hatKopfInhalt) return
-    return anmelden?.({ raeumtObenLinks: clearsTopLeft })
-  }, [anmelden, hatKopfInhalt, clearsTopLeft])
+    return anmelden?.()
+  }, [anmelden, hatKopfInhalt])
 
-  const kopfinhalt = hatKopfInhalt ? (
-    <div className="flex flex-col gap-2">
-      {hatZeile && (
-        <ModuleSearchBar search={search} searchLabel={searchLabel} trailingActions={trailingActions} />
-      )}
-      <ModuleFilterChips availableTypes={availableTypes} chipsExtra={chipsExtra} />
-    </div>
+  // Getrennt vom Kopf-Beitrag: Dass die Karte oben links ihre Zoom-Knoepfe
+  // fuehrt, gilt auch dann, wenn sie gerade nichts in den Kopf reicht. Die
+  // Suche steht trotzdem und braucht den Abstand (Codex-Review zu #405).
+  const raeumeObenLinks = kopf?.raeumeObenLinks
+  useEffect(() => {
+    if (!clearsTopLeft) return
+    return raeumeObenLinks?.()
+  }, [raeumeObenLinks, clearsTopLeft])
+
+  const chips = hatKopfInhalt ? (
+    <ModuleFilterChips availableTypes={availableTypes} chipsExtra={chipsExtra} />
   ) : null
   const pille = (
     <FilterPill
@@ -119,15 +117,21 @@ export function ModuleToolbar({
   if (kopf) {
     return (
       <>
-        {kopfinhalt && kopf.element ? createPortal(kopfinhalt, kopf.element) : null}
+        {trailingActions && kopf.actionsElement
+          ? createPortal(trailingActions, kopf.actionsElement)
+          : null}
+        {chips && kopf.element ? createPortal(chips, kopf.element) : null}
         {kopf.controlsElement ? createPortal(pille, kopf.controlsElement) : null}
       </>
     )
   }
 
+  // Ohne Flaeche darueber steht alles an Ort und Stelle. Die Suche fehlt hier
+  // bewusst: Sie gehoert der Flaeche, und wo keine ist, gibt es sie nicht.
   return (
     <div data-module-toolbar className={cn("flex flex-col gap-3", className)}>
-      {kopfinhalt}
+      {trailingActions && <div className="flex items-center justify-end gap-2">{trailingActions}</div>}
+      {chips}
       {pille}
     </div>
   )

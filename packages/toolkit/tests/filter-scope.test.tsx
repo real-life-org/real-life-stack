@@ -115,9 +115,19 @@ describe("FilterScope", () => {
 })
 
 describe("Die Suchzeile ohne Besitzer", () => {
-  it("wirft, statt still in einen eigenen Zustand zu schreiben", () => {
-    const stumm = vi.spyOn(console, "error").mockImplementation(() => {})
-    expect(() => rendere(createElement(ModuleSearchBar, {}))).toThrow(/FilterProvider/)
-    stumm.mockRestore()
+  it("rendert nichts, statt still in einen eigenen Zustand zu schreiben", () => {
+    // Bis zum 19.09.2026 warf sie hier. Seit die Suche der Flaeche gehoert und
+    // nicht mehr dem Modul, rendert die Flaeche sie unbedingt — auch ein
+    // nackter ModuleFrame im Test. Eine Ausnahme waere dort kein Fund, sondern
+    // ein Hindernis. Ohne Besitzer gibt es eben keine Suche.
+    rendere(createElement(ModuleSearchBar, {}))
+    expect(host.querySelector("input")).toBeNull()
+  })
+
+  it("schreibt weiter in den Besitzer, wenn es einen gibt", () => {
+    rendere(createElement(FilterProvider, null, createElement(ModuleSearchBar, {})))
+    const feld = host.querySelector("input")
+    expect(feld).not.toBeNull()
+    expect(feld!.getAttribute("aria-label")).toBe("Inhalte durchsuchen")
   })
 })

@@ -68,7 +68,7 @@ const karte = () =>
   })
 
 const rahmen = () => host.querySelectorAll("[data-module-frame]")
-const kopfSlot = () => host.querySelector("[data-module-head-slot]")
+const kopfSlot = () => host.querySelector("[data-module-head-content]")
 const controls = () => host.querySelector("[data-module-controls]")
 
 /**

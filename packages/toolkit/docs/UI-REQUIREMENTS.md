@@ -147,6 +147,20 @@ Entwurf: Claude-Design-Projekt „RLS System Design", Datei `Space Menu.dc.html`
 
 ---
 
+## Modulkopf
+
+Der Kopf der Modulfläche, normativ in [`docs/spec/01-app-composition.md`](../../../docs/spec/01-app-composition.md) Regeln 2, 2a und 4.
+
+- [x] **head-search-belongs-to-surface**: Die Suche gehört der Fläche, nicht dem Modul. `ModuleFrame` rendert sie genau einmal, bevor irgendein Modul etwas beiträgt; kein Modul bringt sie mit und keines schaltet sie ab. Sie zieht sich ausnahmslos durch alle Module (Anton, 19.09.2026)
+- [x] **head-search-label-names-the-space**: Die Beschriftung des Suchfelds nennt den Space, nicht das Modul („In Gemeinschaftsgarten suchen") — was sie durchsucht, wechselt beim Modulwechsel nicht
+- [x] **head-module-actions-beside-search**: Die eigenen Steuerelemente eines Moduls (Ansichtswechsel, „Heute", Ortung) stehen rechtsbündig in **derselben Zeile** wie die Suche, nicht darunter; sie kommen über `ModuleToolbar` in den Platz neben ihr
+- [x] **head-chips-below**: Die aktiven Filter stehen als entfernbare Chips in einer zweiten Zeile unter der Suche
+- [x] **head-single-search-even-with-two-toolbars**: Reichen zwei Leisten in denselben Kopf, gibt es trotzdem genau ein Suchfeld. Vorher brachte jedes Modul die Suche mit, und im Kalender standen zwei untereinander
+- [x] **head-hidden-without-filter-owner**: Ohne Besitzer des Filters gibt es keine Suche; trägt dann auch das Modul nichts bei, verschwindet der Kopf statt eine leere Zeile zu zeigen
+- [x] **head-top-left-clearance-independent**: Führt ein Modul die Ecke oben links selbst (Zoom-Knöpfe der Karte), rückt die schwebende Kopfzeile daneben — **unabhängig davon, ob das Modul gerade etwas in den Kopf reicht**. Eine Karte ohne Ortungsknopf und ohne aktive Filter behält den Abstand, weil die Suche trotzdem steht (Codex-Review zu rls#405)
+
+---
+
 ## Linsen
 
 - [x] **lens-no-local-filter-toolbar**: List-, Grid- und read-only-Kanban-Linsen bringen keine eigene Filter-Toolbar mit

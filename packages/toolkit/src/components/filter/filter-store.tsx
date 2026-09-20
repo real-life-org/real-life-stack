@@ -69,6 +69,21 @@ export function useSharedFilter(): SharedFilterValue {
   return ctx
 }
 
+/**
+ * Derselbe Zustand, aber `null` statt einer Ausnahme, wenn es keinen Besitzer
+ * gibt.
+ *
+ * Genau eine Stelle braucht das: die Modulflaeche. Sie rendert die Suche
+ * selbst (Spec 01, Regel 2), und eine Flaeche ohne Filter-Besitzer — ein
+ * nackter `ModuleFrame` in einem Test — hat eben keine Suche, statt beim
+ * Rendern zu werfen. Alle anderen bestehen weiter auf dem Besitzer: Wer
+ * filtert, ohne dass jemand den Filter haelt, hat einen Fehler und soll ihn
+ * frueh sehen.
+ */
+export function useOptionalSharedFilter(): SharedFilterValue | null {
+  return useContext(FilterContext)
+}
+
 
 /**
  * Der Besitzer fuer eine Flaeche, die auch AUSSERHALB der App laeuft.
