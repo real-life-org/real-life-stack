@@ -299,3 +299,42 @@ describe("Die Geometrie der Spalte", () => {
     expect(host.querySelector("[data-module-fill]")).not.toBeNull()
   })
 })
+
+/**
+ * Eine freistehende Ansicht hat keinen Connector, aber ihre Items als Prop —
+ * und ist die einzige, die sie kennt. Bis zum 20.09.2026 leitete sie ihr
+ * Vokabular daraus selbst ab; seit es der Flaeche gehoert, muss sie es
+ * hinaufreichen, sonst verliert sie Tag- und Typfilter ganz
+ * (Codex-Review zu #407, rls#408).
+ */
+describe("Das Vokabular einer freistehenden Flaeche", () => {
+  const item = (id: string, typ: string, tags: string[]) => ({
+    id, type: typ, createdAt: "2026-01-01T00:00:00.000Z", createdBy: "mira", data: {}, tags,
+  })
+
+  it("kommt aus den Items, die der Aufrufer mitbringt", () => {
+    rendere(
+      createElement(
+        ModuleFrame,
+        {
+          moduleId: "feed",
+          fallbackItems: [item("1", "event", ["garten"]), item("2", "post", ["zaun"])],
+        },
+        "INHALT",
+      ),
+    )
+    const pille = host.querySelector<HTMLButtonElement>("[data-filter-pill-trigger]")
+    expect(pille).not.toBeNull()
+    act(() => pille!.dispatchEvent(new MouseEvent("click", { bubbles: true })))
+    const text = document.body.textContent ?? ""
+    expect(text).toContain("garten")
+    expect(text).toContain("zaun")
+  })
+
+  it("bleibt leer, wenn der Aufrufer nichts mitbringt", () => {
+    rendere(createElement(ModuleFrame, { moduleId: "feed" }, "INHALT"))
+    const pille = host.querySelector<HTMLButtonElement>("[data-filter-pill-trigger]")
+    act(() => pille!.dispatchEvent(new MouseEvent("click", { bubbles: true })))
+    expect(document.body.textContent ?? "").not.toContain("garten")
+  })
+})

@@ -280,7 +280,7 @@ export function mapViewRevealOptions(
  */
 export function MapView(props: MapViewProps) {
   return (
-    <ModuleSurfaceScope fill="bleed" panelFit="overlay">
+    <ModuleSurfaceScope fill="bleed" panelFit="overlay" fallbackItems={props.items}>
       <MapViewInner {...props} />
     </ModuleSurfaceScope>
   )

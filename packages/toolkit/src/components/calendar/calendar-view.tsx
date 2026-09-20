@@ -351,7 +351,7 @@ export interface CalendarViewProps {
  */
 export function CalendarView(props: CalendarViewProps) {
   return (
-    <ModuleSurfaceScope maxWidth="max-w-5xl">
+    <ModuleSurfaceScope maxWidth="max-w-5xl" fallbackItems={props.items}>
       <CalendarViewInner {...props} />
     </ModuleSurfaceScope>
   )

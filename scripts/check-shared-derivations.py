@@ -51,14 +51,28 @@ REGELN = [
      "die Chips der aktiven Filter rendert die Flaeche, nicht das Modul (Spec 01, Regel 2a)"),
 ]
 
-ZAUN = re.compile(r"^\s*(```|~~~)")
+BLOCK = re.compile(r"/\*.*?\*/", re.S)
+ZEILE = re.compile(r"//[^\n]*")
+
+
+def ohne_kommentare(text: str) -> str:
+    """Kommentare ausmaskiert, Zeilennummern erhalten.
+
+    Ersetzt wird mit Leerzeichen und Zeilenumbruechen statt zu loeschen, damit
+    ein Befund weiter auf seine echte Zeile zeigt. Erfasst den JSX-Fall
+    `{/* … */}` mit, denn auch der ist ein Blockkommentar — er stand nur in
+    einer Zeile, die nicht mit `/*` beginnt (Codex-Review zu #407, rls#409).
+    """
+    def leeren(treffer: re.Match[str]) -> str:
+        return "".join("\n" if z == "\n" else " " for z in treffer.group(0))
+
+    return ZEILE.sub(leeren, BLOCK.sub(leeren, text))
 
 
 def pruefe(pfad: Path) -> list[str]:
     befunde = []
-    for nr, zeile in enumerate(pfad.read_text(encoding="utf-8").splitlines(), 1):
-        if zeile.lstrip().startswith(("//", "*", "/*")):
-            continue
+    text = ohne_kommentare(pfad.read_text(encoding="utf-8"))
+    for nr, zeile in enumerate(text.splitlines(), 1):
         for muster, grund in REGELN:
             treffer = muster.search(zeile)
             if treffer:

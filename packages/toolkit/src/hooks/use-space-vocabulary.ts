@@ -14,8 +14,6 @@ export interface SpaceVocabulary {
   types: readonly FilterTypeOption[]
 }
 
-const LEER: SpaceVocabulary = { tags: [], types: [] }
-
 /**
  * Die reine Ableitung — ohne React, damit sie ohne Fläche testbar ist.
  *
@@ -62,8 +60,12 @@ export function spaceVocabulary(items: readonly Item[]): SpaceVocabulary {
  * Farbe mit, und die Karte nannte den Typ „event" kurzerhand „Events", während
  * überall sonst das Typ-Register die Beschriftung bestimmte.
  *
- * Ohne Connector ist es leer, statt zu werfen: Eine Fläche ohne Daten hat kein
- * Vokabular, und das ist kein Fehler (Story, Test).
+ * Ohne Connector zählt `fallbackItems`: Eine freistehende Ansicht bekommt ihre
+ * Items als Prop und ist die einzige, die sie kennt. **Nur dann** — unter einem
+ * Connector gilt der ganze Space, nicht die Auswahl eines einzelnen Moduls.
+ * Sonst böte der Kalender nur die Typen seiner Termine an, und ein im Feed
+ * gesetzter Filter wäre dort nicht mehr abwählbar. Ohne beides ist es leer,
+ * statt zu werfen (Test).
  *
  * **Zwischenstand, nicht Ziel.** Heute leitet der Haken das Vokabular aus den
  * vorhandenen Items ab. Filter und Item-Typen sollen später **pro Space
@@ -72,7 +74,7 @@ export function spaceVocabulary(items: readonly Item[]): SpaceVocabulary {
  * für einen Space ohne eigene. Dass es überhaupt nur EINE Ableitung gibt, ist
  * die Voraussetzung dafür: Es gibt genau eine Stelle umzustellen.
  */
-export function useSpaceVocabulary(): SpaceVocabulary {
+export function useSpaceVocabulary(fallbackItems?: readonly Item[]): SpaceVocabulary {
   const connector = useOptionalConnector()
   // Nicht über `useItems`: Das besteht auf einem Connector, und der Haken hier
   // muss auch ohne einen laufen. Bedingt aufrufen dürfte man ihn nicht.
@@ -86,5 +88,10 @@ export function useSpaceVocabulary(): SpaceVocabulary {
     setItems(observable.current)
     return observable.subscribe(setItems)
   }, [observable])
-  return useMemo(() => (observable ? spaceVocabulary(items) : LEER), [observable, items])
+  // Ohne Connector zaehlt, was der Aufrufer mitbringt: Eine freistehende
+  // Ansicht (Story, eingebetteter Kalender) bekommt ihre Items als Prop und
+  // ist die einzige, die sie kennt. Sonst verlöre sie Tag- und Typfilter, die
+  // sie vor dem 20.09.2026 selbst ableitete (Codex-Review zu #407, rls#408).
+  const quelle = observable ? items : (fallbackItems ?? [])
+  return useMemo(() => spaceVocabulary(quelle), [quelle])
 }

@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react"
 
+import type { Item } from "@real-life-stack/data-interface"
+
 import { FilterPill } from "../filter/filter-pill"
 import { useOptionalSharedFilter } from "../filter/filter-store"
 import { ModuleFilterChips } from "../filter/module-filter-chips"
@@ -185,6 +187,12 @@ export interface ModuleFrameProps extends Partial<ModuleLayout> {
    * Modul, in dem man gerade steht.
    */
   searchLabel?: string
+  /**
+   * Items, aus denen das Vokabular abgeleitet wird, wenn es **keinen**
+   * Connector gibt — der Fall einer freistehenden Ansicht (Story,
+   * eingebetteter Kalender). Unter einem Connector gilt der ganze Space.
+   */
+  fallbackItems?: readonly Item[]
   children: ReactNode
 }
 
@@ -206,7 +214,7 @@ export interface ModuleFrameProps extends Partial<ModuleLayout> {
  * die volle Breite und der Inhalt auf die um die Leiste verminderte — die
  * halbe Leistenbreite Versatz, sichtbar an jeder Kartenkante.
  */
-export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: ModuleFrameProps) {
+export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ...vorgaben }: ModuleFrameProps) {
   const layout = resolveModuleLayout({ moduleId, ...vorgaben })
   const bleed = layout.fill === "bleed"
   const overlay = layout.panelFit === "overlay"
@@ -248,7 +256,7 @@ export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: Mo
   // Tags und Typen des Space: eine Ableitung fuer alle Module (Spec 01,
   // Regel 2a). Vorher leitete sie jedes Modul selbst ab, siebenmal fuer Tags
   // und viermal fuer Typen, mit auseinanderlaufenden Ergebnissen.
-  const vokabular = useSpaceVocabulary()
+  const vokabular = useSpaceVocabulary(fallbackItems)
   const hatKopf = hatSuche || leisten > 0
   const raeumtObenLinks = obenLinks > 0
 
