@@ -138,15 +138,22 @@ interface ModuleHeadValue {
   actionsElement: HTMLElement | null
   /** Die schwebende Ecke unten links. */
   controlsElement: HTMLElement | null
+  /** Meldet einen Kopf-Beitrag an; die Rueckgabe meldet ihn wieder ab. */
+  anmelden(): () => void
   /**
-   * Meldet einen Kopf-Beitrag an; die Rueckgabe meldet ihn wieder ab.
+   * Meldet an, dass das Modul die Ecke OBEN LINKS selbst belegt (die
+   * Zoom-Knoepfe der Karte); die Rueckgabe gibt sie wieder frei. Die
+   * schwebende Kopfzeile rueckt dann daneben, statt sie zu verdecken.
    *
-   * `raeumtObenLinks`: Das Modul hat dort eigene Bedienelemente (die
-   * Zoom-Knoepfe der Karte). Die schwebende Kopfzeile rueckt dann daneben,
-   * statt sie zu verdecken — als Angabe des Moduls, nicht als zweite Fassung
-   * des Kopfes.
+   * **Unabhaengig vom Kopf-Beitrag.** Ob das Modul dort Knoepfe hat, ist eine
+   * Aussage ueber seine eigene Flaeche und hat nichts damit zu tun, ob es
+   * gerade etwas in den Kopf reicht. Bis zum 20.09.2026 hing beides an einer
+   * Anmeldung: Seit die Suche der Flaeche gehoert und nicht mehr als
+   * Kopf-Beitrag zaehlt, blieb bei einer Karte ohne Ortungsknopf und ohne
+   * aktive Filter die Anmeldung aus — und die Suche lag auf den Zoom-Knoepfen
+   * (Codex-Review zu #405).
    */
-  anmelden(optionen?: { raeumtObenLinks?: boolean }): () => void
+  raeumeObenLinks(): () => void
 }
 
 const ModuleHeadContext = createContext<ModuleHeadValue | null>(null)
@@ -202,16 +209,21 @@ export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: Mo
   const [actionsElement, setActionsElement] = useState<HTMLElement | null>(null)
   const [controlsElement, setControlsElement] = useState<HTMLElement | null>(null)
   const [leisten, setLeisten] = useState(0)
-  const [raeumtObenLinks, setRaeumtObenLinks] = useState(false)
+  // Zaehler, kein Schalter: Sonst bliebe der Versatz stehen, wenn das Modul
+  // mit den Knoepfen verschwindet.
+  const [obenLinks, setObenLinks] = useState(0)
   const kopf = useMemo<ModuleHeadValue>(
     () => ({
       element: kopfElement,
       actionsElement,
       controlsElement,
-      anmelden(optionen) {
+      anmelden() {
         setLeisten((n) => n + 1)
-        if (optionen?.raeumtObenLinks) setRaeumtObenLinks(true)
         return () => setLeisten((n) => n - 1)
+      },
+      raeumeObenLinks() {
+        setObenLinks((n) => n + 1)
+        return () => setObenLinks((n) => n - 1)
       },
     }),
     [kopfElement, actionsElement, controlsElement],
@@ -223,6 +235,7 @@ export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: Mo
   // der Kopf ueberhaupt eine Zeile bekommt (Spec 01, Regel 4).
   const hatSuche = !!useOptionalSharedFilter()
   const hatKopf = hatSuche || leisten > 0
+  const raeumtObenLinks = obenLinks > 0
 
   const kopfSlot = (klasse?: string) => (
     <div data-module-head-content className={cn("flex flex-col gap-2", klasse)}>

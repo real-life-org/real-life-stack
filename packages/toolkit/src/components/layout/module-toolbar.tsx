@@ -91,8 +91,17 @@ export function ModuleToolbar({
   const anmelden = kopf?.anmelden
   useEffect(() => {
     if (!hatKopfInhalt) return
-    return anmelden?.({ raeumtObenLinks: clearsTopLeft })
-  }, [anmelden, hatKopfInhalt, clearsTopLeft])
+    return anmelden?.()
+  }, [anmelden, hatKopfInhalt])
+
+  // Getrennt vom Kopf-Beitrag: Dass die Karte oben links ihre Zoom-Knoepfe
+  // fuehrt, gilt auch dann, wenn sie gerade nichts in den Kopf reicht. Die
+  // Suche steht trotzdem und braucht den Abstand (Codex-Review zu #405).
+  const raeumeObenLinks = kopf?.raeumeObenLinks
+  useEffect(() => {
+    if (!clearsTopLeft) return
+    return raeumeObenLinks?.()
+  }, [raeumeObenLinks, clearsTopLeft])
 
   const chips = hatKopfInhalt ? (
     <ModuleFilterChips availableTypes={availableTypes} chipsExtra={chipsExtra} />

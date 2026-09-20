@@ -181,6 +181,27 @@ describe("Der Modulkopf", () => {
     expect(leiste!.querySelector("input")).toBeNull()
   })
 
+  it("haelt die Kartenecke frei, auch wenn das Modul sonst nichts beitraegt", () => {
+    // Codex-Review zu #405: Die Anmeldung von `clearsTopLeft` hing am
+    // Kopf-Beitrag. Seit die Suche der Flaeche gehoert, zaehlt sie nicht mehr
+    // als Beitrag — eine Karte ohne Ortungsknopf (kein navigator.geolocation)
+    // und ohne aktive Filter meldete deshalb nichts an, und die Suche lag auf
+    // den Zoom-Knoepfen. Dass das Modul dort Knoepfe fuehrt, ist eine Aussage
+    // ueber seine Flaeche und unabhaengig vom Kopf-Beitrag.
+    rendere(
+      createElement(
+        ModuleFrame,
+        { moduleId: "map" },
+        "KARTE",
+        createElement(ModuleToolbar, { clearsTopLeft: true }),
+      ),
+    )
+    const schutzzone = kopf()!.closest("[data-panel-safe-area]") ?? kopf()!.parentElement!
+    expect(schutzzone.className).toContain("pl-16")
+    // Die Suche steht trotzdem — sie gehoert der Flaeche.
+    expect(kopfBereich()!.querySelector("input")).not.toBeNull()
+  })
+
   it("schwebt bei ueberlagerten Flaechen, statt zu verschwinden", () => {
     // `panelFit: "overlay"` (Karte, Graph): Die Flaeche IST der Inhalt, ein
     // Kopf im Fluss wuerde ihr Welt wegnehmen. Dieselben Bausteine schweben
