@@ -33,6 +33,7 @@ import { filterByAssignee,
   useConnector,
   useItemGroupColorResolver,
   usePersonalGroupId,
+  useSpaceVocabulary,
 } from "@real-life-stack/toolkit"
 import { Settings } from "lucide-react"
 import type { Item, User, Group } from "@real-life-stack/data-interface"
@@ -123,18 +124,15 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
   // Darauf die Extras des Kanban: Zuweisung ueber Relationen, „Nur meine".
   // Die Regel selbst liegt im Toolkit (filterByAssignee), samt der
   // Fail-closed-Entscheidung: „Nur meine" ohne bekannte Kennung zeigt nichts.
+  // Tags kommen aus dem geteilten Vokabular des Space, nicht aus einer
+  // eigenen Ableitung (Spec 01, Regel 2a).
+  const vokabular = useSpaceVocabulary()
+
   const filteredTasks = useMemo(
     () => filterByAssignee(filteredByBar, { assignedTo, myItemsOnly }, currentUser?.id),
     [filteredByBar, assignedTo, myItemsOnly, currentUser?.id],
   )
 
-  const availableTags = useMemo(() => {
-    const tagSet = new Set<string>()
-    for (const task of tasks) {
-      for (const tag of task.tags ?? []) tagSet.add(tag)
-    }
-    return Array.from(tagSet)
-  }, [tasks])
 
   const handleMoveItem = (itemId: string, newStatus: string, position: number) =>
     handleKanbanDrag(tasks, itemId, newStatus, position, updateItem)
@@ -176,15 +174,15 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
       ...editConfig,
       composerProps: {
         ...editConfig.composerProps,
-        tagSuggestions: availableTags,
-        tagQuickSuggestions: availableTags.slice(0, 10),
+        tagSuggestions: [...vokabular.tags],
+        tagQuickSuggestions: vokabular.tags.slice(0, 10),
       },
       renderCommentReactions: (commentId) => <ReactionBar itemId={commentId} />,
       onShare: () => {
         void navigator.clipboard?.writeText(window.location.href)
       },
     }),
-    [resolveAuthor, members, isAggregate, editConfig, availableTags],
+    [resolveAuthor, members, isAggregate, editConfig, vokabular.tags],
   )
   useRegisterDetail("kanban", detailConfig)
 
@@ -197,11 +195,11 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
       shell: "sheet",
       composerProps: {
         ...composerProps,
-        tagSuggestions: availableTags,
-        tagQuickSuggestions: availableTags.slice(0, 10),
+        tagSuggestions: [...vokabular.tags],
+        tagQuickSuggestions: vokabular.tags.slice(0, 10),
       },
     }),
-    [kanbanCreateTypes, composerProps, availableTags],
+    [kanbanCreateTypes, composerProps, vokabular.tags],
   )
   useRegisterCreate("kanban", createConfig)
 
@@ -311,7 +309,6 @@ function KanbanViewInner({ activeWorkspaceId, groups }: KanbanViewProps) {
   return (
     <div className="space-y-4">
       <ModuleToolbar
-        availableTags={availableTags}
         drawerExtra={
           <>
             <FilterSection label="Schnellfilter">

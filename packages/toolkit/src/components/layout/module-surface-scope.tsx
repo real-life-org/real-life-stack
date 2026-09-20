@@ -1,11 +1,17 @@
 "use client"
 
 import type { ReactNode } from "react"
+import type { Item } from "@real-life-stack/data-interface"
 
 import { FilterScope } from "../filter/filter-store"
 import { ModuleFrame, useOptionalModuleHead, type ModuleLayout } from "./module-frame"
 
 export interface ModuleSurfaceScopeProps extends Partial<ModuleLayout> {
+  /**
+   * Items der Ansicht, aus denen das Vokabular entsteht, solange es keinen
+   * Connector gibt. Eine freistehende Ansicht kennt sie als einzige.
+   */
+  fallbackItems?: readonly Item[]
   children: ReactNode
 }
 
@@ -30,11 +36,11 @@ export interface ModuleSurfaceScopeProps extends Partial<ModuleLayout> {
  * direkt: Ausserhalb der App gibt es keine Registereintrag-Id, an der sie
  * haengen koennten.
  */
-export function ModuleSurfaceScope({ children, ...layout }: ModuleSurfaceScopeProps) {
+export function ModuleSurfaceScope({ children, fallbackItems, ...layout }: ModuleSurfaceScopeProps) {
   const flaeche = useOptionalModuleHead()
   return (
     <FilterScope>
-      {flaeche ? children : <ModuleFrame {...layout}>{children}</ModuleFrame>}
+      {flaeche ? children : <ModuleFrame {...layout} fallbackItems={fallbackItems}>{children}</ModuleFrame>}
     </FilterScope>
   )
 }

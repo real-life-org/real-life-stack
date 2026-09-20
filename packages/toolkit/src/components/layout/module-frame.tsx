@@ -8,8 +8,13 @@ import {
   type ReactNode,
 } from "react"
 
+import type { Item } from "@real-life-stack/data-interface"
+
+import { FilterPill } from "../filter/filter-pill"
 import { useOptionalSharedFilter } from "../filter/filter-store"
+import { ModuleFilterChips } from "../filter/module-filter-chips"
 import { ModuleSearchBar } from "../filter/module-search-bar"
+import { useSpaceVocabulary } from "../../hooks/use-space-vocabulary"
 import { getModule, type ModuleFill, type ModulePanelFit } from "../../lib/module-register"
 import { cn } from "../../lib/utils"
 import { PanelSafeArea } from "./panel-safe-area"
@@ -136,6 +141,10 @@ interface ModuleHeadValue {
    * portalt nur seine eigenen Knoepfe hierher.
    */
   actionsElement: HTMLElement | null
+  /** Eigene Chips des Moduls, rechts neben den aktiven Filtern. */
+  chipsElement: HTMLElement | null
+  /** Eigene Abschnitte des Moduls in der Filterkarte. */
+  drawerElement: HTMLElement | null
   /** Die schwebende Ecke unten links. */
   controlsElement: HTMLElement | null
   /** Meldet einen Kopf-Beitrag an; die Rueckgabe meldet ihn wieder ab. */
@@ -178,6 +187,12 @@ export interface ModuleFrameProps extends Partial<ModuleLayout> {
    * Modul, in dem man gerade steht.
    */
   searchLabel?: string
+  /**
+   * Items, aus denen das Vokabular abgeleitet wird, wenn es **keinen**
+   * Connector gibt — der Fall einer freistehenden Ansicht (Story,
+   * eingebetteter Kalender). Unter einem Connector gilt der ganze Space.
+   */
+  fallbackItems?: readonly Item[]
   children: ReactNode
 }
 
@@ -199,7 +214,7 @@ export interface ModuleFrameProps extends Partial<ModuleLayout> {
  * die volle Breite und der Inhalt auf die um die Leiste verminderte — die
  * halbe Leistenbreite Versatz, sichtbar an jeder Kartenkante.
  */
-export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: ModuleFrameProps) {
+export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ...vorgaben }: ModuleFrameProps) {
   const layout = resolveModuleLayout({ moduleId, ...vorgaben })
   const bleed = layout.fill === "bleed"
   const overlay = layout.panelFit === "overlay"
@@ -207,6 +222,8 @@ export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: Mo
 
   const [kopfElement, setKopfElement] = useState<HTMLElement | null>(null)
   const [actionsElement, setActionsElement] = useState<HTMLElement | null>(null)
+  const [chipsElement, setChipsElement] = useState<HTMLElement | null>(null)
+  const [drawerElement, setDrawerElement] = useState<HTMLElement | null>(null)
   const [controlsElement, setControlsElement] = useState<HTMLElement | null>(null)
   const [leisten, setLeisten] = useState(0)
   // Zaehler, kein Schalter: Sonst bliebe der Versatz stehen, wenn das Modul
@@ -216,6 +233,8 @@ export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: Mo
     () => ({
       element: kopfElement,
       actionsElement,
+      chipsElement,
+      drawerElement,
       controlsElement,
       anmelden() {
         setLeisten((n) => n + 1)
@@ -226,7 +245,7 @@ export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: Mo
         return () => setObenLinks((n) => n - 1)
       },
     }),
-    [kopfElement, actionsElement, controlsElement],
+    [kopfElement, actionsElement, chipsElement, drawerElement, controlsElement],
   )
 
   // Der Kopf steht, sobald es die Suche gibt — sie zieht sich ausnahmslos
@@ -234,6 +253,10 @@ export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: Mo
   // Suche nichts; dann entscheiden wieder allein die Beitraege der Module, ob
   // der Kopf ueberhaupt eine Zeile bekommt (Spec 01, Regel 4).
   const hatSuche = !!useOptionalSharedFilter()
+  // Tags und Typen des Space: eine Ableitung fuer alle Module (Spec 01,
+  // Regel 2a). Vorher leitete sie jedes Modul selbst ab, siebenmal fuer Tags
+  // und viermal fuer Typen, mit auseinanderlaufenden Ergebnissen.
+  const vokabular = useSpaceVocabulary(fallbackItems)
   const hatKopf = hatSuche || leisten > 0
   const raeumtObenLinks = obenLinks > 0
 
@@ -249,10 +272,33 @@ export function ModuleFrame({ moduleId, searchLabel, children, ...vorgaben }: Mo
           />
         }
       />
-      <div data-module-head-slot ref={setKopfElement} />
+      <div data-module-head-slot ref={setKopfElement}>
+        {/* Die Chips lesen den geteilten Filter — ohne Besitzer gibt es sie
+            nicht, genau wie die Suche. Der Platz des Moduls bleibt trotzdem
+            stehen: Er ist das Portal-Ziel und muss existieren, bevor jemand
+            hineinreicht. */}
+        {hatSuche ? (
+          <ModuleFilterChips
+            availableTypes={vokabular.types}
+            chipsExtra={<span data-module-head-chips ref={setChipsElement} className="contents" />}
+          />
+        ) : (
+          <span data-module-head-chips ref={setChipsElement} className="contents" />
+        )}
+      </div>
     </div>
   )
-  const controlsSlot = <div data-module-controls ref={setControlsElement} />
+  const controlsSlot = (
+    <div data-module-controls ref={setControlsElement}>
+      {hatSuche && (
+        <FilterPill
+          availableTags={vokabular.tags}
+          availableTypes={vokabular.types}
+          drawerExtra={<span data-module-drawer ref={setDrawerElement} className="contents" />}
+        />
+      )}
+    </div>
+  )
 
   // Ueberlagerte Flaechen tragen DIESELBE Steuerung, nur schwebend (Spec 01,
   // Regel 5): Die Flaeche IST hier der Inhalt — ein Kopf im Fluss naehme der

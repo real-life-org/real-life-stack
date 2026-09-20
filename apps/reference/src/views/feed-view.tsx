@@ -15,7 +15,6 @@ import {
   ModuleToolbar,
   useModuleFilteredItems,
   useSharedFilter,
-  type FilterTypeOption,
   useItemsWithDraft,
   useMembers,
   useCurrentUser,
@@ -25,7 +24,6 @@ import {
   useItemGroupColorResolver,
   useItemGroupResolver,
   useItemPrivacyResolver,
-  resolveTypePresentation,
 } from "@real-life-stack/toolkit"
 import { FileText, SearchX } from "lucide-react"
 import { renderTypeFooter } from "@real-life-stack/toolkit"
@@ -154,31 +152,10 @@ export function FeedView({ groupId }: { groupId: string }) {
   // Modulflaeche zeigt sie, und beim Wechsel ins Kanban wirken sie weiter.
   const { value: filterBarValue, searchText } = useSharedFilter()
   const filteredFeedItems = useModuleFilteredItems(feedItems)
-  const availableTags = useMemo(() => {
-    const seen = new Set<string>()
-    for (const item of feedItems) for (const tag of item.tags ?? []) seen.add(tag)
-    return Array.from(seen).sort()
-  }, [feedItems])
   // The type filter offers the types actually PRESENT — same derivation as the
   // tags above. Label and icon come from the type register (spec 06), so a new
   // type is filterable without touching this view. `type` may drive a user
   // filter (spec 06 Z.93), it just must not decide feed membership.
-  const availableTypes = useMemo<FilterTypeOption[]>(() => {
-    const present = new Set(feedItems.map(({ type }) => type))
-    return Array.from(present)
-      .map((id) => {
-        const presentation = resolveTypePresentation(id)
-        // Farbe mitgeben: Der Chip im Filter sieht damit aus wie das Abzeichen
-        // auf der Karte, ohne dass die Filter-Schicht das Typ-Register kennt.
-        return {
-          id,
-          label: presentation.label,
-          icon: presentation.badge?.icon,
-          badgeClassName: presentation.badge?.className,
-        }
-      })
-      .sort((a, b) => a.label.localeCompare(b.label, "de"))
-  }, [feedItems])
   // Distinguishes "no items at all" from "filtered/searched to nothing" for the
   // empty state copy.
   const filterActive =
@@ -208,7 +185,7 @@ export function FeedView({ groupId }: { groupId: string }) {
 
   return (
     <div className="space-y-4">
-      <ModuleToolbar availableTags={availableTags} availableTypes={availableTypes} />
+      <ModuleToolbar />
 
       {/* Composer trigger — hands off to the app-level create host (fullscreen). */}
       <div ref={composerTrigger}>

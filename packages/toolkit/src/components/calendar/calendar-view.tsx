@@ -42,7 +42,6 @@ import { ItemTypeBadge } from "../preview/item-type-badge"
 import { ItemTimeRange } from "../preview/item-time-range"
 import { FilterSection, FilterToggle, FilterMultiSelect } from "../filter/filter-building-blocks"
 import { ModuleSurfaceScope } from "../layout/module-surface-scope"
-import type { FilterTypeOption } from "../filter/types"
 import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
 import type { Item } from "@real-life-stack/data-interface"
 
@@ -308,16 +307,6 @@ function getHeaderLabel(date: Date, viewMode: CalendarViewMode): string {
   return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`
 }
 
-function getTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    event: "Events",
-    project: "Projekte",
-    offer: "Angebote",
-    task: "Tasks",
-    quest: "Quests",
-  }
-  return labels[type] ?? type
-}
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
@@ -362,7 +351,7 @@ export interface CalendarViewProps {
  */
 export function CalendarView(props: CalendarViewProps) {
   return (
-    <ModuleSurfaceScope maxWidth="max-w-5xl">
+    <ModuleSurfaceScope maxWidth="max-w-5xl" fallbackItems={props.items}>
       <CalendarViewInner {...props} />
     </ModuleSurfaceScope>
   )
@@ -422,17 +411,6 @@ function CalendarViewInner({
     [eventsAfterBar],
   )
 
-  const availableTags = useMemo(() => {
-    const seen = new Set<string>()
-    for (const event of calendarItems) for (const tag of event.tags ?? []) seen.add(tag)
-    return Array.from(seen).sort()
-  }, [calendarItems])
-
-  const availableTypes = useMemo<FilterTypeOption[]>(() => {
-    const seen = new Set<string>()
-    for (const event of calendarItems) seen.add(event.type)
-    return Array.from(seen).sort().map((id) => ({ id, label: getTypeLabel(id) }))
-  }, [calendarItems])
 
   const filteredEvents = useMemo(() => {
     // Nur noch die Extras des Kalenders: Tag-, Typ- und Textsuche haben die
@@ -674,8 +652,6 @@ function CalendarViewInner({
     <CalendarActiveItemContext.Provider value={activeItemId}>
     <div className={cn("w-full space-y-3", className)}>
       <ModuleToolbar
-        availableTags={availableTags}
-        availableTypes={availableTypes}
         trailingActions={
           <Button variant="outline" size="sm" className="shrink-0" onClick={goToday}>
             Heute
