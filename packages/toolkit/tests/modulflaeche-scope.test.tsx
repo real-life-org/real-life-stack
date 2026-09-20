@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CalendarView } from "../src/components/calendar/calendar-view"
 import { MapView } from "../src/components/map/map-view"
+import { FilterProvider } from "../src/components/filter/filter-store"
 import { ModuleFrame } from "../src/components/layout/module-frame"
 import type { MapAdapter } from "../src/components/map/adapter"
 
@@ -89,9 +90,15 @@ describe("Eine eingebettete Modulflaeche", () => {
   })
 
   it("legt unter einer vorhandenen Flaeche keine zweite an", async () => {
-    await rendere(createElement(ModuleFrame, { moduleId: "map" }, karte()))
+    // Wie in der App: Der Besitzer des Filters steht UEBER der Flaeche. Die
+    // Filterkarte gehoert seit dem 20.09.2026 der Flaeche, also braucht die
+    // aeussere Flaeche ihn — der FilterScope, den die Karte mitbringt, sitzt
+    // unter ihr und kaeme zu spaet.
+    await rendere(
+      createElement(FilterProvider, null, createElement(ModuleFrame, { moduleId: "map" }, karte())),
+    )
     expect(rahmen()).toHaveLength(1)
-    expect(controls()!.querySelector("[data-filter-pill-trigger]")).not.toBeNull()
+    expect(controls()!.querySelectorAll("[data-filter-pill-trigger]")).toHaveLength(1)
   })
 
   it("bringt sie auch dem Kalender mit", async () => {

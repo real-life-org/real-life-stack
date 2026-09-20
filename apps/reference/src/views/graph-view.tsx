@@ -11,9 +11,7 @@ import {
   useMembers,
   useRelationRecords,
   type GraphViewHandle,
-  type FilterTypeOption,
 } from "@real-life-stack/toolkit"
-import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
 import { ReactionBar, useItemGroupResolver, useOpenProfile } from "@real-life-stack/toolkit"
 import { useItemFocus } from "../hooks/use-item-focus"
 import { useItemDetailEdit } from "../hooks/use-item-detail-edit"
@@ -83,22 +81,6 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
   // Tags und Typen aus dem UNGEFILTERTEN Bestand: Sonst verschwaende die
   // Auswahl mit dem, was sie gerade wegfiltert, und man koennte einen Filter
   // nicht mehr gegen einen anderen tauschen.
-  const availableTags = useMemo(() => {
-    const seen = new Set<string>()
-    for (const item of alleItems) for (const tag of item.tags ?? []) seen.add(tag)
-    return Array.from(seen).sort()
-  }, [alleItems])
-  const availableTypes = useMemo<FilterTypeOption[]>(() => {
-    // Dieselbe Regel wie Feed und Sammlung: nicht Typen aufzählen, sondern
-    // fragen, ob der Typ überhaupt ein eigener Eintrag ist.
-    const present = new Set(alleItems.map(({ type }) => type).filter(isAggregateVisibleItemType))
-    return Array.from(present)
-      .map((id) => {
-        const presentation = resolveTypePresentation(id)
-        return { id, label: presentation.label, badgeClassName: presentation.badge?.className }
-      })
-      .sort((a, b) => a.label.localeCompare(b.label, "de"))
-  }, [alleItems])
 
   // Selection wires into the shared focus/detail flow: an ITEM node opens the
   // one detail panel every module shares; a PERSON node opens the profile
@@ -157,8 +139,6 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
       {/* Wie in jedem anderen Modul: EIN Beitrag, verteilt wird er von der
           Flaeche (hier schwebend, weil der Graph seine Flaeche ist). */}
       <ModuleToolbar
-        availableTags={availableTags}
-        availableTypes={availableTypes}
       />
     </div>
   )

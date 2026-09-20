@@ -151,6 +151,8 @@ Entwurf: Claude-Design-Projekt „RLS System Design", Datei `Space Menu.dc.html`
 
 Der Kopf der Modulfläche, normativ in [`docs/spec/01-app-composition.md`](../../../docs/spec/01-app-composition.md) Regeln 2, 2a und 4.
 
+- [x] **shared-belongs-to-surface**: Was sich Module teilen können, gehört der Fläche. Prüfsatz: aus den Items des Space oder dem geteilten Filterzustand ableitbar ⇒ geteilt. Geteilt sind Suche, Vokabular (Tags und Typen), Filterkarte und die Chips der aktiven Filter; dem Modul gehören seine Steuerelemente, `chipsExtra` und `drawerExtra`
+- [x] **vocabulary-from-one-derivation**: Welche Tags und Typen es gibt, leitet `useSpaceVocabulary` einmal ab — Tags alphabetisch, Systemtypen weg, Beschriftung und Farbe aus dem Typ-Register. Kein Modul leitet es selbst ab
 - [x] **head-search-belongs-to-surface**: Die Suche gehört der Fläche, nicht dem Modul. `ModuleFrame` rendert sie genau einmal, bevor irgendein Modul etwas beiträgt; kein Modul bringt sie mit und keines schaltet sie ab. Sie zieht sich ausnahmslos durch alle Module (Anton, 19.09.2026)
 - [x] **head-search-label-names-the-space**: Die Beschriftung des Suchfelds nennt den Space, nicht das Modul („In Gemeinschaftsgarten suchen") — was sie durchsucht, wechselt beim Modulwechsel nicht
 - [x] **head-module-actions-beside-search**: Die eigenen Steuerelemente eines Moduls (Ansichtswechsel, „Heute", Ortung) stehen rechtsbündig in **derselben Zeile** wie die Suche, nicht darunter; sie kommen über `ModuleToolbar` in den Platz neben ihr

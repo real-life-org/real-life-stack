@@ -5,7 +5,6 @@ import {
   CreateFab,
   ModuleToolbar,
   ReactionBar,
-  resolveTypePresentation,
   useModuleFilteredItems,
   useCurrentUser,
   useGroups,
@@ -15,7 +14,6 @@ import {
   useModulePanel,
   usePersonalGroupId,
   type CollectionLayout,
-  type FilterTypeOption,
   type SelectionFocusVisibleArea,
 } from "@real-life-stack/toolkit"
 import { isAggregateVisibleItemType, type Item } from "@real-life-stack/data-interface"
@@ -56,27 +54,6 @@ export function CollectionView({
   // Die Liste filtert jetzt mit: Vorher zeigte sie alles, waehrend Feed und
   // Kanban daneben gefiltert waren — dieselbe Auswahl, zwei Ergebnisse.
   const items = useModuleFilteredItems(alleEintraege)
-  const availableTags = useMemo(() => {
-    const seen = new Set<string>()
-    for (const item of alleEintraege) for (const tag of item.tags ?? []) seen.add(tag)
-    return Array.from(seen).sort()
-  }, [alleEintraege])
-  const availableTypes = useMemo<FilterTypeOption[]>(() => {
-    const present = new Set(alleEintraege.map(({ type }) => type))
-    return Array.from(present)
-      .map((id) => {
-        const presentation = resolveTypePresentation(id)
-        // Farbe mitgeben: Der Chip im Filter sieht damit aus wie das Abzeichen
-        // auf der Karte, ohne dass die Filter-Schicht das Typ-Register kennt.
-        return {
-          id,
-          label: presentation.label,
-          icon: presentation.badge?.icon,
-          badgeClassName: presentation.badge?.className,
-        }
-      })
-      .sort((a, b) => a.label.localeCompare(b.label, "de"))
-  }, [alleEintraege])
   // Die Dichte gehoert dem Modul, ihr Umschalter aber in den Kopf der Flaeche
   // (Spec 01, Regel 2) — deshalb haelt sie hier und nicht in der Lens.
   const [layout, setLayout] = useState<CollectionLayout>("list")
@@ -119,8 +96,6 @@ export function CollectionView({
 
   return <>
     <ModuleToolbar
-      availableTags={availableTags}
-      availableTypes={availableTypes}
       trailingActions={<CollectionLayoutToggle layout={layout} onChange={setLayout} />}
     />
     <ToolkitCollectionView

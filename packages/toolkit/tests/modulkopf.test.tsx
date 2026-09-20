@@ -45,8 +45,10 @@ const kopf = () => host.querySelector("[data-module-head]")
 const kopfBereich = () => host.querySelector("[data-module-head-content]")
 /** Der Platz NEBEN der Suche, in den das Modul seine Knoepfe portalt. */
 const aktionen = () => host.querySelector("[data-module-head-actions]")
-/** Die Chip-Zeile unter der Suche. */
-const chipSlot = () => host.querySelector("[data-module-head-slot]")
+/** Die Chip-Zeile unter der Suche — sie gehoert der Flaeche. */
+const chipZeile = () => host.querySelector("[data-filter-chips]")
+/** Der Platz IN der Chip-Zeile, in den das Modul seine eigenen Chips portalt. */
+const chipSlot = () => host.querySelector("[data-module-head-chips]")
 const scrollbereich = () => host.querySelector("[data-module-scroll]")
 
 /**
@@ -65,6 +67,8 @@ describe("Der Modulkopf", () => {
     // Die Slots des Moduls sind als Portal-Ziele da, aber leer.
     expect(chipSlot()!.childNodes.length).toBe(0)
     expect(aktionen()!.childNodes.length).toBe(0)
+    // Die Chip-Zeile selbst gehoert der Flaeche und steht schon bereit.
+    expect(chipZeile()).not.toBeNull()
   })
 
   it("stellt die Knoepfe des Moduls NEBEN die Suche, nicht darunter", () => {
@@ -88,7 +92,7 @@ describe("Der Modulkopf", () => {
     expect(feld.closest("[data-module-head-content]")!.contains(aktionen()!)).toBe(true)
     // Der Filter-KNOPF ist unten (Board 2g) — die aktiven Filter bleiben oben.
     expect(kopfBereich()!.querySelector("[data-filter-pill-trigger]")).toBeNull()
-    expect(chipSlot()!.querySelector("[data-filter-chips]")).not.toBeNull()
+    expect(chipZeile()).not.toBeNull()
   })
 
   it("gibt es genau einmal, auch wenn zwei Leisten in denselben Kopf reichen", () => {
@@ -169,20 +173,21 @@ describe("Der Modulkopf", () => {
   })
 
   it("faellt ohne Flaeche darueber an seinen Ort zurueck", () => {
-    // Story, Test, eingebettete Ansicht (Spec 01, Regel 3): Was das Modul
-    // beitraegt, verschwindet nicht spurlos, wenn es keinen Kopf gibt. Die
-    // SUCHE gehoert nicht dazu — sie gehoert der Flaeche, und wo keine ist,
-    // gibt es sie auch nicht.
+    // Story, Test, eingebettete Ansicht (Spec 01, Regel 3): Was das MODUL
+    // beitraegt, verschwindet nicht spurlos, wenn es keinen Kopf gibt. Was der
+    // FLAECHE gehoert, gibt es dort nicht — weder Suche noch Filterkarte noch
+    // die Chips der aktiven Filter.
     rendere(
       createElement(ModuleToolbar, {
-        availableTags: ["garten"],
         trailingActions: createElement("button", { "data-heute": true }, "Heute"),
+        chipsExtra: createElement("span", { "data-extra": true }, "Nur meine"),
       }),
     )
     const leiste = host.querySelector("[data-module-toolbar]")
     expect(leiste).not.toBeNull()
     expect(leiste!.querySelector("[data-heute]")).not.toBeNull()
-    expect(leiste!.querySelector("[data-filter-pill-trigger]")).not.toBeNull()
+    expect(leiste!.querySelector("[data-extra]")).not.toBeNull()
+    expect(leiste!.querySelector("[data-filter-pill-trigger]")).toBeNull()
     expect(leiste!.querySelector("input")).toBeNull()
   })
 
@@ -251,7 +256,7 @@ describe("Der Modulkopf", () => {
         new MouseEvent("click", { bubbles: true }),
       )
     })
-    const chips = chipSlot()!.querySelector("[data-filter-chips]")
+    const chips = chipZeile()
     expect(chips).not.toBeNull()
     expect(chips!.textContent).toContain("garten")
   })

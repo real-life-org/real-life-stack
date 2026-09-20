@@ -108,6 +108,12 @@ jobs:
       - name: Normative Woerter
         run: python3 scripts/check-normative-words.py
 
+      # Spec 01, Regel 2a: Was sich Module teilen koennen, gehoert der Flaeche.
+      # Vorher stand availableTags siebenmal im Code, und die Kopien liefen
+      # auseinander, ohne dass ein Test brach.
+      - name: Geteiltes bleibt geteilt
+        run: python3 scripts/check-shared-derivations.py
+
       - name: Test
         run: pnpm test
 

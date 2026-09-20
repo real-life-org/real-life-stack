@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
-import { Calendar, Loader2, MapPin } from "lucide-react"
+import { Loader2, MapPin } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"
-import { useSharedFilter, type FilterBarValue, type FilterTypeOption } from "../filter"
+import { useSharedFilter, type FilterBarValue } from "../filter"
 import { CreateFab } from "../create-fab"
 import { StandortIcon } from "./standort-icon"
 import { PanelSafeArea } from "../layout/panel-safe-area"
@@ -17,11 +17,6 @@ import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { cn, getSpacePrimaryColor } from "../../lib/utils"
 import { hasViewportPadding, hasGlobe, hasUserPosition, hasUserGesture, type MapAdapter, type MapBounds, type MapMountOptions, type MapProjection } from "./adapter"
 import { useLocationPick } from "./location-pick"
-
-const MAP_TYPES: FilterTypeOption[] = [
-  { id: "event", label: "Events", icon: Calendar },
-  { id: "place", label: "Orte", icon: MapPin },
-]
 const PICK_MARKER_ID = "__rls_pick__"
 const PICK_MARKER_COLOR = "#ef4444"
 const MAP_SHEET_FRACTION = .55
@@ -435,7 +430,6 @@ function MapViewInner({
   useEffect(() => { if (!isPicking) setPickPosition(null) }, [isPicking])
 
   const filtered = useMemo(() => filterMapViewItems(inventory, filter, search), [filter, inventory, search])
-  const availableTags = useMemo(() => [...new Set(inventory.flatMap((item) => item.tags ?? []))].sort(), [inventory])
   const markerItems = useMemo(() => mapViewMarkerItems(filtered, draftItem, isPicking), [draftItem, filtered, isPicking])
   const lensItems = useMemo(() => pickPosition && isPicking ? [...markerItems, {
     id: PICK_MARKER_ID, type: "__pick__", createdAt: "", createdBy: "", data: { position: { type: "Point", coordinates: [pickPosition.lng, pickPosition.lat] }, color: PICK_MARKER_COLOR },
@@ -655,7 +649,7 @@ function MapViewInner({
     {/* Der Beitrag der Karte zur Steuerung ihrer Flaeche — WO er steht,
         entscheidet die Flaeche (Suche und Chips schwebend oben, Pille unten).
         `clearsTopLeft`: links oben sitzen die Zoom-Knoepfe. */}
-    <ModuleToolbar clearsTopLeft availableTags={availableTags} availableTypes={MAP_TYPES} trailingActions={hasGeolocation() && !isPicking ? <div className="flex flex-col items-end gap-1"><Button size="icon-sm" variant="outline" aria-label={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} title={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} aria-pressed={ortung === "aktiv"} aria-busy={ortung === "suchend"} onClick={zeigeStandort} className="bg-card!">{ortung === "suchend" ? <Loader2 className="h-4 w-4 animate-spin" /> : <StandortIcon className={cn(ortung === "aktiv" && "text-primary")} />}</Button>{standortFehler && <span role="status" className="rounded-full border bg-card/95 px-2 py-0.5 text-xs text-muted-foreground shadow-sm">{standortFehler}</span>}</div> : undefined} />
+    <ModuleToolbar clearsTopLeft trailingActions={hasGeolocation() && !isPicking ? <div className="flex flex-col items-end gap-1"><Button size="icon-sm" variant="outline" aria-label={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} title={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} aria-pressed={ortung === "aktiv"} aria-busy={ortung === "suchend"} onClick={zeigeStandort} className="bg-card!">{ortung === "suchend" ? <Loader2 className="h-4 w-4 animate-spin" /> : <StandortIcon className={cn(ortung === "aktiv" && "text-primary")} />}</Button>{standortFehler && <span role="status" className="rounded-full border bg-card/95 px-2 py-0.5 text-xs text-muted-foreground shadow-sm">{standortFehler}</span>}</div> : undefined} />
     {!isPicking && canCreate && <CreateFab onClick={onCreate!} label="Ort erstellen" />}
   </div>
 }

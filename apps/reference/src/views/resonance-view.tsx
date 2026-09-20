@@ -94,11 +94,6 @@ export function ResonanceView({ groupId }: { groupId: string }) {
     () => sortStatements(filteredStatements, voteStats, sortMode),
     [filteredStatements, voteStats, sortMode],
   )
-  const availableTags = useMemo(() => {
-    const seen = new Set<string>()
-    for (const item of statements) for (const tag of item.tags ?? []) seen.add(tag)
-    return Array.from(seen).sort()
-  }, [statements])
   const filterActive =
     searchText.trim() !== "" || filterBarValue.tags.length > 0 || filterBarValue.types.length > 0
 
@@ -151,7 +146,6 @@ export function ResonanceView({ groupId }: { groupId: string }) {
       {/* Die Sortierung steht rechts: Links neben dem Filter-Knopf sitzt die
           Suche, die alle Module teilen. */}
       <ModuleToolbar
-        availableTags={availableTags}
         trailingActions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

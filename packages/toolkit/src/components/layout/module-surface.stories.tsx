@@ -152,12 +152,6 @@ function FeedInhalt() {
           bringen ihre eigene mit, der Feed diese hier. Zwei Leisten
           übereinander wären zwei Suchfelder. */}
       <ModuleToolbar
-        availableTags={["garten", "planung"]}
-        availableTypes={[
-          { id: "post", label: "Beiträge" },
-          { id: "event", label: "Termine" },
-          { id: "task", label: "Aufgaben" },
-        ]}
       />
       <div className="mx-auto flex max-w-2xl flex-col gap-3 p-4">
       {gefiltert.map((item) => (

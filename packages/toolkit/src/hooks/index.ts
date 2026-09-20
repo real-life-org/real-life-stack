@@ -55,4 +55,5 @@ export {
   applyItemSearch,
 } from "./use-filterable-items"
 export { useResolvedUsers } from "./use-resolved-users"
+export { useSpaceVocabulary, spaceVocabulary, type SpaceVocabulary } from "./use-space-vocabulary"
 export { useBeforeUnloadWarning, DiscardChangesDialog, type DiscardChangesDialogProps } from "./use-unsaved-warning"
