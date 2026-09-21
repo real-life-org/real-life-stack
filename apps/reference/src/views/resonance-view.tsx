@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { useState, useMemo } from "react"
 import { aggregateVoteStats,
   sortStatements,
   type ResonanceSortMode,
@@ -9,15 +9,10 @@ import { aggregateVoteStats,
   ItemPreviewSkeleton,
   ItemTypeBadge,
   renderTypeFooter,
-  useCurrentUser,
-  useItemGroupColorResolver,
-  useSharedFilter,
-  useMembers,
-  useModulePanel,
   useRelationRecords,
   useItemFocus,
+  useModuleHost,
   type ModuleViewProps,
-  useResolvedUsers,
   useVerifiedRelationRecords,
   Button,
   DropdownMenu,
@@ -27,7 +22,7 @@ import { aggregateVoteStats,
   DropdownMenuTrigger,
 } from "@real-life-stack/toolkit"
 import { ArrowUpDown, MessageSquareQuote } from "lucide-react"
-import { VOTE_PREDICATE, type User } from "@real-life-stack/data-interface"
+import { VOTE_PREDICATE } from "@real-life-stack/data-interface"
 
 
 const SORT_LABELS: Record<ResonanceSortMode, string> = {
@@ -43,7 +38,7 @@ const SORT_MODES: readonly ResonanceSortMode[] = ["newest", "votes", "approval",
  * Resonance module: statements the group positions itself on with a
  * green/yellow/red vote. Spec: docs/spec/modules/resonance.md.
  */
-export function ResonanceView({ groupId, items: statements = [], itemsLoading: isLoading = false }: Pick<ModuleViewProps, "groupId" | "items" | "itemsLoading">) {
+export function ResonanceView({ items: statements = [], itemsLoading: isLoading = false }: Pick<ModuleViewProps, "items" | "itemsLoading">) {
   // Die Aussagen laedt der Host aus `presents: ["statement"]`: Klassen mit
   // der Affordanz `votesOn` (Spec 06, „Klassen haben IRIs"; Spec 01, Der
   // Ladevertrag) — nicht mehr ueber das Schema im `@context`.
@@ -53,54 +48,18 @@ export function ResonanceView({ groupId, items: statements = [], itemsLoading: i
   // Spec 08 L1: authorial aggregates count only records the connector vouches
   // for — fail closed, also for the sort keys.
   const verifiedVoteRecords = useVerifiedRelationRecords(voteRecords)
-  const { data: members } = useMembers(groupId === "__overview__" ? null : groupId)
-  const { data: currentUser } = useCurrentUser()
-  const modulePanel = useModulePanel()
-  const resolveGroupColor = useItemGroupColorResolver(groupId === "__overview__" ? undefined : groupId)
-  const { itemId: focusedId, focusItem } = useItemFocus()
-
-  // Author resolution: members first, then the connector cascade (contacts),
-  // never a raw DID if avoidable — same approach as the feed.
-  const memberMap = useMemo(() => new Map(members.map((m) => [m.id, m])), [members])
-  const unknownAuthorIds = useMemo(
-    () => [...new Set(statements.map(({ createdBy }) => createdBy))].filter((id) => !memberMap.has(id) && id !== currentUser?.id),
-    [statements, memberMap, currentUser],
-  )
-  const resolvedAuthors = useResolvedUsers(unknownAuthorIds)
-  const resolveAuthor = useCallback(
-    (createdBy: string): User | undefined =>
-      memberMap.get(createdBy) ?? (currentUser?.id === createdBy ? currentUser : undefined) ?? resolvedAuthors.get(createdBy),
-    [memberMap, currentUser, resolvedAuthors],
-  )
+  const { resolveAuthor, resolveItemGroupColor: resolveGroupColor, activeItemId, filterActive, registerItemElement } = useModuleHost()
+  const { focusItem } = useItemFocus()
 
   // Filter und Suche kommen aus dem Kopf der Modulflaeche (geteilt), die
   // Sortierung gehoert diesem Modul.
-  const { value: filterBarValue, searchText } = useSharedFilter()
   const [sortMode, setSortMode] = useState<ResonanceSortMode>("newest")
   // Suche, Tags und Typen hat der Host schon angewendet.
-  const filteredStatements = statements
   const voteStats = useMemo(() => aggregateVoteStats(verifiedVoteRecords), [verifiedVoteRecords])
   const sortedStatements = useMemo(
-    () => sortStatements(filteredStatements, voteStats, sortMode),
-    [filteredStatements, voteStats, sortMode],
+    () => sortStatements(statements, voteStats, sortMode),
+    [statements, voteStats, sortMode],
   )
-  const filterActive =
-    searchText.trim() !== "" || filterBarValue.tags.length > 0 || filterBarValue.types.length > 0
-
-  // Reveal: scroll the focused card into view (same pattern as the feed).
-  const revealedIdRef = useRef<string | null>(null)
-  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
-  useEffect(() => {
-    if (!focusedId) {
-      revealedIdRef.current = null
-      return
-    }
-    if (revealedIdRef.current === focusedId) return
-    const el = itemRefs.current.get(focusedId)
-    if (!el) return
-    revealedIdRef.current = focusedId
-    el.scrollIntoView({ behavior: "smooth", block: "center" })
-  }, [focusedId, sortedStatements])
 
   return (
     <div className="space-y-4">
@@ -145,15 +104,12 @@ export function ResonanceView({ groupId, items: statements = [], itemsLoading: i
           sortedStatements.map((item) => (
             <div
               key={item.id}
-              ref={(el) => {
-                if (el) itemRefs.current.set(item.id, el)
-                else itemRefs.current.delete(item.id)
-              }}
+              ref={(el) => registerItemElement(item.id, el)}
             >
               <ItemPreview
                 item={item}
                 author={resolveAuthor(item.createdBy)}
-                active={modulePanel.current?.itemId === item.id}
+                active={activeItemId === item.id}
                 activeColor={resolveGroupColor(item)}
                 onClick={() => focusItem(item.id)}
                 headerAdornment={<ItemTypeBadge type={item.type} />}

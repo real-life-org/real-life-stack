@@ -151,3 +151,8 @@ export function useModulePanel(): ModulePanelContextValue {
   return ctx
 }
 
+/** Wie {@link useModulePanel}, aber `null` ohne Provider — fuer den Modul-Host in Story und Test. */
+export function useOptionalModulePanel(): ModulePanelContextValue | null {
+  return useContext(ModulePanelContext)
+}
+

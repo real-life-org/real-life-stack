@@ -218,15 +218,16 @@ describe("feed card footer", () => {
 
 describe("feed selection", () => {
   const post = { id: "p1", type: "post", createdAt: "2026-08-01T10:00:00.000Z", createdBy: ME, data: { content: "Hallo" } }
-  const comment = { id: "c1", type: "comment", createdAt: "2026-08-01T11:00:00.000Z", createdBy: ME, data: { content: "Antwort" } }
 
   it("includes statements — polls surface in the feed", () => {
     const selected = selectFeedItems([post as never, statement() as never])
     expect(selected.map((item) => item.id).sort()).toEqual(["p1", "statement-1"])
   })
 
-  it("still excludes comments, which carry data.content like a post", () => {
-    expect(selectFeedItems([post as never, comment as never]).map((item) => item.id)).toEqual(["p1"])
+  it("sorts newest first — which items stand as a card decides the host (modul-host.test.tsx)", () => {
+    const aelter = { ...post, createdAt: "2026-08-01T10:00:00.000Z" }
+    const neuer = { ...statement(), createdAt: "2026-08-17T10:00:00.000Z" }
+    expect(selectFeedItems([aelter as never, neuer as never]).map((item) => item.id)).toEqual([neuer.id, "p1"])
   })
 })
 

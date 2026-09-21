@@ -33,6 +33,7 @@ const ITEMS: Item[] = [
   item("mit-start", { title: "Termin", start: "2026-10-01T10:00" }),
   item("mit-ort", { title: "Ort", position: { type: "Point", coordinates: [13.4, 52.5] } }, "place"),
   item("nur-text", { title: "Notiz" }, "post"),
+  { ...item("kommentar", { content: "Antwort" }, "comment"), createdBy: "fremd" },
 ]
 
 let host: HTMLDivElement
@@ -125,9 +126,48 @@ describe("Der Modul-Host", () => {
     expect(kontext?.items?.map((i) => i.id)).toEqual(["nur-text"])
   })
 
-  it("laedt alles fuer ein Modul ohne Hinweis", async () => {
+  it("laedt alles fuer ein Modul ohne Hinweis — was als eigene Karte steht", async () => {
     await rendere(eintrag({}))
-    expect(empfangen?.items).toHaveLength(3)
+    // Der Kommentar wird ueber sein Item gelesen; ein aggregierendes Modul sieht ihn nicht.
+    expect(empfangen?.items?.map((i) => i.id).sort()).toEqual(["mit-ort", "mit-start", "nur-text"])
+  })
+
+  it("loest Autoren auf: Mitglied, ich selbst, sonst nichts Erfundenes", async () => {
+    await rendere(eintrag({}), "g1")
+    expect(kontext?.resolveAuthor("u1")?.displayName).toBe("Uli")
+    expect(kontext?.resolveAuthor("niemand")).toBeUndefined()
+  })
+
+  it("nennt das aktive Item aus dem Fokus, solange kein Panel offen ist", async () => {
+    await rendere(eintrag({}))
+    expect(kontext?.activeItemId).toBeUndefined()
+    await act(async () => fokus!.focusItem("nur-text"))
+    expect(kontext?.activeItemId).toBe("nur-text")
+  })
+
+  it("weiss, ob ein Filter aktiv ist — fuer den Text des leeren Zustands", async () => {
+    await rendere(eintrag({}))
+    expect(kontext?.filterActive).toBe(false)
+    await rendere(eintrag({}), "__overview__", "Notiz")
+    expect(kontext?.filterActive).toBe(true)
+  })
+
+  it("scrollt ein gemeldetes Element in den Blick, wenn sein Item in den Fokus kommt", async () => {
+    await rendere(eintrag({}))
+    const el = document.createElement("div")
+    const scroll = vi.fn()
+    ;(el as unknown as { scrollIntoView: () => void }).scrollIntoView = scroll
+    act(() => kontext!.registerItemElement("nur-text", el))
+    expect(scroll).not.toHaveBeenCalled()
+    await act(async () => fokus!.focusItem("nur-text"))
+    expect(scroll).toHaveBeenCalledTimes(1)
+    // Ein spaeter gemeldetes Element des fokussierten Items wird sofort gezeigt.
+    const spaet = document.createElement("div")
+    const scroll2 = vi.fn()
+    ;(spaet as unknown as { scrollIntoView: () => void }).scrollIntoView = scroll2
+    await act(async () => fokus!.focusItem("mit-ort"))
+    act(() => kontext!.registerItemElement("mit-ort", spaet))
+    expect(scroll2).toHaveBeenCalledTimes(1)
   })
 
   it("stellt keine Abfrage, wenn das Modul selbst laedt", async () => {

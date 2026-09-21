@@ -4,6 +4,7 @@ import { Loader2, MapPin } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"
 import { useSharedFilter, type FilterBarValue } from "../filter"
+import { applyFilterBarValue, applyItemSearch } from "../../hooks/use-filterable-items"
 import { CreateFab } from "../create-fab"
 import { StandortIcon } from "./standort-icon"
 import { PanelSafeArea } from "../layout/panel-safe-area"
@@ -224,14 +225,12 @@ export function applyMapViewPick(
 
 /** FilterBar and text-search own the same marker input as the rendered module. */
 export function filterMapViewItems(items: readonly Item[], filter: FilterBarValue, search: string): Item[] {
-  const needle = search.trim().toLowerCase()
-  return items.filter((item) => {
-    if (item.type === "relation" || !latLngFromPoint(item.data.position)) return false
-    if (filter.types?.length && !filter.types.includes(item.type)) return false
-    if (filter.tags?.length && !filter.tags.every((tag) => item.tags?.includes(tag))) return false
-    return !needle || [item.data.title, item.data.description, item.data.content]
-      .some((value) => String(value ?? "").toLowerCase().includes(needle))
-  })
+  // Die Karte laedt selbst (`loads: "module"`) und filtert darum selbst —
+  // aber mit DENSELBEN Funktionen wie Host und Flaeche, nicht mit einer
+  // dritten Fassung (Anton, 21.09.2026). Ihr eigen bleibt nur: ein Ort ist,
+  // was eine Position hat.
+  const verortet = items.filter((item) => item.type !== "relation" && !!latLngFromPoint(item.data.position))
+  return applyItemSearch(applyFilterBarValue(verortet, filter), search)
 }
 
 /**
