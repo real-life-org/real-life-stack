@@ -26,7 +26,7 @@
 // documentation and a foundation for future typing.
 
 import type { Item } from "./index.js"
-import type { CoreItemTypeId, STATEMENT_TYPE_DEFINITION } from "./type-manifest"
+import type { ToolkitItemTypeId } from "./type-manifest"
 
 // --- Shared Types ---
 
@@ -473,10 +473,9 @@ export const SYSTEM_ITEM_TYPES = ["relation", "reaction", "comment"] as const
  * manifest definition (registered by the app layer).
  */
 export type KnownItemType =
-  | CoreItemTypeId
+  | ToolkitItemTypeId
   | (typeof SYSTEM_ITEM_TYPES)[number]
   | "feature"
-  | (typeof STATEMENT_TYPE_DEFINITION)["id"]
 
 /**
  * Types an aggregating view does not list on their own: the system types are

@@ -2,25 +2,22 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { aggregateVoteStats,
   sortStatements,
   type ResonanceSortMode,
-  CreateFab,
   EmptyState,
   ModuleToolbar,
   ItemMetaRow,
   ItemPreview,
   ItemPreviewSkeleton,
   ItemTypeBadge,
-  ReactionBar,
   renderTypeFooter,
   useCurrentUser,
   useItemGroupColorResolver,
   useModuleFilteredItems,
   useSharedFilter,
-  useGroups,
-  useItems,
   useMembers,
   useModulePanel,
-  usePersonalGroupId,
   useRelationRecords,
+  useItemFocus,
+  type ModuleViewProps,
   useResolvedUsers,
   useVerifiedRelationRecords,
   Button,
@@ -31,13 +28,7 @@ import { aggregateVoteStats,
   DropdownMenuTrigger,
 } from "@real-life-stack/toolkit"
 import { ArrowUpDown, MessageSquareQuote } from "lucide-react"
-import { VOCAB_STATEMENT, VOTE_PREDICATE, type User } from "@real-life-stack/data-interface"
-import { useItemFocus } from "../hooks/use-item-focus"
-import { useItemDetailEdit } from "../hooks/use-item-detail-edit"
-import { RESONANCE_CREATE_TYPES } from "../content-types"
-import { withGroupOptions } from "../composer-mapping"
-import { useCreate, useRegisterCreate, type CreateConfig } from "../create-host"
-import { useRegisterDetail, type DetailConfig } from "../detail-host"
+import { VOTE_PREDICATE, type User } from "@real-life-stack/data-interface"
 
 
 const SORT_LABELS: Record<ResonanceSortMode, string> = {
@@ -53,11 +44,10 @@ const SORT_MODES: readonly ResonanceSortMode[] = ["newest", "votes", "approval",
  * Resonance module: statements the group positions itself on with a
  * green/yellow/red vote. Spec: docs/spec/modules/resonance.md.
  */
-export function ResonanceView({ groupId }: { groupId: string }) {
-  // Statements are activated by their SCHEMA (statement/v1), per spec 06 —
-  // `type` never drives module activation. The composer stamps the vocabulary
-  // via deriveContext on create.
-  const { data: statements, isLoading } = useItems({ hasSchema: [VOCAB_STATEMENT] })
+export function ResonanceView({ groupId, items: statements = [], itemsLoading: isLoading = false }: Pick<ModuleViewProps, "groupId" | "items" | "itemsLoading">) {
+  // Die Aussagen laedt der Host aus `presents: ["statement"]`: Klassen mit
+  // der Affordanz `votesOn` (Spec 06, „Klassen haben IRIs"; Spec 01, Der
+  // Ladevertrag) — nicht mehr ueber das Schema im `@context`.
   // All votes of the scope in one query — the per-statement sort keys (count,
   // approval, last activity) need the full picture, not per-card subscriptions.
   const { data: voteRecords } = useRelationRecords({ predicate: VOTE_PREDICATE })
@@ -96,35 +86,6 @@ export function ResonanceView({ groupId }: { groupId: string }) {
   )
   const filterActive =
     searchText.trim() !== "" || filterBarValue.tags.length > 0 || filterBarValue.types.length > 0
-
-  // Detail: the read body is the host's shared, type-driven renderer (#203) —
-  // the module only contributes the edit half + panel plumbing.
-  const editConfig = useItemDetailEdit(members)
-  const detailConfig = useMemo<DetailConfig>(() => ({
-    ...editConfig,
-    renderCommentReactions: (commentId) => <ReactionBar itemId={commentId} />,
-    onShare: () => void navigator.clipboard?.writeText(window.location.href),
-  }), [editConfig])
-  useRegisterDetail("resonance", detailConfig)
-
-  const { startCreate } = useCreate()
-  const { data: groups } = useGroups()
-  const personalGroupId = usePersonalGroupId()
-  const createTypes = useMemo(
-    () => withGroupOptions(RESONANCE_CREATE_TYPES, groups, groupId === "__overview__" ? undefined : groupId, personalGroupId),
-    [groups, groupId, personalGroupId],
-  )
-  const createConfig = useMemo<CreateConfig>(
-    () => ({
-      contentTypes: createTypes,
-      mapper: editConfig.mapper,
-      composerProps: editConfig.composerProps,
-      shell: "sheet",
-    }),
-    [createTypes, editConfig],
-  )
-  useRegisterCreate("resonance", createConfig)
-  const handleCreate = useCallback(() => startCreate("statement"), [startCreate])
 
   // Reveal: scroll the focused card into view (same pattern as the feed).
   const revealedIdRef = useRef<string | null>(null)
@@ -203,8 +164,6 @@ export function ResonanceView({ groupId }: { groupId: string }) {
           ))
         )}
       </div>
-
-      <CreateFab onClick={handleCreate} label="Aussage einbringen" />
     </div>
   )
 }

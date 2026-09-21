@@ -101,6 +101,12 @@ Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 | `useFieldLink(item, feld)` | `(() => void) \| null` | Führt dieses Feld zu einer Sicht, die es darstellt? | `null` |
 | `useCommentLink(itemId)` | `(() => void) \| null` | Führt der Kommentar-Hinweis ins Eingabefeld? | `null` |
 | `useTagLink(tag)` | `{onClick, active} \| null` | Filtert ein Klick auf dieses Tag die Ansicht? | `null` |
+| `useItemFocus()` | `{itemId, isEditing, composeType, focusItem, editItem, startCompose, …}` | Welches Item ist offen, wird es bearbeitet, wird gerade erstellt? Der Fokus-Vertrag — in der App die URL (`UrlFocusProvider` aus `/router`), sonst der Speicher. | wirft |
+| `useModuleHost()` | `{entry, currentSpace, members, groups, items, setCreateAnchor, …}` | Der Space-Kontext und die Items, die der Modul-Host für diese Fläche hergestellt hat. | wirft |
+| `useCreate()` | `{isComposing, startCreate, patchCreate}` | Erstellen anstoßen — mit Vorschlag und Vorbelegung, nie mit Einschränkung. | wirft |
+| `useSpaceVocabulary()` | `{tags, types}` | Welche Tags und Typen gibt es im Space? Die eine Ableitung für Filterkarte, Chips und Tag-Vorschläge. | leer |
+| `useItemDetailEdit(members)` | `{contentTypes, mapper, editInitialData, composerProps}` | Die Bearbeiten-Hälfte des Details, für alle Module gleich. Ruft der Host; ein Modul braucht es nicht. | — |
+| `useItemComposerProps(members)` | `Partial<ContentComposerProps>` | Geocoder, Karten-Pick und Personen für den Composer — eine Quelle für Erstellen und Bearbeiten. | — |
 
 ## Umgebung
 

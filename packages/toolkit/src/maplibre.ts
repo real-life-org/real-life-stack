@@ -10,3 +10,10 @@
  */
 
 export { MapLibreMapAdapter, prefetchMapLibre } from "./components/map/adapters/maplibre"
+
+/**
+ * Stellt dem Karten-Modul die MapLibre-Engine — die eine Zeile, die eine App
+ * fuer die Karte schreibt (Spec 01, Der Modul-Host). Lebt hier und nicht im
+ * Kern, damit `maplibre-gl` ein optionaler Peer bleibt.
+ */
+export { MapLibreAdapterProvider } from "./components/map/adapters/maplibre-provider"

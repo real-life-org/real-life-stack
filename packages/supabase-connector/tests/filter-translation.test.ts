@@ -35,14 +35,47 @@ describe("applyItemFilter — ItemFilter → PostgREST translation", () => {
     expect(calls).toEqual(ORDER_CALLS)
   })
 
-  it("type and createdBy become eq filters on their columns", () => {
+  it("createdBy becomes an eq filter; an unknown type is an in-set of its own spelling", () => {
     const { builder, calls } = recordingBuilder()
     applyItemFilter(builder, { type: "note", createdBy: "user-1" })
     expect(calls).toEqual([
-      ["eq", "type", "note"],
+      ["in", "type", ["note"]],
       ["eq", "created_by", "user-1"],
       ...ORDER_CALLS,
     ])
+  })
+
+  // Der Klassenvertrag (Spec 06, Regeln 6–8; rls#416): `type` ist eine
+  // Oder-Menge nach Normalisierung. Die Spalte haelt, was geschrieben wurde,
+  // also trifft die Abfrage Kurzname UND IRI — dieselben vier Faelle wie fuer
+  // `matchesFilter` in data-interface.
+  describe("type als Klassenmenge (Spec 06)", () => {
+    const POST_IRI = "https://real-life-stack.org/vocab/base/v1#Post"
+    const STATEMENT_IRI = "https://real-life-stack.org/vocab/statement/v1#Statement"
+
+    it("ein bekannter Kurzname trifft beide Schreibweisen", () => {
+      const { builder, calls } = recordingBuilder()
+      applyItemFilter(builder, { type: "post" })
+      expect(calls).toEqual([["in", "type", ["post", POST_IRI]], ...ORDER_CALLS])
+    })
+
+    it("eine Liste ist ein Oder ueber alle Schreibweisen", () => {
+      const { builder, calls } = recordingBuilder()
+      applyItemFilter(builder, { type: ["post", "statement"] })
+      expect(calls).toEqual([["in", "type", ["post", POST_IRI, "statement", STATEMENT_IRI]], ...ORDER_CALLS])
+    })
+
+    it("eine leere Liste trifft nichts — wie matchesFilter", () => {
+      const { builder, calls } = recordingBuilder()
+      applyItemFilter(builder, { type: [] })
+      expect(calls).toEqual([["in", "type", []], ...ORDER_CALLS])
+    })
+
+    it("eine bekannte IRI ist dieselbe Klasse wie ihr Kurzname", () => {
+      const { builder, calls } = recordingBuilder()
+      applyItemFilter(builder, { type: POST_IRI })
+      expect(calls).toEqual([["in", "type", ["post", POST_IRI]], ...ORDER_CALLS])
+    })
   })
 
   it("hasTag and hasSchema use array containment (AND semantics)", () => {

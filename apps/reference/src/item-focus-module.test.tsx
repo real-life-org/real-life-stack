@@ -4,7 +4,8 @@ import { createRoot, type Root } from "react-dom/client"
 import { MemoryRouter, useLocation } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
-import { ItemFocusProvider, useItemFocus } from "./hooks/use-item-focus"
+import { useItemFocus } from "@real-life-stack/toolkit"
+import { UrlFocusProvider as ItemFocusProvider } from "@real-life-stack/toolkit/router"
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 

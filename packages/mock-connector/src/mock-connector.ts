@@ -40,6 +40,7 @@ import {
   applyNotificationStatePatch,
   cloneNotificationState,
   findRelatedItems,
+  canonicalItem,
   matchesFilter,
 } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
@@ -414,7 +415,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     updates = withEditStamp(updates, actor.id)
     const location = this.findVisibleItemLocation(id)
     if (!location) throw new Error(`Item not found: ${id}`)
-    const updated = { ...location.item, ...updates, id }
+    const updated = canonicalItem({ ...location.item, ...updates, id })
     if (location.item.type !== "feature" && updated.type === "feature") {
       this.assertNoItemOutsideScope(location.scopeId, id)
     }
@@ -770,7 +771,8 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
   private storeItem(scopeId: string | null, item: Item): void {
     const items = this.getScopeItems(scopeId, true)
     if (items.has(item.id)) return
-    items.set(item.id, item)
+    // Eingangsgrenze (Spec 06, Regel 7): bekannte IRI → Kurzname, fremde bleibt.
+    items.set(item.id, canonicalItem(item))
     this.itemOrder.push({ scopeId, id: item.id })
   }
 

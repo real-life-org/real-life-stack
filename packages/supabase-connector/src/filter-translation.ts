@@ -1,4 +1,5 @@
 import type { ItemFilter } from "@real-life-stack/data-interface"
+import { typeSpellings } from "@real-life-stack/data-interface"
 import type { FilterBuilderLike } from "./client-types.js"
 
 /**
@@ -21,7 +22,11 @@ const MAX_ROWS = 1000
  */
 export function applyItemFilter<Q extends FilterBuilderLike>(query: Q, filter?: ItemFilter): Q {
   if (!filter) return stableOrder(query)
-  if (filter.type) query = query.eq("type", filter.type)
+  // Klassen sind eine Oder-Menge nach Normalisierung (Spec 06, Regel 8);
+  // die Spalte haelt, was geschrieben wurde — Kurzname oder IRI —, also
+  // trifft die Abfrage beide Schreibweisen. Eine leere Liste trifft nichts,
+  // wie `matchesFilter` (rls#416).
+  if (filter.type !== undefined) query = query.in("type", typeSpellings(filter.type))
   if (filter.createdBy) query = query.eq("created_by", filter.createdBy)
   if (filter.hasTag && filter.hasTag.length > 0) query = query.contains("tags", filter.hasTag)
   if (filter.hasSchema && filter.hasSchema.length > 0) query = query.contains("context", filter.hasSchema)

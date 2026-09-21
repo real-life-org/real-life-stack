@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
 
-import { itemToComposerData, mapComposerSubmission } from "./composer-mapping"
+import { itemToComposerData, mapComposerSubmission } from "@real-life-stack/toolkit"
 
 /**
  * Der App-Mapper reicht die Personenfelder an die geteilten Toolkit-Helfer

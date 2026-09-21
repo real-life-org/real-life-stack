@@ -38,12 +38,14 @@ import {
 } from "lucide-react"
 import {
   composeTypeManifest,
-  CORE_TYPE_LAYER,
+  TOOLKIT_TYPE_LAYER,
+  setTypeManifest as bindDataInterfaceManifest,
   isTask,
   relationAffordanceKey,
   type ComposedTypeManifest,
   type Item,
   type User,
+  normalizeItemType,
 } from "@real-life-stack/data-interface"
 
 import { useMembers } from "../../hooks/use-groups"
@@ -51,6 +53,8 @@ import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { ItemAssignees } from "./item-assignees"
 import { ItemMetaRow } from "./item-meta-row"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
+import { VoteBar } from "../resonance/vote-bar"
+import { MessageSquareQuote } from "lucide-react"
 
 /** Every slot receives the item — nothing else. Data resolution (members,
  *  votes, …) happens inside the slot component via hooks, so a slot works on
@@ -82,6 +86,23 @@ export interface TypePresentationEntry {
   detail?: ComponentType<ItemSlotProps>
   /** Type-own footer, rendered IN ADDITION to surface footers. */
   footer?: ComponentType<ItemSlotProps>
+  /**
+   * Was der Composer fuer diesen Typ zusaetzlich wissen muss: Beschriftung
+   * des Speichern-Knopfs, eigene Widget-Beschriftungen, Statuswerte, ob ein
+   * Space Pflicht ist. Bis zum 21.09.2026 stand das als `APP_EXTRAS` in der
+   * Referenz-App — als „genuinely app-specific". Es ist Darstellung eines
+   * Typs und gehoert hierher, damit ein Toolkit-Typ ohne eine Zeile in der
+   * App erstellbar ist (Spec 01, Der Modul-Host, Regel 1).
+   */
+  composer?: TypeComposerPresentation
+}
+
+export interface TypeComposerPresentation {
+  submitLabel?: string
+  widgetLabels?: Readonly<Record<string, string>>
+  statusOptions?: readonly { id: string; label: string }[]
+  defaultStatus?: string
+  groupRequired?: boolean
 }
 
 /** Additively fills fields an existing presentation left unset
@@ -96,6 +117,7 @@ export interface TypePresentationFragment {
   preview?: ComponentType<ItemSlotProps>
   detail?: ComponentType<ItemSlotProps>
   footer?: ComponentType<ItemSlotProps>
+  composer?: TypeComposerPresentation
 }
 
 export interface TypePresentationLayer {
@@ -113,6 +135,7 @@ export interface ResolvedTypePresentation {
   preview?: ComponentType<ItemSlotProps>
   detail: ComponentType<ItemSlotProps>
   footer?: ComponentType<ItemSlotProps>
+  composer?: TypeComposerPresentation
   /** True when rendering generically: the type is unknown to the manifest OR
    *  has no presentation yet (spec rule 5 — visible, neutral, never broken). */
   generic: boolean
@@ -164,10 +187,11 @@ export const GENERIC_BADGE: TypeBadgeStyle = {
  *  styles are verbatim from the previous ItemTypeBadge DEFAULT_CONFIG; the
  *  preview slots are the previous getItemPreviewAdornments bodies. */
 const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
-  { id: "post", label: "Post", composerWidgets: ["text"] },
+  { id: "post", composer: { submitLabel: "Posten" }, label: "Post", composerWidgets: ["text"] },
   {
     id: "event",
     label: "Event",
+    composer: { submitLabel: "Erstellen" },
     badge: { icon: Calendar, className: "bg-blue-50 text-blue-700 border-blue-200" },
     composerWidgets: ["title", "text", "date", "location"],
     relationWidgets: { [relationAffordanceKey({ predicate: "invited", itemRole: "from" })]: "people" },
@@ -176,12 +200,26 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
   {
     id: "place",
     label: "Ort",
+    composer: { submitLabel: "Erstellen" },
     badge: { icon: MapPin, className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
     composerWidgets: ["title", "text", "location"],
   },
   {
     id: "task",
     label: "Task",
+    // Statuswerte = die Spalten des Kanban (kanban-board.tsx, defaultColumns).
+    // Hier ausgeschrieben statt importiert: Das Darstellungs-Register darf
+    // kein Modul einziehen. Aendert sich eine Spalte, aendern sich beide.
+    composer: {
+      widgetLabels: { text: "Beschreibung", people: "Zugewiesen" },
+      statusOptions: [
+        { id: "open", label: "To Do" },
+        { id: "in-progress", label: "In Arbeit" },
+        { id: "done", label: "Erledigt" },
+      ],
+      defaultStatus: "open",
+      groupRequired: true,
+    },
     badge: { icon: CheckSquare, className: "bg-amber-50 text-amber-700 border-amber-200" },
     composerWidgets: ["title", "text", "status", "people", "tags"],
     relationWidgets: { [relationAffordanceKey({ predicate: "assignedTo", itemRole: "from" })]: "people" },
@@ -195,13 +233,30 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
   },
   { id: "project", label: "Projekt", preview: ItemProjectMeta },
   { id: "resource", label: "Ressource", preview: ItemResourceMeta },
+  // Seit 21.09.2026 ein Toolkit-Typ (Spec 06): Das Toolkit liefert die
+  // Resonanz vollständig, also auch die Darstellung ihrer Aussage. Die
+  // Stimmleiste ist eine TYP-Regel — sie gehört zur Aussage, wo immer die
+  // gezeigt wird (Regel 3, kein Typ-Verzweigen in Modulen).
+  {
+    id: "statement",
+    label: "Aussage",
+    badge: { icon: MessageSquareQuote, className: "bg-sky-50 text-sky-700 border-sky-200" },
+    composerWidgets: ["title", "text", "tags"],
+    composer: { widgetLabels: { title: "Aussage", text: "Kontext" }, submitLabel: "Einbringen" },
+    footer: StatementVotesFooter,
+  },
 ]
+
+/** `itemRole: "to"`: votes are INCOMING records; the bar queries records pointing at this item. */
+function StatementVotesFooter({ item }: ItemSlotProps) {
+  return <VoteBar statementId={item.id} className="w-full" />
+}
 
 /** Toolkit default: core manifest only. Apps composing more layers hand the
  *  result in via {@link setTypeManifest} BEFORE registering presentation. */
-const CORE_ONLY_MANIFEST = composeTypeManifest([CORE_TYPE_LAYER])
+const TOOLKIT_ONLY_MANIFEST = composeTypeManifest([TOOLKIT_TYPE_LAYER])
 
-let manifest: ComposedTypeManifest = CORE_ONLY_MANIFEST
+let manifest: ComposedTypeManifest = TOOLKIT_ONLY_MANIFEST
 const layers = new Map<string, TypePresentationLayer>([
   ["core", { definitions: CORE_PRESENTATION }],
 ])
@@ -215,6 +270,9 @@ let composedCache: Map<string, TypePresentationEntry> | null = null
  * manifest so a narrower manifest cannot leave orphans behind.
  */
 export function setTypeManifest(next: ComposedTypeManifest): void {
+  // Dasselbe Manifest für Hinweise und Filter in data-interface: Wer im
+  // Toolkit bindet, bindet einmal (Spec 06, Regel 1 — eine Identitätsquelle).
+  bindDataInterfaceManifest(next)
   for (const [name, layer] of layers) {
     for (const entry of layer.definitions ?? []) {
       if (!next.has(entry.id)) {
@@ -256,7 +314,7 @@ function assertRelationWidgetKeys(
 /** Test seam: core-only manifest, core-only presentation. Deliberately NOT
  *  exported via the package barrel — tests import this module directly. */
 export function resetTypePresentationForTests(): void {
-  manifest = CORE_ONLY_MANIFEST
+  manifest = TOOLKIT_ONLY_MANIFEST
   for (const key of [...layers.keys()]) if (key !== "core") layers.delete(key)
   composedCache = null
 }
@@ -321,7 +379,7 @@ export function registerTypePresentation(
   }
 }
 
-const SCALAR_SLOTS = ["badge", "composerWidgets", "preview", "detail", "footer"] as const
+const SCALAR_SLOTS = ["badge", "composerWidgets", "preview", "detail", "footer", "composer"] as const
 
 function composePresentation(): Map<string, TypePresentationEntry> {
   if (composedCache) return composedCache
@@ -373,9 +431,16 @@ function composePresentation(): Map<string, TypePresentationEntry> {
  * visible with title, meta row and neutral badge, never invisible or broken.
  */
 export function resolveTypePresentation(typeId: string): ResolvedTypePresentation {
-  const entry = composePresentation().get(typeId)
-  if (!entry || !manifest.has(typeId)) {
-    return { id: typeId, label: typeId, detail: GENERIC_DETAIL, generic: true }
+  // Ueber die normalisierte Klassenmenge (Spec 06, Regel 7 und 9): eine
+  // volle IRI findet ihre Darstellung, und bei mehreren Klassen zaehlt die
+  // erste, fuer die eine Vorlage existiert — eine UI-Wahl, keine Aussage
+  // ueber das Item (rls#417).
+  const klassen = normalizeItemType(typeId)
+  const darstellungen = composePresentation()
+  const id = klassen.find((k) => darstellungen.has(k) && manifest.has(k)) ?? klassen[0] ?? typeId
+  const entry = darstellungen.get(id)
+  if (!entry || !manifest.has(id)) {
+    return { id, label: id, detail: GENERIC_DETAIL, generic: true }
   }
   return {
     ...entry,

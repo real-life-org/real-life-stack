@@ -14,7 +14,7 @@ import { ItemComposer } from "../composer/item-composer"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import { useItem } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
-import { hasItemGroups } from "@real-life-stack/data-interface"
+import { hasItemGroups, normalizeItemType } from "@real-life-stack/data-interface"
 
 export interface ItemDetailViewProps {
   /** The item to show. The view subscribes via `useItem`, so it always renders
@@ -95,11 +95,13 @@ export function ItemDetailView({
     )
   }
 
-  // Lock the edit composer to the item's own type (no type switcher in phase 1):
-  // narrow the caller's full type list to the matching one. NO fallback to the
-  // full list — for an item whose type the module doesn't configure, editing is
-  // simply not offered (a fallback would show a wrong type switcher / form).
-  const composerTypes = contentTypes.filter((t) => t.id === item.type)
+  // Lock the edit composer to the item's own template (no type switcher in
+  // phase 1): narrow the caller's full type list to the one matching class. NO
+  // fallback to the full list — for an item none of whose classes has a
+  // template, editing is simply not offered (a fallback would show a wrong
+  // type switcher / form).
+  const vorlage = editTemplateFor(item, contentTypes)
+  const composerTypes = vorlage ? contentTypes.filter((t) => t.id === vorlage) : []
   const canEdit = composerTypes.length > 0
 
   // Pre-fill the group widget with the item's ACTUAL group/space (not just the
@@ -137,7 +139,7 @@ export function ItemDetailView({
           className="p-4"
           existingItem={item}
           contentTypes={composerTypes}
-          initialContentType={item.type}
+          initialContentType={vorlage}
           initialData={initialData}
           mapper={mapper}
           composerProps={composerProps}
@@ -147,4 +149,15 @@ export function ItemDetailView({
       )}
     </ItemDetailPanel>
   )
+}
+
+/**
+ * Welche Vorlage bearbeitet dieses Item? Die erste Klasse des Items, fuer die
+ * es einen Inhaltstyp gibt — ueber die normalisierte Klassenmenge, nie ueber
+ * den rohen String (Spec 06, Regeln 7 und 9). Ein Item `["post", "statement"]`
+ * bearbeitet als Beitrag; ohne Treffer gibt es kein Bearbeiten (rls#417).
+ */
+export function editTemplateFor(item: Pick<Item, "type">, contentTypes: readonly { id: string }[]): string | undefined {
+  const ids = new Set(contentTypes.map((t) => t.id))
+  return normalizeItemType(item.type).find((k) => ids.has(k))
 }

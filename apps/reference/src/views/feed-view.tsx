@@ -11,29 +11,23 @@ import {
   ItemMetaRow,
   ItemCommentCount,
   FeedComposerTrigger,
-  CreateFab,
   ModuleToolbar,
   useModuleFilteredItems,
   useSharedFilter,
-  useItemsWithDraft,
   useMembers,
   useCurrentUser,
   useResolvedUsers,
-  useGroups,
-  usePersonalGroupId,
   useItemGroupColorResolver,
+  useItemFocus,
+  useCreate,
+  useModuleHost,
+  type ModuleViewProps,
   useItemGroupResolver,
   useItemPrivacyResolver,
 } from "@real-life-stack/toolkit"
 import { FileText, SearchX } from "lucide-react"
 import { renderTypeFooter } from "@real-life-stack/toolkit"
 import { isAggregateVisibleItemType, type Item, type User } from "@real-life-stack/data-interface"
-import { useItemFocus } from "../hooks/use-item-focus"
-import { useRegisterDetail, type DetailConfig } from "../detail-host"
-import { mapComposerSubmission, withGroupOptions } from "../composer-mapping"
-import { FEED_CREATE_TYPES } from "../content-types"
-import { useItemDetailEdit } from "../hooks/use-item-detail-edit"
-import { useCreate, useRegisterCreate, type CreateConfig } from "../create-host"
 
 /**
  * Everything new in the network, newest first: the feed is an AGGREGATING view
@@ -51,13 +45,12 @@ export function selectFeedItems(items: readonly Item[]): Item[] {
   return items.filter((item) => isAggregateVisibleItemType(item.type)).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
-export function FeedView({ groupId }: { groupId: string }) {
-  // ONE unfiltered query: the feed's job is "what's new here", so it reads the
-  // scope's items and drops only what has no card of its own (see
-  // selectFeedItems). A field-based query would tie feed membership to
-  // `data.content` — a place with a description would show up, the same place
-  // without one would not.
-  const { data: items, isLoading } = useItemsWithDraft()
+export function FeedView({ groupId, items = [], itemsLoading: isLoading = false }: Pick<ModuleViewProps, "groupId" | "items" | "itemsLoading">) {
+  // Der Host laedt UNGEFILTERT (kein `presents` im Eintrag): the feed's job is
+  // "what's new here", so it reads the scope's items and drops only what has
+  // no card of its own (see selectFeedItems). A field-based query would tie
+  // feed membership to `data.content` — a place with a description would show
+  // up, the same place without one would not.
   // `groupId === "__overview__"` is the cross-space aggregate view
   // ("Mein Netzwerk"). useMembers(null) returns the union of all
   // members the connector knows about, so author resolution still
@@ -106,30 +99,6 @@ export function FeedView({ groupId }: { groupId: string }) {
   const resolveItemGroup = useItemGroupResolver()
   // Private items (in the personal space, shared with nobody) get a „Privat" badge.
   const isItemPrivate = useItemPrivacyResolver()
-  // Groups + personal space for the sharing-scope picker in the composer.
-  const { data: groups } = useGroups()
-  const personalGroupId = usePersonalGroupId()
-  // Create offers the feed's own types (post/event); the detail edit uses the
-  // full registry (shared hook) so any item is editable with its own fields.
-  const feedCreateTypes = useMemo(
-    () => withGroupOptions(FEED_CREATE_TYPES, groups, isOverview ? undefined : groupId, personalGroupId),
-    [groups, isOverview, groupId, personalGroupId],
-  )
-  const editConfig = useItemDetailEdit(members)
-  // Register the feed's detail config with the host (which owns the panel + the
-  // read↔edit lifecycle for the focused item). Memoised so it only re-registers
-  // when author resolution changes.
-  const detailConfig = useMemo<DetailConfig>(
-    () => ({
-      ...editConfig,
-      renderCommentReactions: (commentId) => <ReactionBar itemId={commentId} />,
-      onShare: () => {
-        void navigator.clipboard?.writeText(window.location.href)
-      },
-    }),
-    [resolveAuthor, editConfig, isOverview],
-  )
-  useRegisterDetail("feed", detailConfig)
 
   // Reveal: scroll the focused card into view once it is in the rendered
   // (filtered) list. The host opens the detail panel itself; this only handles
@@ -161,19 +130,14 @@ export function FeedView({ groupId }: { groupId: string }) {
   const filterActive =
     searchText.trim() !== "" || filterBarValue.tags.length > 0 || filterBarValue.types.length > 0
 
-  // Create runs through the app-level host in the fullscreen shell (the feed's
-  // "write a post" surface). The trigger card just points the URL at `?compose`.
+  // Erstellen laeuft ueber den Modul-Host (Vollbild, `options.createShell`
+  // im Eintrag). Die Pille schlaegt nur den Beitrag vor.
   const { startCreate } = useCreate()
-  const composerProps = editConfig.composerProps
-  const createConfig = useMemo<CreateConfig>(
-    () => ({ contentTypes: feedCreateTypes, mapper: mapComposerSubmission, composerProps, shell: "fullscreen" }),
-    [feedCreateTypes, composerProps],
-  )
-  useRegisterCreate("feed", createConfig)
 
   // Die Pille ist der Einstieg ins Schreiben, solange sie im Bild ist; der
-  // FAB beobachtet sie und tritt an ihre Stelle, sobald sie weggescrollt ist.
-  const composerTrigger = useRef<HTMLDivElement | null>(null)
+  // Plusknopf des Hosts beobachtet sie und tritt an ihre Stelle, sobald sie
+  // weggescrollt ist (Spec shared-components → „Feed-Sonderfall").
+  const { setCreateAnchor } = useModuleHost()
 
   // Stable so a card's wrapper keeps its ref callback across renders —
   // otherwise React detaches and reattaches every card on every render of the
@@ -187,8 +151,8 @@ export function FeedView({ groupId }: { groupId: string }) {
     <div className="space-y-4">
       <ModuleToolbar />
 
-      {/* Composer trigger — hands off to the app-level create host (fullscreen). */}
-      <div ref={composerTrigger}>
+      {/* Composer trigger — hands off to the create host (fullscreen). */}
+      <div ref={setCreateAnchor}>
         <FeedComposerTrigger
           placeholder="Was gibt's Neues?"
           userName={currentUser?.displayName}
@@ -234,15 +198,6 @@ export function FeedView({ groupId }: { groupId: string }) {
           })
         )}
       </div>
-
-      {/* Derselbe Einstieg wie in jedem anderen Modul — nur erscheint er hier
-          erst, wenn die Pille aus dem Bild ist (Spec shared-components →
-          „Feed-Sonderfall"). */}
-      <CreateFab
-        onClick={() => startCreate("post")}
-        label="Beitrag erstellen"
-        hideWhileVisible={composerTrigger}
-      />
     </div>
   )
 }

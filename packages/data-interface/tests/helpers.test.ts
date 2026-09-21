@@ -274,46 +274,33 @@ describe("matchesFilter", () => {
   })
 })
 
-describe("moduleHintsFor — hasStatement schema hint", () => {
-  it("derives hasStatement from the statement/v1 vocabulary, not the type", () => {
-    const withSchema = {
+describe("moduleHintsFor — hasStatement kommt von der Klasse, nicht vom Schema (Spec 06, 21.09.2026)", () => {
+  it("aktiviert über die Klasse mit der Affordanz votesOn — mit oder ohne statement/v1 in @context", () => {
+    const mitSchema = {
       id: "s1", type: "statement", createdAt: "t", createdBy: "u",
       "@context": ["https://real-life-stack.org/vocab/base/v1", "https://real-life-stack.org/vocab/statement/v1"],
       data: { title: "These" },
     } as never
-    const withoutSchema = { id: "s2", type: "statement", createdAt: "t", createdBy: "u", data: { title: "Alt" } } as never
-    expect(moduleHintsFor(withSchema).hasStatement).toBe(true)
-    expect(moduleHintsFor(withoutSchema).hasStatement).toBe(false)
+    const ohneSchema = { id: "s2", type: "statement", createdAt: "t", createdBy: "u", data: { title: "Alt" } } as never
+    expect(moduleHintsFor(mitSchema).hasStatement).toBe(true)
+    // Bis zum 21.09.2026 war das false: Das „Marker-Vokabular" entschied.
+    // Jetzt entscheidet die Klasse — ein Vokabular in @context ist kein
+    // zweiter Ort für dieselbe Aussage.
+    expect(moduleHintsFor(ohneSchema).hasStatement).toBe(true)
+  })
+
+  it("aktiviert nicht über das Schema allein — ein Post mit statement/v1 im @context ist keine Aussage", () => {
+    const nurSchema = {
+      id: "s3", type: "post", createdAt: "t", createdBy: "u",
+      "@context": ["https://real-life-stack.org/vocab/base/v1", "https://real-life-stack.org/vocab/statement/v1"],
+      data: { title: "Post" },
+    } as never
+    expect(moduleHintsFor(nurSchema).hasStatement).toBe(false)
   })
 
   it("passes persisted hints through unchanged (older entries without the field stay undefined)", () => {
     const legacy = { hasPosition: false, hasStart: false, hasStatus: true }
     expect(moduleHintsFor(legacy).hasStatement).toBeUndefined()
-  })
-})
-
-describe("moduleHintsFor — hasStatus kommt vom Feld, nie vom Typ (Spec 06)", () => {
-  // Bis zum 21.09.2026 stand `item.type === "task"` als ERSTE Bedingung vor
-  // dem Feld. Ein Task ohne Status wurde damit ins Kanban geleitet, das ihn
-  // nicht zeigt (die Ansicht filtert `hasField: ["status"]`) — Hinweis und
-  // Fläche widersprachen sich. Spec 06, Zeile 55: `type` aktiviert nie.
-  const item = (type: string, data: Record<string, unknown>) =>
-    ({ id: "x", type, createdAt: "t", createdBy: "u", data }) as never
-
-  it("ein Task ohne Status ist kein Kanban-Item", () => {
-    expect(moduleHintsFor(item("task", {})).hasStatus).toBe(false)
-  })
-
-  it("ein Task mit Status ist eines", () => {
-    expect(moduleHintsFor(item("task", { status: "open" })).hasStatus).toBe(true)
-  })
-
-  it("ein Nicht-Task mit gültigem Status ist ebenfalls eines — das Feld entscheidet", () => {
-    expect(moduleHintsFor(item("place", { status: "done" })).hasStatus).toBe(true)
-  })
-
-  it("ein unbekannter Statuswert aktiviert nicht", () => {
-    expect(moduleHintsFor(item("task", { status: "irgendwas" })).hasStatus).toBe(false)
   })
 })
 

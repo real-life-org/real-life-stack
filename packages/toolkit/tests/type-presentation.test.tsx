@@ -17,14 +17,25 @@ import {
 } from "../src/components/preview/type-presentation"
 import {
   composeTypeManifest,
-  CORE_TYPE_LAYER,
-  STATEMENT_TYPE_DEFINITION,
+  TOOLKIT_TYPE_LAYER,
+  type TypeManifestEntry,
 } from "@real-life-stack/data-interface"
 
-/** Manifest wie in der App komponiert: Core + statement. */
+/**
+ * Ein App-eigener Typ mit einer Kante, wie ihn eine App mitbringen wuerde.
+ * Bis zum 21.09.2026 stand hier `statement`; das ist seither ein Toolkit-Typ
+ * (Spec 06) und kann von keiner App mehr definiert werden.
+ */
+const SIGHTING_TYPE_DEFINITION: TypeManifestEntry = {
+  id: "sighting",
+  vocabularies: [],
+  relations: [{ predicate: "spottedBy", itemRole: "to", otherKind: "person" }],
+}
+
+/** Manifest wie in einer App komponiert: Toolkit + eigener Typ. */
 const APP_MANIFEST = composeTypeManifest([
-  CORE_TYPE_LAYER,
-  { name: "app", definitions: [STATEMENT_TYPE_DEFINITION] },
+  TOOLKIT_TYPE_LAYER,
+  { name: "app", definitions: [SIGHTING_TYPE_DEFINITION] },
 ])
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -60,15 +71,15 @@ describe("type presentation registry", () => {
 
   it("lets the same layer re-register itself (Vite HMR re-executes modules)", () => {
     setTypeManifest(APP_MANIFEST)
-    registerTypePresentation("app", [{ id: "statement", label: "Aussage" }])
-    registerTypePresentation("app", [{ id: "statement", label: "These" }])
-    expect(resolveTypePresentation("statement").label).toBe("These")
+    registerTypePresentation("app", [{ id: "sighting", label: "Aussage" }])
+    registerTypePresentation("app", [{ id: "sighting", label: "These" }])
+    expect(resolveTypePresentation("sighting").label).toBe("These")
   })
 
   it("still rejects an id owned by ANOTHER layer", () => {
     setTypeManifest(APP_MANIFEST)
-    registerTypePresentation("app", [{ id: "statement", label: "Aussage" }])
-    expect(() => registerTypePresentation("space", [{ id: "statement", label: "X" }]))
+    registerTypePresentation("app", [{ id: "sighting", label: "Aussage" }])
+    expect(() => registerTypePresentation("space", [{ id: "sighting", label: "X" }]))
       .toThrow(/bereits in Layer "app"/)
   })
 
@@ -92,17 +103,17 @@ describe("type presentation registry", () => {
   })
 
   it("revalidates EXTENSION relationWidgets on manifest rebind (#228)", () => {
-    // Valid under the app manifest (statement declares votesOn/to)…
+    // Valid under the app manifest (sighting declares spottedBy/to)…
     setTypeManifest(APP_MANIFEST)
     registerTypePresentation("app", {
-      definitions: [{ id: "statement", label: "Aussage" }],
-      extensions: [{ id: "statement", relationWidgets: { "votesOn to": "people" } }],
+      definitions: [{ id: "sighting", label: "Aussage" }],
+      extensions: [{ id: "sighting", relationWidgets: { "spottedBy to": "people" } }],
     })
     // …but a rebind to a manifest without that edge must throw, not leave
     // the orphan widget behind.
     expect(() => setTypeManifest(composeTypeManifest([
-      CORE_TYPE_LAYER,
-      { name: "app", definitions: [{ id: "statement", vocabularies: [] }] },
+      TOOLKIT_TYPE_LAYER,
+      { name: "app", definitions: [{ id: "sighting", vocabularies: [] }] },
     ]))).toThrow(/keine Manifest-Kante/)
   })
 
@@ -112,7 +123,7 @@ describe("type presentation registry", () => {
     setTypeManifest(APP_MANIFEST)
     expect(() =>
       registerTypePresentation("app", [{
-        id: "statement",
+        id: "sighting",
         label: "Aussage",
         relationWidgets: { "endorses from": "people" },
       }]),
@@ -140,9 +151,9 @@ describe("type presentation registry", () => {
 
   it("lets an app layer present a MANIFEST-known type that then resolves everywhere", () => {
     setTypeManifest(APP_MANIFEST)
-    registerTypePresentation("app", [{ id: "statement", label: "Aussage" }])
-    expect(resolveTypePresentation("statement").label).toBe("Aussage")
-    expect(resolveTypePresentation("statement").generic).toBe(false)
+    registerTypePresentation("app", [{ id: "sighting", label: "Aussage" }])
+    expect(resolveTypePresentation("sighting").label).toBe("Aussage")
+    expect(resolveTypePresentation("sighting").generic).toBe(false)
   })
 
   it("rejects orphan presentation — the register cannot introduce types (rules 1/6)", () => {
@@ -154,8 +165,8 @@ describe("type presentation registry", () => {
 
   it("resolves a manifest entry WITHOUT presentation as generic (rule 5)", () => {
     setTypeManifest(APP_MANIFEST)
-    // statement is in the manifest, but no presentation layer registered it.
-    const resolved = resolveTypePresentation("statement")
+    // sighting is in the manifest, but no presentation layer registered it.
+    const resolved = resolveTypePresentation("sighting")
     expect(resolved.generic).toBe(true)
     expect(resolved.detail).toBeTruthy()
   })

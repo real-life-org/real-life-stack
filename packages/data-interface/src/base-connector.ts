@@ -22,6 +22,7 @@ import type {
   ProfileShareStatus,
   IncomingEvent,
 } from "./index.js"
+import { itemTypes, normalizeItemType } from "./type-manifest.js"
 
 // --- Shared Helpers for Connector implementations ---
 
@@ -133,8 +134,17 @@ function positionInBbox(item: Item, bbox: [number, number, number, number]): boo
   return west <= east ? lng >= west && lng <= east : lng >= west || lng <= east
 }
 
+function hasAnyItemType(item: Item, type: string | string[]): boolean {
+  const gesucht = normalizeItemType(type)
+  const hat = itemTypes(item)
+  return gesucht.some((t) => hat.includes(t))
+}
+
 export function matchesFilter(item: Item, filter: ItemFilter): boolean {
-  if (filter.type && item.type !== filter.type) return false
+  // Klassen als Menge nach Normalisierung, nie Strings in Reihenfolge
+  // (Spec 06, Regel 8): Kurzname und volle IRI treffen gleich, eine Liste im
+  // Filter ist ein Oder.
+  if (filter.type && !hasAnyItemType(item, filter.type)) return false
   if (filter.createdBy && item.createdBy !== filter.createdBy) return false
   if (filter.hasField) {
     for (const field of filter.hasField) {

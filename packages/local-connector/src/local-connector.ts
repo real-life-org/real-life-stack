@@ -23,7 +23,7 @@ import type {
   RelationRecordUpdate,
   Source,
 } from "@real-life-stack/data-interface"
-import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, createObservable, createDefaultRelationStore, createRelationRecordWith, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState } from "@real-life-stack/data-interface"
+import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, createObservable, createDefaultRelationStore, createRelationRecordWith, canonicalItem, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState } from "@real-life-stack/data-interface"
 import { get, set, del, createStore, update as updateStoredValue } from "idb-keyval"
 
 // --- Types ---
@@ -197,7 +197,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
     )
 
     if (shouldSeed) {
-      this.items = this.seedData!.items.map(i => ({ ...i }))
+      this.items = this.seedData!.items.map((i) => canonicalItem({ ...i }))
       this.groups = [...this.seedData!.groups]
       this.users = [...this.seedData!.users]
       this.groupMembers = { ...this.seedData!.groupMembers }
@@ -211,7 +211,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
         : null
       await this.persist({ replaceItemState: true })
     } else if (stored) {
-      this.items = stored.items.map(i => ({ ...i }))
+      this.items = stored.items.map((i) => canonicalItem({ ...i }))
       this.groups = stored.groups
       this.users = stored.users
       this.groupMembers = stored.groupMembers
@@ -905,7 +905,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
   }
 
   private applyStoredItemState(state: StoredState): void {
-    this.items = state.items.map((item) => ({ ...item }))
+    this.items = state.items.map((item) => canonicalItem({ ...item }))
     this.groupItems = cloneGroupItems(state.groupItems)
     this.nextItemId = state.nextItemId
     this.activityByScope = state.activityByScope ?? {}
@@ -947,7 +947,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
     }
 
     if (msg.type === "items-changed" || msg.type === "full-sync") {
-      this.items = stored.items.map(i => ({ ...i }))
+      this.items = stored.items.map((i) => canonicalItem({ ...i }))
       this.nextItemId = stored.nextItemId
       // groupItems holds the group-membership for each item. Without
       // reloading it here, getScopedItems() filters the freshly arrived

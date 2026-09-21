@@ -56,4 +56,14 @@ export {
 } from "./use-filterable-items"
 export { useResolvedUsers } from "./use-resolved-users"
 export { useSpaceVocabulary, spaceVocabulary, type SpaceVocabulary } from "./use-space-vocabulary"
+export {
+  useItemFocus,
+  useOptionalItemFocus,
+  MemoryFocusProvider,
+  ItemFocusContext,
+  type ItemFocus,
+  type MemoryFocusProviderProps,
+} from "./use-item-focus"
 export { useBeforeUnloadWarning, DiscardChangesDialog, type DiscardChangesDialogProps } from "./use-unsaved-warning"
+export { useItemComposerProps } from "./use-item-composer-props"
+export { useItemDetailEdit, type ItemDetailEditConfig } from "./use-item-detail-edit"
