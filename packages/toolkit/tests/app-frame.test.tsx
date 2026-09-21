@@ -3,11 +3,12 @@ import { act, createElement, type ReactNode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MockConnector } from "@real-life-stack/mock-connector"
+import type { DataInterface } from "@real-life-stack/data-interface"
 
 import { AppFrame, type FrameRouting } from "../src/components/frame/app-frame"
 import { useCreate } from "../src/components/host/create-host"
 import { useModulePanel } from "../src/components/module-panel/module-panel"
-import { ConnectorProvider } from "../src/hooks/connector-context"
+import { ConnectorProvider, useConnector } from "../src/hooks/connector-context"
 import { MemoryFocusProvider } from "../src/hooks/use-item-focus"
 import { useUnsavedChanges } from "../src/hooks/use-unsaved-changes"
 import { getModules } from "../src/lib/module-register"
@@ -112,5 +113,24 @@ describe("HostWorld ist derselbe Rahmen", () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
     for (const m of getModules().filter((m) => m.view)) expect(knoepfe(), m.id).toContain(m.label)
     expect(host.querySelector("[aria-label='Erstellen']")).toBeTruthy()
+  })
+
+  it("behaelt Connector und Daten ueber den Modulwechsel (rls#431)", async () => {
+    // Der Modul-Tab liegt als Zustand UEBER der Story-Huelle; die darf darum
+    // ihren Connector nicht je Render neu erzeugen — sonst ist nach jedem
+    // Tabwechsel alles weg, was die Story geschrieben hat.
+    let gesehen: DataInterface | null = null
+    function Sonde() { gesehen = useConnector(); return null }
+    await act(async () => { root.render(createElement(HostWorld, { module: "feed" }, createElement(Sonde))) })
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
+    const vorher = gesehen!
+    const angelegt = await (vorher as MockConnector).createItem({ id: "post-neu", type: "post", createdBy: "mira", data: { title: "Neu" } } as never)
+    expect(angelegt).toBeTruthy()
+    const liste = [...host.querySelectorAll("button, [role=tab], a")].find((el) => el.textContent?.trim() === "Liste") as HTMLElement
+    await act(async () => { liste.click() })
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
+    expect(gesehen).toBe(vorher)
+    expect(await vorher.getItem("post-neu")).not.toBeNull()
+    expect((vorher as MockConnector).getCurrentGroup()?.id).toBe("garden")
   })
 })
