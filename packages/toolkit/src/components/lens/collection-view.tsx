@@ -4,6 +4,7 @@ import type { Item } from "@real-life-stack/data-interface"
 
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { cn } from "../../lib/utils"
+import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
 import { ModuleSurfaceScope } from "../layout/module-surface-scope"
 import { ModuleToolbar } from "../layout/module-toolbar"
 import { Button } from "../primitives/button"
@@ -102,6 +103,11 @@ function CollectionViewInner({
   selectionFocusVisibleArea,
   className,
 }: CollectionViewProps) {
+  // Der geteilte Filter (Suche, Tags, Typen) wirkt IN der Lens — auch
+  // freistehend und in einer App, die sie ohne Host einsetzt. Vorher wandte
+  // ihn nur das Modul darueber an, und die Story unter „Gemeinsame Ansichten"
+  // suchte ins Leere (Anton, 21.09.2026).
+  const gefiltert = useModuleFilteredItems(items)
   const [eigenes, setEigenes] = useState<CollectionLayout>(defaultLayout)
   const gesteuert = layoutProp !== undefined
   const layout = layoutProp ?? eigenes
@@ -123,7 +129,7 @@ function CollectionViewInner({
         {layout === "list" ? (
           <ListView
             key={layout}
-            items={items}
+            items={gefiltert}
             activeItemId={activeItemId}
             selectionFocusVisibleArea={selectionFocusVisibleArea}
             selectionFocusGateKey={layout}
@@ -132,7 +138,7 @@ function CollectionViewInner({
         ) : (
           <GridView
             key={layout}
-            items={items}
+            items={gefiltert}
             activeItemId={activeItemId}
             selectionFocusVisibleArea={selectionFocusVisibleArea}
             selectionFocusGateKey={layout}

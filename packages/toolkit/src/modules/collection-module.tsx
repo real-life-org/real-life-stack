@@ -3,7 +3,6 @@
 import { useMemo } from "react"
 import { isAggregateVisibleItemType, type Item } from "@real-life-stack/data-interface"
 
-import { useModuleFilteredItems } from "../hooks/use-filterable-items"
 import { useItemFocus } from "../hooks/use-item-focus"
 import { CollectionView } from "../components/lens/collection-view"
 import { useModulePanel } from "../components/module-panel/module-panel"
@@ -33,17 +32,15 @@ export function selectCollectionItems(items: readonly Item[]): Item[] {
  * Plusknopf stellt der Host.
  */
 export function CollectionModule({ items = [], selectionFocusVisibleArea }: ModuleViewProps) {
+  // Den geteilten Filter (Suche, Tags, Typen) wendet die Lens selbst an.
   const alleEintraege = useMemo(() => selectCollectionItems(items), [items])
-  // Die Liste filtert mit: Vorher zeigte sie alles, waehrend Feed und Kanban
-  // daneben gefiltert waren — dieselbe Auswahl, zwei Ergebnisse.
-  const gefiltert = useModuleFilteredItems(alleEintraege)
   const { itemId: focusedId, focusItem } = useItemFocus()
   const panel = useModulePanel()
 
   return (
     <CollectionView
       className="h-full"
-      items={gefiltert}
+      items={alleEintraege}
       activeItemId={panel.current?.itemId ?? focusedId}
       selectionFocusVisibleArea={selectionFocusVisibleArea}
       onItemClick={(item) => focusItem(item.id)}
