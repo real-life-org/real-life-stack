@@ -24,6 +24,7 @@ import { CollectionModule } from "../modules/collection-module"
 import { FeedModule } from "../modules/feed-module"
 import { GraphModule } from "../modules/graph-module"
 import { MapModule } from "../modules/map-module"
+import { ResonanceModule } from "../modules/resonance-module"
 import {
   Calendar,
   Columns3,
@@ -159,9 +160,8 @@ export interface ModuleFragment extends Partial<Omit<ModuleEntry, "id">> {
 
 /**
  * Die Module, die das Toolkit mitliefert. Reihenfolge = Tab-Reihenfolge.
- * Feed, Kalender, Karte, Liste und Graph bringen ihre Flaeche mit (B0–B3);
- * Resonanz und Kanban folgen je in einem eigenen Schritt (B4, B5) und
- * werden bis dahin von der Referenz-App erweitert.
+ * Alle ausser dem Kanban bringen ihre Flaeche mit (B0–B4); das Kanban folgt
+ * in B5 und wird bis dahin von der Referenz-App erweitert.
  */
 export const TOOLKIT_MODULES: readonly ModuleEntry[] = Object.freeze([
   { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl", options: { suggestType: "post", createShell: "fullscreen" }, view: FeedModule },
@@ -169,7 +169,7 @@ export const TOOLKIT_MODULES: readonly ModuleEntry[] = Object.freeze([
   { id: "calendar", label: "Kalender", icon: Calendar, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["start"], options: { suggestType: "event" }, view: CalendarModule },
   { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay", presents: ["position"], loads: "module", options: { suggestType: "place" }, view: MapModule },
   // Opt-in — spec: docs/spec/modules/resonance.md
-  { id: "resonance", label: "Resonanz", icon: Waves, maxWidth: "max-w-3xl", presents: ["statement"], options: { suggestType: "statement" } },
+  { id: "resonance", label: "Resonanz", icon: Waves, maxWidth: "max-w-3xl", presents: ["statement"], options: { suggestType: "statement" }, view: ResonanceModule },
   // `maxWidth` auch ohne Container: Sie gilt fuer den Kopf der Flaeche UND
   // fuer den Inhalt — die Lens liest sie aus der Flaeche
   // (`useModuleContentClass`), statt eine eigene zu fuehren. Vorher stand die
