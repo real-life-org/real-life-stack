@@ -230,3 +230,28 @@ export function fitCamera(
     zoom: Math.max(0.08, Math.min(1.6, 0.82 * Math.min(width / boundsWidth, height / boundsHeight))),
   }
 }
+
+/**
+ * Laesst die Simulation synchron vorlaufen, bis `alpha` unter `until` faellt
+ * oder das Zeitbudget aufgebraucht ist — VOR dem ersten Bild. Ohne das sah
+ * man zehn Sekunden Wanderung mit drei harten Kameraspruengen (Anton,
+ * 21.09.2026: „warum zuckt der Graph nach dem Aufbau?"). 312 Knoten brauchen
+ * fuer ihre Schritte einen guten Teil des Budgets; ein sehr grosser Graph bekommt so
+ * viel, wie in das Budget passt, und wandert den Rest sichtbar.
+ */
+export function presettleForceLayout(
+  nodes: LayoutNode[],
+  edges: readonly GraphEdge[],
+  alpha: number,
+  options: { budgetMs?: number; until?: number; now?: () => number } = {},
+): number {
+  const { budgetMs = 120, until = 0.03 } = options
+  const now = options.now ?? (() => performance.now())
+  const start = now()
+  let current = alpha
+  while (current > until && now() - start < budgetMs) {
+    current = stepForceLayout(nodes, edges, current)
+  }
+  return current
+}
+
