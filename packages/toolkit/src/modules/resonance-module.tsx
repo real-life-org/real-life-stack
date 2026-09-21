@@ -1,29 +1,30 @@
-import { useState, useMemo } from "react"
-import { aggregateVoteStats,
-  sortStatements,
-  type ResonanceSortMode,
-  EmptyState,
-  ModuleToolbar,
-  ItemMetaRow,
-  ItemPreview,
-  ItemPreviewSkeleton,
-  ItemTypeBadge,
-  renderTypeFooter,
-  useRelationRecords,
-  useItemFocus,
-  useModuleHost,
-  type ModuleViewProps,
-  useVerifiedRelationRecords,
-  Button,
+"use client"
+
+import { useMemo, useState } from "react"
+import { ArrowUpDown, MessageSquareQuote } from "lucide-react"
+import { VOTE_PREDICATE } from "@real-life-stack/data-interface"
+
+import { useItemFocus } from "../hooks/use-item-focus"
+import { useRelationRecords } from "../hooks/use-relation-records"
+import { useVerifiedRelationRecords } from "../hooks/use-votes"
+import { useModuleHost } from "../components/host/module-host"
+import { ModuleToolbar } from "../components/layout/module-toolbar"
+import { ItemMetaRow } from "../components/preview/item-meta-row"
+import { ItemPreview } from "../components/preview/item-preview"
+import { ItemPreviewSkeleton } from "../components/preview/item-preview-skeleton"
+import { ItemTypeBadge } from "../components/preview/item-type-badge"
+import { renderTypeFooter } from "../components/preview/type-presentation"
+import { Button } from "../components/primitives/button"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "@real-life-stack/toolkit"
-import { ArrowUpDown, MessageSquareQuote } from "lucide-react"
-import { VOTE_PREDICATE } from "@real-life-stack/data-interface"
-
+} from "../components/primitives/dropdown-menu"
+import { EmptyState } from "../components/primitives/empty-state"
+import { aggregateVoteStats, sortStatements, type ResonanceSortMode } from "../lib/resonance-sort"
+import type { ModuleViewProps } from "../lib/module-register"
 
 const SORT_LABELS: Record<ResonanceSortMode, string> = {
   newest: "Neueste",
@@ -35,26 +36,28 @@ const SORT_LABELS: Record<ResonanceSortMode, string> = {
 const SORT_MODES: readonly ResonanceSortMode[] = ["newest", "votes", "approval", "activity"]
 
 /**
- * Resonance module: statements the group positions itself on with a
- * green/yellow/red vote. Spec: docs/spec/modules/resonance.md.
+ * Das Resonanz-Modul, vollstaendig aus dem Toolkit (Spec 01, Der Modul-Host;
+ * B4, 21.09.2026 — bis dahin `ResonanceView` in der Referenz-App): Aussagen,
+ * zu denen sich die Gruppe mit gruen, gelb oder rot stellt. Spec:
+ * docs/spec/modules/resonance.md.
+ *
+ * Die Aussagen laedt der Host aus `presents: ["statement"]` — Klassen mit der
+ * Affordanz `votesOn` (Spec 06) —, gefiltert nach Suche, Tags und Typen.
+ * Dem Modul gehoert die Sortierung; ihr Umschalter steht im Kopf neben der
+ * Suche. Autor, aktives Item, leerer Zustand und Scrollen zur fokussierten
+ * Karte kommen vom Host; Detail, Erstellen und Plusknopf stellt er.
  */
-export function ResonanceView({ items: statements = [], itemsLoading: isLoading = false }: Pick<ModuleViewProps, "items" | "itemsLoading">) {
-  // Die Aussagen laedt der Host aus `presents: ["statement"]`: Klassen mit
-  // der Affordanz `votesOn` (Spec 06, „Klassen haben IRIs"; Spec 01, Der
-  // Ladevertrag) — nicht mehr ueber das Schema im `@context`.
-  // All votes of the scope in one query — the per-statement sort keys (count,
-  // approval, last activity) need the full picture, not per-card subscriptions.
+export function ResonanceModule({ items: statements = [], itemsLoading: isLoading = false }: ModuleViewProps) {
+  // Alle Stimmen des Space in einer Abfrage — die Sortierschluessel je
+  // Aussage (Anzahl, Zustimmung, letzte Aktivitaet) brauchen das ganze Bild.
   const { data: voteRecords } = useRelationRecords({ predicate: VOTE_PREDICATE })
-  // Spec 08 L1: authorial aggregates count only records the connector vouches
-  // for — fail closed, also for the sort keys.
+  // Spec 08 L1: Zaehlen nur Records, fuer die der Connector buergt — fail
+  // closed, auch fuer die Sortierung.
   const verifiedVoteRecords = useVerifiedRelationRecords(voteRecords)
-  const { resolveAuthor, resolveItemGroupColor: resolveGroupColor, activeItemId, filterActive, registerItemElement } = useModuleHost()
+  const { resolveAuthor, resolveItemGroupColor, activeItemId, filterActive, registerItemElement } = useModuleHost()
   const { focusItem } = useItemFocus()
 
-  // Filter und Suche kommen aus dem Kopf der Modulflaeche (geteilt), die
-  // Sortierung gehoert diesem Modul.
   const [sortMode, setSortMode] = useState<ResonanceSortMode>("newest")
-  // Suche, Tags und Typen hat der Host schon angewendet.
   const voteStats = useMemo(() => aggregateVoteStats(verifiedVoteRecords), [verifiedVoteRecords])
   const sortedStatements = useMemo(
     () => sortStatements(statements, voteStats, sortMode),
@@ -63,8 +66,7 @@ export function ResonanceView({ items: statements = [], itemsLoading: isLoading 
 
   return (
     <div className="space-y-4">
-      {/* Die Sortierung steht rechts: Links neben dem Filter-Knopf sitzt die
-          Suche, die alle Module teilen. */}
+      {/* Die Sortierung steht rechts neben der Suche, die alle Module teilen. */}
       <ModuleToolbar
         trailingActions={
           <DropdownMenu>
@@ -102,15 +104,12 @@ export function ResonanceView({ items: statements = [], itemsLoading: isLoading 
           />
         ) : (
           sortedStatements.map((item) => (
-            <div
-              key={item.id}
-              ref={(el) => registerItemElement(item.id, el)}
-            >
+            <div key={item.id} ref={(el) => registerItemElement(item.id, el)}>
               <ItemPreview
                 item={item}
                 author={resolveAuthor(item.createdBy)}
                 active={activeItemId === item.id}
-                activeColor={resolveGroupColor(item)}
+                activeColor={resolveItemGroupColor(item)}
                 onClick={() => focusItem(item.id)}
                 headerAdornment={<ItemTypeBadge type={item.type} />}
                 metaAdornment={<ItemMetaRow item={item} />}
