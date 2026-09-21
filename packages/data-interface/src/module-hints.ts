@@ -64,6 +64,17 @@ export function resetModuleHints(): void {
   for (const name of [...tabelle.keys()]) if (!TOOLKIT_HINTS.has(name)) tabelle.delete(name)
 }
 
+/**
+ * Unter welchem Schlüssel ein Hinweis im Hinweis-Objekt steht: `position` →
+ * `hasPosition`, ein eigener Hinweis ohne `key` unter seinem Namen. Wer
+ * `presents: ["x"]` gegen `moduleHintsFor(item)` prüft, fragt HIER nach —
+ * bis zum 21.09.2026 leitete das Register den Schlüssel selbst als `has<X>`
+ * her und fand einen eigenen Hinweis darum nie.
+ */
+export function hintKeyFor(name: string): string {
+  return tabelle.get(name)?.key ?? name
+}
+
 /** Hinweis → Connector-Filter. Wirft bei einem unbekannten Namen, statt still nichts zu laden. */
 export function filterForHint(name: string, options: ModuleHintOptions = {}): ItemFilter {
   const def = tabelle.get(name)

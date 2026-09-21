@@ -1,30 +1,30 @@
+"use client"
+
 import { useCallback, useEffect, useMemo } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import { moduleForItem,
-  useConnector,
-  useGroups,
-  useCurrentGroup,
-  useItem,
-  getSpacePrimaryColor,
-  scalesForColor,
-  instanceTheme,
-  readRadius,
-  readGray,
-  readSurfaces,
-  layoutTokens,
-  useColorScheme,
-  themeTokens,
-  applyThemeTokens,
-  clearThemeTokens,
-  moduleIds,
-  getModule,
-  resolveSpaceModules,
-  resolveActiveModule,
-  type Workspace,
-  type Module,
-} from "@real-life-stack/toolkit"
 import type { Group, Item } from "@real-life-stack/data-interface"
 import { hasGroups, type ModuleHints } from "@real-life-stack/data-interface"
+
+import { useConnector } from "../../hooks/connector-context"
+import { useColorScheme } from "../../hooks/use-color-scheme"
+import { useCurrentGroup, useGroups } from "../../hooks/use-groups"
+import { useItem } from "../../hooks/use-items"
+import { scalesForColor } from "../../lib/color-scales"
+import { getModule, moduleForItem, moduleIds, resolveActiveModule, resolveSpaceModules } from "../../lib/module-register"
+import { instanceTheme } from "../../lib/runtime-config"
+import { layoutTokens, readGray, readRadius, readSurfaces } from "../../lib/space-theme"
+import { applyThemeTokens, clearThemeTokens, themeTokens } from "../../lib/theme-tokens"
+import { getSpacePrimaryColor } from "../../lib/utils"
+import type { Module } from "../layout/module-tabs"
+import type { Workspace } from "../layout/workspace-switcher"
+
+/**
+ * Space, Modul und Item aus der URL — die Auflösung, die jede App mit Router
+ * braucht (Spec 01, Der Modul-Host: „Was bei der App bleibt" ist der Router
+ * selbst, nicht diese Regeln). Bis zum 21.09.2026 stand sie in der
+ * Referenz-App (`hooks/use-workspace-routing.ts`), und die Netzwerk-App hatte
+ * keine: Sie hielt Linse und Auswahl im Speicher, ohne Adresse.
+ */
 
 export const STORAGE_KEY_GROUP = "rls-active-group"
 export const STORAGE_KEY_MODULE = "rls-active-module"
@@ -56,10 +56,12 @@ const OVERVIEW_WORKSPACE: Workspace = { id: OVERVIEW_ID, name: "Mein Netzwerk", 
  * selbst liegt im Modul-Register (`moduleForItem`); hier bleibt nur der
  * Aufruf. Ein ausdrückliches `/{scope}/{module}/{itemId}` gewinnt immer.
  */
-export function resolveDefaultModule(itemOrHints: Item | ModuleHints, available: string[]): string {
+export function resolveDefaultModule(itemOrHints: Item | ModuleHints, available: readonly string[], fallback?: string): string {
   const gewaehlt = moduleForItem(itemOrHints, available)
   if (gewaehlt) return gewaehlt
-  return available.includes("feed") ? "feed" : (available[0] ?? "feed")
+  // Den Rückfall wählt die App (Spec 01): die Referenz-App den Feed, die
+  // Netzwerk-App die Liste. Ohne Angabe das erste Modul des Space.
+  return fallback && available.includes(fallback) ? fallback : (available[0] ?? fallback ?? moduleIds()[0])
 }
 
 /**
@@ -92,7 +94,7 @@ export interface WorkspaceRouting {
    * unknown) — the UI shows the no-access notice in that case.
    */
   activeWorkspace: Workspace | null
-  /** Resolved from URL → localStorage → "feed". */
+  /** Resolved from URL → localStorage → first module of the space. */
   activeModule: string
   /** Modules available in the active workspace (group's data.modules). */
   modules: Module[]
@@ -106,7 +108,7 @@ export interface WorkspaceRouting {
 }
 
 /**
- * Owns the workspace/module/item routing concern of the reference app. URL
+ * Owns the workspace/module/item routing concern of an app with a router. URL
  * scheme (flat; the URL is the single source of truth for the focused item):
  *   /{scope}                   → redirect to /{scope}/{defaultModule}
  *   /{scope}/{module}          → module view
@@ -118,7 +120,12 @@ export interface WorkspaceRouting {
  *
  * Pure glue — no rendering, no dialog state. Home composes the shell around this.
  */
-export function useWorkspaceRouting(): WorkspaceRouting {
+export interface WorkspaceRoutingOptions {
+  /** Das Modul, wenn kein Feld eines wählt (Spec 01: die App wählt den Rückfall). Standard: das erste des Space. */
+  fallbackModule?: string
+}
+
+export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions = {}): WorkspaceRouting {
   const connector = useConnector()
   const navigate = useNavigate()
   const location = useLocation()
@@ -242,7 +249,7 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     // (b) Module-less item — only once the scope is synced AND the lookup settled.
     if (moduleLessItemId && scopeSynced && !moduleLessLoading) {
       const mod = moduleLessItem
-        ? resolveDefaultModule(moduleLessItem, groupModuleIds)
+        ? resolveDefaultModule(moduleLessItem, groupModuleIds, fallbackModule)
         : groupModuleIds[0]
       navigate(canonicalPath(slug, mod, moduleLessItemId, search, hash), { replace: true })
     }
@@ -259,6 +266,7 @@ export function useWorkspaceRouting(): WorkspaceRouting {
     scopeSynced,
     moduleLessLoading,
     moduleLessItem,
+    fallbackModule,
     groupModuleIds,
     navigate,
   ])
@@ -327,7 +335,7 @@ export function useWorkspaceRouting(): WorkspaceRouting {
   const handleWorkspaceChange = useCallback((workspace: Workspace) => {
     const group = groups.find((g) => g.id === workspace.id)
     const mods = resolveSpaceModules(group?.data?.modules as string[] | undefined)
-    const mod = mods.includes(activeModule) ? activeModule : (mods[0] ?? "feed")
+    const mod = mods.includes(activeModule) ? activeModule : mods[0]
     navigate(`/${scopeToSlug(workspace.id)}/${mod}`)
   }, [groups, activeModule, navigate])
 

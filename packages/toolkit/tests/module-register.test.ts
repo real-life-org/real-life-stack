@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
+import { registerModuleHint, resetModuleHints, type Item } from "@real-life-stack/data-interface"
 import {
   TOOLKIT_MODULES,
   TOOLKIT_DEFINITION,
@@ -12,6 +13,7 @@ import {
   isKnownModule,
   resetModuleRegistryForTests,
   findModulePresenting,
+  modulePresentsItem,
 } from "../src/lib/module-register"
 
 const Dummy = () => null
@@ -364,5 +366,30 @@ describe("Der Modul-Host: was der Eintrag traegt (Spec 01, B0 Schritt 5a)", () =
     expect(() =>
       composeModules([TOOLKIT_DEFINITION, { name: "app", extensions: [{ id: "map", loads: "host" }] }]),
     ).toThrow(/Beitrag "app" wuerde es ueberschreiben/)
+  })
+})
+
+describe("eigener Hinweis einer App (Spec 01, Ladevertrag Punkt 1)", () => {
+  beforeEach(() => resetModuleRegistryForTests())
+  afterEach(() => resetModuleHints())
+
+  const resource = { id: "r1", type: "resource", createdAt: "2026-09-21T10:00:00.000Z", createdBy: "u1", data: { title: "Beamer" } } as Item
+  const task = { id: "t1", type: "task", createdAt: "2026-09-21T10:00:00.000Z", createdBy: "u1", data: { title: "Aufbau", status: "open" } } as Item
+
+  it("findet ein App-Modul ueber seinen eigenen Hinweis — ohne has-Praefix", () => {
+    // Ein eigener Hinweis heisst wie er selbst (`resource`), die vier des
+    // Toolkits aus Kompatibilitaet `has…`. Das Register darf den Schluessel
+    // nicht raten: Bis zum 21.09.2026 fragte es `hasResource` und fand nichts.
+    registerModuleHint("resource", {
+      test: (item) => item.type === "resource",
+      filter: () => ({ type: ["resource"] }),
+    })
+    setModuleRegistry(composeModules([
+      TOOLKIT_DEFINITION,
+      { name: "app", definitions: [{ id: "marketplace", label: "Marktplatz", icon: Dummy, presents: ["resource"], view: Dummy }] },
+    ]))
+    expect(modulePresentsItem("marketplace", resource)).toBe(true)
+    expect(modulePresentsItem("marketplace", task)).toBe(false)
+    expect(findModulePresenting("resource")?.id).toBe("marketplace")
   })
 })

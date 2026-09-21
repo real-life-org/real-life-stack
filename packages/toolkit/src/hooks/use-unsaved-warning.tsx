@@ -12,10 +12,10 @@ import { Button } from "../components/primitives/button"
 /**
  * Die zwei Hälften des Schutzes vor verlorenen Eingaben, die jede App braucht.
  *
- * Die dritte Hälfte fehlt hier mit Absicht: Das Abfangen der App-internen
- * Navigation hängt am Router, und den kennt das Toolkit nicht (und soll es
- * nicht — sonst müsste jede Anwendung denselben Router nehmen). Die App
- * verdrahtet ihren Blocker und zeigt damit den Dialog von hier.
+ * Die dritte Hälfte — das Abfangen der App-internen Navigation — hängt am
+ * Router und liegt darum im Unterpfad `/router` (`UnsavedChangesGuard`), wie
+ * der Fokus in der URL. Bis zum 21.09.2026 verdrahtete jede App sie selbst;
+ * die Netzwerk-App hatte sie darum nicht (rls#429).
  */
 
 /**

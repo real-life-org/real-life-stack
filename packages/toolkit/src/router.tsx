@@ -12,3 +12,15 @@
  */
 
 export { UrlFocusProvider, parsePath, buildUrl } from "./components/router/url-focus"
+export {
+  useWorkspaceRouting,
+  resolveDefaultModule,
+  canonicalPath,
+  scopeToSlug,
+  STORAGE_KEY_GROUP,
+  STORAGE_KEY_MODULE,
+  type WorkspaceRouting,
+  type WorkspaceRoutingOptions,
+} from "./components/router/workspace-routing"
+export { notificationRoute } from "./components/router/notification-route"
+export { UnsavedChangesGuard } from "./components/router/unsaved-changes-guard"

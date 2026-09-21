@@ -52,19 +52,17 @@ import {
   useCurrentGroup,
   useCurrentUser,
   useInitialSync,
-  useMembers,
   useConnector,
   useContacts,
   useVerification,
   useRelayStatus,
   ActivityBell,
-  ActivityPanel,
+  ActivityPanelController,
   useActivity,
   NotificationBell,
-  NotificationCenter,
   useNotifications,
-  useMarkNotificationsSeen,
   useItems,
+  modulePresentsItem,
   type Workspace,
   type ConnectorOption,
   type GroupDialogMode,
@@ -77,20 +75,19 @@ import {
 import { initialDarkMode, rememberColorScheme } from "./initial-color-scheme"
 import type { DataInterface, User } from "@real-life-stack/data-interface"
 import {
-  type Item, isAggregateVisibleItemType, isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
+  type Item, isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
 import { MapLibreAdapterProvider } from "@real-life-stack/toolkit/maplibre"
 import { MockConnector } from "@real-life-stack/mock-connector"
 import { LocalConnector } from "@real-life-stack/local-connector"
 import { ModuleOutlet } from "./views/module-outlet"
-import { useWorkspaceRouting, STORAGE_KEY_GROUP } from "./hooks/use-workspace-routing"
-import { buildNotificationRoute, moduleCanDisplay } from "./notification-navigation"
 // Der Fokus in der URL ist die Voreinstellung (Spec 01, Der Modul-Host);
-// die Politik lebt im Router-Unterpfad des Toolkits.
-import { UrlFocusProvider as ItemFocusProvider } from "@real-life-stack/toolkit/router"
+// die Politik lebt im Router-Unterpfad des Toolkits — seit dem 21.09.2026
+// auch die Auflösung Space/Modul/Item aus der URL und die Route einer
+// Benachrichtigung, die bis dahin hier standen (und in der Netzwerk-App noch einmal).
+import { UrlFocusProvider as ItemFocusProvider, useWorkspaceRouting, STORAGE_KEY_GROUP, notificationRoute, UnsavedChangesGuard } from "@real-life-stack/toolkit/router"
 import { CreateHostProvider, CreateSheetController, DetailHostProvider, DetailHostController, useItemFocus } from "@real-life-stack/toolkit"
 import { LocationPickProvider, useLocationPick } from "./location-pick"
-import { UnsavedChangesGuard } from "./unsaved-changes-guard"
 
 
 /**
@@ -158,93 +155,6 @@ function extractProfileId(input: string): string {
     // not a URL — treat as raw id
   }
   return trimmed
-}
-
-/** Meta-item types the shell has no detail projection for (log stays visible, not clickable). */
-// Welche Typen keine eigene Karte bekommen, sagt der Datenvertrag —
-// früher stand hier eine eigene Liste, der „reaction" fehlte.
-
-/** Activity deliberately shares the module panel instead of adding a second shell overlay. */
-function ActivityPanelController({ open, onClose, onOpenNotification, onOpenGroup, onOpenEntryTarget }: { open: boolean; onClose: () => void; onOpenNotification: (notification: import("@real-life-stack/toolkit").NotificationCandidate) => void; onOpenGroup: (groupId: string) => void; onOpenEntryTarget: (targetId: string) => void }) {
-  const panel = useModulePanel()
-  const { clearFocus } = useItemFocus()
-  const ownedActivityPanel = useRef(false)
-  const wasOpen = useRef(open)
-  const openTarget = useCallback((entry: import("@real-life-stack/data-interface").ActivityEntry) => {
-    onOpenEntryTarget(entry.targetId)
-    onClose()
-  }, [onOpenEntryTarget, onClose])
-  useEffect(() => {
-    const openedNow = open && !wasOpen.current
-    wasOpen.current = open
-    if (!open) {
-      ownedActivityPanel.current = false
-      if (panel.current?.itemId === "__activity__") panel.close({ silent: true })
-      return
-    }
-    if (panel.current?.itemId === "__activity__") {
-      ownedActivityPanel.current = true
-      return
-    }
-    // A content swap does not invoke the previous panel's onClose. Yield the
-    // shared shell instead of reclaiming it from the new owner.
-    if (ownedActivityPanel.current && !openedNow) {
-      ownedActivityPanel.current = false
-      onClose()
-      return
-    }
-    ownedActivityPanel.current = true
-    // Like starting a create, opening the history DROPS the item focus: the
-    // shared panel shows exactly one thing, and only a focus CHANGE hands it
-    // back to the detail host. Keeping a stale focus would make clicking the
-    // same item a no-op (no focus change → no detail reopen).
-    clearFocus()
-    panel.open({
-      kind: "custom",
-      itemId: "__activity__",
-      content: <ReferenceNotificationCenterContent onOpenTarget={openTarget} onOpenNotification={onOpenNotification} onOpenGroup={onOpenGroup} onCloseCenter={onClose} onOpenActivity={() => panel.open({ kind: "custom", itemId: "__activity__", content: <ReferenceActivityPanelContent onOpenTarget={openTarget} />, onClose })} />,
-      onClose,
-    })
-  }, [clearFocus, onClose, open, openTarget, panel.close, panel.current?.itemId, panel.open])
-  return null
-}
-
-function ReferenceNotificationCenterContent({ onOpenTarget, onOpenNotification, onOpenGroup, onOpenActivity, onCloseCenter }: { onOpenTarget: (entry: import("@real-life-stack/data-interface").ActivityEntry) => void; onOpenNotification: (notification: import("@real-life-stack/toolkit").NotificationCandidate) => void; onOpenGroup: (groupId: string) => void; onOpenActivity: () => void; onCloseCenter: () => void }) {
-  const notifications = useNotifications()
-  useMarkNotificationsSeen(notifications)
-  if (!notifications.supported) return <ReferenceActivityPanelContent onOpenTarget={onOpenTarget} />
-  return <NotificationCenter notifications={notifications.notifications} onOpenSubject={onOpenNotification} onOpenGroup={onOpenGroup} onOpenActivity={onOpenActivity} onMarkRead={notifications.stateSupported ? (keys) => void notifications.update?.({ op: "markRead", keys }) : undefined} onMarkAllRead={notifications.stateSupported ? () => { if (notifications.maxTs) void notifications.update?.({ op: "markAllReadUpTo", ts: notifications.maxTs }); onCloseCenter() } : undefined} onMuteGroup={notifications.stateSupported ? (groupId, muted) => void notifications.update?.(muted ? { op: "mute", groupId } : { op: "unmute", groupId }) : undefined} />
-}
-
-function ReferenceActivityPanelContent({ onOpenTarget }: { onOpenTarget: (entry: import("@real-life-stack/data-interface").ActivityEntry) => void }) {
-  const { data: entries } = useActivity()
-  const { data: items } = useItems()
-  const currentGroup = useCurrentGroup()
-  const { data: members } = useMembers(currentGroup?.id ?? null)
-  const { data: currentUser } = useCurrentUser()
-  const itemById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
-  // A reaction entry opens its PARENT (the reacted-to item) — the reaction
-  // itself has no detail projection.
-  const resolveOpenId = useCallback((entry: import("@real-life-stack/data-interface").ActivityEntry) => {
-    if (!isAggregateVisibleItemType(entry.targetType) || entry.action === "delete") return undefined
-    if (entry.targetType === "reaction") {
-      const reaction = itemById.get(entry.targetId)
-      const target = reaction?.relations?.find((relation) => relation.predicate === "reactsTo")?.target
-      const parentId = target?.startsWith("item:") ? target.slice("item:".length) : undefined
-      return parentId && itemById.has(parentId) ? parentId : undefined
-    }
-    return itemById.has(entry.targetId) ? entry.targetId : undefined
-  }, [itemById])
-  const isTargetOpenable = useCallback((entry: import("@real-life-stack/data-interface").ActivityEntry) => resolveOpenId(entry) !== undefined, [resolveOpenId])
-  const resolveActor = useCallback(
-    (actorId: string) => members.find((member) => member.id === actorId) ?? (currentUser?.id === actorId ? currentUser : undefined),
-    [members, currentUser],
-  )
-  const openResolvedTarget = useCallback((entry: import("@real-life-stack/data-interface").ActivityEntry) => {
-    const openId = resolveOpenId(entry)
-    if (openId) onOpenTarget({ ...entry, targetId: openId })
-  }, [onOpenTarget, resolveOpenId])
-  return <ActivityPanel entries={entries} isTargetOpenable={isTargetOpenable} onOpenTarget={openResolvedTarget} resolveActor={resolveActor} />
 }
 
 const CONNECTOR_OPTIONS: ConnectorOption[] = [
@@ -505,7 +415,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     urlItemId,
     handleWorkspaceChange,
     handleModuleChange,
-  } = useWorkspaceRouting()
+  } = useWorkspaceRouting({ fallbackModule: "feed" })
   const createGroup = useCreateGroup()
   const updateGroup = useUpdateGroup()
   const deleteGroup = useDeleteGroup()
@@ -667,7 +577,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   const activity = useActivity()
   const notifications = useNotifications()
   const openNotification = useCallback((notification: import("@real-life-stack/toolkit").NotificationCandidate) => {
-    navigate(buildNotificationRoute(notification, groups))
+    navigate(notificationRoute(notification, groups, "feed"))
     closeActivity()
   }, [closeActivity, groups, navigate])
   // Raw-history clicks escalate the module when the active one cannot show
@@ -677,8 +587,8 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
   const openEntryTarget = useCallback((targetId: string) => {
     const item = allItems.find(({ id }) => id === targetId)
     const hints = item ? moduleHintsFor(item) : undefined
-    if (item && activeWorkspace && !moduleCanDisplay(activeModule ?? "feed", hints, item.type)) {
-      navigate(buildNotificationRoute({ groupId: activeWorkspace.id, subjectId: targetId, subjectType: item.type, moduleHints: hints } as import("@real-life-stack/toolkit").NotificationCandidate, groups))
+    if (item && activeWorkspace && !modulePresentsItem(activeModule, hints, item.type)) {
+      navigate(notificationRoute({ groupId: activeWorkspace.id, subjectId: targetId, moduleHints: hints }, groups, "feed"))
       return
     }
     focusItem(targetId)

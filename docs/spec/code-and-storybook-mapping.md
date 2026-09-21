@@ -34,7 +34,7 @@ In der Reference-App spiegelt sich die Taxonomie so:
 | Komposition (Provider, AuthGate, App Shell) | `apps/reference/src/App.tsx` |
 | Space-Module-Instanzen (eine Datei pro Modul) | `apps/reference/src/views/feed-view.tsx`, `kanban-view.tsx`, `calendar-view.tsx`, `map-view.tsx`, `resonance-view.tsx`, `collection-view.tsx`, `graph-view.tsx` |
 | Modul-Dispatch (welches Modul rendert, wie es den Space füllt) | `apps/reference/src/views/module-outlet.tsx` |
-| Space/Module-Routing (URL → aktiver Space + Modul) | `apps/reference/src/hooks/use-workspace-routing.ts` |
+| Space/Module-Routing (URL → aktiver Space + Modul) | `packages/toolkit/src/components/router/workspace-routing.tsx` (`@real-life-stack/toolkit/router`; bis rls#429 in der Referenz-App) |
 
 Regeln:
 

@@ -27,6 +27,22 @@ describe("projectSpaceGraph", () => {
     expect(nodes.map((n) => n.id)).toEqual(["item:t1"])
   })
 
+  it("carries a safe avatar from the item data to its node", () => {
+    // Personen als Items (Spec 09) bringen ihr Bild mit; die Netzwerk-App
+    // zeigte es bis zum 21.09.2026 ueber eine eigene Projektion.
+    const { nodes } = projectSpaceGraph(
+      [
+        item("p1", "person", { displayName: "Mira", avatarUrl: "https://example.org/mira.webp" }),
+        item("p2", "person", { displayName: "Jonas", avatarUrl: "javascript:alert(1)" }),
+        item("p3", "person", { displayName: "Lea" }),
+      ],
+      [], USERS, labelOf,
+    )
+    expect(nodes.find((n) => n.id === "item:p1")?.avatarUrl).toBe("https://example.org/mira.webp")
+    expect(nodes.find((n) => n.id === "item:p2")?.avatarUrl).toBeUndefined()
+    expect(nodes.find((n) => n.id === "item:p3")).not.toHaveProperty("avatarUrl")
+  })
+
   it("adds person nodes only when an edge reaches them", () => {
     const { nodes, edges } = projectSpaceGraph(
       [item("t1", "task", { title: "Beete" }, [{ predicate: "assignedTo", target: "global:u2" }])],
