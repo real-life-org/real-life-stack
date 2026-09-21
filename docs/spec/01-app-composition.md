@@ -268,7 +268,7 @@ Was ein Eintrag dafür **nicht** braucht: kein `items`-Feld (folgt aus `presents
 | `position` | `data.position.coordinates` ist ein Array | `hasField: ["position"]` | Feld |
 | `start` | `data.start` ist ein nichtleerer String | `hasField: ["start"]` | Feld |
 | `status` | `data[statusField]` ist ein String | `hasField: [statusField]` | Feld, **konfiguriert** über `options.statusField` (Standard `status`) |
-| `statement` | `@context` enthält `statement/v1` | `hasSchema: ["…/statement/v1"]` | **Marker-Vokabular** (Spec 06: kein eigenes Feld, `hasSchema` ist der einzige Filter) |
+| `statement` | `@context` enthält `statement/v1` | `hasSchema: ["…/statement/v1"]` | **vorläufig.** Heute ein Vokabular ohne Begriffe, das nur die Klasse markiert — dieselbe Aussage wie `type: "statement"`, das per `base/v1` schon `@type` ist. Anton, 21.09.2026: JSON-LD sichert die Interoperabilität, eine interne Regel darf sie nicht einschränken. Ziel: die Klasse in `@type` mit IRI, die Aktivierung über die im Manifest deklarierte Affordanz `votesOn`; das Marker-Vokabular entfällt. Umbau in Spec 06 |
 
 Abnahmefall: Ein Resonanz-Item ohne `data.statement` wird geladen — es gibt dieses Feld nicht, das Vokabular entscheidet.
 
