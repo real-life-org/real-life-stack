@@ -22,7 +22,7 @@ Diese Doppelrolle führt zu Konflikten: User legen viele Layer an, um Themen abz
 RLS trennt diese Aspekte:
 
 - **Struktur** ergibt sich aus den **`@context`-Schemas**, die ein Item komponiert (mehrere parallel möglich) — Gegenstand dieser Spec.
-- **Art** (als was ein Item erstellt wurde) trägt **`type`** — genau eine pro Item, steuert Template und User-Filter, siehe „Die Rolle von `type`".
+- **Klasse** trägt **`type`** — JSON-LDs `@type`, eine **ungeordnete Menge**; die Vorlage beim Erstellen und der User-Filter hängen daran, siehe „Die Rolle von `type`".
 - **Kategorisierung** läuft über **Tags** (frei oder URN-basiert, optional in einem Kategoriebaum strukturierbar) — siehe [07-tags.md](07-tags.md).
 - **Modul-Sichtbarkeit** folgt aus den Feldern — siehe „Verhältnis zwischen Schema- und Feldfiltern".
 - **Thematische Klammer** ist der **Space** selbst — verschiedene Communities haben verschiedene Spaces mit eigenen Schwerpunkten.
@@ -37,7 +37,7 @@ Ein RLS-Item trägt eine `@context`-Liste, die festlegt, welche Vokabulare seine
 interface Item {
   id: string
   '@context': string[]            // ordered list of vocabulary URLs
-  type?: string | string[]         // Art des Items (Template + User-Filter), siehe „Die Rolle von `type`"
+  type?: string | string[]         // Klasse(n) = @type, ungeordnete Menge; siehe „Die Rolle von `type`"
   createdAt: string
   createdBy: string
   data: Record<string, unknown>
@@ -94,6 +94,16 @@ Regeln:
 4. Ein Vokabular besteht aus Begriffen. Ein Vokabular **ohne** Begriffe, das nur in `@context` steht, um etwas zu markieren, gibt es nicht mehr — die Klasse steht in `@type`, wo JSON-LD sie erwartet. `statement/v1` war das einzige und ist jetzt ein Vokabular mit genau einem Begriff, seiner Klasse.
 5. Sobald Typen je Space konfigurierbar sind, bringt ein Space eigene Klassen mit eigenen IRIs in seinem eigenen Namensraum mit — nicht in `rls:`. Regel 1 ist das Gerüst dafür.
 
+**Normalisierung — der Vertrag an der Grenze** (rls#413, 21.09.2026). Ein JSON-LD-Prozessor darf dieselbe Klasse als Kontextbegriff (`statement`) oder als volle IRI (`https://real-life-stack.org/vocab/statement/v1#Statement`) liefern, und `@type` ist eine ungeordnete Menge. RLS MUSS beides so behandeln, dass keine Semantik davon abhängt:
+
+6. **Identität ist die IRI.** Zwei Klassen sind gleich, wenn ihre über den Kontext expandierten IRIs gleich sind. Der Kurzname ist eine Schreibweise, keine zweite Identität.
+7. **Kanonische Form im Stack ist der Kurzname** — die Schreibweise der Items und des Manifests. An der **Eingangsgrenze** (Connector liest, Import, Sync) MUSS eine volle IRI, die ein bekanntes Vokabular der Registry auflöst, auf ihren Kurznamen normalisiert werden. Eine IRI, die kein bekanntes Vokabular auflöst, bleibt **unverändert** als volle IRI stehen: Sie ist eine fremde Klasse und wird weder verworfen noch umgedeutet.
+8. **Alle Klassen zählen für Affordanzen.** Ob ein Item die Affordanz `votesOn` hat, entscheidet die **Vereinigung** der Affordanzen aller Klassen, die es trägt. `["post","statement"]` und `["statement","post"]` sind dieselbe Menge und haben dieselben Affordanzen. Filter (`type` im `ItemFilter`), Hinweise (`moduleHintsFor`) und der Host-Filter aus dem Ladevertrag vergleichen **Mengen auf Kurznamen nach Normalisierung**, nie Strings in Reihenfolge.
+9. **Die Vorlage ist eine UI-Wahl, keine Klassensemantik.** Der Composer braucht beim Erstellen genau eine Vorlage und beim Bearbeiten genau eine, um die Widgets zu bestimmen. Er nimmt die **erste Klasse, für die das Darstellungs-Register eine Vorlage kennt**; sind es mehrere, ist die Wahl eine Konvention der Fläche und DARF keine andere Aussage über das Item tragen. Wer einen Filter, eine Aktivierung oder eine Affordanz an „die erste Klasse" hängt, hat einen Fehler gegen Regel 8 vor sich.
+10. **Unbekannte Klassen** aktivieren kein Modul, tragen keine Affordanz und bekommen die generische Darstellung — sie bleiben am Item erhalten (Regel 7) und laufen beim Sync unverändert weiter.
+
+Abnahmefälle: (a) `type: "statement"` und `type: "https://real-life-stack.org/vocab/statement/v1#Statement"` unter demselben `@context` erscheinen beide in der Resonanz; (b) Vertauschen zweier Klassen ändert weder Affordanzen noch Modul-Zugehörigkeit; (c) eine fremde IRI bleibt nach Lesen und Zurückschreiben byteweise erhalten; (d) `matchesFilter({ type: "statement" })` trifft beide Schreibweisen aus (a). JSON-Schema-Tests prüfen das nicht; es braucht Tests gegen `matchesFilter` und `moduleHintsFor`, mit B0.
+
 ### Überlagerung statt Konflikt
 
 Wenn zwei `@context`-Schemas dieselbe Semantik treffen (z.B. `start` für Beginn), wird das Feld **geteilt**, nicht dupliziert. Beispiel: ein Item, das gleichzeitig Event und Task ist, hat ein gemeinsames `start`. Strukturelle Überlagerung ist beabsichtigt.
@@ -102,7 +112,7 @@ Wenn semantisch unterschiedliche Konzepte denselben Property-Namen tragen würde
 
 ### Die Rolle von `type`
 
-`type` benennt die **Art**, als die ein Item erstellt wurde (`post`, `event`, `task`) — die Intention beim Erstellen. Aus ihr wählt der Composer ein **Template** (Widget-Set beim Erstellen, Karten-Darstellung beim Anzeigen); sie bleibt am Item, damit Module und User sich darauf beziehen können. `type` ist genau eine pro Item; bei mehreren Werten zählt die erste. Pro `type` gehört **ein** Template (Erstellen-Widgets und Anzeige-Karte zusammen); heute als `ContentTypeConfig` je Modul-View definiert; das kanonische, modulübergreifend geteilte **Typ-Register** (nächster Abschnitt) löst diese Streuung ab.
+`type` benennt die **Art**, als die ein Item erstellt wurde (`post`, `event`, `task`) — die Intention beim Erstellen. Aus ihr wählt der Composer ein **Template** (Widget-Set beim Erstellen, Karten-Darstellung beim Anzeigen); sie bleibt am Item, damit Module und User sich darauf beziehen können. `type` ist eine **Menge** von Klassen, meist mit einem Element. Sie ist **ungeordnet** — JSON-LD gibt `@type` keine Reihenfolge, und keine Regel dieser Spec DARF von einer abhängen (siehe „Klassen haben IRIs", Normalisierung). Pro Klasse gehört **ein** Template (Erstellen-Widgets und Anzeige-Karte zusammen); heute als `ContentTypeConfig` je Modul-View definiert; das kanonische, modulübergreifend geteilte **Typ-Register** (nächster Abschnitt) löst diese Streuung ab.
 
 `type` darf tragen: die Composer-Vorlage, die Karten-Wahl in aggregierenden Sichten (Feed, Suche) und **User-Filter** („zeig mir nur Veranstaltungen"). Für die **Modul-Aktivierung** gilt eine zweiteilige Regel:
 
