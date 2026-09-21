@@ -29,6 +29,7 @@ import { filterByAssignee,
   useConnector,
   useItemGroupColorResolver,
   useItemFocus,
+  useModuleHost,
   type ModuleViewProps,
 } from "@real-life-stack/toolkit"
 import { Settings } from "lucide-react"
@@ -92,6 +93,7 @@ function KanbanViewInner({ activeWorkspaceId, groups, items: tasks = [], itemsLo
   const [myItemsOnly, setMyItemsOnly] = useState(false)
   const [assignedTo, setAssignedTo] = useState<string[]>([])
   const modulePanel = useModulePanel()
+  const { activeItemId } = useModuleHost()
   // The shared host owns the detail (read↔edit) for the focused item; a card
   // click just points the URL focus at it (like the other modules). The host
   // opens/closes the panel and runs the group-move on save.
@@ -349,7 +351,7 @@ function KanbanViewInner({ activeWorkspaceId, groups, items: tasks = [], itemsLo
                     users={members}
                     onMoveItem={handleMoveItem}
                     onItemClick={handleItemClick}
-                    activeItemId={modulePanel.current?.itemId}
+                    activeItemId={activeItemId}
                     resolveItemGroupColor={resolveItemGroupColor}
                     renderCardAdornment={renderTaskAdornment}
                     onExternalDrop={externalDropHandlers.get(group.id)}
@@ -378,7 +380,7 @@ function KanbanViewInner({ activeWorkspaceId, groups, items: tasks = [], itemsLo
                   users={members}
                   onMoveItem={handleMoveItem}
                   onItemClick={handleItemClick}
-                  activeItemId={modulePanel.current?.itemId}
+                  activeItemId={activeItemId}
                   resolveItemGroupColor={resolveItemGroupColor}
                   renderCardAdornment={renderTaskAdornment}
                 />
@@ -392,7 +394,7 @@ function KanbanViewInner({ activeWorkspaceId, groups, items: tasks = [], itemsLo
           users={members}
           onMoveItem={handleMoveItem}
           onItemClick={handleItemClick}
-          activeItemId={modulePanel.current?.itemId}
+          activeItemId={activeItemId}
           resolveItemGroupColor={resolveItemGroupColor}
           renderCardAdornment={renderTaskAdornment}
         />

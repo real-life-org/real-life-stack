@@ -1,8 +1,9 @@
 "use client"
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   filterForHint,
+  isAggregateVisibleItemType,
   isWritable,
   type Group,
   type Item,
@@ -11,6 +12,9 @@ import {
 } from "@real-life-stack/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
+import { useCurrentUser } from "../../hooks/use-auth"
+import { useOptionalItemFocus } from "../../hooks/use-item-focus"
+import { useResolvedUsers } from "../../hooks/use-resolved-users"
 import { useGroups, useMembers, usePersonalGroupId } from "../../hooks/use-groups"
 import { useItemDetailEdit } from "../../hooks/use-item-detail-edit"
 import { useItemGroupColorResolver } from "../../hooks/use-item-group-color"
@@ -20,6 +24,8 @@ import { useSpaceVocabulary } from "../../hooks/use-space-vocabulary"
 import type { ModuleEntry } from "../../lib/module-register"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { contentTypesFromRegister, mapComposerSubmission, withGroupOptions } from "../composer/content-types"
+import { useOptionalSharedFilter } from "../filter/filter-store"
+import { useOptionalModulePanel } from "../module-panel/module-panel"
 import { CreateFab } from "../create-fab/create-fab"
 import { useLocationPick } from "../map/location-pick"
 import { ReactionBar } from "../reactions/reaction-bar"
@@ -60,6 +66,29 @@ export interface ModuleHostValue {
   /** Die Items nach dem Ladevertrag, gefiltert wie der Kopf es anzeigt; `undefined`, wenn das Modul selbst laedt. */
   items: Item[] | undefined
   itemsLoading: boolean
+  /** Die angemeldete Person. */
+  currentUser: User | null
+  /**
+   * Wer hat ein Item angelegt — als `User` fuer die Karte: Mitglied des
+   * Space, sonst ich selbst, sonst ueber die Kontakte nachgeschlagen. Vorher
+   * in Feed und Resonanz je einmal geschrieben, im Kanban halb, im Detail
+   * ein viertes Mal.
+   */
+  resolveAuthor: (createdBy: string) => User | undefined
+  /**
+   * Das Item, das gerade offen ist: im geteilten Panel oder, solange es
+   * noch nicht offen ist, im Fokus. Vorher rechnete es jedes Modul selbst,
+   * in drei Varianten.
+   */
+  activeItemId: string | undefined
+  /** Ist Suche, Tag- oder Typfilter gesetzt? Fuer „Keine Treffer" statt „Noch nichts hier". */
+  filterActive: boolean
+  /**
+   * Ein Modul meldet das Element einer Karte; der Host scrollt es in den
+   * Blick, wenn sein Item in den Fokus kommt — auch wenn es erst spaeter
+   * gerendert wird. Als `ref`-Callback benutzen.
+   */
+  registerItemElement: (id: string, el: Element | null) => void
   /**
    * Ein Modul mit eigenem Einstieg ins Schreiben (die Composer-Pille des
    * Feeds) meldet dessen Element; der Plusknopf weicht, solange es im Bild
@@ -110,11 +139,20 @@ interface ItemsValue {
 }
 const ItemsContext = createContext<ItemsValue>({ items: undefined, itemsLoading: false })
 
-function LoadedItems({ filters, children }: { filters: ItemFilter[]; children: ReactNode }) {
+function LoadedItems({ entry, filters, children }: { entry: ModuleEntry; filters: ItemFilter[]; children: ReactNode }) {
   const { data: geladen, isLoading } = useItemsUnionWithDraft(filters)
   // Der geteilte Filter (Suche, Tags, Typen) ist HIER angewendet: Ein Modul
   // bekommt genau das, was der Kopf anzeigt, und kann nichts vergessen.
-  const items = useSurfaceFilteredItems(geladen)
+  const gefiltert = useSurfaceFilteredItems(geladen)
+  // Ein aggregierendes Modul (ohne `presents`: Feed, Liste, Graph) sieht,
+  // was als eigene Karte steht — Kommentare, Reaktionen und Relationen
+  // werden ueber ihr Item gelesen (Spec 06, Modul-Konsequenzen). Vorher
+  // stand diese Regel in jedem dieser Module einzeln.
+  const aggregiert = !(entry.presents?.length)
+  const items = useMemo(
+    () => (aggregiert ? gefiltert.filter((item) => isAggregateVisibleItemType(item.type)) : gefiltert),
+    [aggregiert, gefiltert],
+  )
   const value = useMemo<ItemsValue>(() => ({ items, itemsLoading: isLoading }), [items, isLoading])
   return <ItemsContext.Provider value={value}>{children}</ItemsContext.Provider>
 }
@@ -122,7 +160,7 @@ function LoadedItems({ filters, children }: { filters: ItemFilter[]; children: R
 function HostItems({ entry, children }: { entry: ModuleEntry; children: ReactNode }) {
   const filters = hostFiltersFor(entry)
   if (!filters) return <>{children}</>
-  return <LoadedItems filters={filters}>{children}</LoadedItems>
+  return <LoadedItems entry={entry} filters={filters}>{children}</LoadedItems>
 }
 
 /**
@@ -150,6 +188,56 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
   const personalGroupId = usePersonalGroupId()
   const resolveItemGroupColor = useItemGroupColorResolver(currentSpace)
   const { items, itemsLoading } = useContext(ItemsContext)
+  const { data: currentUser } = useCurrentUser()
+
+  // Autor-Aufloesung: Mitglied → ich selbst → Kontakte (nachgeschlagen nur
+  // fuer die Ids, die die Items dieses Moduls wirklich tragen).
+  const memberMap = useMemo(() => new Map(members.map((m) => [m.id, m])), [members])
+  const unknownAuthorIds = useMemo(
+    () => [...new Set((items ?? []).map(({ createdBy }) => createdBy))].filter((id) => !memberMap.has(id) && id !== currentUser?.id),
+    [items, memberMap, currentUser],
+  )
+  const resolvedAuthors = useResolvedUsers(unknownAuthorIds)
+  const resolveAuthor = useCallback(
+    (createdBy: string): User | undefined =>
+      memberMap.get(createdBy) ?? (currentUser?.id === createdBy ? currentUser : undefined) ?? resolvedAuthors.get(createdBy),
+    [memberMap, currentUser, resolvedAuthors],
+  )
+
+  // Das offene Item: im Panel, sonst im Fokus (das Panel folgt ihm gleich).
+  const focus = useOptionalItemFocus()
+  const panel = useOptionalModulePanel()
+  const focusedId = focus?.itemId
+  const panelItem = panel?.current?.kind === "detail" ? panel.current.itemId : undefined
+  const activeItemId = panelItem ?? focusedId
+
+  const filter = useOptionalSharedFilter()
+  const filterActive = !!filter && (filter.searchText.trim() !== "" || filter.value.tags.length > 0 || filter.value.types.length > 0)
+
+  // In den Blick scrollen, was in den Fokus kommt — einmal je Item, auch
+  // wenn die Karte erst nach dem Fokus gerendert wird (Filter, Nachladen).
+  const elementsRef = useRef(new Map<string, Element>())
+  const revealedRef = useRef<string | null>(null)
+  const focusedRef = useRef<string | undefined>(undefined)
+  focusedRef.current = focusedId
+  const zeige = useCallback((id: string, el: Element) => {
+    if (revealedRef.current === id) return
+    revealedRef.current = id
+    el.scrollIntoView?.({ behavior: "smooth", block: "center" })
+  }, [])
+  const registerItemElement = useCallback((id: string, el: Element | null) => {
+    if (el) {
+      elementsRef.current.set(id, el)
+      if (focusedRef.current === id) zeige(id, el)
+    } else {
+      elementsRef.current.delete(id)
+    }
+  }, [zeige])
+  useEffect(() => {
+    if (!focusedId) { revealedRef.current = null; return }
+    const el = elementsRef.current.get(focusedId)
+    if (el) zeige(focusedId, el)
+  }, [focusedId, items, zeige])
 
   // Bearbeiten und Erstellen teilen die Verdrahtung; die Tag-Vorschlaege
   // kommen aus dem Vokabular des Space (Spec 01, Regel 2a) — vorher hatte
@@ -209,8 +297,9 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
     () => ({
       entry, groupId, isOverview, currentSpace, members, groups, personalGroupId,
       resolveItemGroupColor, items, itemsLoading, setCreateAnchor: setAnchor,
+      currentUser: currentUser ?? null, resolveAuthor, activeItemId, filterActive, registerItemElement,
     }),
-    [entry, groupId, isOverview, currentSpace, members, groups, personalGroupId, resolveItemGroupColor, items, itemsLoading],
+    [entry, groupId, isOverview, currentSpace, members, groups, personalGroupId, resolveItemGroupColor, items, itemsLoading, currentUser, resolveAuthor, activeItemId, filterActive, registerItemElement],
   )
 
   const View = entry.view

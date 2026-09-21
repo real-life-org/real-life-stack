@@ -2,12 +2,10 @@
 
 import { useCallback, useMemo } from "react"
 
-import { useCurrentUser } from "../hooks/use-auth"
 import { useItemFocus } from "../hooks/use-item-focus"
 import { CalendarView } from "../components/calendar/calendar-view"
 import { useCreate } from "../components/host/create-host"
 import { useModuleHost } from "../components/host/module-host"
-import { useModulePanel } from "../components/module-panel/module-panel"
 import type { ModuleViewProps } from "../lib/module-register"
 
 const pad2 = (n: number) => String(n).padStart(2, "0")
@@ -27,9 +25,7 @@ const toLocalDatetime = (d: Date) => `${toLocalDate(d)}T${pad2(d.getHours())}:${
  * und Erstellen noch selbst.
  */
 export function CalendarModule({ items = [] }: ModuleViewProps) {
-  const { resolveItemGroupColor } = useModuleHost()
-  const { data: currentUser } = useCurrentUser()
-  const modulePanel = useModulePanel()
+  const { resolveItemGroupColor, currentUser, activeItemId } = useModuleHost()
   const { itemId: focusedId, focusItem } = useItemFocus()
   const { startCreate, patchCreate, isComposing } = useCreate()
 
@@ -55,7 +51,7 @@ export function CalendarModule({ items = [] }: ModuleViewProps) {
       items={items}
       currentUserId={currentUser?.id}
       resolveItemGroupColor={resolveItemGroupColor}
-      activeItemId={modulePanel.current?.itemId}
+      activeItemId={activeItemId}
       focusDate={focusDate}
       onItemClick={(event) => focusItem(event.id)}
       onCreateEvent={openComposerAt}

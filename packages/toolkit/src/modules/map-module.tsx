@@ -9,7 +9,6 @@ import { useIsCompact } from "../hooks/use-mobile"
 import { useModuleHost } from "../components/host/module-host"
 import { MapView } from "../components/map/map-view"
 import type { MapAdapter } from "../components/map/adapter"
-import { useModulePanel } from "../components/module-panel/module-panel"
 import type { ModuleViewProps } from "../lib/module-register"
 
 const AWAITING_VIEWPORT_FILTER = { hasField: ["__rls_awaiting_viewport__"] }
@@ -42,12 +41,11 @@ function useMapAdapterFactory(): (() => MapAdapter) | null {
  * Referenz-App.
  */
 export function MapModule({ groupId, active = true }: ModuleViewProps) {
-  const { entry, resolveItemGroupColor } = useModuleHost()
+  const { entry, resolveItemGroupColor, activeItemId } = useModuleHost()
   const [bbox, setBbox] = useState<Bounds | undefined>()
   const { data: items, isLoading } = useItems(bbox ? { hasField: ["position"], bbox } : AWAITING_VIEWPORT_FILTER)
   const { itemId: focusedId, focusItem } = useItemFocus()
   const { data: focusedItem } = useItem(active ? (focusedId ?? "") : "")
-  const panel = useModulePanel()
   const compact = useIsCompact()
   const draftItem = useDraftItem()
   const createAdapter = useMapAdapterFactory()
@@ -76,7 +74,7 @@ export function MapModule({ groupId, active = true }: ModuleViewProps) {
       viewportMode="bbox-module"
       onViewportBoundsChange={setBbox}
       active={active}
-      activeItemId={panel.current?.itemId}
+      activeItemId={activeItemId}
       isCompact={compact}
       draftItem={draftItem}
       onItemClick={(item) => focusItem(item.id)}
