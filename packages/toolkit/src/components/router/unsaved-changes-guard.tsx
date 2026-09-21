@@ -1,10 +1,10 @@
+"use client"
+
 import { useCallback } from "react"
 import { useBlocker, type Location } from "react-router-dom"
-import {
-  DiscardChangesDialog,
-  useBeforeUnloadWarning,
-  useUnsavedChanges,
-} from "@real-life-stack/toolkit"
+
+import { useUnsavedChanges } from "../../hooks/use-unsaved-changes"
+import { DiscardChangesDialog, useBeforeUnloadWarning } from "../../hooks/use-unsaved-warning"
 
 /** Does this navigation leave the create/edit context (i.e. discard the open
  *  composer)? True only when we were composing (`?compose`/`?edit`) and the
@@ -26,8 +26,10 @@ function leavesComposer(current: Location, next: Location): boolean {
  *   react-router's `useBlocker`, gated on {@link leavesComposer};
  * - hard reload / tab close / external nav → `useBeforeUnloadWarning`.
  *
- * Dialog und Verlassen-Warnung liegen im Toolkit; hier bleibt nur, was den
- * Router braucht — den kennt das Toolkit bewusst nicht.
+ * Braucht den Router (`useBlocker`, also einen Data-Router) und liegt darum im
+ * Unterpfad `/router`. Bis zum 21.09.2026 stand er in der Referenz-App — und
+ * die Netzwerk-App hatte den Provider, aber nicht den Guard (rls#429, Codex).
+ * Eine App mit Router mountet ihn einmal unter `UnsavedChangesProvider`.
  *
  * Only armed while a composer reports unsaved changes (see `useUnsavedChanges`),
  * so an untouched or empty form never triggers it. Mounted once, under the

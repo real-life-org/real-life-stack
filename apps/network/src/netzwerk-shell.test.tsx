@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
-import { MemoryRouter } from "react-router-dom"
+import { RouterProvider, createMemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MockConnector, type MockConnectorSeed } from "@real-life-stack/mock-connector"
 
@@ -37,12 +37,13 @@ let host: HTMLDivElement
 let root: Root
 let connector: MockConnector
 
+// Unter einem Data-Router, wie in `main.tsx` — der Guard vor Entwurfsverlust braucht ihn.
 async function rendere(pfad: string) {
-  await act(async () => {
-    root.render(createElement(MemoryRouter, { initialEntries: [pfad] }, createElement(App, { connector })))
-  })
+  const router = createMemoryRouter([{ path: "*", element: createElement(App, { connector }) }], { initialEntries: [pfad] })
+  await act(async () => { root.render(createElement(RouterProvider, { router })) })
   // Register, Gruppen und Items kommen über Observables an — einen Tick warten.
   await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
+  return router
 }
 
 beforeEach(async () => {
@@ -78,5 +79,46 @@ describe("Netzwerk-Shell auf dem Modul-Host", () => {
   it("ein Space ohne Marktplatz zeigt keinen", async () => {
     await rendere("/privat/collection")
     expect(tabs()).not.toContain("Marktplatz")
+  })
+})
+
+describe("Schutz vor Entwurfsverlust (Codex-Befund rls#429)", () => {
+  const tippe = (input: HTMLInputElement, wert: string) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!
+    setter.call(input, wert)
+    input.dispatchEvent(new Event("input", { bubbles: true }))
+  }
+  const dialog = () => document.body.textContent?.includes("Änderungen verwerfen?") ?? false
+
+  it("fragt nach, bevor Abbrechen einen begonnenen Entwurf verwirft, und warnt vor dem Neuladen", async () => {
+    const router = await rendere("/dwebcamp/collection?compose=task")
+    const titel = document.body.querySelector<HTMLInputElement>("input[placeholder=\"Titel\"]")
+    expect(titel, "Composer mit Titelfeld offen").toBeTruthy()
+    await act(async () => { tippe(titel!, "Ungespeicherter Entwurf") })
+
+    const reload = new Event("beforeunload", { cancelable: true })
+    window.dispatchEvent(reload)
+    expect(reload.defaultPrevented, "Neuladen wird abgefangen").toBe(true)
+
+    const abbrechen = [...document.body.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Abbrechen")
+    expect(abbrechen, "Abbrechen-Knopf").toBeTruthy()
+    await act(async () => { abbrechen!.click() })
+    expect(dialog(), "Rueckfrage erscheint").toBe(true)
+    expect(router.state.location.search).toContain("compose=task")
+
+    const verwerfen = [...document.body.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Verwerfen")
+    await act(async () => { verwerfen!.click() })
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
+    expect(router.state.location.search).not.toContain("compose")
+    expect(dialog()).toBe(false)
+  })
+
+  it("laesst einen unberuehrten Composer ohne Rueckfrage schliessen", async () => {
+    const router = await rendere("/dwebcamp/collection?compose=task")
+    const abbrechen = [...document.body.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Abbrechen")
+    await act(async () => { abbrechen!.click() })
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
+    expect(dialog()).toBe(false)
+    expect(router.state.location.search).not.toContain("compose")
   })
 })

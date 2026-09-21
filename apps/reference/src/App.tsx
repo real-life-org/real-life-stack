@@ -85,10 +85,9 @@ import { ModuleOutlet } from "./views/module-outlet"
 // die Politik lebt im Router-Unterpfad des Toolkits — seit dem 21.09.2026
 // auch die Auflösung Space/Modul/Item aus der URL und die Route einer
 // Benachrichtigung, die bis dahin hier standen (und in der Netzwerk-App noch einmal).
-import { UrlFocusProvider as ItemFocusProvider, useWorkspaceRouting, STORAGE_KEY_GROUP, notificationRoute } from "@real-life-stack/toolkit/router"
+import { UrlFocusProvider as ItemFocusProvider, useWorkspaceRouting, STORAGE_KEY_GROUP, notificationRoute, UnsavedChangesGuard } from "@real-life-stack/toolkit/router"
 import { CreateHostProvider, CreateSheetController, DetailHostProvider, DetailHostController, useItemFocus } from "@real-life-stack/toolkit"
 import { LocationPickProvider, useLocationPick } from "./location-pick"
-import { UnsavedChangesGuard } from "./unsaved-changes-guard"
 
 
 /**

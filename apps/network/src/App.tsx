@@ -47,7 +47,7 @@ import {
   type NotificationCandidate,
 } from "@real-life-stack/toolkit"
 import { MapLibreAdapterProvider } from "@real-life-stack/toolkit/maplibre"
-import { UrlFocusProvider as ItemFocusProvider, notificationRoute, useWorkspaceRouting } from "@real-life-stack/toolkit/router"
+import { UrlFocusProvider as ItemFocusProvider, UnsavedChangesGuard, notificationRoute, useWorkspaceRouting } from "@real-life-stack/toolkit/router"
 
 const THEME_KEY = "rls-network-theme"
 /** Der Rückfall, wenn kein Feld ein Modul wählt: die Liste (Spec 01, Der Modul-Host). */
@@ -185,6 +185,7 @@ function NetworkShell() {
       />
       <CreateSheetController />
       <DetailHostController activeModule={activeModule} activeGroupId={activeWorkspace?.id ?? null} />
+      <UnsavedChangesGuard />
       <AppShell>
         <Navbar>
           <NavbarStart>

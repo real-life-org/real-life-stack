@@ -23,3 +23,4 @@ export {
   type WorkspaceRoutingOptions,
 } from "./components/router/workspace-routing"
 export { notificationRoute } from "./components/router/notification-route"
+export { UnsavedChangesGuard } from "./components/router/unsaved-changes-guard"
