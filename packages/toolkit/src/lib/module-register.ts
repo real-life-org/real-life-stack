@@ -20,6 +20,7 @@ import type { Group, Item, ModuleHintOptions, ModuleHints } from "@real-life-sta
 import { isAggregateVisibleItemType, moduleHintsFor } from "@real-life-stack/data-interface"
 import type { SelectionFocusVisibleArea } from "./selection-focus"
 import { CalendarModule } from "../modules/calendar-module"
+import { FeedModule } from "../modules/feed-module"
 import { MapModule } from "../modules/map-module"
 import {
   Calendar,
@@ -154,12 +155,12 @@ export interface ModuleFragment extends Partial<Omit<ModuleEntry, "id">> {
 
 /**
  * Die Module, die das Toolkit mitliefert. Reihenfolge = Tab-Reihenfolge.
- * Kalender und Karte bringen ihre Flaeche mit (B0, Schritt 5a); die uebrigen
- * folgen je in einem eigenen Schritt und werden bis dahin von der
+ * Feed, Kalender und Karte bringen ihre Flaeche mit (B0/B1); die uebrigen
+ * folgen je in einem eigenen Schritt (B2–B5) und werden bis dahin von der
  * Referenz-App erweitert.
  */
 export const TOOLKIT_MODULES: readonly ModuleEntry[] = Object.freeze([
-  { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl", options: { suggestType: "post", createShell: "fullscreen" } },
+  { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl", options: { suggestType: "post", createShell: "fullscreen" }, view: FeedModule },
   { id: "kanban", label: "Kanban", icon: Columns3, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["status"], options: { suggestType: "task" } },
   { id: "calendar", label: "Kalender", icon: Calendar, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["start"], options: { suggestType: "event" }, view: CalendarModule },
   { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay", presents: ["position"], loads: "module", options: { suggestType: "place" }, view: MapModule },

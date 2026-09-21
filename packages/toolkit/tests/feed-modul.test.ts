@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
-import { selectFeedItems } from "./feed-view"
+import { selectFeedItems } from "../src/modules/feed-module"
 
 /**
  * The feed is the "what's new in my network" surface: it shows everything that

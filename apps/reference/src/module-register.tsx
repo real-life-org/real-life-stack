@@ -1,9 +1,9 @@
 // Erweiterung der Referenz-App am Modul-Register (Spec 01, Regel 2).
 //
-// Das Toolkit definiert die Module. Kalender und Karte bringen ihre Flaeche
-// aus dem Toolkit mit (B0, Schritt 5a); die uebrigen fuenf erweitert diese
+// Das Toolkit definiert die Module. Feed, Kalender und Karte bringen ihre
+// Flaeche aus dem Toolkit mit (B0, B1); die uebrigen vier erweitert diese
 // App noch um ihre Flaeche, bis sie je in einem eigenen Schritt umziehen
-// (B1–B5). Eine Flaeche des Toolkits ERSETZEN darf sie auch — dann mit
+// (B2–B5). Eine Flaeche des Toolkits ERSETZEN darf sie auch — dann mit
 // `replaces: ["view"]` am Fragment (Spec 01, Regel 2).
 //
 // Einmal importieren, vor dem ersten Render (main.tsx).
@@ -14,7 +14,6 @@ import {
   setModuleRegistry,
   type ModuleViewProps,
 } from "@real-life-stack/toolkit"
-import { FeedView } from "./views/feed-view"
 import { KanbanView } from "./views/kanban-view"
 import { CollectionView } from "./views/collection-view"
 import { ResonanceView } from "./views/resonance-view"
@@ -22,7 +21,6 @@ import { GraphViewWrapper } from "./views/graph-view"
 
 // Die Ansichten lesen Items und Kontext vom Host (Spec 01, Der Modul-Host);
 // Detail, Erstellen und Plusknopf stellt er selbst.
-const Feed = (p: ModuleViewProps) => <FeedView {...p} />
 const Resonance = (p: ModuleViewProps) => <ResonanceView {...p} />
 const Graph = ({ groupId, items }: ModuleViewProps) => <GraphViewWrapper groupId={groupId || "__overview__"} items={items} />
 const Kanban = ({ groupId, groups, items, itemsLoading }: ModuleViewProps) => (
@@ -36,7 +34,6 @@ const Collection = ({ items, selectionFocusVisibleArea }: ModuleViewProps) => (
 export const MODULE_REGISTRY = composeModules([
   TOOLKIT_DEFINITION,
   { name: "app", extensions: [
-    { id: "feed", view: Feed },
     { id: "kanban", view: Kanban },
     { id: "resonance", view: Resonance },
     { id: "collection", view: Collection },

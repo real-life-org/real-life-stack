@@ -3,9 +3,7 @@ import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
 import { beforeEach, describe, expect, it } from "vitest"
 import { MockConnector } from "@real-life-stack/mock-connector"
-import { ConnectorProvider, ItemDetailRead } from "@real-life-stack/toolkit"
-
-import { feedFooter, selectFeedItems } from "./views/feed-view"
+import { ConnectorProvider, ItemDetailRead, feedFooter, selectFeedItems } from "@real-life-stack/toolkit"
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
