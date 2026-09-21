@@ -4,8 +4,7 @@ import type { Item } from "@real-life-stack/data-interface"
 
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { cn } from "../../lib/utils"
-import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
-import { ModuleSurfaceScope } from "../layout/module-surface-scope"
+import { ModuleSurfaceScope, useSurfaceItems } from "../layout/module-surface-scope"
 import { ModuleToolbar } from "../layout/module-toolbar"
 import { Button } from "../primitives/button"
 import { GridView } from "./grid-view"
@@ -87,14 +86,13 @@ export interface CollectionViewProps {
  */
 export function CollectionView(props: CollectionViewProps) {
   return (
-    <ModuleSurfaceScope fill="bleed" maxWidth="max-w-6xl">
+    <ModuleSurfaceScope fill="bleed" maxWidth="max-w-6xl" items={props.items}>
       <CollectionViewInner {...props} />
     </ModuleSurfaceScope>
   )
 }
 
 function CollectionViewInner({
-  items,
   activeItemId,
   onItemClick,
   defaultLayout = "list",
@@ -103,11 +101,9 @@ function CollectionViewInner({
   selectionFocusVisibleArea,
   className,
 }: CollectionViewProps) {
-  // Der geteilte Filter (Suche, Tags, Typen) wirkt IN der Lens — auch
-  // freistehend und in einer App, die sie ohne Host einsetzt. Vorher wandte
-  // ihn nur das Modul darueber an, und die Story unter „Gemeinsame Ansichten"
-  // suchte ins Leere (Anton, 21.09.2026).
-  const gefiltert = useModuleFilteredItems(items)
+  // Die Items kommen gefiltert von der Flaeche — freistehend wie unter dem
+  // Host; die Lens wendet keinen Filter selbst an (Spec 01, Regel 2a).
+  const gefiltert = useSurfaceItems()
   const [eigenes, setEigenes] = useState<CollectionLayout>(defaultLayout)
   const gesteuert = layoutProp !== undefined
   const layout = layoutProp ?? eigenes

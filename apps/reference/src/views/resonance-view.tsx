@@ -11,7 +11,6 @@ import { aggregateVoteStats,
   renderTypeFooter,
   useCurrentUser,
   useItemGroupColorResolver,
-  useModuleFilteredItems,
   useSharedFilter,
   useMembers,
   useModulePanel,
@@ -78,7 +77,8 @@ export function ResonanceView({ groupId, items: statements = [], itemsLoading: i
   // Sortierung gehoert diesem Modul.
   const { value: filterBarValue, searchText } = useSharedFilter()
   const [sortMode, setSortMode] = useState<ResonanceSortMode>("newest")
-  const filteredStatements = useModuleFilteredItems(statements)
+  // Suche, Tags und Typen hat der Host schon angewendet.
+  const filteredStatements = statements
   const voteStats = useMemo(() => aggregateVoteStats(verifiedVoteRecords), [verifiedVoteRecords])
   const sortedStatements = useMemo(
     () => sortStatements(filteredStatements, voteStats, sortMode),

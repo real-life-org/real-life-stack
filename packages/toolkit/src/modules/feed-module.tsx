@@ -5,7 +5,6 @@ import { FileText, SearchX } from "lucide-react"
 import { isAggregateVisibleItemType, type Item, type User } from "@real-life-stack/data-interface"
 
 import { useCurrentUser } from "../hooks/use-auth"
-import { useModuleFilteredItems } from "../hooks/use-filterable-items"
 import { useItemGroupResolver, useItemPrivacyResolver } from "../hooks/use-item-group-color"
 import { useItemFocus } from "../hooks/use-item-focus"
 import { useResolvedUsers } from "../hooks/use-resolved-users"
@@ -116,7 +115,9 @@ export function FeedModule({ items = [], itemsLoading: isLoading = false }: Modu
   // Filter und Suche gehoeren der App-Shell, nicht diesem View: Der Kopf der
   // Modulflaeche zeigt sie, und beim Wechsel ins Kanban wirken sie weiter.
   const { value: filterBarValue, searchText } = useSharedFilter()
-  const filteredFeedItems = useModuleFilteredItems(feedItems)
+  // `items` kommen vom Host bereits gefiltert; hier zaehlt der Zustand nur
+  // noch fuer den Text des leeren Zustands.
+  const filteredFeedItems = feedItems
   // The type filter offers the types actually PRESENT — same derivation as the
   // tags above. Label and icon come from the type register (spec 06), so a new
   // type is filterable without touching this view. `type` may drive a user

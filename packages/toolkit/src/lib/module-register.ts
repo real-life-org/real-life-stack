@@ -67,8 +67,10 @@ export interface ModuleViewProps {
   /** Sichtbarer Bereich fuer Fokus-Scrolling (siehe selection-focus.ts). */
   selectionFocusVisibleArea?: SelectionFocusVisibleArea
   /**
-   * Die Items nach dem Ladevertrag, vom Host geladen (Spec 01, Der
-   * Modul-Host). `undefined`, wenn das Modul selbst laedt (`loads: "module"`).
+   * Die Items nach dem Ladevertrag, vom Host geladen und mit dem geteilten
+   * Filter (Suche, Tags, Typen) bereits angewendet (Spec 01, Der Modul-Host,
+   * Regel 2a): genau das, was der Kopf anzeigt. `undefined`, wenn das Modul
+   * selbst laedt (`loads: "module"`) — dann filtert es auch selbst.
    */
   items?: Item[]
   itemsLoading?: boolean

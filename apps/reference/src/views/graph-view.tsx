@@ -6,7 +6,6 @@ import {
   GraphView,
   ModuleToolbar,
   resolveTypePresentation,
-  useModuleFilteredItems,
   useMembers,
   useRelationRecords,
   type GraphViewHandle,
@@ -32,10 +31,9 @@ import { useModulePanel } from "@real-life-stack/toolkit"
 
 export function GraphViewWrapper({ groupId, items: alleItems = [] }: Pick<ModuleViewProps, "groupId" | "items">) {
   // Der Graph aggregiert: der Host laedt ungefiltert (kein `presents`).
-  // Der Graph filtert wie jedes andere Modul — nur schwebt seine Leiste ueber
-  // der Flaeche, statt in einem Kopf zu sitzen (`panelFit: "overlay"`,
-  // Spec 01, Regel 5). Der Wert ist derselbe wie im Feed daneben.
-  const items = useModuleFilteredItems(alleItems)
+  // Suche, Tags und Typen hat der Host schon angewendet — nur schwebt die
+  // Leiste hier ueber der Flaeche statt in einem Kopf (`panelFit: "overlay"`).
+  const items = alleItems
   const { data: records } = useRelationRecords()
   const { data: members } = useMembers(groupId === "__overview__" ? null : groupId)
   const { focusItem, itemId: focusedItemId, clearFocus } = useItemFocus()

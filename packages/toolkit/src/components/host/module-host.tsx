@@ -14,6 +14,7 @@ import { useConnector } from "../../hooks/connector-context"
 import { useGroups, useMembers, usePersonalGroupId } from "../../hooks/use-groups"
 import { useItemDetailEdit } from "../../hooks/use-item-detail-edit"
 import { useItemGroupColorResolver } from "../../hooks/use-item-group-color"
+import { useSurfaceFilteredItems } from "../../hooks/use-filterable-items"
 import { useItemsUnionWithDraft } from "../../hooks/use-items"
 import { useSpaceVocabulary } from "../../hooks/use-space-vocabulary"
 import type { ModuleEntry } from "../../lib/module-register"
@@ -56,7 +57,7 @@ export interface ModuleHostValue {
   personalGroupId: string | null
   /** Farbe des Herkunfts-Space eines Items — fuer aktive Karten und Marker. */
   resolveItemGroupColor: (item: Item) => string
-  /** Die Items nach dem Ladevertrag; `undefined`, wenn das Modul selbst laedt. */
+  /** Die Items nach dem Ladevertrag, gefiltert wie der Kopf es anzeigt; `undefined`, wenn das Modul selbst laedt. */
   items: Item[] | undefined
   itemsLoading: boolean
   /**
@@ -110,7 +111,10 @@ interface ItemsValue {
 const ItemsContext = createContext<ItemsValue>({ items: undefined, itemsLoading: false })
 
 function LoadedItems({ filters, children }: { filters: ItemFilter[]; children: ReactNode }) {
-  const { data: items, isLoading } = useItemsUnionWithDraft(filters)
+  const { data: geladen, isLoading } = useItemsUnionWithDraft(filters)
+  // Der geteilte Filter (Suche, Tags, Typen) ist HIER angewendet: Ein Modul
+  // bekommt genau das, was der Kopf anzeigt, und kann nichts vergessen.
+  const items = useSurfaceFilteredItems(geladen)
   const value = useMemo<ItemsValue>(() => ({ items, itemsLoading: isLoading }), [items, isLoading])
   return <ItemsContext.Provider value={value}>{children}</ItemsContext.Provider>
 }
