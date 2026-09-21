@@ -206,7 +206,7 @@ function getInitials(name: string): string {
  * cards of work per update. The memo only bites where the surface hands over
  * stable props; a freshly built `headerAdornment` or an inline `onClick`
  * defeats it, so a surface builds its row in a component of its own (see
- * `FeedCard` in feed-view.tsx, `KanbanCard` here in the toolkit).
+ * `FeedCard` in modules/feed-module.tsx, `KanbanCard` here in the toolkit).
  */
 export const ItemPreview = memo(function ItemPreview({
   item,

@@ -1,33 +1,31 @@
+"use client"
+
 import { memo, useMemo, useCallback, useEffect, useRef } from "react"
-import {
-  useModulePanel,
-  ReactionBar,
-  ItemPreview,
-  ItemPreviewSkeleton,
-  EmptyState,
-  ItemTypeBadge,
-  ItemGroupBadge,
-  ItemPrivateBadge,
-  ItemMetaRow,
-  ItemCommentCount,
-  FeedComposerTrigger,
-  ModuleToolbar,
-  useModuleFilteredItems,
-  useSharedFilter,
-  useMembers,
-  useCurrentUser,
-  useResolvedUsers,
-  useItemGroupColorResolver,
-  useItemFocus,
-  useCreate,
-  useModuleHost,
-  type ModuleViewProps,
-  useItemGroupResolver,
-  useItemPrivacyResolver,
-} from "@real-life-stack/toolkit"
 import { FileText, SearchX } from "lucide-react"
-import { renderTypeFooter } from "@real-life-stack/toolkit"
 import { isAggregateVisibleItemType, type Item, type User } from "@real-life-stack/data-interface"
+
+import { useCurrentUser } from "../hooks/use-auth"
+import { useModuleFilteredItems } from "../hooks/use-filterable-items"
+import { useItemGroupResolver, useItemPrivacyResolver } from "../hooks/use-item-group-color"
+import { useItemFocus } from "../hooks/use-item-focus"
+import { useResolvedUsers } from "../hooks/use-resolved-users"
+import { FeedComposerTrigger } from "../components/feed/feed-composer-trigger"
+import { useSharedFilter } from "../components/filter/filter-store"
+import { useCreate } from "../components/host/create-host"
+import { useModuleHost } from "../components/host/module-host"
+import { ModuleToolbar } from "../components/layout/module-toolbar"
+import { useModulePanel } from "../components/module-panel/module-panel"
+import { ItemCommentCount } from "../components/preview/item-comment-count"
+import { ItemGroupBadge } from "../components/preview/item-group-badge"
+import { ItemMetaRow } from "../components/preview/item-meta-row"
+import { ItemPreview } from "../components/preview/item-preview"
+import { ItemPreviewSkeleton } from "../components/preview/item-preview-skeleton"
+import { ItemPrivateBadge } from "../components/preview/item-private-badge"
+import { ItemTypeBadge } from "../components/preview/item-type-badge"
+import { renderTypeFooter } from "../components/preview/type-presentation"
+import { EmptyState } from "../components/primitives/empty-state"
+import { ReactionBar } from "../components/reactions/reaction-bar"
+import type { ModuleViewProps } from "../lib/module-register"
 
 /**
  * Everything new in the network, newest first: the feed is an AGGREGATING view
@@ -45,17 +43,18 @@ export function selectFeedItems(items: readonly Item[]): Item[] {
   return items.filter((item) => isAggregateVisibleItemType(item.type)).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
-export function FeedView({ groupId, items = [], itemsLoading: isLoading = false }: Pick<ModuleViewProps, "groupId" | "items" | "itemsLoading">) {
-  // Der Host laedt UNGEFILTERT (kein `presents` im Eintrag): the feed's job is
-  // "what's new here", so it reads the scope's items and drops only what has
-  // no card of its own (see selectFeedItems). A field-based query would tie
-  // feed membership to `data.content` — a place with a description would show
-  // up, the same place without one would not.
-  // `groupId === "__overview__"` is the cross-space aggregate view
-  // ("Mein Netzwerk"). useMembers(null) returns the union of all
-  // members the connector knows about, so author resolution still
-  // resolves the items that surface here from other spaces.
-  const { data: members } = useMembers(groupId === "__overview__" ? null : groupId)
+/**
+ * Das Feed-Modul, vollstaendig aus dem Toolkit (Spec 01, Der Modul-Host; B1,
+ * 21.09.2026 — bis dahin `FeedView` in der Referenz-App). Der Host laedt
+ * UNGEFILTERT (kein `presents` im Eintrag): the feed's job is "what's new
+ * here", so it reads the scope's items and drops only what has no card of its
+ * own (see selectFeedItems). A field-based query would tie feed membership to
+ * `data.content` — a place with a description would show up, the same place
+ * without one would not. Mitglieder, Aggregat-Fall und Gruppenfarben kommen
+ * vom Host; Detail, Erstellen (Vollbild) und Plusknopf stellt er.
+ */
+export function FeedModule({ items = [], itemsLoading: isLoading = false }: ModuleViewProps) {
+  const { members, isOverview, resolveItemGroupColor, setCreateAnchor } = useModuleHost()
   const { data: currentUser } = useCurrentUser()
 
   const feedItems = useMemo(() => selectFeedItems(items), [items])
@@ -92,9 +91,6 @@ export function FeedView({ groupId, items = [], itemsLoading: isLoading = false 
   // `/{scope}/feed/{id}` and an effect below opens the detail + scrolls to it;
   // browser-back clears the URL and closes the panel.
   const { itemId: focusedId, focusItem } = useItemFocus()
-  // Active-item glow uses the colour of each item's origin group.
-  const isOverview = groupId === "__overview__"
-  const resolveItemGroupColor = useItemGroupColorResolver(isOverview ? undefined : groupId)
   // Origin group per item — only surfaced as a badge in the aggregate view.
   const resolveItemGroup = useItemGroupResolver()
   // Private items (in the personal space, shared with nobody) get a „Privat" badge.
@@ -135,9 +131,9 @@ export function FeedView({ groupId, items = [], itemsLoading: isLoading = false 
   const { startCreate } = useCreate()
 
   // Die Pille ist der Einstieg ins Schreiben, solange sie im Bild ist; der
-  // Plusknopf des Hosts beobachtet sie und tritt an ihre Stelle, sobald sie
-  // weggescrollt ist (Spec shared-components → „Feed-Sonderfall").
-  const { setCreateAnchor } = useModuleHost()
+  // Plusknopf des Hosts beobachtet sie (`setCreateAnchor`) und tritt an ihre
+  // Stelle, sobald sie weggescrollt ist (Spec shared-components →
+  // „Feed-Sonderfall").
 
   // Stable so a card's wrapper keeps its ref callback across renders —
   // otherwise React detaches and reattaches every card on every render of the

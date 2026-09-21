@@ -4,4 +4,5 @@ export { ModuleHost, useModuleHost, useOptionalModuleHost, hostFiltersFor, type 
 export { ModuleOutlet, type ModuleOutletProps } from "./module-outlet"
 export { MapAdapterProvider } from "../../modules/map-module"
 export { CalendarModule } from "../../modules/calendar-module"
+export { FeedModule, selectFeedItems, feedFooter } from "../../modules/feed-module"
 export { MapModule } from "../../modules/map-module"

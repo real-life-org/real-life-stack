@@ -54,10 +54,10 @@ describe("Modul-Register", () => {
 
   it("lets an app attach its view to a core id", () => {
     setModuleRegistry(
-      composeModules([TOOLKIT_DEFINITION, { name: "app", extensions: [{ id: "feed", view: Dummy }] }]),
+      composeModules([TOOLKIT_DEFINITION, { name: "app", extensions: [{ id: "kanban", view: Dummy }] }]),
     )
-    expect(getModule("feed")?.view).toBe(Dummy)
-    expect(getModule("feed")?.label).toBe(TOOLKIT_MODULES.find((m) => m.id === "feed")!.label)
+    expect(getModule("kanban")?.view).toBe(Dummy)
+    expect(getModule("kanban")?.label).toBe(TOOLKIT_MODULES.find((m) => m.id === "kanban")!.label)
   })
 })
 
@@ -85,19 +85,19 @@ describe("Konflikte werden abgelehnt, nicht aufgeloest (Review #277)", () => {
     expect(() =>
       composeModules([
         TOOLKIT_DEFINITION,
-        { name: "app", extensions: [{ id: "feed", view: Dummy }] },
-        { name: "space", extensions: [{ id: "feed", view: Dummy }] },
+        { name: "app", extensions: [{ id: "kanban", view: Dummy }] },
+        { name: "space", extensions: [{ id: "kanban", view: Dummy }] },
       ]),
-    ).toThrow(/feed/)
+    ).toThrow(/kanban/)
   })
 
   it("rejects two fragments in the SAME layer setting the same field", () => {
     expect(() =>
       composeModules([
         TOOLKIT_DEFINITION,
-        { name: "app", extensions: [{ id: "feed", view: Dummy }, { id: "feed", view: Dummy }] },
+        { name: "app", extensions: [{ id: "kanban", view: Dummy }, { id: "kanban", view: Dummy }] },
       ]),
-    ).toThrow(/feed/)
+    ).toThrow(/kanban/)
   })
 
   it("rejects a fragment that would overwrite a field the base sets", () => {
@@ -116,8 +116,8 @@ describe("Konflikte werden abgelehnt, nicht aufgeloest (Review #277)", () => {
     try {
       composeModules([
         TOOLKIT_DEFINITION,
-        { name: "app", extensions: [{ id: "feed", view: Dummy }] },
-        { name: "space:garten", extensions: [{ id: "feed", view: Dummy }] },
+        { name: "app", extensions: [{ id: "kanban", view: Dummy }] },
+        { name: "space:garten", extensions: [{ id: "kanban", view: Dummy }] },
       ])
       throw new Error("kein Konflikt gemeldet")
     } catch (e) {
@@ -138,11 +138,11 @@ describe("Das Register ist unveraenderlich (Review #277)", () => {
   })
 
   it("does not leak the composed entries into a later composition", () => {
-    const a = composeModules([TOOLKIT_DEFINITION, { name: "app", extensions: [{ id: "feed", view: Dummy }] }])
+    const a = composeModules([TOOLKIT_DEFINITION, { name: "app", extensions: [{ id: "kanban", view: Dummy }] }])
     const b = composeModules([TOOLKIT_DEFINITION])
-    expect(a.find((m) => m.id === "feed")?.view).toBe(Dummy)
+    expect(a.find((m) => m.id === "kanban")?.view).toBe(Dummy)
     // Die zweite Komposition darf von der ersten nichts wissen.
-    expect(b.find((m) => m.id === "feed")?.view).toBeUndefined()
+    expect(b.find((m) => m.id === "kanban")?.view).toBeUndefined()
   })
 
   it("refuses a second, different binding", () => {
