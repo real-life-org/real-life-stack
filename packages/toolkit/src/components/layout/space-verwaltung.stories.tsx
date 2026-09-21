@@ -1,6 +1,6 @@
 import { useState } from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { Group } from "@real-life-stack/data-interface"
+import type { ContactInfo, Group } from "@real-life-stack/data-interface"
 import { GroupDialog, type GroupDialogMode } from "./group-dialog"
 import { SpaceThemePanel } from "./space-theme-panel"
 import { Button } from "../primitives/button"
@@ -31,6 +31,18 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
+/**
+ * Kontakte, die noch nicht im Garten sind: Nur sie bietet der Bereich
+ * „Einladen" an. Ohne Einlade-Handler gibt es den Bereich gar nicht — so
+ * fehlte er hier bis zum 21.09.2026 (Anton).
+ */
+const SEIT = "2026-09-01T10:00:00.000Z"
+const KONTAKTE: ContactInfo[] = [
+  { id: "kim", name: "Kim Adeyemi", status: "active", createdAt: SEIT, updatedAt: SEIT },
+  { id: "noor", name: "Noor Haddad", status: "active", createdAt: SEIT, updatedAt: SEIT },
+  { id: "jonas", name: "Jonas Klein", status: "active", createdAt: SEIT, updatedAt: SEIT },
+]
+
 function DialogStory({ mode }: { mode: GroupDialogMode }) {
   const [open, setOpen] = useState(true)
   return (
@@ -41,10 +53,11 @@ function DialogStory({ mode }: { mode: GroupDialogMode }) {
         onOpenChange={setOpen}
         mode={mode}
         currentUserId="mira"
-        contacts={[]}
+        contacts={KONTAKTE}
         onCreateGroup={async () => setOpen(false)}
         onUpdateGroup={async () => {}}
         onDeleteGroup={async () => setOpen(false)}
+        onInviteMember={async () => {}}
       />
     </div>
   )
@@ -55,7 +68,7 @@ export const Anlegen: Story = {
   render: () => <DialogStory mode={{ type: "create" }} />,
 }
 
-/** Bearbeiten: Name, Mitglieder, Aussehen, Löschen — alles am selben Ort. */
+/** Bearbeiten: Name, Mitglieder, Einladen, Aussehen, Module, Löschen — alles am selben Ort. */
 export const Bearbeiten: Story = {
   render: () => <DialogStory mode={{ type: "edit", group: GARTEN }} />,
 }

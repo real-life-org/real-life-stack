@@ -14,6 +14,9 @@ const meta: Meta<typeof CollectionView> = {
   title: "RLS/Module/Gemeinsame Ansichten/Sammlung",
   component: CollectionView,
   tags: ["autodocs"],
+  // Die Modulflaeche ist eine Spalte mit fester Hoehe; ohne sie faellt der
+  // Rahmen zusammen und die schwebende Filter-Pille landet auf der ersten Karte.
+  decorators: [(Story) => <div className="h-[36rem]"><Story /></div>],
   parameters: {
     docs: {
       description: {
@@ -42,7 +45,4 @@ const thousandItems: Item[] = Array.from({ length: 1000 }, (_, index) => ({
 }))
 
 /** Deterministic large fixture with uneven cards for the order-stable masonry grid. */
-export const ThousandItems: Story = {
-  args: { items: thousandItems },
-  decorators: [(Story) => <div className="h-[36rem]"><Story /></div>],
-}
+export const ThousandItems: Story = { args: { items: thousandItems } }

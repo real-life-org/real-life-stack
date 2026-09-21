@@ -147,19 +147,10 @@ describe("read-only lenses", () => {
     const listMarkup = renderToStaticMarkup(createElement(CollectionView, { items, activeItemId: "task-1" }))
     const gridMarkup = renderToStaticMarkup(createElement(CollectionView, { items, activeItemId: "task-1", defaultLayout: "grid" }))
 
-    // Zugänglicher Zustands-Toggle: stabile Namen + aria-pressed je Button
-    // (nie Aktions-Label mit Zustands-Attribut mischen).
-    expect(listMarkup).toContain('aria-label="Listenansicht" aria-pressed="true"')
-    expect(listMarkup).toContain('aria-label="Rasteransicht" aria-pressed="false"')
+    // Der Umschalter sitzt im Kopf der Flaeche (Portal) und ist darum im
+    // statischen Markup nicht sichtbar — siehe listenbreite.test.tsx (jsdom).
     expect(listMarkup).toContain('data-preview-density="compact"')
-    expect(gridMarkup).toContain('aria-label="Rasteransicht" aria-pressed="true"')
-    expect(gridMarkup).toContain('aria-label="Listenansicht" aria-pressed="false"')
     expect(gridMarkup).toContain('data-preview-density="comfortable"')
-    // Die Umschaltzeile steht auf derselben Kante wie die Eintraege: dieselbe
-    // Breite aus derselben Quelle (`useModuleContentClass`).
-    for (const markup of [listMarkup, gridMarkup]) {
-      expect(markup).toMatch(/class="mx-auto w-full px-4 sm:px-6 max-w-6xl flex justify-end pt-4 sm:pt-6"/)
-    }
     expect(collectionFocusGateKey("list", "task-1")).toBe("list:task-1")
     expect(collectionFocusGateKey("grid", "task-1")).toBe("grid:task-1")
 

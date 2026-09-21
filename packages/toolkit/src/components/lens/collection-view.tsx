@@ -5,7 +5,7 @@ import type { Item } from "@real-life-stack/data-interface"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { cn } from "../../lib/utils"
 import { ModuleSurfaceScope } from "../layout/module-surface-scope"
-import { useModuleContentClass } from "../layout/module-frame"
+import { ModuleToolbar } from "../layout/module-toolbar"
 import { Button } from "../primitives/button"
 import { GridView } from "./grid-view"
 import { ListView } from "./list-view"
@@ -102,7 +102,6 @@ function CollectionViewInner({
   selectionFocusVisibleArea,
   className,
 }: CollectionViewProps) {
-  const inhaltsbreite = useModuleContentClass()
   const [eigenes, setEigenes] = useState<CollectionLayout>(defaultLayout)
   const gesteuert = layoutProp !== undefined
   const layout = layoutProp ?? eigenes
@@ -113,10 +112,12 @@ function CollectionViewInner({
 
   return (
     <section aria-label="Sammlungsansicht" className={cn("flex h-full min-h-0 flex-col gap-4", className)}>
+      {/* Der Umschalter ist ein Steuerelement des Moduls und gehoert in den
+          Kopf neben die Suche (Spec 01, Regel 2) — freistehend genauso wie
+          unter der App, wo die Ansicht ihn ueber dieselbe Leiste hineinreicht.
+          Vorher stand er hier in einer eigenen Zeile mit eigenem Abstand. */}
       {!gesteuert && (
-        <div className={cn(inhaltsbreite, "flex justify-end pt-4 sm:pt-6")}>
-          <CollectionLayoutToggle layout={layout} onChange={setLayout} />
-        </div>
+        <ModuleToolbar trailingActions={<CollectionLayoutToggle layout={layout} onChange={setLayout} />} />
       )}
       <div className="min-h-0 flex-1">
         {layout === "list" ? (
