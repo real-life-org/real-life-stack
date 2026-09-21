@@ -21,6 +21,7 @@ import {
   approachOpacity,
   createLayoutNodes,
   displayRadius,
+  approachCamera,
   fitCamera,
   focusCamera,
   interpolateCamera,
@@ -58,6 +59,13 @@ interface FocusTarget {
   startedAt: number
   startCamera: GraphCamera
   settled: boolean
+}
+
+/** Eine Kamerafahrt auf die ganze Ausdehnung — dieselbe Kurve wie der Knotenfokus. */
+interface FitTween {
+  startedAt: number
+  from: GraphCamera
+  to: GraphCamera
 }
 
 interface DrawOptions {
@@ -109,9 +117,12 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
   const cameraRef = useRef<GraphCamera>({ x: 0, y: 0, zoom: 0.42 })
   const alphaRef = useRef(1)
   const frameRef = useRef<number | null>(null)
-  const autoFitFrameRef = useRef(0)
-  const autoFitPassRef = useRef(0)
+  /** Vor dem ersten Bild eines neuen Bestands: Kamera sofort passend, ohne Fahrt. */
+  const pendingInitialFitRef = useRef(false)
+  /** Solange sich ein neuer Bestand ordnet, folgt die Kamera ihm weich — bis der Nutzer eingreift. */
+  const followFitRef = useRef(false)
   const fitOnSettleRef = useRef(false)
+  const fitTweenRef = useRef<FitTween | null>(null)
   const initializedRef = useRef(false)
   const imagesRef = useRef(new Map<string, HTMLImageElement | null>())
   const nodeOpacityRef = useRef(new Map<string, number>())
@@ -146,17 +157,46 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     })
   }, [])
 
-  const fitView = useCallback(() => {
+  /**
+   * Die Kamera auf die ganze Ausdehnung — als Fahrt, nicht als Sprung. Drei
+   * harte Spruenge nach dem Aufbau waren das „Zucken" (Anton, 21.09.2026).
+   * `instant` nur vor dem ersten Bild und bei reduzierter Bewegung.
+   */
+  const fitView = useCallback((options?: { instant?: boolean }) => {
     focusTargetRef.current = null
-    cameraRef.current = fitCamera(layoutRef.current, viewportRef.current.width, viewportRef.current.height)
+    const target = fitCamera(layoutRef.current, viewportRef.current.width, viewportRef.current.height)
+    if (options?.instant || prefersReducedMotionRef.current) {
+      fitTweenRef.current = null
+      cameraRef.current = target
+    } else {
+      fitTweenRef.current = { startedAt: performance.now(), from: { ...cameraRef.current }, to: target }
+    }
     scheduleDraw()
   }, [scheduleDraw])
+
+  /**
+   * Der Nutzer greift zur Kamera (Ziehen, Zoomen, Kneifen): Jede automatische
+   * Fahrt endet — die laufende, das Folgen UND der noch ausstehende Fit beim
+   * Einrasten. Sonst schriebe das naechste Bild seine Eingabe wieder um
+   * (Codex-Review zu #420, rls#421).
+   */
+  const userTakesCamera = useCallback(() => {
+    focusTargetRef.current = null
+    fitTweenRef.current = null
+    followFitRef.current = false
+    fitOnSettleRef.current = false
+    pendingInitialFitRef.current = false
+  }, [])
+
+  const getCamera = useCallback(() => ({ ...cameraRef.current }), [])
 
   const focusNode = useCallback((nodeId: string, options?: { bottomInset?: number }) => {
     const node = layoutRef.current.find((candidate) => candidate.id === nodeId)
     if (!node) return
-    autoFitFrameRef.current = 0
+    pendingInitialFitRef.current = false
+    followFitRef.current = false
     fitOnSettleRef.current = false
+    fitTweenRef.current = null
     focusTargetRef.current = {
       nodeId,
       bottomInset: options?.bottomInset ?? 0,
@@ -167,7 +207,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     scheduleDraw()
   }, [scheduleDraw])
 
-  useImperativeHandle(ref, () => ({ fitView, focusNode }), [fitView, focusNode])
+  useImperativeHandle(ref, () => ({ fitView, focusNode, getCamera }), [fitView, focusNode, getCamera])
 
   useEffect(() => {
     selectedRef.current = selectedNodeId
@@ -190,12 +230,16 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
       if (!edgeIds.has(id)) edgeOpacityRef.current.delete(id)
     }
     alphaRef.current = nodes.length > 0 ? 1 : 0
-    if (!initializedRef.current) {
-      initializedRef.current = true
-      autoFitPassRef.current = 0
-      autoFitFrameRef.current = 1
-      fitOnSettleRef.current = nodes.length > 0
+    // Ein NEUER Bestand (erster Aufbau, Space-Wechsel): Die Kamera sitzt im
+    // ersten Bild und folgt dann dem Netz, waehrend es sich ordnet. Die
+    // Bewegung der Simulation bleibt sichtbar; nur die Spruenge sind weg.
+    const alleNeu = nodes.length > 0 && !nodes.some((node) => previous.has(node.id))
+    if (alleNeu) {
+      pendingInitialFitRef.current = true
+      followFitRef.current = true
+      fitOnSettleRef.current = true
     }
+    initializedRef.current = true
     scheduleDraw()
   }, [nodes, validEdges, scheduleDraw])
 
@@ -214,10 +258,11 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
 
   useEffect(() => {
     if (fitViewKey === undefined) return
-    autoFitPassRef.current = 0
-    autoFitFrameRef.current = 1
+    pendingInitialFitRef.current = nodes.length > 0
+    followFitRef.current = nodes.length > 0
     fitOnSettleRef.current = nodes.length > 0
     scheduleDraw()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitViewKey, scheduleDraw])
 
   useEffect(() => {
@@ -321,6 +366,24 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
       ? 16
       : Math.min(32, Math.max(0, now - transitionFrameTimeRef.current))
     if (advanceTransitions) transitionFrameTimeRef.current = now
+    // Der erste Blick auf einen neuen Bestand sitzt schon im ersten Bild —
+    // nicht ein Bild spaeter mit Sprung.
+    if (advanceSimulation && pendingInitialFitRef.current && layoutRef.current.length > 0 && viewport.width > 1) {
+      pendingInitialFitRef.current = false
+      fitView({ instant: true })
+    }
+    let fitAnimating = false
+    const fitTween = fitTweenRef.current
+    if (fitTween) {
+      if (advanceTransitions) {
+        const progress = (now - fitTween.startedAt) / FOCUS_TRANSITION_MS
+        cameraRef.current = interpolateCamera(fitTween.from, fitTween.to, progress)
+        if (progress >= 1) fitTweenRef.current = null
+        else fitAnimating = true
+      } else {
+        fitAnimating = true
+      }
+    }
     let focusAnimating = false
     const focusTarget = focusTargetRef.current
     if (focusTarget) {
@@ -520,18 +583,13 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
       if (simulationWasActive && gestureRef.current.mode !== "drag") {
         alphaRef.current = stepForceLayout(layoutRef.current, edgeRef.current, alphaRef.current)
       }
-      if (autoFitFrameRef.current > 0) {
-        autoFitFrameRef.current -= 1
-        if (autoFitFrameRef.current === 0) {
-          fitView()
-          if (autoFitPassRef.current === 0 && layoutRef.current.length > 0) {
-            autoFitPassRef.current = 1
-            autoFitFrameRef.current = 159
-          }
-        }
+      if (followFitRef.current && simulationWasActive && !focusTargetRef.current && !fitTweenRef.current) {
+        const ziel = fitCamera(layoutRef.current, viewport.width, viewport.height)
+        cameraRef.current = prefersReducedMotion ? ziel : approachCamera(cameraRef.current, ziel, 0.12)
       }
       if (fitOnSettleRef.current && simulationWasActive && alphaRef.current <= 0.004) {
         fitOnSettleRef.current = false
+        followFitRef.current = false
         fitView()
       }
 
@@ -543,7 +601,8 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
       }
       if (
         alphaRef.current > 0.004 ||
-        autoFitFrameRef.current > 0 ||
+        pendingInitialFitRef.current ||
+        fitAnimating ||
         focusAnimating ||
         opacityAnimating ||
         needsFinalFocusedFrame
@@ -582,7 +641,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
   }, [])
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
-    focusTargetRef.current = null
+    userTakesCamera()
     const position = pointerPosition(event)
     pointersRef.current.set(event.pointerId, position)
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -617,7 +676,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
       dragOffsetX: node ? world.x - node.x : 0,
       dragOffsetY: node ? world.y - node.y : 0,
     }
-  }, [pickNode, pointerPosition])
+  }, [pickNode, pointerPosition, userTakesCamera])
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
     const position = pointerPosition(event)
@@ -707,7 +766,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     const canvas = canvasRef.current
     if (!canvas) return
     event.preventDefault()
-    focusTargetRef.current = null
+    userTakesCamera()
     const bounds = canvas.getBoundingClientRect()
     const position = { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
     const before = screenToWorld(position.x, position.y, cameraRef.current, viewportRef.current)
@@ -719,7 +778,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     cameraRef.current.x += before.x - after.x
     cameraRef.current.y += before.y - after.y
     scheduleDraw()
-  }, [scheduleDraw])
+  }, [scheduleDraw, userTakesCamera])
 
   useEffect(() => {
     const canvas = canvasRef.current

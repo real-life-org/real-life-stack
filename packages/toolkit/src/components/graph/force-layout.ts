@@ -230,3 +230,18 @@ export function fitCamera(
     zoom: Math.max(0.08, Math.min(1.6, 0.82 * Math.min(width / boundsWidth, height / boundsHeight))),
   }
 }
+
+/**
+ * Ein Schritt der Kamera auf ein Ziel zu — ein fester Anteil des Abstands je
+ * Bild. Damit FOLGT die Kamera dem Netz, waehrend es sich ordnet: Die
+ * Bewegung der Simulation bleibt sichtbar (Anton, 21.09.2026: „die Bewegung
+ * war gut"), nur die harten Spruenge sind weg. Bei `factor` 1 ist es der Sprung.
+ */
+export function approachCamera(from: GraphCamera, to: GraphCamera, factor: number): GraphCamera {
+  const k = Math.max(0, Math.min(1, factor))
+  return {
+    x: from.x + (to.x - from.x) * k,
+    y: from.y + (to.y - from.y) * k,
+    zoom: from.zoom + (to.zoom - from.zoom) * k,
+  }
+}
