@@ -259,7 +259,7 @@ Was ein Eintrag dafür **nicht** braucht: kein `items`-Feld (folgt aus `presents
 
 ### Der Ladevertrag
 
-**Status: umgesetzt, rls#414.** Die Tabelle lebt in `packages/data-interface/src/module-hints.ts` (`registerModuleHint`, `filterForHint`, `moduleHintsFor`); der Host leitet seinen Filter mit `hostFilterFor` daraus ab. Aus rls#411: vier Dinge, die der erste Entwurf offenließ.
+**Status: umgesetzt, rls#414.** Die Tabelle lebt in `packages/data-interface/src/module-hints.ts` (`registerModuleHint`, `filterForHint`, `moduleHintsFor`); der Host leitet seinen Filter mit `hostFiltersFor` daraus ab — je Hinweis eine Abfrage, zusammen die Vereinigung. Aus rls#411: vier Dinge, die der erste Entwurf offenließ.
 
 **1. Ein Hinweis ist ein Feld oder eine Klasse mit deklarierter Affordanz — und `data-interface` kennt beide Richtungen in einer Tabelle.** Bis rls#414 gab es nur die Richtung Item → Hinweise (`moduleHintsFor`); der Host braucht die Umkehrung Hinweis → Connector-Filter. Beide MÜSSEN aus **derselben** Tabelle kommen, sonst driften Routing und Laden auseinander — genau so, wie es bei `hasStatus` passiert ist (Typ-Abkürzung im Hinweis, Feldfilter in der Ansicht). Und die Tabelle ist **offen, nicht geschlossen**: Ein Registereintrag DARF einen eigenen Hinweis samt beiden Richtungen eintragen. Ein Modul, das ein Feld darstellt, das das Toolkit nicht kennt — ein fremdes Modul aus einem Marktplatz, oder ein eigenes der App — bringt seinen Hinweis mit, statt auf eine Änderung in `data-interface` zu warten. Für B0 heißt das: eine Tabelle, in die man einträgt, kein fester `switch` über vier Namen (Anton, 21.09.2026). Die Zeilen, die das Toolkit einträgt, Stand heute:
 

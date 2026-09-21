@@ -4,7 +4,6 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import {
   filterForHint,
   isWritable,
-  matchesFilter,
   type Group,
   type Item,
   type ItemFilter,
@@ -15,7 +14,7 @@ import { useConnector } from "../../hooks/connector-context"
 import { useGroups, useMembers, usePersonalGroupId } from "../../hooks/use-groups"
 import { useItemDetailEdit } from "../../hooks/use-item-detail-edit"
 import { useItemGroupColorResolver } from "../../hooks/use-item-group-color"
-import { useItemsWithDraft } from "../../hooks/use-items"
+import { useItemsUnionWithDraft } from "../../hooks/use-items"
 import { useSpaceVocabulary } from "../../hooks/use-space-vocabulary"
 import type { ModuleEntry } from "../../lib/module-register"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
@@ -90,17 +89,18 @@ export interface ModuleHostProps {
 }
 
 /**
- * Was der Host fuer einen Eintrag laedt (Spec 01, Der Ladevertrag): den
- * Filter seines Hinweises; ohne Hinweis alles — das Modul aggregiert (Feed,
- * Liste, Graph). `null`: das Modul laedt selbst (die Karte, nach Ausschnitt).
- * Bei mehreren Hinweisen ist der Connector-Filter grob (alles) und die
- * Vereinigung geschieht unten, Zeile fuer Zeile aus derselben Tabelle.
+ * Was der Host fuer einen Eintrag laedt (Spec 01, Der Ladevertrag): je Hinweis
+ * ein Connector-Filter aus der Hinweis-Tabelle, bei mehreren die Vereinigung
+ * der Abfragen — nie „alles und lokal filtern", denn ein Backend-Connector
+ * zoege dann den ganzen Bestand (Codex-Review zu #414). Ohne Hinweis alles:
+ * das Modul aggregiert (Feed, Liste, Graph). `null`: das Modul laedt selbst
+ * (die Karte, nach Ausschnitt).
  */
-export function hostFilterFor(entry: Pick<ModuleEntry, "presents" | "loads" | "options">): ItemFilter | null {
+export function hostFiltersFor(entry: Pick<ModuleEntry, "presents" | "loads" | "options">): ItemFilter[] | null {
   if (entry.loads === "module") return null
   const hints = entry.presents ?? []
-  if (hints.length === 1) return filterForHint(hints[0], entry.options)
-  return {}
+  if (hints.length === 0) return [{}]
+  return hints.map((h) => filterForHint(h, entry.options))
 }
 
 interface ItemsValue {
@@ -109,23 +109,16 @@ interface ItemsValue {
 }
 const ItemsContext = createContext<ItemsValue>({ items: undefined, itemsLoading: false })
 
-function LoadedItems({ entry, filter, children }: { entry: ModuleEntry; filter: ItemFilter; children: ReactNode }) {
-  const { data, isLoading } = useItemsWithDraft(filter)
-  const hints = entry.presents ?? []
-  const options = entry.options
-  const items = useMemo(
-    () => (hints.length > 1 ? data.filter((item) => hints.some((h) => matchesFilter(item, filterForHint(h, options)))) : data),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, hints.join("|"), options],
-  )
+function LoadedItems({ filters, children }: { filters: ItemFilter[]; children: ReactNode }) {
+  const { data: items, isLoading } = useItemsUnionWithDraft(filters)
   const value = useMemo<ItemsValue>(() => ({ items, itemsLoading: isLoading }), [items, isLoading])
   return <ItemsContext.Provider value={value}>{children}</ItemsContext.Provider>
 }
 
 function HostItems({ entry, children }: { entry: ModuleEntry; children: ReactNode }) {
-  const filter = hostFilterFor(entry)
-  if (!filter) return <>{children}</>
-  return <LoadedItems entry={entry} filter={filter}>{children}</LoadedItems>
+  const filters = hostFiltersFor(entry)
+  if (!filters) return <>{children}</>
+  return <LoadedItems filters={filters}>{children}</LoadedItems>
 }
 
 /**

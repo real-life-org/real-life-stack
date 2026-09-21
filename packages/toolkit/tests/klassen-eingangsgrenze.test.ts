@@ -52,3 +52,25 @@ describe("Klassen an der Eingangsgrenze", () => {
     expect(resolveTypePresentation(gefunden!.type).generic).toBe(true)
   })
 })
+
+describe("Klassenmengen: nichts geht am Connector verloren (Codex zu rls#417)", () => {
+  const STATEMENT_IRI = "https://real-life-stack.org/vocab/statement/v1#Statement"
+  const mehrklassig: Item = {
+    id: "m1", type: ["post", STATEMENT_IRI, FREMD] as unknown as string,
+    createdAt: "2026-09-21T10:00:00.000Z", createdBy: "u1", data: { content: "Beides" },
+  }
+
+  it("ein Item mit mehreren Klassen erscheint in der Resonanz UND behaelt die fremde Klasse", async () => {
+    const c = seed([mehrklassig])
+    const [inResonanz] = await c.getItems({ type: ["statement"] })
+    expect(inResonanz?.id).toBe("m1")
+    expect(inResonanz?.type).toEqual(["post", "statement", FREMD])
+    const [alsPost] = await c.getItems({ type: "post" })
+    expect(alsPost?.id).toBe("m1")
+  })
+
+  it("Darstellung und Composer nehmen die erste Klasse mit Vorlage (Regel 9)", () => {
+    expect(resolveTypePresentation(mehrklassig.type).id).toBe("post")
+    expect(itemToComposerData(mehrklassig).text).toBe("Beides")
+  })
+})

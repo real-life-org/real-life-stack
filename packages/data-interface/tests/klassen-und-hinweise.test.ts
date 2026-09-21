@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import {
   canonicalItem,
+  canonicalItemType,
+  canonicalTypeValue,
   composeTypeManifest,
   filterForHint,
   getTypeManifest,
@@ -137,5 +139,33 @@ describe("Eingangsgrenze und Schreibweisen (Regel 7, rls#416, rls#417)", () => {
     expect(matchesFilter(item({ type: "post" }), { type: [] })).toBe(false)
     expect(matchesFilter(item({ type: "post" }), { type: ["post", "event"] })).toBe(true)
     expect(matchesFilter(item({ type: POST_IRI }), { type: "post" })).toBe(true)
+  })
+})
+
+describe("Klassenmengen ueberleben die Eingangsgrenze (Regel 7 und 8, Codex zu rls#417)", () => {
+  const POST_IRI = "https://real-life-stack.org/vocab/base/v1#Post"
+  const FREMD = "https://example.org/ns#Widget"
+  // JSON-LD erlaubt eine Menge in `@type`; der TypeScript-Typ sagt `string`,
+  // die Daten nicht — der Test geht am Typ vorbei, wie die Daten es tun.
+  const mehrklassig = item({ type: [POST_IRI, "statement", FREMD] as unknown as string })
+
+  it("canonicalItem behaelt alle Klassen, normalisiert die bekannten, laesst die fremde", () => {
+    expect(canonicalItem(mehrklassig).type).toEqual(["post", "statement", FREMD])
+  })
+
+  it("canonicalTypeValue erhaelt die Form: String bleibt String, Menge bleibt Menge", () => {
+    expect(canonicalTypeValue(POST_IRI)).toBe("post")
+    expect(canonicalTypeValue([POST_IRI])).toEqual(["post"])
+  })
+
+  it("das Item trifft danach noch den Resonanz-Filter und den Post-Filter", () => {
+    const k = canonicalItem(mehrklassig)
+    expect(matchesFilter(k, filterForHint("statement"))).toBe(true)
+    expect(matchesFilter(k, { type: "post" })).toBe(true)
+    expect(moduleHintsFor(k).hasStatement).toBe(true)
+  })
+
+  it("canonicalItemType nennt die erste Klasse — nur fuer die Vorlagenwahl (Regel 9)", () => {
+    expect(canonicalItemType([POST_IRI, "statement"])).toBe("post")
   })
 })

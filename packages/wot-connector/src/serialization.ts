@@ -1,5 +1,5 @@
 import type { Item } from "@real-life-stack/data-interface"
-import { canonicalItemType } from "@real-life-stack/data-interface"
+import { canonicalTypeValue } from "@real-life-stack/data-interface"
 import type { SerializedItem } from "./types.js"
 
 export function serializeItem(item: Item): SerializedItem {
@@ -24,7 +24,7 @@ export function deserializeItem(serialized: SerializedItem): Item {
   const item: Item = {
     id: serialized.id,
     // Eingangsgrenze (Spec 06, Regel 7): bekannte IRI → Kurzname, fremde bleibt.
-    type: canonicalItemType(serialized.type),
+    type: canonicalTypeValue(serialized.type) as string,
     createdAt: serialized.createdAt,
     createdBy: serialized.createdBy,
     data: { ...serialized.data },

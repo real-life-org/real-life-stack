@@ -10,7 +10,7 @@ import { ConnectorProvider } from "../src/hooks/connector-context"
 import { MemoryFocusProvider, useItemFocus, type ItemFocus } from "../src/hooks/use-item-focus"
 import { CreateHostProvider, useCreate, type CreateHostValue } from "../src/components/host/create-host"
 import { DetailHostProvider } from "../src/components/host/detail-host"
-import { ModuleHost, hostFilterFor, useModuleHost, type ModuleHostValue } from "../src/components/host/module-host"
+import { ModuleHost, hostFiltersFor, useModuleHost, type ModuleHostValue } from "../src/components/host/module-host"
 import type { ModuleEntry, ModuleViewProps } from "../src/lib/module-register"
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -40,6 +40,7 @@ let empfangen: ModuleViewProps | null = null
 let kontext: ModuleHostValue | null = null
 let fokus: ItemFocus | null = null
 let erstellen: CreateHostValue | null = null
+let abfragen: unknown[] = []
 
 function Probe(props: ModuleViewProps) {
   empfangen = props
@@ -56,6 +57,8 @@ function baum(entry: ModuleEntry, groupId = "__overview__"): ReactNode {
     { items: ITEMS, groups: [{ id: "g1", name: "Garten" }], users: [{ id: "u1", displayName: "Uli" }], groupMembers: { g1: ["u1"] } },
     { allowFixtureAuthors: true },
   )
+  const observe = connector.observe.bind(connector)
+  connector.observe = (filter) => { abfragen.push(filter); return observe(filter) }
   return createElement(ConnectorProvider, { connector },
     createElement(MemoryFocusProvider, { module: entry.id },
       createElement(DetailHostProvider, null,
@@ -69,22 +72,25 @@ async function rendere(entry: ModuleEntry, groupId?: string) {
 
 beforeEach(() => {
   host = document.createElement("div"); document.body.appendChild(host); root = createRoot(host)
-  empfangen = null; kontext = null; fokus = null; erstellen = null
+  empfangen = null; kontext = null; fokus = null; erstellen = null; abfragen = []
 })
 afterEach(() => { act(() => root.unmount()); host.remove() })
 
-describe("hostFilterFor — der Ladevertrag als Filter", () => {
+describe("hostFiltersFor — der Ladevertrag als Filter", () => {
   it("leitet den Filter aus dem einen Hinweis ab, mit den Optionen des Eintrags", () => {
-    expect(hostFilterFor({ presents: ["status"], options: { statusField: "kind" } })).toEqual({ hasField: ["kind"] })
+    expect(hostFiltersFor({ presents: ["status"], options: { statusField: "kind" } })).toEqual([{ hasField: ["kind"] }])
+  })
+  it("stellt je Hinweis eine Abfrage — nie eine ungefilterte fuer alle", () => {
+    expect(hostFiltersFor({ presents: ["start", "position"] })).toEqual([{ hasField: ["start"] }, { hasField: ["position"] }])
   })
   it("stellt bei loads: module keine Abfrage", () => {
-    expect(hostFilterFor({ presents: ["position"], loads: "module" })).toBeNull()
+    expect(hostFiltersFor({ presents: ["position"], loads: "module" })).toBeNull()
   })
   it("laedt ohne Hinweis alles — das Modul aggregiert", () => {
-    expect(hostFilterFor({})).toEqual({})
+    expect(hostFiltersFor({})).toEqual([{}])
   })
   it("wirft bei einem Hinweis ohne Zeile in der Tabelle, statt still nichts zu laden", () => {
-    expect(() => hostFilterFor({ presents: ["gibtsnicht"] })).toThrow(/gibtsnicht/)
+    expect(() => hostFiltersFor({ presents: ["gibtsnicht"] })).toThrow(/gibtsnicht/)
   })
 })
 
@@ -95,9 +101,13 @@ describe("Der Modul-Host", () => {
     expect(empfangen?.itemsLoading).toBe(false)
   })
 
-  it("vereinigt mehrere Hinweise", async () => {
+  it("vereinigt mehrere Hinweise aus je einer gefilterten Abfrage — keine ungefilterte", async () => {
     await rendere(eintrag({ presents: ["start", "position"] }))
     expect(empfangen?.items?.map((i) => i.id).sort()).toEqual(["mit-ort", "mit-start"])
+    const modulAbfragen = abfragen.filter((f) => JSON.stringify(f) !== "{}")
+    expect(modulAbfragen).toEqual(expect.arrayContaining([{ hasField: ["start"] }, { hasField: ["position"] }]))
+    // Das Vokabular der Flaeche fragt `{}` — die Modul-Items nie.
+    expect(abfragen.filter((f) => JSON.stringify(f) === "{}").length).toBeLessThanOrEqual(1)
   })
 
   it("laedt alles fuer ein Modul ohne Hinweis", async () => {
