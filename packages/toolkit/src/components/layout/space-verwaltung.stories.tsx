@@ -36,10 +36,11 @@ type Story = StoryObj
  * „Einladen" an. Ohne Einlade-Handler gibt es den Bereich gar nicht — so
  * fehlte er hier bis zum 21.09.2026 (Anton).
  */
+const SEIT = "2026-09-01T10:00:00.000Z"
 const KONTAKTE: ContactInfo[] = [
-  { id: "kim", name: "Kim Adeyemi", status: "active" },
-  { id: "noor", name: "Noor Haddad", status: "active" },
-  { id: "jonas", name: "Jonas Klein", status: "active" },
+  { id: "kim", name: "Kim Adeyemi", status: "active", createdAt: SEIT, updatedAt: SEIT },
+  { id: "noor", name: "Noor Haddad", status: "active", createdAt: SEIT, updatedAt: SEIT },
+  { id: "jonas", name: "Jonas Klein", status: "active", createdAt: SEIT, updatedAt: SEIT },
 ]
 
 function DialogStory({ mode }: { mode: GroupDialogMode }) {
