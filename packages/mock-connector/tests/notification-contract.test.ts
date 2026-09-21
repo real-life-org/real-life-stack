@@ -29,7 +29,10 @@ describe("Notification contracts — MockConnector", () => {
   it("A-T6: resolves live parent/hints and distinguishes deleted target from missing parent", async () => {
     const connector = new MockConnector(seed)
     connector.setCurrentGroup("alpha")
-    const parent = await connector.createItem({ id: "parent", type: "task", createdBy: "ignored", data: { title: "Task", start: "2026-07-18", position: { coordinates: [] } } })
+    // `status` steht ausdruecklich drin: Der Hinweis kommt vom Feld, nie vom
+    // Typ (Spec 06). Bis zum 21.09.2026 reichte `type: "task"` allein, und
+    // dieses Fixture verliess sich darauf.
+    const parent = await connector.createItem({ id: "parent", type: "task", createdBy: "ignored", data: { title: "Task", start: "2026-07-18", position: { coordinates: [] }, status: "open" } })
     const reaction = await connector.createItem({ id: "reaction", type: "reaction", createdBy: "ignored", data: {}, relations: [{ predicate: "reactsTo", target: `item:${parent.id}` }] })
     expect((await connector.getScopedActivity()).find((value) => value.entry.targetId === reaction.id)!.subject).toMatchObject({ id: parent.id, createdBy: "alice", moduleHints: { hasPosition: true, hasStart: true, hasStatus: true } })
     await connector.deleteItem(reaction.id)

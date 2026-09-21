@@ -333,7 +333,11 @@ export function moduleHintsFor(itemOrHints: Item | ModuleHints): ModuleHints {
   return {
     hasPosition: Array.isArray(position?.coordinates),
     hasStart: typeof data.start === "string" && data.start.length > 0,
-    hasStatus: item.type === "task" || (typeof status === "string" && KANBAN_STATUSES.has(status)),
+    // Das Feld entscheidet, nie der Typ (Spec 06). Bis zum 21.09.2026 stand
+    // `item.type === "task"` als erste Bedingung davor: Ein Task ohne Status
+    // wurde ins Kanban geleitet, das ihn nicht zeigt — die Ansicht filtert
+    // `hasField: ["status"]`. Hinweis und Fläche widersprachen sich.
+    hasStatus: typeof status === "string" && KANBAN_STATUSES.has(status),
     // Statements have no discriminator field — their activation hint comes
     // from the statement/v1 schema (spec 06), never from `type`.
     hasStatement: (item["@context"] ?? []).includes(VOCAB_STATEMENT),
