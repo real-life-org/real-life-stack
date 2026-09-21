@@ -38,6 +38,10 @@ ERLAUBT = {
     "packages/toolkit/src/components/filter/filter-bar.tsx",
     "packages/toolkit/src/components/filter/module-filter-chips.tsx",
     "packages/toolkit/src/components/filter/types.ts",
+    # Die zwei Stellen, die Items fuer eine Flaeche HERSTELLEN und dabei den
+    # geteilten Filter anwenden.
+    "packages/toolkit/src/components/layout/module-surface-scope.tsx",
+    "packages/toolkit/src/hooks/use-filterable-items.ts",
 }
 
 REGELN = [
@@ -54,6 +58,12 @@ REGELN = [
     # jede Ansicht selbst — siebenmal; ohne Waechter kommt die Verdrahtung zurueck.
     (re.compile(r"\buseRegister(?:Detail|Create)\("),
      "Detail und Erstellen registriert der Modul-Host, nicht die Ansicht (Spec 01, Der Modul-Host)"),
+    # Der geteilte Filter ist angewendet, bevor ein Modul seine Items sieht:
+    # vom Host (`items` in den ModuleViewProps) oder von der Flaeche
+    # (`useSurfaceItems`). Ein Modul, das ihn selbst anwendet, kann ihn auch
+    # vergessen — genau das war die Liste am 21.09.2026.
+    (re.compile(r"\buseModuleFilteredItems\("),
+     "der geteilte Filter ist schon angewendet — items vom Host oder useSurfaceItems() nehmen (Spec 01, Regel 2a)"),
 ]
 
 # Wo der Host selbst wohnt: dort registriert er.

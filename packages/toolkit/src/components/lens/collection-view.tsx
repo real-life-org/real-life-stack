@@ -4,7 +4,7 @@ import type { Item } from "@real-life-stack/data-interface"
 
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { cn } from "../../lib/utils"
-import { ModuleSurfaceScope } from "../layout/module-surface-scope"
+import { ModuleSurfaceScope, useSurfaceItems } from "../layout/module-surface-scope"
 import { ModuleToolbar } from "../layout/module-toolbar"
 import { Button } from "../primitives/button"
 import { GridView } from "./grid-view"
@@ -86,14 +86,13 @@ export interface CollectionViewProps {
  */
 export function CollectionView(props: CollectionViewProps) {
   return (
-    <ModuleSurfaceScope fill="bleed" maxWidth="max-w-6xl">
+    <ModuleSurfaceScope fill="bleed" maxWidth="max-w-6xl" items={props.items}>
       <CollectionViewInner {...props} />
     </ModuleSurfaceScope>
   )
 }
 
 function CollectionViewInner({
-  items,
   activeItemId,
   onItemClick,
   defaultLayout = "list",
@@ -102,6 +101,9 @@ function CollectionViewInner({
   selectionFocusVisibleArea,
   className,
 }: CollectionViewProps) {
+  // Die Items kommen gefiltert von der Flaeche — freistehend wie unter dem
+  // Host; die Lens wendet keinen Filter selbst an (Spec 01, Regel 2a).
+  const gefiltert = useSurfaceItems()
   const [eigenes, setEigenes] = useState<CollectionLayout>(defaultLayout)
   const gesteuert = layoutProp !== undefined
   const layout = layoutProp ?? eigenes
@@ -123,7 +125,7 @@ function CollectionViewInner({
         {layout === "list" ? (
           <ListView
             key={layout}
-            items={items}
+            items={gefiltert}
             activeItemId={activeItemId}
             selectionFocusVisibleArea={selectionFocusVisibleArea}
             selectionFocusGateKey={layout}
@@ -132,7 +134,7 @@ function CollectionViewInner({
         ) : (
           <GridView
             key={layout}
-            items={items}
+            items={gefiltert}
             activeItemId={activeItemId}
             selectionFocusVisibleArea={selectionFocusVisibleArea}
             selectionFocusGateKey={layout}

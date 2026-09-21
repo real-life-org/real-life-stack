@@ -23,7 +23,6 @@ import { filterByAssignee,
   FilterSection,
   FilterToggle,
   FilterMultiSelect,
-  useModuleFilteredItems,
   useUpdateItem,
   useMembers,
   useCurrentUser,
@@ -101,8 +100,8 @@ function KanbanViewInner({ activeWorkspaceId, groups, items: tasks = [], itemsLo
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null)
 
-  // Tag-, Typ- und Textsuche der geteilten Leiste.
-  const filteredByBar = useModuleFilteredItems(tasks)
+  // Tag-, Typ- und Textsuche hat der Host schon angewendet.
+  const filteredByBar = tasks
 
   // Darauf die Extras des Kanban: Zuweisung ueber Relationen, „Nur meine".
   // Die Regel selbst liegt im Toolkit (filterByAssignee), samt der

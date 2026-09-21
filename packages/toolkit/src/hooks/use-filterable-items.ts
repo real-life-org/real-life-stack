@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import type { Item } from "@real-life-stack/data-interface"
-import { useSharedFilter } from "../components/filter/filter-store"
+import { useOptionalSharedFilter, useSharedFilter } from "../components/filter/filter-store"
 import type { FilterBarValue } from "../components/filter/types"
 
 /**
@@ -86,3 +86,22 @@ export function useModuleFilteredItems(items: readonly Item[]): Item[] {
   const gefiltert = useFilterableItems(items, value)
   return useMemo(() => applyItemSearch(gefiltert, searchText), [gefiltert, searchText])
 }
+
+/**
+ * Wie {@link useModuleFilteredItems}, aber ohne Besitzer des Filters
+ * unveraendert: fuer die zwei Stellen, die Items fuer eine Flaeche HERSTELLEN
+ * — den Modul-Host und `ModuleSurfaceScope`. Seit dem 21.09.2026 wenden nur
+ * sie den geteilten Filter an; ein Modul bekommt seine Items gefiltert und
+ * kann nichts vergessen (Anton: „ein Modul darf da gar nichts falsch machen
+ * koennen").
+ */
+export function useSurfaceFilteredItems(items: readonly Item[]): Item[] {
+  const filter = useOptionalSharedFilter()
+  const value = filter?.value ?? LEER
+  const searchText = filter?.searchText ?? ""
+  const gefiltert = useFilterableItems(items, value)
+  return useMemo(() => applyItemSearch(gefiltert, searchText), [gefiltert, searchText])
+}
+
+const LEER: FilterBarValue = { tags: [], types: [] }
+

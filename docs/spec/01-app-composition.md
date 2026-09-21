@@ -122,7 +122,7 @@ Regeln:
 2. Die **Steuerelemente eines Moduls** (Ansichtswechsel, „Heute", Ortung, aktive Filter) gehören in den Kopf, nicht in den Scrollbereich. Module reichen sie über `ModuleToolbar` hinein; die Fläche besitzt den Kopf. Es `sticky` im Modul zu lösen wäre billiger — dann löst es aber jedes Modul selbst, und die Lösungen driften auseinander.
 2a. **Was sich Module teilen können, gehört der Fläche — nicht dem Modul.** Das ist die allgemeine Regel; die Suche ist ihr erster Fall. Der Prüfsatz: Lässt sich etwas aus den Items des Space oder aus dem geteilten Filterzustand ableiten, dann ist es geteilt und die Fläche stellt es genau einmal her. Dem Modul gehört nur, was ohne seinen eigenen Zustand nicht zu beantworten wäre.
 
-    Geteilt sind heute: die **Suche**, das **Vokabular** (welche Tags und Typen es im Space gibt), die **Filterkarte** und die **Chips der aktiven Filter**. Ein Modul MUSS sie über die Fläche beziehen (`useSpaceVocabulary`) und DARF sie nicht selbst ableiten.
+    Geteilt sind heute: die **Suche**, das **Vokabular** (welche Tags und Typen es im Space gibt), die **Filterkarte**, die **Chips der aktiven Filter** — und das **Anwenden** des Filters auf die Items. Ein Modul MUSS sie über die Fläche beziehen (`useSpaceVocabulary`) und DARF sie nicht selbst ableiten. Die Items eines Moduls sind **bereits gefiltert**, wenn es sie sieht: vom Host (`items` in den `ModuleViewProps`) oder von der Fläche (`useSurfaceItems`). Ein Modul, das den Filter selbst anwenden müsste, könnte ihn auch vergessen — die freistehende Liste suchte so ins Leere (Anton, 21.09.2026). Einzige Ausnahme sind Module mit `loads: "module"`: Sie laden selbst und filtern selbst.
 
     Dem Modul gehören: seine **Steuerelemente** (Ansichtswechsel, „Heute", Ortung), seine **eigenen Chips** (`chipsExtra`) und seine **eigenen Abschnitte in der Filterkarte** (`drawerExtra`).
 
@@ -226,7 +226,7 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 
 ### Der Modul-Host
 
-**Status: umgesetzt, rls#414 (B0, 21.09.2026).** `ModuleHost` in `packages/toolkit/src/components/host/module-host.tsx`; das Outlet rendert jede Fläche darin. Feed (B1), Kalender und Karte laufen ohne eine Zeile in der App; die vier übrigen Ansichten der Referenz-App lesen Items und Kontext vom Host und ziehen je in einem eigenen Schritt (B2–B5) ins Toolkit.
+**Status: umgesetzt, rls#414 (B0, 21.09.2026).** `ModuleHost` in `packages/toolkit/src/components/host/module-host.tsx`; das Outlet rendert jede Fläche darin. Feed (B1), Liste (B2), Kalender und Karte laufen ohne eine Zeile in der App; die drei übrigen Ansichten der Referenz-App lesen Items und Kontext vom Host und ziehen je in einem eigenen Schritt (B3–B5) ins Toolkit.
 
 Der Registereintrag beantwortet, *was folgt daraus, dass ein Space dieses Modul führt*. Der Host ist die Stelle, die aus der Antwort eine laufende Fläche macht — **einmal**, für alle Module.
 
@@ -237,7 +237,7 @@ Der Registereintrag beantwortet, *was folgt daraus, dass ein Space dieses Modul 
 | Der Host … | … und woher er es weiß |
 |---|---|
 | stellt die **Fläche** (Kopf, Suche, Vokabular, Filterkarte, Chips, schwebende Ecke) | `fill`, `panelFit`, `maxWidth` — wie heute |
-| lädt die **Items** des Moduls | nach dem **Ladevertrag** unten: aus `presents` und `options` einen Connector-Filter je Hinweis, bei mehreren Hinweisen die Vereinigung. Bei `loads: "module"` stellt der Host **keine** Abfrage — die Karte lädt nach Ausschnitt selbst |
+| lädt die **Items** des Moduls und wendet den **geteilten Filter** an | nach dem **Ladevertrag** unten: aus `presents` und `options` einen Connector-Filter je Hinweis, bei mehreren Hinweisen die Vereinigung; darauf Suche, Tags und Typen des Kopfes (Regel 2a). Bei `loads: "module"` stellt der Host **keine** Abfrage — die Karte lädt nach Ausschnitt selbst und filtert selbst |
 | löst den **Space-Kontext** auf: Mitglieder, Autoren, Gruppenfarben, das Aggregat „Mein Netzwerk" | aus dem aktiven Space; die Ausnahme `__overview__` gibt es damit an genau einer Stelle |
 | registriert das **Detail** (Lesen ↔ Bearbeiten im geteilten Panel) | aus der geteilten Bearbeitungs-Konfiguration: alle Inhaltstypen, der Composer-Mapper, die Vorbelegung. Der Hintergrund-Schleier folgt aus `panelFit`: `overlay` bleibt ohne, damit die Karte bewegbar bleibt |
 | registriert das **Erstellen** | mit **allen** Inhaltstypen des Space — der Plusknopf bietet immer alles an, das Modul schränkt nicht ein (Anton, 20.09.2026). Ein Modul DARF einen **Vorschlag** machen: Ein Klick auf einen leeren Kalendertag öffnet den Composer mit „Termin" vorgewählt und dem Datum vorbelegt. Ein Vorschlag ist eine Voreinstellung, kein Zaun — das Typmenü bleibt offen |

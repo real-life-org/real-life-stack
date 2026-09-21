@@ -41,8 +41,7 @@ import { ItemPreview } from "../preview/item-preview"
 import { ItemTypeBadge } from "../preview/item-type-badge"
 import { ItemTimeRange } from "../preview/item-time-range"
 import { FilterSection, FilterToggle, FilterMultiSelect } from "../filter/filter-building-blocks"
-import { ModuleSurfaceScope } from "../layout/module-surface-scope"
-import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
+import { ModuleSurfaceScope, useSurfaceItems } from "../layout/module-surface-scope"
 import type { Item } from "@real-life-stack/data-interface"
 
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
@@ -351,14 +350,13 @@ export interface CalendarViewProps {
  */
 export function CalendarView(props: CalendarViewProps) {
   return (
-    <ModuleSurfaceScope maxWidth="max-w-5xl" fallbackItems={props.items}>
+    <ModuleSurfaceScope maxWidth="max-w-5xl" items={props.items}>
       <CalendarViewInner {...props} />
     </ModuleSurfaceScope>
   )
 }
 
 function CalendarViewInner({
-  items,
   initialDate,
   initialVisibleDate,
   initialViewMode = "month",
@@ -403,8 +401,10 @@ function CalendarViewInner({
     setSelectedDate(focusDate)
   }, [focusDate])
 
-  const calendarItems = useMemo(() => calendarFilterItems(items), [items])
-  const eventsAfterBar = useModuleFilteredItems(calendarItems)
+  // Gefiltert von der Flaeche (Suche, Tags, Typen); hier nur noch die
+  // Kalender-Regel, was ein Termin ist.
+  const gefiltert = useSurfaceItems()
+  const eventsAfterBar = useMemo(() => calendarFilterItems(gefiltert), [gefiltert])
 
   const calendarEvents = useMemo(
     () => toCalendarEvents(eventsAfterBar),

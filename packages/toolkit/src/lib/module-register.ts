@@ -20,6 +20,7 @@ import type { Group, Item, ModuleHintOptions, ModuleHints } from "@real-life-sta
 import { isAggregateVisibleItemType, moduleHintsFor } from "@real-life-stack/data-interface"
 import type { SelectionFocusVisibleArea } from "./selection-focus"
 import { CalendarModule } from "../modules/calendar-module"
+import { CollectionModule } from "../modules/collection-module"
 import { FeedModule } from "../modules/feed-module"
 import { MapModule } from "../modules/map-module"
 import {
@@ -66,8 +67,10 @@ export interface ModuleViewProps {
   /** Sichtbarer Bereich fuer Fokus-Scrolling (siehe selection-focus.ts). */
   selectionFocusVisibleArea?: SelectionFocusVisibleArea
   /**
-   * Die Items nach dem Ladevertrag, vom Host geladen (Spec 01, Der
-   * Modul-Host). `undefined`, wenn das Modul selbst laedt (`loads: "module"`).
+   * Die Items nach dem Ladevertrag, vom Host geladen und mit dem geteilten
+   * Filter (Suche, Tags, Typen) bereits angewendet (Spec 01, Der Modul-Host,
+   * Regel 2a): genau das, was der Kopf anzeigt. `undefined`, wenn das Modul
+   * selbst laedt (`loads: "module"`) — dann filtert es auch selbst.
    */
   items?: Item[]
   itemsLoading?: boolean
@@ -155,9 +158,9 @@ export interface ModuleFragment extends Partial<Omit<ModuleEntry, "id">> {
 
 /**
  * Die Module, die das Toolkit mitliefert. Reihenfolge = Tab-Reihenfolge.
- * Feed, Kalender und Karte bringen ihre Flaeche mit (B0/B1); die uebrigen
- * folgen je in einem eigenen Schritt (B2–B5) und werden bis dahin von der
- * Referenz-App erweitert.
+ * Feed, Kalender, Karte und Liste bringen ihre Flaeche mit (B0–B2); die
+ * uebrigen folgen je in einem eigenen Schritt (B3–B5) und werden bis dahin
+ * von der Referenz-App erweitert.
  */
 export const TOOLKIT_MODULES: readonly ModuleEntry[] = Object.freeze([
   { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl", options: { suggestType: "post", createShell: "fullscreen" }, view: FeedModule },
@@ -171,7 +174,7 @@ export const TOOLKIT_MODULES: readonly ModuleEntry[] = Object.freeze([
   // (`useModuleContentClass`), statt eine eigene zu fuehren. Vorher stand die
   // Zahl fuenfmal im Code, und wer eine davon anfasste, rueckte Kopf und
   // Eintraege gegeneinander.
-  { id: "collection", label: "Liste", icon: List, fill: "bleed", maxWidth: "max-w-6xl" },
+  { id: "collection", label: "Liste", icon: List, fill: "bleed", maxWidth: "max-w-6xl", view: CollectionModule },
   { id: "graph", label: "Graph", icon: Share2, fill: "bleed", panelFit: "overlay" },
 ])
 

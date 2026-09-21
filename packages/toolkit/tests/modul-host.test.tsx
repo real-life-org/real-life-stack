@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement, type ReactNode } from "react"
+import { act, createElement, useEffect, type ReactNode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { List } from "lucide-react"
@@ -7,6 +7,7 @@ import type { Item } from "@real-life-stack/data-interface"
 import { MockConnector } from "@real-life-stack/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
+import { FilterProvider, useSharedFilter } from "../src/components/filter/filter-store"
 import { MemoryFocusProvider, useItemFocus, type ItemFocus } from "../src/hooks/use-item-focus"
 import { CreateHostProvider, useCreate, type CreateHostValue } from "../src/components/host/create-host"
 import { DetailHostProvider } from "../src/components/host/detail-host"
@@ -52,7 +53,13 @@ function Probe(props: ModuleViewProps) {
 
 const eintrag = (teil: Partial<ModuleEntry>): ModuleEntry => ({ id: "probe", label: "Probe", icon: List, view: Probe, ...teil })
 
-function baum(entry: ModuleEntry, groupId = "__overview__"): ReactNode {
+function Suche({ text }: { text: string }) {
+  const { setSearchText } = useSharedFilter()
+  useEffect(() => { setSearchText(text) }, [setSearchText, text])
+  return null
+}
+
+function baum(entry: ModuleEntry, groupId = "__overview__", suche = ""): ReactNode {
   const connector = new MockConnector(
     { items: ITEMS, groups: [{ id: "g1", name: "Garten" }], users: [{ id: "u1", displayName: "Uli" }], groupMembers: { g1: ["u1"] } },
     { allowFixtureAuthors: true },
@@ -60,14 +67,16 @@ function baum(entry: ModuleEntry, groupId = "__overview__"): ReactNode {
   const observe = connector.observe.bind(connector)
   connector.observe = (filter) => { abfragen.push(filter); return observe(filter) }
   return createElement(ConnectorProvider, { connector },
-    createElement(MemoryFocusProvider, { module: entry.id },
-      createElement(DetailHostProvider, null,
-        createElement(CreateHostProvider, null,
-          createElement(ModuleHost, { entry, groupId, active: true })))))
+    createElement(FilterProvider, null,
+      createElement(Suche, { text: suche }),
+      createElement(MemoryFocusProvider, { module: entry.id },
+        createElement(DetailHostProvider, null,
+          createElement(CreateHostProvider, null,
+            createElement(ModuleHost, { entry, groupId, active: true }))))))
 }
 
-async function rendere(entry: ModuleEntry, groupId?: string) {
-  await act(async () => { root.render(baum(entry, groupId)) })
+async function rendere(entry: ModuleEntry, groupId?: string, suche?: string) {
+  await act(async () => { root.render(baum(entry, groupId, suche)) })
 }
 
 beforeEach(() => {
@@ -108,6 +117,12 @@ describe("Der Modul-Host", () => {
     expect(modulAbfragen).toEqual(expect.arrayContaining([{ hasField: ["start"] }, { hasField: ["position"] }]))
     // Das Vokabular der Flaeche fragt `{}` — die Modul-Items nie.
     expect(abfragen.filter((f) => JSON.stringify(f) === "{}").length).toBeLessThanOrEqual(1)
+  })
+
+  it("reicht die Items GEFILTERT weiter — ein Modul kann den geteilten Filter nicht vergessen", async () => {
+    await rendere(eintrag({}), "__overview__", "Notiz")
+    expect(empfangen?.items?.map((i) => i.id)).toEqual(["nur-text"])
+    expect(kontext?.items?.map((i) => i.id)).toEqual(["nur-text"])
   })
 
   it("laedt alles fuer ein Modul ohne Hinweis", async () => {
