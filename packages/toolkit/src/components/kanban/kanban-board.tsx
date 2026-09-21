@@ -36,7 +36,7 @@ export interface KanbanBoardProps {
   statusField?: string
   /** Presentation-only board: cards cannot be dragged or dropped. */
   readOnly?: boolean
-  users?: User[]
+  users?: readonly User[]
   onMoveItem?: (itemId: string, newStatus: string, position: number) => void
   onItemClick?: (item: Item) => void
   /** Id of the item currently open in the shared panel — its card is highlighted. */
@@ -66,7 +66,7 @@ function getAssigneeIds(item: Item): string[] {
 
 interface KanbanCardProps {
   item: Item
-  users?: User[]
+  users?: readonly User[]
   readOnly: boolean
   isDragged: boolean
   active?: boolean

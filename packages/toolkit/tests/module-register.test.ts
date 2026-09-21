@@ -52,9 +52,9 @@ describe("Modul-Register", () => {
     expect(moduleIds().at(-1)).toBe("garten")
   })
 
-  it("lets an app attach its view to a core id", () => {
+  it("laesst eine App eine Toolkit-Flaeche ausdruecklich ersetzen — der Rest des Eintrags bleibt", () => {
     setModuleRegistry(
-      composeModules([TOOLKIT_DEFINITION, { name: "app", extensions: [{ id: "kanban", view: Dummy }] }]),
+      composeModules([TOOLKIT_DEFINITION, { name: "app", extensions: [{ id: "kanban", view: Dummy, replaces: ["view"] }] }]),
     )
     expect(getModule("kanban")?.view).toBe(Dummy)
     expect(getModule("kanban")?.label).toBe(TOOLKIT_MODULES.find((m) => m.id === "kanban")!.label)
@@ -116,13 +116,14 @@ describe("Konflikte werden abgelehnt, nicht aufgeloest (Review #277)", () => {
     try {
       composeModules([
         TOOLKIT_DEFINITION,
-        { name: "app", extensions: [{ id: "kanban", view: Dummy }] },
-        { name: "space:garten", extensions: [{ id: "kanban", view: Dummy }] },
+        { name: "app", definitions: [{ id: "quests", label: "Quests", icon: Dummy }] },
+        { name: "plugin", extensions: [{ id: "quests", view: Dummy }] },
+        { name: "space:garten", extensions: [{ id: "quests", view: Dummy }] },
       ])
       throw new Error("kein Konflikt gemeldet")
     } catch (e) {
       expect(String(e)).toContain("view")
-      expect(String(e)).toContain("app")
+      expect(String(e)).toContain("plugin")
       expect(String(e)).toContain("space:garten")
     }
   })
@@ -138,11 +139,11 @@ describe("Das Register ist unveraenderlich (Review #277)", () => {
   })
 
   it("does not leak the composed entries into a later composition", () => {
-    const a = composeModules([TOOLKIT_DEFINITION, { name: "app", extensions: [{ id: "kanban", view: Dummy }] }])
+    const a = composeModules([TOOLKIT_DEFINITION, { name: "app", extensions: [{ id: "kanban", view: Dummy, replaces: ["view"] }] }])
     const b = composeModules([TOOLKIT_DEFINITION])
     expect(a.find((m) => m.id === "kanban")?.view).toBe(Dummy)
     // Die zweite Komposition darf von der ersten nichts wissen.
-    expect(b.find((m) => m.id === "kanban")?.view).toBeUndefined()
+    expect(b.find((m) => m.id === "kanban")?.view).not.toBe(Dummy)
   })
 
   it("refuses a second, different binding", () => {
