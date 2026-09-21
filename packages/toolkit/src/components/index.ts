@@ -3,6 +3,7 @@ export * from "./primitives"
 
 // Layout
 export * from "./layout"
+export * from "./frame"
 
 // Auth primitives
 export * from "./auth"

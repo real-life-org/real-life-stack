@@ -5,7 +5,7 @@ import {
   applyInitialColorScheme,
   rememberColorScheme,
   STORAGE_KEY_THEME,
-} from "./initial-color-scheme"
+} from "@real-life-stack/toolkit"
 
 /** Systemvorgabe stellen — jsdom bringt kein echtes matchMedia mit. */
 function systemMag(dunkel: boolean) {

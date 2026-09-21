@@ -14,7 +14,8 @@ Code-Referenzen:
 - `packages/toolkit/src/components/detail/` — modul-agnostisches Detail-Panel
 - `packages/toolkit/src/hooks/`
 - `apps/reference/src/App.tsx` — Komposition: Provider, AuthGate, App Shell
-- `apps/network/src/App.tsx` — dieselbe Komposition, kleiner: Shell um den Modul-Host, eigenes Modul im Register
+- `apps/network/src/App.tsx` — dieselbe Komposition, kleiner: Rahmen plus eigenes Modul im Register
+- `packages/toolkit/src/components/frame/app-frame.tsx` — der Rahmen einer App (Provider, Panel, Kopfzeile, Controller, Outlet)
 - `packages/toolkit/src/components/router/` — Fokus in der URL, Space/Modul-Auflösung aus URL, Route einer Benachrichtigung (`@real-life-stack/toolkit/router`)
 
 ## Grundstruktur
@@ -248,7 +249,9 @@ Der Registereintrag beantwortet, *was folgt daraus, dass ein Space dieses Modul 
 
 **Was beim Modul bleibt.** Die Ansicht, ihre eigenen Steuerelemente (Regel 2), ihr Vorschlag beim Erstellen, und — wo es das gibt — eigene Logik (Kanban: Spalten, Verschieben, Zuweisung). Das ist alles.
 
-**Was bei der App bleibt.** Der Router selbst und die Entscheidung, welche Module ihr Register führt. Die URL-Fokus-Politik braucht einen Router; sie liegt darum in einem eigenen Unterpfad des Toolkits (`@real-life-stack/toolkit/router`, nach dem Muster von `/maplibre`), damit der Kern routerfrei bleibt. Dort liegt seit rls#429 auch, was jede App mit Router gleich tut: Space, Modul und Item aus der URL auflösen (`useWorkspaceRouting`; den Rückfall ohne Feld wählt die App) aus einer Benachrichtigung eine Route machen (`notificationRoute`) und vor dem Verlust ungespeicherter Eingaben warnen (`UnsavedChangesGuard`, braucht `useBlocker`). *Bis dahin stand beides in der Referenz-App und ein zweites Mal, anders, in der Netzwerk-App.* Ohne Router — in einer Story, einem Test, einer Einbettung ohne eigene Adresse — hält der Host den Fokus im Speicher, mit demselben Vertrag. Eine App, die einen Router hat, MUSS die URL-Politik nehmen. Der Fokus im Speicher ist der Rückfall für den Fall ohne Router, keine zweite gleichwertige Betriebsart.
+**Was bei der App bleibt.** Der Router selbst und die Entscheidung, welche Module ihr Register führt. Die URL-Fokus-Politik braucht einen Router; sie liegt darum in einem eigenen Unterpfad des Toolkits (`@real-life-stack/toolkit/router`, nach dem Muster von `/maplibre`), damit der Kern routerfrei bleibt. Dort liegt seit rls#429 auch, was jede App mit Router gleich tut: Space, Modul und Item aus der URL auflösen (`useWorkspaceRouting`; den Rückfall ohne Feld wählt die App) aus einer Benachrichtigung eine Route machen (`notificationRoute`) und vor dem Verlust ungespeicherter Eingaben warnen (`UnsavedChangesGuard`, braucht `useBlocker`). *Bis dahin stand beides in der Referenz-App und ein zweites Mal, anders, in der Netzwerk-App.*
+
+Und eine App schreibt ihre Shell nicht selbst zusammen. Der **Rahmen** (`AppFrame` im Toolkit, `RoutedAppFrame` im Unterpfad `/router`) stellt Provider, das geteilte Panel, die Kopfzeile mit Space-Verwaltung, die vier Controller, die drei Navigationsregeln und den Outlet einmal — für jede App und für jede Story gleich (`HostWorld` ist derselbe Rahmen unter dem Speicher-Fokus). Eine App stellt Connector, Router, Register, die Karten-Engine und ihre Extras (ein Slot in der Kopfzeile, Kinder im Baum). *Bis rls#430 zählten Referenz-App, Netzwerk-App und Story-Hülle denselben Stapel von Hand auf, zehn Provider und vier Controller in drei Fassungen; was in einer fehlte, fiel nicht auf, bis es fehlte (Anton, 21.09.2026).* Ohne Router — in einer Story, einem Test, einer Einbettung ohne eigene Adresse — hält der Host den Fokus im Speicher, mit demselben Vertrag. Eine App, die einen Router hat, MUSS die URL-Politik nehmen. Der Fokus im Speicher ist der Rückfall für den Fall ohne Router, keine zweite gleichwertige Betriebsart.
 
 Regeln:
 
