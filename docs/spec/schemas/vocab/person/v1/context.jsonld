@@ -2,6 +2,7 @@
   "@context": {
     "@version": 1.1,
     "rls": "https://real-life-stack.org/vocab/person/v1#",
+    "person": "rls:Person",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
 
     "displayName": { "@id": "rls:displayName", "@type": "xsd:string" },

@@ -2,6 +2,7 @@
   "@context": {
     "@version": 1.1,
     "rls": "https://real-life-stack.org/vocab/project/v1#",
+    "project": "rls:Project",
 
     "website": { "@id": "rls:website", "@type": "@id" },
     "repo": { "@id": "rls:repo", "@type": "@id" }

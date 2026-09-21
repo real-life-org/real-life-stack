@@ -2,6 +2,10 @@
   "@context": {
     "@version": 1.1,
     "rls": "https://real-life-stack.org/vocab/base/v1#",
+    "post": "rls:Post",
+    "comment": "rls:Comment",
+    "reaction": "rls:Reaction",
+    "feature": "rls:Feature",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
 
     "id": "@id",

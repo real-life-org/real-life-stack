@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://real-life-stack.org/vocab/statement/v1/schema.json",
   "title": "RLS Statement Vocabulary",
-  "description": "Marker vocabulary for statements the group takes a stance on (Resonance module). It introduces no own data properties: the statement sentence lives in the base/v1 `title`, optional context in `description`. Carrying this vocabulary activates the item for the Resonance module and the feed union (spec 06, marker vocabularies).",
+  "description": "Vocabulary for statements the group takes a stance on (Resonance module). It introduces no own data properties: the statement sentence lives in the base/v1 `title`, optional context in `description`. Its context defines the class `statement` (rls:Statement). Activation for the Resonance module follows from the class's declared affordance `votesOn` in the type manifest, not from carrying this vocabulary (spec 06, classes have IRIs).",
   "type": "object",
   "additionalProperties": true,
   "properties": {

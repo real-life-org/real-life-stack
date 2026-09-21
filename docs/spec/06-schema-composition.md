@@ -52,7 +52,7 @@ Regeln:
 2. Weitere Einträge erweitern das Vokabular und damit die in `data` zulässigen Felder.
 3. **Property-Namen MÜSSEN über alle Vokabularien eindeutig sein.** JSON-LD's last-wins-Verhalten gilt nur für reine Property-Identifier-Auflösung; die JSON-Schema-Validierung läuft über `allOf` (Schnittmenge) und kennt keine Überschreibung. Vocabulary-Autoren vermeiden Kollisionen aktiv: gleiche Semantik → gleicher Name (Konvention), unterschiedliche Semantik → unterschiedlicher Name. Validator-Verhalten bei einer Kollision ist undefined und gilt als Vokabular-Bug.
 4. Semantisch gleiche Properties aus verschiedenen Vokabularen tragen denselben Namen (z.B. `start` für Beginn-Zeitpunkt, egal ob Event oder Task).
-5. `type` benennt die Art eines Items (siehe „Die Rolle von `type`") und steuert **nie die Modul-Aktivierung** — welche Items ein Modul zeigt, entscheidet Feld-Präsenz oder (zukünftig) `hasSchema`.
+5. `type` ist per `base/v1` ein Alias für JSON-LDs **`@type`** — es benennt die **Klasse** eines Items, und jede Klasse hat eine IRI (siehe „Klassen haben IRIs"). Welche Items ein Modul zeigt, entscheidet **Feld-Präsenz** oder eine **im Manifest deklarierte Affordanz der Klasse** — nie der Typ-Name als freier String (siehe „Die Rolle von `type`").
 
 ### Beispiel: Workshop in der Markthalle
 
@@ -80,6 +80,20 @@ Regeln:
 
 Dieses Item erscheint **gleichzeitig auf der Map** (wegen `place`-Schema → `position`-Feld) und **im Calendar** (wegen `event`-Schema → `start`-Feld). Keines der Module muss vom anderen wissen.
 
+### Klassen haben IRIs
+
+**Status: Entwurf, 21.09.2026.** Anton: JSON-LD sichert unsere Dateninteroperabilität — eine interne Regel darf sie nicht einschränken.
+
+`base/v1` definiert `"type": "@type"`. Damit ist unser `type` kein RLS-eigenes Feld, sondern JSON-LDs Klassen-Slot: `"type": "event"` heißt für jeden JSON-LD-Prozessor *dieses Item ist ein Event*. Bis zum 21.09.2026 fehlte die zweite Hälfte — kein Kontext definierte einen Klassenbegriff, `event` wurde zu keiner IRI, und ein fremder Prozessor sah eine Klasse ohne Identität. JSON-LD der Form, nicht der Wirkung nach.
+
+Regeln:
+
+1. Jedes Vokabular, das eine Klasse einführt, definiert in seinem Kontext den **Klassenbegriff in der Schreibweise der Items**: `"event": "rls:Event"`, `"place": "rls:Place"`, `"statement": "rls:Statement"`. Die Kleinschreibung ist der Begriff, die IRI trägt die Klasse. Bestehende Items brauchen dafür keine Änderung — das ist der Grund für die Kleinschreibung, nicht Geschmack.
+2. Klassen ohne eigenes Vokabular stehen in `base/v1`: `post`, `comment`, `reaction`, `feature`.
+3. Der Typ-Manifest-Eintrag nennt die IRI seiner Klasse; das Manifest bleibt die einzige Quelle für Typ-Identität (siehe Typ-Register).
+4. Ein Vokabular besteht aus Begriffen. Ein Vokabular **ohne** Begriffe, das nur in `@context` steht, um etwas zu markieren, gibt es nicht mehr — die Klasse steht in `@type`, wo JSON-LD sie erwartet. `statement/v1` war das einzige und ist jetzt ein Vokabular mit genau einem Begriff, seiner Klasse.
+5. Sobald Typen je Space konfigurierbar sind, bringt ein Space eigene Klassen mit eigenen IRIs in seinem eigenen Namensraum mit — nicht in `rls:`. Regel 1 ist das Gerüst dafür.
+
 ### Überlagerung statt Konflikt
 
 Wenn zwei `@context`-Schemas dieselbe Semantik treffen (z.B. `start` für Beginn), wird das Feld **geteilt**, nicht dupliziert. Beispiel: ein Item, das gleichzeitig Event und Task ist, hat ein gemeinsames `start`. Strukturelle Überlagerung ist beabsichtigt.
@@ -90,7 +104,13 @@ Wenn semantisch unterschiedliche Konzepte denselben Property-Namen tragen würde
 
 `type` benennt die **Art**, als die ein Item erstellt wurde (`post`, `event`, `task`) — die Intention beim Erstellen. Aus ihr wählt der Composer ein **Template** (Widget-Set beim Erstellen, Karten-Darstellung beim Anzeigen); sie bleibt am Item, damit Module und User sich darauf beziehen können. `type` ist genau eine pro Item; bei mehreren Werten zählt die erste. Pro `type` gehört **ein** Template (Erstellen-Widgets und Anzeige-Karte zusammen); heute als `ContentTypeConfig` je Modul-View definiert; das kanonische, modulübergreifend geteilte **Typ-Register** (nächster Abschnitt) löst diese Streuung ab.
 
-`type` darf tragen: die Composer-Vorlage, die Karten-Wahl in aggregierenden Sichten (Feed, Suche) und **User-Filter** („zeig mir nur Veranstaltungen"). Es darf **nicht** die **Modul-Aktivierung** steuern: ob ein Item im Calendar erscheint, entscheidet `data.start`, nie `type` — sonst verschwände ein Task mit Fälligkeitsdatum zu Unrecht. Der Unterschied ist prinzipiell: Modul-Aktivierung ist eine System-Frage und immer feldbasiert; ein User-Filter ist eine Mensch-Frage und darf die Intention nutzen, die nur in `type` steht (ein Task mit Deadline und ein Event tragen beide `start` — „die Veranstaltungen" sind aus Feldern allein nicht herauszufiltern).
+`type` darf tragen: die Composer-Vorlage, die Karten-Wahl in aggregierenden Sichten (Feed, Suche) und **User-Filter** („zeig mir nur Veranstaltungen"). Für die **Modul-Aktivierung** gilt eine zweiteilige Regel:
+
+- **Ein Feld aktiviert das Modul, das es darstellt.** Ob ein Item im Calendar erscheint, entscheidet `data.start`, nie der Typ-Name — sonst verschwände ein Task mit Fälligkeitsdatum zu Unrecht. Ein Task mit Deadline und ein Event tragen beide `start`; „die Veranstaltungen" sind aus Feldern allein nicht herauszufiltern, das ist der User-Filter.
+- **Eine Klasse aktiviert das Modul, dessen Affordanz sie im Manifest deklariert.** Was eine Aussage zur Aussage macht, ist kein Feld, sondern dass sie Stellungnahmen entgegennimmt — im Manifest: `relations: [{ predicate: "votesOn", itemRole: "to" }]`. Die Resonanz zeigt Items, deren Klasse diese Affordanz deklariert. Das ist keine Aktivierung über den Typ-**Namen**, sondern über eine Angabe im Register — dieselbe Art Angabe wie `presents` am Modul (Spec 01).
+- **Der Typ-Name als freier String aktiviert nichts.** Ein Composer kann ihn setzen, wie er will; eine Fläche, die darauf schaltet, verwechselt eine Vorlage mit einer Wahrheit über das Item.
+
+*Bis zum 21.09.2026 hieß es hier nur: „`type` aktiviert nie." Der Satz war für Felder richtig und für Klassen falsch; um ihn nicht zu brechen, gab es das „Marker-Vokabular" `statement/v1` — eine zweite Aussage derselben Klasse in `@context`. Das war eine Umgehung, und sie hat die Interoperabilität gekostet, für die `@context` da ist.*
 
 ### Typ-Register
 
@@ -98,7 +118,7 @@ Das Typ-Register löst die oben genannte Ausbaustufe ein: **ein** kanonischer Ei
 
 Motivation aus der Praxis: dieselbe Frage wurde bisher an vier Stellen unabhängig beantwortet (Typ-Guards in `data-interface`, `ContentTypeConfig` je App-View, `ItemTypeBadge`, `getItemPreviewAdornments`). Die vier Listen kennen unterschiedliche Typ-Mengen — `project` und `resource` haben eine Preview-Darstellung, aber keinen Composer-Eintrag; `post` das Umgekehrte — und sind nachweislich auseinandergelaufen (Kalender-Detail mit abweichender Meta-Komponente; Task-Assignees nur im Kanban sichtbar).
 
-**Begriff:** Ein **Core-Typ** ist ein Typ, dessen Register-Einträge RLS selbst mitliefert — in v0.1: `post`, `event`, `place`, `task`, `person`, `project`, `resource`. Systemtypen ohne eigenständige Karte (`reaction`, `comment`, `relation`) brauchen keinen Registereintrag; sie erscheinen ausschließlich über ihre Flächen (ReactionBar, Kommentarliste, Graph).
+**Begriff:** Ein **Toolkit-Typ** ist ein Typ, dessen Register-Einträge das Toolkit mitliefert — in v0.1: `post`, `event`, `place`, `task`, `person`, `project`, `resource`, `statement`. *(Bis zum 21.09.2026 „Core-Typ"; „Core" hieß im Stack schon `wot-core` und den Pflichtteil des `DataInterface`, und RLS hat keinen Kern.)* Systemtypen ohne eigenständige Karte (`reaction`, `comment`, `relation`) brauchen keinen Registereintrag; sie erscheinen ausschließlich über ihre Flächen (ReactionBar, Kommentarliste, Graph).
 
 #### Zwei Schichten, eine Identitätsquelle
 
@@ -195,7 +215,7 @@ RLS-Vokabulare sind als JSON-LD und JSON-Schema unter `https://real-life-stack.o
 - `https://real-life-stack.org/vocab/relation/v1` — eigenständige RelationRecords
 - `https://real-life-stack.org/vocab/project/v1` — Projekt-Felder
 - `https://real-life-stack.org/vocab/resource/v1` — Ressourcen-Felder
-- `https://real-life-stack.org/vocab/statement/v1` — Marker: Aussage zur Gruppen-Stellungnahme (Resonance); keine eigenen Felder, verlangt `base/v1 title`
+- `https://real-life-stack.org/vocab/statement/v1` — Klasse `statement`: Aussage zur Gruppen-Stellungnahme (Resonance); keine eigenen Felder, verlangt `base/v1 title`; aktiviert über die Affordanz `votesOn` im Manifest, nicht über `@context`
 
 Jede Vocabulary-URL liefert:
 
@@ -297,7 +317,9 @@ Module aktivieren ein Item primär **feldbasiert** (das benötigte Feld ist in `
 
 Für Vokabulare mit eigenem Feld gilt: Da `@context`-Konsistenz nicht erzwingbar ist, **müssen Module den Feldfilter verwenden** und dürfen `hasSchema` nur als zusätzliche Optimierung anbieten.
 
-**Marker-Vokabulare** sind die definierte Ausnahme: ein Vokabular, das kein eigenes Feld einführt, sondern eine Intention markiert und dabei nur Basis-Felder verlangt (z.B. `statement/v1` — verlangt `base/v1 title`). Für sie existiert kein äquivalenter Feldfilter, darum ist `hasSchema` ihr **primärer und einziger** Aktivierungsfilter. Voraussetzungen: der Composer MUSS das Vokabular beim Erstellen setzen (`deriveContext`), und das Vokabular MUSS in der Registry mit Schema und Context ausgewiesen sein. Ein Item ohne das Marker-Vokabular erscheint nicht in dessen Modulen — auch wenn sein `type` gleich heißt; `type` aktiviert nie (s.o.).
+**Klassen ohne eigenes Feld** aktivieren über ihre im Manifest deklarierte **Affordanz**, nicht über `hasSchema` (siehe „Die Rolle von `type`" und „Klassen haben IRIs"). Der Connector-Filter dafür ist `type`, verglichen gegen die Klassen, deren Manifest die Affordanz trägt — der Host leitet die Liste aus dem Manifest ab (Spec 01, Ladevertrag), kein Modul zählt sie auf. `hasSchema` bleibt, was es für alle anderen ist: ein schnellerer Vorfilter, nie die einzige Wahrheit.
+
+*Bis zum 21.09.2026 stand hier die Ausnahme „Marker-Vokabular": ein Vokabular ohne eigene Begriffe, das nur in `@context` stand, um eine Intention zu markieren, mit `hasSchema` als einzigem Filter. Es gab genau eines, `statement/v1`. Es ist entfallen — die Klasse steht in `@type`.*
 
 > **Status:** `hasSchema` ist implementiert: `matchesFilter` in `data-interface` prüft, dass alle gelisteten Vokabulare in `@context` aktiv sind; die lokal filternden Connectoren (Local, Mock, WoT) erben das, der GraphQL-Pfad transportiert Filter und `@context` end-to-end.
 
@@ -309,7 +331,7 @@ Für Vokabulare mit eigenem Feld gilt: Da `@context`-Konsistenz nicht erzwingbar
 | Calendar | `hasField: ['start']` | `hasSchema: ['…/event/v1']` | alles zeitlich Darstellbares |
 | Kanban | konfiguriertes `hasField: [statusField]` (Default: `['status']`) plus Spaltenwert-Prüfung | bei Default `hasSchema: ['…/task/v1']`; bei anderem Feld keine Task-Vokabular-Annahme | Nicht-Relation-Items mit verwertbarem konfiguriertem Spaltenfeld; `archived` nur bei expliziter Spalte |
 | Feed | kein Feldfilter — jedes Item mit eigener Karte | — | alles Neue im Space |
-| Resonance | `hasSchema: ['…/statement/v1']` (Marker-Vokabular, s.o.) | — | Aussagen zur Gruppen-Stellungnahme |
+| Resonance | `type` in den Klassen, deren Manifest `votesOn` deklariert (heute: `statement`) | `hasSchema: ['…/statement/v1']` | Aussagen zur Gruppen-Stellungnahme |
 | Contacts | `hasSchema: ['…/person/v1']` | — | Personen-Profile |
 
 Ein Item mit mehreren Schemas erscheint in jedem zuständigen Modul gleichzeitig. Jedes Modul rendert nur den Schema-Anteil, den es kennt.
