@@ -22,6 +22,8 @@ export interface GraphTypeDescriptor {
 export interface GraphViewHandle {
   fitView: (options?: { instant?: boolean }) => void
   focusNode: (nodeId: string, options?: { bottomInset?: number }) => void
+  /** Die aktuelle Kamera — fuer Tests und Aufrufer, die sie merken wollen. */
+  getCamera: () => { x: number; y: number; zoom: number }
 }
 
 export interface GraphViewProps {

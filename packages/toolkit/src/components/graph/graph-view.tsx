@@ -174,6 +174,22 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     scheduleDraw()
   }, [scheduleDraw])
 
+  /**
+   * Der Nutzer greift zur Kamera (Ziehen, Zoomen, Kneifen): Jede automatische
+   * Fahrt endet — die laufende, das Folgen UND der noch ausstehende Fit beim
+   * Einrasten. Sonst schriebe das naechste Bild seine Eingabe wieder um
+   * (Codex-Review zu #420, rls#421).
+   */
+  const userTakesCamera = useCallback(() => {
+    focusTargetRef.current = null
+    fitTweenRef.current = null
+    followFitRef.current = false
+    fitOnSettleRef.current = false
+    pendingInitialFitRef.current = false
+  }, [])
+
+  const getCamera = useCallback(() => ({ ...cameraRef.current }), [])
+
   const focusNode = useCallback((nodeId: string, options?: { bottomInset?: number }) => {
     const node = layoutRef.current.find((candidate) => candidate.id === nodeId)
     if (!node) return
@@ -191,7 +207,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     scheduleDraw()
   }, [scheduleDraw])
 
-  useImperativeHandle(ref, () => ({ fitView, focusNode }), [fitView, focusNode])
+  useImperativeHandle(ref, () => ({ fitView, focusNode, getCamera }), [fitView, focusNode, getCamera])
 
   useEffect(() => {
     selectedRef.current = selectedNodeId
@@ -567,8 +583,6 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
       if (simulationWasActive && gestureRef.current.mode !== "drag") {
         alphaRef.current = stepForceLayout(layoutRef.current, edgeRef.current, alphaRef.current)
       }
-      // Greift der Nutzer ein, gehoert ihm die Kamera.
-      if (gestureRef.current.mode !== "idle") followFitRef.current = false
       if (followFitRef.current && simulationWasActive && !focusTargetRef.current && !fitTweenRef.current) {
         const ziel = fitCamera(layoutRef.current, viewport.width, viewport.height)
         cameraRef.current = prefersReducedMotion ? ziel : approachCamera(cameraRef.current, ziel, 0.12)
@@ -627,7 +641,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
   }, [])
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
-    focusTargetRef.current = null
+    userTakesCamera()
     const position = pointerPosition(event)
     pointersRef.current.set(event.pointerId, position)
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -662,7 +676,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
       dragOffsetX: node ? world.x - node.x : 0,
       dragOffsetY: node ? world.y - node.y : 0,
     }
-  }, [pickNode, pointerPosition])
+  }, [pickNode, pointerPosition, userTakesCamera])
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
     const position = pointerPosition(event)
@@ -752,9 +766,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     const canvas = canvasRef.current
     if (!canvas) return
     event.preventDefault()
-    followFitRef.current = false
-    fitTweenRef.current = null
-    focusTargetRef.current = null
+    userTakesCamera()
     const bounds = canvas.getBoundingClientRect()
     const position = { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
     const before = screenToWorld(position.x, position.y, cameraRef.current, viewportRef.current)
@@ -766,7 +778,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     cameraRef.current.x += before.x - after.x
     cameraRef.current.y += before.y - after.y
     scheduleDraw()
-  }, [scheduleDraw])
+  }, [scheduleDraw, userTakesCamera])
 
   useEffect(() => {
     const canvas = canvasRef.current
