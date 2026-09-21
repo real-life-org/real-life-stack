@@ -12,6 +12,7 @@ import {
 } from "react"
 
 import { cn } from "../../lib/utils"
+import { ModuleSurfaceScope } from "../layout/module-surface-scope"
 import {
   focusActiveItemInVisibleArea,
   initialSelectionFocusVisibleAreaState,
@@ -82,7 +83,7 @@ function screenToWorld(x: number, y: number, camera: GraphCamera, viewport: View
   }
 }
 
-export const GraphView = forwardRef<GraphViewHandle, GraphViewProps>(function GraphView(
+const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function GraphViewInner(
   {
     nodes,
     edges,
@@ -788,3 +789,19 @@ export const GraphView = forwardRef<GraphViewHandle, GraphViewProps>(function Gr
     </div>
   )
 })
+
+/**
+ * Der Graph laeuft auch ausserhalb der App (Story, Test, apps/network). Die
+ * Huelle bringt dort mit, was sonst die Flaeche stellt — den schwebenden Kopf
+ * mit Suche, Filterkarte und Chips (`panelFit: "overlay"`, Spec 01, Regel 5).
+ * Unter der App reicht sie die vorhandene Flaeche durch. Vorher zeigte die
+ * Story den nackten Canvas: ohne Suche, ohne Filter (Anton, 21.09.2026).
+ */
+export const GraphView = forwardRef<GraphViewHandle, GraphViewProps>(function GraphView(props, ref) {
+  return (
+    <ModuleSurfaceScope fill="bleed" panelFit="overlay">
+      <GraphViewInner ref={ref} {...props} />
+    </ModuleSurfaceScope>
+  )
+})
+

@@ -97,3 +97,20 @@ describe("Keine zweite Breite in der Lens", () => {
     }
   })
 })
+
+/**
+ * Der Umschalter ist ein Steuerelement des Moduls und steht im Kopf neben der
+ * Suche (Spec 01, Regel 2) — auch freistehend. Vorher stand er in einer
+ * eigenen Zeile mit eigenem Abstand, und in der Story klaffte eine Luecke
+ * zwischen Suche und Karten (Anton, 21.09.2026).
+ */
+describe("Der Umschalter der Sammlung", () => {
+  it("steht freistehend im Kopf neben der Suche, mit zugaenglichem Zustand", () => {
+    act(() => {
+      root.render(createElement(CollectionView, { items: [eintrag], defaultLayout: "grid" }))
+    })
+    const aktionen = host.querySelector("[data-module-head-actions]")
+    expect(aktionen?.querySelector("[aria-label='Rasteransicht']")?.getAttribute("aria-pressed")).toBe("true")
+    expect(aktionen?.querySelector("[aria-label='Listenansicht']")?.getAttribute("aria-pressed")).toBe("false")
+  })
+})
