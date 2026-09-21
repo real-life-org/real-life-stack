@@ -85,6 +85,23 @@ export interface TypePresentationEntry {
   detail?: ComponentType<ItemSlotProps>
   /** Type-own footer, rendered IN ADDITION to surface footers. */
   footer?: ComponentType<ItemSlotProps>
+  /**
+   * Was der Composer fuer diesen Typ zusaetzlich wissen muss: Beschriftung
+   * des Speichern-Knopfs, eigene Widget-Beschriftungen, Statuswerte, ob ein
+   * Space Pflicht ist. Bis zum 21.09.2026 stand das als `APP_EXTRAS` in der
+   * Referenz-App — als „genuinely app-specific". Es ist Darstellung eines
+   * Typs und gehoert hierher, damit ein Toolkit-Typ ohne eine Zeile in der
+   * App erstellbar ist (Spec 01, Der Modul-Host, Regel 1).
+   */
+  composer?: TypeComposerPresentation
+}
+
+export interface TypeComposerPresentation {
+  submitLabel?: string
+  widgetLabels?: Readonly<Record<string, string>>
+  statusOptions?: readonly { id: string; label: string }[]
+  defaultStatus?: string
+  groupRequired?: boolean
 }
 
 /** Additively fills fields an existing presentation left unset
@@ -99,6 +116,7 @@ export interface TypePresentationFragment {
   preview?: ComponentType<ItemSlotProps>
   detail?: ComponentType<ItemSlotProps>
   footer?: ComponentType<ItemSlotProps>
+  composer?: TypeComposerPresentation
 }
 
 export interface TypePresentationLayer {
@@ -116,6 +134,7 @@ export interface ResolvedTypePresentation {
   preview?: ComponentType<ItemSlotProps>
   detail: ComponentType<ItemSlotProps>
   footer?: ComponentType<ItemSlotProps>
+  composer?: TypeComposerPresentation
   /** True when rendering generically: the type is unknown to the manifest OR
    *  has no presentation yet (spec rule 5 — visible, neutral, never broken). */
   generic: boolean
@@ -167,10 +186,11 @@ export const GENERIC_BADGE: TypeBadgeStyle = {
  *  styles are verbatim from the previous ItemTypeBadge DEFAULT_CONFIG; the
  *  preview slots are the previous getItemPreviewAdornments bodies. */
 const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
-  { id: "post", label: "Post", composerWidgets: ["text"] },
+  { id: "post", composer: { submitLabel: "Posten" }, label: "Post", composerWidgets: ["text"] },
   {
     id: "event",
     label: "Event",
+    composer: { submitLabel: "Erstellen" },
     badge: { icon: Calendar, className: "bg-blue-50 text-blue-700 border-blue-200" },
     composerWidgets: ["title", "text", "date", "location"],
     relationWidgets: { [relationAffordanceKey({ predicate: "invited", itemRole: "from" })]: "people" },
@@ -179,12 +199,26 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
   {
     id: "place",
     label: "Ort",
+    composer: { submitLabel: "Erstellen" },
     badge: { icon: MapPin, className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
     composerWidgets: ["title", "text", "location"],
   },
   {
     id: "task",
     label: "Task",
+    // Statuswerte = die Spalten des Kanban (kanban-board.tsx, defaultColumns).
+    // Hier ausgeschrieben statt importiert: Das Darstellungs-Register darf
+    // kein Modul einziehen. Aendert sich eine Spalte, aendern sich beide.
+    composer: {
+      widgetLabels: { text: "Beschreibung", people: "Zugewiesen" },
+      statusOptions: [
+        { id: "open", label: "To Do" },
+        { id: "in-progress", label: "In Arbeit" },
+        { id: "done", label: "Erledigt" },
+      ],
+      defaultStatus: "open",
+      groupRequired: true,
+    },
     badge: { icon: CheckSquare, className: "bg-amber-50 text-amber-700 border-amber-200" },
     composerWidgets: ["title", "text", "status", "people", "tags"],
     relationWidgets: { [relationAffordanceKey({ predicate: "assignedTo", itemRole: "from" })]: "people" },
@@ -207,6 +241,7 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     label: "Aussage",
     badge: { icon: MessageSquareQuote, className: "bg-sky-50 text-sky-700 border-sky-200" },
     composerWidgets: ["title", "text", "tags"],
+    composer: { widgetLabels: { title: "Aussage", text: "Kontext" }, submitLabel: "Einbringen" },
     footer: StatementVotesFooter,
   },
 ]
@@ -343,7 +378,7 @@ export function registerTypePresentation(
   }
 }
 
-const SCALAR_SLOTS = ["badge", "composerWidgets", "preview", "detail", "footer"] as const
+const SCALAR_SLOTS = ["badge", "composerWidgets", "preview", "detail", "footer", "composer"] as const
 
 function composePresentation(): Map<string, TypePresentationEntry> {
   if (composedCache) return composedCache
