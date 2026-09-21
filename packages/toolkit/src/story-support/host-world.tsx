@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react"
+import type { Group } from "@real-life-stack/data-interface"
 
 import { CreateHostProvider, CreateSheetController } from "../components/host/create-host"
 import { DetailHostController, DetailHostProvider } from "../components/host/detail-host"
@@ -18,9 +19,21 @@ import { STORY_SEED, StoryWorld, type StoryWorldOptions } from "./story-world"
  * vollstaendig aus dem Register (Spec 01, Der Modul-Host). Eine Story, die
  * ein Modul zeigt, zeigt es HIER — nicht als Nachbau aus Bausteinen.
  */
+/**
+ * Der aktive Space und die Gruppenliste kommen aus DERSELBEN Konfiguration wie
+ * der Connector (`seed`, `group`) — sonst steht der Connector auf einem Space
+ * und Fokus, Host-Kontext und Outlet auf einem anderen (rls#423).
+ */
+export function hostWorldSpace(options: StoryWorldOptions): { groups: Group[]; space: Group } {
+  const groups = options.seed?.groups ?? STORY_SEED.groups
+  const gewuenscht = options.group ?? "garden"
+  const space = groups.find((g) => g.id === gewuenscht) ?? groups[0]
+  return { groups, space }
+}
+
 export function HostWorld({ module: start, children, ...options }: StoryWorldOptions & { module: string; children?: ReactNode }) {
   const [module, setModule] = useState(start)
-  const space = STORY_SEED.groups[0]
+  const { groups, space } = hostWorldSpace(options)
   const modules = getModules().filter((m) => m.view)
   return (
     <StoryWorld {...options}>
@@ -38,7 +51,7 @@ export function HostWorld({ module: start, children, ...options }: StoryWorldOpt
                   <DetailHostController activeModule={module} activeGroupId={space.id} />
                   <CreateSheetController />
                   <AppShellMain>
-                    <ModuleOutlet activeWorkspace={space} activeModule={module} groups={STORY_SEED.groups} />
+                    <ModuleOutlet activeWorkspace={space} activeModule={module} groups={groups} />
                   </AppShellMain>
                   {children}
                 </ModulePanelProvider>
