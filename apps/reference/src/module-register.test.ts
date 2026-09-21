@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { getModules, moduleIds, resolveSpaceModules, resolveActiveModule } from "@real-life-stack/toolkit"
 import "./module-register"
-import { validModules, resolveDefaultModule, canonicalPath } from "./hooks/use-workspace-routing"
+import { resolveDefaultModule, canonicalPath } from "@real-life-stack/toolkit/router"
 
 const SRC = join(__dirname)
 
@@ -13,10 +13,6 @@ describe("Modul-Register — App-Schicht", () => {
     // Ein Modul ohne Ansicht degradiert zwar sichtbar (Spec 01, Regel 5),
     // aber in DIESER App soll jedes Modul eine haben.
     expect(ohneView).toEqual([])
-  })
-
-  it("derives the routing list from the register", () => {
-    expect(validModules()).toEqual(moduleIds())
   })
 
   it("gives every module a label and an icon", () => {
@@ -32,9 +28,10 @@ describe("keine zweite Modul-Liste (Spec 01, Regel 1)", () => {
   // Stellen unabhaengig beantwortet, und die Listen sind lautlos
   // auseinandergelaufen. Der Test faellt, sobald jemand wieder eine
   // Aufzaehlung von Modul-Ids einfuehrt, statt sie abzuleiten.
+  // `hooks/use-workspace-routing.ts` und `notification-navigation.ts` standen
+  // hier bis zum 21.09.2026; beide leben jetzt im Router-Unterpfad des
+  // Toolkits, samt dieser Regel (tests/router-regeln.test.ts).
   const DATEIEN = [
-    "hooks/use-workspace-routing.ts",
-    "notification-navigation.ts",
     "views/module-outlet.tsx",
   ]
 
@@ -78,9 +75,10 @@ describe("kein Register-Snapshot auf Modulebene (Review #277)", () => {
   // unsichtbar, und der Fehler zeigt sich nur bei bestimmter Importreihenfolge.
   // `detail-host.tsx` stand hier bis zum 21.09.2026; der Detail-Host lebt
   // jetzt im Toolkit (B0), samt dieser Regel.
+  // `hooks/use-workspace-routing.ts` und `notification-navigation.ts` standen
+  // hier bis zum 21.09.2026; beide leben jetzt im Router-Unterpfad des
+  // Toolkits, samt dieser Regel (tests/router-regeln.test.ts).
   const DATEIEN = [
-    "hooks/use-workspace-routing.ts",
-    "notification-navigation.ts",
     "views/module-outlet.tsx",
   ]
 

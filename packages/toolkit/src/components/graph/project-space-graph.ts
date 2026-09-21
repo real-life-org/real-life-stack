@@ -15,10 +15,21 @@ import type { GraphEdge, GraphNode, GraphTypeDescriptor } from "./types"
  * getan, verschieden. Diese hier ist die vollständigere: Sie kennt Personen
  * als Knoten, Ziele in anderen Spaces und die Namensräume der Knoten-Ids.
  *
- * Die Netzwerk-App hat noch ihre eigene, ohne Namensräume (`project-relation-graph.ts`).
- * Sie sollte auf diese umstellen; das ändert dort aber das Verhalten und
- * braucht eine eigene Runde.
+ * Bis zum 21.09.2026 hatte die Netzwerk-App eine eigene, ohne Namensräume
+ * (`project-relation-graph.ts`); seit sie auf dem Modul-Host läuft, ist dies
+ * die eine Umrechnung. Von dort stammt das Bild am Item-Knoten: Eine Person,
+ * die als Item steht (Spec 09, Profil als Spiegel), trägt ihr Bild in
+ * `data.avatarUrl`.
  */
+
+/** Ein Bild aus den Daten — nur, was ein Browser gefahrlos laden kann. */
+function itemAvatarUrl(item: Item): string | undefined {
+  for (const key of ["avatarUrl", "avatar", "avatarThumbnail"] as const) {
+    const value = item.data[key]
+    if (typeof value === "string" && /^(?:data:image\/|https:\/\/)/.test(value)) return value
+  }
+  return undefined
+}
 
 
 /** Palette per type id; register supplies the labels. Deliberately local:
@@ -97,7 +108,8 @@ export function projectSpaceGraph(
 
   for (const item of cardItems) {
     const nodeId = graphItemNodeId(item.id)
-    nodes.set(nodeId, { id: nodeId, label: label(item), type: item.type })
+    const avatarUrl = itemAvatarUrl(item)
+    nodes.set(nodeId, { id: nodeId, label: label(item), type: item.type, ...(avatarUrl ? { avatarUrl } : {}) })
     usedTypes.add(item.type)
   }
 

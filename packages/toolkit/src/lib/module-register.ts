@@ -17,7 +17,7 @@
 
 import type { ComponentType } from "react"
 import type { Group, Item, ModuleHintOptions, ModuleHints } from "@real-life-stack/data-interface"
-import { isAggregateVisibleItemType, moduleHintsFor } from "@real-life-stack/data-interface"
+import { hintKeyFor, isAggregateVisibleItemType, moduleHintsFor } from "@real-life-stack/data-interface"
 import type { SelectionFocusVisibleArea } from "./selection-focus"
 import { CalendarModule } from "../modules/calendar-module"
 import { CollectionModule } from "../modules/collection-module"
@@ -434,10 +434,8 @@ export function findModulePresenting(
  */
 export const PRESENT_PRIORITY = ["statement", "position", "start", "status"] as const
 
-/** `position` → `hasPosition`: so heißt das Feld im Hinweis-Objekt. */
-function hintKey(field: string): keyof ModuleHints {
-  return `has${field[0].toUpperCase()}${field.slice(1)}` as keyof ModuleHints
-}
+/** `position` → `hasPosition`: so heißt das Feld im Hinweis-Objekt. Die Tabelle weiß es (auch für eigene Hinweise). */
+const hintKey = (field: string): string => hintKeyFor(field)
 
 /**
  * Welches Modul zeigt dieses Item, wenn der Link keines nennt?

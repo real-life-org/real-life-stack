@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest"
 import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
 import type { Group } from "@real-life-stack/data-interface"
-import { NotificationCenter, type NotificationCandidate } from "@real-life-stack/toolkit"
-import { buildNotificationRoute } from "./notification-navigation"
+import { NotificationCenter, modulePresentsItem, type NotificationCandidate } from "../src"
+import { notificationRoute } from "../src/router"
+
+const buildNotificationRoute = (n: NotificationCandidate, g: readonly Group[]) => notificationRoute(n, g, "feed")
+const moduleCanDisplay = (module: string, hints: { hasPosition: boolean; hasStart: boolean; hasStatus: boolean; hasStatement?: boolean } | undefined, itemType?: string) => modulePresentsItem(module, hints, itemType)
 
 const groups: Group[] = [
   { id: "garten", name: "Gartenprojekt", data: { modules: ["feed", "map", "kanban", "calendar", "resonance"] } },
@@ -23,8 +26,8 @@ function candidate(overrides: Partial<NotificationCandidate>): NotificationCandi
   } as NotificationCandidate
 }
 
-import { moduleCanDisplay } from "./notification-navigation"
-
+// Bis zum 21.09.2026 `apps/reference/src/notification-navigation.test.ts`;
+// die Route lebt jetzt im Router-Unterpfad, fuer beide Apps.
 describe("Linsen-Eskalation — moduleCanDisplay", () => {
   const task = { hasPosition: false, hasStart: false, hasStatus: true }
   const place = { hasPosition: true, hasStart: false, hasStatus: false }

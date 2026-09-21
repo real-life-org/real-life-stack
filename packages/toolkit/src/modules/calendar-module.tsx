@@ -25,7 +25,11 @@ const toLocalDatetime = (d: Date) => `${toLocalDate(d)}T${pad2(d.getHours())}:${
  * und Erstellen noch selbst.
  */
 export function CalendarModule({ items = [] }: ModuleViewProps) {
-  const { resolveItemGroupColor, currentUser, activeItemId } = useModuleHost()
+  const { entry, resolveItemGroupColor, currentUser, activeItemId } = useModuleHost()
+  // Wo der Kalender aufgeht, wenn kein Item den Blick lenkt — Konfiguration
+  // des Eintrags (`options.initialVisibleDate`), wie `options.initialView`
+  // bei der Karte: Nur die App weiss, dass ihre Daten im Juli liegen.
+  const initialVisibleDate = typeof entry.options?.initialVisibleDate === "string" ? entry.options.initialVisibleDate : undefined
   const { itemId: focusedId, focusItem } = useItemFocus()
   const { startCreate, patchCreate, isComposing } = useCreate()
 
@@ -52,6 +56,7 @@ export function CalendarModule({ items = [] }: ModuleViewProps) {
       currentUserId={currentUser?.id}
       resolveItemGroupColor={resolveItemGroupColor}
       activeItemId={activeItemId}
+      initialVisibleDate={initialVisibleDate}
       focusDate={focusDate}
       onItemClick={(event) => focusItem(event.id)}
       onCreateEvent={openComposerAt}
