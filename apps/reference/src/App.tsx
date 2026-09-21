@@ -79,6 +79,7 @@ import type { DataInterface, User } from "@real-life-stack/data-interface"
 import {
   type Item, isAggregateVisibleItemType, isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
+import { MapLibreAdapterProvider } from "@real-life-stack/toolkit/maplibre"
 import { MockConnector } from "@real-life-stack/mock-connector"
 import { LocalConnector } from "@real-life-stack/local-connector"
 import { ModuleOutlet } from "./views/module-outlet"
@@ -735,6 +736,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     <DraftItemProvider>
     <UnsavedChangesProvider>
     <DetailHostProvider>
+    <MapLibreAdapterProvider>
     <LocationPickProvider
       navigateToModule={handleModuleChange}
       currentModule={activeModule}
@@ -959,6 +961,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     </FilterProvider>
     </CreateHostProvider>
     </LocationPickProvider>
+    </MapLibreAdapterProvider>
     </DetailHostProvider>
     </UnsavedChangesProvider>
     </DraftItemProvider>

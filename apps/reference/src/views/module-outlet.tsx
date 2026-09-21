@@ -1,20 +1,8 @@
-import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import {
-  Button,
-  ModuleFrame,
-  getModule,
-  getModules,
-  type SelectionFocusVisibleArea,
-  type Workspace,
-} from "@real-life-stack/toolkit"
+import { Button, ModuleOutlet as ToolkitModuleOutlet, type SelectionFocusVisibleArea, type Workspace } from "@real-life-stack/toolkit"
 import type { Group } from "@real-life-stack/data-interface"
 
 export interface ModuleOutletProps {
-  /**
-   * Workspace resolved by useWorkspaceRouting. Null means the URL names
-   * a space the user has no access to — renders the no-access notice.
-   */
   activeWorkspace: Workspace | null
   activeModule: string
   groups: Group[]
@@ -24,110 +12,25 @@ export interface ModuleOutletProps {
 }
 
 /**
- * Renders the active module for the active workspace. Pure dispatch over the
- * module register (spec 01) — this file knows no module by name any more.
- * Which modules exist, how each fills the space and which ones are expensive
- * enough to keep mounted all live in the register.
+ * Der Outlet lebt im Toolkit (B0, Schritt 5a). Die App steuert nur bei, was
+ * ohne Zugang steht — denn nur sie weiss, wohin „zurueck" fuehrt.
  */
-export function ModuleOutlet({
-  activeWorkspace,
-  activeModule,
-  groups,
-  urlSpaceId,
-  selectionFocusVisibleArea,
-}: ModuleOutletProps) {
+export function ModuleOutlet({ activeWorkspace, activeModule, groups, urlSpaceId, selectionFocusVisibleArea }: ModuleOutletProps) {
   const navigate = useNavigate()
-  const noAccess = !!urlSpaceId && !activeWorkspace
-  const groupId = activeWorkspace?.id ?? ""
-
-  // Modules flagged `keepMounted` are expensive to (re)initialise — the map
-  // costs a WebGL context, workers, a remote style and its tiles, roughly a
-  // second every time. So instead of mounting on demand and tearing down on
-  // every module switch, they are created on first visit and then hidden
-  // while another module is active. ModuleOutlet persists across module
-  // switches (the route always renders <Home>), so this state survives.
-  const [visited, setVisited] = useState<string[]>(() => (noAccess ? [] : [activeModule]))
-  useEffect(() => {
-    if (noAccess) return
-    setVisited((prev) => (prev.includes(activeModule) ? prev : [...prev, activeModule]))
-  }, [activeModule, noAccess])
-
-  const persistent = getModules().filter((m) => m.keepMounted && visited.includes(m.id))
-  const active = getModule(activeModule)
-  const activeIsPersistent = !!active?.keepMounted
-
-  // Die Flaeche ist eine Spalte: Kopf, darunter der Scrollbereich (Spec 01).
-  // Was Geometrie, Fuellmodus und Panel-Regel daraus machen, entscheidet der
-  // Frame anhand des Registereintrags — nicht dieser Dispatch.
-  // Die Suche gehoert der Flaeche und zieht sich durch alle Module (Spec 01,
-  // Regel 2). Ihre Beschriftung nennt darum den Space, nicht das Modul.
-  const searchLabel = activeWorkspace ? `In ${activeWorkspace.name} suchen` : undefined
-  const wrap = (id: string, node: React.ReactNode) => (
-    <ModuleFrame moduleId={id} searchLabel={searchLabel}>{node}</ModuleFrame>
-  )
-
   return (
-    <>
-      {/* Persistent, full-bleed hosts. Kept mounted across module switches
-          (hidden via display:none when inactive) so returning is instant.
-          Lazily created on first visit so users who never open them don't
-          pay for it. */}
-      {persistent.map((mod) => {
-        const View = mod.view
-        if (!View) return null
-        const isActive = mod.id === activeModule && !noAccess
-        return (
-          <div
-            key={mod.id}
-            className="h-full w-full"
-            style={isActive ? undefined : { display: "none" }}
-          >
-            {/* Auch die dauerhaft gehaltenen Flaechen bekommen ihren Frame:
-                Er ist der eine Wirt der Steuerung — ohne ihn baute die Karte
-                Suche, Chips und Pille wieder selbst. */}
-            {wrap(
-              mod.id,
-              <View
-                groupId={groupId}
-                active={isActive}
-                groups={groups}
-                selectionFocusVisibleArea={selectionFocusVisibleArea}
-              />,
-            )}
-          </div>
-        )
-      })}
-
-      {noAccess ? (
+    <ToolkitModuleOutlet
+      activeWorkspace={activeWorkspace}
+      activeModule={activeModule}
+      groups={groups}
+      urlSpaceId={urlSpaceId}
+      selectionFocusVisibleArea={selectionFocusVisibleArea}
+      noAccessContent={
         <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
           <p className="text-lg font-medium text-foreground">Du bist kein Mitglied dieses Spaces</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Der Space existiert nicht oder du hast keinen Zugang.
-          </p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate("/")}>
-            Zurück zur Übersicht
-          </Button>
+          <p className="text-sm text-muted-foreground mt-2">Der Space existiert nicht oder du hast keinen Zugang.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate("/")}>Zurück zur Übersicht</Button>
         </div>
-      ) : activeIsPersistent ? null : active?.view ? (
-        wrap(
-          active.id,
-          <active.view
-            groupId={groupId}
-            active
-            groups={groups}
-            selectionFocusVisibleArea={selectionFocusVisibleArea}
-          />,
-        )
-      ) : active ? (
-        // Registered but no surface attached — say so instead of showing an
-        // empty page (spec 01, rule 5).
-        <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
-          <p className="text-lg font-medium text-foreground">{active.label}</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Für dieses Modul ist in dieser App keine Ansicht hinterlegt.
-          </p>
-        </div>
-      ) : null}
-    </>
+      }
+    />
   )
 }

@@ -49,8 +49,8 @@ export {
   type ThemeTokens,
 } from "./lib/theme-tokens"
 export {
-  CORE_MODULES,
-  CORE_MODULE_LAYER,
+  TOOLKIT_MODULES,
+  TOOLKIT_DEFINITION,
   composeModules,
   setModuleRegistry,
   isKnownModule,
@@ -64,7 +64,7 @@ export {
   findModulePresenting,
   type ModuleEntry,
   type ModuleFragment,
-  type ModuleLayer,
+  type ModuleExtension,
   type ModuleRegistry,
   type ModuleViewProps,
   type ModuleFill,

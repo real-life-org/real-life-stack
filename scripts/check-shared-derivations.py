@@ -90,7 +90,8 @@ def quellen(wurzeln: list[Path]) -> list[Path]:
     except (subprocess.CalledProcessError, FileNotFoundError):
         print("git ls-files nicht verfuegbar — es wird nichts geprueft", file=sys.stderr)
         return []
-    return [Path(p) for p in roh.split("\0") if p.endswith((".ts", ".tsx"))]
+    # `--cached` listet auch geloeschte, noch nicht gestagte Dateien — nur pruefen, was es gibt.
+    return [Path(p) for p in roh.split("\0") if Path(p).is_file() and p.endswith((".ts", ".tsx"))]
 
 
 def main() -> int:
