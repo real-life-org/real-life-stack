@@ -22,6 +22,7 @@ import type { SelectionFocusVisibleArea } from "./selection-focus"
 import { CalendarModule } from "../modules/calendar-module"
 import { CollectionModule } from "../modules/collection-module"
 import { FeedModule } from "../modules/feed-module"
+import { GraphModule } from "../modules/graph-module"
 import { MapModule } from "../modules/map-module"
 import {
   Calendar,
@@ -158,9 +159,9 @@ export interface ModuleFragment extends Partial<Omit<ModuleEntry, "id">> {
 
 /**
  * Die Module, die das Toolkit mitliefert. Reihenfolge = Tab-Reihenfolge.
- * Feed, Kalender, Karte und Liste bringen ihre Flaeche mit (B0–B2); die
- * uebrigen folgen je in einem eigenen Schritt (B3–B5) und werden bis dahin
- * von der Referenz-App erweitert.
+ * Feed, Kalender, Karte, Liste und Graph bringen ihre Flaeche mit (B0–B3);
+ * Resonanz und Kanban folgen je in einem eigenen Schritt (B4, B5) und
+ * werden bis dahin von der Referenz-App erweitert.
  */
 export const TOOLKIT_MODULES: readonly ModuleEntry[] = Object.freeze([
   { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl", options: { suggestType: "post", createShell: "fullscreen" }, view: FeedModule },
@@ -175,7 +176,7 @@ export const TOOLKIT_MODULES: readonly ModuleEntry[] = Object.freeze([
   // Zahl fuenfmal im Code, und wer eine davon anfasste, rueckte Kopf und
   // Eintraege gegeneinander.
   { id: "collection", label: "Liste", icon: List, fill: "bleed", maxWidth: "max-w-6xl", view: CollectionModule },
-  { id: "graph", label: "Graph", icon: Share2, fill: "bleed", panelFit: "overlay" },
+  { id: "graph", label: "Graph", icon: Share2, fill: "bleed", panelFit: "overlay", view: GraphModule },
 ])
 
 /**
