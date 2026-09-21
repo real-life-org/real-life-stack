@@ -232,26 +232,16 @@ export function fitCamera(
 }
 
 /**
- * Laesst die Simulation synchron vorlaufen, bis `alpha` unter `until` faellt
- * oder das Zeitbudget aufgebraucht ist — VOR dem ersten Bild. Ohne das sah
- * man zehn Sekunden Wanderung mit drei harten Kameraspruengen (Anton,
- * 21.09.2026: „warum zuckt der Graph nach dem Aufbau?"). 312 Knoten brauchen
- * fuer ihre Schritte einen guten Teil des Budgets; ein sehr grosser Graph bekommt so
- * viel, wie in das Budget passt, und wandert den Rest sichtbar.
+ * Ein Schritt der Kamera auf ein Ziel zu — ein fester Anteil des Abstands je
+ * Bild. Damit FOLGT die Kamera dem Netz, waehrend es sich ordnet: Die
+ * Bewegung der Simulation bleibt sichtbar (Anton, 21.09.2026: „die Bewegung
+ * war gut"), nur die harten Spruenge sind weg. Bei `factor` 1 ist es der Sprung.
  */
-export function presettleForceLayout(
-  nodes: LayoutNode[],
-  edges: readonly GraphEdge[],
-  alpha: number,
-  options: { budgetMs?: number; until?: number; now?: () => number } = {},
-): number {
-  const { budgetMs = 120, until = 0.03 } = options
-  const now = options.now ?? (() => performance.now())
-  const start = now()
-  let current = alpha
-  while (current > until && now() - start < budgetMs) {
-    current = stepForceLayout(nodes, edges, current)
+export function approachCamera(from: GraphCamera, to: GraphCamera, factor: number): GraphCamera {
+  const k = Math.max(0, Math.min(1, factor))
+  return {
+    x: from.x + (to.x - from.x) * k,
+    y: from.y + (to.y - from.y) * k,
+    zoom: from.zoom + (to.zoom - from.zoom) * k,
   }
-  return current
 }
-

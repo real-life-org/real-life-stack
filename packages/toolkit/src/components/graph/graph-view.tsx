@@ -21,8 +21,8 @@ import {
   approachOpacity,
   createLayoutNodes,
   displayRadius,
+  approachCamera,
   fitCamera,
-  presettleForceLayout,
   focusCamera,
   interpolateCamera,
   stepForceLayout,
@@ -119,6 +119,8 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
   const frameRef = useRef<number | null>(null)
   /** Vor dem ersten Bild eines neuen Bestands: Kamera sofort passend, ohne Fahrt. */
   const pendingInitialFitRef = useRef(false)
+  /** Solange sich ein neuer Bestand ordnet, folgt die Kamera ihm weich — bis der Nutzer eingreift. */
+  const followFitRef = useRef(false)
   const fitOnSettleRef = useRef(false)
   const fitTweenRef = useRef<FitTween | null>(null)
   const initializedRef = useRef(false)
@@ -176,6 +178,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     const node = layoutRef.current.find((candidate) => candidate.id === nodeId)
     if (!node) return
     pendingInitialFitRef.current = false
+    followFitRef.current = false
     fitOnSettleRef.current = false
     fitTweenRef.current = null
     focusTargetRef.current = {
@@ -211,13 +214,13 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
       if (!edgeIds.has(id)) edgeOpacityRef.current.delete(id)
     }
     alphaRef.current = nodes.length > 0 ? 1 : 0
-    // Ein NEUER Bestand (erster Aufbau, Space-Wechsel): erst vorrechnen, dann
-    // zeigen. Ein Bestand, der nur waechst oder schrumpft, animiert weiter —
-    // sonst spraengen die bekannten Knoten.
+    // Ein NEUER Bestand (erster Aufbau, Space-Wechsel): Die Kamera sitzt im
+    // ersten Bild und folgt dann dem Netz, waehrend es sich ordnet. Die
+    // Bewegung der Simulation bleibt sichtbar; nur die Spruenge sind weg.
     const alleNeu = nodes.length > 0 && !nodes.some((node) => previous.has(node.id))
     if (alleNeu) {
-      alphaRef.current = presettleForceLayout(layoutRef.current, validEdges, alphaRef.current)
       pendingInitialFitRef.current = true
+      followFitRef.current = true
       fitOnSettleRef.current = true
     }
     initializedRef.current = true
@@ -240,6 +243,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
   useEffect(() => {
     if (fitViewKey === undefined) return
     pendingInitialFitRef.current = nodes.length > 0
+    followFitRef.current = nodes.length > 0
     fitOnSettleRef.current = nodes.length > 0
     scheduleDraw()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -563,8 +567,15 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
       if (simulationWasActive && gestureRef.current.mode !== "drag") {
         alphaRef.current = stepForceLayout(layoutRef.current, edgeRef.current, alphaRef.current)
       }
+      // Greift der Nutzer ein, gehoert ihm die Kamera.
+      if (gestureRef.current.mode !== "idle") followFitRef.current = false
+      if (followFitRef.current && simulationWasActive && !focusTargetRef.current && !fitTweenRef.current) {
+        const ziel = fitCamera(layoutRef.current, viewport.width, viewport.height)
+        cameraRef.current = prefersReducedMotion ? ziel : approachCamera(cameraRef.current, ziel, 0.12)
+      }
       if (fitOnSettleRef.current && simulationWasActive && alphaRef.current <= 0.004) {
         fitOnSettleRef.current = false
+        followFitRef.current = false
         fitView()
       }
 
@@ -741,6 +752,8 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     const canvas = canvasRef.current
     if (!canvas) return
     event.preventDefault()
+    followFitRef.current = false
+    fitTweenRef.current = null
     focusTargetRef.current = null
     const bounds = canvas.getBoundingClientRect()
     const position = { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
