@@ -177,7 +177,7 @@ Beispiele:
 | Map | räumliche Ansicht auf Orte, Events und Ressourcen | Items mit `position` |
 | Calendar | zeitliche Monats-, Wochen-, Tages- oder Listenansicht | Items mit `start` / `end` |
 | Kanban / Tasks | Aufgaben- und Workflow-Ansicht | Items mit `status` |
-| Resonance | Zustimmung und Vorbehalt zu Aussagen | Items vom Typ `statement` mit Stimmen als Relations-Datensätze |
+| Resonance | Zustimmung und Vorbehalt zu Aussagen | Items mit dem Marker-Vokabular `statement/v1` — der erklärten Fähigkeit, Stellungnahmen zu tragen; die Stimmen selbst sind Relation Records. Nie der Typ, und nie die Stimmen: Eine frisch eingebrachte Aussage hat noch keine und muss trotzdem dort erscheinen, wo man sie bewertet |
 | Collection | Liste oder Raster über alles, was der Space hält | alle Items, die in einer aggregierenden Ansicht erscheinen |
 | Graph | Items und ihre Beziehungen als Netz | Items und Relations |
 
@@ -201,7 +201,9 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 | `maxWidth` | Breite des Inhalts: bei `fill: "container"` die des Containers, bei `fill: "bleed"` die, an der sich **Kopf und Inhalt** ausrichten — die Lens liest sie aus der Fläche (`useModuleContentClass`), statt eine eigene zu führen, sonst stehen Kopf und Einträge nicht mehr bündig |
 | `keepMounted` | Fläche im Baum halten statt beim Wechsel abzubauen — für Module, deren Aufbau teuer ist (Map: WebGL-Kontext, Worker, entfernter Style) |
 | `panelFit` | ob ein offenes Panel die Fläche einrückt (`inset`, Standard) oder sich darüber legt (`overlay`) — siehe Content-Bereich |
-| `presents` | Item-Felder, die dieses Modul darstellen kann (Karte: `position`, Kalender: `start`) — siehe „Ein Feld führt zu seiner Sicht" |
+| `presents` | **Aktivierungshinweise**: was dieses Modul darstellen kann (Karte: `position`, Kalender: `start`, Kanban: `status`, Resonanz: `statement`). Ein Hinweis ist ein Feld **oder** ein Marker-Vokabular (Spec 06); welches von beiden, weiß `data-interface`, nicht der Eintrag — siehe „Der Ladevertrag" und „Ein Feld führt zu seiner Sicht" |
+| `loads` | wer die Items des Moduls lädt: `host` (Standard — aus `presents`) oder `module`. `module` sagt die Karte, die nach Kartenausschnitt lädt; der Host stellt dann **keine** eigene Abfrage. *Entwurf 21.09.2026, aus rls#411: das eine Feld, das der Host wirklich braucht* |
+| `options` | modulspezifische Konfiguration, die in den Ladevertrag eingeht (Kanban: `statusField`, Standard `status`). Heute statisch in der App-Schicht; sobald Module je Space konfigurierbar sind, kommt derselbe Wert aus dem Space. *Entwurf 21.09.2026* |
 | `view` | die Fläche selbst. Für die Kern-Module liefert sie das **Toolkit** — vollständig, lauffähig ohne eine Zeile in der App (siehe „Der Modul-Host"). Eine App DARF sie in ihrer Schicht ersetzen oder ein eigenes Modul mit eigener Fläche hinzufügen. *Entwurf 20.09.2026: Bis dahin steuerte die App jede Fläche bei; die Verdrahtung darum stand deshalb siebenmal in der Referenz-App.* |
 
 ### Regeln
@@ -215,7 +217,7 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 5. **Die Auswahl gehört ebenfalls an eine Stelle.** Aus einer gespeicherten Liste eine benutzbare zu machen und daraus ein aktives Modul zu wählen, sind zwei Operationen, die das Register anbietet und die jede Fläche benutzt — Routing, Tabs, Space-Wechsel und Benachrichtigungen. Sie selbst zusammenzusetzen ist derselbe Fehler wie eine zweite Modul-Liste: Es hat bereits dazu geführt, dass ein Sprung aus einer Benachrichtigung im Feed statt auf der Karte landete, weil eine Aufrufstelle den Leer-Fall anders behandelte als die andere.
 6. Eine `id` in `Group.data.modules` ohne Registereintrag ist **kein Fehler**: Sie stammt aus einer anderen App-Version oder einem Modul, das diese App nicht kennt. Sie MUSS erhalten bleiben (nie stillschweigend entfernt) und DARF NICHT dargestellt werden. Zählungen, Garantien — etwa „mindestens ein Modul bleibt aktiv" — **und jede Auswahl eines aktiven Moduls** MÜSSEN die darstellbaren Einträge nehmen, nie die rohe Liste: Sonst bestimmt eine fremde Id das Routing, und der Nutzer landet auf einem Tab ohne Fläche. Bleibt nach dem Filtern nichts übrig, greift der volle Satz — ein Space ganz ohne Tab wäre schlimmer als einer mit den Vorgaben.
 7. Ein Registereintrag ohne `view` MUSS sichtbar degradieren (Hinweis statt leerer Fläche). Ein Modul, das im Tab erscheint und dann nichts zeigt, ist schlimmer als eines, das fehlt.
-8. Das Register trägt **keine Aktivierungsregel**: Welche Items ein Modul zeigt, entscheidet Feld-Präsenz (siehe [06-schema-composition.md](06-schema-composition.md)), nie ein Eintrag hier. `presents` ist keine Ausnahme davon, sondern ihre Anwendung: Es nennt die Felder, und der Host leitet daraus den Filter ab — dieselbe Regel, die auch „Ein Feld führt zu seiner Sicht" trägt. Ein Modul ohne `presents` zeigt alles, was in einer aggregierenden Ansicht erscheint.
+8. Das Register trägt **keine Aktivierungsregel**: Welche Items ein Modul zeigt, entscheidet Feld-Präsenz (siehe [06-schema-composition.md](06-schema-composition.md)), nie ein Eintrag hier. `presents` ist keine Ausnahme davon, sondern ihre Anwendung: Es nennt die Felder, und der Host leitet daraus den Filter ab — dieselbe Regel, die auch „Ein Feld führt zu seiner Sicht" trägt. Ein Modul ohne `presents` zeigt alles, was in einer aggregierenden Ansicht erscheint. Und die Präsenz ist die des **Feldes**, nie die des Typs — auch nicht als Abkürzung davor: `hasStatus` prüfte bis zum 21.09.2026 zuerst `type === "task"`, und ein Task ohne Status wurde in ein Kanban geleitet, das ihn nicht zeigte.
 
 ### Der Modul-Host
 
@@ -230,7 +232,7 @@ Der Registereintrag beantwortet, *was folgt daraus, dass ein Space dieses Modul 
 | Der Host … | … und woher er es weiß |
 |---|---|
 | stellt die **Fläche** (Kopf, Suche, Vokabular, Filterkarte, Chips, schwebende Ecke) | `fill`, `panelFit`, `maxWidth` — wie heute |
-| lädt die **Items** des Moduls | aus `presents`, über eine Funktion in `data-interface`, die zu jedem darstellbaren Feld den Filter kennt (heute steht dieses Wissen in `moduleHintsFor`; die Umkehrung fehlt noch). Ein Modul, das anders laden muss (die Karte nach Ausschnitt), lädt selbst und sagt es dem Host |
+| lädt die **Items** des Moduls | nach dem **Ladevertrag** unten: aus `presents` und `options` einen Connector-Filter je Hinweis, bei mehreren Hinweisen die Vereinigung. Bei `loads: "module"` stellt der Host **keine** Abfrage — die Karte lädt nach Ausschnitt selbst |
 | löst den **Space-Kontext** auf: Mitglieder, Autoren, Gruppenfarben, das Aggregat „Mein Netzwerk" | aus dem aktiven Space; die Ausnahme `__overview__` gibt es damit an genau einer Stelle |
 | registriert das **Detail** (Lesen ↔ Bearbeiten im geteilten Panel) | aus der geteilten Bearbeitungs-Konfiguration: alle Inhaltstypen, der Composer-Mapper, die Vorbelegung. Der Hintergrund-Schleier folgt aus `panelFit`: `overlay` bleibt ohne, damit die Karte bewegbar bleibt |
 | registriert das **Erstellen** | mit **allen** Inhaltstypen des Space — der Plusknopf bietet immer alles an, das Modul schränkt nicht ein (Anton, 20.09.2026). Ein Modul DARF einen **Vorschlag** machen: Ein Klick auf einen leeren Kalendertag öffnet den Composer mit „Termin" vorgewählt und dem Datum vorbelegt. Ein Vorschlag ist eine Voreinstellung, kein Zaun — das Typmenü bleibt offen |
@@ -248,7 +250,36 @@ Regeln:
 4. Der Fokus lebt in der URL, wo es eine gibt. Eine App mit Router, die den Fokus anders hält, weicht von der Spec ab und MUSS das im Pull Request begründen.
 5. Der Host ist **eine** Komponente im Toolkit. Eine zweite Fassung davon in einer App — auch eine teilweise, auch eine „vorläufige" — ist derselbe Fehler wie eine zweite Modul-Liste. Die Netzwerk-App hat heute eine; sie wird auf den Host umgestellt.
 
-Was ein Eintrag dafür **nicht** braucht: kein `items`-Feld (folgt aus `presents`), kein `backdrop` (folgt aus `panelFit`), keine Liste der Erstell-Typen (es sind alle), kein `createLabel` (der Knopf heißt „Erstellen", das Modul schlägt höchstens einen Typ vor). Der Eintrag wird durch den Host nicht länger, sondern die Ansichten werden kürzer.
+Was ein Eintrag dafür **nicht** braucht: kein `items`-Feld (folgt aus `presents`), kein `backdrop` (folgt aus `panelFit`), keine Liste der Erstell-Typen (es sind alle), kein `createLabel` (der Knopf heißt „Erstellen", das Modul schlägt höchstens einen Typ vor). Was er braucht, sind zwei kleine Felder, die nichts anderes herleiten kann: `loads`, weil nur das Modul weiß, ob es selbst lädt, und `options`, weil nur die Konfiguration weiß, welches Feld die Kanban-Spalte trägt. *Der erste Entwurf behauptete, der Eintrag werde gar nicht länger; rls#411 hat gezeigt, dass das die Übergabe an den Host verschwieg.*
+
+### Der Ladevertrag
+
+**Status: Entwurf, 21.09.2026, aus rls#411.** Vier Dinge, die der erste Entwurf offenließ.
+
+**1. Ein Hinweis ist ein Feld oder ein Marker-Vokabular — und `data-interface` kennt beide Richtungen in einer Tabelle.** Heute gibt es nur die Richtung Item → Hinweise (`moduleHintsFor`); der Host braucht die Umkehrung Hinweis → Connector-Filter. Beide MÜSSEN aus **derselben** Tabelle kommen, sonst driften Routing und Laden auseinander — genau so, wie es bei `hasStatus` passiert ist (Typ-Abkürzung im Hinweis, Feldfilter in der Ansicht). Die Tabelle, Stand heute:
+
+| Hinweis | Item → Hinweis | Hinweis → Filter | Art |
+|---|---|---|---|
+| `position` | `data.position.coordinates` ist ein Array | `hasField: ["position"]` | Feld |
+| `start` | `data.start` ist ein nichtleerer String | `hasField: ["start"]` | Feld |
+| `status` | `data[statusField]` ist ein String | `hasField: [statusField]` | Feld, **konfiguriert** über `options.statusField` (Standard `status`) |
+| `statement` | `@context` enthält `statement/v1` | `hasSchema: ["…/statement/v1"]` | **Marker-Vokabular** (Spec 06: kein eigenes Feld, `hasSchema` ist der einzige Filter) |
+
+Abnahmefall: Ein Resonanz-Item ohne `data.statement` wird geladen — es gibt dieses Feld nicht, das Vokabular entscheidet.
+
+**2. Grob lädt der Connector, fein entscheidet das Modul.** Der Connector-Filter prüft **Präsenz** (Feld da, Vokabular da); er prüft keine Werte, denn Connectoren filtern nicht nach Aufzählungen. Ob ein Wert einer Spalte entspricht (`open`, `done` …), prüft das Kanban selbst auf dem geladenen Bestand — wie heute (Spec 06: „plus Spaltenwert-Prüfung"). Der **Hinweis** für Routing und Benachrichtigungen DARF die Wertprüfung enthalten, weil er die Frage „würde dieses Modul das Item zeigen?" beantwortet; er MUSS dafür dieselbe Konfiguration nehmen wie der Filter. Bis Module je Space konfigurierbar sind, gelten die Standardwerte.
+
+Abnahmefall: Ein Kanban mit `options.statusField: "kind"` lädt `hasField: ["kind"]`, und der Hinweis prüft `data.kind`, nicht `data.status`.
+
+**3. Mehrere Hinweise sind eine Vereinigung.** `presents` beantwortet „was kann dieses Modul zeigen"; zwei Hinweise heißen also *das eine oder das andere*. `ItemFilter.hasField` ist dagegen ein Und. Der Host stellt darum **je Hinweis eine Abfrage** und vereinigt die Ergebnisse nach `id`. Ein Hinweis ist der schnelle Normalfall und heute der einzige; der Vertrag steht trotzdem, damit ihn niemand später als Und implementiert.
+
+**4. Wer selbst lädt, sagt es — und der Host schweigt dann.** `loads: "module"` ist die Anmeldung. Der Host stellt keine Standardabfrage, hängt aber alles andere unverändert an: Fläche, Space-Kontext, Detail, Erstellen, Fokus. Das Modul bekommt vom Host, was es zum Laden braucht (den aktiven Space), und liefert seine Items an die Fläche zurück (`fallbackItems`-Pfad des Vokabulars entfällt damit; unter einem Connector gilt ohnehin der Space).
+
+Abnahmefall: Die Karte mit `viewportMode: "bbox-module"` löst **keine** zweite Vollbestandsabfrage aus; im Netzwerk gibt es genau eine Abfrage je Ausschnitt.
+
+Was der Implementierer damit **nicht** erfinden muss: keinen Schalter über Modul-Ids im Host, keine zweite Abfrage neben der des Moduls, keine eigene Tabelle Hinweis → Filter.
+
+
 
 **Offen, bewusst.** Sobald Filter und Typen je Space konfigurierbar sind (angekündigt 20.09.2026), heißt „alle Typen" „alle, die dieser Space führt", und der Host liest sie aus der Space-Konfiguration statt aus dem Typ-Register. Dass es dann genau eine Stelle umzustellen gibt, ist der Grund, sie jetzt zusammenzuführen.
 
