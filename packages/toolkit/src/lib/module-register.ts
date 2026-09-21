@@ -23,6 +23,7 @@ import { CalendarModule } from "../modules/calendar-module"
 import { CollectionModule } from "../modules/collection-module"
 import { FeedModule } from "../modules/feed-module"
 import { GraphModule } from "../modules/graph-module"
+import { KanbanModule } from "../modules/kanban-module"
 import { MapModule } from "../modules/map-module"
 import { ResonanceModule } from "../modules/resonance-module"
 import {
@@ -160,12 +161,12 @@ export interface ModuleFragment extends Partial<Omit<ModuleEntry, "id">> {
 
 /**
  * Die Module, die das Toolkit mitliefert. Reihenfolge = Tab-Reihenfolge.
- * Alle ausser dem Kanban bringen ihre Flaeche mit (B0–B4); das Kanban folgt
- * in B5 und wird bis dahin von der Referenz-App erweitert.
+ * Jedes bringt seine Flaeche mit (B0–B5, 21.09.2026): Ein Toolkit-Modul
+ * laeuft ohne eine Zeile in der App (Spec 01, Der Modul-Host, Regel 1).
  */
 export const TOOLKIT_MODULES: readonly ModuleEntry[] = Object.freeze([
   { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl", options: { suggestType: "post", createShell: "fullscreen" }, view: FeedModule },
-  { id: "kanban", label: "Kanban", icon: Columns3, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["status"], options: { suggestType: "task" } },
+  { id: "kanban", label: "Kanban", icon: Columns3, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["status"], options: { suggestType: "task" }, view: KanbanModule },
   { id: "calendar", label: "Kalender", icon: Calendar, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["start"], options: { suggestType: "event" }, view: CalendarModule },
   { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay", presents: ["position"], loads: "module", options: { suggestType: "place" }, view: MapModule },
   // Opt-in — spec: docs/spec/modules/resonance.md

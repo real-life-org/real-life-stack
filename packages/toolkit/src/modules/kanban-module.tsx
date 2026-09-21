@@ -1,45 +1,26 @@
+"use client"
+
 import { useState, useMemo, useCallback, type DragEvent } from "react"
-import {
-  Layers,
-  LayoutList,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react"
+import { ChevronDown, ChevronRight, Layers, LayoutList, Settings } from "lucide-react"
+import { hasItemGroups, type Item } from "@real-life-stack/data-interface"
 
-import { filterByAssignee,
-  KanbanBoard,
-  computeColumnReorder,
-  useModulePanel,
-  ModuleSettingsPlaceholder,
-  Button,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  ItemScopeBadge,
-  Skeleton,
-  ItemPreviewSkeleton,
-  ModuleToolbar,
-  FilterSection,
-  FilterToggle,
-  FilterMultiSelect,
-  useUpdateItem,
-  useMembers,
-  useCurrentUser,
-  useConnector,
-  useItemGroupColorResolver,
-  useItemFocus,
-  useModuleHost,
-  type ModuleViewProps,
-} from "@real-life-stack/toolkit"
-import { Settings } from "lucide-react"
-import type { Item, Group } from "@real-life-stack/data-interface"
-import { hasItemGroups } from "@real-life-stack/data-interface"
-
-interface KanbanViewProps extends Pick<ModuleViewProps, "items" | "itemsLoading"> {
-  activeWorkspaceId: string | null
-  groups: Group[]
-}
+import { useConnector } from "../hooks/connector-context"
+import { useItemFocus } from "../hooks/use-item-focus"
+import { useUpdateItem } from "../hooks/use-mutations"
+import { FilterMultiSelect, FilterSection, FilterToggle } from "../components/filter/filter-building-blocks"
+import { useModuleHost } from "../components/host/module-host"
+import { KanbanBoard } from "../components/kanban/kanban-board"
+import { computeColumnReorder } from "../components/kanban/reorder"
+import { ModuleToolbar } from "../components/layout/module-toolbar"
+import { useModulePanel } from "../components/module-panel/module-panel"
+import { ModuleSettingsPlaceholder } from "../components/module-panel/module-settings-placeholder"
+import { ItemPreviewSkeleton } from "../components/preview/item-preview-skeleton"
+import { ItemScopeBadge } from "../components/preview/item-scope-badge"
+import { Button } from "../components/primitives/button"
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "../components/primitives/dropdown-menu"
+import { Skeleton } from "../components/primitives/skeleton"
+import { filterByAssignee } from "../lib/item-filter"
+import type { ModuleViewProps } from "../lib/module-register"
 
 /**
  * The mutation half of Kanban's drag handler.  Keeping it at module scope
@@ -61,59 +42,45 @@ export async function handleKanbanDrag(
   }
 }
 
-export function KanbanView(props: KanbanViewProps) {
-  // Renders into the app-level shared panel (one host for all modules);
-  // pin + mode config lives on that provider (App.tsx).
-  return <KanbanViewInner {...props} />
-}
-
-function KanbanViewInner({ activeWorkspaceId, groups, items: tasks = [], itemsLoading: tasksLoading = false }: KanbanViewProps) {
+/**
+ * Das Kanban-Modul, vollstaendig aus dem Toolkit (Spec 01, Der Modul-Host;
+ * B5, 21.09.2026 — bis dahin `KanbanView` in der Referenz-App, das letzte
+ * der sieben). Die Aufgaben laedt der Host aus `presents: ["status"]` (Spec
+ * 01, Der Ladevertrag: das Feld entscheidet, nie der Typ), gefiltert nach
+ * Suche, Tags und Typen. Dem Modul gehoeren Spalten, Verschieben, die
+ * Gruppierung im Aggregat und seine eigenen Filter (Zuweisung, „Nur meine").
+ * Mitglieder, Gruppen, Farben, Aggregat-Fall und aktives Item kommen vom
+ * Host; Detail, Erstellen (Vorschlag „Aufgabe") und Plusknopf stellt er.
+ */
+export function KanbanModule({ items: tasks = [], itemsLoading: tasksLoading = false }: ModuleViewProps) {
   const connector = useConnector()
-  // Active-item glow uses the colour of each card's origin group.
-  const resolveItemGroupColor = useItemGroupColorResolver(
-    activeWorkspaceId === "__overview__" ? undefined : (activeWorkspaceId ?? undefined),
-  )
+  const { members, groups, isOverview: isAggregate, currentUser, resolveItemGroupColor, activeItemId } = useModuleHost()
   // Scope tag on the card (Privat OR group), only in the meta group („Mein
-  // Netzwerk") — in a concrete space the scope is clear, so no tag. Same
-  // ItemScopeBadge as the detail + the other modules (private and group items
-  // are now treated consistently, not just the private ones).
+  // Netzwerk") — in a concrete space the scope is clear, so no tag.
   const renderTaskAdornment = useCallback(
-    (item: Item) =>
-      activeWorkspaceId === "__overview__" ? <ItemScopeBadge item={item} /> : null,
-    [activeWorkspaceId],
+    (item: Item) => (isAggregate ? <ItemScopeBadge item={item} /> : null),
+    [isAggregate],
   )
-  // Die Aufgaben laedt der Host aus `presents: ["status"]` (Spec 01, Der
-  // Ladevertrag): Das Feld entscheidet, nie der Typ (Spec 06).
-  const { data: members } = useMembers(activeWorkspaceId === "__overview__" ? null : (activeWorkspaceId ?? "group-1"))
-  const { data: currentUser } = useCurrentUser()
   const { mutate: updateItem } = useUpdateItem()
-  // Tags, Typen und Suchtext kommen aus dem geteilten Zustand (Kopf der
-  // Modulflaeche); „Nur meine" und die Zuweisung bedeuten nur hier etwas und
-  // bleiben darum lokal (Spec shared-components → Filter-State, Regel 2).
+  // Tags, Typen und Suchtext hat der Host angewendet; „Nur meine" und die
+  // Zuweisung bedeuten nur hier etwas und bleiben darum lokal (Spec
+  // shared-components → Filter-State, Regel 2).
   const [myItemsOnly, setMyItemsOnly] = useState(false)
   const [assignedTo, setAssignedTo] = useState<string[]>([])
   const modulePanel = useModulePanel()
-  const { activeItemId } = useModuleHost()
-  // The shared host owns the detail (read↔edit) for the focused item; a card
-  // click just points the URL focus at it (like the other modules). The host
-  // opens/closes the panel and runs the group-move on save.
+  // A card click points the focus at the task; the host opens its detail.
   const { focusItem } = useItemFocus()
   const [groupedView, setGroupedView] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null)
 
-  // Tag-, Typ- und Textsuche hat der Host schon angewendet.
-  const filteredByBar = tasks
-
   // Darauf die Extras des Kanban: Zuweisung ueber Relationen, „Nur meine".
-  // Die Regel selbst liegt im Toolkit (filterByAssignee), samt der
-  // Fail-closed-Entscheidung: „Nur meine" ohne bekannte Kennung zeigt nichts.
-
+  // Die Regel selbst liegt in `filterByAssignee`, samt der Fail-closed-
+  // Entscheidung: „Nur meine" ohne bekannte Kennung zeigt nichts.
   const filteredTasks = useMemo(
-    () => filterByAssignee(filteredByBar, { assignedTo, myItemsOnly }, currentUser?.id),
-    [filteredByBar, assignedTo, myItemsOnly, currentUser?.id],
+    () => filterByAssignee(tasks, { assignedTo, myItemsOnly }, currentUser?.id),
+    [tasks, assignedTo, myItemsOnly, currentUser?.id],
   )
-
 
   const handleMoveItem = (itemId: string, newStatus: string, position: number) =>
     handleKanbanDrag(tasks, itemId, newStatus, position, updateItem)
@@ -122,9 +89,6 @@ function KanbanViewInner({ activeWorkspaceId, groups, items: tasks = [], itemsLo
   const handleItemClick = useCallback((item: Item) => {
     focusItem(item.id)
   }, [focusItem])
-
-  // Determine if the active workspace is the overview view
-  const isAggregate = activeWorkspaceId === "__overview__"
 
   // All groups are concrete — no aggregate/overview group in the list anymore
   const concreteGroups = groups

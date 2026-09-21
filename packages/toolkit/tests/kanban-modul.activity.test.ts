@@ -4,8 +4,8 @@ import { act } from "react"
 import { createRoot } from "react-dom/client"
 import { describe, expect, it } from "vitest"
 import { MockConnector } from "@real-life-stack/mock-connector"
-import { KanbanBoard } from "@real-life-stack/toolkit"
-import { handleKanbanDrag } from "./kanban-view"
+import { KanbanBoard } from "../src/components/kanban/kanban-board"
+import { handleKanbanDrag } from "../src/modules/kanban-module"
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 

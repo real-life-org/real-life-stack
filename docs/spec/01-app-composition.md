@@ -226,7 +226,7 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 
 ### Der Modul-Host
 
-**Status: umgesetzt, rls#414 (B0, 21.09.2026).** `ModuleHost` in `packages/toolkit/src/components/host/module-host.tsx`; das Outlet rendert jede Fläche darin. Feed (B1), Liste (B2), Graph (B3), Resonanz (B4), Kalender und Karte laufen ohne eine Zeile in der App; das Kanban liest Items und Kontext vom Host und zieht in B5 ins Toolkit.
+**Status: umgesetzt, rls#414 (B0, 21.09.2026).** `ModuleHost` in `packages/toolkit/src/components/host/module-host.tsx`; das Outlet rendert jede Fläche darin. Alle sieben Toolkit-Module — Feed, Kanban, Kalender, Karte, Resonanz, Liste, Graph — laufen ohne eine Zeile in der App (B1–B5, 21.09.2026); die Referenz-App erweitert das Register nicht mehr.
 
 Der Registereintrag beantwortet, *was folgt daraus, dass ein Space dieses Modul führt*. Der Host ist die Stelle, die aus der Antwort eine laufende Fläche macht — **einmal**, für alle Module.
 

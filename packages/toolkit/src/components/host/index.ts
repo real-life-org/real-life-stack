@@ -8,4 +8,5 @@ export { FeedModule, selectFeedItems, feedFooter } from "../../modules/feed-modu
 export { CollectionModule } from "../../modules/collection-module"
 export { GraphModule } from "../../modules/graph-module"
 export { ResonanceModule } from "../../modules/resonance-module"
+export { KanbanModule, handleKanbanDrag } from "../../modules/kanban-module"
 export { MapModule } from "../../modules/map-module"
