@@ -14,8 +14,8 @@ Code-Referenzen:
 - `packages/toolkit/src/components/detail/` — modul-agnostisches Detail-Panel
 - `packages/toolkit/src/hooks/`
 - `apps/reference/src/App.tsx` — Komposition: Provider, AuthGate, App Shell
-- `apps/reference/src/views/` — ein File pro Space Module + `module-outlet.tsx` (Dispatch)
-- `apps/reference/src/hooks/use-workspace-routing.ts` — Space/Module-Auflösung aus URL
+- `apps/network/src/App.tsx` — dieselbe Komposition, kleiner: Shell um den Modul-Host, eigenes Modul im Register
+- `packages/toolkit/src/components/router/` — Fokus in der URL, Space/Modul-Auflösung aus URL, Route einer Benachrichtigung (`@real-life-stack/toolkit/router`)
 
 ## Grundstruktur
 
@@ -248,7 +248,7 @@ Der Registereintrag beantwortet, *was folgt daraus, dass ein Space dieses Modul 
 
 **Was beim Modul bleibt.** Die Ansicht, ihre eigenen Steuerelemente (Regel 2), ihr Vorschlag beim Erstellen, und — wo es das gibt — eigene Logik (Kanban: Spalten, Verschieben, Zuweisung). Das ist alles.
 
-**Was bei der App bleibt.** Der Router selbst und die Entscheidung, welche Module ihr Register führt. Die URL-Fokus-Politik braucht einen Router; sie liegt darum in einem eigenen Unterpfad des Toolkits (`@real-life-stack/toolkit/router`, nach dem Muster von `/maplibre`), damit der Kern routerfrei bleibt. Ohne Router — in einer Story, einem Test, einer Einbettung ohne eigene Adresse — hält der Host den Fokus im Speicher, mit demselben Vertrag. Eine App, die einen Router hat, MUSS die URL-Politik nehmen. Der Fokus im Speicher ist der Rückfall für den Fall ohne Router, keine zweite gleichwertige Betriebsart.
+**Was bei der App bleibt.** Der Router selbst und die Entscheidung, welche Module ihr Register führt. Die URL-Fokus-Politik braucht einen Router; sie liegt darum in einem eigenen Unterpfad des Toolkits (`@real-life-stack/toolkit/router`, nach dem Muster von `/maplibre`), damit der Kern routerfrei bleibt. Dort liegt seit rls#429 auch, was jede App mit Router gleich tut: Space, Modul und Item aus der URL auflösen (`useWorkspaceRouting`; den Rückfall ohne Feld wählt die App) und aus einer Benachrichtigung eine Route machen (`notificationRoute`). *Bis dahin stand beides in der Referenz-App und ein zweites Mal, anders, in der Netzwerk-App.* Ohne Router — in einer Story, einem Test, einer Einbettung ohne eigene Adresse — hält der Host den Fokus im Speicher, mit demselben Vertrag. Eine App, die einen Router hat, MUSS die URL-Politik nehmen. Der Fokus im Speicher ist der Rückfall für den Fall ohne Router, keine zweite gleichwertige Betriebsart.
 
 Regeln:
 
@@ -256,7 +256,7 @@ Regeln:
 2. Ein Modul DARF **nicht** selbst laden, registrieren oder den Fokus verdrahten, was der Host aus dem Eintrag herstellt. Die Tabelle oben ist die Liste; wer etwas davon im Modul wiederfindet, hat einen Fehler gegen diese Spec vor sich.
 3. Das Erstellen bietet in jedem Modul **dieselben** Typen an. Eine je Modul verschiedene Liste ist eine zweite Typ-Liste und damit ein Verstoß gegen Regel 1 des Typ-Registers. Ein Modul DARF einen Typ **vorschlagen** und Felder **vorbelegen**; es DARF die Auswahl nicht **einschränken**.
 4. Der Fokus lebt in der URL, wo es eine gibt. Eine App mit Router, die den Fokus anders hält, weicht von der Spec ab und MUSS das im Pull Request begründen.
-5. Der Host ist **eine** Komponente im Toolkit. Eine zweite Fassung davon in einer App — auch eine teilweise, auch eine „vorläufige" — ist derselbe Fehler wie eine zweite Modul-Liste. Die Netzwerk-App hat heute eine; sie wird auf den Host umgestellt.
+5. Der Host ist **eine** Komponente im Toolkit. Eine zweite Fassung davon in einer App — auch eine teilweise, auch eine „vorläufige" — ist derselbe Fehler wie eine zweite Modul-Liste. *Die Netzwerk-App hatte eine; seit rls#429 ist sie eine Shell um den Host: Register mit eigenem Modul (Marktplatz, über einen eigenen Hinweis `resource`), Konfiguration von Karte und Kalender per `replaces: ["options"]`, sonst nichts.*
 
 Was ein Eintrag dafür **nicht** braucht: kein `items`-Feld (folgt aus `presents`), kein `backdrop` (folgt aus `panelFit`), keine Liste der Erstell-Typen (es sind alle), kein `createLabel` (der Knopf heißt „Erstellen", das Modul schlägt höchstens einen Typ vor). Was er braucht, sind zwei kleine Felder, die nichts anderes herleiten kann: `loads`, weil nur das Modul weiß, ob es selbst lädt, und `options`, weil nur die Konfiguration weiß, welches Feld die Kanban-Spalte trägt. *Der erste Entwurf behauptete, der Eintrag werde gar nicht länger; rls#411 hat gezeigt, dass das die Übergabe an den Host verschwieg.*
 

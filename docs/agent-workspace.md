@@ -16,6 +16,7 @@ Kernidee: App Shell und Space Modules (Kanban, Kalender, Karte, Feed) arbeiten g
 
 ```text
 apps/reference/          → Showcase-App (alle Module, MockConnector + LocalConnector)
+apps/network/            → Netzwerk-App: Shell um den Modul-Host, eigenes Modul Marktplatz, DWeb-Camp-Seed
 apps/landing/            → Landing Page
 packages/toolkit/        → UI-Komponenten (shadcn/ui, Storybook) + Hooks + ConnectorProvider
 packages/data-interface/ → TypeScript-Typen, Interfaces, BaseConnector, Shared Helpers
@@ -272,5 +273,6 @@ Ausführliche Spezifikation in `docs/spec/reaktivitaet.md`. Die wichtigsten Rege
 - `packages/toolkit/docs/UI-REQUIREMENTS.md` — UI/UX Anforderungen
 - `packages/toolkit/src/styles/globals.css` — Theme & CSS-Variablen
 - `apps/reference/src/App.tsx` — Reference App: Komposition (Provider, AuthGate, App Shell)
-- `apps/reference/src/views/` — Space-Module-Views (feed, kanban, calendar, map) + `module-outlet.tsx` (Dispatch)
-- `apps/reference/src/hooks/use-workspace-routing.ts` — Space/Module-Auflösung aus URL (localStorage-Fallback, No-Access-Fall)
+- `apps/reference/src/views/module-outlet.tsx` — dünne Hülle um den Toolkit-Outlet (nur der Kein-Zugang-Hinweis)
+- `apps/network/src/App.tsx` + `module-register.tsx` — Netzwerk-App: dieselbe Shell, Register mit Marktplatz
+- `packages/toolkit/src/components/router/` — `UrlFocusProvider`, `useWorkspaceRouting` (Space/Modul-Auflösung aus URL, localStorage-Fallback, No-Access-Fall), `notificationRoute` — Unterpfad `/router`

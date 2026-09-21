@@ -153,6 +153,7 @@ divergieren Item und Log bei Offline-Merges.
   `position`, Kanban beim konfigurierten Spaltenfeld (im Netzwerk die sieben
   Aufgaben über `status`), Graph über RelationRecords, List/Grid generisch. Marketplace = List über
   Ressourcen.
+- **Stand 21.09.2026 (rls#429):** Die Linsen sind die Toolkit-Module auf dem Modul-Host ([01](01-app-composition.md), „Der Modul-Host", Regel 5); die App bringt nur noch den Marktplatz als eigenes Modul mit (Hinweis `resource`, Spec 01 Ladevertrag) und konfiguriert Karte und Kalender über `options`. Damit sind P3 (Linsen) und P4 (Suche/Filter als Shell-Zustand — jetzt Sache des Hosts) erledigt; P5 (Item-Detail) läuft über das geteilte Detail-Panel des Toolkits, offen bleibt dort der Baustein „Verbindungen" (die Nachbarn eines Knotens), den das eigene Netzwerk-Detail bis dahin zeigte.
 - **P3.1 — Bild-Karten-Modus:** eigener Schnitt für Camp-JPG,
   Pixel-Koordinaten und Karten-Kontext pro Space; kein Bestandteil von P3.
 - **P4 — AppShell:** Suche und Filter als **Shell-Zustand über der
