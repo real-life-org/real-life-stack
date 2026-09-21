@@ -103,3 +103,6 @@ export * from "./components/navigation"
 export { readRadius, readSurfaces, readGray, layoutTokens, RADIUS_ORDER, RADIUS_STEPS, SURFACES } from "./lib/space-theme"
 export type { GrayChoice, RadiusStep, Surfaces } from "./lib/space-theme"
 export { aggregateVoteStats, sortStatements, type ResonanceSortMode, type StatementVoteStats } from "./lib/resonance-sort"
+
+// Der Modul-Host: Detail und Erstellen ueber alle Module (Spec 01)
+export * from "./components/host"
