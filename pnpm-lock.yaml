@@ -520,6 +520,9 @@ importers:
       maplibre-gl:
         specifier: ^5.24.0
         version: 5.24.0
+      react-router-dom:
+        specifier: ^7.1.1
+        version: 7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       storybook:
         specifier: ^10.1.11
         version: 10.1.11(@testing-library/dom@10.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
