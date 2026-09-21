@@ -38,7 +38,8 @@ import {
 } from "lucide-react"
 import {
   composeTypeManifest,
-  CORE_TYPE_LAYER,
+  TOOLKIT_TYPE_LAYER,
+  setTypeManifest as bindDataInterfaceManifest,
   isTask,
   relationAffordanceKey,
   type ComposedTypeManifest,
@@ -51,6 +52,8 @@ import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { ItemAssignees } from "./item-assignees"
 import { ItemMetaRow } from "./item-meta-row"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
+import { VoteBar } from "../resonance/vote-bar"
+import { MessageSquareQuote } from "lucide-react"
 
 /** Every slot receives the item — nothing else. Data resolution (members,
  *  votes, …) happens inside the slot component via hooks, so a slot works on
@@ -195,13 +198,29 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
   },
   { id: "project", label: "Projekt", preview: ItemProjectMeta },
   { id: "resource", label: "Ressource", preview: ItemResourceMeta },
+  // Seit 21.09.2026 ein Toolkit-Typ (Spec 06): Das Toolkit liefert die
+  // Resonanz vollständig, also auch die Darstellung ihrer Aussage. Die
+  // Stimmleiste ist eine TYP-Regel — sie gehört zur Aussage, wo immer die
+  // gezeigt wird (Regel 3, kein Typ-Verzweigen in Modulen).
+  {
+    id: "statement",
+    label: "Aussage",
+    badge: { icon: MessageSquareQuote, className: "bg-sky-50 text-sky-700 border-sky-200" },
+    composerWidgets: ["title", "text", "tags"],
+    footer: StatementVotesFooter,
+  },
 ]
+
+/** `itemRole: "to"`: votes are INCOMING records; the bar queries records pointing at this item. */
+function StatementVotesFooter({ item }: ItemSlotProps) {
+  return <VoteBar statementId={item.id} className="w-full" />
+}
 
 /** Toolkit default: core manifest only. Apps composing more layers hand the
  *  result in via {@link setTypeManifest} BEFORE registering presentation. */
-const CORE_ONLY_MANIFEST = composeTypeManifest([CORE_TYPE_LAYER])
+const TOOLKIT_ONLY_MANIFEST = composeTypeManifest([TOOLKIT_TYPE_LAYER])
 
-let manifest: ComposedTypeManifest = CORE_ONLY_MANIFEST
+let manifest: ComposedTypeManifest = TOOLKIT_ONLY_MANIFEST
 const layers = new Map<string, TypePresentationLayer>([
   ["core", { definitions: CORE_PRESENTATION }],
 ])
@@ -215,6 +234,9 @@ let composedCache: Map<string, TypePresentationEntry> | null = null
  * manifest so a narrower manifest cannot leave orphans behind.
  */
 export function setTypeManifest(next: ComposedTypeManifest): void {
+  // Dasselbe Manifest für Hinweise und Filter in data-interface: Wer im
+  // Toolkit bindet, bindet einmal (Spec 06, Regel 1 — eine Identitätsquelle).
+  bindDataInterfaceManifest(next)
   for (const [name, layer] of layers) {
     for (const entry of layer.definitions ?? []) {
       if (!next.has(entry.id)) {
@@ -256,7 +278,7 @@ function assertRelationWidgetKeys(
 /** Test seam: core-only manifest, core-only presentation. Deliberately NOT
  *  exported via the package barrel — tests import this module directly. */
 export function resetTypePresentationForTests(): void {
-  manifest = CORE_ONLY_MANIFEST
+  manifest = TOOLKIT_ONLY_MANIFEST
   for (const key of [...layers.keys()]) if (key !== "core") layers.delete(key)
   composedCache = null
 }

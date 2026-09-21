@@ -2,7 +2,6 @@
 // Zentrale Typdefinitionen für das DataInterface (Connector-Schnittstelle)
 
 import { BaseConnector } from "./base-connector.js"
-import { VOCAB_STATEMENT } from "./vocab.js"
 export { BaseConnector, createObservable, shallowEqual, matchesFilter, findRelatedItems, applyPagination, type ReactiveObservable } from "./base-connector.js"
 export {
   canonicalizeRelationEndpoints,
@@ -22,6 +21,8 @@ export * from "./votes.js"
 export * from "./claims.js"
 export * from "./vocab.js"
 export * from "./type-manifest.js"
+export * from "./module-hints.js"
+import type { ModuleHints } from "./module-hints.js"
 export { EMPTY_NOTIFICATION_STATE, cloneNotificationState, applyNotificationStatePatch, maxTs, pruneReadEntryKeys } from "./notification-state.js"
 
 // --- Core Types ---
@@ -130,7 +131,11 @@ export interface AuthMethod {
 // --- Filter & Query ---
 
 export interface ItemFilter {
-  type?: string
+  /**
+   * Klasse(n): ein Kurzname oder eine IRI, oder eine Liste davon als ODER.
+   * Verglichen wird nach Normalisierung als Menge (Spec 06, Regeln 6–8).
+   */
+  type?: string | string[]
   hasField?: string[]
   /**
    * AND-filter on top-level `item.tags`. All listed tags must be present.
@@ -287,7 +292,7 @@ export interface ScopedActivityEntry {
     type: string
     createdBy?: string
     title?: string
-    moduleHints?: { hasPosition: boolean; hasStart: boolean; hasStatus: boolean; hasStatement?: boolean }
+    moduleHints?: ModuleHints
   } | null
   isPersonal?: boolean
   actor: User | null
@@ -320,29 +325,6 @@ export function hasNotificationState(connector: DataInterface): connector is Dat
     && typeof (connector as Partial<NotificationStateCapable>).updateNotificationState === "function"
 }
 
-const KANBAN_STATUSES = new Set(["open", "in-progress", "done", "archived"])
-export type ModuleHints = NonNullable<NonNullable<ScopedActivityEntry["subject"]>["moduleHints"]>
-
-/** The exact field predicates used by the workspace's default module resolver. */
-export function moduleHintsFor(itemOrHints: Item | ModuleHints): ModuleHints {
-  if ("hasPosition" in itemOrHints) return itemOrHints
-  const item = itemOrHints
-  const data = item.data ?? {}
-  const position = data.position as { coordinates?: unknown } | undefined
-  const status = data.status
-  return {
-    hasPosition: Array.isArray(position?.coordinates),
-    hasStart: typeof data.start === "string" && data.start.length > 0,
-    // Das Feld entscheidet, nie der Typ (Spec 06). Bis zum 21.09.2026 stand
-    // `item.type === "task"` als erste Bedingung davor: Ein Task ohne Status
-    // wurde ins Kanban geleitet, das ihn nicht zeigt — die Ansicht filtert
-    // `hasField: ["status"]`. Hinweis und Fläche widersprachen sich.
-    hasStatus: typeof status === "string" && KANBAN_STATUSES.has(status),
-    // Statements have no discriminator field — their activation hint comes
-    // from the statement/v1 schema (spec 06), never from `type`.
-    hasStatement: (item["@context"] ?? []).includes(VOCAB_STATEMENT),
-  }
-}
 
 /**
  * UCAN-style abilities for item authorization. Strings, so they map onto UCAN
