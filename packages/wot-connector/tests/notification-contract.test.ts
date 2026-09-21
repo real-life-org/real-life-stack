@@ -28,7 +28,7 @@ function item(id: string, type: string, createdBy: string, data: Record<string, 
   return serializeItem({ id, type, createdBy, createdAt: "2026-07-18T10:00:00.000Z", data })
 }
 function doc(id: string, actor: string, itemType = "task"): RlsSpaceDoc {
-  return { _type: "rls", metadata: { name: id, modules: [] }, items: { same: item("same", itemType, actor, { start: "2026-07-18", position: { coordinates: [] } }) }, activity: { [id]: { id, ts: `2026-07-18T10:00:0${id === "b" ? "2" : "1"}.000Z`, actor, action: "create", targetId: "same", targetType: itemType } } }
+  return { _type: "rls", metadata: { name: id, modules: [] }, items: { same: item("same", itemType, actor, { start: "2026-07-18", position: { coordinates: [] }, status: "open" }) }, activity: { [id]: { id, ts: `2026-07-18T10:00:0${id === "b" ? "2" : "1"}.000Z`, actor, action: "create", targetId: "same", targetType: itemType } } }
 }
 function handle(id: string, value: RlsSpaceDoc, members: string[]) {
   const remote = new Set<() => void>()

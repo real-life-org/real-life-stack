@@ -292,6 +292,31 @@ describe("moduleHintsFor — hasStatement schema hint", () => {
   })
 })
 
+describe("moduleHintsFor — hasStatus kommt vom Feld, nie vom Typ (Spec 06)", () => {
+  // Bis zum 21.09.2026 stand `item.type === "task"` als ERSTE Bedingung vor
+  // dem Feld. Ein Task ohne Status wurde damit ins Kanban geleitet, das ihn
+  // nicht zeigt (die Ansicht filtert `hasField: ["status"]`) — Hinweis und
+  // Fläche widersprachen sich. Spec 06, Zeile 55: `type` aktiviert nie.
+  const item = (type: string, data: Record<string, unknown>) =>
+    ({ id: "x", type, createdAt: "t", createdBy: "u", data }) as never
+
+  it("ein Task ohne Status ist kein Kanban-Item", () => {
+    expect(moduleHintsFor(item("task", {})).hasStatus).toBe(false)
+  })
+
+  it("ein Task mit Status ist eines", () => {
+    expect(moduleHintsFor(item("task", { status: "open" })).hasStatus).toBe(true)
+  })
+
+  it("ein Nicht-Task mit gültigem Status ist ebenfalls eines — das Feld entscheidet", () => {
+    expect(moduleHintsFor(item("place", { status: "done" })).hasStatus).toBe(true)
+  })
+
+  it("ein unbekannter Statuswert aktiviert nicht", () => {
+    expect(moduleHintsFor(item("task", { status: "irgendwas" })).hasStatus).toBe(false)
+  })
+})
+
 describe("matchesFilter — hasSchema (spec 06: schema-based module activation)", () => {
   const statement = {
     id: "s1",
