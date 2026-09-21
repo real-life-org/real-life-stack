@@ -1,4 +1,5 @@
 import type { Group, Item, Relation, User } from "@real-life-stack/data-interface"
+import { canonicalItemType } from "@real-life-stack/data-interface"
 
 /** Column layout of public.items (supabase/migrations/0001_rls_schema.sql). */
 export interface ItemRow {
@@ -28,7 +29,8 @@ export function rowToItem(row: Record<string, unknown>): Item {
   const r = row as unknown as ItemRow
   return {
     id: r.id,
-    type: r.type,
+    // Eingangsgrenze (Spec 06, Regel 7): bekannte IRI → Kurzname, fremde bleibt.
+    type: canonicalItemType(r.type),
     createdBy: r.created_by,
     createdAt: isoTimestamp(r.created_at),
     // Absent until first edit — `null` from Postgres normalises to "no key",

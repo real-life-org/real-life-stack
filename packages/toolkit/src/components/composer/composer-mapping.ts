@@ -1,4 +1,5 @@
 import type { Item } from "@real-life-stack/data-interface"
+import { canonicalItemType } from "@real-life-stack/data-interface"
 import type { ContentTypeConfig, WidgetData } from "./content-composer"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import {
@@ -147,8 +148,11 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
 
   const editInitialData = (item: Item): Partial<WidgetData> => {
     const d = item.data as Record<string, unknown>
-    const typeConfig = resolve(item.type)
-    const text = d[textFieldFor(item.type, typeConfig)]
+    // Die Vorlage folgt der kanonischen Klasse (Spec 06, Regel 7, 9): ein Item,
+    // das mit voller IRI ankam, verliert sonst hier seine Vorbelegung (rls#417).
+    const type = canonicalItemType(item.type)
+    const typeConfig = resolve(type)
+    const text = d[textFieldFor(type, typeConfig)]
     const people = typeConfig ? peopleRelationsToWidgetData(typeConfig, item.relations) : {}
     return {
       ...(typeof d.title === "string" ? { title: d.title } : {}),

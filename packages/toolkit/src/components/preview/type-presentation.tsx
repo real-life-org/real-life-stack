@@ -45,6 +45,7 @@ import {
   type ComposedTypeManifest,
   type Item,
   type User,
+  normalizeItemType,
 } from "@real-life-stack/data-interface"
 
 import { useMembers } from "../../hooks/use-groups"
@@ -430,9 +431,16 @@ function composePresentation(): Map<string, TypePresentationEntry> {
  * visible with title, meta row and neutral badge, never invisible or broken.
  */
 export function resolveTypePresentation(typeId: string): ResolvedTypePresentation {
-  const entry = composePresentation().get(typeId)
-  if (!entry || !manifest.has(typeId)) {
-    return { id: typeId, label: typeId, detail: GENERIC_DETAIL, generic: true }
+  // Ueber die normalisierte Klassenmenge (Spec 06, Regel 7 und 9): eine
+  // volle IRI findet ihre Darstellung, und bei mehreren Klassen zaehlt die
+  // erste, fuer die eine Vorlage existiert — eine UI-Wahl, keine Aussage
+  // ueber das Item (rls#417).
+  const klassen = normalizeItemType(typeId)
+  const darstellungen = composePresentation()
+  const id = klassen.find((k) => darstellungen.has(k) && manifest.has(k)) ?? klassen[0] ?? typeId
+  const entry = darstellungen.get(id)
+  if (!entry || !manifest.has(id)) {
+    return { id, label: id, detail: GENERIC_DETAIL, generic: true }
   }
   return {
     ...entry,

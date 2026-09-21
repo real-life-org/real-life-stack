@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import {
+  canonicalItem,
   composeTypeManifest,
   filterForHint,
   getTypeManifest,
@@ -10,6 +11,7 @@ import {
   registerModuleHint,
   setTypeManifest,
   TOOLKIT_TYPE_LAYER,
+  typeSpellings,
   typesWithAffordance,
   VOCAB_STATEMENT,
   type Item,
@@ -103,5 +105,37 @@ describe("Der Ladevertrag: eine offene Tabelle Hinweis → Filter (Spec 01)", ()
   })
   it("wirft bei einem unbekannten Hinweis, statt still nichts zu laden", () => {
     expect(() => filterForHint("unbekannt")).toThrow(/unbekannt/)
+  })
+})
+
+describe("Eingangsgrenze und Schreibweisen (Regel 7, rls#416, rls#417)", () => {
+  const POST_IRI = "https://real-life-stack.org/vocab/base/v1#Post"
+
+  it("canonicalItem normalisiert eine bekannte IRI und laesst das Objekt sonst identisch", () => {
+    const roh = item({ type: POST_IRI, data: { content: "Vorhandener Text" } })
+    const kanonisch = canonicalItem(roh)
+    expect(kanonisch.type).toBe("post")
+    expect(kanonisch.data.content).toBe("Vorhandener Text")
+    const schon = item({ type: "post" })
+    expect(canonicalItem(schon)).toBe(schon)
+  })
+
+  it("canonicalItem laesst eine fremde IRI unveraendert (Regel 7, 10)", () => {
+    const fremd = item({ type: "https://example.org/ns#Widget" })
+    expect(canonicalItem(fremd)).toBe(fremd)
+  })
+
+  it("typeSpellings liefert Kurzname und IRI fuer bekannte Klassen, den Wert selbst fuer fremde", () => {
+    expect(typeSpellings("post")).toEqual(["post", POST_IRI])
+    expect(typeSpellings(POST_IRI)).toEqual(["post", POST_IRI])
+    expect(typeSpellings(["post", "statement"])).toEqual(["post", POST_IRI, "statement", STATEMENT_IRI])
+    expect(typeSpellings("https://example.org/ns#Widget")).toEqual(["https://example.org/ns#Widget"])
+    expect(typeSpellings([])).toEqual([])
+  })
+
+  it("matchesFilter: eine leere Typliste ist ein Oder von nichts und trifft nichts", () => {
+    expect(matchesFilter(item({ type: "post" }), { type: [] })).toBe(false)
+    expect(matchesFilter(item({ type: "post" }), { type: ["post", "event"] })).toBe(true)
+    expect(matchesFilter(item({ type: POST_IRI }), { type: "post" })).toBe(true)
   })
 })

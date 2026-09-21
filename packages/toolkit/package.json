@@ -129,7 +129,11 @@
         "types": "./dist/maplibre.d.ts",
         "import": "./dist/maplibre.js"
       },
-      "./styles/globals.css": "./src/styles/globals.css"
+      "./styles/globals.css": "./src/styles/globals.css",
+      "./router": {
+        "types": "./dist/router.d.ts",
+        "import": "./dist/router.js"
+      }
     }
   }
 }

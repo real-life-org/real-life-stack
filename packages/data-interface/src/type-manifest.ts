@@ -314,3 +314,40 @@ export function hasItemType(item: { type?: string | readonly string[] }, type: s
 // Referenced so the "always implied" contract above stays type-checked against
 // the canonical constant instead of a comment.
 void VOCAB_BASE
+
+/**
+ * The canonical spelling of ONE stored `type` value (Spec 06, Regel 7): a
+ * known IRI becomes its short name, everything else stays as it is. For the
+ * `Item.type` string, which today carries one class.
+ */
+export function canonicalItemType(type: string): string {
+  return normalizeItemType(type)[0] ?? type
+}
+
+/**
+ * Every spelling a store may hold for these classes — short name AND class
+ * IRI for known classes, the value itself for a foreign one. For connectors
+ * that filter server-side (Supabase, rls#416): the database holds whatever
+ * was written, the query must match either spelling, and an empty list is an
+ * OR of nothing — it matches nothing, like `matchesFilter`.
+ */
+export function typeSpellings(type: string | readonly string[]): string[] {
+  const m = getTypeManifest()
+  const ergebnis: string[] = []
+  for (const kurz of normalizeItemType(type)) {
+    const iri = m.get(kurz)?.classIri
+    for (const s of iri ? [kurz, iri] : [kurz]) if (!ergebnis.includes(s)) ergebnis.push(s)
+  }
+  return ergebnis
+}
+
+/**
+ * The ingress rule (Spec 06, Regel 7) as one function every connector calls
+ * where an item enters from storage, import or sync: a known IRI in `type`
+ * becomes its short name; a foreign IRI is kept. Returns the SAME object when
+ * nothing changes, so memoised consumers keep their identity.
+ */
+export function canonicalItem<T extends { type: string }>(item: T): T {
+  const kurz = canonicalItemType(item.type)
+  return kurz === item.type ? item : { ...item, type: kurz }
+}
