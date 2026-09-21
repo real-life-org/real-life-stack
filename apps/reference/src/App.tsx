@@ -1,161 +1,39 @@
-import { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense, type ReactNode } from "react"
-import { Routes, Route, useNavigate, useSearchParams, useLocation } from "react-router-dom"
-import {
-  Plus,
-  Sun,
-  Moon,
-} from "lucide-react"
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react"
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom"
 
 import {
-  AppShell,
-  AppShellMain,
-  FilterProvider,
-  Navbar,
-  NavbarStart,
-  NavbarCenter,
-  NavbarEnd,
-  WorkspaceSwitcher,
-  UserMenu,
-  ModuleTabs,
-  BottomNav,
-  ConnectorSwitcher,
-  Button,
-  GroupDialog,
-  SpaceThemeCard,
   AdaptivePanel,
-  CommentNavigationProvider,
-  FieldNavigationProvider,
-  TagNavigationProvider,
-  findModulePresenting,
-  OpenProfileProvider,
-  DraftItemProvider,
-  UnsavedChangesProvider,
-  ModulePanelProvider,
-  useModulePanel,
-  DebugDashboard,
   ProfilePanelContent,
-  type ProfileData,
-  ContactsDialog,
-  VerificationDialog,
-  IncomingVerificationDialog,
-  IncomingSpaceInviteDialog,
-  MutualVerificationDialog,
-  RelayStatusBadge,
+  ConnectorSwitcher,
+  ConnectorProvider,
   IncomingEventsProvider,
   useIncomingEvents,
-  ConnectorProvider,
-  useCreateGroup,
-  useUpdateGroup,
-  useDeleteGroup,
-  useInviteMember,
-  useRemoveMember,
-  useCurrentGroup,
-  useCurrentUser,
-  useInitialSync,
   useConnector,
+  useCurrentUser,
   useContacts,
-  useVerification,
   useRelayStatus,
-  ActivityBell,
-  ActivityPanelController,
-  useActivity,
-  NotificationBell,
-  useNotifications,
-  useItems,
-  modulePresentsItem,
-  type Workspace,
-  type ConnectorOption,
-  type GroupDialogMode,
+  useModulePanel,
+  DebugDashboard,
+  RelayStatusBadge,
   AuthScreen,
-  AddContactDialog,
+  IncomingVerificationDialog,
   IncomingContactRequestDialog,
+  IncomingSpaceInviteDialog,
+  MutualVerificationDialog,
   getRuntimeConfig,
-  getModule,
+  type ProfileData,
+  type ConnectorOption,
 } from "@real-life-stack/toolkit"
-import { initialDarkMode, rememberColorScheme } from "./initial-color-scheme"
 import type { DataInterface, User } from "@real-life-stack/data-interface"
-import {
-  type Item, isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile, moduleHintsFor } from "@real-life-stack/data-interface"
+import { isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
 import { MapLibreAdapterProvider } from "@real-life-stack/toolkit/maplibre"
 import { MockConnector } from "@real-life-stack/mock-connector"
 import { LocalConnector } from "@real-life-stack/local-connector"
-import { ModuleOutlet } from "./views/module-outlet"
-// Der Fokus in der URL ist die Voreinstellung (Spec 01, Der Modul-Host);
-// die Politik lebt im Router-Unterpfad des Toolkits — seit dem 21.09.2026
-// auch die Auflösung Space/Modul/Item aus der URL und die Route einer
-// Benachrichtigung, die bis dahin hier standen (und in der Netzwerk-App noch einmal).
-import { UrlFocusProvider as ItemFocusProvider, useWorkspaceRouting, STORAGE_KEY_GROUP, notificationRoute, UnsavedChangesGuard } from "@real-life-stack/toolkit/router"
-import { CreateHostProvider, CreateSheetController, DetailHostProvider, DetailHostController, useItemFocus } from "@real-life-stack/toolkit"
-import { LocationPickProvider, useLocationPick } from "./location-pick"
+// Der Rahmen mit Router: Fokus in der URL, Space/Modul/Item aus der URL,
+// Provider, Panel, Kopfzeile, Controller — einmal im Toolkit (Spec 01).
+import { RoutedAppFrame } from "@real-life-stack/toolkit/router"
 
-
-/**
- * Links ODER rechts, nie beide. Die Feineinstellung (links) und das
- * Modul-Panel (rechts: Details, Composer, Debug) schliessen einander aus:
- * oeffnet das eine, geht das andere zu. Zwei offene Panels liessen dem
- * Inhalt auf dem Laptop kaum Platz und waeren auf dem Handy zwei Drawer.
- *
- * Sitzt im Provider-Baum, weil `useModulePanel` nur dort geht; `Home`
- * selbst steht ausserhalb.
- */
-function PanelExclusivity({ themeOpen, onCloseTheme }: { themeOpen: boolean; onCloseTheme: () => void }) {
-  const panel = useModulePanel()
-  const rightOpen = panel.current !== null
-  const rightKey = panel.current ? `${panel.current.kind}:${panel.current.itemId ?? ""}` : null
-  const prevRightKey = useRef(rightKey)
-  const prevThemeOpen = useRef(themeOpen)
-  useEffect(() => {
-    // Die Feineinstellung ist gerade aufgegangen → rechts schliessen.
-    if (themeOpen && !prevThemeOpen.current && rightOpen) panel.close()
-    // Rechts ist gerade etwas (Neues) aufgegangen → Feineinstellung schliessen.
-    if (rightKey !== null && rightKey !== prevRightKey.current && themeOpen) onCloseTheme()
-    prevThemeOpen.current = themeOpen
-    prevRightKey.current = rightKey
-  }, [themeOpen, rightOpen, rightKey, panel, onCloseTheme])
-  return null
-}
-
-/**
- * Renders the single app-level ModulePanel and suspends it (hidden, kept
- * mounted) while the user picks a location on the map — so the drawer steps
- * aside on mobile. Lives inside LocationPickProvider to read `isPicking`.
- */
-function ModulePanelHost({ children, onDrawerHeightChange }: { children: ReactNode; onDrawerHeightChange: (height: number) => void }) {
-  const { isPicking } = useLocationPick()
-  return (
-    // No "modal" mode (drops the maximise/mode-switch) and no pinning — both were
-    // controls without a real use in the detail panel (Pin does nothing in a
-    // sidebar; maximise hides the context, esp. on the map). Chrome is just the
-    // close button; item actions live in the card header (ItemDetailActions).
-    <ModulePanelProvider
-      allowedModes={["floating", "drawer"]}
-      sidebarWidth="420px"
-      sidebarMinWidth="300px"
-      sidebarMaxWidth="70vw"
-      suspended={isPicking}
-      onDrawerHeightChange={onDrawerHeightChange}
-    >
-      {children}
-    </ModulePanelProvider>
-  )
-}
-
-/**
- * Accepts either a raw user id or a shared profile URL (…?profile=<id>) in
- * the add-contact input — people paste what they got.
- */
-function extractProfileId(input: string): string {
-  const trimmed = input.trim()
-  try {
-    const url = new URL(trimmed)
-    const fromParam = url.searchParams.get("profile")
-    if (fromParam) return fromParam
-  } catch {
-    // not a URL — treat as raw id
-  }
-  return trimmed
-}
 
 const CONNECTOR_OPTIONS: ConnectorOption[] = [
   { id: "mock", name: "Mock", description: "In-Memory, kein Speichern" },
@@ -402,107 +280,24 @@ export function ProfilePanelHost({
   )
 }
 
+/**
+ * Die Shell der Referenz-App: der Rahmen aus dem Toolkit (`RoutedAppFrame`,
+ * Spec 01 „Was bei der App bleibt") plus das, was nur diese App hat — das
+ * Profil-Overlay in der URL, die WoT-Ereignisdialoge, der Relay-Status, der
+ * Connector-Umschalter im Dev-Modus. Bis zum 21.09.2026 zaehlte `Home` hier
+ * zehn Provider und vier Controller von Hand auf.
+ */
 function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: string; onConnectorChange: (id: string) => void }) {
   const connector = useConnector()
   const navigate = useNavigate()
-  const {
-    groups,
-    workspaces,
-    activeWorkspace,
-    activeModule,
-    modules,
-    urlSpaceId,
-    urlItemId,
-    handleWorkspaceChange,
-    handleModuleChange,
-  } = useWorkspaceRouting({ fallbackModule: "feed" })
-  const createGroup = useCreateGroup()
-  const updateGroup = useUpdateGroup()
-  const deleteGroup = useDeleteGroup()
-  const inviteMember = useInviteMember()
-  const removeMember = useRemoveMember()
-  const { data: currentUser } = useCurrentUser()
-  // Erstbefüllung dieses Geräts — die Gruppenliste ist dann unvollständig,
-  // nicht leer (rls#265).
-  const initialSync = useInitialSync()
-  const { activeContacts, pendingContacts, contacts: allContacts, isLoading: contactsLoading, addContact, activateContact, removeContact, updateContactName, supportsContacts } = useContacts()
-  const verification = useVerification()
-
-  // Erstbefüllung des Verify-Dialogs: restore-dann-create (Entscheidung 1c).
-  // Der Dialog-Stack ist reload-fest (?dialog=verify) — nach einem Reload mit
-  // offenem QR lebt die persistierte Challenge weiter, statt dass eine neue
-  // die alte (vom Freund evtl. schon gescannte) still ersetzt.
-  const ensureVerificationChallenge = useCallback(async () => {
-    const restored = await verification.restoreChallenge()
-    if (restored) return restored
-    return verification.createChallenge()
-  }, [verification.restoreChallenge, verification.createChallenge])
-
-  // Dialog-Ebene (Ebene 2) als Back-Stack, an die Browser-History gekoppelt:
-  // der Stack lebt im ?dialog=-Query (Komma-Liste, letztes = oben). Öffnen
-  // pusht einen History-Eintrag; Schließen (X/Esc/Backdrop) und Browser-Zurück
-  // poppen über die History eine Ebene. Verify aus Kontakten heraus → zurück
-  // zu Kontakten; direkt geöffnet → einfach zu. Deep-linkbar + refresh-fest.
-  // Spec: 01-app-composition → Overlay-Flächen, Regel 5.
-  type DialogLayerId = "contacts" | "verify"
-  const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
-  const dialogStack = useMemo<DialogLayerId[]>(() => {
-    const raw = searchParams.get("dialog")?.split(",") ?? []
-    return raw.filter((x): x is DialogLayerId => x === "contacts" || x === "verify")
-  }, [searchParams])
-  const topDialog = dialogStack[dialogStack.length - 1] ?? null
-  const openDialog = (id: DialogLayerId) => {
-    const next = [...dialogStack.filter((x) => x !== id), id]
-    const params = new URLSearchParams(searchParams)
-    params.set("dialog", next.join(","))
-    // Jeden In-App-Push als unseren markieren, damit popDialog ihn sicher
-    // erkennt. Vorhandenen Route-State erhalten.
-    const prev = (typeof location.state === "object" && location.state) || {}
-    setSearchParams(params, { state: { ...prev, rlsDialogPush: true } })
-  }
-  // Schließen poppt eine Ebene. Nur In-App geöffnete Dialoge haben einen
-  // echten History-Eintrag, den navigate(-1) sauber poppt (Browser-Zurück
-  // identisch). Wir markieren diese Pushes mit state.rlsDialogPush.
-  //
-  // location.key taugt NICHT als Detektor: ein replace erzeugt einen neuen
-  // Key, also wäre bei gestapeltem Deep-Link (?dialog=contacts,verify) nur
-  // der erste Close "default", der zweite würde fälschlich navigate(-1)
-  // rausnavigieren. state.rlsDialogPush überlebt das, weil wir es beim
-  // replace-Entfernen NICHT setzen — Deep-Link/Refresh-Einträge bleiben so
-  // dauerhaft "nicht-gepusht" und schließen Ebene für Ebene per replace,
-  // ohne die App zu verlassen.
-  const popDialog = () => {
-    const pushed = (location.state as { rlsDialogPush?: boolean } | null)?.rlsDialogPush
-    if (pushed) {
-      navigate(-1)
-    } else {
-      const next = dialogStack.slice(0, -1)
-      const params = new URLSearchParams(searchParams)
-      if (next.length > 0) params.set("dialog", next.join(","))
-      else params.delete("dialog")
-      setSearchParams(params, { replace: true })
-    }
-  }
-  // Radix-Dialoge (RemoveScroll) setzen `body { pointer-events: none }` und
-  // können es nach gestapeltem Open/Close (Kontakte unter Verify) HÄNGEN
-  // lassen → danach ist die ganze App unklickbar (Erstellen-Button „ohne
-  // Wirkung"). Das AdaptivePanel nutzt einen eigenen Backdrop, kein body-Lock;
-  // sobald also kein Dialog mehr offen ist, body sicher wieder freigeben.
-  useEffect(() => {
-    if (topDialog !== null) return
-    const t = setTimeout(() => {
-      if (document.body.style.pointerEvents === "none") {
-        document.body.style.pointerEvents = ""
-      }
-    }, 0)
-    return () => clearTimeout(t)
-  }, [topDialog])
-  // The profile overlay lives in the URL (`?profile={userId}`) so it is
-  // deep-linkable and back-stackable: opening pushes a history entry (joining
-  // the same rlsDialogPush mechanism as the dialog stack), so browser-back / X
-  // pops it. The own profile (id === currentUser.id) opens the editor, any
-  // other id a read-only view.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { data: currentUser } = useCurrentUser()
+  const { activeContacts, contacts: allContacts, addContact, supportsContacts } = useContacts()
+
+  // Das Profil-Overlay lebt in der URL (`?profile={userId}`): verlinkbar, und
+  // Zurueck im Browser schliesst es (derselbe Push-Marker wie der
+  // Dialog-Stack des Rahmens). Bleibt App-Sache, bis das Profil ein Item ist.
   const profileUserId = searchParams.get("profile")
   const openProfile = useCallback((userId: string) => {
     const params = new URLSearchParams(searchParams)
@@ -511,9 +306,6 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     setSearchParams(params, { state: { ...prev, rlsDialogPush: true } })
   }, [searchParams, setSearchParams, location.state])
   const closeProfile = useCallback(() => {
-    // Mirror popDialog: an in-app push has a real history entry → navigate(-1)
-    // (browser-back identical); a deep-link/refresh entry isn't pushed → strip
-    // the param via replace so we never navigate out of the app.
     const pushed = (location.state as { rlsDialogPush?: boolean } | null)?.rlsDialogPush
     if (pushed) {
       navigate(-1)
@@ -523,361 +315,52 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
       setSearchParams(params, { replace: true })
     }
   }, [location.state, navigate, searchParams, setSearchParams])
-
   const handleSaveProfile = useCallback(async (updates: { name: string; bio: string; avatar?: string }) => {
-    if (hasProfile(connector)) {
-      await connector.updateMyProfile(updates)
-    }
+    if (hasProfile(connector)) await connector.updateMyProfile(updates)
   }, [connector])
-
-  const [addContactOpen, setAddContactOpen] = useState(false)
-
-  // Group dialog state
-  const [groupDialogOpen, setGroupDialogOpen] = useState(false)
-  /**
-   * Die Feineinstellung des Aussehens als schwebende Karte ueber dem Inhalt
-   * (Entwurf 5b) — kein Dialog, kein Modul-Panel. Sie regelt immer den
-   * AKTIVEN Space (useCurrentGroup), ein key setzt die Regler beim Wechsel
-   * sauber neu.
-   */
-  const [themeCardOpen, setThemeCardOpen] = useState(false)
-  /**
-   * Fuer WELCHEN Space die Karte angefragt wurde. Der Wechsel dorthin laeuft
-   * ueber die URL und setzt die aktuelle Gruppe erst in einem Effekt; bis
-   * dahin liefert useCurrentGroup noch die vorige — und die Karte schriebe
-   * in den falschen Space. Gerendert wird erst, wenn beide uebereinstimmen.
-   */
-  const [themeGroupId, setThemeGroupId] = useState<string | null>(null)
-  const currentGroup = useCurrentGroup()
-  const themeGroup = currentGroup && currentGroup.id === themeGroupId ? currentGroup : null
-  const [groupDialogMode, setGroupDialogMode] = useState<GroupDialogMode>({ type: "create" })
-  const openCreateDialog = useCallback(() => {
-    setGroupDialogMode({ type: "create" })
-    setGroupDialogOpen(true)
-  }, [])
-
-  const openEditDialog = useCallback((workspace: Workspace) => {
-    if (workspace.scope === "overview") return
-    const group = groups.find((g) => g.id === workspace.id)
-    if (!group) return
-    setGroupDialogMode({ type: "edit", group })
-    setGroupDialogOpen(true)
-  }, [groups])
-
-  // UserMenu nimmt den User des Datenmodells; keine zweite Personenform mehr.
-  const userData: User = useMemo(
-    () => currentUser ?? { id: "", displayName: "Laden..." },
-    [currentUser]
-  )
-
-  const [isDark, setIsDark] = useState(initialDarkMode)
-  const [drawerHeight, setDrawerHeight] = useState(0)
-  const [activityOpen, setActivityOpen] = useState(false)
-  const closeActivity = useCallback(() => setActivityOpen(false), [])
-  const activity = useActivity()
-  const notifications = useNotifications()
-  const openNotification = useCallback((notification: import("@real-life-stack/toolkit").NotificationCandidate) => {
-    navigate(notificationRoute(notification, groups, "feed"))
-    closeActivity()
-  }, [closeActivity, groups, navigate])
-  // Raw-history clicks escalate the module when the active one cannot show
-  // the target (lens-active-item-escalates-view) — otherwise plain focus.
-  const { data: allItems } = useItems()
-  const { itemId: offenesItem, focusItem, commentOnItem } = useItemFocus()
-  const openEntryTarget = useCallback((targetId: string) => {
-    const item = allItems.find(({ id }) => id === targetId)
-    const hints = item ? moduleHintsFor(item) : undefined
-    if (item && activeWorkspace && !modulePresentsItem(activeModule, hints, item.type)) {
-      navigate(notificationRoute({ groupId: activeWorkspace.id, subjectId: targetId, moduleHints: hints }, groups, "feed"))
-      return
-    }
-    focusItem(targetId)
-  }, [activeModule, activeWorkspace, allItems, focusItem, groups, navigate])
-  const supportsMessaging = hasMessaging(connector)
-
-  // Ein Feld fuehrt zu der Sicht, die es darstellen kann — das Datum in den
-  // Kalender, die Position auf die Karte. Drei Dinge kommen hier zusammen, und
-  // nur hier liegen sie alle vor: WELCHES Modul ein Feld zeigt (Register),
-  // WELCHE Module dieser Space fuehrt, und WIE man hinkommt.
-  // Der Kommentar-Hinweis einer Karte fuehrt ins Kommentarfeld des Panels.
-  // Steht das Item schon offen, fuehrt er nirgendwohin — man ist bereits da.
-  const kommentarNavigation = useMemo(
-    () => ({
-      openComments: (item: Item) =>
-        offenesItem === item.id ? null : () => commentOnItem(item.id),
-    }),
-    [commentOnItem, offenesItem],
-  )
-
-  const feldNavigation = useMemo(
-    () => ({
-      openField: (field: string, item: Item) => {
-        const ziel = findModulePresenting(field, modules.map(({ id }) => id))
-        // Kein Modul dafuer, oder wir stehen schon darin: Dann ist der Wert
-        // eine Auskunft und kein Weg. Ein Link, der nichts tut, ist schlimmer
-        // als schlichter Text.
-        if (!ziel || ziel.id === activeModule) return null
-        // Modul und Item in EINER Navigation: Nacheinander gesetzt, naehme der
-        // zweite Schritt den ersten zurueck (er liest das noch alte Modul).
-        return () => focusItem(item.id, ziel.id)
-      },
-    }),
-    [activeModule, focusItem, modules],
-  )
-
-  // Die Klasse folgt dem Zustand, nicht dem Klick. Gespeichert wird hier
-  // BEWUSST nicht: dieser Effekt laeuft auch beim Mount, und dann schriebe er
-  // die Systemvorgabe als Wahl fest — ein spaeterer Wechsel des Systems bliebe
-  // wirkungslos. Festgehalten wird nur, was jemand wirklich waehlt.
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark)
-  }, [isDark])
-
-  const toggleTheme = () => {
-    const naechster = !isDark
-    setIsDark(naechster)
-    rememberColorScheme(naechster)
-  }
+  // Eine eingehende Verifikation schliesst den eigenen Verify-Dialog des
+  // Rahmens (`?dialog=…,verify`) — per replace, ohne die App zu verlassen.
+  const closeVerifyOverlay = useCallback(() => {
+    const stack = searchParams.get("dialog")?.split(",") ?? []
+    if (!stack.includes("verify")) return
+    const next = stack.filter((x) => x !== "verify")
+    const params = new URLSearchParams(searchParams)
+    if (next.length > 0) params.set("dialog", next.join(","))
+    else params.delete("dialog")
+    setSearchParams(params, { replace: true })
+  }, [searchParams, setSearchParams])
 
   return (
-    <CommentNavigationProvider value={kommentarNavigation}>
-    <FieldNavigationProvider value={feldNavigation}>
-    <OpenProfileProvider openProfile={openProfile}>
-    <DraftItemProvider>
-    <UnsavedChangesProvider>
-    <DetailHostProvider>
     <MapLibreAdapterProvider>
-    <LocationPickProvider
-      navigateToModule={handleModuleChange}
-      currentModule={activeModule}
-      canOpenMap={modules.some((m) => m.id === "map")}
-    >
-    <CreateHostProvider>
-    {/* Der Filter lebt neben dem persistenten Panel: beides ueberdauert den
-        Modulwechsel (Spec shared-components → „Modul-uebergreifender
-        Filter-State", Regel 1). */}
-    <FilterProvider>
-    {/* Tags werden zum Weg: ein Klick setzt den geteilten Filter. Der Provider
-        haengt UNTER dem Filter, nicht bei den anderen Navigationen — er
-        braucht den Zustand, den er setzt. */}
-    <TagNavigationProvider>
-    <ModulePanelHost onDrawerHeightChange={setDrawerHeight}>
-    <ActivityPanelController open={activityOpen} onClose={closeActivity} onOpenNotification={openNotification} onOpenEntryTarget={openEntryTarget} onOpenGroup={(groupId) => { const group = workspaces.find((workspace) => workspace.id === groupId); if (group) handleWorkspaceChange(group); closeActivity() }} />
-    <CreateSheetController />
-    <DetailHostController activeModule={activeModule} activeGroupId={activeWorkspace?.id ?? null} />
-    <UnsavedChangesGuard />
-    <AppShell>
-      <Navbar>
-        <NavbarStart>
-          {workspaces.length > 0 ? (
-            // Switcher stays available even when activeWorkspace is null
-            // (no-access URL) so the user can navigate to their spaces.
-            <WorkspaceSwitcher
-              workspaces={workspaces}
-              activeWorkspace={activeWorkspace}
-              onWorkspaceChange={handleWorkspaceChange}
-              onCreateWorkspace={openCreateDialog}
-              onEditWorkspace={openEditDialog}
-              syncing={initialSync.active}
-              syncExpected={initialSync.expectedGroups}
-            />
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openCreateDialog}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Neue Gruppe
-            </Button>
-          )}
-        </NavbarStart>
-        <NavbarCenter>
-          <ModuleTabs
-            modules={modules}
-            activeModule={activeModule}
-            onModuleChange={handleModuleChange}
-          />
-        </NavbarCenter>
-        <NavbarEnd>
-          {supportsMessaging && <RelayStatusBadgeWrapper />}
-          {notifications.supported ? <NotificationBell open={activityOpen} count={notifications.badgeCount} onOpenChange={setActivityOpen} /> : activity.supported && <ActivityBell open={activityOpen} onOpenChange={setActivityOpen} />}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="h-9 w-9"
-          >
-            {isDark ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
-          </Button>
-          <UserMenu
-            user={userData}
-            onProfile={() => { if (currentUser?.id) openProfile(currentUser.id) }}
-            onContacts={supportsContacts ? () => openDialog("contacts") : undefined}
-            contactCount={activeContacts.length}
-            onVerify={hasEncounterVerification(connector) ? () => openDialog("verify") : undefined}
-            onLogout={isAuthenticatable(connector) ? async () => {
-              await connector.logout()
-              window.location.reload()
-            } : undefined}
-          />
-        </NavbarEnd>
-      </Navbar>
-
-      {/* Map is full-bleed: skip the bottom-nav padding so the map fills the
-          area behind the translucent BottomNav instead of leaving a gap above
-          it. Scrolling modules keep the padding so content clears the nav. */}
-      <AppShellMain
-        withBottomNav={activeModule !== "map"}
-        // Aus dem Register, nicht aus einer Liste hier: sonst weiss die App
-        // wieder, welches Modul was braucht, und die Liste driftet.
-        inset={getModule(activeModule)?.panelFit !== "overlay"}
+      <RoutedAppFrame
+        fallbackModule="feed"
+        openProfile={openProfile}
+        navbarEnd={hasMessaging(connector) ? <RelayStatusBadgeWrapper /> : null}
       >
-        <ModuleOutlet
-          activeWorkspace={activeWorkspace}
-          activeModule={activeModule}
-          groups={groups}
-          urlSpaceId={urlSpaceId}
-          urlItemId={urlItemId}
-          selectionFocusVisibleArea={drawerHeight > 0 ? { bottomInset: drawerHeight } : undefined}
+        <ProfilePanelHost
+          userId={profileUserId}
+          currentUser={currentUser}
+          connector={connector}
+          contactCount={activeContacts.length}
+          onSaveProfile={handleSaveProfile}
+          onClose={closeProfile}
+          onAddContact={supportsContacts ? addContact : undefined}
+          contactStatusFor={(id) => allContacts.find((contact) => contact.id === id)?.status}
+          contactDirectionFor={(id) => allContacts.find((contact) => contact.id === id)?.direction}
         />
-      </AppShellMain>
-
-      <BottomNav
-        items={modules}
-        activeItem={activeModule}
-        onItemChange={handleModuleChange}
-      />
-      <GroupDialog
-        key={groupDialogMode.type === "edit" ? `edit-${groupDialogMode.group.id}` : "create"}
-        open={groupDialogOpen}
-        onOpenChange={setGroupDialogOpen}
-        mode={groupDialogMode}
-        currentUserId={currentUser?.id}
-        contacts={allContacts}
-        onCreateGroup={async (name) => {
-          const group = await createGroup(name)
-          handleWorkspaceChange({ id: group.id, name: group.name })
-        }}
-        onUpdateGroup={async (id, updates) => {
-          await updateGroup(id, updates)
-        }}
-        onOpenThemePanel={(group) => {
-          // Die Tokens gehoeren dem AKTIVEN Space. Aus dem Menue eines
-          // anderen geoeffnet, regelte man sonst an Farben, die gar nicht
-          // auf dem Bildschirm sind — also erst hinspringen.
-          if (activeWorkspace?.id !== group.id) handleWorkspaceChange({ id: group.id, name: group.name })
-          setThemeGroupId(group.id)
-          setThemeCardOpen(true)
-        }}
-        onDeleteGroup={async (id) => {
-          await deleteGroup(id)
-          // If deleted group was active, switch to first remaining
-          if (activeWorkspace?.id === id) {
-            const remaining = workspaces.filter((w) => w.id !== id)
-            if (remaining.length > 0) {
-              handleWorkspaceChange(remaining[0])
-            } else {
-              localStorage.removeItem(STORAGE_KEY_GROUP)
-              navigate("/")
-            }
-          }
-        }}
-        onInviteMember={async (groupId, userId) => {
-          await inviteMember(groupId, userId)
-        }}
-        onRemoveMember={async (groupId, userId) => {
-          await removeMember(groupId, userId)
-        }}
-      />
-      <PanelExclusivity themeOpen={themeCardOpen} onCloseTheme={() => setThemeCardOpen(false)} />
-      {themeCardOpen && themeGroup && (
-        <SpaceThemeCard
-          key={themeGroup.id}
-          group={themeGroup}
-          onUpdateGroup={async (id, updates) => { await updateGroup(id, updates) }}
-          onClose={() => setThemeCardOpen(false)}
-        />
-      )}
-
-      <ProfilePanelHost
-        userId={profileUserId}
-        currentUser={currentUser}
-        connector={connector}
-        contactCount={activeContacts.length}
-        onSaveProfile={handleSaveProfile}
-        onClose={closeProfile}
-        onAddContact={supportsContacts ? addContact : undefined}
-        contactStatusFor={(id) => allContacts.find((contact) => contact.id === id)?.status}
-        contactDirectionFor={(id) => allContacts.find((contact) => contact.id === id)?.direction}
-      />
-
-      {/* Contacts Dialog */}
-      <ContactsDialog
-        open={topDialog === "contacts"}
-        onOpenChange={(open) => { if (!open) popDialog() }}
-        activeContacts={activeContacts}
-        pendingContacts={pendingContacts}
-        isLoading={contactsLoading}
-        onRemove={removeContact}
-        onEditName={updateContactName}
-        onVerify={hasEncounterVerification(connector) ? () => openDialog("verify") : undefined}
-        onAdd={supportsContacts && !hasEncounterVerification(connector) ? () => setAddContactOpen(true) : undefined}
-        onActivate={activateContact}
-        activeLabel={hasEncounterVerification(connector) ? "Verifiziert" : "Aktiv"}
-      />
-
-      {/* Kontakt per ID/Profil-Link hinzufügen (Anfrage-Connectoren). */}
-      <AddContactDialog
-        open={addContactOpen}
-        onOpenChange={setAddContactOpen}
-        onAdd={(id, name) => addContact(extractProfileId(id), name)}
-      />
-
-      <VerificationDialog
-        open={topDialog === "verify" && hasEncounterVerification(connector)}
-        onOpenChange={(open) => { if (!open) popDialog() }}
-        challenge={verification.challenge}
-        peerInfo={verification.peerInfo}
-        isProcessing={verification.isProcessing}
-        error={verification.error}
-        onCreateChallenge={verification.createChallenge}
-        onEnsureChallenge={ensureVerificationChallenge}
-        onScanChallenge={verification.scanChallenge}
-        onConfirmVerification={verification.confirmVerification}
-        onReset={verification.reset}
-      />
-
-      {/* Incoming event dialogs */}
-      <IncomingEventDialogs onCloseVerifyDialog={() => { if (topDialog === "verify") popDialog() }} />
-
-      {/* Connector FAB — bottom-left, above BottomNav (only with ?dev URL param) */}
-      {initialDevMode && (
-        <div className="fixed bottom-20 left-4 z-50">
-          <ConnectorSwitcher
-            connectors={CONNECTOR_OPTIONS}
-            activeConnector={activeConnectorId}
-            onConnectorChange={onConnectorChange}
-          />
-        </div>
-      )}
-    </AppShell>
-    </ModulePanelHost>
-    </TagNavigationProvider>
-    </FilterProvider>
-    </CreateHostProvider>
-    </LocationPickProvider>
+        <IncomingEventDialogs onCloseVerifyDialog={closeVerifyOverlay} />
+        {/* Connector FAB — bottom-left, above BottomNav (only with ?dev URL param) */}
+        {initialDevMode && (
+          <div className="fixed bottom-20 left-4 z-50">
+            <ConnectorSwitcher
+              connectors={CONNECTOR_OPTIONS}
+              activeConnector={activeConnectorId}
+              onConnectorChange={onConnectorChange}
+            />
+          </div>
+        )}
+      </RoutedAppFrame>
     </MapLibreAdapterProvider>
-    </DetailHostProvider>
-    </UnsavedChangesProvider>
-    </DraftItemProvider>
-    </OpenProfileProvider>
-    </FieldNavigationProvider>
-    </CommentNavigationProvider>
   )
 }
 
@@ -1045,21 +528,10 @@ export default function App() {
           {/* Focus lives above the routes so it survives module switches — the
               shared panel's onClose must clear the focus on whatever module the
               user is on now, not the one that opened it. */}
-          <ItemFocusProvider>
-            <Routes>
-              {/* Flat scheme — the URL is the single source of truth for the focused
-                  item. `:seg` is a module (known enum) or a module-less item id;
-                  use-workspace-routing discriminates + redirects. `/` and unknown
-                  paths fall to `*` → Home → redirect to the default scope/module.
-                  App-level surfaces (profile, contacts, …) are query overlays, not
-                  path routes. Reserved for later: literal `/u/:userId`, `/join/:token`
-                  would go ABOVE `:scope` (literal beats param). */}
-              <Route path=":scope/:seg/:itemId" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
-              <Route path=":scope/:seg" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
-              <Route path=":scope" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
-              <Route path="*" element={<Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />} />
-            </Routes>
-          </ItemFocusProvider>
+          {/* Fokus, Routen (flaches Schema `/{scope}/{modul}/{item}`) und der
+              Rahmen kommen aus `RoutedAppFrame`; Home stellt nur, was diese
+              App zusaetzlich hat. */}
+          <Home activeConnectorId={connectorId} onConnectorChange={setConnectorId} />
         </AuthGate>
       </IncomingEventsProvider>
     </ConnectorProvider>

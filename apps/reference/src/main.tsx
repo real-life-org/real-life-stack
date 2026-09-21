@@ -11,9 +11,8 @@ import './index.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { checkForLiveUpdate } from './live-update'
 import { prefetchMapLibre } from '@real-life-stack/toolkit/maplibre'
-import { loadRuntimeConfig, applyBranding } from '@real-life-stack/toolkit'
+import { loadRuntimeConfig, applyBranding, applyInitialColorScheme } from '@real-life-stack/toolkit'
 import { RootError } from './root-error'
-import { applyInitialColorScheme } from './initial-color-scheme'
 
 // Check for OTA updates before rendering (no-op in browser/dev)
 checkForLiveUpdate()

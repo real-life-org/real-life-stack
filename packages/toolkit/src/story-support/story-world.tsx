@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useEffect, useMemo, type ReactNode } from "react"
 import type { Item, User } from "@real-life-stack/data-interface"
 import { MockConnector, type MockConnectorSeed } from "@real-life-stack/mock-connector"
 import { ConnectorProvider } from "../hooks/connector-context"
@@ -147,7 +147,15 @@ export function makeStoryConnector({ seed, group = "garden" }: StoryWorldOptions
  * Bearbeiten wirken wirklich, für die Dauer der Sitzung.
  */
 export function StoryWorld({ children, ...options }: StoryWorldOptions & { children: ReactNode }) {
-  return <ConnectorProvider connector={makeStoryConnector(options)}>{children}</ConnectorProvider>
+  // EIN Connector je Welt, nicht je Render: Bis zum 21.09.2026 entstand er bei
+  // jedem Render neu, und sobald ueber der Huelle Zustand lag (der Modul-Tab
+  // in `HostWorld`), verschwand mit jedem Tabwechsel alles, was die Story
+  // geschrieben hatte (rls#431). Neu entsteht er nur, wenn Seed oder Space
+  // wirklich andere sind — der bewusste Reset einer Story bleibt moeglich.
+  const key = JSON.stringify([options.group ?? null, options.seed ?? null])
+  const connector = useMemo(() => makeStoryConnector(options), [key]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => void connector.dispose(), [connector])
+  return <ConnectorProvider connector={connector}>{children}</ConnectorProvider>
 }
 
 /** Als Storybook-Dekorator: `decorators: [storyWorld()]`. */

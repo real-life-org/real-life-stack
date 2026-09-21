@@ -74,6 +74,7 @@ export {
   modulePresentsItem,
   PRESENT_PRIORITY,
 } from "./lib/module-register"
+export { notificationTarget, resolveDefaultModule, type NotificationTarget } from "./lib/notification-target"
 export {
   resolveIcon,
   registerIcon,

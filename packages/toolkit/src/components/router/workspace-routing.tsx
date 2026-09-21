@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useMemo } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import type { Group, Item } from "@real-life-stack/data-interface"
-import { hasGroups, type ModuleHints } from "@real-life-stack/data-interface"
+import type { Group } from "@real-life-stack/data-interface"
+import { hasGroups } from "@real-life-stack/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useColorScheme } from "../../hooks/use-color-scheme"
 import { useCurrentGroup, useGroups } from "../../hooks/use-groups"
 import { useItem } from "../../hooks/use-items"
 import { scalesForColor } from "../../lib/color-scales"
-import { getModule, moduleForItem, moduleIds, resolveActiveModule, resolveSpaceModules } from "../../lib/module-register"
+import { getModule, moduleIds, resolveActiveModule, resolveSpaceModules } from "../../lib/module-register"
+import { resolveDefaultModule } from "../../lib/notification-target"
 import { instanceTheme } from "../../lib/runtime-config"
 import { layoutTokens, readGray, readRadius, readSurfaces } from "../../lib/space-theme"
 import { applyThemeTokens, clearThemeTokens, themeTokens } from "../../lib/theme-tokens"
@@ -51,18 +52,6 @@ const slugToScope = (slug: string) => (slug === OVERVIEW_SLUG ? OVERVIEW_ID : sl
 
 const OVERVIEW_WORKSPACE: Workspace = { id: OVERVIEW_ID, name: "Mein Netzwerk", scope: "overview" }
 
-/**
- * Das Modul für einen Item-Link ohne Modul (`/{scope}/{itemId}`). Die Regel
- * selbst liegt im Modul-Register (`moduleForItem`); hier bleibt nur der
- * Aufruf. Ein ausdrückliches `/{scope}/{module}/{itemId}` gewinnt immer.
- */
-export function resolveDefaultModule(itemOrHints: Item | ModuleHints, available: readonly string[], fallback?: string): string {
-  const gewaehlt = moduleForItem(itemOrHints, available)
-  if (gewaehlt) return gewaehlt
-  // Den Rückfall wählt die App (Spec 01): die Referenz-App den Feed, die
-  // Netzwerk-App die Liste. Ohne Angabe das erste Modul des Space.
-  return fallback && available.includes(fallback) ? fallback : (available[0] ?? fallback ?? moduleIds()[0])
-}
 
 /**
  * Der kanonische Pfad fuer einen Redirect.

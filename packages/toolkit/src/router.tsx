@@ -12,9 +12,9 @@
  */
 
 export { UrlFocusProvider, parsePath, buildUrl } from "./components/router/url-focus"
+export { resolveDefaultModule } from "./lib/notification-target"
 export {
   useWorkspaceRouting,
-  resolveDefaultModule,
   canonicalPath,
   scopeToSlug,
   STORAGE_KEY_GROUP,
@@ -24,3 +24,4 @@ export {
 } from "./components/router/workspace-routing"
 export { notificationRoute } from "./components/router/notification-route"
 export { UnsavedChangesGuard } from "./components/router/unsaved-changes-guard"
+export { RoutedAppFrame, type RoutedAppFrameProps } from "./components/router/routed-app-frame"
