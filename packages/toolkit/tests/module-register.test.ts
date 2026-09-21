@@ -328,9 +328,35 @@ describe("Der Modul-Host: was der Eintrag traegt (Spec 01, B0 Schritt 5a)", () =
   it("laesst eine Erweiterung `options` setzen, wo das Toolkit schweigt", () => {
     const reg = composeModules([
       TOOLKIT_DEFINITION,
-      { name: "app", extensions: [{ id: "kanban", options: { statusField: "kind" } }] },
+      { name: "app", extensions: [{ id: "collection", options: { suggestType: "place" } }] },
     ])
-    expect(reg.find((m) => m.id === "kanban")?.options).toEqual({ statusField: "kind" })
+    expect(reg.find((m) => m.id === "collection")?.options).toEqual({ suggestType: "place" })
+  })
+
+  // Anton, 21.09.2026: Eine App DARF eine Toolkit-Flaeche ersetzen — aber nur
+  // ausdruecklich (Spec 01, Regel 2). Ohne die Nennung bleibt es der Konflikt.
+  it("laesst eine Erweiterung eine Flaeche ERSETZEN, wenn sie es sagt", () => {
+    const Andere = () => null
+    const reg = composeModules([
+      TOOLKIT_DEFINITION,
+      { name: "app", extensions: [{ id: "calendar", view: Andere, replaces: ["view"] }] },
+    ])
+    expect(reg.find((m) => m.id === "calendar")?.view).toBe(Andere)
+  })
+
+  it("lehnt denselben Ersatz ohne Nennung ab und nennt den Weg", () => {
+    expect(() =>
+      composeModules([TOOLKIT_DEFINITION, { name: "app", extensions: [{ id: "calendar", view: Dummy }] }]),
+    ).toThrow(/replaces: \["view"\]/)
+  })
+
+  it("`replaces` gilt nur fuer die genannten Felder", () => {
+    expect(() =>
+      composeModules([
+        TOOLKIT_DEFINITION,
+        { name: "app", extensions: [{ id: "calendar", view: Dummy, presents: ["end"], replaces: ["view"] }] },
+      ]),
+    ).toThrow(/"presents"/)
   })
 
   it("nennt die Quelle Beitrag statt Schicht, wenn eine Erweiterung ueberschreiben will", () => {

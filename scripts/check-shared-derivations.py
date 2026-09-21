@@ -49,7 +49,15 @@ REGELN = [
      "die Filterkarte rendert die Flaeche, nicht das Modul (Spec 01, Regel 2a)"),
     (re.compile(r"<ModuleFilterChips\b"),
      "die Chips der aktiven Filter rendert die Flaeche, nicht das Modul (Spec 01, Regel 2a)"),
+    # Der Modul-Host registriert Detail und Erstellen EINMAL je Modul aus dem
+    # Eintrag (Spec 01, Der Modul-Host, Regel 2). Bis zum 21.09.2026 tat das
+    # jede Ansicht selbst — siebenmal; ohne Waechter kommt die Verdrahtung zurueck.
+    (re.compile(r"\buseRegister(?:Detail|Create)\("),
+     "Detail und Erstellen registriert der Modul-Host, nicht die Ansicht (Spec 01, Der Modul-Host)"),
 ]
+
+# Wo der Host selbst wohnt: dort registriert er.
+ERLAUBTE_PRAEFIXE = ("packages/toolkit/src/components/host/",)
 
 BLOCK = re.compile(r"/\*.*?\*/", re.S)
 ZEILE = re.compile(r"//[^\n]*")
@@ -100,7 +108,7 @@ def main() -> int:
     geprueft = 0
     for pfad in sorted(quellen(wurzeln)):
         posix = pfad.as_posix()
-        if posix in ERLAUBT or ".stories." in posix or "/tests/" in posix or "/prototype/" in posix:
+        if posix in ERLAUBT or posix.startswith(ERLAUBTE_PRAEFIXE) or ".stories." in posix or "/tests/" in posix or "/prototype/" in posix:
             continue
         geprueft += 1
         befunde += pruefe(pfad)

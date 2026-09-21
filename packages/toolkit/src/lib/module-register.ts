@@ -64,6 +64,20 @@ export interface ModuleViewProps {
   groups?: readonly Group[]
   /** Sichtbarer Bereich fuer Fokus-Scrolling (siehe selection-focus.ts). */
   selectionFocusVisibleArea?: SelectionFocusVisibleArea
+  /**
+   * Die Items nach dem Ladevertrag, vom Host geladen (Spec 01, Der
+   * Modul-Host). `undefined`, wenn das Modul selbst laedt (`loads: "module"`).
+   */
+  items?: Item[]
+  itemsLoading?: boolean
+}
+
+/** Was der Modul-Host aus `options` liest (Spec 01, Der Modul-Host). */
+export interface ModuleHostOptions {
+  /** Vorschlag des Plusknopfs. Ein Vorschlag, kein Zaun: das Menue bietet alle Typen (Anton, 20.09.2026). */
+  suggestType?: string
+  /** Flaeche des Erstellens: `sheet` (Standard) oder `fullscreen` (der Feed). */
+  createShell?: "sheet" | "fullscreen"
 }
 
 export interface ModuleEntry {
@@ -116,7 +130,7 @@ export interface ModuleEntry {
    * Heute statisch in der Erweiterung; sobald Module je Space konfigurierbar
    * sind, kommt derselbe Wert aus dem Space.
    */
-  options?: ModuleHintOptions & Record<string, unknown>
+  options?: ModuleHintOptions & ModuleHostOptions & Record<string, unknown>
   /**
    * Die Flaeche selbst. Fuer die Toolkit-Module liefert sie das Toolkit —
    * vollstaendig, lauffaehig ohne eine Zeile in der App (Spec 01, Der
@@ -129,6 +143,13 @@ export interface ModuleEntry {
 /** Additive Ergaenzung eines VORHANDENEN Eintrags (Spec 01, Regel 2). */
 export interface ModuleFragment extends Partial<Omit<ModuleEntry, "id">> {
   id: string
+  /**
+   * Felder, die diese Erweiterung AUSDRUECKLICH ersetzt (Spec 01, Regel 2):
+   * eine App darf die Flaeche eines Toolkit-Moduls austauschen (Anton,
+   * 21.09.2026), aber nur, wenn sie es sagt — ein gesetztes Feld ohne diese
+   * Nennung bleibt ein Konflikt. Es gibt kein stilles Shadowing.
+   */
+  replaces?: readonly ModuleScalar[]
 }
 
 /**
@@ -138,12 +159,12 @@ export interface ModuleFragment extends Partial<Omit<ModuleEntry, "id">> {
  * Referenz-App erweitert.
  */
 export const TOOLKIT_MODULES: readonly ModuleEntry[] = Object.freeze([
-  { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl" },
-  { id: "kanban", label: "Kanban", icon: Columns3, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["status"] },
-  { id: "calendar", label: "Kalender", icon: Calendar, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["start"], view: CalendarModule },
-  { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay", presents: ["position"], loads: "module", view: MapModule },
+  { id: "feed", label: "Feed", icon: Newspaper, enabledByDefault: true, maxWidth: "max-w-3xl", options: { suggestType: "post", createShell: "fullscreen" } },
+  { id: "kanban", label: "Kanban", icon: Columns3, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["status"], options: { suggestType: "task" } },
+  { id: "calendar", label: "Kalender", icon: Calendar, enabledByDefault: true, maxWidth: "max-w-5xl", presents: ["start"], options: { suggestType: "event" }, view: CalendarModule },
+  { id: "map", label: "Karte", icon: MapIcon, enabledByDefault: true, fill: "bleed", keepMounted: true, panelFit: "overlay", presents: ["position"], loads: "module", options: { suggestType: "place" }, view: MapModule },
   // Opt-in — spec: docs/spec/modules/resonance.md
-  { id: "resonance", label: "Resonanz", icon: Waves, maxWidth: "max-w-3xl", presents: ["statement"] },
+  { id: "resonance", label: "Resonanz", icon: Waves, maxWidth: "max-w-3xl", presents: ["statement"], options: { suggestType: "statement" } },
   // `maxWidth` auch ohne Container: Sie gilt fuer den Kopf der Flaeche UND
   // fuer den Inhalt — die Lens liest sie aus der Flaeche
   // (`useModuleContentClass`), statt eine eigene zu fuehren. Vorher stand die
@@ -181,6 +202,7 @@ export const TOOLKIT_DEFINITION: ModuleExtension = Object.freeze({
 })
 
 const SCALARS = ["label", "icon", "enabledByDefault", "fill", "maxWidth", "keepMounted", "panelFit", "presents", "loads", "options", "view"] as const
+export type ModuleScalar = (typeof SCALARS)[number]
 
 /**
  * Setzt Schichten in der Reihenfolge Core → App zusammen und friert
@@ -232,10 +254,10 @@ export function composeModules(beitraege: readonly ModuleExtension[]): ModuleReg
         const value = frag[k]
         if (value === undefined) continue
         const held = fields.get(k)
-        if (held !== undefined) {
+        if (held !== undefined && !frag.replaces?.includes(k)) {
           throw new Error(
             `[rls] Modul "${frag.id}": "${k}" ist bereits von "${held}" gesetzt, ` +
-              `Beitrag "${layer.name}" wuerde es ueberschreiben — ein Ersatz muss ausdruecklich sein (Spec 01, Regel 2).`,
+              `Beitrag "${layer.name}" wuerde es ueberschreiben — ein Ersatz muss ausdruecklich sein: replaces: ["${k}"] (Spec 01, Regel 2).`,
           )
         }
         ;(base as unknown as Record<string, unknown>)[k] = value

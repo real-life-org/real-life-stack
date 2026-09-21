@@ -163,6 +163,21 @@ Der Kopf der Modulfläche, normativ in [`docs/spec/01-app-composition.md`](../..
 
 ---
 
+## Modul-Host
+
+Normativ in [`docs/spec/01-app-composition.md`](../../../docs/spec/01-app-composition.md) „Der Modul-Host" und „Der Ladevertrag".
+
+- [x] **host-owns-shared-wiring**: Items, Space-Kontext, Detail, Erstellen und Plusknopf stellt der `ModuleHost` einmal je Modul aus dem Registereintrag her; keine Ansicht registriert selbst (rls#414)
+- [x] **host-loads-by-contract**: Der Host lädt nach `presents` über die Hinweis-Tabelle; ohne Hinweis alles (aggregierende Module), bei mehreren die Vereinigung, bei `loads: "module"` gar nicht (Karte lädt nach Ausschnitt)
+- [x] **create-offers-all-types**: Der Plusknopf bietet in jedem Modul alle Inhaltstypen; ein Modul schlägt über `options.suggestType` einen vor und schränkt nie ein (Anton, 20.09.2026)
+- [x] **create-fab-uniform**: Der Plusknopf heißt überall „Erstellen", weicht dem Orts-Pick auf der Karte, fehlt ohne Schreibrecht, und tritt hinter einen vom Modul gemeldeten eigenen Einstieg zurück, solange der im Bild ist (Feed-Pille, `setCreateAnchor`)
+- [x] **detail-backdrop-follows-panelfit**: Der Hintergrund-Schleier des Detail-Panels folgt aus `panelFit`; über `overlay`-Flächen (Karte, Graph) keiner
+- [x] **tag-suggestions-from-vocabulary**: Tag-Vorschläge im Composer kommen aus dem Vokabular des Space — für Erstellen und Bearbeiten, in jedem Modul (vorher nur im Kanban)
+- [x] **focus-in-url-by-default**: Offenes Item, Bearbeiten und Erstellen stehen in der URL (`UrlFocusProvider` aus `/router`); ohne Router hält `MemoryFocusProvider` denselben Vertrag
+- [x] **app-may-replace-a-view-explicitly**: Eine App ersetzt eine Toolkit-Fläche nur mit `replaces: ["view"]` am Fragment; ohne die Nennung bleibt es ein Konflikt (Anton, 21.09.2026)
+
+---
+
 ## Linsen
 
 - [x] **lens-no-local-filter-toolbar**: List-, Grid- und read-only-Kanban-Linsen bringen keine eigene Filter-Toolbar mit

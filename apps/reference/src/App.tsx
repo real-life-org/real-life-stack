@@ -85,12 +85,12 @@ import { LocalConnector } from "@real-life-stack/local-connector"
 import { ModuleOutlet } from "./views/module-outlet"
 import { useWorkspaceRouting, STORAGE_KEY_GROUP } from "./hooks/use-workspace-routing"
 import { buildNotificationRoute, moduleCanDisplay } from "./notification-navigation"
-import { ItemFocusProvider } from "./hooks/use-item-focus"
+// Der Fokus in der URL ist die Voreinstellung (Spec 01, Der Modul-Host);
+// die Politik lebt im Router-Unterpfad des Toolkits.
+import { UrlFocusProvider as ItemFocusProvider } from "@real-life-stack/toolkit/router"
+import { CreateHostProvider, CreateSheetController, DetailHostProvider, DetailHostController, useItemFocus } from "@real-life-stack/toolkit"
 import { LocationPickProvider, useLocationPick } from "./location-pick"
-import { CreateHostProvider, CreateSheetController } from "./create-host"
-import { DetailHostProvider, DetailHostController } from "./detail-host"
 import { UnsavedChangesGuard } from "./unsaved-changes-guard"
-import { useItemFocus } from "./hooks/use-item-focus"
 
 
 /**

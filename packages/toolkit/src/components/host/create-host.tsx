@@ -245,3 +245,8 @@ export function useCreate(): CreateHostValue {
   if (!ctx) throw new Error("useCreate must be used inside <CreateHostProvider>")
   return ctx
 }
+
+/** Wie {@link useCreate}, aber `null` ohne Provider — fuer Flaechen, die auch nackt laufen (Story, Test). */
+export function useOptionalCreate(): CreateHostValue | null {
+  return useContext(CreateHostContext)
+}

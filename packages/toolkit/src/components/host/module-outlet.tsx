@@ -6,6 +6,7 @@ import type { Group } from "@real-life-stack/data-interface"
 import { getModule, getModules } from "../../lib/module-register"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { ModuleFrame } from "../layout/module-frame"
+import { ModuleHost } from "./module-host"
 
 export interface ModuleOutletProps {
   /** Der aktive Space; `null` heisst: die URL nennt einen Space ohne Zugang. */
@@ -21,8 +22,9 @@ export interface ModuleOutletProps {
 
 /**
  * Rendert das aktive Modul fuer den aktiven Space. Reiner Dispatch ueber das
- * Register (Spec 01, Regel 1) — kennt kein Modul beim Namen. Bis zum
- * 21.09.2026 in der Referenz-App.
+ * Register (Spec 01, Regel 1) — kennt kein Modul beim Namen. Jede Flaeche
+ * laeuft in ihrem `ModuleHost`, der aus dem Eintrag Detail, Erstellen,
+ * Space-Kontext und Items herstellt. Bis zum 21.09.2026 in der Referenz-App.
  */
 export function ModuleOutlet({ activeWorkspace, activeModule, groups, urlSpaceId, selectionFocusVisibleArea, noAccessContent }: ModuleOutletProps) {
   const noAccess = !!urlSpaceId && !activeWorkspace
@@ -50,12 +52,11 @@ export function ModuleOutlet({ activeWorkspace, activeModule, groups, urlSpaceId
   return (
     <>
       {persistent.map((mod) => {
-        const View = mod.view
-        if (!View) return null
+        if (!mod.view) return null
         const isActive = mod.id === activeModule && !noAccess
         return (
           <div key={mod.id} className="h-full w-full" style={isActive ? undefined : { display: "none" }}>
-            {wrap(mod.id, <View groupId={groupId} active={isActive} groups={groups} selectionFocusVisibleArea={selectionFocusVisibleArea} />)}
+            {wrap(mod.id, <ModuleHost entry={mod} groupId={groupId} active={isActive} groups={groups} selectionFocusVisibleArea={selectionFocusVisibleArea} />)}
           </div>
         )
       })}
@@ -67,7 +68,7 @@ export function ModuleOutlet({ activeWorkspace, activeModule, groups, urlSpaceId
           </div>
         )
       ) : activeIsPersistent ? null : active?.view ? (
-        wrap(active.id, <active.view groupId={groupId} active groups={groups} selectionFocusVisibleArea={selectionFocusVisibleArea} />)
+        wrap(active.id, <ModuleHost entry={active} groupId={groupId} active groups={groups} selectionFocusVisibleArea={selectionFocusVisibleArea} />)
       ) : active ? (
         // Registriert, aber ohne Flaeche — sichtbar sagen statt leer (Spec 01, Regel 7).
         <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">

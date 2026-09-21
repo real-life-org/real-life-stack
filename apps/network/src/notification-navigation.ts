@@ -4,11 +4,11 @@ import { moduleForItem, modulePresentsItem } from "@real-life-stack/toolkit"
 
 export type NetworkLensId = "graph" | "list" | "kanban" | "map" | "calendar" | "marketplace"
 
-export interface ModuleHintsLike {
-  hasPosition: boolean
-  hasStart: boolean
-  hasStatus: boolean
-}
+/**
+ * Bis zum 21.09.2026 stand hier eine eigene Kopie der Hinweise; jetzt ist es
+ * der Vertrag aus data-interface (offene Tabelle, Spec 01 Ladevertrag).
+ */
+export type ModuleHintsLike = ModuleHints
 
 /**
  * Welche Linse zeigt was: Die Regel liegt im Modul-Register des Toolkits
@@ -28,7 +28,7 @@ const MODULE_TO_LENS: Record<string, NetworkLensId> = { map: "map", calendar: "c
 /** Lens choice from connector-resolved hints — the one shared truth for clicks. */
 export function lensForHints(hints: ModuleHintsLike | undefined): NetworkLensId {
   if (!hints) return "list"
-  const modul = moduleForItem(hints as ModuleHints, ["map", "calendar", "kanban"])
+  const modul = moduleForItem(hints, ["map", "calendar", "kanban"])
   return (modul ? MODULE_TO_LENS[modul] : undefined) ?? "list"
 }
 
@@ -38,7 +38,7 @@ export function lensCanDisplay(lens: NetworkLensId, hints: ModuleHintsLike | und
   if (lens === "marketplace") return itemType === "resource"
   const modul = LENS_TO_MODULE[lens]
   if (!modul) return true
-  return modulePresentsItem(modul, hints as ModuleHints | undefined, itemType)
+  return modulePresentsItem(modul, hints, itemType)
 }
 
 /**

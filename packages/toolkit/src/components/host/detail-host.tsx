@@ -124,8 +124,11 @@ export function DetailHostProvider({ children }: { children: ReactNode }) {
  * on unmount so a torn-down module can't leave a stale config behind.
  */
 export function useRegisterDetail(module: string, config: DetailConfig): void {
-  const store = useConfigStore()
+  // Ohne Provider ein No-op, wie beim Erstellen-Host: Der Modul-Host ruft
+  // das fuer jede Flaeche, auch fuer eine, die nackt in einer Story laeuft.
+  const store = useContext(DetailHostContext)
   useEffect(() => {
+    if (!store) return
     store.setConfig(module, config)
     return () => store.setConfig(module, null)
   }, [module, config, store])

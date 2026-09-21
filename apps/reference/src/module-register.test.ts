@@ -76,9 +76,10 @@ describe("kein Register-Snapshot auf Modulebene (Review #277)", () => {
   // Ein `const X = moduleIds()` neben dem Import friert das Register zum
   // Importzeitpunkt ein — eine spaeter gebundene App-Schicht ist darin
   // unsichtbar, und der Fehler zeigt sich nur bei bestimmter Importreihenfolge.
+  // `detail-host.tsx` stand hier bis zum 21.09.2026; der Detail-Host lebt
+  // jetzt im Toolkit (B0), samt dieser Regel.
   const DATEIEN = [
     "hooks/use-workspace-routing.ts",
-    "detail-host.tsx",
     "notification-navigation.ts",
     "views/module-outlet.tsx",
   ]

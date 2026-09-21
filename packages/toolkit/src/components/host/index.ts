@@ -1,5 +1,6 @@
 export { DetailHostProvider, DetailHostController, ItemDetailRead, useRegisterDetail, type DetailConfig } from "./detail-host"
-export { CreateHostProvider, CreateSheetController, useRegisterCreate, useCreate, type CreateConfig, type CreateHostValue } from "./create-host"
+export { CreateHostProvider, CreateSheetController, useRegisterCreate, useCreate, useOptionalCreate, type CreateConfig, type CreateHostValue } from "./create-host"
+export { ModuleHost, useModuleHost, useOptionalModuleHost, hostFilterFor, type ModuleHostValue, type ModuleHostProps } from "./module-host"
 export { ModuleOutlet, type ModuleOutletProps } from "./module-outlet"
 export { MapAdapterProvider } from "../../modules/map-module"
 export { CalendarModule } from "../../modules/calendar-module"

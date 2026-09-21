@@ -82,7 +82,7 @@ Dieses Item erscheint **gleichzeitig auf der Map** (wegen `place`-Schema → `po
 
 ### Klassen haben IRIs
 
-**Status: Entwurf, 21.09.2026.** Anton: JSON-LD sichert unsere Dateninteroperabilität — eine interne Regel darf sie nicht einschränken.
+**Status: umgesetzt, rls#414 (21.09.2026).** Klassen-IRIs in den Kontexten, `normalizeItemType`/`itemTypes`/`hasItemType`/`typeSpellings` und die Eingangsregel `canonicalItem` in `data-interface`; jeder Connector normalisiert an seinem Trichter (Regel 7), die Darstellung wählt über die normalisierte Klassenmenge (Regel 9). Anton: JSON-LD sichert unsere Dateninteroperabilität — eine interne Regel darf sie nicht einschränken.
 
 `base/v1` definiert `"type": "@type"`. Damit ist unser `type` kein RLS-eigenes Feld, sondern JSON-LDs Klassen-Slot: `"type": "event"` heißt für jeden JSON-LD-Prozessor *dieses Item ist ein Event*. Bis zum 21.09.2026 fehlte die zweite Hälfte — kein Kontext definierte einen Klassenbegriff, `event` wurde zu keiner IRI, und ein fremder Prozessor sah eine Klasse ohne Identität. JSON-LD der Form, nicht der Wirkung nach.
 

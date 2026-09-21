@@ -65,6 +65,8 @@ export {
   type ModuleEntry,
   type ModuleFragment,
   type ModuleExtension,
+  type ModuleHostOptions,
+  type ModuleScalar,
   type ModuleRegistry,
   type ModuleViewProps,
   type ModuleFill,

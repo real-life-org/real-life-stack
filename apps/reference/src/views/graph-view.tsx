@@ -6,16 +6,13 @@ import {
   GraphView,
   ModuleToolbar,
   resolveTypePresentation,
-  useItems,
   useModuleFilteredItems,
   useMembers,
   useRelationRecords,
   type GraphViewHandle,
+  type ModuleViewProps,
 } from "@real-life-stack/toolkit"
-import { ReactionBar, useItemGroupResolver, useOpenProfile } from "@real-life-stack/toolkit"
-import { useItemFocus } from "../hooks/use-item-focus"
-import { useItemDetailEdit } from "../hooks/use-item-detail-edit"
-import { useRegisterDetail, type DetailConfig } from "../detail-host"
+import { useItemFocus, useItemGroupResolver, useOpenProfile } from "@real-life-stack/toolkit"
 import { useModulePanel } from "@real-life-stack/toolkit"
 
 /**
@@ -33,8 +30,8 @@ import { useModulePanel } from "@real-life-stack/toolkit"
  * like any other and introduces no fifth type list.
  */
 
-export function GraphViewWrapper({ groupId }: { groupId: string }) {
-  const { data: alleItems } = useItems()
+export function GraphViewWrapper({ groupId, items: alleItems = [] }: Pick<ModuleViewProps, "groupId" | "items">) {
+  // Der Graph aggregiert: der Host laedt ungefiltert (kein `presents`).
   // Der Graph filtert wie jedes andere Modul — nur schwebt seine Leiste ueber
   // der Flaeche, statt in einem Kopf zu sitzen (`panelFit: "overlay"`,
   // Spec 01, Regel 5). Der Wert ist derselbe wie im Feed daneben.
@@ -44,20 +41,6 @@ export function GraphViewWrapper({ groupId }: { groupId: string }) {
   const { focusItem, itemId: focusedItemId, clearFocus } = useItemFocus()
   const modulePanel = useModulePanel()
   const graphRef = useRef<GraphViewHandle>(null)
-
-  // The detail host only opens the shared panel when the ACTIVE module has
-  // registered a config — without this, a node click sets the URL focus and
-  // nothing visible happens.
-  const editConfig = useItemDetailEdit(members)
-  const detailConfig = useMemo<DetailConfig>(
-    () => ({
-      ...editConfig,
-      renderCommentReactions: (id) => <ReactionBar itemId={id} />,
-      onShare: () => void navigator.clipboard?.writeText(window.location.href),
-    }),
-    [editConfig],
-  )
-  useRegisterDetail("graph", detailConfig)
 
   const resolveLabel = useCallback((typeId: string) => resolveTypePresentation(typeId).label, [])
 
