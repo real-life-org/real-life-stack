@@ -84,8 +84,12 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
     // (moveItemToGroup in useItemEditor) — never written into item.data.
     // `people` becomes relations (below), not item.data. `tags` is top-level.
     const { text, tags: submittedTags, group: _group, people: _people, ...rest } = submission.data
+    // Was gespeichert wird, ist die Klassenmenge des Items (unveraendert);
+    // die VORLAGE ist die erste Klasse, fuer die es eine gibt (Spec 06, Regel 9).
     const type = existingItem?.type ?? submission.contentType
-    const typeConfig = resolve(type)
+    const klassen = normalizeItemType(type)
+    const vorlage = klassen.find((k) => resolve(k) !== undefined) ?? klassen[0] ?? submission.contentType
+    const typeConfig = resolve(vorlage)
 
     // Which keys carry people is said by the type (an entry may set its own
     // dataKey) — they become relations, not item.data.
@@ -110,7 +114,7 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
 
     // Free text maps to content/description by type. Clearing it in edit removes
     // the stored field; an empty text on create writes nothing.
-    const textField = textFieldFor(type, typeConfig)
+    const textField = textFieldFor(vorlage, typeConfig)
     if (text) itemData[textField] = text
     else if (existingItem) delete itemData[textField]
 

@@ -45,8 +45,11 @@ function isPlaceGeometry(value: unknown): boolean {
  * - `statement/v1` if `type === "statement"` — the schema (not the type)
  *   then carries the module activation for Resonance/Feed (spec 06).
  */
-export function deriveContext(type: string, data: Record<string, unknown>): string[] {
+export function deriveContext(type: string | readonly string[], data: Record<string, unknown>): string[] {
   const ctx: string[] = [VOCAB_BASE]
+  // Alle Klassen zaehlen (Spec 06, Regel 8): ein Item darf mehrere tragen.
+  const klassen = new Set(Array.isArray(type) ? type : [type as string])
+  const ist = (k: string) => klassen.has(k)
 
   if (typeof data.start === "string" && data.start.length > 0) {
     ctx.push(VOCAB_EVENT)
@@ -56,27 +59,27 @@ export function deriveContext(type: string, data: Record<string, unknown>): stri
     ctx.push(VOCAB_PLACE)
   }
 
-  if (type === "task" || (typeof data.status === "string" && TASK_STATUS_VALUES.has(data.status))) {
+  if (ist("task") || (typeof data.status === "string" && TASK_STATUS_VALUES.has(data.status))) {
     ctx.push(VOCAB_TASK)
   }
 
-  if (type === "person") {
+  if (ist("person")) {
     ctx.push(VOCAB_PERSON)
   }
 
-  if (type === "relation") {
+  if (ist("relation")) {
     ctx.push(VOCAB_RELATION)
   }
 
-  if (type === "project") {
+  if (ist("project")) {
     ctx.push(VOCAB_PROJECT)
   }
 
-  if (type === "resource") {
+  if (ist("resource")) {
     ctx.push(VOCAB_RESOURCE)
   }
 
-  if (type === "statement") {
+  if (ist("statement")) {
     ctx.push(VOCAB_STATEMENT)
   }
 

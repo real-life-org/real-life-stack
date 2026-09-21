@@ -107,3 +107,23 @@ describe("editInitialData", () => {
     expect(editInitialData(event)).toMatchObject({ text: "Wir teilen.", start: "2026-09-19T14:00", end: "2026-09-19T18:00" })
   })
 })
+
+describe("Klassenmengen im Bearbeiten (Spec 06, Regel 8 und 9; Codex zu rls#417)", () => {
+  const mehrklassig: Item = {
+    id: "m1", type: ["post", "statement"] as unknown as string, createdAt: "2026-09-21T10:00:00.000Z", createdBy: "u9",
+    data: { title: "Beides", content: "Alter Text" },
+  }
+
+  it("bearbeitet mit der Vorlage der ersten Klasse, speichert aber die ganze Menge", () => {
+    const out = mapSubmission(
+      { contentType: "post", data: { title: "Beides", text: "Neuer Text", tags: [] } },
+      { existingItem: mehrklassig },
+    )
+    expect(out.type).toEqual(["post", "statement"])
+    expect(out.data.content).toBe("Neuer Text")
+  })
+
+  it("belegt das Formular aus der Vorlage der ersten Klasse vor", () => {
+    expect(editInitialData(mehrklassig).text).toBe("Alter Text")
+  })
+})
