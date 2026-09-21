@@ -226,7 +226,7 @@ Das Muster folgt dem Typ-Register aus [06-schema-composition.md](06-schema-compo
 
 ### Der Modul-Host
 
-**Status: umgesetzt, rls#414 (B0, 21.09.2026).** `ModuleHost` in `packages/toolkit/src/components/host/module-host.tsx`; das Outlet rendert jede Fläche darin. Feed (B1), Kalender und Karte laufen ohne eine Zeile in der App; die vier übrigen Ansichten der Referenz-App lesen Items und Kontext vom Host und ziehen je in einem eigenen Schritt (B2–B5) ins Toolkit.
+**Status: umgesetzt, rls#414 (B0, 21.09.2026).** `ModuleHost` in `packages/toolkit/src/components/host/module-host.tsx`; das Outlet rendert jede Fläche darin. Feed (B1), Liste (B2), Kalender und Karte laufen ohne eine Zeile in der App; die drei übrigen Ansichten der Referenz-App lesen Items und Kontext vom Host und ziehen je in einem eigenen Schritt (B3–B5) ins Toolkit.
 
 Der Registereintrag beantwortet, *was folgt daraus, dass ein Space dieses Modul führt*. Der Host ist die Stelle, die aus der Antwort eine laufende Fläche macht — **einmal**, für alle Module.
 

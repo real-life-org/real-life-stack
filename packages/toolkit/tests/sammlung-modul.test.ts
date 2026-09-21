@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
-import { selectCollectionItems } from "./collection-view"
+import { selectCollectionItems } from "../src/modules/collection-module"
 
 const item = (id: string, type: string): Item => ({
   id,
