@@ -30,6 +30,14 @@ interface IncomingEventsContextType {
 
 const IncomingEventsContext = createContext<IncomingEventsContextType | null>(null)
 
+/**
+ * Which incoming event is waiting for an answer?
+ *
+ * @answers `{current, dismiss, …}`
+ * @without throws on render — without provider
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useIncomingEvents(): IncomingEventsContextType {
   const ctx = useContext(IncomingEventsContext)
   if (!ctx) {

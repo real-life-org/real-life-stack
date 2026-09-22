@@ -4,6 +4,8 @@ import { hasGroups, isAuthenticatable } from "@real-life-stack/data-interface"
 import { useOptionalConnector } from "./connector-context"
 
 /**
+ * A display name for a user id, falling back to the id.
+ *
  * Resolves user ids to display names — defensively.
  *
  * Widely used surfaces (reaction pills, small hints) want to NAME a user id
@@ -16,6 +18,11 @@ import { useOptionalConnector } from "./connector-context"
  * user — who is not a member of their own personal space and would otherwise
  * stay nameless. The current user resolves to "Du": in a list of reactors,
  * reading your own name is odd.
+ *
+ * @answers `(userId) => string`
+ * @without value — value — the id itself
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useUserNameResolver(): (userId: string) => string {
   const connector = useOptionalConnector()

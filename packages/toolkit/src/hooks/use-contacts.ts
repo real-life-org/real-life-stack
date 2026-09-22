@@ -6,6 +6,14 @@ import { useConnector } from "./connector-context"
 const noop = () => Promise.resolve() as any
 const EMPTY: ContactInfo[] = []
 
+/**
+ * Whom do I know, who is waiting for confirmation?
+ *
+ * @answers `{contacts, addContact, …}`
+ * @without empty — actions no-op
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useContacts() {
   const connector = useConnector()
   const supportsContacts = hasContacts(connector)

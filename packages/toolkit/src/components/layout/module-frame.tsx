@@ -102,16 +102,33 @@ function moduleHeadClass(layout: ModuleLayout): string {
  */
 const ModuleLayoutContext = createContext<ModuleLayout | null>(null)
 
+/**
+ * Which geometry does the module surface prescribe?
+ *
+ * @answers `ModuleLayout | null`
+ * @without null
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useModuleLayout(): ModuleLayout | null {
   return useContext(ModuleLayoutContext)
 }
 
 /**
+ * In which width does the content stand?
+ *
  * Die Breite, in der der Inhalt dieser Flaeche steht.
  *
  * Fuer Lenses: Sie zentrieren ihre Eintraege damit auf dieselbe Kante wie der
  * Kopf darueber. Ohne Flaeche gilt die Vorgabe — dann bestimmt die Lens ihre
  * Breite selbst, weil niemand sonst es tut.
+ *
+ * @answers `string`
+ * @without value — default
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function useModuleContentClass(): string {
   return moduleBleedContentClass(useModuleLayout() ?? {})
@@ -167,7 +184,17 @@ interface ModuleHeadValue {
 
 const ModuleHeadContext = createContext<ModuleHeadValue | null>(null)
 
-/** Der Kopf der umgebenden Modulflaeche — `null`, wenn es keine gibt. */
+/**
+ * Where does a module portal its toolbar?
+ *
+ * Der Kopf der umgebenden Modulflaeche — `null`, wenn es keine gibt.
+ *
+ * @answers `… | null`
+ * @without null
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useOptionalModuleHead(): ModuleHeadValue | null {
   return useContext(ModuleHeadContext)
 }

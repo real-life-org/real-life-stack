@@ -33,9 +33,17 @@ export interface UseReactionsResult {
 }
 
 /**
+ * How was reacted, and can I set my reaction?
+ *
  * Hook for reading and toggling reactions on an item.
  * Reads from item.data.reactions (summary) and item.data.myReaction (current user).
  * Uses optimistic updates with latest-wins for rapid clicks.
+ *
+ * @answers `{reactions, react, canReact}`
+ * @without empty — `react` no-op
+ * @group relations
+ * @see story rls-foundations-hooks--relations
+ * @see spec docs/spec/08-relation-records.md
  */
 export function useReactions(itemId: string): UseReactionsResult {
   const connector = useConnector()
@@ -190,8 +198,16 @@ export interface UseReactionUsersResult {
 }
 
 /**
+ * Who reacted with which emoji?
+ *
  * Hook for loading the list of users who reacted to an item.
  * Lazy-loaded — only fetches when called.
+ *
+ * @answers `{users, isLoading}`
+ * @without empty
+ * @group relations
+ * @see story rls-foundations-hooks--relations
+ * @see spec docs/spec/08-relation-records.md
  */
 export function useReactionUsers(itemId: string, emojiFilter?: string): UseReactionUsersResult {
   const connector = useConnector()

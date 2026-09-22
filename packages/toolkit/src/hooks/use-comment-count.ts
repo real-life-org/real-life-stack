@@ -4,6 +4,8 @@ import { hasRelations } from "@real-life-stack/data-interface"
 import { useOptionalConnector } from "./connector-context"
 
 /**
+ * Is there a conversation on this card?
+ *
  * Number of comments on an item — the cheap counterpart to {@link useComments}.
  *
  * Cards only need "is there a discussion, and how big", not the threaded list
@@ -15,6 +17,12 @@ import { useOptionalConnector } from "./connector-context"
  *
  * Returns 0 without a connector or on connectors without relations, so
  * callers need no guard.
+ *
+ * @answers `number`
+ * @without value — `0`
+ * @group relations
+ * @see story rls-foundations-hooks--relations
+ * @see spec docs/spec/08-relation-records.md
  */
 export function useCommentCount(itemId: string): number {
   // Optional on purpose: ItemPreview renders without a ConnectorProvider

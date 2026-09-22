@@ -3,10 +3,17 @@ import { isAuthenticatable, type User } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
 /**
+ * For which ids do I know a name?
+ *
  * Fallback author resolution: some ids are not in the current member list
  * (e.g. a membership entry that has not synced yet) although the connector
  * CAN resolve them — WoT cascades own profile → verified contacts →
  * discovery. Never show a raw DID when a name is one lookup away.
+ *
+ * @answers `Map<string, User>`
+ * @without empty — map
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useResolvedUsers(ids: readonly string[]): ReadonlyMap<string, User> {
   const connector = useConnector()

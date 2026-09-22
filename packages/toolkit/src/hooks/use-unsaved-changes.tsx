@@ -50,12 +50,32 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
   return <UnsavedChangesContext.Provider value={value}>{children}</UnsavedChangesContext.Provider>
 }
 
-/** Read the unsaved-changes state (for the app-level navigation guard). */
+/**
+ * Are there unsaved inputs that leaving must intercept?
+ *
+ * Read the unsaved-changes state (for the app-level navigation guard).
+ *
+ * @answers `{dirty, setDirty} | null`
+ * @without null — without provider
+ * @group write
+ * @see story rls-foundations-hooks--write
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useUnsavedChanges(): UnsavedChangesValue | null {
   return useContext(UnsavedChangesContext)
 }
 
-/** Publish/clear the unsaved flag (used by the shared item composer). No-op without a provider. */
+/**
+ * Report that something unsaved sits in the form.
+ *
+ * Publish/clear the unsaved flag (used by the shared item composer). No-op without a provider.
+ *
+ * @answers `(dirty) => void`
+ * @without no-op
+ * @group write
+ * @see story rls-foundations-hooks--write
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useSetUnsavedDirty(): (dirty: boolean) => void {
   const ctx = useContext(UnsavedChangesContext)
   return ctx?.setDirty ?? (() => {})

@@ -2,7 +2,17 @@ import { useEffect, useMemo, useReducer, startTransition } from "react"
 import { hasActivityLog } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
-/** Reads the optional space activity projection without making it a shell requirement. */
+/**
+ * What happened in this space recently?
+ *
+ * Reads the optional space activity projection without making it a shell requirement.
+ *
+ * @answers `{data, supported}`
+ * @without empty — `supported: false`
+ * @group read
+ * @see story rls-foundations-hooks--read
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useActivity(limit?: number) {
   const connector = useConnector()
   const observable = useMemo(

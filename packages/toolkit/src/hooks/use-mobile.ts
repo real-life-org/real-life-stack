@@ -17,13 +17,28 @@ function useBelowBreakpoint(breakpoint: number) {
   return !!below
 }
 
+/**
+ * Narrower than 768px?
+ *
+ * @answers `boolean`
+ * @without —
+ * @group environment
+ * @see spec docs/spec/11-runtime-config-und-branding.md
+ */
 export function useIsMobile() {
   return useBelowBreakpoint(MOBILE_BREAKPOINT)
 }
 
 /**
+ * Below 1024px, where the panel becomes a drawer?
+ *
  * True below the panel breakpoint — i.e. where the AdaptivePanel switches from
  * a sidebar to a drawer (and a suspended panel is actually hidden).
+ *
+ * @answers `boolean`
+ * @without —
+ * @group environment
+ * @see spec docs/spec/11-runtime-config-und-branding.md
  */
 export function useIsCompact() {
   return useBelowBreakpoint(COMPACT_BREAKPOINT)

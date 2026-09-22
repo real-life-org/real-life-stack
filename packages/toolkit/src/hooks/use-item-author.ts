@@ -2,6 +2,8 @@ import { useMemo } from "react"
 import type { Item, User } from "@real-life-stack/data-interface"
 
 /**
+ * Who wrote this item?
+ *
  * Resolves the author (`createdBy`) of an item against a preloaded
  * user list. Returns `undefined` if the item has no `createdBy` or the
  * user isn't in the list.
@@ -11,6 +13,11 @@ import type { Item, User } from "@real-life-stack/data-interface"
  * it in keeps this hook synchronous and avoids N redundant reads when a
  * page renders many items. Future option: a connector-aware
  * `useItemAuthorAsync` that fetches on demand.
+ *
+ * @answers `User | undefined`
+ * @without —
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useItemAuthor(
   item: Item | null | undefined,

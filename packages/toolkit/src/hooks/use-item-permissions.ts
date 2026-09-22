@@ -75,10 +75,18 @@ export function resolveCanCreate(
 }
 
 /**
+ * May I show the ⋮ menu here?
+ *
  * Whether the current user may edit / delete a given item — drives the detail
  * action menu (⋮). UI affordance only; the backend/protocol enforces. See
  * `AuthorizationCapable` in data-interface and the concept doc
  * `docs/concepts/item-edit-delete-2026-06.md`.
+ *
+ * @answers `{canEdit, canDelete}`
+ * @without value — both `false`
+ * @group permissions
+ * @see story rls-foundations-hooks--permissions
+ * @see spec docs/spec/03-capabilities.md
  */
 export function useItemPermissions(item: Item | null | undefined): ItemPermissions {
   const connector = useConnector()

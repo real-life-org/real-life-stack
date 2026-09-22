@@ -63,7 +63,17 @@ export interface ItemFocus {
 
 export const ItemFocusContext = createContext<ItemFocus | null>(null)
 
-/** Der Fokus. Wirft ohne Provider — ein Modul ohne Fokus ist ein Kompositionsfehler. */
+/**
+ * Which item is open, is it being edited, is something being created? The focus contract — in the app the URL (`UrlFocusProvider` from `/router`), otherwise memory.
+ *
+ * Der Fokus. Wirft ohne Provider — ein Modul ohne Fokus ist ein Kompositionsfehler.
+ *
+ * @answers `{itemId, isEditing, composeType, focusItem, editItem, startCompose, …}`
+ * @without throws on render
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useItemFocus(): ItemFocus {
   const ctx = useContext(ItemFocusContext)
   if (!ctx) {
@@ -72,7 +82,17 @@ export function useItemFocus(): ItemFocus {
   return ctx
 }
 
-/** Der Fokus oder `null` — für Flächen, die auch ohne Fokus stehen dürfen (Story, Test). */
+/**
+ * The focus, or `null` where a surface may stand without one.
+ *
+ * Der Fokus oder `null` — für Flächen, die auch ohne Fokus stehen dürfen (Story, Test).
+ *
+ * @answers `ItemFocus | null`
+ * @without value — null
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useOptionalItemFocus(): ItemFocus | null {
   return useContext(ItemFocusContext)
 }

@@ -72,6 +72,15 @@ export function LocationPickProvider({ children, navigateToModule, currentModule
   return <LocationPickContext.Provider value={value}>{children}</LocationPickContext.Provider>
 }
 
+/**
+ * Pick a place on the map from within the form.
+ *
+ * @answers `{isPicking, startPick, …}`
+ * @without value — `canPick: false`
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useLocationPick(): LocationPickValue {
   return useContext(LocationPickContext)
 }

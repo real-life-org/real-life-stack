@@ -119,9 +119,17 @@ export function DetailHostProvider({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Register the detail configuration of the active module — the host's job, never a module's.
+ *
  * A module registers its detail config here, keyed by its module id. Pass a
  * memoised config so it only re-registers on real change. Removes its config
  * on unmount so a torn-down module can't leave a stale config behind.
+ *
+ * @answers `void`
+ * @without no-op
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function useRegisterDetail(module: string, config: DetailConfig): void {
   // Ohne Provider ein No-op, wie beim Erstellen-Host: Der Modul-Host ruft

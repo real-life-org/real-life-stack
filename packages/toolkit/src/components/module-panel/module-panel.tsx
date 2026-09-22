@@ -141,6 +141,15 @@ export function ModulePanelProvider({
   )
 }
 
+/**
+ * Open a panel beside the module. There is only one.
+ *
+ * @answers `{current, open, close}`
+ * @without throws on render
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useModulePanel(): ModulePanelContextValue {
   const ctx = useContext(ModulePanelContext)
   if (!ctx) {

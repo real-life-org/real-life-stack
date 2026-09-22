@@ -37,6 +37,8 @@ export function readPanelEdges(): PanelEdges {
 }
 
 /**
+ * How much does an open panel cover right now?
+ *
  * Dieselben Raender, aber reaktiv: Ein Panel oeffnet in einem eigenen Effekt,
  * also erst NACH dem Klick, der es ausgeloest hat. Wer nur einmal liest, sieht
  * in genau diesem Moment noch 0px und richtet sich nach einem Zustand, den es
@@ -44,6 +46,12 @@ export function readPanelEdges(): PanelEdges {
  *
  * Der Wert behaelt seine Referenz, solange sich die Zahlen nicht aendern —
  * sonst waere er als Effekt-Abhaengigkeit unbrauchbar.
+ *
+ * @answers `{left, right}`
+ * @without —
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function usePanelEdges(): PanelEdges {
   const [kanten, setKanten] = useState<PanelEdges>(KEINE)

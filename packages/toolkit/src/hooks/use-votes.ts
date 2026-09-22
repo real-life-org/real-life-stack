@@ -35,6 +35,15 @@ function verdictKey(record: RelationRecord): string | null {
 
 const EMPTY_VERDICTS: ReadonlyMap<string, ClaimVerdict> = new Map()
 
+/**
+ * Which of those are cryptographically covered?
+ *
+ * @answers `RelationRecord[]`
+ * @without empty — also while checking
+ * @group relations
+ * @see story rls-foundations-hooks--relations
+ * @see spec docs/spec/08-relation-records.md
+ */
 export function useVerifiedRelationRecords(records: RelationRecord[]): RelationRecord[] {
   const connector = useConnector()
   const canVerify = hasClaimVerification(connector)
@@ -99,6 +108,8 @@ export interface UseVotesResult {
 }
 
 /**
+ * How does the resonance stand, and how do I vote?
+ *
  * Hook for reading and casting votes on a statement (Resonance module).
  *
  * Votes are RELATION RECORDS written through the auth-bound relation store
@@ -107,6 +118,12 @@ export interface UseVotesResult {
  * tuple, structurally. The read side accepts only validated records
  * (`votesFromRelationRecords`): endpoint bound to the author, at most one
  * counted vote per (statement, voter). See docs/spec/modules/resonance.md.
+ *
+ * @answers `{summary, vote, canVote}`
+ * @without empty — without signature verification no vote counts
+ * @group relations
+ * @see story rls-foundations-hooks--relations
+ * @see spec docs/spec/08-relation-records.md
  */
 export function useVotes(statementId: string): UseVotesResult {
   const connector = useConnector()
@@ -245,8 +262,16 @@ export interface UseVoteUsersResult {
 }
 
 /**
+ * Who voted how?
+ *
  * Reactive list of voters (with stance) for a statement: subscribes to the
  * vote records and re-resolves display names when the set changes.
+ *
+ * @answers `{users, isLoading}`
+ * @without empty
+ * @group relations
+ * @see story rls-foundations-hooks--relations
+ * @see spec docs/spec/08-relation-records.md
  */
 export function useVoteUsers(statementId: string, enabled = true): UseVoteUsersResult {
   const connector = useConnector()

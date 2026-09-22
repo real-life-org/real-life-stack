@@ -229,7 +229,17 @@ function CreateComposerOutlet({ className }: { className?: string }) {
   )
 }
 
-/** Register a module's create config. Pass a memoised config; removed on unmount. */
+/**
+ * Register the create configuration of the active module — the host's job, never a module's (guarded by `check-shared-derivations`).
+ *
+ * Register a module's create config. Pass a memoised config; removed on unmount.
+ *
+ * @answers `void`
+ * @without no-op
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useRegisterCreate(module: string, config: CreateConfig): void {
   const ctx = useContext(CreateOutletContext)
   const store = ctx?.store
@@ -240,13 +250,32 @@ export function useRegisterCreate(module: string, config: CreateConfig): void {
   }, [module, config, store])
 }
 
+/**
+ * Start creating — with suggestion and prefill, never with restriction.
+ *
+ * @answers `{isComposing, startCreate, patchCreate}`
+ * @without throws on render
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useCreate(): CreateHostValue {
   const ctx = useContext(CreateHostContext)
   if (!ctx) throw new Error("useCreate must be used inside <CreateHostProvider>")
   return ctx
 }
 
-/** Wie {@link useCreate}, aber `null` ohne Provider — fuer Flaechen, die auch nackt laufen (Story, Test). */
+/**
+ * The create host, or `null` where a surface may stand without one (story, test).
+ *
+ * Wie {@link useCreate}, aber `null` ohne Provider — fuer Flaechen, die auch nackt laufen (Story, Test).
+ *
+ * @answers `CreateHostValue | null`
+ * @without value — null
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useOptionalCreate(): CreateHostValue | null {
   return useContext(CreateHostContext)
 }

@@ -35,8 +35,16 @@ export interface UseCommentsResult {
 }
 
 /**
+ * What was said, by whom, and may I reply?
+ *
  * Hook for reading and creating comments on an item.
  * Returns first-level comments with reply counts.
+ *
+ * @answers `{comments, createComment, canComment}`
+ * @without empty — writing no-op
+ * @group relations
+ * @see story rls-foundations-hooks--relations
+ * @see spec docs/spec/08-relation-records.md
  */
 export function useComments(itemId: string): UseCommentsResult {
   const connector = useConnector()
@@ -179,8 +187,16 @@ export interface UseRepliesResult {
 }
 
 /**
+ * Which replies does this comment have?
+ *
  * Hook for loading second-level replies to a first-level comment.
  * Filters from the parent item's full comment list.
+ *
+ * @answers `{replies, isLoading}`
+ * @without empty
+ * @group relations
+ * @see story rls-foundations-hooks--relations
+ * @see spec docs/spec/08-relation-records.md
  */
 export function useReplies(itemId: string, commentId: string): UseRepliesResult {
   const connector = useConnector()
