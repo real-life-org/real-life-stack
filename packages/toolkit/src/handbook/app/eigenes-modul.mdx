@@ -1,0 +1,27 @@
+import { Meta, Source } from '@storybook/addon-docs/blocks'
+import register from '../../../../../apps/network/src/module-register.tsx?raw'
+import modul from '../../../../../apps/network/src/modules/marketplace-module.tsx?raw'
+
+<Meta title="RLS/App/06 Ein eigenes Modul" />
+
+# Ein eigenes Modul
+
+Drei Schritte, am Marktplatz der Netzwerk-App gezeigt. Er zeigt die Ressourcen eines Space als Liste.
+
+## 1. Die Ansicht
+
+Ein Modul tut nur, was seine Sache ist: zeigen und den Blick auf ein Item richten. Items kommen gefiltert vom Host (`items`), das aktive Item aus `useModuleHost()`, der Klick geht an `focusItem`. Kein Laden, kein Registrieren, kein eigener Plusknopf (Spec 01, Der Modul-Host, Regel 2).
+
+<Source code={modul} language="tsx" dark />
+
+## 2. Der Hinweis und der Registereintrag
+
+Was der Marktplatz zeigt, ist eine **Klasse** (`resource`), kein Feld. Der Hinweis trägt sich mit beiden Richtungen in die Tabelle ein — Item → Hinweis für Routing und Benachrichtigungen, Hinweis → Filter für den Host. Danach der Eintrag: `presents: ["resource"]`, ein Vorschlag fürs Erstellen, die Ansicht. Karte und Kalender bekommen hier außerdem die Daten des Camps als `options` — ausdrücklich ersetzt.
+
+<Source code={register} language="tsx" dark />
+
+## 3. Der Space führt es
+
+Ein Space führt die Module, die er in `data.modules` nennt, in dieser Reihenfolge. Die Netzwerk-App gibt dem Camp `["graph", "collection", "kanban", "calendar", "map", "marketplace"]` mit. Ein Space ohne den Marktplatz zeigt keinen Tab dafür.
+
+Das war alles. Tabs, Route, Benachrichtigungen, „Feld führt zur Sicht", Detail und Erstellen kennen das neue Modul, ohne dass irgendwo eine zweite Liste gepflegt wird.
