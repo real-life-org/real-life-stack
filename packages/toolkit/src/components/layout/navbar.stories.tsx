@@ -9,12 +9,12 @@ import { ActivityBell } from '../activity/activity-bell'
 import { STORY_ME, STORY_SEED, StoryWorld } from '../../story-support/story-world'
 
 /**
- * Die Kopfzeile ist ein Gerüst aus drei Fächern, nichts weiter: links der
- * Space, in der Mitte die Module, rechts die Person. Womit die App sie füllt,
- * steht nicht im Belieben des Moduls — es sind immer dieselben drei Bausteine
- * (`WorkspaceSwitcher`, `ModuleTabs`, `UserMenu`), und genau die zeigen diese
- * Stories. Die Anmeldung läuft vor der Hülle über den `AuthScreen`, nie als
- * Knopf in der Kopfzeile.
+ * **Navbar** is a scaffold of three compartments, nothing more: the space on
+ * the left, the modules in the middle, the person on the right. What fills
+ * them is not up to a module — it is always the same three building blocks
+ * (`WorkspaceSwitcher`, `ModuleTabs`, `UserMenu`), placed by the frame, and
+ * exactly those are shown here. Sign-in happens before the shell through the
+ * `AuthScreen`, never as a button in the header.
  */
 
 const MODULES = [
@@ -25,7 +25,7 @@ const MODULES = [
 
 const meta: Meta<typeof Navbar> = {
   id: 'rls-app-shell-navigation-navbar',
-  title: 'RLS/App Shell/Navigation/Navbar',
+  title: 'RLS/App shell/Navigation/Navbar',
   component: Navbar,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },
@@ -35,8 +35,9 @@ const meta: Meta<typeof Navbar> = {
 export default meta
 type Story = StoryObj<typeof Navbar>
 
-/** Voll besetzt, wie in der Referenz-App. Alle drei Fächer sind bedienbar. */
+/** Fully staffed, as in the reference app. All three compartments work. */
 export const Default: Story = {
+  name: "Fully staffed",
   render: function Render() {
     const [space, setSpace] = useState(STORY_SEED.groups[0])
     const [module, setModule] = useState('feed')
@@ -56,11 +57,11 @@ export const Default: Story = {
   },
 }
 
-/** Mit Verlaufs-Glocke rechts — so sieht die Kopfzeile aus, wenn die App das Aktivitätspanel führt. */
+/** With the activity bell on the right — the header of an app that carries the activity panel. */
 // Exportname bleibt, damit die alte Story-Kennung weiter auflöst
 // (docs/reference/story-migration.json); der sichtbare Name sagt, was drin ist.
 export const WithMenuButton: Story = {
-  name: 'Mit Verlaufs-Glocke',
+  name: 'With activity bell',
   render: function Render() {
     const [space, setSpace] = useState(STORY_SEED.groups[0])
     const [module, setModule] = useState('map')
@@ -82,8 +83,9 @@ export const WithMenuButton: Story = {
   },
 }
 
-/** Schmal: die Modulreiter verschwinden, die Module wandern in die BottomNav. */
+/** Narrow: the module tabs disappear, the modules move into the BottomNav. */
 export const Simple: Story = {
+  name: "Narrow",
   parameters: { viewport: { defaultViewport: 'mobile1' } },
   render: function Render() {
     const [space, setSpace] = useState(STORY_SEED.groups[0])

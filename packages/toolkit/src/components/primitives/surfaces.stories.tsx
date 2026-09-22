@@ -12,21 +12,19 @@ import {
 } from "./dropdown-menu"
 
 /**
- * **Die vier Flächen, die überall vorkommen.**
+ * **The four surfaces that occur everywhere.**
  *
- * Kein Modul baut sie selbst: Ein leerer Zustand sieht im Feed aus wie auf der
- * Karte, ein Menü verhält sich im Kartenkopf wie im Benutzermenü. Sie standen
- * bisher in keiner Story, obwohl fast jede Fläche sie benutzt.
+ * No module builds them itself: an empty state looks the same in the feed as
+ * on the map, a menu behaves the same in a card header as in the user menu.
  *
- * Für Dialoge gilt im Stack eine Regel: Sie sind für Entscheidungen da, die
- * den Arbeitsfluss unterbrechen dürfen (löschen, einladen, bestätigen). Alles,
- * was zum Weiterarbeiten gehört, gehört ins geteilte Panel, nicht in einen
- * Dialog.
+ * For dialogs one rule holds in the stack: they are for decisions that may
+ * interrupt the flow (delete, invite, confirm). Everything that belongs to
+ * carrying on belongs into the shared panel, not into a dialog.
  */
 
 const meta: Meta = {
   id: "rls-grundlagen-flaechen",
-  title: "RLS/Grundlagen/UI-Primitives/Flächen",
+  title: "RLS/Foundations/UI primitives/Surfaces",
   tags: ["autodocs"],
   parameters: { layout: "padded" },
 }
@@ -34,8 +32,9 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-/** Nichts da: mit Grund und, wenn möglich, mit einem Ausweg. */
+/** Nothing there: with a reason and, where possible, a way out. */
 export const Leerzustand: Story = {
+  name: "Empty state",
   render: () => (
     <div className="mx-auto grid max-w-3xl gap-4 md:grid-cols-2">
       <div className="rounded-xl border bg-card">
@@ -48,8 +47,9 @@ export const Leerzustand: Story = {
   ),
 }
 
-/** Solange geladen wird: dieselbe Form wie danach, damit nichts springt. */
+/** While loading: the same shape as afterwards, so nothing jumps. */
 export const Ladeblock: Story = {
+  name: "Loading block",
   render: () => (
     <div className="mx-auto max-w-md space-y-3 rounded-xl border bg-card p-4">
       <Skeleton className="h-5 w-2/3" />
@@ -63,7 +63,7 @@ export const Ladeblock: Story = {
   ),
 }
 
-/** Eine Entscheidung, die unterbrechen darf. Hier: löschen. */
+/** A decision that may interrupt. Here: delete. */
 export const DialogFlaeche: Story = {
   name: "Dialog",
   render: function Render() {
@@ -93,9 +93,9 @@ export const DialogFlaeche: Story = {
   },
 }
 
-/** Aktionen zu genau einem Ding. Im Stack immer hinter ⋮, nie als Knopfreihe. */
+/** Actions on exactly one thing. In the stack always behind ⋮, never as a row of buttons. */
 export const Menue: Story = {
-  name: "Dropdown-Menü",
+  name: "Dropdown menu",
   render: () => (
     <div className="mx-auto max-w-md">
       <DropdownMenu>

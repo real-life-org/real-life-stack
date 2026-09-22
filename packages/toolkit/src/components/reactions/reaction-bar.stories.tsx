@@ -13,14 +13,19 @@ import {
 } from "../../story-support/story-world"
 
 /**
- * Die Leiste liest ihre Reaktionen über `useReactions` aus dem Connector und
- * schreibt beim Klick eine Reaktion zurück. Deshalb steht hinter jeder Story
- * eine echte Datenquelle: Klicken wirkt, die Zahlen ändern sich, ein zweiter
- * Klick auf dieselbe Reaktion nimmt sie zurück. Ein Langdruck oder ein Klick
- * auf eine Pille öffnet „wer hat reagiert".
+ * **ReactionBar** reads its reactions through `useReactions` from the connector
+ * and writes one back on click. That is why a real data source stands behind
+ * every story: clicking takes effect, the numbers change, a second click on
+ * the same reaction takes it back. A long press or a click on a pill opens
+ * "who reacted".
+ *
+ * A reaction is an item of the class `reaction` with a relation `reactsTo`.
+ * Without relations the bar is gone; without a write capability it is
+ * read-only. Where it sits: as the footer of the card in the feed and at the
+ * bottom of the detail — a rule of the type, not of the module.
  */
 
-/** Ein Beitrag mit genau den angegebenen Reaktionen, sonst leere Welt. */
+/** A post with exactly the given reactions, otherwise an empty world. */
 function withReactions(...reactions: { emoji: string; by: string[] }[]) {
   const items: Item[] = [STORY_POST]
   let n = 0
@@ -42,7 +47,7 @@ const many = (emoji: string, count: number, withMe = false) => ({
 
 const meta: Meta<typeof ReactionBar> = {
   id: "rls-module-components-reactions-reactionbar",
-  title: "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionBar",
+  title: "RLS/Items/Detail view/Reactions and comments/ReactionBar",
   component: ReactionBar,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
@@ -51,8 +56,9 @@ const meta: Meta<typeof ReactionBar> = {
 export default meta
 type Story = StoryObj<typeof ReactionBar>
 
-/** Vier Reaktionen, eine davon meine. */
+/** Four reactions, one of them mine. */
 export const Default: Story = {
+  name: "Four reactions, one mine",
   render: () => (
     <StoryWorld seed={withReactions(many("❤️", 12), many("👍", 5, true), many("😂", 3), many("🔥", 2))}>
       <div className="p-8">
@@ -62,8 +68,9 @@ export const Default: Story = {
   ),
 }
 
-/** Eine einzelne Reaktion — der häufigste Fall im Feed. */
+/** A single reaction — the most common case in the feed. */
 export const SingleReaction: Story = {
+  name: "A single reaction",
   render: () => (
     <StoryWorld seed={withReactions(many("👍", 1))}>
       <div className="p-8">
@@ -73,8 +80,9 @@ export const SingleReaction: Story = {
   ),
 }
 
-/** Noch niemand hat reagiert: nur der Auslöser steht da. */
+/** Nobody has reacted yet: only the trigger stands there. */
 export const NoReactions: Story = {
+  name: "No reactions yet",
   render: () => (
     <StoryWorld seed={withReactions()}>
       <div className="p-8">
@@ -84,8 +92,9 @@ export const NoReactions: Story = {
   ),
 }
 
-/** Sechs verschiedene Reaktionen, die gerade noch alle passen. */
+/** Six different reactions that just about all fit. */
 export const ManyReactions: Story = {
+  name: "Six reactions",
   render: () => (
     <StoryWorld
       seed={withReactions(
@@ -104,8 +113,9 @@ export const ManyReactions: Story = {
   ),
 }
 
-/** Mehr als `maxVisible`: der Rest wandert hinter eine Sammelpille. */
+/** More than `maxVisible`: the rest goes behind an overflow pill. */
 export const Overflow: Story = {
+  name: "Overflow behind a pill",
   render: () => (
     <StoryWorld
       seed={withReactions(
@@ -125,8 +135,9 @@ export const Overflow: Story = {
   ),
 }
 
-/** So sitzt die Leiste im Feed: als Fußzeile der Item-Karte. */
+/** How the bar sits in the feed: as the footer of the item card. */
 export const InPostCard: Story = {
+  name: "Inside the post card",
   render: () => (
     <StoryWorld seed={withReactions(many("❤️", 12), many("👍", 5, true), many("😂", 3))}>
       <div className="mx-auto max-w-lg p-8">

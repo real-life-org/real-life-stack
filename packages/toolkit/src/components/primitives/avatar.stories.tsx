@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Avatar, AvatarImage, AvatarFallback } from './avatar'
 
+/** **Avatar**: a person's picture with initials as fallback, in the sizes the cards and the header use. */
 const meta: Meta<typeof Avatar> = {
   id: "rls-primitives-avatar",
-  title: "RLS/Grundlagen/UI-Primitives/Avatar",
+  title: "RLS/Foundations/UI primitives/Avatar",
   component: Avatar,
   tags: ['autodocs'],
 }

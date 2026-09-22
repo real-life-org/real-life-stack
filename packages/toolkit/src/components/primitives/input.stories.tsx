@@ -2,9 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Input } from './input'
 import { Label } from './label'
 
+/** **Input**: the text field of forms and of the search; the composer widgets build on it. */
 const meta: Meta<typeof Input> = {
   id: "rls-primitives-input",
-  title: "RLS/Grundlagen/UI-Primitives/Input",
+  title: "RLS/Foundations/UI primitives/Input",
   component: Input,
   tags: ['autodocs'],
   argTypes: {

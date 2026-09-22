@@ -64,9 +64,24 @@ const taskItem: Item = {
   tags: ["garten"],
 }
 
+/**
+ * **ItemPreview** is the one card of the stack: feed, list, grid, kanban and
+ * the map's popups all render it. It knows nothing about types, spaces or
+ * conversations — it has a title, a text, tags and an author row, and three
+ * slots (header, meta, footer) that the surface fills through the type
+ * register. That is why the same card looks different per module without
+ * there being three cards.
+ *
+ * Density is `comfortable` or `compact` (kanban, lists); `author={null}`
+ * suppresses the author row for cards that stand where the author is obvious.
+ *
+ * Where next: what goes into the slots under [Adornments](?path=/docs/rls-items-beigaben--docs);
+ * the card opened under [Detail view](?path=/docs/detail-itemdetailbody--docs).
+ */
 const meta: Meta<typeof ItemPreview> = {
+  tags: ["autodocs"],
   id: "module-components-itempreview",
-  title: "RLS/Items/Item-Vorschau/ItemPreview",
+  title: "RLS/Items/Item preview/ItemPreview",
   component: ItemPreview,
   decorators: [
     (Story) => (

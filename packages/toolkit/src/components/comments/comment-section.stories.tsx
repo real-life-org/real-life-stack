@@ -60,7 +60,7 @@ const MOCK_REPLIES_C1: CommentWithAuthor[] = [
 
 const meta: Meta = {
   id: "rls-module-components-comments-commentsection",
-  title: "RLS/Items/Detailansicht/Reaktionen und Kommentare/CommentSection",
+  title: "RLS/Items/Detail view/Reactions and comments/CommentSection",
   tags: ["autodocs"],
   parameters: {
     layout: "fullscreen",
@@ -80,10 +80,18 @@ export default meta
 type Story = StoryObj
 
 /**
- * Der ganze Bereich an einer echten Datenquelle: Liste, Antworten, Eingabe.
- * Schreiben wirkt — ein neuer Kommentar erscheint sofort, eine Antwort klappt
- * ihren Strang auf. `CommentSection` holt sich alles über `useComments`; die
- * Fläche gibt ihr nur die Kennung des Items.
+ * **CommentSection** is the discussion under an item: the list, replies as
+ * threads, the input. It runs on a real data source here — writing takes
+ * effect, a new comment appears at once, a reply unfolds its thread.
+ * `CommentSection` fetches everything through `useComments`; the surface only
+ * hands it the item's id.
+ *
+ * Comments are items of the class `comment` with a relation `commentOn`; a
+ * reply carries `replyTo`. Without relations there are no comments; without a
+ * write capability the input is gone.
+ *
+ * The parts below the section — input, bubble, thread — are shown on their own
+ * so their states can be compared.
  */
 export const FullSection: Story = {
   name: "CommentSection",

@@ -3,15 +3,24 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import { HostWorld } from "../../story-support/host-world"
 
 /**
- * Der Feed ist ein Toolkit-Modul und laeuft im Modul-Host (Spec 01) — diese
- * Story enthaelt keine Zeile Feed-Verdrahtung. Bis zum 21.09.2026 baute sie
- * den Feed aus Bausteinen nach; das war eine zweite Fassung neben der App,
- * und die beiden liefen auseinander.
+ * **The feed** is the aggregating view of a space: everything that stands as a
+ * card of its own — posts, events, tasks, places — newest first, with comments
+ * and reactions on the card. It is a toolkit module and runs inside the module
+ * host (spec 01): this story contains no line of feed wiring.
  *
- * Die Pille oben ist der Einstieg ins Schreiben, solange sie im Bild ist; der
- * Plusknopf des Hosts tritt an ihre Stelle, sobald sie weggescrollt ist.
- * Erstellen oeffnet im Vollbild (`options.createShell`), mit „Beitrag"
- * vorgeschlagen — alle Typen bleiben waehlbar.
+ * What is the feed's own: the sort order and the **pill** at the top, the entry
+ * into writing. While the pill is in view, the host's plus button steps back;
+ * once it is scrolled away, the plus button takes its place. Create opens
+ * fullscreen (`options.createShell`) with "Beitrag" (post) suggested — all
+ * types stay selectable.
+ *
+ * Without a write capability the pill and the plus button are gone; the feed
+ * still reads. Without relations there are no comments and reactions; the
+ * cards still show.
+ *
+ * Where next: the card is [ItemPreview](?path=/story/module-components-itempreview--bare),
+ * the detail on click [Detail view](?path=/story/detail-itemdetailbody--event),
+ * the host behind it [The module host](?path=/docs/rls-module-host--docs).
  */
 function FeedModuleOverview() {
   return <HostWorld module="feed" />
@@ -19,7 +28,7 @@ function FeedModuleOverview() {
 
 const meta: Meta<typeof FeedModuleOverview> = {
   id: "rls-space-modules-feed-overview",
-  title: "RLS/Module/Feed/Übersicht",
+  title: "RLS/Modules/Feed/Overview",
   component: FeedModuleOverview,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
@@ -28,4 +37,4 @@ const meta: Meta<typeof FeedModuleOverview> = {
 export default meta
 type Story = StoryObj<typeof FeedModuleOverview>
 
-export const Default: Story = {}
+export const Default: Story = { name: "Feed inside the host" }

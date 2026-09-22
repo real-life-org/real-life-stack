@@ -1,0 +1,27 @@
+import { Meta, Source } from '@storybook/addon-docs/blocks'
+import register from '../../../../../apps/network/src/module-register.tsx?raw'
+import module from '../../../../../apps/network/src/modules/marketplace-module.tsx?raw'
+
+<Meta title="RLS/App/06 A module of your own" />
+
+# A module of your own
+
+Three steps, shown on the marketplace of the network app. It lists the resources of a space.
+
+## 1. The view
+
+A module does only what is its business: show, and point the focus at an item. Items arrive filtered from the host (`items`), the active item comes from `useModuleHost()`, a click goes to `focusItem`. No loading, no registering, no plus button of its own (spec 01, the module host, rule 2).
+
+<Source code={module} language="tsx" dark />
+
+## 2. The hint and the register entry
+
+What the marketplace shows is a **class** (`resource`), not a field. The hint registers itself with both directions in the table — item → hint for routing and notifications, hint → filter for the host. Then the entry: `presents: ["resource"]`, a suggestion for creating, the view. Map and calendar also receive the camp's data as `options` here — replaced explicitly.
+
+<Source code={register} language="tsx" dark />
+
+## 3. The space carries it
+
+A space carries the modules it names in `data.modules`, in that order. The network app gives the camp `["graph", "collection", "kanban", "calendar", "map", "marketplace"]`. A space without the marketplace shows no tab for it.
+
+That is all. Tabs, route, notifications, "a field leads to its view", detail and create know the new module without a second list being maintained anywhere.

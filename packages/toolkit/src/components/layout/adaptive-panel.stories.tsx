@@ -3,9 +3,18 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import { AdaptivePanel, type PanelMode } from "./adaptive-panel"
 import { Button } from "../primitives/button"
 
+/**
+ * **AdaptivePanel** is the one panel shape of the stack: a floating card
+ * beside the content on wide screens, a drawer from the bottom below 1024px,
+ * a modal where a dialog is meant. `ModulePanelProvider` renders exactly one
+ * of these per app and swaps its content — detail, composer, activity,
+ * settings — instead of stacking panels. The modes an app allows, the width,
+ * pinning and the drawer height are its options; the content never knows
+ * which mode it is in.
+ */
 const meta: Meta<typeof AdaptivePanel> = {
   id: "rls-app-shell-layout-adaptivepanel",
-  title: "RLS/App Shell/Inhalts-Panel und Dialoge/AdaptivePanel",
+  title: "RLS/App shell/Panel and dialogs/AdaptivePanel",
   component: AdaptivePanel,
   tags: ["autodocs"],
   parameters: {
@@ -114,9 +123,9 @@ function PanelDemo({
 }
 
 /**
- * Der Standard im Stack: die schwebende Karte liegt über dem Inhalt statt als
- * Spalte daneben und rückt ihn genauso ein (360px + 2x16px Rand); unter 1024px
- * der Drawer.
+ * The stack's standard: the floating card lies over the content instead of as
+ * a column beside it and insets it the same way (360px + 2×16px margin);
+ * below 1024px the drawer.
  */
 export const Default: Story = {
   render: () => <PanelDemo title="Schwebende Karte" />,

@@ -121,9 +121,19 @@ const SEED: Item[] = [
   comment("c3", "user-1", "Super, dann bis Samstag.", "c1"),
 ]
 
+/**
+ * **ItemDetailPanel** is the detail as a whole: a top slot for the reading
+ * view and, underneath, the discussion — comments with replies and the input.
+ * The panel owns the comment wiring (`useComments`); what goes into the top
+ * slot is decided by the surface, in the app always `ItemDetailBody`.
+ *
+ * Without relations there is no discussion; the top slot still shows. Without
+ * a write capability the input is gone; the comments still read.
+ */
 const meta: Meta<typeof ItemDetailPanel> = {
+  tags: ["autodocs"],
   id: "rls-module-components-detail-itemdetailpanel",
-  title: "RLS/Items/Detailansicht/Inhalt und Diskussion",
+  title: "RLS/Items/Detail view/Content and discussion",
   component: ItemDetailPanel,
   parameters: {
     layout: "fullscreen",
@@ -148,8 +158,9 @@ const meta: Meta<typeof ItemDetailPanel> = {
 export default meta
 type Story = StoryObj<typeof ItemDetailPanel>
 
-/** Feed-Variante: read-only ItemPreview als Top-Slot, Kommentare darunter. */
+/** Feed variant: a read-only ItemPreview as top slot, comments underneath. */
 export const FeedDetail: Story = {
+  name: "Feed detail with discussion",
   render: () => (
     <ItemDetailPanel itemId={POST.id}>
       <div className="p-4">
@@ -165,12 +176,13 @@ export const FeedDetail: Story = {
 }
 
 /**
- * Der Top-Slot ist technisch frei — das Panel besitzt nur die Kommentar-Verdrahtung.
- * In einer App gehört dort trotzdem immer `ItemDetailBody` hinein, gefüllt nach dem
- * Typ des Items. Diese Story zeigt die Grenze des Bausteins, nicht eine Einladung,
- * je Modul etwas anderes zu rendern.
+ * The top slot is technically free — the panel only owns the comment wiring.
+ * In an app it always holds `ItemDetailBody`, filled by the item's type. This
+ * story shows the limit of the building block, not an invitation to render
+ * something different per module.
  */
 export const CustomTopSlot: Story = {
+  name: "The top slot is free (limit, not invitation)",
   render: () => (
     <ItemDetailPanel itemId={POST.id}>
       <div className="p-6 space-y-2">

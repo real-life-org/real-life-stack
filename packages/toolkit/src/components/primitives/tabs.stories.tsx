@@ -2,9 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 
+/** **Tabs**: content tabs inside a surface (calendar views, notification centre) — not the module tabs of the header, those are `ModuleTabs`. */
 const meta: Meta<typeof Tabs> = {
   id: "rls-primitives-tabs",
-  title: "RLS/Grundlagen/UI-Primitives/Tabs",
+  title: "RLS/Foundations/UI primitives/Tabs",
   component: Tabs,
   tags: ['autodocs'],
 }

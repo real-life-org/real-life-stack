@@ -19,23 +19,23 @@ import { FilterProvider, useSharedFilter } from "../components/filter/filter-sto
 import { STORY_ME, STORY_POST, STORY_TASK, StoryWorld } from "../story-support/story-world"
 
 /**
- * **Die Hooks des Toolkits.**
+ * **The hooks of the toolkit.**
  *
- * Eine Fläche im Real Life Stack ruft nie direkt den Connector. Sie fragt
- * Hooks, und die Hooks sprechen mit dem Connector. Das hat einen Grund: Welches
- * Backend darunter liegt, soll die Fläche nicht wissen — sie soll nur wissen,
- * was sie fragen darf.
+ * A surface in Real Life Stack never calls the connector directly. It asks
+ * hooks, and the hooks talk to the connector. There is a reason: which backend
+ * lies underneath the surface should not know — only what it may ask.
  *
- * Zwei Regeln, die überall gelten und die hier vorgeführt werden:
+ * Two rules that hold everywhere and are demonstrated here:
  *
- * 1. **Lesen antwortet immer.** Kann ein Connector etwas nicht — keine Gruppen,
- *    keine Anmeldung, kein Schreiben —, dann antwortet der lesende Hook leer.
- *    Er wirft nicht. „Keine Gruppen" ist eine wahre Antwort, kein Fehler.
- * 2. **Schreiben scheitert beim Aufruf, nicht beim Vorbereiten.** Einen Knopf
- *    darf jede Fläche bauen; ob er etwas bewirkt, sagt die Fähigkeitsprüfung
- *    (`isWritable`, `useItemPermissions`), nicht eine Ausnahme beim Rendern.
+ * 1. **Reading always answers.** If a connector cannot do something — no
+ *    groups, no sign-in, no writing — the reading hook answers empty. It does
+ *    not throw. "No groups" is a true answer, not an error.
+ * 2. **Writing fails on the call, not on preparation.** Any surface may build
+ *    a button; whether it does something is said by the capability check
+ *    (`isWritable`, `useItemPermissions`), not by an exception while rendering.
  *
- * Jede Story unten läuft an einer echten Datenquelle. Was du anklickst, wirkt.
+ * Every story below runs on a real data source. What you click takes effect.
+ * The full list with one line per hook: [All hooks](?path=/docs/rls-grundlagen-alle-hooks--docs).
  */
 
 // ── Darstellung ────────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ function Tafel({ titel, hinweis, children }: { titel: string; hinweis?: string; 
   )
 }
 
-/** Ein Connector, der nur lesen kann — für die Gegenprobe in „Rechte". */
+/** A connector that can only read — for the counter-check in “Permissions”. */
 function nurLesen(): DataInterface {
   const items = createObservable<Item[]>([STORY_POST])
   return {
@@ -278,7 +278,7 @@ function Flaechen() {
 
 const meta: Meta = {
   id: "rls-grundlagen-hooks",
-  title: "RLS/Grundlagen/Hooks",
+  title: "RLS/Foundations/Hooks",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
 }
@@ -287,7 +287,7 @@ export default meta
 type Story = StoryObj
 
 export const Lesen: Story = {
-  name: "1 · Items lesen",
+  name: "1 · Read items",
   render: () => (
     <StoryWorld>
       <ItemsLesen />
@@ -296,7 +296,7 @@ export const Lesen: Story = {
 }
 
 export const Schreiben: Story = {
-  name: "2 · Items schreiben",
+  name: "2 · Write items",
   render: () => (
     <StoryWorld>
       <ItemsSchreiben />
@@ -305,12 +305,12 @@ export const Schreiben: Story = {
 }
 
 export const RechteUndFaehigkeiten: Story = {
-  name: "3 · Rechte und Fähigkeiten",
+  name: "3 · Permissions and capabilities",
   render: () => <RechteVergleich />,
 }
 
 export const BeziehungenStory: Story = {
-  name: "4 · Beziehungen",
+  name: "4 · Relations",
   render: () => (
     <StoryWorld>
       <Beziehungen />
@@ -319,7 +319,7 @@ export const BeziehungenStory: Story = {
 }
 
 export const FlaechenStory: Story = {
-  name: "5 · Flächen",
+  name: "5 · Surfaces",
   render: () => (
     <StoryWorld>
       <FilterProvider>
@@ -331,9 +331,9 @@ export const FlaechenStory: Story = {
   ),
 }
 
-/** Die Fähigkeitsprüfung, die jede schreibende Fläche macht, bevor sie einen Knopf zeigt. */
+/** The capability check every writing surface makes before it shows a button. */
 export const Faehigkeitspruefung: Story = {
-  name: "6 · Fähigkeit prüfen",
+  name: "6 · Check a capability",
   render: function Render() {
     function Probe() {
       const { data: items } = useItems()

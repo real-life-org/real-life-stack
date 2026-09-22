@@ -5,12 +5,12 @@ import { useReactions } from "../../hooks/use-reactions"
 import { STORY_POST, STORY_SEED, STORY_USERS, StoryWorld, storyReaction } from "../../story-support/story-world"
 
 /**
- * „Wer hat reagiert" — die Liste hinter einer Reaktionspille.
+ * **ReactionDetails** — "who reacted", the list behind a reaction pill.
  *
- * Die Namen und Bilder holt die Komponente selbst über `useReactionUsers` aus
- * dem Connector; die aggregierten Zahlen reicht die aufrufende Fläche durch,
- * damit sie nicht zweimal gezählt werden. Genau so macht es die `ReactionBar`.
- * Die Stories zeigen deshalb dieselbe Verdrahtung an echten Daten.
+ * Names and pictures the component fetches itself through `useReactionUsers`
+ * from the connector; the aggregated counts are handed in by the calling
+ * surface so they are not counted twice. That is exactly what `ReactionBar`
+ * does. The stories therefore show the same wiring on real data.
  */
 
 const PEOPLE = [
@@ -26,7 +26,7 @@ const PEOPLE = [
   ["Jan Becker", null],
 ] as const
 
-/** Zehn Menschen, verteilt auf die angegebenen Reaktionen. */
+/** Ten people, spread over the given reactions. */
 function withReactors(...groups: { emoji: string; count: number }[]) {
   const users = PEOPLE.map(([displayName, portrait], i) => ({
     id: `u${i + 1}`,
@@ -41,7 +41,7 @@ function withReactors(...groups: { emoji: string; count: number }[]) {
   return { ...STORY_SEED, users: [...users, ...STORY_USERS], items }
 }
 
-/** Wie eine Fläche die Liste öffnet: Zahlen aus `useReactions`, Namen holt sie selbst. */
+/** How a surface opens the list: counts from `useReactions`, names it fetches itself. */
 function DetailsSurface({ initialEmoji }: { initialEmoji?: string }) {
   const { reactions } = useReactions(STORY_POST.id)
   return (
@@ -58,7 +58,7 @@ function DetailsSurface({ initialEmoji }: { initialEmoji?: string }) {
 
 const meta: Meta<typeof ReactionDetails> = {
   id: "rls-module-components-reactions-reactiondetails",
-  title: "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionDetails",
+  title: "RLS/Items/Detail view/Reactions and comments/ReactionDetails",
   component: ReactionDetails,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
@@ -68,8 +68,9 @@ const meta: Meta<typeof ReactionDetails> = {
 export default meta
 type Story = StoryObj<typeof ReactionDetails>
 
-/** Alle Reaktionen, nach Häufigkeit sortiert. Der Reiter oben filtert. */
+/** All reactions, sorted by frequency. The tab at the top filters. */
 export const AllReactions: Story = {
+  name: "All reactions",
   render: () => (
     <StoryWorld seed={withReactors({ emoji: "❤️", count: 4 }, { emoji: "👍", count: 2 }, { emoji: "😂", count: 2 }, { emoji: "🔥", count: 2 })}>
       <DetailsSurface />
@@ -77,8 +78,9 @@ export const AllReactions: Story = {
   ),
 }
 
-/** Vorgefiltert, weil die Person auf genau diese Pille gedrückt hat. */
+/** Pre-filtered, because the person pressed exactly this pill. */
 export const FilteredByEmoji: Story = {
+  name: "Filtered by one emoji",
   render: () => (
     <StoryWorld seed={withReactors({ emoji: "❤️", count: 4 }, { emoji: "👍", count: 2 }, { emoji: "😂", count: 2 }, { emoji: "🔥", count: 2 })}>
       <DetailsSurface initialEmoji="❤️" />
@@ -86,8 +88,9 @@ export const FilteredByEmoji: Story = {
   ),
 }
 
-/** Wenige Reaktionen: die Liste bleibt kurz, der Filter trotzdem da. */
+/** Few reactions: the list stays short, the filter is still there. */
 export const FewReactions: Story = {
+  name: "Few reactions",
   render: () => (
     <StoryWorld seed={withReactors({ emoji: "👍", count: 2 }, { emoji: "🎉", count: 1 })}>
       <DetailsSurface />

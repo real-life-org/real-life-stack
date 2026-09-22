@@ -7,22 +7,24 @@ import { Button } from "../primitives/button"
 import { STORY_SEED, StoryWorld } from "../../story-support/story-world"
 
 /**
- * **Einen Space anlegen und einrichten.**
+ * **Create and configure a space.**
  *
- * Ein Space gehört den Menschen darin, nicht der Instanz. Deshalb liegt beides
- * in der App und nicht in einer Verwaltungsoberfläche: Wer einen Space anlegt,
- * lädt ein und stellt sein Aussehen ein, ohne den Ort zu wechseln.
+ * A space belongs to the people in it, not to the instance. So both live in
+ * the app and not in an admin surface: whoever creates a space invites people
+ * and sets its look without changing place. The frame provides all of it from
+ * the space switcher; a connector without groups shows none of it.
  *
- * Das Aussehen hat drei Achsen (Akzentfarbe, Rundung, Flächen) und liegt in
- * `group.data`. Es wandert mit dem Space mit, über Geräte und Connectoren
- * hinweg; die Instanz gibt nur die Vorgabe, von der aus ein Space abweicht.
+ * The look has three axes (accent colour, radius, surfaces) and lives in
+ * `group.data`. It travels with the space, across devices and connectors; the
+ * instance only gives the default a space departs from. Which modules a space
+ * carries is set here too (`data.modules`).
  */
 
 const GARTEN: Group = { ...STORY_SEED.groups[0], data: { primaryColor: "#3f7a4e" } }
 
 const meta: Meta = {
   id: "rls-app-shell-space-verwaltung",
-  title: "RLS/Spaces/Anlegen und Einrichten",
+  title: "RLS/Spaces/Create and configure",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
   decorators: [(Story) => <StoryWorld>{Story()}</StoryWorld>],
@@ -32,9 +34,9 @@ export default meta
 type Story = StoryObj
 
 /**
- * Kontakte, die noch nicht im Garten sind: Nur sie bietet der Bereich
- * „Einladen" an. Ohne Einlade-Handler gibt es den Bereich gar nicht — so
- * fehlte er hier bis zum 21.09.2026 (Anton).
+ * Contacts who are not in the garden yet: only those the "invite" section
+ * offers. Without an invite handler the section does not exist at all — that
+ * is how it was missing here until 21 Sept 2026.
  */
 const SEIT = "2026-09-01T10:00:00.000Z"
 const KONTAKTE: ContactInfo[] = [
@@ -63,21 +65,24 @@ function DialogStory({ mode }: { mode: GroupDialogMode }) {
   )
 }
 
-/** Anlegen: nur der Name. Alles andere kommt danach. */
+/** Create: only the name. Everything else comes after. */
 export const Anlegen: Story = {
+  name: "Create",
   render: () => <DialogStory mode={{ type: "create" }} />,
 }
 
-/** Bearbeiten: Name, Mitglieder, Einladen, Aussehen, Module, Löschen — alles am selben Ort. */
+/** Edit: name, members, invite, look, modules, delete — all in the same place. */
 export const Bearbeiten: Story = {
+  name: "Edit",
   render: () => <DialogStory mode={{ type: "edit", group: GARTEN }} />,
 }
 
 /**
- * Die Feineinstellung des Aussehens. In der App liegt sie im geteilten Panel,
- * hier ohne Hülle, damit die drei Achsen sichtbar sind.
+ * The fine-tuning of the look. In the app it sits in the shared panel; here
+ * without a shell so the three axes are visible.
  */
 export const Aussehen: Story = {
+  name: "Look",
   render: function Render() {
     const [group, setGroup] = useState<Group>(GARTEN)
     return (

@@ -8,9 +8,23 @@ import {
   Megaphone,
 } from "lucide-react"
 
+/**
+ * **ContentComposer** is the form for creating and editing an item. It offers
+ * the content types it is given — in the app all types of the space, from the
+ * type register (spec 06) — and for each type the widgets that type declares:
+ * title, text, date, place, status, people, tags, media. Create strips empty
+ * defaults; edit starts from the existing data and treats an emptied field as
+ * an intentional clear.
+ *
+ * In the app the composer is opened by the create host (sheet or fullscreen)
+ * and by the detail's edit; here it stands alone so its modes and widgets can
+ * be compared. What you submit here goes nowhere.
+ *
+ * Where next: how the host opens it under [Focus, panel, create](?path=/docs/rls-app-fokus--docs).
+ */
 const meta: Meta<typeof ContentComposer> = {
   id: "rls-module-components-contentcomposer",
-  title: "RLS/Items/Anlegen und Bearbeiten/ContentComposer",
+  title: "RLS/Items/Create and edit/ContentComposer",
   component: ContentComposer,
   tags: ["autodocs"],
   decorators: [
@@ -77,7 +91,7 @@ const taskType: ContentTypeConfig = {
   defaultGroup: "g1",
 }
 
-/** Zwei Personenfelder je Typ: „Kann ich" und „Will lernen" (peopleRelations). */
+/** Two people fields per type: "can do" and "wants to learn" (peopleRelations). */
 const skillTaskType: ContentTypeConfig = {
   id: "skill-task",
   label: "Aufgabe mit Lernwunsch",
@@ -142,7 +156,7 @@ const action =
 // ── Stories ──────────────────────────────────────────────────────────────
 
 export const MultiTyp: Story = {
-  name: "Multi-Typ (alle Typen)",
+  name: "All types",
   args: {
     contentTypes: allTypes,
     onSubmit: action("onSubmit"),
@@ -152,7 +166,7 @@ export const MultiTyp: Story = {
 }
 
 export const PostOnly: Story = {
-  name: "Nur Post",
+  name: "Post only",
   args: {
     contentTypes: [postType],
     onSubmit: action("onSubmit"),
@@ -161,7 +175,7 @@ export const PostOnly: Story = {
 }
 
 export const EventVorausgefuellt: Story = {
-  name: "Event (vorausgefuellt)",
+  name: "Event, prefilled",
   args: {
     contentTypes: allTypes,
     initialContentType: "event",
@@ -175,7 +189,7 @@ export const EventVorausgefuellt: Story = {
 }
 
 export const TaskEinzelTyp: Story = {
-  name: "Task (Einzel-Typ-Modus)",
+  name: "Task, single-type mode",
   args: {
     contentTypes: [taskType],
     mode: "task",
@@ -190,7 +204,7 @@ export const TaskEinzelTyp: Story = {
 }
 
 export const EditModus: Story = {
-  name: "Edit-Modus",
+  name: "Edit mode",
   args: {
     contentTypes: [taskType],
     mode: "task",
@@ -215,7 +229,7 @@ export const EditModus: Story = {
 }
 
 export const MitAbbrechen: Story = {
-  name: "Mit Abbrechen-Button",
+  name: "With cancel button",
   args: {
     contentTypes: [postType],
     onSubmit: action("onSubmit"),
@@ -225,7 +239,7 @@ export const MitAbbrechen: Story = {
 }
 
 export const OhneVorschau: Story = {
-  name: "Ohne Vorschau + Sichtbarkeit",
+  name: "Without preview, with visibility",
   args: {
     contentTypes: [postType],
     showVisibility: false,
@@ -235,7 +249,7 @@ export const OhneVorschau: Story = {
 }
 
 export const ProjektMitMedien: Story = {
-  name: "Projekt (mit Media-Widget)",
+  name: "Project with media widget",
   args: {
     contentTypes: [
       {
@@ -250,7 +264,7 @@ export const ProjektMitMedien: Story = {
 }
 
 export const MitQuickSuggestions: Story = {
-  name: "Quick-Suggestions (Tags + People)",
+  name: "Quick suggestions: tags and people",
   args: {
     contentTypes: [taskType],
     mode: "task",
@@ -269,7 +283,7 @@ export const MitQuickSuggestions: Story = {
 }
 
 export const ZweiPersonenfelder: Story = {
-  name: "Zwei Personenfelder (Kann ich / Will lernen)",
+  name: "Two people fields",
   args: {
     contentTypes: [skillTaskType],
     mode: "skill-task",

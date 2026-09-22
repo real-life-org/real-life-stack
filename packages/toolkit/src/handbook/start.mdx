@@ -1,18 +1,39 @@
 import { Meta } from '@storybook/addon-docs/blocks';
-import schemeText from '../../../../docs/reference/rls.skos.jsonld?raw';
-export const scheme = JSON.parse(schemeText);
-export const terms = scheme['@graph'].filter(n => n['@type'] === 'skos:Concept').map(n => ({ id: n['@id'], label: n['skos:prefLabel'].find(v => v['@language'] === 'de')?.['@value'], definition: n['skos:definition'].find(v => v['@language'] === 'de')?.['@value'] }));
 
-<Meta title="RLS/Einstieg/Orientierung" />
+<Meta title="RLS/Start/Read me first" />
 
-# Vom Ganzen zum Detail
+# Read me first
 
-**App → Instanz → App Shell → Space → Modul → Item-Vorschau → Detailansicht**
+This Storybook shows Real Life Stack **running**: every page has a story with real building blocks on top of a real data source. What you click takes effect, until you reload. It answers three questions:
 
-Starte bei **App / Gemeinschaftsgarten**. Wechsle Module, öffne das Erntefest und bearbeite den Titel. Alle Darstellungen beobachten dieselbe Datenquelle. Unter **App Shell** findest du die äußere Navigation, unter **Module** ganze Arbeitsflächen, unter **Items** deren gemeinsame Inhalte.
+- **How is an app composed?** → section **App**, read in order.
+- **What does a building block look like, and what does it do without this or that capability?** → **App shell**, **Modules**, **Items**.
+- **Which hooks exist, and what do they answer?** → **Foundations**.
 
-Die Begriffe des Stack mit ihren Verknüpfungen zu Netzwerk und Trust Protocol: [real-life.org/rls/v1](https://real-life.org/rls/v1/).
+The handbook, with its paths for vibecoders, agents, contributors and operators: [real-life-stack.de/handbuch](https://real-life-stack.de/handbuch/). The normative truth is the [specification](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/README.md) (German).
 
-## Gemeinsame Begriffe
+The user interface inside the stories is German today: the toolkit's own texts are not translated yet. The explanations here are English; the code they explain is the same either way.
 
-{terms.map(term => <section key={term.id}><h3>{term.label}</h3><p>{term.definition}</p></section>)}
+## The path through the app
+
+One example runs through everything: a community garden organises a harvest festival. It has a date and a place, so **the same item** appears in the calendar and on the map.
+
+1. [00 Community garden](?path=/docs/rls-handbook-app--docs) — the app as a whole: switch space, switch module, open and edit an item.
+2. [01 The app in 40 lines](?path=/docs/rls-app-01-the-app-in-40-lines--docs) — what an app writes, and what the frame takes off its hands.
+3. [02 The register](?path=/docs/rls-app-register--docs) — the one list of modules; extend and replace.
+4. [03 The module host](?path=/docs/rls-module-host--docs) — how an entry becomes a surface.
+5. [04 The loading contract](?path=/docs/rls-app-ladevertrag--docs) — what a module loads, and why.
+6. [05 Focus, panel, create](?path=/docs/rls-app-fokus--docs) — where it is recorded which item is open.
+7. [06 A module of your own](?path=/docs/rls-app-06-a-module-of-your-own--docs) — three steps, shown on the marketplace.
+
+## After that, by question
+
+- **App shell** — header, space switcher, navigation, the shared panel, sign-in, contacts. The scaffold around the module surface.
+- **Spaces** — the space as working context: create, configure, switch, membership.
+- **Modules** — the seven surfaces of the toolkit, feed, kanban, calendar, map, resonance, list, graph: one overview each inside the host, below it the views and the shared tools (search, filter, create).
+- **Items** — what is the same in every module: the preview card, the detail view, comments and reactions, the create form.
+- **Foundations** — all hooks with the question they answer and what happens without the capability; the UI primitives; the [terms](?path=/docs/rls-foundations-terms--docs).
+
+## What is not here
+
+How to install the stack, run an instance or contribute: that is the handbook. How to put an agent on it: [llms.txt](https://real-life-stack.de/llms.txt).

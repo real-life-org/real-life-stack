@@ -1,22 +1,18 @@
 import { Meta } from '@storybook/addon-docs/blocks'
 
-<Meta title="RLS/Grundlagen/Alle Hooks" />
+<Meta title="RLS/Foundations/All hooks" />
 
-# Alle Hooks
+# All hooks
 
-Jede Fläche im Real Life Stack fragt Hooks, nie den Connector. Diese Seite listet
-alle, die das Toolkit nach außen gibt, mit der Frage, die sie beantworten, und
-mit dem, was passiert, wenn der Connector die nötige Fähigkeit nicht hat.
+Every surface in Real Life Stack asks hooks, never the connector. This page lists all hooks the toolkit exports, with the question each answers and what happens when the connector lacks the capability.
 
-**Die Spalte „ohne Fähigkeit" ist die wichtigste.** Lesende Hooks antworten leer:
-„keine Gruppen", „niemand angemeldet", „null Kommentare" sind wahre Antworten,
-kein Fehler. Schreibende Hooks scheitern beim Aufruf, nicht beim Vorbereiten —
-einen Knopf darf jede Fläche bauen. Wo dennoch „wirft beim Rendern" steht, ist
-das Absicht: Die Fläche kann ohne diese Fähigkeit gar nicht bestehen.
+**The column "without capability" is the important one.** Reading hooks answer empty: "no groups", "nobody signed in", "zero comments" are true answers, not errors. Writing hooks fail on the call, not on preparation — any surface may build a button. Where it says "throws on render" nevertheless, that is intended: the surface cannot exist without that capability.
 
-Lebende Beispiele stehen unter [Grundlagen → Hooks](?path=/story/rls-grundlagen-hooks--lesen).
+Living examples are under [Foundations → Hooks](?path=/story/rls-grundlagen-hooks--lesen).
 
-## Items lesen
+*The rows below are still German: this hand-kept list is being replaced by a reference generated from each hook's documentation comment (plan D2), which will be English and cannot drift from the exports.*
+
+## Read items
 
 | Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
 |---|---|---|---|
@@ -27,7 +23,7 @@ Lebende Beispiele stehen unter [Grundlagen → Hooks](?path=/story/rls-grundlage
 | `useActivity(scope)` | `{data, supported}` | Was ist in diesem Space zuletzt passiert? | leer, `supported: false` |
 | `useNotifications()` | `{notifications, badgeCount, …}` | Was gibt es für mich Neues, und wieviel ist ungelesen? | leer |
 
-## Items schreiben
+## Write items
 
 | Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
 |---|---|---|---|
@@ -40,7 +36,7 @@ Lebende Beispiele stehen unter [Grundlagen → Hooks](?path=/story/rls-grundlage
 | `useUnsavedChanges()` | `{dirty, setDirty} \| null` | Gibt es ungespeicherte Eingaben, die ein Verlassen abfangen müssen? | `null` ohne Provider |
 | `useSetUnsavedDirty()` | `(dirty) => void` | Melden, dass etwas Ungespeichertes im Formular steht. | still untätig |
 
-## Menschen, Spaces und Mitgliedschaft
+## People, spaces and membership
 
 | Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
 |---|---|---|---|
@@ -62,7 +58,7 @@ Lebende Beispiele stehen unter [Grundlagen → Hooks](?path=/story/rls-grundlage
 | `useVerification()` | `{supported, createChallenge, …}` | Zwei Menschen, die sich real begegnen, gegenseitig bestätigen. | leer, `supported: false` |
 | `useIncomingEvents()` | `{current, dismiss, …}` | Welcher hereingekommene Vorgang wartet auf Antwort? | wirft ohne Provider |
 
-## Rechte und Fähigkeiten
+## Permissions and capabilities
 
 | Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
 |---|---|---|---|
@@ -74,7 +70,7 @@ Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 `isWritable`, `hasGroups`, `isAuthenticatable`, `hasRelations`, `hasItemGroups`,
 `hasActivityLog`, `hasRelationRecords`, `hasMessaging`, `hasAuthorization`.
 
-## Beziehungen
+## Relations
 
 | Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
 |---|---|---|---|
@@ -87,7 +83,7 @@ Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 | `useRelationRecords(filter)` | `{data, supported}` | Welche signierten Beziehungsdatensätze passen? | leer, `supported: false` |
 | `useVerifiedRelationRecords(records)` | `RelationRecord[]` | Welche davon sind kryptografisch gedeckt? | leer, auch während der Prüfung |
 
-## Flächen und Zustand der Oberfläche
+## Surfaces and UI state
 
 | Hook | Antwortet | Beantwortet | Ohne Provider |
 |---|---|---|---|
@@ -108,7 +104,7 @@ Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 | `useItemDetailEdit(members)` | `{contentTypes, mapper, editInitialData, composerProps}` | Die Bearbeiten-Hälfte des Details, für alle Module gleich. Ruft der Host; ein Modul braucht es nicht. | — |
 | `useItemComposerProps(members)` | `Partial<ContentComposerProps>` | Geocoder, Karten-Pick und Personen für den Composer — eine Quelle für Erstellen und Bearbeiten. | — |
 
-## Umgebung
+## Environment
 
 | Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
 |---|---|---|---|
@@ -119,7 +115,7 @@ Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 | `useRelayStatus()` | `{state, isConnected, pendingCount}` | Hängt dieses Gerät am Relay, wartet Ungesendetes? | wirft beim Rendern |
 | `useMarkNotificationsSeen(result)` | — | Die gesehene Grenze einmal pro Öffnen vorrücken. | still untätig |
 
-## Item-Eigenschaften
+## Item properties
 
 | Hook | Antwortet | Beantwortet | Ohne Fähigkeit |
 |---|---|---|---|
@@ -128,7 +124,7 @@ Die Prüfungen selbst kommen aus dem Datenvertrag, nicht aus dem Toolkit:
 | `useItemGroupResolver(scope)` | `(item) => Group \| undefined` | Aus welchem Space stammt es? | `undefined` |
 | `useItemPrivacyResolver()` | `(item) => boolean` | Ist es privat, also mit niemandem geteilt? | immer `false` |
 
-## Paare, die man verwechseln kann
+## Pairs easily confused
 
 - `useCurrentUser` und `useOptionalCurrentUser` unterscheiden sich nur darin, ob
   eine fehlende Anmeldung wirft oder `null` liefert. Dasselbe Muster bei

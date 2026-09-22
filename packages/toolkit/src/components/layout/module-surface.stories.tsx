@@ -30,33 +30,35 @@ import { createComposerMapping } from "../composer/composer-mapping"
 import { STORY_ME, STORY_SEED, StoryWorld } from "../../story-support/story-world"
 
 /**
- * **Wie eine Modulfläche entsteht.**
+ * **How a module surface comes about.**
  *
- * Kein Modul baut seine Fläche selbst. Es gibt genau eine Verschachtelung, und
- * jede App benutzt sie:
+ * No module builds its surface itself. There is exactly one nesting, and the
+ * frame (`AppFrame`) uses it for every app:
  *
  * ```
- * FilterProvider              Suche und Filter überdauern den Modulwechsel
- *   AppShell                  die Hülle, volle Höhe
- *     Navbar                  Space · Module · Person
- *     ModulePanelProvider     EIN Panel für Detail, Composer, Einstellungen
+ * FilterProvider              search and filter survive the module switch
+ *   AppShell                  the shell, full height
+ *     Navbar                  space · modules · person
+ *     ModulePanelProvider     ONE panel for detail, composer, settings
  *       AppShellMain
- *         ModuleFrame         Kopf oben fest, Inhalt scrollt darunter
- *           <Modul>           bringt seine ModuleToolbar selbst mit
- *     BottomNav               dieselben Module, schmal
+ *         ModuleFrame         header fixed at the top, content scrolls below
+ *           <module>          brings its ModuleToolbar itself
+ *     BottomNav               the same modules, narrow
  * ```
  *
- * Diese Stories zeigen genau das, an echten Daten. Ein Klick auf eine Karte
- * öffnet die Detailansicht im geteilten Panel; die Suche oben filtert die
- * Liste; auf schmalen Schirmen wird das Panel zum Drawer und die Modulreiter
- * zur unteren Leiste.
+ * These stories show exactly that, on real data, built by hand so each layer
+ * is visible. A click on a card opens the detail in the shared panel; the
+ * search at the top filters the list; on narrow screens the panel becomes a
+ * drawer and the module tabs the bottom bar.
  *
- * Auch die Werte in der Faktenzeile führen irgendwohin: Ein Klick auf das
- * Datum wechselt in den Kalender, einer auf den Ort auf die Karte. Welches
- * Modul ein Feld zeigt, sagt das Register (`findModulePresenting`); WIE man
- * dorthin kommt, weiß nur die Anwendung — deshalb reicht sie es über den
- * `FieldNavigationProvider` hinein. Ohne ihn bleibt der Wert schlichter Text,
- * und genau das sieht man in den einzelnen Beigaben-Stories.
+ * The values in the facts row lead somewhere too: a click on the date switches
+ * to the calendar, one on the place to the map. Which module shows a field is
+ * said by the register (`findModulePresenting`); HOW to get there only the
+ * app knows — so it hands it in through `FieldNavigationProvider`. Without it
+ * the value stays plain text, which is exactly what the single adornment
+ * stories show.
+ *
+ * In an app you do not write this nesting: [The app in 40 lines](?path=/docs/rls-app-01-the-app-in-40-lines--docs).
  */
 
 const MODULES = [
@@ -83,8 +85,8 @@ const mapping = createComposerMapping([
 ])
 
 /**
- * Detail im geteilten Panel öffnen. Eine Stelle für alle drei Module: Was
- * „Detail" heißt, folgt dem ITEM, nicht dem Modul, aus dem geklickt wurde.
+ * Open the detail in the shared panel. One place for all three modules: what
+ * "detail" means follows the ITEM, not the module the click came from.
  */
 function useOeffneDetail() {
   const { data: items } = useItems()
@@ -120,7 +122,7 @@ function useOeffneDetail() {
   }
 }
 
-/** Eine Karte in der Liste. Der Klick geht an das geteilte Panel, nicht an das Modul. */
+/** A card in the list. The click goes to the shared panel, not to the module. */
 function Karte({ itemId }: { itemId: string }) {
   const { data: items } = useItems()
   const { data: members } = useMembers(null)
@@ -141,7 +143,7 @@ function Karte({ itemId }: { itemId: string }) {
   )
 }
 
-/** Der Inhalt des Moduls: eine gefilterte Liste. Die Filter kommen von oben. */
+/** The module's content: a filtered list. The filters come from above. */
 function FeedInhalt() {
   const { data: items } = useItems()
   const sichtbar = items.filter((item) => isAggregateVisibleItemType(item.type))
@@ -165,7 +167,7 @@ function FeedInhalt() {
   )
 }
 
-/** Der Inhalt wechselt mit dem Modul — sonst führte ein Feld-Klick ins Leere. */
+/** The content switches with the module — otherwise a field click would lead nowhere. */
 function Inhalt({ module }: { module: string }) {
   const { data: items } = useItems()
   const oeffne = useOeffneDetail()
@@ -242,7 +244,7 @@ function Modulflaeche() {
 
 const meta: Meta<typeof Modulflaeche> = {
   id: "rls-app-shell-modulflaeche",
-  title: "RLS/App Shell/Die Modulfläche",
+  title: "RLS/App shell/The module surface",
   component: Modulflaeche,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
@@ -252,10 +254,11 @@ const meta: Meta<typeof Modulflaeche> = {
 export default meta
 type Story = StoryObj<typeof Modulflaeche>
 
-/** Alles zusammen: Kopfzeile, Kopf der Fläche, Liste, geteiltes Panel. */
-export const Default: Story = {}
+/** Everything together: header, surface head, list, shared panel. */
+export const Default: Story = { name: "Wide" }
 
-/** Schmal: das Panel wird zum Drawer, die Module wandern nach unten. */
+/** Narrow: the panel becomes a drawer, the modules move to the bottom. */
 export const Schmal: Story = {
+  name: "Narrow",
   parameters: { viewport: { defaultViewport: "mobile1" } },
 }

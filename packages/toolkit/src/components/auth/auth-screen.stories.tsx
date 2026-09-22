@@ -4,18 +4,16 @@ import { createObservable } from "@real-life-stack/data-interface"
 import { AuthScreen } from "./auth-screen"
 
 /**
- * **Die Anmeldung.**
+ * **Sign-in.**
  *
- * Der Bildschirm steht vor der App-Hülle, nicht darin: Ohne Identität gibt es
- * keinen Space und keine Karte. Welche Wege er anbietet, entscheidet er nicht
- * selbst, sondern fragt den Connector über `getAuthMethods()`. Ein Connector,
- * der nur anonymen Zugang kennt, bekommt einen Knopf; einer mit E-Mail bekommt
- * zwei Formulare.
+ * The screen stands before the app shell, not inside it: without an identity
+ * there is no space and no card. Which ways it offers it does not decide
+ * itself — it asks the connector through `getAuthMethods()`. A connector that
+ * only knows anonymous access gets one button; one with e-mail gets two forms.
  *
- * Das Trust Protocol geht einen eigenen Weg: Dort ist die Identität ein
- * Schlüsselpaar und die Anmeldung ein Seed-Onboarding, kein Passwort. Deshalb
- * bringt der Connector dafür seinen eigenen Bildschirm mit, und dieser hier
- * bleibt für Server-Connectoren wie Supabase.
+ * The trust protocol goes its own way: there the identity is a key pair and
+ * sign-in is a seed onboarding, not a password. So that connector brings its
+ * own screen, and this one stays for server connectors like Supabase.
  */
 
 function authConnector(methods: AuthMethod[]): Authenticatable {
@@ -37,7 +35,7 @@ function authConnector(methods: AuthMethod[]): Authenticatable {
 
 const meta: Meta<typeof AuthScreen> = {
   id: "rls-app-shell-anmeldung",
-  title: "RLS/App Shell/Anmeldung",
+  title: "RLS/App shell/Sign-in",
   component: AuthScreen,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
@@ -46,9 +44,9 @@ const meta: Meta<typeof AuthScreen> = {
 export default meta
 type Story = StoryObj<typeof AuthScreen>
 
-/** E-Mail mit Registrierung, dazu ein anonymer Schnellstart. Der volle Fall. */
+/** E-mail with sign-up, plus an anonymous quick start. The full case. */
 export const Alles: Story = {
-  name: "Alle Wege",
+  name: "All ways",
   render: () => (
     <AuthScreen
       connector={authConnector([
@@ -61,17 +59,17 @@ export const Alles: Story = {
   ),
 }
 
-/** Nur E-Mail, keine Registrierung: eine geschlossene Instanz. */
+/** E-mail only, no sign-up: a closed instance. */
 export const NurAnmeldung: Story = {
-  name: "Nur Anmeldung",
+  name: "Sign-in only",
   render: () => (
     <AuthScreen connector={authConnector([{ method: "email", label: "E-Mail" }])} onAuthenticated={() => {}} />
   ),
 }
 
-/** Nur anonym: eine öffentliche Ansicht, in die man einfach hineingeht. */
+/** Anonymous only: a public view you simply walk into. */
 export const NurAnonym: Story = {
-  name: "Nur anonym",
+  name: "Anonymous only",
   render: () => (
     <AuthScreen
       connector={authConnector([{ method: "anonymous", label: "Ohne Konto ansehen" }])}

@@ -13,23 +13,24 @@ import { ContactList } from "./contact-list"
 import { Button } from "../primitives/button"
 
 /**
- * **Kontakte und Verifikation.**
+ * **Contacts and verification.**
  *
- * Hier wird aus einer Begegnung eine Beziehung, die das Netzwerk trägt. Der
- * Ablauf hat zwei Wege, und beide enden am selben Ort:
+ * This is where an encounter becomes a relationship the network carries. The
+ * flow has two ways, and both end in the same place:
  *
- * 1. **Begegnung mit QR.** Zwei Menschen stehen voreinander. Eine Seite zeigt
- *    einen Code, die andere scannt ihn. Beide bestätigen, dass sie einander
- *    als diese Person erlebt haben. Das ist die Verifikation im Sinne des
- *    Netzwerkprotokolls, und sie geschieht in der Regel einmal je Beziehung.
- * 2. **Anfrage aus der Ferne.** Jemand fügt eine Kennung ein, die Gegenseite
- *    bekommt eine Anfrage und bestätigt sie. Ohne gemeinsame Begegnung, also
- *    ohne die Aussage „ich habe diesen Menschen erlebt".
+ * 1. **Encounter with QR.** Two people stand in front of each other. One side
+ *    shows a code, the other scans it. Both confirm that they have met each
+ *    other as this person. That is verification in the sense of the network
+ *    protocol, and it usually happens once per relationship.
+ * 2. **Request from afar.** Someone pastes an id, the other side receives a
+ *    request and confirms it. Without a shared encounter, so without the
+ *    statement "I have met this person".
  *
- * Die Dialoge tragen keinen eigenen Zustand über den Vorgang hinaus: Was
- * offen ist, entscheidet die App, und `useIncomingEvents` reicht ihr den
- * nächsten hereingekommenen Vorgang durch. Alle sind bewusst einzeln
- * aufrufbar, weil sie auch einzeln erscheinen.
+ * The dialogs carry no state beyond the step at hand: what is open is decided
+ * by the frame, and `useIncomingEvents` hands it the next incoming event.
+ * All of them can be called on their own, because they also appear on their
+ * own. Whether the menu offers contacts and verification at all is said by
+ * the connector's capabilities.
  */
 
 const ZEIT = { createdAt: "2026-09-01T10:00:00+02:00", updatedAt: "2026-09-01T10:00:00+02:00" }
@@ -42,7 +43,7 @@ const KONTAKTE: ContactInfo[] = [
 
 const meta: Meta = {
   id: "rls-app-shell-kontakte",
-  title: "RLS/App Shell/Kontakte und Verifikation",
+  title: "RLS/App shell/Contacts and verification",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
   decorators: [(Story) => <div className="min-h-screen bg-background p-8">{Story()}</div>],
@@ -51,9 +52,9 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-/** Die Liste: aktive Kontakte, offene Anfragen in beide Richtungen. */
+/** The list: active contacts, open requests in both directions. */
 export const Liste: Story = {
-  name: "Kontaktliste",
+  name: "Contact list",
   render: function Render() {
     const [kontakte, setKontakte] = useState(KONTAKTE)
     return (
@@ -68,7 +69,7 @@ export const Liste: Story = {
   },
 }
 
-/** Der Einstieg aus dem Benutzermenü: alles, was mit Kontakten zu tun hat, an einem Ort. */
+/** The entry from the user menu: everything to do with contacts in one place. */
 export const Uebersicht: Story = {
   name: "ContactsDialog",
   render: function Render() {
@@ -92,7 +93,7 @@ export const Uebersicht: Story = {
   },
 }
 
-/** Jemanden über seine Kennung anfragen. Der zweite Weg, ohne Begegnung. */
+/** Request someone by their id. The second way, without an encounter. */
 export const Hinzufuegen: Story = {
   name: "AddContactDialog",
   render: function Render() {
@@ -106,7 +107,7 @@ export const Hinzufuegen: Story = {
   },
 }
 
-/** Der QR-Weg, meine Seite: ich zeige den Code, die Gegenseite scannt. */
+/** The QR way, my side: I show the code, the other side scans. */
 export const Verifizieren: Story = {
   name: "VerificationDialog",
   render: function Render() {
@@ -131,9 +132,9 @@ export const Verifizieren: Story = {
   },
 }
 
-/** Der QR-Weg, ihre Seite: jemand hat meinen Code gescannt und wartet auf mich. */
+/** The QR way, their side: someone scanned my code and is waiting for me. */
 export const EingehendeVerifikation: Story = {
-  name: "Eingehend · Verifikation",
+  name: "Incoming · verification",
   render: function Render() {
     const [open, setOpen] = useState(true)
     return (
@@ -152,9 +153,9 @@ export const EingehendeVerifikation: Story = {
   },
 }
 
-/** Eine Kontaktanfrage aus der Ferne, die auf meine Antwort wartet. */
+/** A contact request from afar, waiting for my answer. */
 export const EingehendeAnfrage: Story = {
-  name: "Eingehend · Kontaktanfrage",
+  name: "Incoming · contact request",
   render: function Render() {
     const [open, setOpen] = useState(true)
     return (
@@ -173,9 +174,9 @@ export const EingehendeAnfrage: Story = {
   },
 }
 
-/** Eine Einladung in einen Space. Derselbe Ort, andere Bedeutung. */
+/** An invitation into a space. Same place, different meaning. */
 export const EingehendeEinladung: Story = {
-  name: "Eingehend · Space-Einladung",
+  name: "Incoming · space invitation",
   render: function Render() {
     const [open, setOpen] = useState(true)
     return (
@@ -194,11 +195,11 @@ export const EingehendeEinladung: Story = {
 }
 
 /**
- * Der Abschluss: beide Seiten haben bestätigt. Zwei Bedeutungen, eine Form —
- * nach einer Begegnung („verification") oder nach einer Anfrage („contact").
+ * The conclusion: both sides have confirmed. Two meanings, one shape — after
+ * an encounter ("verification") or after a request ("contact").
  */
 export const Gegenseitig: Story = {
-  name: "Gegenseitig bestätigt",
+  name: "Mutually confirmed",
   render: function Render() {
     const [variante, setVariante] = useState<"verification" | "contact">("verification")
     const [open, setOpen] = useState(true)
@@ -223,8 +224,8 @@ export const Gegenseitig: Story = {
 }
 
 /**
- * Der Relais-Zustand. Er gehört hierher, weil ohne Verbindung keine Anfrage
- * ankommt: Die Zahl sagt, wieviel noch auf dem Gerät wartet.
+ * The relay state. It belongs here because without a connection no request
+ * arrives: the number says how much is still waiting on the device.
  */
 export const Relais: Story = {
   name: "RelayStatusBadge",

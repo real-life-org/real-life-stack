@@ -1,0 +1,13 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import schemeText from '../../../../docs/reference/rls.skos.jsonld?raw';
+export const scheme = JSON.parse(schemeText);
+export const pick = (values, lang) => (values ?? []).find(v => v['@language'] === lang)?.['@value'];
+export const terms = scheme['@graph'].filter(n => n['@type'] === 'skos:Concept').map(n => ({ id: n['@id'], label: pick(n['skos:prefLabel'], 'en') ?? pick(n['skos:prefLabel'], 'de'), german: pick(n['skos:prefLabel'], 'de'), definition: pick(n['skos:definition'], 'en') ?? pick(n['skos:definition'], 'de') })).sort((a, b) => (a.label ?? '').localeCompare(b.label ?? '', 'en'));
+
+<Meta title="RLS/Foundations/Terms" />
+
+# Terms
+
+The words of the stack as they stand in the term register (`docs/reference/rls.skos.jsonld`). The same register links them to their counterparts in the network and in the trust protocol: [real-life.org/rls/v1](https://real-life.org/rls/v1/). For looking things up, not for starting; the start is [Read me first](?path=/docs/rls-start-read-me-first--docs). Where no English definition exists yet, the German one is shown.
+
+{terms.map(term => <section key={term.id}><h3>{term.label}{term.german && term.german !== term.label ? <small style={{ fontWeight: 400, marginLeft: '.5rem', opacity: .7 }}>{term.german}</small> : null}</h3><p>{term.definition}</p></section>)}
