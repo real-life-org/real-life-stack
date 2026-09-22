@@ -37,7 +37,7 @@ function authConnector(methods: AuthMethod[]): Authenticatable {
 
 const meta: Meta<typeof AuthScreen> = {
   id: "rls-app-shell-anmeldung",
-  title: "RLS/App Shell/Anmeldung",
+  title: "RLS/App shell/Sign-in",
   component: AuthScreen,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

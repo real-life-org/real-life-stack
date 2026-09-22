@@ -1,55 +1,51 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-
-import { HostWorld } from "../../story-support/host-world"
-import { ProbeWorld } from "../../story-support/probe-world"
-import { useModuleHost } from "../../components/host/module-host"
-import type { ModuleEntry, ModuleViewProps } from "../../lib/module-register"
 import { List } from "lucide-react"
 
+import { useModuleHost } from "../../components/host/module-host"
+import type { ModuleEntry, ModuleViewProps } from "../../lib/module-register"
+import { HostWorld } from "../../story-support/host-world"
+import { ProbeWorld } from "../../story-support/probe-world"
+
 /**
- * **Der Modul-Host** (Spec 01, „Der Modul-Host"): Register binden, Host rendern,
- * fertig. Der Host ist die Stelle, die aus einem Registereintrag eine laufende
- * Fläche macht — einmal, für alle Module. Was er herstellt, und woher er es
- * weiß:
+ * **The module host** (spec 01, "the module host"): bind the register, render
+ * the host, done. The host is the place that turns a register entry into a
+ * running surface — once, for all modules. What it produces, and where it
+ * knows it from:
  *
- * | Der Host … | … aus |
+ * | The host … | … from |
  * |---|---|
- * | stellt die Fläche (Kopf, Suche, Vokabular, Filterkarte, Chips) | `fill`, `panelFit`, `maxWidth` |
- * | lädt die Items und wendet den geteilten Filter an | `presents` + `options` über die Hinweis-Tabelle; `loads: "module"` = keine Abfrage |
- * | löst den Space-Kontext auf (Mitglieder, Autoren, Farben, Übersicht) | aktiver Space; `__overview__` an genau einer Stelle |
- * | begrenzt aggregierende Module auf eigene Karten | `isAggregateVisibleItemType` |
- * | nennt aktives Item und ob ein Filter aktiv ist | Panel + Fokus, geteilter Filterzustand |
- * | scrollt die fokussierte Karte in den Blick | `registerItemElement` |
- * | registriert Detail und Erstellen | Typ-Register: alle Typen, `options.suggestType`, `options.createShell` |
- * | hält den Fokus | URL (App) oder Speicher (Story) |
+ * | provides the surface (header, search, vocabulary, filter card, chips) | `fill`, `panelFit`, `maxWidth` |
+ * | loads the items and applies the shared filter | `presents` + `options` via the hint table; `loads: "module"` = no query |
+ * | resolves the space context (members, authors, colours, overview) | the active space; `__overview__` in exactly one place |
+ * | limits aggregating modules to items that stand as a card of their own | `isAggregateVisibleItemType` |
+ * | names the active item and whether a filter is active | panel + focus, shared filter state |
+ * | scrolls the focused card into view | `registerItemElement` |
+ * | registers detail and create | type register: all types, `options.suggestType`, `options.createShell` |
+ * | holds the focus | URL (app) or memory (story) |
  *
- * Ein Modul bekommt all das über `useModuleHost()` und `ModuleViewProps` fertig;
- * es darf nichts davon selbst bauen (Regel 2). Die Story „Probe" zeigt genau
- * diese Werte live für einen künstlichen Eintrag. Diese Story enthält KEINE Zeile Modul-Verdrahtung — kein
- * `useItems`, kein `useRegisterDetail`, kein Plusknopf. Alles davon stellt
- * der Host aus dem Registereintrag her; die Story stellt nur, was eine App
- * stellt: Connector, Filter, Fokus, die zwei Host-Provider und das Panel.
+ * A module receives all of this ready-made via `useModuleHost()` and
+ * `ModuleViewProps`; it must not build any of it itself (rule 2). The story
+ * "Probe" shows exactly these values live for an artificial entry.
  *
- * Feed, Kalender und Karte laufen heute so; die Verdrahtung dafuer steht
- * einmal in `story-support/host-world.tsx`. Die Karte
- * zeigt hier den Hinweis „Keine Karten-Engine gestellt": Die Engine ist die
- * eine Zeile, die eine App für die Karte schreibt (`MapLibreAdapterProvider`
- * aus `@real-life-stack/toolkit/maplibre`) — und sie fehlt hier mit Absicht,
- * damit man den Hinweis einmal gesehen hat.
+ * This story contains **no line** of module wiring — no `useItems`, no
+ * `useRegisterDetail`, no plus button. The map shows the note "no map engine
+ * provided" on purpose: the engine is the one line an app writes for the map
+ * (`MapLibreAdapterProvider` from `@real-life-stack/toolkit/maplibre`), and it
+ * is missing here so that you have seen the note once.
  *
- * Klick auf den Termin: der Host öffnet das Detail im Panel, mit Bearbeiten.
- * Klick auf einen leeren Tag: Erstellen mit „Termin" vorgeschlagen und dem
- * Datum vorbelegt — das Typmenü bleibt offen. Der Plusknopf unten rechts:
- * derselbe Vorschlag, ohne Datum.
+ * Click the event: the host opens the detail in the panel, with edit. Click an
+ * empty day: create with "Termin" suggested and the date prefilled — the type
+ * menu stays open. The plus button bottom right: the same suggestion, without
+ * a date.
  */
-function DerModulHost() {
+function TheModuleHost() {
   return <HostWorld module="calendar" />
 }
 
-/** Ein Modul, das nur zeigt, was der Host ihm gibt — nichts sonst. */
-function ProbeModul({ items = [], itemsLoading }: ModuleViewProps) {
+/** A module that only shows what the host gives it — nothing else. */
+function ProbeModule({ items = [], itemsLoading }: ModuleViewProps) {
   const host = useModuleHost()
-  const zeile = (k: string, v: unknown) => (
+  const row = (k: string, v: unknown) => (
     <div key={k} className="grid grid-cols-[13rem_minmax(0,1fr)] gap-3 border-b py-1.5 last:border-b-0 text-sm">
       <code className="font-mono text-[13px] text-primary">{k}</code>
       <span className="break-all">{typeof v === "string" ? v : JSON.stringify(v)}</span>
@@ -57,45 +53,38 @@ function ProbeModul({ items = [], itemsLoading }: ModuleViewProps) {
   )
   return (
     <div className="mx-auto max-w-3xl space-y-3 p-4">
-      <p className="text-sm text-muted-foreground">Alles unten kommt aus <code>useModuleHost()</code> und den Props — das Modul hat keinen einzigen Hook zum Laden aufgerufen. Suche oben und die Items hier ändern sich zusammen.</p>
+      <p className="text-sm text-muted-foreground">Everything below comes from <code>useModuleHost()</code> and the props — the module has not called a single hook to load anything. Type into the search above and watch the items change with it.</p>
       <div className="rounded-xl border bg-card px-4 py-1">
-        {zeile("entry.id / presents / loads", `${host.entry.id} / ${JSON.stringify(host.entry.presents ?? [])} / ${host.entry.loads ?? "host"}`)}
-        {zeile("groupId / isOverview", `${host.groupId} / ${host.isOverview}`)}
-        {zeile("members", host.members.map((m) => m.displayName ?? m.id))}
-        {zeile("currentUser", host.currentUser?.displayName ?? "—")}
-        {zeile("items (gefiltert)", items.map((i) => i.data.title ?? i.id))}
-        {zeile("itemsLoading", String(itemsLoading))}
-        {zeile("filterActive", String(host.filterActive))}
-        {zeile("activeItemId", host.activeItemId ?? "—")}
-        {zeile("resolveAuthor(items[0])", items[0] ? host.resolveAuthor(items[0].createdBy)?.displayName ?? "unbekannt" : "—")}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {items.map((i) => (
-          <button key={i.id} type="button" className="rounded-md border px-2 py-1 text-xs hover:bg-accent" onClick={() => host.setCreateAnchor?.(null)}>
-            {String(i.data.title ?? i.id)}
-          </button>
-        ))}
+        {row("entry.id / presents / loads", `${host.entry.id} / ${JSON.stringify(host.entry.presents ?? [])} / ${host.entry.loads ?? "host"}`)}
+        {row("groupId / isOverview", `${host.groupId} / ${host.isOverview}`)}
+        {row("members", host.members.map((m) => m.displayName ?? m.id))}
+        {row("currentUser", host.currentUser?.displayName ?? "—")}
+        {row("items (filtered)", items.map((i) => i.data.title ?? i.id))}
+        {row("itemsLoading", String(itemsLoading))}
+        {row("filterActive", String(host.filterActive))}
+        {row("activeItemId", host.activeItemId ?? "—")}
+        {row("resolveAuthor(items[0].createdBy)", items[0] ? host.resolveAuthor(items[0].createdBy)?.displayName ?? "unknown" : "—")}
       </div>
     </div>
   )
 }
-const PROBE: ModuleEntry = { id: "probe", label: "Probe", icon: List, presents: ["start"], options: { suggestType: "event" }, view: ProbeModul }
+const PROBE: ModuleEntry = { id: "probe", label: "Probe", icon: List, presents: ["start"], options: { suggestType: "event" }, view: ProbeModule }
 
 function Probe() {
   return <ProbeWorld entry={PROBE} />
 }
 
-const meta: Meta<typeof DerModulHost> = {
+const meta: Meta<typeof TheModuleHost> = {
   id: "rls-module-host",
-  title: "RLS/App/03 Der Modul-Host",
-  component: DerModulHost,
+  title: "RLS/App/03 The module host",
+  component: TheModuleHost,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
 }
 
 export default meta
-type Story = StoryObj<typeof DerModulHost>
+type Story = StoryObj<typeof TheModuleHost>
 
-export const Default: Story = { name: "Der Kalender im Host" }
-/** Ein Eintrag mit `presents: ["start"]`: Der Host lädt Termine, filtert nach Suche, stellt Mitglieder, Autor, Plusknopf mit Vorschlag „Termin". */
-export const ProbeStory: StoryObj = { name: "Probe: was der Host gibt", render: () => <Probe /> }
+export const Default: Story = { name: "The calendar inside the host" }
+/** An entry with `presents: ["start"]`: the host loads events, filters by search, provides members, author, and the plus button suggesting "Termin". */
+export const ProbeStory: StoryObj = { name: "Probe: what the host gives", render: () => <Probe /> }

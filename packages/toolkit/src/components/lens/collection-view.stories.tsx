@@ -11,7 +11,7 @@ const items: Item[] = [
 
 const meta: Meta<typeof CollectionView> = {
   id: "rls-module-components-lenses-collectionview",
-  title: "RLS/Module/Gemeinsame Ansichten/Sammlung",
+  title: "RLS/Modules/Shared views/Collection view",
   component: CollectionView,
   tags: ["autodocs"],
   // Die Modulflaeche ist eine Spalte mit fester Hoehe; ohne sie faellt der

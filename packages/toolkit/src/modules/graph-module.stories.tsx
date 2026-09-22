@@ -17,7 +17,7 @@ function GraphModuleOverview() {
 
 const meta: Meta<typeof GraphModuleOverview> = {
   id: "rls-space-modules-graph-module",
-  title: "RLS/Module/Graph/Übersicht",
+  title: "RLS/Modules/Graph/Overview",
   component: GraphModuleOverview,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

@@ -58,7 +58,7 @@ function DetailsSurface({ initialEmoji }: { initialEmoji?: string }) {
 
 const meta: Meta<typeof ReactionDetails> = {
   id: "rls-module-components-reactions-reactiondetails",
-  title: "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionDetails",
+  title: "RLS/Items/Detail view/Reactions and comments/ReactionDetails",
   component: ReactionDetails,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

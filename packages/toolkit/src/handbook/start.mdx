@@ -1,37 +1,39 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="RLS/Einstieg/Lies mich zuerst" />
+<Meta title="RLS/Start/Read me first" />
 
-# Lies mich zuerst
+# Read me first
 
-Dieses Storybook zeigt den Real Life Stack **am laufenden Stück**: jede Seite hat eine Story mit echten Bausteinen über einer echten Datenquelle. Was du anklickst, wirkt — bis zum Neuladen. Es ist für drei Fragen da:
+This Storybook shows Real Life Stack **running**: every page has a story with real building blocks on top of a real data source. What you click takes effect, until you reload. It answers three questions:
 
-- **Wie ist eine App zusammengesetzt?** → Abschnitt **App**, in Reihenfolge lesen.
-- **Wie sieht ein Baustein aus, und was macht er ohne diese oder jene Fähigkeit?** → **App Shell**, **Module**, **Items**.
-- **Welche Hooks gibt es, und was antworten sie?** → **Grundlagen**.
+- **How is an app composed?** → section **App**, read in order.
+- **What does a building block look like, and what does it do without this or that capability?** → **App shell**, **Modules**, **Items**.
+- **Which hooks exist, and what do they answer?** → **Foundations**.
 
-Das Handbuch dazu, mit den Wegen für Vibecoder, Agents, Mitbauer und Betreiber: [real-life-stack.de/handbuch](https://real-life-stack.de/handbuch/). Die normative Wahrheit ist die [Spezifikation](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/README.md).
+The handbook, with its paths for vibecoders, agents, contributors and operators: [real-life-stack.de/handbuch](https://real-life-stack.de/handbuch/). The normative truth is the [specification](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/README.md) (German).
 
-## Der Weg durch die App
+The user interface inside the stories is German today: the toolkit's own texts are not translated yet. The explanations here are English; the code they explain is the same either way.
 
-Ein Beispiel begleitet alles: ein Gemeinschaftsgarten organisiert ein Erntefest. Es hat ein Datum und einen Ort, darum steht **dasselbe Item** im Kalender und auf der Karte.
+## The path through the app
 
-1. [00 Gemeinschaftsgarten](?path=/docs/rls-handbook-app--docs) — die App als Ganzes: Space wechseln, Modul wechseln, ein Item öffnen und bearbeiten.
-2. [01 Die App in 40 Zeilen](?path=/docs/rls-app-01-die-app-in-40-zeilen--docs) — was eine App schreibt, und was der Rahmen ihr abnimmt.
-3. [02 Das Register](?path=/docs/rls-app-register--docs) — die eine Liste der Module; ergänzen und ersetzen.
-4. [03 Der Modul-Host](?path=/docs/rls-module-host--docs) — wie aus einem Eintrag eine Fläche wird.
-5. [04 Der Ladevertrag](?path=/docs/rls-app-ladevertrag--docs) — was ein Modul lädt, und warum.
-6. [05 Fokus, Panel, Erstellen](?path=/docs/rls-app-fokus--docs) — wo steht, welches Item offen ist.
-7. [06 Ein eigenes Modul](?path=/docs/rls-app-06-ein-eigenes-modul--docs) — drei Schritte, am Marktplatz gezeigt.
+One example runs through everything: a community garden organises a harvest festival. It has a date and a place, so **the same item** appears in the calendar and on the map.
 
-## Danach, je nach Frage
+1. [00 Community garden](?path=/docs/rls-handbook-app--docs) — the app as a whole: switch space, switch module, open and edit an item.
+2. [01 The app in 40 lines](?path=/docs/rls-app-01-the-app-in-40-lines--docs) — what an app writes, and what the frame takes off its hands.
+3. [02 The register](?path=/docs/rls-app-register--docs) — the one list of modules; extend and replace.
+4. [03 The module host](?path=/docs/rls-module-host--docs) — how an entry becomes a surface.
+5. [04 The loading contract](?path=/docs/rls-app-ladevertrag--docs) — what a module loads, and why.
+6. [05 Focus, panel, create](?path=/docs/rls-app-fokus--docs) — where it is recorded which item is open.
+7. [06 A module of your own](?path=/docs/rls-app-06-a-module-of-your-own--docs) — three steps, shown on the marketplace.
 
-- **App Shell** — Kopfzeile, Space-Umschalter, Navigation, das geteilte Panel, Anmeldung, Kontakte. Das Gerüst um die Modulfläche.
-- **Spaces** — Der Space als Arbeitskontext: anlegen, einrichten, wechseln, Zugehörigkeit.
-- **Module** — Die sieben Flächen des Toolkits, Feed, Kanban, Kalender, Karte, Resonanz, Liste, Graph: je eine Übersicht im Host, darunter die Ansichten und die gemeinsamen Werkzeuge (Suche, Filter, Erstellen).
-- **Items** — Was in jedem Modul gleich ist: die Vorschau-Karte, die Detailansicht, Kommentare und Reaktionen, das Erstellen-Formular.
-- **Grundlagen** — Alle Hooks mit der Frage, die sie beantworten, und was ohne Fähigkeit passiert; die UI-Primitive; die [Begriffe](?path=/docs/rls-grundlagen-begriffe--docs).
+## After that, by question
 
-## Was hier nicht steht
+- **App shell** — header, space switcher, navigation, the shared panel, sign-in, contacts. The scaffold around the module surface.
+- **Spaces** — the space as working context: create, configure, switch, membership.
+- **Modules** — the seven surfaces of the toolkit, feed, kanban, calendar, map, resonance, list, graph: one overview each inside the host, below it the views and the shared tools (search, filter, create).
+- **Items** — what is the same in every module: the preview card, the detail view, comments and reactions, the create form.
+- **Foundations** — all hooks with the question they answer and what happens without the capability; the UI primitives; the [terms](?path=/docs/rls-foundations-terms--docs).
 
-Wie man den Stack installiert, eine Instanz betreibt oder beiträgt: das ist das Handbuch. Wie man einen Agenten darauf ansetzt: [llms.txt](https://real-life-stack.de/llms.txt).
+## What is not here
+
+How to install the stack, run an instance or contribute: that is the handbook. How to put an agent on it: [llms.txt](https://real-life-stack.de/llms.txt).

@@ -42,7 +42,7 @@ const KONTAKTE: ContactInfo[] = [
 
 const meta: Meta = {
   id: "rls-app-shell-kontakte",
-  title: "RLS/App Shell/Kontakte und Verifikation",
+  title: "RLS/App shell/Contacts and verification",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
   decorators: [(Story) => <div className="min-h-screen bg-background p-8">{Story()}</div>],

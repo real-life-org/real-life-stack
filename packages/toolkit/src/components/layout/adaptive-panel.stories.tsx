@@ -5,7 +5,7 @@ import { Button } from "../primitives/button"
 
 const meta: Meta<typeof AdaptivePanel> = {
   id: "rls-app-shell-layout-adaptivepanel",
-  title: "RLS/App Shell/Inhalts-Panel und Dialoge/AdaptivePanel",
+  title: "RLS/App shell/Panel and dialogs/AdaptivePanel",
   component: AdaptivePanel,
   tags: ["autodocs"],
   parameters: {

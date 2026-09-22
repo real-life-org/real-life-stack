@@ -13,7 +13,7 @@ import { MoreHorizontal } from 'lucide-react'
 
 const meta: Meta<typeof Card> = {
   id: "rls-primitives-card",
-  title: "RLS/Grundlagen/UI-Primitives/Card",
+  title: "RLS/Foundations/UI primitives/Card",
   component: Card,
   tags: ['autodocs'],
 }

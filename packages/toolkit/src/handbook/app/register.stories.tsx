@@ -6,90 +6,91 @@ import { Button } from "../../components/primitives/button"
 import { TOOLKIT_DEFINITION, composeModules, type ModuleExtension } from "../../lib/module-register"
 
 /**
- * **Das Register** (Spec 01, „Modul-Register"): Welche Module es gibt, sagt
- * genau eine Liste — komponiert aus Beiträgen, zuerst dem des Toolkits, dann
- * denen der App. Eine App **definiert** eigene Module und **ergänzt**
- * vorhandene; ersetzen darf sie ein Feld nur ausdrücklich (`replaces`, Regel 2).
- * Ein Konflikt ist ein Fehler beim Start, kein stilles Überschreiben.
+ * **The register** (spec 01, "module register"): which modules exist is said
+ * by exactly one list — composed from contributions, the toolkit's first,
+ * then the app's. An app **defines** modules of its own and **extends**
+ * existing ones; it may replace a field only explicitly (`replaces`, rule 2).
+ * A conflict is an error at start-up, never a silent override.
  *
- * Die Liste steht nirgends ein zweites Mal: Tabs, Routen, Benachrichtigungen,
- * „Feld führt zur Sicht" — alles liest aus `getModules()`. Welche Module ein
- * Space **führt**, steht in `Group.data.modules`, in seiner Reihenfolge.
+ * The list is kept nowhere a second time: tabs, routes, notifications,
+ * "a field leads to its view" — all of them read `getModules()`. Which modules
+ * a space **carries** is stored in `Group.data.modules`, in its order.
  *
- * Unten wird live komponiert. Die Beiträge sind die der Netzwerk-App:
- * Marktplatz als eigenes Modul, Karte und Kalender mit eigenen Optionen.
+ * Below, the register is composed live. The contributions are those of the
+ * network app: the marketplace as a module of its own, map and calendar with
+ * options of their own.
  */
 const Dummy = () => null
 
-const MARKTPLATZ: ModuleExtension = {
+const MARKETPLACE: ModuleExtension = {
   name: "network",
   definitions: [{ id: "marketplace", label: "Marktplatz", icon: Store, presents: ["resource"], options: { suggestType: "resource" }, view: Dummy }],
 }
-const karte = (replaces: boolean): ModuleExtension => ({
+const mapOptions = (replaces: boolean): ModuleExtension => ({
   name: "network",
   extensions: [{ id: "map", options: { suggestType: "place", initialView: { center: [12.4066, 52.1183], zoom: 16 } }, ...(replaces ? { replaces: ["options"] } : {}) }],
 })
 
-function Spalte({ titel, children }: { titel: string; children: ReactNode }) {
+function Column({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="rounded-xl border bg-card p-4">
-      <h3 className="mb-2 text-sm font-semibold">{titel}</h3>
+      <h3 className="mb-2 text-sm font-semibold">{title}</h3>
       {children}
     </div>
   )
 }
 
 function Register() {
-  const [mitMarktplatz, setMarktplatz] = useState(true)
-  const [mitKarte, setKarte] = useState(true)
-  const [ausdruecklich, setAusdruecklich] = useState(true)
-  const ergebnis = useMemo(() => {
-    const beitraege: ModuleExtension[] = [TOOLKIT_DEFINITION]
-    if (mitMarktplatz) beitraege.push(MARKTPLATZ)
-    if (mitKarte) beitraege.push(karte(ausdruecklich))
+  const [withMarketplace, setMarketplace] = useState(true)
+  const [withMap, setMap] = useState(true)
+  const [explicit, setExplicit] = useState(true)
+  const result = useMemo(() => {
+    const contributions: ModuleExtension[] = [TOOLKIT_DEFINITION]
+    if (withMarketplace) contributions.push(MARKETPLACE)
+    if (withMap) contributions.push(mapOptions(explicit))
     try {
-      return { register: composeModules(beitraege), fehler: null as string | null }
+      return { register: composeModules(contributions), error: null as string | null }
     } catch (e) {
-      return { register: null, fehler: (e as Error).message }
+      return { register: null, error: (e as Error).message }
     }
-  }, [mitMarktplatz, mitKarte, ausdruecklich])
+  }, [withMarketplace, withMap, explicit])
   const toolkit = composeModules([TOOLKIT_DEFINITION])
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-6">
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant={mitMarktplatz ? "default" : "outline"} onClick={() => setMarktplatz((v) => !v)}>Marktplatz definieren</Button>
-        <Button size="sm" variant={mitKarte ? "default" : "outline"} onClick={() => setKarte((v) => !v)}>Karten-Optionen der App</Button>
-        <Button size="sm" variant={ausdruecklich ? "default" : "outline"} onClick={() => setAusdruecklich((v) => !v)} disabled={!mitKarte}>
-          {ausdruecklich ? "mit replaces: [\"options\"]" : "ohne replaces"}
+        <Button size="sm" variant={withMarketplace ? "default" : "outline"} onClick={() => setMarketplace((v) => !v)}>define marketplace</Button>
+        <Button size="sm" variant={withMap ? "default" : "outline"} onClick={() => setMap((v) => !v)}>app's map options</Button>
+        <Button size="sm" variant={explicit ? "default" : "outline"} onClick={() => setExplicit((v) => !v)} disabled={!withMap}>
+          {explicit ? "with replaces: [\"options\"]" : "without replaces"}
         </Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Spalte titel="Beitrag „toolkit“">
+        <Column title="contribution “toolkit”">
           <ol className="list-decimal space-y-1 pl-5 text-sm">
             {toolkit.map((m) => (
               <li key={m.id}><code>{m.id}</code> — {m.label}{m.presents?.length ? <span className="text-muted-foreground"> · presents {JSON.stringify(m.presents)}</span> : null}</li>
             ))}
           </ol>
-        </Spalte>
-        <Spalte titel="komponiert: toolkit + network">
-          {ergebnis.register ? (
+        </Column>
+        <Column title="composed: toolkit + network">
+          {result.register ? (
             <ol className="list-decimal space-y-1 pl-5 text-sm">
-              {ergebnis.register.map((m) => (
+              {result.register.map((m) => (
                 <li key={m.id}>
                   <code>{m.id}</code> — {m.label}
-                  {m.id === "marketplace" && <span className="text-muted-foreground"> · von der App definiert</span>}
-                  {m.id === "map" && mitKarte && <span className="text-muted-foreground"> · options ersetzt: {JSON.stringify(m.options)}</span>}
+                  {m.id === "marketplace" && <span className="text-muted-foreground"> · defined by the app</span>}
+                  {m.id === "map" && withMap && <span className="text-muted-foreground"> · options replaced: {JSON.stringify(m.options)}</span>}
                 </li>
               ))}
             </ol>
           ) : (
-            <pre className="whitespace-pre-wrap rounded-md bg-destructive/10 p-3 text-xs text-destructive">{ergebnis.fehler}</pre>
+            <pre className="whitespace-pre-wrap rounded-md bg-destructive/10 p-3 text-xs text-destructive">{result.error}</pre>
           )}
-        </Spalte>
+        </Column>
       </div>
       <p className="text-sm text-muted-foreground">
-        Reihenfolge = Tab-Reihenfolge des Registers; ein Space ordnet für sich um, indem er <code>data.modules</code> in seiner Reihenfolge speichert. Ein Modul, das die App nicht kennt, bleibt gespeichert und bekommt nur keinen Tab.
+        Register order = tab order; a space reorders for itself by storing <code>data.modules</code> in its own order. A module this app does not know stays stored and simply gets no tab. (The error text is German: it is the message the register throws at start-up.)
       </p>
     </div>
   )
@@ -97,11 +98,11 @@ function Register() {
 
 const meta: Meta<typeof Register> = {
   id: "rls-app-register",
-  title: "RLS/App/02 Das Register",
+  title: "RLS/App/02 The register",
   component: Register,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
 }
 export default meta
 type Story = StoryObj<typeof Register>
-export const Default: Story = { name: "Komponieren, ergänzen, ersetzen" }
+export const Default: Story = { name: "Compose, extend, replace" }

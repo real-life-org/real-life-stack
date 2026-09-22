@@ -22,7 +22,7 @@ const GARTEN: Group = { ...STORY_SEED.groups[0], data: { primaryColor: "#3f7a4e"
 
 const meta: Meta = {
   id: "rls-app-shell-space-verwaltung",
-  title: "RLS/Spaces/Anlegen und Einrichten",
+  title: "RLS/Spaces/Create and configure",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
   decorators: [(Story) => <StoryWorld>{Story()}</StoryWorld>],

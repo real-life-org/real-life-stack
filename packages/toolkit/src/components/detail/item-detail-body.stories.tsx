@@ -25,7 +25,7 @@ const REACTED = {
 
 const meta: Meta<typeof ItemDetailBody> = {
   id: "detail-itemdetailbody",
-  title: "RLS/Items/Detailansicht/Anatomie und Inhalt",
+  title: "RLS/Items/Detail view/Anatomy and content",
   component: ItemDetailBody,
   parameters: { layout: "centered" },
   decorators: [

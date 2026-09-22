@@ -8,7 +8,7 @@ const notification = {
 }
 
 const meta = { id: "rls-activity-notificationcenter",
-  title: "RLS/App Shell/Aktivität und Benachrichtigungen/NotificationCenter", component: NotificationCenter, args: { onOpenSubject: () => {}, onOpenGroup: () => {}, onMarkRead: () => {}, onMarkAllRead: () => {}, onMuteGroup: () => {}, onOpenActivity: () => {} } } satisfies Meta<typeof NotificationCenter>
+  title: "RLS/App shell/Activity and notifications/NotificationCenter", component: NotificationCenter, args: { onOpenSubject: () => {}, onOpenGroup: () => {}, onMarkRead: () => {}, onMarkAllRead: () => {}, onMuteGroup: () => {}, onOpenActivity: () => {} } } satisfies Meta<typeof NotificationCenter>
 export default meta
 type Story = StoryObj<typeof meta>
 

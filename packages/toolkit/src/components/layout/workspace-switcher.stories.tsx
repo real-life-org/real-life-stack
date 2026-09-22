@@ -11,7 +11,7 @@ const WORKSPACES: Workspace[] = [
 
 const meta: Meta<typeof WorkspaceSwitcher> = {
   id: "rls-app-shell-navigation-workspaceswitcher",
-  title: "RLS/App Shell/Space-Steuerung links/WorkspaceSwitcher",
+  title: "RLS/App shell/Space switcher/WorkspaceSwitcher",
   component: WorkspaceSwitcher,
   parameters: {
     docs: {

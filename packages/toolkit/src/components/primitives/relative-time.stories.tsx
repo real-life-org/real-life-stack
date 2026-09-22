@@ -3,7 +3,7 @@ import { RelativeTime } from "./relative-time"
 
 const meta: Meta<typeof RelativeTime> = {
   id: "rls-primitives-relativetime",
-  title: "RLS/Grundlagen/UI-Primitives/RelativeTime",
+  title: "RLS/Foundations/UI primitives/RelativeTime",
   component: RelativeTime,
   tags: ["autodocs"],
   parameters: {

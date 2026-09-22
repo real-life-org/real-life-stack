@@ -3,7 +3,7 @@ import { ProfilePanelContent } from "./profile-panel-content"
 
 const meta: Meta<typeof ProfilePanelContent> = {
   id: "module-components-profilepanelcontent",
-  title: "RLS/Items/Typbeispiele/Personenprofil",
+  title: "RLS/Items/Type examples/Person profile",
   component: ProfilePanelContent,
   parameters: { layout: "centered" },
   decorators: [

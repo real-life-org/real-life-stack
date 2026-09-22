@@ -1,34 +1,34 @@
 import { Meta, Canvas, Source } from '@storybook/addon-docs/blocks'
 import * as Host from './host.stories'
-import netzwerkApp from '../../../../../apps/network/src/App.tsx?raw'
-import netzwerkMain from '../../../../../apps/network/src/main.tsx?raw'
+import networkApp from '../../../../../apps/network/src/App.tsx?raw'
+import networkMain from '../../../../../apps/network/src/main.tsx?raw'
 
-<Meta title="RLS/App/01 Die App in 40 Zeilen" />
+<Meta title="RLS/App/01 The app in 40 lines" />
 
-# Die App in 40 Zeilen
+# The app in 40 lines
 
-Eine App auf dem Real Life Stack stellt **vier Dinge**: einen Connector zu ihren Daten, einen Router, ihr Register und den Rahmen aus dem Toolkit. Alles andere — Kopfzeile, Space-Umschalter, Tabs, das geteilte Panel, Detail, Erstellen, Verlauf, Suche und Filter, der Guard vor Entwurfsverlust — kommt aus `RoutedAppFrame` (Spec 01, „Was bei der App bleibt").
+An app on Real Life Stack provides **four things**: a connector to its data, a router, its register, and the frame from the toolkit. Everything else — header, space switcher, tabs, the shared panel, detail, create, activity, search and filter, the guard against losing a draft — comes from `RoutedAppFrame` (spec 01, "what stays with the app").
 
-Das hier ist die vollständige Shell der Netzwerk-App, Stand heute:
+This is the complete shell of the network app, as of today:
 
-<Source code={netzwerkApp} language="tsx" dark />
+<Source code={networkApp} language="tsx" dark />
 
-Und ihr Start: Connector bauen, Register binden, Router, fertig.
+And its start: build the connector, bind the register, router, done.
 
-<Source code={netzwerkMain} language="tsx" dark />
+<Source code={networkMain} language="tsx" dark />
 
-## Dasselbe im Storybook
+## The same thing in Storybook
 
-Ohne Router hält `HostWorld` denselben Rahmen über dem Speicher-Fokus. Was du unten siehst, ist kein Nachbau, sondern `AppFrame` mit dem Register des Toolkits über einem Mock-Connector — jede Story unter **RLS / App** und **RLS / Module** läuft darin.
+Without a router, `HostWorld` holds the same frame over the in-memory focus. What you see below is not a mock-up but `AppFrame` with the toolkit's register on top of a mock connector — every story under **RLS / App** and **RLS / Modules** runs inside it.
 
 <Canvas of={Host.Default} />
 
-## Was wohin gehört
+## Where things belong
 
-- Welche Module gibt es? → [Das Register](?path=/docs/rls-app-register--docs)
-- Wie wird aus einem Eintrag eine Fläche? → [Der Modul-Host](?path=/docs/rls-module-host--docs)
-- Was lädt ein Modul? → [Der Ladevertrag](?path=/docs/rls-app-ladevertrag--docs)
-- Wo steht, welches Item offen ist? → [Fokus, Panel, Erstellen](?path=/docs/rls-app-fokus--docs)
-- Wie kommt ein eigenes Modul dazu? → [Ein eigenes Modul](?path=/docs/rls-app-06-ein-eigenes-modul--docs)
+- Which modules exist? → [The register](?path=/docs/rls-app-register--docs)
+- How does an entry become a surface? → [The module host](?path=/docs/rls-module-host--docs)
+- What does a module load? → [The loading contract](?path=/docs/rls-app-ladevertrag--docs)
+- Where is it recorded which item is open? → [Focus, panel, create](?path=/docs/rls-app-fokus--docs)
+- How does a module of your own join? → [A module of your own](?path=/docs/rls-app-06-a-module-of-your-own--docs)
 
-Normativ: [Spec 01 — App Composition](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/01-app-composition.md).
+Normative: [Spec 01 — App composition](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/01-app-composition.md) (German).

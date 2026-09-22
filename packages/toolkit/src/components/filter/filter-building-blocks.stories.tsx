@@ -20,7 +20,7 @@ import { FilterChip, FilterMultiSelect, FilterSection, FilterToggle } from "./fi
 
 const meta: Meta = {
   id: "rls-module-filterbausteine",
-  title: "RLS/Module/Gemeinsame Werkzeuge/Filterbausteine",
+  title: "RLS/Modules/Shared tools/Filter building blocks",
   tags: ["autodocs"],
   parameters: { layout: "padded" },
 }

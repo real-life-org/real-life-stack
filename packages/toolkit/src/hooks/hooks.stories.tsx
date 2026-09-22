@@ -278,7 +278,7 @@ function Flaechen() {
 
 const meta: Meta = {
   id: "rls-grundlagen-hooks",
-  title: "RLS/Grundlagen/Hooks",
+  title: "RLS/Foundations/Hooks",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
 }

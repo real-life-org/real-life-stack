@@ -25,7 +25,7 @@ const MODULES = [
 
 const meta: Meta<typeof Navbar> = {
   id: 'rls-app-shell-navigation-navbar',
-  title: 'RLS/App Shell/Navigation/Navbar',
+  title: 'RLS/App shell/Navigation/Navbar',
   component: Navbar,
   tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },

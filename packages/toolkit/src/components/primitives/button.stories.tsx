@@ -4,7 +4,7 @@ import { Mail, Loader2, ChevronRight } from 'lucide-react'
 
 const meta: Meta<typeof Button> = {
   id: "rls-primitives-button",
-  title: "RLS/Grundlagen/UI-Primitives/Button",
+  title: "RLS/Foundations/UI primitives/Button",
   component: Button,
   tags: ['autodocs'],
   argTypes: {

@@ -3,7 +3,7 @@ import { Avatar, AvatarImage, AvatarFallback } from './avatar'
 
 const meta: Meta<typeof Avatar> = {
   id: "rls-primitives-avatar",
-  title: "RLS/Grundlagen/UI-Primitives/Avatar",
+  title: "RLS/Foundations/UI primitives/Avatar",
   component: Avatar,
   tags: ['autodocs'],
 }

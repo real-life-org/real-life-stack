@@ -3,7 +3,7 @@ import { CreateFab } from "./create-fab"
 
 const meta: Meta<typeof CreateFab> = {
   id: "module-components-createfab",
-  title: "RLS/Module/Gemeinsame Werkzeuge/Erstellen-Auslöser",
+  title: "RLS/Modules/Shared tools/Create trigger",
   component: CreateFab,
   parameters: {
     layout: "fullscreen",

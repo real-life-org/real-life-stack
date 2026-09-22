@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react"
 import { ActivityPanel } from "./activity-panel"
 
 const meta: Meta<typeof ActivityPanel> = { id: "rls-shell-activity-panel",
-  title: "RLS/App Shell/Aktivität und Benachrichtigungen/ActivityPanel", component: ActivityPanel }
+  title: "RLS/App shell/Activity and notifications/ActivityPanel", component: ActivityPanel }
 export default meta
 type Story = StoryObj<typeof ActivityPanel>
 

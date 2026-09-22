@@ -42,7 +42,7 @@ const many = (emoji: string, count: number, withMe = false) => ({
 
 const meta: Meta<typeof ReactionBar> = {
   id: "rls-module-components-reactions-reactionbar",
-  title: "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionBar",
+  title: "RLS/Items/Detail view/Reactions and comments/ReactionBar",
   component: ReactionBar,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

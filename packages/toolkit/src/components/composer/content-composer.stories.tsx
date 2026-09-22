@@ -10,7 +10,7 @@ import {
 
 const meta: Meta<typeof ContentComposer> = {
   id: "rls-module-components-contentcomposer",
-  title: "RLS/Items/Anlegen und Bearbeiten/ContentComposer",
+  title: "RLS/Items/Create and edit/ContentComposer",
   component: ContentComposer,
   tags: ["autodocs"],
   decorators: [

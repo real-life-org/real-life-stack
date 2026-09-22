@@ -5,7 +5,7 @@ import { Home, Map, Calendar, User, List, Grid2X2, KanbanSquare } from 'lucide-r
 
 const meta: Meta<typeof BottomNav> = {
   id: "rls-app-shell-layout-bottomnav",
-  title: "RLS/App Shell/Navigation/BottomNav",
+  title: "RLS/App shell/Navigation/BottomNav",
   component: BottomNav,
   tags: ['autodocs'],
   parameters: {

@@ -242,7 +242,7 @@ function Modulflaeche() {
 
 const meta: Meta<typeof Modulflaeche> = {
   id: "rls-app-shell-modulflaeche",
-  title: "RLS/App Shell/Die Modulfläche",
+  title: "RLS/App shell/The module surface",
   component: Modulflaeche,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

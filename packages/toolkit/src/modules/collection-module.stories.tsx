@@ -18,7 +18,7 @@ function CollectionModuleOverview() {
 
 const meta: Meta<typeof CollectionModuleOverview> = {
   id: "rls-space-modules-collection-overview",
-  title: "RLS/Module/Liste/Übersicht",
+  title: "RLS/Modules/List/Overview",
   component: CollectionModuleOverview,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

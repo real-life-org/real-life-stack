@@ -19,7 +19,7 @@ function KanbanModuleOverview() {
 
 const meta: Meta<typeof KanbanModuleOverview> = {
   id: "rls-space-modules-kanban-overview",
-  title: "RLS/Module/Kanban/Übersicht",
+  title: "RLS/Modules/Kanban/Overview",
   component: KanbanModuleOverview,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

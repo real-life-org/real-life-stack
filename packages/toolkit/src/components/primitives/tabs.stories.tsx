@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './car
 
 const meta: Meta<typeof Tabs> = {
   id: "rls-primitives-tabs",
-  title: "RLS/Grundlagen/UI-Primitives/Tabs",
+  title: "RLS/Foundations/UI primitives/Tabs",
   component: Tabs,
   tags: ['autodocs'],
 }

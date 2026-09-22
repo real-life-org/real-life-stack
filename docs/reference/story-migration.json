@@ -5,7 +5,7 @@
   {
     "file": "packages/toolkit/src/components/activity/activity-panel.stories.tsx",
     "oldTitle": "RLS/Shell/Activity Panel",
-    "title": "RLS/App Shell/Aktivität und Benachrichtigungen/ActivityPanel",
+    "title": "RLS/App shell/Activity and notifications/ActivityPanel",
     "id": "rls-shell-activity-panel",
     "storyIds": [
       "rls-shell-activity-panel--full",
@@ -16,7 +16,7 @@
   {
     "file": "packages/toolkit/src/components/activity/notification-center.stories.tsx",
     "oldTitle": "RLS/Activity/NotificationCenter",
-    "title": "RLS/App Shell/Aktivität und Benachrichtigungen/NotificationCenter",
+    "title": "RLS/App shell/Activity and notifications/NotificationCenter",
     "id": "rls-activity-notificationcenter",
     "storyIds": [
       "rls-activity-notificationcenter--full",
@@ -27,7 +27,7 @@
   {
     "file": "packages/toolkit/src/components/calendar/calendar-module.stories.tsx",
     "oldTitle": "RLS/Space Modules/Calendar/Overview",
-    "title": "RLS/Module/Kalender/Übersicht",
+    "title": "RLS/Modules/Calendar/Overview",
     "id": "rls-space-modules-calendar-overview",
     "storyIds": [
       "rls-space-modules-calendar-overview--docs",
@@ -37,7 +37,7 @@
   {
     "file": "packages/toolkit/src/components/comments/comment-section.stories.tsx",
     "oldTitle": "RLS/Module Components/Comments/CommentSection",
-    "title": "RLS/Items/Detailansicht/Reaktionen und Kommentare/CommentSection",
+    "title": "RLS/Items/Detail view/Reactions and comments/CommentSection",
     "id": "rls-module-components-comments-commentsection",
     "storyIds": [
       "rls-module-components-comments-commentsection--docs",
@@ -53,7 +53,7 @@
   {
     "file": "packages/toolkit/src/components/composer/content-composer.stories.tsx",
     "oldTitle": "RLS/Module Components/ContentComposer",
-    "title": "RLS/Items/Anlegen und Bearbeiten/ContentComposer",
+    "title": "RLS/Items/Create and edit/ContentComposer",
     "id": "rls-module-components-contentcomposer",
     "storyIds": [
       "rls-module-components-contentcomposer--docs",
@@ -72,7 +72,7 @@
   {
     "file": "packages/toolkit/src/components/composer/widgets/text-widget.stories.tsx",
     "oldTitle": "RLS/Module Components/Widgets/TextWidget",
-    "title": "RLS/Items/Feldbausteine/TextWidget",
+    "title": "RLS/Items/Field widgets/TextWidget",
     "id": "rls-module-components-widgets-textwidget",
     "storyIds": [
       "rls-module-components-widgets-textwidget--docs",
@@ -84,7 +84,7 @@
   {
     "file": "packages/toolkit/src/components/create-fab/create-fab.stories.tsx",
     "oldTitle": "Module Components / CreateFab",
-    "title": "RLS/Module/Gemeinsame Werkzeuge/Erstellen-Auslöser",
+    "title": "RLS/Modules/Shared tools/Create trigger",
     "id": "module-components-createfab",
     "storyIds": [
       "module-components-createfab--default",
@@ -130,7 +130,7 @@
   {
     "file": "packages/toolkit/src/components/detail/item-detail-body.stories.tsx",
     "oldTitle": "Detail/ItemDetailBody",
-    "title": "RLS/Items/Detailansicht/Anatomie und Inhalt",
+    "title": "RLS/Items/Detail view/Anatomy and content",
     "id": "detail-itemdetailbody",
     "storyIds": [
       "detail-itemdetailbody--event",
@@ -142,7 +142,7 @@
   {
     "file": "packages/toolkit/src/components/detail/item-detail-panel.stories.tsx",
     "oldTitle": "RLS/Module Components/Detail/ItemDetailPanel",
-    "title": "RLS/Items/Detailansicht/Inhalt und Diskussion",
+    "title": "RLS/Items/Detail view/Content and discussion",
     "id": "rls-module-components-detail-itemdetailpanel",
     "storyIds": [
       "rls-module-components-detail-itemdetailpanel--feed-detail",
@@ -152,7 +152,7 @@
   {
     "file": "packages/toolkit/src/components/feed/feed-module.stories.tsx",
     "oldTitle": "RLS/Space Modules/Feed/Overview",
-    "title": "RLS/Module/Feed/Übersicht",
+    "title": "RLS/Modules/Feed/Overview",
     "id": "rls-space-modules-feed-overview",
     "storyIds": [
       "rls-space-modules-feed-overview--docs",
@@ -180,7 +180,7 @@
   {
     "file": "packages/toolkit/src/components/filter/filter-bar.stories.tsx",
     "oldTitle": "Module Components / FilterBar",
-    "title": "RLS/Module/Gemeinsame Werkzeuge/Suche und Filter",
+    "title": "RLS/Modules/Shared tools/Search and filter",
     "id": "module-components-filterbar",
     "storyIds": [
       "module-components-filterbar--default",
@@ -194,7 +194,7 @@
   {
     "file": "packages/toolkit/src/components/graph/graph-view.stories.tsx",
     "oldTitle": "RLS/Space Modules/Graph/Overview",
-    "title": "RLS/Module/Graph/Übersicht",
+    "title": "RLS/Modules/Graph/Overview",
     "id": "rls-space-modules-graph-overview",
     "storyIds": [
       "rls-space-modules-graph-overview--default",
@@ -206,7 +206,7 @@
   {
     "file": "packages/toolkit/src/components/kanban/kanban-board.stories.tsx",
     "oldTitle": "RLS/Space Modules/Kanban/Board",
-    "title": "RLS/Module/Kanban/Board",
+    "title": "RLS/Modules/Kanban/Board",
     "id": "rls-space-modules-kanban-board",
     "storyIds": [
       "rls-space-modules-kanban-board--docs",
@@ -224,7 +224,7 @@
   {
     "file": "packages/toolkit/src/components/kanban/kanban-module.stories.tsx",
     "oldTitle": "RLS/Space Modules/Kanban/Overview",
-    "title": "RLS/Module/Kanban/Übersicht",
+    "title": "RLS/Modules/Kanban/Overview",
     "id": "rls-space-modules-kanban-overview",
     "storyIds": [
       "rls-space-modules-kanban-overview--docs",
@@ -250,7 +250,7 @@
   {
     "file": "packages/toolkit/src/components/layout/adaptive-panel.stories.tsx",
     "oldTitle": "RLS/App Shell/Layout/AdaptivePanel",
-    "title": "RLS/App Shell/Inhalts-Panel und Dialoge/AdaptivePanel",
+    "title": "RLS/App shell/Panel and dialogs/AdaptivePanel",
     "id": "rls-app-shell-layout-adaptivepanel",
     "storyIds": [
       "rls-app-shell-layout-adaptivepanel--docs",
@@ -279,7 +279,7 @@
   {
     "file": "packages/toolkit/src/components/layout/bottom-nav.stories.tsx",
     "oldTitle": "RLS/App Shell/Layout/BottomNav",
-    "title": "RLS/App Shell/Navigation/BottomNav",
+    "title": "RLS/App shell/Navigation/BottomNav",
     "id": "rls-app-shell-layout-bottomnav",
     "storyIds": [
       "rls-app-shell-layout-bottomnav--docs",
@@ -291,8 +291,8 @@
   },
   {
     "file": "packages/toolkit/src/components/layout/navbar.stories.tsx",
-    "oldTitle": "RLS/App Shell/Navigation/Navbar",
-    "title": "RLS/App Shell/Navigation/Navbar",
+    "oldTitle": "RLS/App shell/Navigation/Navbar",
+    "title": "RLS/App shell/Navigation/Navbar",
     "id": "rls-app-shell-navigation-navbar",
     "storyIds": [
       "rls-app-shell-navigation-navbar--docs",
@@ -304,7 +304,7 @@
   {
     "file": "packages/toolkit/src/components/layout/workspace-switcher.stories.tsx",
     "oldTitle": "RLS/App Shell/Navigation/WorkspaceSwitcher",
-    "title": "RLS/App Shell/Space-Steuerung links/WorkspaceSwitcher",
+    "title": "RLS/App shell/Space switcher/WorkspaceSwitcher",
     "id": "rls-app-shell-navigation-workspaceswitcher",
     "storyIds": [
       "rls-app-shell-navigation-workspaceswitcher--group-active",
@@ -315,7 +315,7 @@
   {
     "file": "packages/toolkit/src/components/lens/collection-view.stories.tsx",
     "oldTitle": "RLS/Module Components/Lenses/CollectionView",
-    "title": "RLS/Module/Gemeinsame Ansichten/Sammlung",
+    "title": "RLS/Modules/Shared views/Collection view",
     "id": "rls-module-components-lenses-collectionview",
     "storyIds": [
       "rls-module-components-lenses-collectionview--docs",
@@ -341,7 +341,7 @@
   {
     "file": "packages/toolkit/src/components/lens/list-view.stories.tsx",
     "oldTitle": "RLS/Module Components/Lenses/ListView",
-    "title": "RLS/Module/Gemeinsame Ansichten/Liste",
+    "title": "RLS/Modules/Shared views/List view",
     "id": "rls-module-components-lenses-listview",
     "storyIds": [
       "rls-module-components-lenses-listview--docs",
@@ -351,7 +351,7 @@
   {
     "file": "packages/toolkit/src/components/lens/map-lens.stories.tsx",
     "oldTitle": "RLS/Module Components/Lenses/MapLens",
-    "title": "RLS/Module/Karte/Read-only-Ansicht (MapLens)",
+    "title": "RLS/Modules/Map/Read-only view (MapLens)",
     "id": "rls-module-components-lenses-maplens",
     "storyIds": [
       "rls-module-components-lenses-maplens--docs",
@@ -361,7 +361,7 @@
   {
     "file": "packages/toolkit/src/components/map/map-view.stories.tsx",
     "oldTitle": "RLS/Space Modules/MapView",
-    "title": "RLS/Module/Karte/MapView",
+    "title": "RLS/Modules/Map/MapView",
     "id": "rls-space-modules-mapview",
     "storyIds": [
       "rls-space-modules-mapview--bbox-module",
@@ -371,7 +371,7 @@
   {
     "file": "packages/toolkit/src/components/preview/item-preview.stories.tsx",
     "oldTitle": "Module Components / ItemPreview",
-    "title": "RLS/Items/Item-Vorschau/ItemPreview",
+    "title": "RLS/Items/Item preview/ItemPreview",
     "id": "module-components-itempreview",
     "storyIds": [
       "module-components-itempreview--bare",
@@ -389,7 +389,7 @@
   {
     "file": "packages/toolkit/src/components/primitives/avatar.stories.tsx",
     "oldTitle": "RLS/Primitives/Avatar",
-    "title": "RLS/Grundlagen/UI-Primitives/Avatar",
+    "title": "RLS/Foundations/UI primitives/Avatar",
     "id": "rls-primitives-avatar",
     "storyIds": [
       "rls-primitives-avatar--docs",
@@ -402,7 +402,7 @@
   {
     "file": "packages/toolkit/src/components/primitives/button.stories.tsx",
     "oldTitle": "RLS/Primitives/Button",
-    "title": "RLS/Grundlagen/UI-Primitives/Button",
+    "title": "RLS/Foundations/UI primitives/Button",
     "id": "rls-primitives-button",
     "storyIds": [
       "rls-primitives-button--docs",
@@ -422,7 +422,7 @@
   {
     "file": "packages/toolkit/src/components/primitives/card.stories.tsx",
     "oldTitle": "RLS/Primitives/Card",
-    "title": "RLS/Grundlagen/UI-Primitives/Card",
+    "title": "RLS/Foundations/UI primitives/Card",
     "id": "rls-primitives-card",
     "storyIds": [
       "rls-primitives-card--docs",
@@ -435,7 +435,7 @@
   {
     "file": "packages/toolkit/src/components/primitives/input.stories.tsx",
     "oldTitle": "RLS/Primitives/Input",
-    "title": "RLS/Grundlagen/UI-Primitives/Input",
+    "title": "RLS/Foundations/UI primitives/Input",
     "id": "rls-primitives-input",
     "storyIds": [
       "rls-primitives-input--docs",
@@ -450,7 +450,7 @@
   {
     "file": "packages/toolkit/src/components/primitives/relative-time.stories.tsx",
     "oldTitle": "RLS/Primitives/RelativeTime",
-    "title": "RLS/Grundlagen/UI-Primitives/RelativeTime",
+    "title": "RLS/Foundations/UI primitives/RelativeTime",
     "id": "rls-primitives-relativetime",
     "storyIds": [
       "rls-primitives-relativetime--docs",
@@ -467,7 +467,7 @@
   {
     "file": "packages/toolkit/src/components/primitives/tabs.stories.tsx",
     "oldTitle": "RLS/Primitives/Tabs",
-    "title": "RLS/Grundlagen/UI-Primitives/Tabs",
+    "title": "RLS/Foundations/UI primitives/Tabs",
     "id": "rls-primitives-tabs",
     "storyIds": [
       "rls-primitives-tabs--docs",
@@ -479,7 +479,7 @@
   {
     "file": "packages/toolkit/src/components/profile/profile-panel-content.stories.tsx",
     "oldTitle": "Module Components / ProfilePanelContent",
-    "title": "RLS/Items/Typbeispiele/Personenprofil",
+    "title": "RLS/Items/Type examples/Person profile",
     "id": "module-components-profilepanelcontent",
     "storyIds": [
       "module-components-profilepanelcontent--view-foreign",
@@ -490,7 +490,7 @@
   {
     "file": "packages/toolkit/src/components/reactions/reaction-bar.stories.tsx",
     "oldTitle": "RLS/Module Components/Reactions/ReactionBar",
-    "title": "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionBar",
+    "title": "RLS/Items/Detail view/Reactions and comments/ReactionBar",
     "id": "rls-module-components-reactions-reactionbar",
     "storyIds": [
       "rls-module-components-reactions-reactionbar--docs",
@@ -505,7 +505,7 @@
   {
     "file": "packages/toolkit/src/components/reactions/reaction-details.stories.tsx",
     "oldTitle": "RLS/Module Components/Reactions/ReactionDetails",
-    "title": "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionDetails",
+    "title": "RLS/Items/Detail view/Reactions and comments/ReactionDetails",
     "id": "rls-module-components-reactions-reactiondetails",
     "storyIds": [
       "rls-module-components-reactions-reactiondetails--docs",
@@ -517,7 +517,7 @@
   {
     "file": "packages/toolkit/src/components/reactions/reaction-picker.stories.tsx",
     "oldTitle": "RLS/Module Components/Reactions/ReactionPicker",
-    "title": "RLS/Items/Detailansicht/Reaktionen und Kommentare/ReactionPicker",
+    "title": "RLS/Items/Detail view/Reactions and comments/ReactionPicker",
     "id": "rls-module-components-reactions-reactionpicker",
     "storyIds": [
       "rls-module-components-reactions-reactionpicker--docs",
@@ -531,7 +531,7 @@
   {
     "file": "packages/toolkit/src/components/tag/tag-chip.stories.tsx",
     "oldTitle": "RLS/Module Components/Tag/TagChip",
-    "title": "RLS/Items/Detailansicht/Tags und Urheber/TagChip",
+    "title": "RLS/Items/Detail view/Tags and author/TagChip",
     "id": "rls-module-components-tag-tagchip",
     "storyIds": [
       "rls-module-components-tag-tagchip--docs",

@@ -42,15 +42,7 @@ const preview: Preview = {
     backgrounds: { disable: true },
     options: {
       storySort: (a, b) => {
-        const sections = [
-          'Einstieg',
-          'App',
-          'App Shell',
-          'Spaces',
-          'Module',
-          'Items',
-          'Grundlagen',
-        ]
+        const sections = ['Start', 'App', 'App shell', 'Spaces', 'Modules', 'Items', 'Foundations']
         const left = a.title.split('/'),
           right = b.title.split('/')
         for (let i = 0; i < Math.max(left.length, right.length); i++) {
@@ -58,8 +50,8 @@ const preview: Preview = {
             y = right[i] ?? ''
           if (x === y) continue
           if (i === 1) return sections.indexOf(x) - sections.indexOf(y)
-          if (x === 'Übersicht') return -1
-          if (y === 'Übersicht') return 1
+          if (x === 'Overview') return -1
+          if (y === 'Overview') return 1
           return x.localeCompare(y, 'de', { numeric: true })
         }
         return a.name.localeCompare(b.name, 'de', { numeric: true })
@@ -69,13 +61,13 @@ const preview: Preview = {
 
   globalTypes: {
     theme: {
-      description: 'Erscheinungsbild',
+      description: 'Color scheme',
       toolbar: {
-        title: 'Erscheinungsbild',
+        title: 'Color scheme',
         icon: 'contrast',
         items: [
-          { value: 'light', title: 'Hell', icon: 'sun' },
-          { value: 'dark', title: 'Dunkel', icon: 'moon' },
+          { value: 'light', title: 'Light', icon: 'sun' },
+          { value: 'dark', title: 'Dark', icon: 'moon' },
         ],
         dynamicTitle: true,
       },

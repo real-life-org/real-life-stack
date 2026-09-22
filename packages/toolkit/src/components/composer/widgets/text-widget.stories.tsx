@@ -4,7 +4,7 @@ import { TextWidget } from "./text-widget"
 
 const meta: Meta<typeof TextWidget> = {
   id: "rls-module-components-widgets-textwidget",
-  title: "RLS/Items/Feldbausteine/TextWidget",
+  title: "RLS/Items/Field widgets/TextWidget",
   component: TextWidget,
   tags: ["autodocs"],
   decorators: [

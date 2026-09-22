@@ -4,7 +4,7 @@ import { TagChip } from './tag-chip'
 
 const meta: Meta<typeof TagChip> = {
   id: "rls-module-components-tag-tagchip",
-  title: "RLS/Items/Detailansicht/Tags und Urheber/TagChip",
+  title: "RLS/Items/Detail view/Tags and author/TagChip",
   component: TagChip,
   tags: ['autodocs'],
   argTypes: {

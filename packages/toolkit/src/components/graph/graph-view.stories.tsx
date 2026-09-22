@@ -37,7 +37,7 @@ function ControlledGraph({ initialSelection = null }: { initialSelection?: strin
 
 const meta: Meta<typeof ControlledGraph> = {
   id: "rls-space-modules-graph-overview",
-  title: "RLS/Module/Graph/Ansicht",
+  title: "RLS/Modules/Graph/View",
   component: ControlledGraph,
   parameters: { layout: "fullscreen" },
 }

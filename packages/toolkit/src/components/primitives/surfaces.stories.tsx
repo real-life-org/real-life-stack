@@ -26,7 +26,7 @@ import {
 
 const meta: Meta = {
   id: "rls-grundlagen-flaechen",
-  title: "RLS/Grundlagen/UI-Primitives/Flächen",
+  title: "RLS/Foundations/UI primitives/Surfaces",
   tags: ["autodocs"],
   parameters: { layout: "padded" },
 }

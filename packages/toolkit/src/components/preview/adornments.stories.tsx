@@ -23,7 +23,7 @@ import { STORY_EVENT, STORY_ME, STORY_POST, STORY_TASK, StoryWorld } from "../..
 
 const meta: Meta = {
   id: "rls-items-beigaben",
-  title: "RLS/Items/Item-Vorschau/Beigaben",
+  title: "RLS/Items/Item preview/Adornments",
   tags: ["autodocs"],
   parameters: { layout: "padded" },
   decorators: [(Story) => <StoryWorld>{Story()}</StoryWorld>],

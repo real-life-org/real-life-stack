@@ -29,7 +29,7 @@ function ResonanceModuleOverview() {
 
 const meta: Meta<typeof ResonanceModuleOverview> = {
   id: "rls-space-modules-resonance-overview",
-  title: "RLS/Module/Resonanz/Übersicht",
+  title: "RLS/Modules/Resonance/Overview",
   component: ResonanceModuleOverview,
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

@@ -123,7 +123,7 @@ const SEED: Item[] = [
 
 const meta: Meta<typeof ItemDetailPanel> = {
   id: "rls-module-components-detail-itemdetailpanel",
-  title: "RLS/Items/Detailansicht/Inhalt und Diskussion",
+  title: "RLS/Items/Detail view/Content and discussion",
   component: ItemDetailPanel,
   parameters: {
     layout: "fullscreen",

@@ -60,7 +60,7 @@ const MOCK_REPLIES_C1: CommentWithAuthor[] = [
 
 const meta: Meta = {
   id: "rls-module-components-comments-commentsection",
-  title: "RLS/Items/Detailansicht/Reaktionen und Kommentare/CommentSection",
+  title: "RLS/Items/Detail view/Reactions and comments/CommentSection",
   tags: ["autodocs"],
   parameters: {
     layout: "fullscreen",
