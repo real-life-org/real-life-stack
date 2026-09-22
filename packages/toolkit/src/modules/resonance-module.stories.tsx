@@ -19,8 +19,8 @@ import { STORY_SEED } from "../story-support/story-world"
  * Without a write capability the bar is read-only.
  *
  * Where next: how a class activates a module under
- * [The loading contract](?path=/docs/rls-app-ladevertrag--docs); the vote
- * bar as a type rule under [Adornments](?path=/docs/rls-items-beigaben--docs).
+ * [The loading contract](?path=/docs/rls-app-04-loading-contract--docs); the vote
+ * bar as a type rule under [Adornments](?path=/docs/rls-items-adornments--docs).
  */
 const aussagen: Item[] = [
   {
@@ -39,7 +39,7 @@ function ResonanceModuleOverview() {
 }
 
 const meta: Meta<typeof ResonanceModuleOverview> = {
-  id: "rls-space-modules-resonance-overview",
+  id: "rls-modules-resonance",
   title: "RLS/Modules/Resonance/Overview",
   component: ResonanceModuleOverview,
   tags: ["autodocs"],

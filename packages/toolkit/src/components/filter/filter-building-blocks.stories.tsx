@@ -19,7 +19,7 @@ import { FilterChip, FilterMultiSelect, FilterSection, FilterToggle } from "./fi
  */
 
 const meta: Meta = {
-  id: "rls-module-filterbausteine",
+  id: "rls-modules-filter-building-blocks",
   title: "RLS/Modules/Shared tools/Filter building blocks",
   tags: ["autodocs"],
   parameters: { layout: "padded" },
@@ -29,7 +29,7 @@ export default meta
 type Story = StoryObj
 
 /** The four parts one by one, each with the sentence it answers. */
-export const Bausteine: Story = {
+export const TheFourParts: Story = {
   name: "The four parts",
   render: function Render() {
     const [tags, setTags] = useState<string[]>(["garten"])
@@ -69,7 +69,7 @@ export const Bausteine: Story = {
 }
 
 /** What the module-owned part looks like that the calendar hands over as `drawerExtra`. */
-export const AlsModulabschnitt: Story = {
+export const AsModuleSection: Story = {
   name: "As a module section",
   render: function Render() {
     const [orte, setOrte] = useState<string[]>([])

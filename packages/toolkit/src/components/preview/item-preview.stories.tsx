@@ -75,12 +75,12 @@ const taskItem: Item = {
  * Density is `comfortable` or `compact` (kanban, lists); `author={null}`
  * suppresses the author row for cards that stand where the author is obvious.
  *
- * Where next: what goes into the slots under [Adornments](?path=/docs/rls-items-beigaben--docs);
- * the card opened under [Detail view](?path=/docs/detail-itemdetailbody--docs).
+ * Where next: what goes into the slots under [Adornments](?path=/docs/rls-items-adornments--docs);
+ * the card opened under [Detail view](?path=/docs/rls-items-detail-body--docs).
  */
 const meta: Meta<typeof ItemPreview> = {
   tags: ["autodocs"],
-  id: "module-components-itempreview",
+  id: "rls-items-item-preview",
   title: "RLS/Items/Item preview/ItemPreview",
   component: ItemPreview,
   decorators: [

@@ -1,0 +1,129 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="RLS/Foundations/All hooks" />
+
+# All hooks
+
+Every surface in Real Life Stack asks hooks, never the connector. This page lists all hooks the toolkit exports, with the question each answers and what happens when the connector lacks the capability.
+
+**The column "without capability" is the important one.** Reading hooks answer empty: "no groups", "nobody signed in", "zero comments" are true answers, not errors. Writing hooks fail on the call, not on preparation — any surface may build a button. Where it says "throws on render" nevertheless, that is intended: the surface cannot exist without that capability.
+
+Living examples are under [Foundations → Hooks](?path=/story/rls-foundations-hooks--read).
+
+*This list is kept by hand until it is generated from each hook's documentation comment (plan D2), which cannot drift from the exports.*
+
+## Read items
+
+| Hook | Answers | Question it answers | Without capability |
+|---|---|---|---|
+| `useItems(filter?)` | `{data, isLoading}` | Which items match this filter, and is the list still arriving? | — |
+| `useItem(id)` | `{data, isLoading}` | Does this one item exist, and is "not found" already decided? | — |
+| `useItemsWithDraft(filter?)` | `{data, isLoading}` | The same list, with the draft being typed already in it as a card. | — |
+| `useModuleFilteredItems(items)` | `Item[]` | Exactly what the toolbar in the module head promises: filter plus search text. | throws without `FilterProvider` |
+| `useActivity(scope)` | `{data, supported}` | What happened in this space recently? | empty, `supported: false` |
+| `useNotifications()` | `{notifications, badgeCount, …}` | What is new for me, and how much is unread? | empty |
+
+## Write items
+
+| Hook | Answers | Question it answers | Without capability |
+|---|---|---|---|
+| `useCreateItem()` | `{mutate}` | Create a new item. | throws on call |
+| `useUpdateItem()` | `{mutate}` | Change an existing item. | throws on call |
+| `useDeleteItem()` | `{mutate}` | Delete an item. | throws on call |
+| `useItemEditor(options)` | `{isOpen, mode, submit, remove, …}` | Open the composer and save an input as an item, including its space. | throws on call |
+| `useDraftItem()` | `Item \| null` | What is someone typing right now that modules should preview? | `null` without provider |
+| `useSetDraftItem()` | `(draft) => void` | Publish or discard the running draft. | no-op |
+| `useUnsavedChanges()` | `{dirty, setDirty} \| null` | Are there unsaved inputs that leaving must intercept? | `null` without provider |
+| `useSetUnsavedDirty()` | `(dirty) => void` | Report that something unsaved sits in the form. | no-op |
+
+## People, spaces and membership
+
+| Hook | Answers | Question it answers | Without capability |
+|---|---|---|---|
+| `useOptionalCurrentUser()` | `{data, isLoading}` | Who am I, if anyone at all? | `null` |
+| `useCurrentUser()` | `{data, isLoading}` | Who am I? For surfaces that make no sense without sign-in. | throws on render |
+| `useGroups()` | `{data, isLoading}` | Which spaces do I see? | empty |
+| `useCurrentGroup()` | `Group \| null` | Which space am I in right now? | `null` |
+| `usePersonalGroupId()` | `string \| null` | Where does an item belong that is shared with nobody? | `null` |
+| `useMembers(groupId)` | `{data, isLoading}` | Who belongs to this space, or with `null` to all of mine? | empty |
+| `useCreateGroup()` | `(name, data?) => Promise` | Create a space. | throws on call |
+| `useUpdateGroup()` | `(id, patch) => Promise` | Change a space's name or data. | throws on call |
+| `useDeleteGroup()` | `(id) => Promise` | Delete a space. | throws on call |
+| `useInviteMember()` | `(groupId, userId) => Promise` | Invite someone into a space. | throws on call |
+| `useRemoveMember()` | `(groupId, userId) => Promise` | Remove someone from a space. | throws on call |
+| `useContacts()` | `{contacts, addContact, …}` | Whom do I know, who is waiting for confirmation? | empty, actions no-op |
+| `useResolvedUsers(ids)` | `Map<string, User>` | For which ids do I know a name? | empty map |
+| `useItemAuthor(item, users)` | `User \| undefined` | Who wrote this item? | — |
+| `useOpenProfile()` | `(userId) => void` | Open a person's profile. | no-op |
+| `useVerification()` | `{supported, createChallenge, …}` | Two people who meet in real life confirm each other. | empty, `supported: false` |
+| `useIncomingEvents()` | `{current, dismiss, …}` | Which incoming event is waiting for an answer? | throws without provider |
+
+## Permissions and capabilities
+
+| Hook | Answers | Question it answers | Without capability |
+|---|---|---|---|
+| `useItemPermissions(item)` | `{canEdit, canDelete}` | May I show the ⋮ menu here? | both `false` |
+| `useConnector()` | `DataInterface` | Which data access applies here? | throws without provider |
+| `useOptionalConnector()` | `DataInterface \| null` | The same for surfaces that render without data access too. | `null` |
+
+## Relations
+
+| Hook | Answers | Question it answers | Without capability |
+|---|---|---|---|
+| `useComments(itemId)` | `{comments, createComment, canComment}` | What was said, by whom, and may I reply? | empty, writing no-op |
+| `useCommentCount(itemId)` | `number` | Is there a conversation on this card? | `0` |
+| `useReactions(itemId)` | `{reactions, react, canReact}` | How was reacted, and can I set my reaction? | empty, `react` no-op |
+| `useReactionUsers(itemId)` | `{users, isLoading}` | Who reacted with which emoji? | empty |
+| `useVotes(itemId)` | `{summary, vote, canVote}` | How does the resonance stand, and how do I vote? | empty; without signature verification no vote counts |
+| `useVoteUsers(itemId)` | `{users, isLoading}` | Who voted how? | empty |
+| `useRelationRecords(filter)` | `{data, supported}` | Which signed relation records match? | empty, `supported: false` |
+| `useVerifiedRelationRecords(records)` | `RelationRecord[]` | Which of those are cryptographically covered? | empty, also while checking |
+
+## Surfaces and UI state
+
+| Hook | Answers | Question it answers | Without capability |
+|---|---|---|---|
+| `useModulePanel()` | `{current, open, close}` | Open a panel beside the module. There is only one. | throws |
+| `useSharedFilter()` | `{value, searchText, setSearchText, clear}` | The app-wide filter that survives the module switch. | throws |
+| `useModuleLayout()` | `ModuleLayout \| null` | Which geometry does the module surface prescribe? | `null` |
+| `useModuleContentClass()` | `string` | In which width does the content stand? | default |
+| `useOptionalModuleHead()` | `… \| null` | Where does a module portal its toolbar? | `null` |
+| `usePanelEdges()` | `{left, right}` | How much does an open panel cover right now? | — |
+| `useLocationPick()` | `{isPicking, startPick, …}` | Pick a place on the map from within the form. | `canPick: false` |
+| `useFieldLink(item, field)` | `(() => void) \| null` | Does this field lead to a view that shows it? | `null` |
+| `useCommentLink(itemId)` | `(() => void) \| null` | Does the comment hint lead into the input field? | `null` |
+| `useTagLink(tag)` | `{onClick, active} \| null` | Does a click on this tag filter the view? | `null` |
+| `useItemFocus()` | `{itemId, isEditing, composeType, focusItem, editItem, startCompose, …}` | Which item is open, is it being edited, is something being created? The focus contract — in the app the URL (`UrlFocusProvider` from `/router`), otherwise memory. | throws |
+| `useModuleHost()` | `{entry, currentSpace, members, groups, items, setCreateAnchor, …}` | The space context and the items the module host produced for this surface. | throws |
+| `useCreate()` | `{isComposing, startCreate, patchCreate}` | Start creating — with suggestion and prefill, never with restriction. | throws |
+| `useSpaceVocabulary()` | `{tags, types}` | Which tags and types exist in the space? The one derivation for filter card, chips and tag suggestions. | empty |
+| `useItemDetailEdit(members)` | `{contentTypes, mapper, editInitialData, composerProps}` | The edit half of the detail, the same for all modules. The host calls it; a module does not need it. | — |
+| `useItemComposerProps(members)` | `Partial<ContentComposerProps>` | Geocoder, map pick and people for the composer — one source for create and edit. | — |
+
+## Environment
+
+| Hook | Answers | Question it answers | Without capability |
+|---|---|---|---|
+| `useColorScheme()` | `"light" \| "dark"` | Is it light or dark right now? | — |
+| `useIsMobile()` | `boolean` | Narrower than 768px? | — |
+| `useIsCompact()` | `boolean` | Below 1024px, where the panel becomes a drawer? | — |
+| `useInitialSync()` | `{active, loadedGroups, expectedGroups}` | Is the first fill still running, may "nothing there" be said? | permanently `active: false` |
+| `useRelayStatus()` | `{state, isConnected, pendingCount}` | Is this device attached to the relay, is anything unsent waiting? | throws on render |
+| `useMarkNotificationsSeen(result)` | — | Advance the seen boundary once per opening. | no-op |
+
+## Item properties
+
+| Hook | Answers | Question it answers | Without capability |
+|---|---|---|---|
+| `useItemTags(item)` | `string[]` | Which tags does this item carry? | — |
+| `useItemGroupColorResolver(scope)` | `(item) => string` | In which colour does an item appear, by its space? | palette colour |
+| `useItemGroupResolver(scope)` | `(item) => Group \| undefined` | Which space does it come from? | `undefined` |
+| `useItemPrivacyResolver()` | `(item) => boolean` | Is it private, shared with nobody? | always `false` |
+
+## Pairs easily confused
+
+- `useCurrentUser` and `useOptionalCurrentUser` differ only in whether a missing sign-in throws or yields `null`. The same pattern with `useConnector`.
+- `useReactions` already carries in `reactions[].userIds` what `useReactionUsers` fetches again.
+- `useCommentCount` is the cheap half of `useComments`.
+- `useItems` and `useItemsWithDraft` are the same list, the latter with the running draft.
+- `useIsMobile` and `useIsCompact` are the same mechanism with a different threshold: 768px for navigation, 1024px for the panel shape.

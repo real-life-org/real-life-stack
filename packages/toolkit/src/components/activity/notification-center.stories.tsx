@@ -16,7 +16,7 @@ const notification = {
  * (`notificationRoute`). Without notification state the centre is read-only:
  * the actions are simply not there.
  */
-const meta = { id: "rls-activity-notificationcenter", tags: ["autodocs"],
+const meta = { id: "rls-app-shell-notification-center", tags: ["autodocs"],
   title: "RLS/App shell/Activity and notifications/NotificationCenter", component: NotificationCenter, args: { onOpenSubject: () => {}, onOpenGroup: () => {}, onMarkRead: () => {}, onMarkAllRead: () => {}, onMuteGroup: () => {}, onOpenActivity: () => {} } } satisfies Meta<typeof NotificationCenter>
 export default meta
 type Story = StoryObj<typeof meta>

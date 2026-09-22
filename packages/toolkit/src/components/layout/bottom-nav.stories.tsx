@@ -10,7 +10,7 @@ import { Home, Map, Calendar, User, List, Grid2X2, KanbanSquare } from 'lucide-r
  * the app. More than five items overflow into a "more" entry.
  */
 const meta: Meta<typeof BottomNav> = {
-  id: "rls-app-shell-layout-bottomnav",
+  id: "rls-app-shell-bottom-nav",
   title: "RLS/App shell/Navigation/BottomNav",
   component: BottomNav,
   tags: ['autodocs'],

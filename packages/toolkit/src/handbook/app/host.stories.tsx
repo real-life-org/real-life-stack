@@ -70,12 +70,12 @@ function ProbeModule({ items = [], itemsLoading }: ModuleViewProps) {
 }
 const PROBE: ModuleEntry = { id: "probe", label: "Probe", icon: List, presents: ["start"], options: { suggestType: "event" }, view: ProbeModule }
 
-function Probe() {
+function ProbeInWorld() {
   return <ProbeWorld entry={PROBE} />
 }
 
 const meta: Meta<typeof TheModuleHost> = {
-  id: "rls-module-host",
+  id: "rls-app-03-module-host",
   title: "RLS/App/03 The module host",
   component: TheModuleHost,
   tags: ["autodocs"],
@@ -87,4 +87,4 @@ type Story = StoryObj<typeof TheModuleHost>
 
 export const Default: Story = { name: "The calendar inside the host" }
 /** An entry with `presents: ["start"]`: the host loads events, filters by search, provides members, author, and the plus button suggesting "Termin". */
-export const ProbeStory: StoryObj = { name: "Probe: what the host gives", render: () => <Probe /> }
+export const Probe: StoryObj = { name: "Probe: what the host gives", render: () => <ProbeInWorld /> }

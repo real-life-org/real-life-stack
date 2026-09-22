@@ -13,7 +13,7 @@ import { Button } from "../primitives/button"
  * which mode it is in.
  */
 const meta: Meta<typeof AdaptivePanel> = {
-  id: "rls-app-shell-layout-adaptivepanel",
+  id: "rls-app-shell-adaptive-panel",
   title: "RLS/App shell/Panel and dialogs/AdaptivePanel",
   component: AdaptivePanel,
   tags: ["autodocs"],

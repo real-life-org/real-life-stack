@@ -20,10 +20,10 @@ import {
  * and by the detail's edit; here it stands alone so its modes and widgets can
  * be compared. What you submit here goes nowhere.
  *
- * Where next: how the host opens it under [Focus, panel, create](?path=/docs/rls-app-fokus--docs).
+ * Where next: how the host opens it under [Focus, panel, create](?path=/docs/rls-app-05-focus-panel-create--docs).
  */
 const meta: Meta<typeof ContentComposer> = {
-  id: "rls-module-components-contentcomposer",
+  id: "rls-items-content-composer",
   title: "RLS/Items/Create and edit/ContentComposer",
   component: ContentComposer,
   tags: ["autodocs"],
@@ -155,7 +155,7 @@ const action =
 
 // ── Stories ──────────────────────────────────────────────────────────────
 
-export const MultiTyp: Story = {
+export const AllTypes: Story = {
   name: "All types",
   args: {
     contentTypes: allTypes,
@@ -174,7 +174,7 @@ export const PostOnly: Story = {
   },
 }
 
-export const EventVorausgefuellt: Story = {
+export const EventPrefilled: Story = {
   name: "Event, prefilled",
   args: {
     contentTypes: allTypes,
@@ -188,7 +188,7 @@ export const EventVorausgefuellt: Story = {
   },
 }
 
-export const TaskEinzelTyp: Story = {
+export const TaskSingleType: Story = {
   name: "Task, single-type mode",
   args: {
     contentTypes: [taskType],
@@ -203,7 +203,7 @@ export const TaskEinzelTyp: Story = {
   },
 }
 
-export const EditModus: Story = {
+export const EditMode: Story = {
   name: "Edit mode",
   args: {
     contentTypes: [taskType],
@@ -228,7 +228,7 @@ export const EditModus: Story = {
   },
 }
 
-export const MitAbbrechen: Story = {
+export const WithCancel: Story = {
   name: "With cancel button",
   args: {
     contentTypes: [postType],
@@ -238,7 +238,7 @@ export const MitAbbrechen: Story = {
   },
 }
 
-export const OhneVorschau: Story = {
+export const WithoutPreview: Story = {
   name: "Without preview, with visibility",
   args: {
     contentTypes: [postType],
@@ -248,7 +248,7 @@ export const OhneVorschau: Story = {
   },
 }
 
-export const ProjektMitMedien: Story = {
+export const ProjectWithMedia: Story = {
   name: "Project with media widget",
   args: {
     contentTypes: [
@@ -263,7 +263,7 @@ export const ProjektMitMedien: Story = {
   },
 }
 
-export const MitQuickSuggestions: Story = {
+export const QuickSuggestions: Story = {
   name: "Quick suggestions: tags and people",
   args: {
     contentTypes: [taskType],
@@ -282,7 +282,7 @@ export const MitQuickSuggestions: Story = {
   },
 }
 
-export const ZweiPersonenfelder: Story = {
+export const TwoPeopleFields: Story = {
   name: "Two people fields",
   args: {
     contentTypes: [skillTaskType],

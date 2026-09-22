@@ -19,7 +19,7 @@ const WORKSPACES: Workspace[] = [
  */
 const meta: Meta<typeof WorkspaceSwitcher> = {
   tags: ["autodocs"],
-  id: "rls-app-shell-navigation-workspaceswitcher",
+  id: "rls-app-shell-workspace-switcher",
   title: "RLS/App shell/Space switcher/WorkspaceSwitcher",
   component: WorkspaceSwitcher,
   parameters: {

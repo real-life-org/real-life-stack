@@ -16,14 +16,14 @@ import { HostWorld } from "../story-support/host-world"
  * Without a write capability there is no plus button; the list still reads.
  *
  * Where next: the view underneath, with a thousand items and both densities,
- * under [Collection view](?path=/docs/rls-module-components-lenses-collectionview--docs).
+ * under [Collection view](?path=/docs/rls-modules-collection-view--docs).
  */
 function CollectionModuleOverview() {
   return <HostWorld module="collection" />
 }
 
 const meta: Meta<typeof CollectionModuleOverview> = {
-  id: "rls-space-modules-collection-overview",
+  id: "rls-modules-list",
   title: "RLS/Modules/List/Overview",
   component: CollectionModuleOverview,
   tags: ["autodocs"],

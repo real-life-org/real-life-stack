@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { GardenDemo } from './garden'
 const meta = {
   title: 'RLS/App/00 Community garden',
-  id: 'rls-handbook-app',
+  id: 'rls-app-00-community-garden',
   component: GardenDemo,
   parameters: { layout: 'fullscreen' },
   tags: ['autodocs'],

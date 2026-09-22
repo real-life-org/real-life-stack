@@ -52,7 +52,7 @@ function PickerDemo({ style, label = "Add Reaction" }: PickerDemoProps) {
  * the reaction.
  */
 const meta: Meta = {
-  id: "rls-module-components-reactions-reactionpicker",
+  id: "rls-items-reaction-picker",
   title: "RLS/Items/Detail view/Reactions and comments/ReactionPicker",
   tags: ["autodocs"],
   parameters: {

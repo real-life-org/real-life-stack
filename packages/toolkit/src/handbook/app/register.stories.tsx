@@ -97,7 +97,7 @@ function Register() {
 }
 
 const meta: Meta<typeof Register> = {
-  id: "rls-app-register",
+  id: "rls-app-02-register",
   title: "RLS/App/02 The register",
   component: Register,
   tags: ["autodocs"],

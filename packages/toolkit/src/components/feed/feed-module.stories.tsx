@@ -18,16 +18,16 @@ import { HostWorld } from "../../story-support/host-world"
  * still reads. Without relations there are no comments and reactions; the
  * cards still show.
  *
- * Where next: the card is [ItemPreview](?path=/story/module-components-itempreview--bare),
- * the detail on click [Detail view](?path=/story/detail-itemdetailbody--event),
- * the host behind it [The module host](?path=/docs/rls-module-host--docs).
+ * Where next: the card is [ItemPreview](?path=/story/rls-items-item-preview--bare),
+ * the detail on click [Detail view](?path=/story/rls-items-detail-body--event),
+ * the host behind it [The module host](?path=/docs/rls-app-03-module-host--docs).
  */
 function FeedModuleOverview() {
   return <HostWorld module="feed" />
 }
 
 const meta: Meta<typeof FeedModuleOverview> = {
-  id: "rls-space-modules-feed-overview",
+  id: "rls-modules-feed",
   title: "RLS/Modules/Feed/Overview",
   component: FeedModuleOverview,
   tags: ["autodocs"],

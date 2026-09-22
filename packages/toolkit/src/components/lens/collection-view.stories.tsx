@@ -19,11 +19,11 @@ const items: Item[] = [
  * Items arrive already filtered from the surface (`useSurfaceItems`); the view
  * applies no filter of its own. Standalone, as here, it shows what it is given.
  *
- * Where next: the module around it under [Overview](?path=/docs/rls-space-modules-collection-overview--docs);
- * the card under [ItemPreview](?path=/story/module-components-itempreview--bare).
+ * Where next: the module around it under [Overview](?path=/docs/rls-modules-list--docs);
+ * the card under [ItemPreview](?path=/story/rls-items-item-preview--bare).
  */
 const meta: Meta<typeof CollectionView> = {
-  id: "rls-module-components-lenses-collectionview",
+  id: "rls-modules-collection-view",
   title: "RLS/Modules/Shared views/Collection view",
   component: CollectionView,
   tags: ["autodocs"],

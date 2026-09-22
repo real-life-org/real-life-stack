@@ -22,7 +22,7 @@ import { STORY_EVENT, STORY_ME, STORY_POST, StoryWorld, storyReaction } from "..
  * the type register picks the presentation from the item's classes.
  *
  * Where next: comments and reactions under the body in
- * [Content and discussion](?path=/docs/rls-module-components-detail-itemdetailpanel--docs).
+ * [Content and discussion](?path=/docs/rls-items-detail-panel--docs).
  */
 
 const REACTED = {
@@ -31,7 +31,7 @@ const REACTED = {
 
 const meta: Meta<typeof ItemDetailBody> = {
   tags: ["autodocs"],
-  id: "detail-itemdetailbody",
+  id: "rls-items-detail-body",
   title: "RLS/Items/Detail view/Anatomy and content",
   component: ItemDetailBody,
   parameters: { layout: "centered" },
@@ -65,7 +65,7 @@ export const Event: Story = {
 }
 
 /** A post without title, facts or tags: only text and author. */
-export const NurText: Story = {
+export const TextOnly: Story = {
   name: "Text only",
   render: () => (
     <ItemDetailBody
@@ -76,7 +76,7 @@ export const NurText: Story = {
 }
 
 /** Many tags: they clamp, the author keeps their row. */
-export const VieleTags: Story = {
+export const ManyTags: Story = {
   name: "Many tags",
   render: () => (
     <ItemDetailBody
@@ -90,7 +90,7 @@ export const VieleTags: Story = {
 }
 
 /** While the item is not there yet. */
-export const Laedt: Story = {
+export const Loading: Story = {
   name: "Loading",
   render: () => <ItemDetailSkeleton />,
 }

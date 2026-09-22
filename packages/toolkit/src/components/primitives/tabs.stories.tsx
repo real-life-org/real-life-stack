@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './car
 
 /** **Tabs**: content tabs inside a surface (calendar views, notification centre) — not the module tabs of the header, those are `ModuleTabs`. */
 const meta: Meta<typeof Tabs> = {
-  id: "rls-primitives-tabs",
+  id: "rls-foundations-tabs",
   title: "RLS/Foundations/UI primitives/Tabs",
   component: Tabs,
   tags: ['autodocs'],

@@ -243,7 +243,7 @@ function Modulflaeche() {
 }
 
 const meta: Meta<typeof Modulflaeche> = {
-  id: "rls-app-shell-modulflaeche",
+  id: "rls-app-shell-module-surface",
   title: "RLS/App shell/The module surface",
   component: Modulflaeche,
   tags: ["autodocs"],
@@ -258,7 +258,7 @@ type Story = StoryObj<typeof Modulflaeche>
 export const Default: Story = { name: "Wide" }
 
 /** Narrow: the panel becomes a drawer, the modules move to the bottom. */
-export const Schmal: Story = {
+export const Narrow: Story = {
   name: "Narrow",
   parameters: { viewport: { defaultViewport: "mobile1" } },
 }

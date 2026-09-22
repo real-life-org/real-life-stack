@@ -8,7 +8,7 @@ import { RelativeTime } from "./relative-time"
  * everywhere. Output is German until the toolkit texts are translated.
  */
 const meta: Meta<typeof RelativeTime> = {
-  id: "rls-primitives-relativetime",
+  id: "rls-foundations-relative-time",
   title: "RLS/Foundations/UI primitives/RelativeTime",
   component: RelativeTime,
   tags: ["autodocs"],

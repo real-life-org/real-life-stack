@@ -19,7 +19,7 @@ import { HostWorld } from "../story-support/host-world"
  * person nodes cannot be resolved and stay out.
  *
  * Where next: the canvas alone, with a dense set and the empty state, under
- * [View](?path=/docs/rls-space-modules-graph-overview--docs); how nodes get
+ * [View](?path=/docs/rls-modules-graph-view--docs); how nodes get
  * their type and colour in `project-space-graph.ts`.
  */
 function GraphModuleOverview() {
@@ -27,7 +27,7 @@ function GraphModuleOverview() {
 }
 
 const meta: Meta<typeof GraphModuleOverview> = {
-  id: "rls-space-modules-graph-module",
+  id: "rls-modules-graph",
   title: "RLS/Modules/Graph/Overview",
   component: GraphModuleOverview,
   tags: ["autodocs"],

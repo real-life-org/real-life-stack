@@ -107,7 +107,7 @@ function CreateBar() {
 }
 
 const meta: Meta = {
-  id: "rls-app-fokus",
+  id: "rls-app-05-focus-panel-create",
   title: "RLS/App/05 Focus, panel, create",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

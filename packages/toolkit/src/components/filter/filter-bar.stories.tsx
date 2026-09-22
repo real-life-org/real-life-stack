@@ -25,13 +25,13 @@ const TYPES: FilterTypeOption[] = [
  * A module adds what only means something to it: a toggle in the drawer
  * (`drawerExtra`), a chip for an active extra (`chipsExtra`), an action next to
  * the search (`trailingActions`). The building blocks for that are under
- * [Filter building blocks](?path=/docs/rls-module-filterbausteine--docs).
+ * [Filter building blocks](?path=/docs/rls-modules-filter-building-blocks--docs).
  *
  * Available tags and types come from the space's vocabulary, never from a list
  * in the module; with no tags in the current items the section stays empty.
  */
 const meta: Meta<typeof FilterBar> = {
-  id: "module-components-filterbar",
+  id: "rls-modules-search-and-filter",
   tags: ["autodocs"],
   title: "RLS/Modules/Shared tools/Search and filter",
   component: FilterBar,

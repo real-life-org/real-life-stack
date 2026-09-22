@@ -23,7 +23,7 @@ import { STORY_SEED, StoryWorld } from "../../story-support/story-world"
 const GARTEN: Group = { ...STORY_SEED.groups[0], data: { primaryColor: "#3f7a4e" } }
 
 const meta: Meta = {
-  id: "rls-app-shell-space-verwaltung",
+  id: "rls-spaces-management",
   title: "RLS/Spaces/Create and configure",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
@@ -66,13 +66,13 @@ function DialogStory({ mode }: { mode: GroupDialogMode }) {
 }
 
 /** Create: only the name. Everything else comes after. */
-export const Anlegen: Story = {
+export const Create: Story = {
   name: "Create",
   render: () => <DialogStory mode={{ type: "create" }} />,
 }
 
 /** Edit: name, members, invite, look, modules, delete — all in the same place. */
-export const Bearbeiten: Story = {
+export const Edit: Story = {
   name: "Edit",
   render: () => <DialogStory mode={{ type: "edit", group: GARTEN }} />,
 }
@@ -81,7 +81,7 @@ export const Bearbeiten: Story = {
  * The fine-tuning of the look. In the app it sits in the shared panel; here
  * without a shell so the three axes are visible.
  */
-export const Aussehen: Story = {
+export const Look: Story = {
   name: "Look",
   render: function Render() {
     const [group, setGroup] = useState<Group>(GARTEN)

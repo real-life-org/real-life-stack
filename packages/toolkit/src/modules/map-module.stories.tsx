@@ -19,14 +19,14 @@ import "maplibre-gl/dist/maplibre-gl.css"
  * The map engine is not part of the toolkit core: an app provides it with
  * one line, `MapLibreAdapterProvider` from `@real-life-stack/toolkit/maplibre`
  * (or the Leaflet variant). This story does the same; the
- * [module host](?path=/docs/rls-module-host--docs) page shows what happens
+ * [module host](?path=/docs/rls-app-03-module-host--docs) page shows what happens
  * without it.
  *
  * Without a write capability there is no plus button and no location pick.
  *
  * Where next: the map surface alone, with both viewport modes, under
- * [MapView](?path=/docs/rls-space-modules-mapview--docs); the loading rule
- * under [The loading contract](?path=/docs/rls-app-ladevertrag--docs).
+ * [MapView](?path=/docs/rls-modules-map-view--docs); the loading rule
+ * under [The loading contract](?path=/docs/rls-app-04-loading-contract--docs).
  */
 const places: Item[] = [
   { id: "place-schuppen", type: "place", createdAt: "2026-09-03T10:00:00+02:00", createdBy: "jonas", data: { title: "Geräteschuppen", description: "Schlüssel hängt am Brett.", position: { type: "Point", coordinates: [13.4085, 52.5215] } } },
@@ -42,7 +42,7 @@ function MapModuleOverview() {
 }
 
 const meta: Meta<typeof MapModuleOverview> = {
-  id: "rls-space-modules-map-overview",
+  id: "rls-modules-map",
   title: "RLS/Modules/Map/Overview",
   component: MapModuleOverview,
   tags: ["autodocs"],

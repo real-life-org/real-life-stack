@@ -19,14 +19,14 @@ import { HostWorld } from "../../story-support/host-world"
  * moved. Without members the assignment filter is missing.
  *
  * Where next: the board alone, with custom columns and drag handling, under
- * [Board](?path=/docs/rls-space-modules-kanban-board--docs).
+ * [Board](?path=/docs/rls-modules-kanban-board--docs).
  */
 function KanbanModuleOverview() {
   return <HostWorld module="kanban" />
 }
 
 const meta: Meta<typeof KanbanModuleOverview> = {
-  id: "rls-space-modules-kanban-overview",
+  id: "rls-modules-kanban",
   title: "RLS/Modules/Kanban/Overview",
   component: KanbanModuleOverview,
   tags: ["autodocs"],
