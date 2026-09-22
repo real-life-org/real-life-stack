@@ -4,18 +4,18 @@ import { CalendarDays, MapPin, Tag, User } from "lucide-react"
 import { FilterChip, FilterMultiSelect, FilterSection, FilterToggle } from "./filter-building-blocks"
 
 /**
- * **Die Bausteine, aus denen ein Modul seinen Filter baut.**
+ * **The building blocks a module composes its own filter section from.**
  *
- * Die gemeinsame Filterfläche ist `ModuleToolbar`: Suche im Kopf, Filterpille
- * unten links, Filterkarte dahinter. Was in dieser Karte steht, ist zur Hälfte
- * geteilt (Tags, Typen) und zur Hälfte Sache des Moduls — der Kalender filtert
- * nach Ort, das Kanban nach Spalte, die Karte nach Ausschnitt.
+ * The shared filter surface is the header's search, the filter pill bottom
+ * left and the filter card behind it. Half of what is in that card is shared
+ * (tags, types), the other half is the module's business — the calendar
+ * filters by location, the kanban by assignment, the map by viewport.
  *
- * Damit diese modul-eigenen Abschnitte überall gleich aussehen, baut sie kein
- * Modul selbst, sondern setzt sie aus diesen vier Teilen zusammen und reicht
- * sie als `drawerExtra` an die Leiste. Aktive Werte gehen zusätzlich als
- * `chipsExtra` in die Chip-Zeile des Kopfes, damit man sie sieht, ohne die
- * Karte zu öffnen.
+ * So that these module-owned sections look the same everywhere, no module
+ * builds them itself: it composes them from these four parts — `FilterSection`,
+ * `FilterMultiSelect`, `FilterToggle`, `FilterChip` — and hands them to the
+ * bar as `drawerExtra`. Active values also go into the header's chip row as
+ * `chipsExtra`, so you see them without opening the card.
  */
 
 const meta: Meta = {
@@ -28,8 +28,9 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-/** Die vier Teile einzeln, jeder mit dem Satz, den er beantwortet. */
+/** The four parts one by one, each with the sentence it answers. */
 export const Bausteine: Story = {
+  name: "The four parts",
   render: function Render() {
     const [tags, setTags] = useState<string[]>(["garten"])
     const [nurMeine, setNurMeine] = useState(false)
@@ -67,9 +68,9 @@ export const Bausteine: Story = {
   },
 }
 
-/** So sieht der modul-eigene Teil aus, den der Kalender als `drawerExtra` durchreicht. */
+/** What the module-owned part looks like that the calendar hands over as `drawerExtra`. */
 export const AlsModulabschnitt: Story = {
-  name: "Als Modulabschnitt",
+  name: "As a module section",
   render: function Render() {
     const [orte, setOrte] = useState<string[]>([])
     const [nurMeine, setNurMeine] = useState(false)

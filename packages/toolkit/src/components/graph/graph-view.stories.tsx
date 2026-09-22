@@ -35,23 +35,40 @@ function ControlledGraph({ initialSelection = null }: { initialSelection?: strin
   )
 }
 
+/**
+ * **GraphView** is the canvas underneath the graph module: nodes and edges in,
+ * a force layout out, with search and type filter floating over it, a fit
+ * button, and a camera that follows the layout while it settles and stops the
+ * moment you touch it. It knows nothing about items — the module projects
+ * items and relations into `GraphNode`/`GraphEdge` (`project-space-graph.ts`)
+ * and passes the selection in and out.
+ *
+ * Node types come with their colours; the legend and the filter derive from
+ * them. A dense set (300 nodes, 400 edges) stays readable because the layout
+ * runs in steps and the camera keeps the whole in view.
+ *
+ * Where next: the module around it under [Overview](?path=/docs/rls-space-modules-graph-module--docs).
+ */
 const meta: Meta<typeof ControlledGraph> = {
   id: "rls-space-modules-graph-overview",
   title: "RLS/Modules/Graph/View",
   component: ControlledGraph,
+  tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
 }
 
 export default meta
 type Story = StoryObj<typeof ControlledGraph>
 
-export const Default: Story = {}
+export const Default: Story = { name: "Six nodes, five edges" }
 
 export const Selected: Story = {
+  name: "With a selected node",
   args: { initialSelection: "project-local" },
 }
 
 export const Empty: Story = {
+  name: "Empty state",
   render: () => (
     <div className="h-screen bg-background">
       <GraphView nodes={[]} edges={[]} selectedNodeId={null} onSelectedNodeChange={() => undefined} />
@@ -87,5 +104,6 @@ function DenseGraph() {
 }
 
 export const Dense: Story = {
+  name: "Dense: 312 nodes, 420 edges",
   render: () => <DenseGraph />,
 }

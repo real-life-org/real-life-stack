@@ -15,8 +15,24 @@ const TYPES: FilterTypeOption[] = [
   { id: "person", label: "Profil", icon: User },
 ]
 
+/**
+ * **FilterBar** is the shared search and filter of every module surface:
+ * search in the header, a filter pill bottom left, the filter card behind it
+ * with tags and types, active values as chips. The host renders it once per
+ * surface and applies the value to the items before a module sees them (spec
+ * 01, rule 2a) — no module builds this itself.
+ *
+ * A module adds what only means something to it: a toggle in the drawer
+ * (`drawerExtra`), a chip for an active extra (`chipsExtra`), an action next to
+ * the search (`trailingActions`). The building blocks for that are under
+ * [Filter building blocks](?path=/docs/rls-module-filterbausteine--docs).
+ *
+ * Available tags and types come from the space's vocabulary, never from a list
+ * in the module; with no tags in the current items the section stays empty.
+ */
 const meta: Meta<typeof FilterBar> = {
   id: "module-components-filterbar",
+  tags: ["autodocs"],
   title: "RLS/Modules/Shared tools/Search and filter",
   component: FilterBar,
   decorators: [
@@ -57,6 +73,7 @@ function Wrapper({ initial = emptyFilterBarValue, extraDrawer, extraChips, trail
 }
 
 export const Default: Story = {
+  name: "Search, pill, card",
   render: () => <Wrapper />,
 }
 

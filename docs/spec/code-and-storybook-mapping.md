@@ -115,10 +115,10 @@ Mutations-Callbacks ein.
 | Spec-Begriff | Code | Storybook | Daten-/Capability-Annahme |
 |---|---|---|---|
 | Generische Sammlungs-Linse | `components/lens/collection-view.tsx` | `RLS/Modules/Shared views/Collection view` | alle Nicht-Relation-Items; session-lokaler Listen-/Raster-Toggle; `activeItemId?` und optionaler Sichtbereichs-Inset aus der Shell |
-| Generische Listen-Projektion | `components/lens/list-view.tsx` | `RLS/Modules/Shared views/List view` | Baustein der CollectionView: kompakte Dichte ohne lokalen Filter |
+| Generische Listen-Projektion | `components/lens/list-view.tsx` | `RLS/Modules/Shared views/Collection view` (eigene Story entfallen 22.09.2026, Baustein der CollectionView) | Baustein der CollectionView: kompakte Dichte ohne lokalen Filter |
 | Generische Linsen-Karte | `components/preview/item-preview.tsx` + `preview/item-type-meta.tsx` | Linsen-Stories | ItemPreview: List kompakt, Grid komfortabel; `active` nutzt den geteilten Glow; Typ-Meta für Person, Projekt, Ressource und Event sowie Typ-Badge-Fallback |
 | Typspezifische Raster-Projektion | `components/lens/grid-view.tsx` | eigene Story entfallen (19.09.2026); sichtbar in `RLS/Modules/Shared views/Collection view` | Baustein der CollectionView: komfortable Dichte mit geteilten Preview-Adornments |
-| Read-only Karten-Linse | `components/lens/map-lens.tsx` | `RLS/Modules/Map/Read-only view (MapLens)` | Nicht-Relation-Items mit gültigem GeoJSON-`Point`; `createAdapter` erzeugt pro Mount eine frische Engine; ein Marker zentriert im Shell-Sichtbereich bei Zoom 16, mehrere nutzen `fitBounds`; `viewportResetKey` re-armt beim Bestandswechsel; kein lokaler Filter |
+| Read-only Karten-Linse | `components/lens/map-lens.tsx` | `RLS/Modules/Map/MapView` (eigene MapLens-Story entfallen 22.09.2026; `lens-auto-fit`) | Nicht-Relation-Items mit gültigem GeoJSON-`Point`; `createAdapter` erzeugt pro Mount eine frische Engine; ein Marker zentriert im Shell-Sichtbereich bei Zoom 16, mehrere nutzen `fitBounds`; `viewportResetKey` re-armt beim Bestandswechsel; kein lokaler Filter |
 | MapView | `components/map/map-view.tsx` | `RLS/Modules/Map/MapView` | Die Kartenfläche selbst; rendert MapLens intern |
 
 Die CollectionView und die Map-Linse sind presentationale, read-only Module

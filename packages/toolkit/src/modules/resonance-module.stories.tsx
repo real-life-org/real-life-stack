@@ -5,11 +5,22 @@ import { HostWorld } from "../story-support/host-world"
 import { STORY_SEED } from "../story-support/story-world"
 
 /**
- * Die Resonanz ist ein Toolkit-Modul und laeuft im Modul-Host (Spec 01):
- * Aussagen, zu denen sich die Gruppe stellt — die Stimmleiste ist eine Regel
- * des Typs `statement` und erscheint, wo immer eine Aussage gezeigt wird.
- * Sortierung im Kopf neben der Suche; Detail, Erstellen (Vorschlag
- * „Aussage") und Plusknopf stellt der Host.
+ * **Resonance** collects statements a group positions itself on: each card
+ * carries a vote bar, and the module sorts by resonance. It is a toolkit
+ * module and runs inside the module host (spec 01): the host loads the class
+ * `statement` (a hint by affordance, not by field — spec 06), applies search
+ * and filter, and provides detail, create ("Aussage" suggested) and the plus
+ * button.
+ *
+ * The vote bar is a rule of the **type**, not of the module: it appears
+ * wherever a statement is shown — in the feed, in the list, in the detail.
+ *
+ * Without relation records there are no votes; the statements still show.
+ * Without a write capability the bar is read-only.
+ *
+ * Where next: how a class activates a module under
+ * [The loading contract](?path=/docs/rls-app-ladevertrag--docs); the vote
+ * bar as a type rule under [Adornments](?path=/docs/rls-items-beigaben--docs).
  */
 const aussagen: Item[] = [
   {
@@ -38,4 +49,4 @@ const meta: Meta<typeof ResonanceModuleOverview> = {
 export default meta
 type Story = StoryObj<typeof ResonanceModuleOverview>
 
-export const Default: Story = {}
+export const Default: Story = { name: "Resonance inside the host" }
