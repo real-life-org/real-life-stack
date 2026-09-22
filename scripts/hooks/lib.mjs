@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import ts from "typescript"
 
 /**
  * Die Hook-Referenz aus TSDoc (Plan D2, 22.09.2026): Jeder oeffentliche Hook
@@ -117,23 +118,71 @@ export function hookLine(file, name) {
   return m ? src.slice(0, m.index).split("\n").length : 0
 }
 
+/** Storybooks `sanitize`: aus Titel oder Story-Name ein Id-Segment. */
+export function sanitize(str) {
+  return str.toLowerCase().replace(/[ ’–—―′¿'`~!@#$%^&*()_|+\-=?;:'",.<>{}[\]\\/]/gi, "-").replace(/-+/g, "-").replace(/^-+/, "").replace(/-+$/, "")
+}
+
+/** lodash `startCase`, wie Storybook den Story-Namen aus dem Export bildet: `CapabilityCheck` → `Capability Check`, `Item2` → `Item 2`. */
+export function startCase(str) {
+  const words = str.match(/[A-Z]{2,}(?=[A-Z][a-z]|\b|[0-9]|$)|[A-Z]?[a-z]+|[A-Z]|[0-9]+/g) ?? []
+  return words.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ")
+}
+
+/** Den Ausdruck hinter `as`, `satisfies`, Klammern und Bezeichnern aufloesen. */
+function unwrap(expr, decls) {
+  const seen = new Set()
+  while (expr) {
+    if (ts.isAsExpression(expr) || ts.isSatisfiesExpression(expr) || ts.isParenthesizedExpression(expr) || ts.isTypeAssertionExpression(expr)) { expr = expr.expression; continue }
+    if (ts.isIdentifier(expr)) { if (seen.has(expr.text)) return null; seen.add(expr.text); expr = decls.get(expr.text); continue }
+    return expr
+  }
+  return null
+}
+
 /**
- * Alle Story-Ids, die Storybook aus den `*.stories.tsx` bildet: `<meta.id>--<export>`
- * in Kebab-Schreibweise (Storybook: storyNameFromExport + sanitize). Ohne
- * gebautes Storybook pruefbar, was der Waechter braucht.
+ * Die Story-Ids EINER CSF-Datei, wie Storybook sie bildet: `<meta.id | sanitize(meta.title)>--<sanitize(startCase(export))>`
+ * fuer jeden benannten Export, dazu `--docs` bei `tags: ["autodocs"]`. Gelesen aus dem
+ * Syntaxbaum — das exportierte Meta, nicht die erste `id:` in der Datei (rls#438:
+ * vorher gewann eine Fixture-Id wie `event-1`, und blosse Meta-Ids galten als Story).
  */
+export function storyIdsOf(src, file = "story.tsx") {
+  const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  const decls = new Map()
+  const named = []
+  let metaExpr = null
+  const isExported = (st) => ts.canHaveModifiers(st) && (ts.getModifiers(st) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
+  for (const st of sf.statements) {
+    if (ts.isVariableStatement(st)) {
+      for (const d of st.declarationList.declarations) {
+        if (!ts.isIdentifier(d.name)) continue
+        decls.set(d.name.text, d.initializer)
+        if (isExported(st)) named.push(d.name.text)
+      }
+    } else if (ts.isFunctionDeclaration(st) && st.name && isExported(st)) {
+      if (!(ts.getModifiers(st) ?? []).some((m) => m.kind === ts.SyntaxKind.DefaultKeyword)) named.push(st.name.text)
+    } else if (ts.isExportAssignment(st) && !st.isExportEquals) metaExpr = st.expression
+  }
+  const meta = unwrap(metaExpr, decls)
+  if (!meta || !ts.isObjectLiteralExpression(meta)) return new Set()
+  const prop = (name) => meta.properties.find((p) => ts.isPropertyAssignment(p) && ts.isIdentifier(p.name) && p.name.text === name)?.initializer
+  const str = (e) => (e && (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) ? e.text : null)
+  const base = str(prop("id")) ?? (str(prop("title")) ? sanitize(str(prop("title"))) : null)
+  if (!base) return new Set()
+  const ids = new Set(named.map((n) => `${base}--${sanitize(startCase(n))}`))
+  const tags = prop("tags")
+  if (tags && ts.isArrayLiteralExpression(tags) && tags.elements.some((e) => str(e) === "autodocs")) ids.add(`${base}--docs`)
+  return ids
+}
+
+/** Alle Story-Ids unter `dir` — ohne gebautes Storybook pruefbar, was der Waechter braucht. */
 export function storyIds(dir = toolkitSrc) {
   const ids = new Set()
   const walk = (d) => {
     for (const e of readdirSync(d, { withFileTypes: true })) {
       const p = resolve(d, e.name)
-      if (e.isDirectory()) { walk(p); continue }
-      if (!e.name.endsWith(".stories.tsx")) continue
-      const src = readFileSync(p, "utf8")
-      const id = src.match(/^\s*id:\s*["']([^"']+)["']/m)?.[1]
-      if (!id) continue
-      ids.add(id)
-      for (const m of src.matchAll(/^export\s+const\s+([A-Z]\w*)/gm)) ids.add(`${id}--${m[1].replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()}`)
+      if (e.isDirectory()) walk(p)
+      else if (e.name.endsWith(".stories.tsx")) for (const id of storyIdsOf(readFileSync(p, "utf8"), p)) ids.add(id)
     }
   }
   walk(dir)
