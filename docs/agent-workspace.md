@@ -17,7 +17,7 @@ Kernidee: App Shell und Space Modules (Kanban, Kalender, Karte, Feed) arbeiten g
 ```text
 apps/reference/          → Showcase-App (alle Module, MockConnector + LocalConnector)
 apps/network/            → Netzwerk-App: Shell um den Modul-Host, eigenes Modul Marktplatz, DWeb-Camp-Seed
-apps/landing/            → Landing Page
+apps/site/               → real-life-stack.de: Landing + Handbuch (Astro/Starlight), Handbuchtext in docs/handbook/
 packages/toolkit/        → UI-Komponenten (shadcn/ui, Storybook) + Hooks + ConnectorProvider
 packages/data-interface/ → TypeScript-Typen, Interfaces, BaseConnector, Shared Helpers
 packages/mock-connector/ → In-Memory-Implementierung

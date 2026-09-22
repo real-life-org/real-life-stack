@@ -1,0 +1,12 @@
+---
+/** Eine Story des Toolkits, live im Handbuch. Im Dev-Modus aus dem laufenden Storybook (6006), gebaut aus `/storybook/`. */
+interface Props { id: string; title: string; height?: number }
+const { id, title, height = 560 } = Astro.props
+const base = import.meta.env.PUBLIC_STORYBOOK_URL || (import.meta.env.DEV ? 'http://localhost:6006' : '/storybook')
+const url = `${base}/iframe.html?id=${encodeURIComponent(id)}&viewMode=story`
+---
+<figure class="story-example">
+  <figcaption><span>Ausprobieren · echte Toolkit-Komponenten</span><a href={`${base}/?path=/story/${id}`}>In Storybook öffnen ↗</a></figcaption>
+  <iframe src={url} title={title} loading="lazy" style={`height:${height}px`} allow="fullscreen"></iframe>
+  <p>{title}. Die Beispieldaten sind fiktiv. Änderungen bleiben nur für diese Sitzung.</p>
+</figure>

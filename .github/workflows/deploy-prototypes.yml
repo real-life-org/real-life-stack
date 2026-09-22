@@ -7,6 +7,9 @@ on:
     paths:
       - 'apps/**'
       - 'packages/**'
+      - 'docs/handbook/**'
+      - 'scripts/site/**'
+      - 'llms.txt'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/deploy-prototypes.yml'
   workflow_dispatch:
@@ -59,12 +62,7 @@ jobs:
       # Push ab: `Cannot find module '@real-life-stack/supabase-connector'`.
       # Eine Handliste driftet lautlos; `^...` kann das nicht.
       - name: Build workspace dependencies
-        run: pnpm --filter "reference^..." --filter "landing^..." build
-
-      - name: Build landing page
-        run: pnpm --filter landing build
-        env:
-          VITE_BASE_PATH: /
+        run: pnpm --filter "reference^..." build
 
       - name: Set SHORT_SHA
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
@@ -155,6 +153,11 @@ jobs:
       - name: Build Storybook
         run: pnpm build:storybook
 
+      # Die Site (Landing + Handbuch) nach dem Storybook: ihr Pruefschritt
+      # liest den Storybook-Index, damit jede eingebettete Story existiert.
+      - name: Build site (landing + handbook)
+        run: pnpm build:site && pnpm check:site
+
       - name: Compute bundle hashes
         run: |
           for channel in ios android android-foss; do
@@ -215,7 +218,7 @@ jobs:
       - name: Prepare deployment
         run: |
           mkdir -p gh-pages/app gh-pages/edge gh-pages/storybook
-          cp -R apps/landing/dist/. gh-pages/
+          cp -R apps/site/dist/. gh-pages/
           cp -R apps/reference/dist/. gh-pages/app/
           cp apps/reference/public/404.html gh-pages/404.html
           cp -R apps/prototype/dist/. gh-pages/edge/
