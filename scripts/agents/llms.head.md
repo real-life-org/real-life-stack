@@ -8,7 +8,7 @@ The spec is written in German. The type definitions in `@real-life-stack/data-in
 
 ## Building an app on Real Life Stack
 
-**Not yet on npm (22.09.2026):** the frame (`RoutedAppFrame`, subpath `@real-life-stack/toolkit/router`) and the seven toolkit modules are in the repository but not in the published toolkit 0.1.10. Until the next release (release PR #402), run from the repository: `git clone https://github.com/real-life-org/real-life-stack && pnpm install && pnpm dev:first-app`. Check the published state with `npm view @real-life-stack/toolkit exports` — once it lists `./router`, the npm path below works.
+**Not yet on npm (22.09.2026):** the frame (`RoutedAppFrame`, subpath `@real-life-stack/toolkit/router`) and the seven toolkit modules are in the repository but not in the published toolkit 0.1.10. Until the next release (release PR #402), run from the repository: `git clone https://github.com/real-life-org/real-life-stack && cd real-life-stack && pnpm install && pnpm dev:first-app`. Check the published state with `npm view @real-life-stack/toolkit exports` — once it lists `./router`, the npm path below works.
 
 - [First app (handbook, German)](https://real-life-stack.de/handbuch/erste-app/): ~40 lines — connector, router, `RoutedAppFrame`. Every line explained.
 - [examples/first-app](https://github.com/real-life-org/real-life-stack/tree/master/examples/first-app): the same app as running code, built and tested in CI.

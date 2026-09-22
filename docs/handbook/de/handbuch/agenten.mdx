@@ -65,7 +65,7 @@ Das Repo prüft sich selbst, in CI und auf jedem Rechner. Ein Agent, der am Stac
 | Geteiltes bleibt geteilt | `python3 scripts/check-shared-derivations.py` | Ableitungen, die ein Modul selbst macht, obwohl sie der Fläche gehören (Spec 01, Regel 2a) |
 | Hook-Referenz | `pnpm check:hooks && pnpm test:hooks` | ein exportierter Hook ohne Dokumentationsblock, eine Story-Id oder Spec-Datei, die es nicht gibt |
 | Einstiege für Agenten | `pnpm check:agents && pnpm test:agents` | `llms.txt` oder App-Vorlage, die nicht mehr zum Repo passen |
-| Site und Handbuch | `pnpm build:site && pnpm check:site` | Quellen, die eine Seite nennt und die fehlen; Stories, die es nicht gibt; Links ins Leere; veraltete Übersetzungen |
+| Site und Handbuch | `pnpm build:site && pnpm check:site && pnpm test:site` | Quellen, die eine Seite nennt und die fehlen; Stories, die es nicht gibt; Links ins Leere; veraltete Übersetzungen |
 | Erste App | `pnpm exec turbo run build --filter=first-app` | das Handbuch-Beispiel baut nicht mehr gegen die Pakete |
 
 Ein Wächter, der nichts prüft, driftet lautlos; deshalb steht jeder dieser Punkte als Schritt in `.github/workflows/tests.yml`, und einige testen sich selbst mit Negativfällen.
