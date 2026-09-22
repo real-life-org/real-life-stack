@@ -1,0 +1,83 @@
+---
+title: Erste App bauen
+description: In zehn Minuten eine eigene App auf dem Rahmen — Connector, Router, Rahmen, fertig.
+sidebar:
+  order: 1
+sources:
+  - examples/first-app/src/main.tsx
+  - examples/first-app/src/App.tsx
+  - examples/first-app/src/index.css
+  - examples/first-app/package.json
+  - docs/spec/01-app-composition.md
+stories:
+  - rls-app-00-community-garden--garden
+---
+
+import Source from '@site/components/Source.astro'
+import Story from '@site/components/Story.astro'
+
+Eine App auf Real Life Stack stellt drei Dinge: einen **Connector** zu ihren Daten, einen **Router** für die Adresse und den **Rahmen** aus dem Toolkit. Kopfzeile, Tabs, Panel, Erstellen, Detailansicht und die sieben Module (Feed, Liste, Kanban, Kalender, Karte, Graph, Resonanz) kommen fertig mit. Der ganze Code unten steht als lebendes Beispiel unter `examples/first-app/` im Repo und wird in jeder CI gebaut und getestet.
+
+So sieht das Ergebnis aus, mit denselben Bausteinen, im Storybook:
+
+<Story id="rls-app-00-community-garden--garden" title="Ein Gemeinschaftsgarten auf dem Rahmen: Space, Module, ein Item im Kalender und auf der Karte" height={620} />
+
+## 1. Pakete
+
+Drei Pakete von Real Life Stack und vier von außen. `react-router-dom` trägt die Adresse, `maplibre-gl` zeichnet die Karte.
+
+<Source file="examples/first-app/package.json" lang="json" title="package.json" />
+
+Im Repo hängen die Pakete als `workspace:*` am Quelltext. Außerhalb des Repos trägst du die veröffentlichten Versionen von npm ein (`@real-life-stack/toolkit`, `@real-life-stack/data-interface`, `@real-life-stack/mock-connector`); der Rahmen ist ab der nächsten Veröffentlichung nach 0.1.10 enthalten.
+
+## 2. Die Daten und die Adresse: `main.tsx`
+
+<Source file="examples/first-app/src/main.tsx" title="src/main.tsx" />
+
+Zeile für Zeile:
+
+- **`MockConnector`** hält die Daten im Speicher: ein Mensch (`users`), ein Space (`groups`) mit seinen Modulen in Tab-Reihenfolge (`data.modules`), die Mitgliedschaft (`groupMembers`) und ein Item (`items`), das dem Space zugeordnet ist (`groupItems`). Das Item hat ein Datum (`start`) und einen Ort (`position`); deshalb steht es im Kalender **und** auf der Karte, als dasselbe Objekt.
+- **`await connector.init()`** wartet, bis der Connector bereit ist. **`setCurrentGroup`** wählt den Space, den die App zuerst zeigt.
+- **`createBrowserRouter`** mit einer einzigen Route `*`: Die Adresse `/{space}/{modul}/{item}` liest der Rahmen selbst. Die App besitzt nur den Router; das ist der Teil, der bei ihr bleibt (Spec 01, „Was bei der App bleibt“).
+- Die beiden CSS-Importe: dein Stylesheet und das der Karte.
+
+## 3. Der Rahmen: `App.tsx`
+
+<Source file="examples/first-app/src/App.tsx" title="src/App.tsx" />
+
+- **`ConnectorProvider`** macht den Connector für jede Fläche darunter erreichbar. Flächen fragen Hooks, nie den Connector direkt.
+- **`MapLibreAdapterProvider`** ist die Karten-Engine, die einzige Zeile, die eine App für die Karte schreibt. Ohne sie zeigt das Kartenmodul den Hinweis „keine Karten-Engine“.
+- **`RoutedAppFrame`** ist der Rahmen: Provider, das geteilte Panel, die Kopfzeile mit Space-Verwaltung, die Tabs aus dem Register des Space, der Fokus in der Adresse und der Schutz vor dem Verlust ungespeicherter Eingaben. `fallbackModule` sagt, welches Modul ein Item zeigt, wenn keines seiner Felder ein anderes wählt: hier die Liste.
+
+Kein Register, kein Modul, kein Detail wird hier verdrahtet. Das Register enthält ohne weiteres Zutun die Module des Toolkits; ein eigenes Modul kommt später als Ergänzung dazu (Seite „Eigenes Modul“, folgt).
+
+## 4. Styles
+
+<Source file="examples/first-app/src/index.css" lang="css" title="src/index.css" />
+
+Tailwind, die Tokens des Toolkits (`globals.css`) und die Anweisung, die Klassen im gebauten Toolkit einzusammeln (`@source`). Ohne die dritte Zeile fehlen dem Rahmen seine Abstände und Farben.
+
+## 5. Starten
+
+Im Wurzelverzeichnis des Repos:
+
+```bash
+pnpm install
+pnpm dev:first-app
+```
+
+`dev:first-app` baut zuerst die drei Pakete, an denen das Beispiel hängt (im Repo liegen sie als Quelltext, das Beispiel nimmt ihre gebaute Form), und startet dann Vite. Außerhalb des Repos genügt `pnpm dev`: Von npm kommen die Pakete gebaut.
+
+Im Browser: Der Space „Gemeinschaftsgarten“ mit drei Tabs. Im Kalender steht das Erntefest am 26. September, auf der Karte in Berlin, in der Liste als Karte. Klick auf das Item öffnet die Detailansicht im Panel, die Adresse wird `/garten/calendar/erntefest`. Der Plusknopf unten rechts erstellt ein neues Item, mit allen Typen; im Kalender schlägt er „Termin“ vor. Über die Kopfzeile legst du einen weiteren Space an.
+
+## Was die App nicht tut
+
+- Sie speichert nichts: Der `MockConnector` lebt im Arbeitsspeicher. Ein anderer Connector (lokal, Supabase, Web of Trust) tauscht die Datenquelle, ohne dass sich eine Zeile in `App.tsx` ändert (Seite „Connector wechseln“, folgt).
+- Sie hat kein eigenes Modul. Eins hinzuzufügen sind drei Schritte: eine Ansicht, ein Registereintrag, ein Hinweis (Seite „Eigenes Modul“, folgt).
+- Sie meldet niemanden an. Anmeldung, Rechte und Verschlüsselung bringt der Connector mit, der sie kann; der Rahmen zeigt dann, was der Connector erlaubt.
+
+## Wo es weitergeht
+
+- Die Spec zum Rahmen: [01 App-Komposition, „Was bei der App bleibt“](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/01-app-composition.md).
+- Im Storybook: [RLS → App](https://real-life-stack.de/storybook/?path=/docs/rls-app-01-the-app-in-40-lines--docs) zeigt Register, Host, Ladevertrag, Fokus und Erstellen einzeln.
+- Alle Hooks, die eine Fläche fragen kann: [All hooks](https://real-life-stack.de/storybook/?path=/docs/rls-foundations-all-hooks--docs).

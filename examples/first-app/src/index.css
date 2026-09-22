@@ -1,0 +1,4 @@
+@import "tailwindcss";
+@import "@real-life-stack/toolkit/styles/globals.css";
+@source "../node_modules/@real-life-stack/toolkit/dist";
+@custom-variant dark (&:is(.dark *));
