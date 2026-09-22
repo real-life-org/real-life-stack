@@ -28,6 +28,16 @@ test("llms.txt nennt jedes Paket, jede Spec-Datei und jeden Hook", () => {
   assert.ok(!/\d{4}-\d{2}-\d{2}T/.test(out), "no timestamps — the check compares text")
 })
 
+// rls#443 (Codex): release-please bumpt Versionen, nicht llms.txt. Ein reiner
+// Versionsbump darf die eingecheckte Datei deshalb nicht veralten lassen.
+test("ein Versionsbump aendert llms.txt nicht", () => {
+  const before = renderLlms()
+  const bumped = packages().map((p) => ({ ...p, version: "9.9.9" }))
+  assert.equal(renderLlms({ pkgs: bumped }), before)
+  const packagesSection = before.slice(before.indexOf("## Packages"), before.indexOf("## Specification"))
+  assert.ok(!/\d+\.\d+\.\d+/.test(packagesSection), "no package versions in the package list")
+})
+
 test("das App-Template traegt main.tsx und App.tsx der ersten App zwischen den Markern", () => {
   const out = renderTemplate()
   assert.ok(out.includes("<!-- first-app:start -->") && out.includes("<!-- first-app:end -->"))

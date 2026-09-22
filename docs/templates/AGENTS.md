@@ -18,7 +18,16 @@ The app never talks to a backend. It renders the toolkit's frame; modules ask ho
 
 Status: packages are `0.x` — the API is usable but still moving. Pin exact versions.
 
-## Install
+**Not yet on npm (22.09.2026):** the frame (`RoutedAppFrame`, subpath `@real-life-stack/toolkit/router`) and the seven toolkit modules are in the repository but not in the published toolkit 0.1.10. Until the next release (release PR #402) the install below does not build. Run from the repository instead — the same app, built and tested in CI:
+
+```bash
+git clone https://github.com/real-life-org/real-life-stack && cd real-life-stack
+pnpm install && pnpm dev:first-app
+```
+
+Check with `npm view @real-life-stack/toolkit exports`: once it lists `./router`, install from npm as below and remove this note.
+
+## Install (after that release)
 
 ```bash
 npm install react react-dom react-router-dom maplibre-gl

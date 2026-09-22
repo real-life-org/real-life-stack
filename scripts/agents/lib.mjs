@@ -43,13 +43,16 @@ export function hooks() {
   return JSON.parse(read("packages/toolkit/src/hooks/all-hooks.json")).groups
 }
 
-/** llms.txt: Kopf (Hand), Pakete, Spec, Hooks, Schluss (Hand). Ohne Zeitstempel. */
-export function renderLlms() {
+/**
+ * llms.txt: Kopf (Hand), Pakete, Spec, Hooks, Schluss (Hand). Ohne Zeitstempel
+ * und ohne Versionen — ein Release-Bump (release-please) darf die eingecheckte
+ * Datei nicht veralten lassen (rls#443); die Version steht auf npm.
+ */
+export function renderLlms({ pkgs: pkgList = packages(), spec: specList = specDocs(), groups = hooks() } = {}) {
   const head = read("scripts/agents/llms.head.md").trimEnd()
   const tail = read("scripts/agents/llms.tail.md").trimEnd()
-  const pkgs = packages().map((p) => `- [${p.name}](https://www.npmjs.com/package/${p.name}) ${p.version}: ${p.description}`).join("\n")
-  const spec = specDocs().map((d) => `- [${d.label}](${REPO}docs/spec/${d.href})${d.status ? ` (${d.status})` : ""}: ${d.description}`).join("\n")
-  const groups = hooks()
+  const pkgs = pkgList.map((p) => `- [${p.name}](https://www.npmjs.com/package/${p.name}): ${p.description}`).join("\n")
+  const spec = specList.map((d) => `- [${d.label}](${REPO}docs/spec/${d.href})${d.status ? ` (${d.status})` : ""}: ${d.description}`).join("\n")
   const n = groups.reduce((s, g) => s + g.hooks.length, 0)
   const hookLines = groups.map((g) => `### ${g.title}\n\n${g.hooks.map((h) => `- \`${h.name}(${h.signature})\` → ${h.answers}: ${h.question} Without capability: ${h.without}.`).join("\n")}`).join("\n\n")
   return [
