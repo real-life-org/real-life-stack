@@ -1,18 +1,39 @@
 import { Meta } from '@storybook/addon-docs/blocks';
-import schemeText from '../../../../docs/reference/rls.skos.jsonld?raw';
-export const scheme = JSON.parse(schemeText);
-export const terms = scheme['@graph'].filter(n => n['@type'] === 'skos:Concept').map(n => ({ id: n['@id'], label: n['skos:prefLabel'].find(v => v['@language'] === 'de')?.['@value'], definition: n['skos:definition'].find(v => v['@language'] === 'de')?.['@value'] }));
 
-<Meta title="RLS/Einstieg/Orientierung" />
+<Meta title="RLS/Einstieg/Lies mich zuerst" />
 
-# Vom Ganzen zum Detail
+# Lies mich zuerst
 
-**App → Instanz → App Shell → Space → Modul → Item-Vorschau → Detailansicht**
+Dieses Storybook zeigt den Real Life Stack **am laufenden Stück**: jede Seite hat eine Story mit echten Bausteinen über einer echten Datenquelle. Was du anklickst, wirkt — bis zum Neuladen. Es ist für drei Fragen da:
 
-Starte bei **App / Gemeinschaftsgarten**. Wechsle Module, öffne das Erntefest und bearbeite den Titel. Alle Darstellungen beobachten dieselbe Datenquelle. Unter **App** steht danach, wie eine App zusammengesetzt ist: [Die App in 40 Zeilen](?path=/docs/rls-app-01-die-app-in-40-zeilen--docs), das Register, der Modul-Host, der Ladevertrag, Fokus und Panel, ein eigenes Modul. Unter **App Shell** findest du die äußere Navigation, unter **Module** ganze Arbeitsflächen, unter **Items** deren gemeinsame Inhalte.
+- **Wie ist eine App zusammengesetzt?** → Abschnitt **App**, in Reihenfolge lesen.
+- **Wie sieht ein Baustein aus, und was macht er ohne diese oder jene Fähigkeit?** → **App Shell**, **Module**, **Items**.
+- **Welche Hooks gibt es, und was antworten sie?** → **Grundlagen**.
 
-Die Begriffe des Stack mit ihren Verknüpfungen zu Netzwerk und Trust Protocol: [real-life.org/rls/v1](https://real-life.org/rls/v1/).
+Das Handbuch dazu, mit den Wegen für Vibecoder, Agents, Mitbauer und Betreiber: [real-life-stack.de/handbuch](https://real-life-stack.de/handbuch/). Die normative Wahrheit ist die [Spezifikation](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/README.md).
 
-## Gemeinsame Begriffe
+## Der Weg durch die App
 
-{terms.map(term => <section key={term.id}><h3>{term.label}</h3><p>{term.definition}</p></section>)}
+Ein Beispiel begleitet alles: ein Gemeinschaftsgarten organisiert ein Erntefest. Es hat ein Datum und einen Ort, darum steht **dasselbe Item** im Kalender und auf der Karte.
+
+1. [00 Gemeinschaftsgarten](?path=/docs/rls-handbook-app--docs) — die App als Ganzes: Space wechseln, Modul wechseln, ein Item öffnen und bearbeiten.
+2. [01 Die App in 40 Zeilen](?path=/docs/rls-app-01-die-app-in-40-zeilen--docs) — was eine App schreibt, und was der Rahmen ihr abnimmt.
+3. [02 Das Register](?path=/docs/rls-app-register--docs) — die eine Liste der Module; ergänzen und ersetzen.
+4. [03 Der Modul-Host](?path=/docs/rls-module-host--docs) — wie aus einem Eintrag eine Fläche wird.
+5. [04 Der Ladevertrag](?path=/docs/rls-app-ladevertrag--docs) — was ein Modul lädt, und warum.
+6. [05 Fokus, Panel, Erstellen](?path=/docs/rls-app-fokus--docs) — wo steht, welches Item offen ist.
+7. [06 Ein eigenes Modul](?path=/docs/rls-app-06-ein-eigenes-modul--docs) — drei Schritte, am Marktplatz gezeigt.
+
+## Danach, je nach Frage
+
+| Abschnitt | Was dort steht |
+|---|---|
+| **App Shell** | Kopfzeile, Space-Umschalter, Navigation, das geteilte Panel, Anmeldung, Kontakte. Das Gerüst um die Modulfläche. |
+| **Spaces** | Der Space als Arbeitskontext: anlegen, einrichten, wechseln, Zugehörigkeit. |
+| **Module** | Die sieben Flächen des Toolkits — Feed, Kanban, Kalender, Karte, Resonanz, Liste, Graph — je eine Übersicht im Host, darunter die Ansichten und die gemeinsamen Werkzeuge (Suche, Filter, Erstellen). |
+| **Items** | Was in jedem Modul gleich ist: die Vorschau-Karte, die Detailansicht, Kommentare und Reaktionen, das Erstellen-Formular. |
+| **Grundlagen** | Alle Hooks mit der Frage, die sie beantworten, und was ohne Fähigkeit passiert; die UI-Primitive; die [Begriffe](?path=/docs/rls-grundlagen-begriffe--docs). |
+
+## Was hier nicht steht
+
+Wie man den Stack installiert, eine Instanz betreibt oder beiträgt: das ist das Handbuch. Wie man einen Agenten darauf ansetzt: [llms.txt](https://real-life-stack.de/llms.txt).

@@ -1,0 +1,12 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import schemeText from '../../../../docs/reference/rls.skos.jsonld?raw';
+export const scheme = JSON.parse(schemeText);
+export const terms = scheme['@graph'].filter(n => n['@type'] === 'skos:Concept').map(n => ({ id: n['@id'], label: n['skos:prefLabel'].find(v => v['@language'] === 'de')?.['@value'], definition: n['skos:definition'].find(v => v['@language'] === 'de')?.['@value'] })).sort((a, b) => (a.label ?? '').localeCompare(b.label ?? '', 'de'));
+
+<Meta title="RLS/Grundlagen/Begriffe" />
+
+# Begriffe
+
+Die Wörter des Stack, wie sie im Begriffsregister stehen (`docs/reference/rls.skos.jsonld`). Dasselbe Register verknüpft sie mit den Gegenstücken im Netzwerk und im Trust Protocol: [real-life.org/rls/v1](https://real-life.org/rls/v1/). Zum Nachschlagen — nicht zum Anfangen; der Einstieg steht unter [Lies mich zuerst](?path=/docs/rls-einstieg-lies-mich-zuerst--docs).
+
+{terms.map(term => <section key={term.id}><h3>{term.label}</h3><p>{term.definition}</p></section>)}
