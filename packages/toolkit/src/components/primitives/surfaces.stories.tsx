@@ -23,7 +23,7 @@ import {
  */
 
 const meta: Meta = {
-  id: "rls-grundlagen-flaechen",
+  id: "rls-foundations-surfaces",
   title: "RLS/Foundations/UI primitives/Surfaces",
   tags: ["autodocs"],
   parameters: { layout: "padded" },
@@ -33,7 +33,7 @@ export default meta
 type Story = StoryObj
 
 /** Nothing there: with a reason and, where possible, a way out. */
-export const Leerzustand: Story = {
+export const Empty: Story = {
   name: "Empty state",
   render: () => (
     <div className="mx-auto grid max-w-3xl gap-4 md:grid-cols-2">
@@ -48,7 +48,7 @@ export const Leerzustand: Story = {
 }
 
 /** While loading: the same shape as afterwards, so nothing jumps. */
-export const Ladeblock: Story = {
+export const LoadingBlock: Story = {
   name: "Loading block",
   render: () => (
     <div className="mx-auto max-w-md space-y-3 rounded-xl border bg-card p-4">
@@ -64,7 +64,7 @@ export const Ladeblock: Story = {
 }
 
 /** A decision that may interrupt. Here: delete. */
-export const DialogFlaeche: Story = {
+export const DialogSurface: Story = {
   name: "Dialog",
   render: function Render() {
     const [gelöscht, setGelöscht] = useState(false)
@@ -94,7 +94,7 @@ export const DialogFlaeche: Story = {
 }
 
 /** Actions on exactly one thing. In the stack always behind ⋮, never as a row of buttons. */
-export const Menue: Story = {
+export const MenuSurface: Story = {
   name: "Dropdown menu",
   render: () => (
     <div className="mx-auto max-w-md">

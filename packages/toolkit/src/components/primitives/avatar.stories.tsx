@@ -3,7 +3,7 @@ import { Avatar, AvatarImage, AvatarFallback } from './avatar'
 
 /** **Avatar**: a person's picture with initials as fallback, in the sizes the cards and the header use. */
 const meta: Meta<typeof Avatar> = {
-  id: "rls-primitives-avatar",
+  id: "rls-foundations-avatar",
   title: "RLS/Foundations/UI primitives/Avatar",
   component: Avatar,
   tags: ['autodocs'],

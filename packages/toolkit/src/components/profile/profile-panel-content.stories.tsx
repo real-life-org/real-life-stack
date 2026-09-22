@@ -12,7 +12,7 @@ import { ProfilePanelContent } from "./profile-panel-content"
  */
 const meta: Meta<typeof ProfilePanelContent> = {
   tags: ["autodocs"],
-  id: "module-components-profilepanelcontent",
+  id: "rls-items-person-profile",
   title: "RLS/Items/Type examples/Person profile",
   component: ProfilePanelContent,
   parameters: { layout: "centered" },

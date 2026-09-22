@@ -65,10 +65,10 @@ const tasks: Item[] = [
  * Read-only boards can be opened but not moved. `users` resolve assignees on
  * the cards; without them the cards show no faces.
  *
- * Where next: the module around it under [Overview](?path=/docs/rls-space-modules-kanban-overview--docs).
+ * Where next: the module around it under [Overview](?path=/docs/rls-modules-kanban--docs).
  */
 const meta: Meta<typeof KanbanBoard> = {
-  id: "rls-space-modules-kanban-board",
+  id: "rls-modules-kanban-board",
   title: "RLS/Modules/Kanban/Board",
   component: KanbanBoard,
   tags: ["autodocs"],

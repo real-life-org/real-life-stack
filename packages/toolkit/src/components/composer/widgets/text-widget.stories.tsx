@@ -9,7 +9,7 @@ import { TextWidget } from "./text-widget"
  * (`composerWidgets`); the widget itself is the same for every type.
  */
 const meta: Meta<typeof TextWidget> = {
-  id: "rls-module-components-widgets-textwidget",
+  id: "rls-items-text-widget",
   title: "RLS/Items/Field widgets/TextWidget",
   component: TextWidget,
   tags: ["autodocs"],
@@ -37,7 +37,7 @@ export const Default: Story = {
   ),
 }
 
-export const MitInhalt: Story = {
+export const WithContent: Story = {
   name: "With content",
   render: () => (
     <TextWidgetControlled
@@ -48,7 +48,7 @@ export const MitInhalt: Story = {
   ),
 }
 
-export const MitWidgetToggles: Story = {
+export const WithWidgetToggles: Story = {
   name: "With widget toggles",
   render: () => (
     <TextWidgetControlled

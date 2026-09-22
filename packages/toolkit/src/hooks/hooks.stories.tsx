@@ -35,7 +35,7 @@ import { STORY_ME, STORY_POST, STORY_TASK, StoryWorld } from "../story-support/s
  *    (`isWritable`, `useItemPermissions`), not by an exception while rendering.
  *
  * Every story below runs on a real data source. What you click takes effect.
- * The full list with one line per hook: [All hooks](?path=/docs/rls-grundlagen-alle-hooks--docs).
+ * The full list with one line per hook: [All hooks](?path=/docs/rls-foundations-all-hooks--docs).
  */
 
 // ── Darstellung ────────────────────────────────────────────────────────────
@@ -161,7 +161,7 @@ function RechteVergleich() {
       <div className="space-y-3">
         <div>
           <h2 className="text-lg font-semibold">Voller Connector</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Schreiben, Gruppen, Anmeldung.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Write, Gruppen, Anmeldung.</p>
         </div>
         <div className="rounded-xl border bg-card px-5 py-2">
           <StoryWorld>
@@ -277,7 +277,7 @@ function Flaechen() {
 // ── Stories ────────────────────────────────────────────────────────────────
 
 const meta: Meta = {
-  id: "rls-grundlagen-hooks",
+  id: "rls-foundations-hooks",
   title: "RLS/Foundations/Hooks",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
@@ -286,7 +286,7 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 
-export const Lesen: Story = {
+export const Read: Story = {
   name: "1 · Read items",
   render: () => (
     <StoryWorld>
@@ -295,7 +295,7 @@ export const Lesen: Story = {
   ),
 }
 
-export const Schreiben: Story = {
+export const Write: Story = {
   name: "2 · Write items",
   render: () => (
     <StoryWorld>
@@ -304,12 +304,12 @@ export const Schreiben: Story = {
   ),
 }
 
-export const RechteUndFaehigkeiten: Story = {
+export const Permissions: Story = {
   name: "3 · Permissions and capabilities",
   render: () => <RechteVergleich />,
 }
 
-export const BeziehungenStory: Story = {
+export const Relations: Story = {
   name: "4 · Relations",
   render: () => (
     <StoryWorld>
@@ -318,7 +318,7 @@ export const BeziehungenStory: Story = {
   ),
 }
 
-export const FlaechenStory: Story = {
+export const Surfaces: Story = {
   name: "5 · Surfaces",
   render: () => (
     <StoryWorld>
@@ -332,7 +332,7 @@ export const FlaechenStory: Story = {
 }
 
 /** The capability check every writing surface makes before it shows a button. */
-export const Faehigkeitspruefung: Story = {
+export const CapabilityCheck: Story = {
   name: "6 · Check a capability",
   render: function Render() {
     function Probe() {

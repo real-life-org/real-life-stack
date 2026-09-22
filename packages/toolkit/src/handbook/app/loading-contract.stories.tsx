@@ -68,7 +68,7 @@ const entry = (presents: string[] | undefined, loads?: "module"): ModuleEntry =>
 })
 
 const meta: Meta = {
-  id: "rls-app-ladevertrag",
+  id: "rls-app-04-loading-contract",
   title: "RLS/App/04 The loading contract",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },

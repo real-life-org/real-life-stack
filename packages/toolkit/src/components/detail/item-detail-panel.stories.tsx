@@ -132,7 +132,7 @@ const SEED: Item[] = [
  */
 const meta: Meta<typeof ItemDetailPanel> = {
   tags: ["autodocs"],
-  id: "rls-module-components-detail-itemdetailpanel",
+  id: "rls-items-detail-panel",
   title: "RLS/Items/Detail view/Content and discussion",
   component: ItemDetailPanel,
   parameters: {

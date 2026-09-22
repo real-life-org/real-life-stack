@@ -9,7 +9,7 @@ import { ActivityPanel } from "./activity-panel"
  * the shared panel behind the bell, as the fallback when a connector has no
  * notifications; `ActivityPanelController` does the wiring.
  */
-const meta: Meta<typeof ActivityPanel> = { id: "rls-shell-activity-panel", tags: ["autodocs"],
+const meta: Meta<typeof ActivityPanel> = { id: "rls-app-shell-activity-panel", tags: ["autodocs"],
   title: "RLS/App shell/Activity and notifications/ActivityPanel", component: ActivityPanel }
 export default meta
 type Story = StoryObj<typeof ActivityPanel>

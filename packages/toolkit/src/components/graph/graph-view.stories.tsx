@@ -47,10 +47,10 @@ function ControlledGraph({ initialSelection = null }: { initialSelection?: strin
  * them. A dense set (300 nodes, 400 edges) stays readable because the layout
  * runs in steps and the camera keeps the whole in view.
  *
- * Where next: the module around it under [Overview](?path=/docs/rls-space-modules-graph-module--docs).
+ * Where next: the module around it under [Overview](?path=/docs/rls-modules-graph--docs).
  */
 const meta: Meta<typeof ControlledGraph> = {
-  id: "rls-space-modules-graph-overview",
+  id: "rls-modules-graph-view",
   title: "RLS/Modules/Graph/View",
   component: ControlledGraph,
   tags: ["autodocs"],

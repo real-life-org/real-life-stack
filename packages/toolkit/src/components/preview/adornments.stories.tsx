@@ -23,7 +23,7 @@ import { STORY_EVENT, STORY_ME, STORY_POST, STORY_TASK, StoryWorld } from "../..
  */
 
 const meta: Meta = {
-  id: "rls-items-beigaben",
+  id: "rls-items-adornments",
   title: "RLS/Items/Item preview/Adornments",
   tags: ["autodocs"],
   parameters: { layout: "padded" },
@@ -44,7 +44,7 @@ function Reihe({ titel, erklaerung, children }: { titel: string; erklaerung: str
 }
 
 /** All adornments side by side, each with the sentence it answers. */
-export const Alle: Story = {
+export const All: Story = {
   name: "All adornments",
   render: () => (
     <div className="mx-auto max-w-2xl">
@@ -78,7 +78,7 @@ export const Alle: Story = {
 }
 
 /** The same card, equipped differently: this is where the difference between modules comes from. */
-export const InDerKarte: Story = {
+export const InsideTheCard: Story = {
   name: "Inside the card",
   render: () => (
     <div className="mx-auto flex max-w-lg flex-col gap-4">
@@ -114,7 +114,7 @@ export const InDerKarte: Story = {
 }
 
 /** While the list is still loading. Same height as the card, so nothing jumps. */
-export const Ladezustand: Story = {
+export const LoadingState: Story = {
   name: "Loading state",
   render: () => (
     <div className="mx-auto flex max-w-lg flex-col gap-3">

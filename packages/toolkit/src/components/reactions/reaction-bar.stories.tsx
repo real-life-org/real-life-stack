@@ -46,7 +46,7 @@ const many = (emoji: string, count: number, withMe = false) => ({
 })
 
 const meta: Meta<typeof ReactionBar> = {
-  id: "rls-module-components-reactions-reactionbar",
+  id: "rls-items-reaction-bar",
   title: "RLS/Items/Detail view/Reactions and comments/ReactionBar",
   component: ReactionBar,
   tags: ["autodocs"],

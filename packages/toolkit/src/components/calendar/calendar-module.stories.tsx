@@ -156,15 +156,15 @@ const events: Item[] = [
  * gone; the calendar still reads.
  *
  * Where next: the event card and its date row under
- * [Adornments](?path=/docs/rls-items-beigaben--docs); the
- * loading rule under [The loading contract](?path=/docs/rls-app-ladevertrag--docs).
+ * [Adornments](?path=/docs/rls-items-adornments--docs); the
+ * loading rule under [The loading contract](?path=/docs/rls-app-04-loading-contract--docs).
  */
 function CalendarModuleOverview() {
   return <HostWorld module="calendar" seed={{ items: [...STORY_SEED.items, ...events] }} />
 }
 
 const meta: Meta<typeof CalendarModuleOverview> = {
-  id: "rls-space-modules-calendar-overview",
+  id: "rls-modules-calendar",
   title: "RLS/Modules/Calendar/Overview",
   component: CalendarModuleOverview,
   tags: ["autodocs"],

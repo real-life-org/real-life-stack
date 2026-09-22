@@ -42,7 +42,7 @@ const KONTAKTE: ContactInfo[] = [
 ]
 
 const meta: Meta = {
-  id: "rls-app-shell-kontakte",
+  id: "rls-app-shell-contacts",
   title: "RLS/App shell/Contacts and verification",
   tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
@@ -53,7 +53,7 @@ export default meta
 type Story = StoryObj
 
 /** The list: active contacts, open requests in both directions. */
-export const Liste: Story = {
+export const TheList: Story = {
   name: "Contact list",
   render: function Render() {
     const [kontakte, setKontakte] = useState(KONTAKTE)
@@ -70,7 +70,7 @@ export const Liste: Story = {
 }
 
 /** The entry from the user menu: everything to do with contacts in one place. */
-export const Uebersicht: Story = {
+export const ContactsDialogStory: Story = {
   name: "ContactsDialog",
   render: function Render() {
     const [open, setOpen] = useState(true)
@@ -94,7 +94,7 @@ export const Uebersicht: Story = {
 }
 
 /** Request someone by their id. The second way, without an encounter. */
-export const Hinzufuegen: Story = {
+export const AddContact: Story = {
   name: "AddContactDialog",
   render: function Render() {
     const [open, setOpen] = useState(true)
@@ -108,7 +108,7 @@ export const Hinzufuegen: Story = {
 }
 
 /** The QR way, my side: I show the code, the other side scans. */
-export const Verifizieren: Story = {
+export const Verify: Story = {
   name: "VerificationDialog",
   render: function Render() {
     const [open, setOpen] = useState(true)
@@ -133,7 +133,7 @@ export const Verifizieren: Story = {
 }
 
 /** The QR way, their side: someone scanned my code and is waiting for me. */
-export const EingehendeVerifikation: Story = {
+export const IncomingVerification: Story = {
   name: "Incoming · verification",
   render: function Render() {
     const [open, setOpen] = useState(true)
@@ -154,7 +154,7 @@ export const EingehendeVerifikation: Story = {
 }
 
 /** A contact request from afar, waiting for my answer. */
-export const EingehendeAnfrage: Story = {
+export const IncomingRequest: Story = {
   name: "Incoming · contact request",
   render: function Render() {
     const [open, setOpen] = useState(true)
@@ -175,7 +175,7 @@ export const EingehendeAnfrage: Story = {
 }
 
 /** An invitation into a space. Same place, different meaning. */
-export const EingehendeEinladung: Story = {
+export const IncomingInvitation: Story = {
   name: "Incoming · space invitation",
   render: function Render() {
     const [open, setOpen] = useState(true)
@@ -198,7 +198,7 @@ export const EingehendeEinladung: Story = {
  * The conclusion: both sides have confirmed. Two meanings, one shape — after
  * an encounter ("verification") or after a request ("contact").
  */
-export const Gegenseitig: Story = {
+export const MutuallyConfirmed: Story = {
   name: "Mutually confirmed",
   render: function Render() {
     const [variante, setVariante] = useState<"verification" | "contact">("verification")
@@ -227,7 +227,7 @@ export const Gegenseitig: Story = {
  * The relay state. It belongs here because without a connection no request
  * arrives: the number says how much is still waiting on the device.
  */
-export const Relais: Story = {
+export const RelayStatus: Story = {
   name: "RelayStatusBadge",
   render: () => (
     <div className="flex flex-wrap items-center gap-4">

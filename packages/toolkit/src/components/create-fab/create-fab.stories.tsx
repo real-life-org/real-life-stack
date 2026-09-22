@@ -13,7 +13,7 @@ import { CreateFab } from "./create-fab"
  * Here the button alone; in every module overview you see it in place.
  */
 const meta: Meta<typeof CreateFab> = {
-  id: "module-components-createfab",
+  id: "rls-modules-create-trigger",
   title: "RLS/Modules/Shared tools/Create trigger",
   component: CreateFab,
   tags: ["autodocs"],

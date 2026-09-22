@@ -34,7 +34,7 @@ function authConnector(methods: AuthMethod[]): Authenticatable {
 }
 
 const meta: Meta<typeof AuthScreen> = {
-  id: "rls-app-shell-anmeldung",
+  id: "rls-app-shell-sign-in",
   title: "RLS/App shell/Sign-in",
   component: AuthScreen,
   tags: ["autodocs"],
@@ -45,7 +45,7 @@ export default meta
 type Story = StoryObj<typeof AuthScreen>
 
 /** E-mail with sign-up, plus an anonymous quick start. The full case. */
-export const Alles: Story = {
+export const AllWays: Story = {
   name: "All ways",
   render: () => (
     <AuthScreen
@@ -60,7 +60,7 @@ export const Alles: Story = {
 }
 
 /** E-mail only, no sign-up: a closed instance. */
-export const NurAnmeldung: Story = {
+export const SignInOnly: Story = {
   name: "Sign-in only",
   render: () => (
     <AuthScreen connector={authConnector([{ method: "email", label: "E-Mail" }])} onAuthenticated={() => {}} />
@@ -68,7 +68,7 @@ export const NurAnmeldung: Story = {
 }
 
 /** Anonymous only: a public view you simply walk into. */
-export const NurAnonym: Story = {
+export const AnonymousOnly: Story = {
   name: "Anonymous only",
   render: () => (
     <AuthScreen

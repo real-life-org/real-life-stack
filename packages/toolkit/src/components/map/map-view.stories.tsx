@@ -14,9 +14,9 @@ const items = [
  * embeddings). The engine comes in via `createAdapter` (MapLibre here, Leaflet
  * possible); the map itself never imports one.
  *
- * Where next: the module around it under [Overview](?path=/docs/rls-space-modules-map-overview--docs).
+ * Where next: the module around it under [Overview](?path=/docs/rls-modules-map--docs).
  */
-const meta: Meta<typeof MapView> = { id: "rls-space-modules-mapview", tags: ["autodocs"],
+const meta: Meta<typeof MapView> = { id: "rls-modules-map-view", tags: ["autodocs"],
   title: "RLS/Modules/Map/MapView", component: MapView, decorators: [(Story) => <div style={{ height: 560 }}><Story /></div>] }
 export default meta
 type Story = StoryObj<typeof MapView>

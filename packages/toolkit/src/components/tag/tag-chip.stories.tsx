@@ -10,7 +10,7 @@ import { TagChip } from './tag-chip'
  * on a card's tag sets the shared filter (tag navigation).
  */
 const meta: Meta<typeof TagChip> = {
-  id: "rls-module-components-tag-tagchip",
+  id: "rls-items-tag-chip",
   title: "RLS/Items/Detail view/Tags and author/TagChip",
   component: TagChip,
   tags: ['autodocs'],
