@@ -59,10 +59,14 @@ Tailwind, die Tokens des Toolkits (`globals.css`) und die Anweisung, die Klassen
 
 ## 5. Starten
 
+Im Wurzelverzeichnis des Repos:
+
 ```bash
 pnpm install
-pnpm --filter first-app dev
+pnpm dev:first-app
 ```
+
+`dev:first-app` baut zuerst die drei Pakete, an denen das Beispiel hängt (im Repo liegen sie als Quelltext, das Beispiel nimmt ihre gebaute Form), und startet dann Vite. Außerhalb des Repos genügt `pnpm dev`: Von npm kommen die Pakete gebaut.
 
 Im Browser: Der Space „Gemeinschaftsgarten“ mit drei Tabs. Im Kalender steht das Erntefest am 26. September, auf der Karte in Berlin, in der Liste als Karte. Klick auf das Item öffnet die Detailansicht im Panel, die Adresse wird `/garten/calendar/erntefest`. Der Plusknopf unten rechts erstellt ein neues Item, mit allen Typen; im Kalender schlägt er „Termin“ vor. Über die Kopfzeile legst du einen weiteren Space an.
 

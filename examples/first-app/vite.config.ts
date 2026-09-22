@@ -5,7 +5,8 @@ import tailwindcss from "@tailwindcss/vite"
 
 // Im Repo hängen die Pakete am Quelltext (`development`-Condition). Dieses
 // Beispiel nimmt bewusst die gebaute, veröffentlichte Form — so, wie eine App
-// außerhalb des Repos sie von npm bekommt. Vorher: `pnpm build:toolkit`.
+// außerhalb des Repos sie von npm bekommt. Im Repo baut `pnpm dev:first-app`
+// die Pakete vorher (turbo, `first-app^...`).
 // Außerhalb des Repos entfallen `resolve.conditions` und `test.alias`.
 const dist = (file: string) => fileURLToPath(new URL(`./node_modules/@real-life-stack/toolkit/dist/${file}`, import.meta.url))
 

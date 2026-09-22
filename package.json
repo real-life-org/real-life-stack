@@ -23,7 +23,8 @@
     "build:storybook": "pnpm --filter @real-life-stack/toolkit build-storybook",
     "docs:hooks": "node scripts/hooks/generate.mjs",
     "check:hooks": "node scripts/hooks/generate.mjs --check",
-    "test:hooks": "node --test scripts/hooks/check.test.mjs"
+    "test:hooks": "node --test scripts/hooks/check.test.mjs",
+    "dev:first-app": "turbo run build --filter=first-app^... && pnpm --filter first-app dev"
   },
   "devDependencies": {
     "turbo": "^2.3.3",
