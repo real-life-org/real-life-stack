@@ -1,4 +1,5 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
+import { sep } from 'node:path'
 import { createHash } from 'node:crypto'
 
 /** Gemeinsames der Site-Skripte: Wurzel, Lesen, Seiten des Handbuchs, Prüfregeln. */
@@ -39,18 +40,27 @@ export function pages() {
   return LANGS.flatMap((lang) => {
     const dir = new URL(`docs/handbook/${lang}/`, root)
     if (!existsSync(dir)) return []
-    return readdirSync(dir)
+    // Rekursiv, wie der Astro-Loader: `handbuch/index.mdx` ist eine Seite mit
+    // der Id `handbuch/index` — bis zum 22.09.2026 sah dieses Skript nur die
+    // obersten Dateien und prüfte das Handbuch darum gar nicht (rls#434).
+    return readdirSync(dir, { recursive: true })
+      .map(String)
       .filter((f) => /\.mdx?$/.test(f))
+      .sort()
       .map((file) => {
-        const path = `docs/handbook/${lang}/${file}`
+        const rel = file.split(sep).join("/")
+        const path = `docs/handbook/${lang}/${rel}`
         const text = read(path)
-        return { path, lang, id: file.replace(/\.mdx?$/, ''), text, ...parse(text) }
+        return { path, lang, id: rel.replace(/\.mdx?$/, ""), text, ...parse(text) }
       })
   })
 }
 
-/** Die Adresse einer Seite: Deutsch ohne Präfix, andere Sprachen mit. */
-export const route = (p) => `/${p.lang === 'de' ? '' : `${p.lang}/`}${p.id === 'index' ? '' : `${p.id}/`}`
+/** Die Adresse einer Seite: Deutsch ohne Präfix, andere Sprachen mit; ein `index` fällt weg (`handbuch/index` → `/handbuch/`). */
+export const route = (p) => {
+  const slug = p.id.replace(/(^|\/)index$/, "")
+  return `/${p.lang === 'de' ? '' : `${p.lang}/`}${slug ? `${slug}/` : ''}`
+}
 
 /**
  * Was eine Seite verspricht, muss es geben: genannte Quelldateien, eingebettete

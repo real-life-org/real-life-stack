@@ -6,7 +6,7 @@
     "dev": "node ../../scripts/site/prepare.mjs && astro dev --host 127.0.0.1",
     "build": "node ../../scripts/site/prepare.mjs && astro build",
     "preview": "astro preview --host 127.0.0.1",
-    "typecheck": "astro check"
+    "typecheck": "node ../../scripts/site/prepare.mjs && astro check"
   },
   "dependencies": {
     "@astrojs/starlight": "0.42.1",

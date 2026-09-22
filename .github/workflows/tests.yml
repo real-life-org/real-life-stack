@@ -128,4 +128,4 @@ jobs:
       # (scripts/site/check.mjs). Ohne Storybook-Index bleiben Stories
       # ungeprueft — das tut der Deploy, der beides baut.
       - name: Site
-        run: pnpm build:site && pnpm check:site
+        run: pnpm build:site && pnpm check:site && pnpm test:site
