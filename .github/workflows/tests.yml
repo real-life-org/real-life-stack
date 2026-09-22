@@ -136,3 +136,8 @@ jobs:
       # fehlt oder all-hooks.json nicht mehr zum Code passt.
       - name: Hook reference
         run: pnpm check:hooks && pnpm test:hooks
+
+      # Das Beispiel aus dem Handbuch („Erste App bauen") baut gegen die
+      # gebaute Form der Pakete — was die Seite zeigt, läuft auch.
+      - name: First app (examples/first-app)
+        run: pnpm exec turbo run build --filter=first-app
