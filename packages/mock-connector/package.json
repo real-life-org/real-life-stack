@@ -1,6 +1,7 @@
 {
   "name": "@real-life-stack/mock-connector",
   "version": "0.1.6",
+  "description": "In-memory connector with seed data. The starting point for prototypes, stories and tests.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/real-life-org/real-life-stack.git",

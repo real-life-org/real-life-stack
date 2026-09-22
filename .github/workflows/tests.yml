@@ -137,6 +137,12 @@ jobs:
       - name: Hook reference
         run: pnpm check:hooks && pnpm test:hooks
 
+      # Die Einstiege fuer Agenten (llms.txt, docs/templates/AGENTS.md) entstehen
+      # aus Paketen, Spec-Index, Hook-Referenz und examples/first-app
+      # (scripts/agents). Faellt, wenn sie nicht mehr zum Repo passen.
+      - name: Agent entry points
+        run: pnpm check:agents && pnpm test:agents
+
       # Das Beispiel aus dem Handbuch („Erste App bauen") baut gegen die
       # gebaute Form der Pakete — was die Seite zeigt, läuft auch.
       - name: First app (examples/first-app)
