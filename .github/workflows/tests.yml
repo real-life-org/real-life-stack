@@ -122,3 +122,10 @@ jobs:
       # heraus (real-life-stack#403).
       - name: Typecheck
         run: pnpm -r typecheck
+
+      # Die Site (Landing + Handbuch) baut, und jede Seite haelt, was sie
+      # verspricht: Quelldateien, verlinkte Seiten, gebaute Links
+      # (scripts/site/check.mjs). Ohne Storybook-Index bleiben Stories
+      # ungeprueft — das tut der Deploy, der beides baut.
+      - name: Site
+        run: pnpm build:site && pnpm check:site && pnpm test:site

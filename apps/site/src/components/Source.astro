@@ -1,0 +1,14 @@
+---
+/**
+ * Quelltext aus dem Repo, wörtlich — das Handbuch zeigt den Code, der läuft,
+ * nicht eine Abschrift. Erlaubt sind die Beispiele und die Register der Apps;
+ * die Liste ist absichtlich eng (Vite bündelt nur, was hier steht).
+ */
+import { Code } from '@astrojs/starlight/components'
+const files = import.meta.glob(['../../../../examples/*/src/*.tsx', '../../../../apps/*/src/module-register.tsx', '../../../../apps/*/src/App.tsx', '../../../../apps/*/src/main.tsx'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+interface Props { file: string; title?: string; lang?: string }
+const { file, title = file, lang = 'tsx' } = Astro.props
+const key = `../../../../${file}`
+if (!(key in files)) throw new Error(`Source: ${file} ist nicht eingebunden (Source.astro erweitern)`)
+---
+<Code code={files[key]} lang={lang} title={title} />

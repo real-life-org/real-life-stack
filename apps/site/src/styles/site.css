@@ -1,0 +1,88 @@
+/*
+ * Die Site trägt die Tokens des Toolkits (packages/toolkit/src/styles/globals.css):
+ * dieselbe warme Grundfläche, dasselbe Orange, dieselbe Schrift — Landing,
+ * Handbuch, Storybook und App sind eine Sache. Starlight liest seine Farben
+ * aus `--sl-*`; hier werden sie aus den Toolkit-Werten gesetzt, nicht neu
+ * erfunden.
+ */
+:root {
+  --sl-font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sl-font-mono: "Source Code Pro", ui-monospace, monospace;
+  --sl-content-width: 54rem;
+  --sl-text-5xl: 3.4rem;
+  /* Orange der Marke (--primary: oklch(0.63 0.16 55)) */
+  --sl-color-accent-low: oklch(0.30 0.07 55);
+  --sl-color-accent: oklch(0.72 0.15 55);
+  --sl-color-accent-high: oklch(0.90 0.07 55);
+  --rl-blue: oklch(0.55 0.21 264);
+  --rl-green: oklch(0.62 0.15 150);
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: oklch(0.92 0.06 55);
+  --sl-color-accent: oklch(0.63 0.16 55);
+  --sl-color-accent-high: oklch(0.38 0.10 55);
+  --sl-color-bg: oklch(0.975 0.003 70);
+  --sl-color-bg-nav: oklch(0.975 0.003 70 / 0.9);
+  --sl-color-bg-sidebar: oklch(0.985 0.0025 70);
+  --sl-color-text: oklch(0.28 0.02 265);
+  --sl-color-white: oklch(0.20 0.02 265);
+}
+:root[data-theme='dark'] {
+  --sl-color-bg: oklch(0.15 0.02 265);
+  --sl-color-bg-nav: oklch(0.15 0.02 265 / 0.9);
+  --sl-color-bg-sidebar: oklch(0.17 0.02 265);
+}
+h1 { letter-spacing: -.04em; line-height: 1.1 !important; }
+h2, h3 { letter-spacing: -.02em; }
+.site-title { letter-spacing: -.03em; font-weight: 750; }
+
+/* Landing */
+.rl-landing { max-width: 64rem; margin-inline: auto; padding-inline: 1rem; }
+.rl-accent { color: var(--sl-color-accent); }
+.hero { padding-block: 2rem 1rem; }
+.hero .tagline { line-height: 1.6; }
+.rl-hero { text-align: center; padding-block: 3rem 3.5rem; }
+.rl-hero h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); margin: 0 0 1rem; }
+.rl-hero h1 em { font-style: normal; color: var(--sl-color-accent); }
+.rl-hero p { font-size: 1.2rem; color: var(--sl-color-gray-2); max-width: 40rem; margin: 0 auto 1.75rem; line-height: 1.6; }
+.rl-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; }
+.rl-btn { display: inline-flex; align-items: center; gap: .5rem; border-radius: .6rem; padding: .7rem 1.2rem; font-weight: 600; text-decoration: none; border: 1px solid var(--sl-color-gray-5); color: var(--sl-color-white); }
+.rl-btn.primary { background: var(--sl-color-accent); color: #fff; border-color: transparent; }
+.rl-btn:hover { border-color: var(--sl-color-accent); }
+.rl-section { display: grid; gap: 2.5rem; align-items: center; padding-block: 3rem; border-top: 1px solid var(--sl-color-gray-6); }
+@media (min-width: 52rem) { .rl-section { grid-template-columns: 1fr 1fr; } .rl-section.flip > :first-child { order: 2; } }
+.rl-badge { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 600; color: var(--rl-accent, var(--sl-color-accent)); margin-bottom: .75rem; }
+.rl-badge::before { content: ''; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
+.rl-section h2 { font-size: 1.9rem; margin: 0 0 .75rem; }
+.rl-section p { color: var(--sl-color-gray-2); line-height: 1.65; margin: 0 0 1rem; }
+.rl-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.rl-cards.three { grid-template-columns: repeat(3, 1fr); }
+.rl-card { border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; padding: 1rem; background: var(--sl-color-bg-sidebar); }
+.rl-card strong { display: block; margin-bottom: .2rem; }
+.rl-card span { font-size: .85rem; color: var(--sl-color-gray-2); }
+.rl-card.compact { padding: .6rem .75rem; }
+.rl-card.compact strong { font-size: .9rem; }
+.rl-card.compact span { font-size: .75rem; }
+.rl-list { display: grid; gap: 1rem; border-inline-start: 4px solid var(--rl-blue); padding: 1.25rem; border-radius: .7rem; background: var(--sl-color-bg-sidebar); }
+.rl-list strong { display: block; }
+.rl-list span { font-size: .9rem; color: var(--sl-color-gray-2); }
+.rl-ways { padding-block: 3rem; border-top: 1px solid var(--sl-color-gray-6); }
+.rl-ways h2 { font-size: 1.9rem; margin: 0 0 .5rem; }
+.rl-ways > p { color: var(--sl-color-gray-2); margin: 0 0 1.5rem; }
+.rl-ways .rl-cards { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.rl-ways a.rl-card { text-decoration: none; color: inherit; display: block; }
+.rl-ways a.rl-card:hover { border-color: var(--sl-color-accent); }
+.rl-ways .soon { opacity: .6; }
+
+/* Fußzeile: Teil von Real Life */
+.rl-family { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--sl-color-gray-5); font-size: .85rem; color: var(--sl-color-gray-2); display: grid; gap: .5rem; }
+.rl-family nav { display: flex; flex-wrap: wrap; gap: 1rem; }
+.rl-family a { color: inherit; }
+.rl-family small { display: block; }
+
+/* Eingebettete Stories */
+.story-example { margin-block: 2rem; border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; overflow: hidden; }
+.story-example figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; padding: .7rem 1rem; font-size: .78rem; background: var(--sl-color-bg-sidebar); }
+.story-example iframe { display: block; width: 100%; border: 0; background: white; }
+.story-example p { padding: .6rem 1rem; font-size: .8rem; color: var(--sl-color-gray-2); margin: 0; }
+@media (max-width: 50rem) { :root { --sl-text-5xl: 2.4rem; } .rl-cards, .rl-cards.three { grid-template-columns: 1fr 1fr; } }

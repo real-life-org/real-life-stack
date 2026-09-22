@@ -171,7 +171,7 @@ pnpm install
 pnpm dev:reference
 
 # Start the landing page
-pnpm dev:landing
+pnpm dev:site
 
 # Build the toolkit
 pnpm build:toolkit
