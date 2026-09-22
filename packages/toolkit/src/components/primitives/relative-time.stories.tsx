@@ -70,7 +70,7 @@ export const DifferentYear: Story = {
 }
 
 export const AllVariants: Story = {
-  name: "Alle Varianten",
+  name: "All variants",
   render: () => {
     const now = Date.now()
     const variants = [
