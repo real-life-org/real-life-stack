@@ -9,7 +9,16 @@ const WORKSPACES: Workspace[] = [
   { id: "group-3", name: "Repair-Café" },
 ]
 
+/**
+ * **WorkspaceSwitcher** is the space in the header's left compartment: the
+ * active space with avatar and name, the list of your spaces, the overview
+ * "Mein Netzwerk" on top, and — when the frame provides the handlers —
+ * "create a space" and "edit" per space. It shows a syncing hint while a
+ * device receives its first stock, so a short list is not mistaken for a
+ * complete one.
+ */
 const meta: Meta<typeof WorkspaceSwitcher> = {
+  tags: ["autodocs"],
   id: "rls-app-shell-navigation-workspaceswitcher",
   title: "RLS/App shell/Space switcher/WorkspaceSwitcher",
   component: WorkspaceSwitcher,
@@ -39,22 +48,24 @@ function InteractiveSwitcher({ initial }: { initial: Workspace | null }) {
   )
 }
 
-/** Eine Gruppe ist aktiv — Avatar + Name im Trigger. */
+/** A group is active — avatar and name in the trigger. */
 export const GroupActive: Story = {
+  name: "A group is active",
   render: () => <InteractiveSwitcher initial={WORKSPACES[1]} />,
 }
 
-/** Das Overview-Pseudo-Workspace ist aktiv — Home-Icon statt Avatar. */
+/** The overview pseudo-workspace is active — home icon instead of avatar. */
 export const OverviewActive: Story = {
+  name: "The overview is active",
   render: () => <InteractiveSwitcher initial={WORKSPACES[0]} />,
 }
 
 /**
- * Kein aktiver Workspace (null) — der Zustand hinter dem No-Access-Screen:
- * die URL zeigt auf einen Space, in dem der User kein Mitglied ist. Der
- * Trigger zeigt "Space wählen", das Dropdown bleibt der Ausweg zu den
- * eigenen Spaces.
+ * No active workspace (null) — the state behind the no-access screen: the URL
+ * points to a space the user is not a member of. The trigger reads "Space
+ * wählen", the dropdown stays the way out to your own spaces.
  */
 export const NoActiveWorkspace: Story = {
+  name: "No access",
   render: () => <InteractiveSwitcher initial={null} />,
 }

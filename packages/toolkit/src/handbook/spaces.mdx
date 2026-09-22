@@ -3,10 +3,14 @@ import * as Garden from './garden.stories';
 
 <Meta title="RLS/Spaces/Context and membership" />
 
-# Der Space ist der aktuelle Arbeitskontext
+# The space is the current working context
 
-Links im Gemeinschaftsgarten wechselst du zur Offenen Werkstatt. Die App lädt den neuen Bestand und leert ihre bisherige Auswahl. Module und Detail-Host bleiben dieselben Bausteine.
+On the left in the community garden you switch to the open workshop. The app loads the new stock and clears its previous selection. Modules, detail host and frame stay the same building blocks — only the context changes.
 
 <Canvas of={Garden.Garden} />
 
-Ein Space ist keine Instanz. Mehrere Spaces können in derselben laufenden App erreichbar sein. Gruppe beschreibt im Datenmodell Zugehörigkeit; Space beschreibt den konfigurierten Arbeitskontext. [Vertrag und Beispiele](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/00-architecture.md).
+A space is not an instance: several spaces are reachable in the same running app. In the data model a **group** describes membership; a **space** is the configured working context of a group — its modules, its look, its members. The overview "Mein Netzwerk" aggregates across all spaces you belong to.
+
+What a space decides: which modules it carries (`data.modules`), how it looks, who is in it. What it does not decide: how a module works — that is the same in every space.
+
+[Contract and examples](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/00-architecture.md) (German) · [Create and configure](?path=/docs/rls-app-shell-space-verwaltung--docs)
