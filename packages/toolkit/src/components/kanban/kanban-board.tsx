@@ -11,6 +11,7 @@ import { ItemAssignees } from "../preview/item-assignees"
 import { ItemCommentCount } from "../preview/item-comment-count"
 import { normalizeStatus } from "./reorder"
 import { EyeOff, Eye, ChevronDown, ChevronRight } from "lucide-react"
+import { hasItemType } from "@real-life-stack/data-interface"
 
 export interface KanbanColumn {
   id: string
@@ -156,7 +157,7 @@ function DropIndicator({ visible }: { visible: boolean }) {
 }
 
 function itemColumnValue(item: Item, statusField: string): string | null {
-  if (item.type === "relation") return null
+  if (hasItemType(item, "relation")) return null
 
   const value = item.data[statusField]
   if (statusField === "status") {

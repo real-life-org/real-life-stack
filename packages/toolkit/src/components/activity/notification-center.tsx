@@ -3,12 +3,13 @@ import type { Group, NotificationState, ScopedActivityEntry } from "@real-life-s
 import { Bell, BellOff, MessageCircle, MoreHorizontal, Pencil, Plus, Smile, Trash2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, EmptyState, RelativeTime, Tabs, TabsContent, TabsList, TabsTrigger } from "../primitives"
 import { cn } from "../../lib/utils"
+import { canonicalItemType, hasItemType, type ItemType } from "@real-life-stack/data-interface"
 
 export type NotificationAction = "created" | "updated" | "deleted" | "reacted" | "commented"
 export type NotificationPriority = "high" | "low"
 
 export interface NotificationCandidate {
-  groupId: string; groupName: string; subjectId: string; subjectType: string; subjectTitle?: string
+  groupId: string; groupName: string; subjectId: string; subjectType: ItemType; subjectTitle?: string
   semanticAction: NotificationAction; priority: NotificationPriority; muted: boolean
   entryId: string; readKey: string; actorId: string; actor: ScopedActivityEntry["actor"]; ts: string
   targetExists: boolean; moduleHints?: NonNullable<ScopedActivityEntry["subject"]>["moduleHints"]
@@ -24,10 +25,11 @@ const compare = (a: NotificationCandidate, b: NotificationCandidate) => b.ts.loc
 
 function actionFor(scoped: ScopedActivityEntry): NotificationAction | null {
   const { entry } = scoped
-  if (entry.action === "delete") return entry.targetType === "reaction" || entry.targetType === "comment" ? null : "deleted"
+  const targetIs = (t: string) => hasItemType({ type: entry.targetType }, t)
+  if (entry.action === "delete") return targetIs("reaction") || targetIs("comment") ? null : "deleted"
   if (entry.action !== "create" && entry.action !== "update") return null
-  if (entry.targetType === "reaction") return entry.action === "create" ? "reacted" : null
-  if (entry.targetType === "comment") return entry.action === "create" ? "commented" : null
+  if (targetIs("reaction")) return entry.action === "create" ? "reacted" : null
+  if (targetIs("comment")) return entry.action === "create" ? "commented" : null
   return entry.action === "create" ? "created" : "updated"
 }
 
@@ -114,7 +116,7 @@ function sentenceParts(notification: NotificationCandidate): { lead: string; res
   const name = notification.actor?.displayName ?? notification.actorId
   const lead = notification.actorCount > 1 ? `${name} und ${notification.actorCount - 1} weitere` : name
   const plural = notification.actorCount > 1
-  const subject = `„${notification.subjectTitle ?? subjectWord(notification.subjectType)}"`
+  const subject = `„${notification.subjectTitle ?? subjectWord(canonicalItemType(notification.subjectType))}"`
   if (notification.semanticAction === "reacted") return { lead, rest: `${plural ? "haben" : "hat"} auf ${subject} reagiert` }
   if (notification.semanticAction === "commented") return { lead, rest: `${plural ? "haben" : "hat"} ${subject} kommentiert` }
   return { lead, rest: `${plural ? "haben" : "hat"} ${subject} ${presentation[notification.semanticAction].verb}` }

@@ -25,24 +25,7 @@ import type {
   RelationRecordWriterCapable,
   Source,
 } from "@real-life-stack/data-interface"
-import {
-  applyGroupDataPatch,
-  withEditStamp,
-  stripEditStamp,
-  assertMayMutateAuthoredItem,
-  assertAuthoredTypeUnchanged,
-  applyPagination,
-  createDefaultRelationStore,
-  createObservable,
-  deriveActivitySummary,
-  itemDisplayTitle,
-  moduleHintsFor,
-  applyNotificationStatePatch,
-  cloneNotificationState,
-  findRelatedItems,
-  canonicalItem,
-  matchesFilter,
-} from "@real-life-stack/data-interface"
+import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, applyPagination, createDefaultRelationStore, createObservable, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState, findRelatedItems, canonicalItem, matchesFilter, hasItemType, type ItemType } from "@real-life-stack/data-interface"
 import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
 
 export interface MockConnectorSeed {
@@ -131,7 +114,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     this.groupMembers = { ...data.groupMembers }
     this.groupItems = copyGroupItems(data.groupItems)
     for (const item of deduplicateItems(data.items)) {
-      if (item.type === "feature") {
+      if (hasItemType(item, "feature")) {
         this.storeItem(null, item)
         continue
       }
@@ -331,7 +314,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
 
     const scopedItems = [...(this.itemsByScope.get(groupId)?.values() ?? [])]
     const globalFeatures = [...(this.itemsByScope.get(null)?.values() ?? [])]
-      .filter((item) => item.type === "feature")
+      .filter((item) => hasItemType(item, "feature"))
     return [...scopedItems, ...globalFeatures]
   }
 
@@ -371,7 +354,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     // Authoritative ingress binding (spec 08): createdBy comes from the
     // session, never the caller — except in the marked fixture mode.
     if (!this.allowFixtureAuthors) item = { ...item, createdBy: sessionUser.id }
-    const scopeId = item.type === "feature" ? null : this.currentGroup?.id ?? null
+    const scopeId = hasItemType(item, "feature") ? null : this.currentGroup?.id ?? null
     const scopeItems = this.getScopeItems(scopeId, true)
     if (item.id !== undefined) {
       const existing = scopeItems.get(item.id)
@@ -416,11 +399,11 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     const location = this.findVisibleItemLocation(id)
     if (!location) throw new Error(`Item not found: ${id}`)
     const updated = canonicalItem({ ...location.item, ...updates, id })
-    if (location.item.type !== "feature" && updated.type === "feature") {
+    if (!hasItemType(location.item, "feature") && hasItemType(updated, "feature")) {
       this.assertNoItemOutsideScope(location.scopeId, id)
     }
     this.appendActivity(this.activityScopeFor(location.scopeId), "update", updated)
-    if (updated.type === "feature" && location.scopeId !== null) {
+    if (hasItemType(updated, "feature") && location.scopeId !== null) {
       const globalItems = this.getScopeItems(null, true)
       location.items.delete(id)
       globalItems.set(id, updated)
@@ -474,7 +457,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     let changed = false
 
     for (const item of items) {
-      const scopeId = item.type === "feature" ? null : targetGroupId ?? null
+      const scopeId = hasItemType(item, "feature") ? null : targetGroupId ?? null
       const scopeItems = this.getScopeItems(scopeId, true)
       let stored = scopeItems.get(item.id)
       if (!stored) {
@@ -507,7 +490,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
   moveItemToGroup(itemId: string, targetGroupId: string): void {
     const mover = this.requireCurrentUser()
     const location = this.findVisibleItemLocation(itemId)
-    if (!location || (location.scopeId === null && location.item.type === "feature")) throw new Error(`Item not found: ${itemId}`)
+    if (!location || (location.scopeId === null && hasItemType(location.item, "feature"))) throw new Error(`Item not found: ${itemId}`)
     // Fuer den Quell-Space ist ein Move semantisch ein Delete — bei einem
     // fremden Autoren-Item risse es die Aussage aus ihrem Kontext.
     assertMayMutateAuthoredItem(location.item, mover.id, "delete")
@@ -625,7 +608,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     if (entry.action === "delete") {
       subject = { id: entry.targetId, type: entry.targetType, ...(entry.summary ? { title: entry.summary } : {}) }
     } else if (target) {
-      const parentId = target.type === "reaction" || target.type === "comment"
+      const parentId = hasItemType(target, "reaction") || hasItemType(target, "comment")
         ? target.relations?.find((relation) => relation.predicate === "reactsTo" || relation.predicate === "commentOn")?.target.replace(/^item:/, "")
         : undefined
       const resolved = parentId ? items?.get(parentId) : target
@@ -795,7 +778,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
 
       const globalItems = this.itemsByScope.get(null)
       const globalItem = globalItems?.get(id)
-      if (globalItems && globalItem?.type === "feature") {
+      if (globalItems && globalItem && hasItemType(globalItem, "feature")) {
         return { scopeId: null, items: globalItems, item: globalItem }
       }
       return null
@@ -816,20 +799,22 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     return this.findVisibleItemLocation(id)?.item
   }
 
-  private allocateItemId(scopeId: string | null, type: string): string {
+  private allocateItemId(scopeId: string | null, type: ItemType): string {
+    const feature = hasItemType({ type }, "feature")
     const items = this.getScopeItems(scopeId, true)
     let id: string
     do {
       id = `item-${this.nextItemId++}`
     } while (
       items.has(id)
-      || (type === "feature" ? this.hasItemOutsideScope(scopeId, id) : this.hasGlobalFeature(id))
+      || (feature ? this.hasItemOutsideScope(scopeId, id) : this.hasGlobalFeature(id))
     )
     return id
   }
 
   private hasGlobalFeature(id: string): boolean {
-    return this.itemsByScope.get(null)?.get(id)?.type === "feature"
+    const item = this.itemsByScope.get(null)?.get(id)
+    return !!item && hasItemType(item, "feature")
   }
 
   private hasItemOutsideScope(scopeId: string | null, id: string): boolean {
@@ -843,8 +828,8 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     }
   }
 
-  private assertNoGlobalScopeCollision(scopeId: string | null, id: string, type: string): void {
-    if (type === "feature") {
+  private assertNoGlobalScopeCollision(scopeId: string | null, id: string, type: ItemType): void {
+    if (hasItemType({ type }, "feature")) {
       this.assertNoItemOutsideScope(scopeId, id)
       return
     }

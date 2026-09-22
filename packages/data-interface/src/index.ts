@@ -17,6 +17,7 @@ export {
 export * from "./item-types.js"
 export * from "./mirror.js"
 import { SYSTEM_ITEM_TYPES } from "./item-types.js"
+import { hasItemType, normalizeItemType } from "./type-manifest.js"
 export * from "./votes.js"
 export * from "./claims.js"
 export * from "./vocab.js"
@@ -27,9 +28,18 @@ export { EMPTY_NOTIFICATION_STATE, cloneNotificationState, applyNotificationStat
 
 // --- Core Types ---
 
+/**
+ * Die Klasse(n) eines Items — JSON-LDs `@type`, eine ungeordnete Menge, meist
+ * mit einem Element (Spec 06, „Die Rolle von type"). Ein String ist die
+ * Kurzform fuer eine einelementige Menge. Wer vergleicht, vergleicht Mengen:
+ * `hasItemType`, `itemTypes`, nie `item.type === "…"`. Bis rls#433 war der
+ * Typ `string`, obwohl Laufzeit und Eingangsgrenze die Menge laengst kannten.
+ */
+export type ItemType = string | string[]
+
 export interface Item {
   id: string
-  type: string
+  type: ItemType
   createdAt: string
   createdBy: string
 
@@ -238,7 +248,7 @@ export function deriveActivitySummary(
   item: Item,
   lookupItem: (id: string) => Item | undefined,
 ): string | undefined {
-  if (item.type === "reaction") {
+  if (hasItemType(item, "reaction")) {
     const emoji = typeof item.data.emoji === "string" && item.data.emoji ? item.data.emoji : "Reaktion"
     const target = item.relations?.find((relation) => relation.predicate === "reactsTo")?.target
     const targetId = target?.startsWith("item:") ? target.slice("item:".length) : undefined
@@ -246,7 +256,7 @@ export function deriveActivitySummary(
     const title = parent ? itemDisplayTitle(parent) : undefined
     return title ? `${emoji} auf „${title}"` : emoji
   }
-  if (item.type === "relation" && item.data.predicate === "votesOn") {
+  if (hasItemType(item, "relation") && item.data.predicate === "votesOn") {
     // Votes are relation records (votes.ts); their record item carries the
     // stance in data.value and the statement in the "to" endpoint relation.
     const stanceLabel = item.data.value === "green" ? "Zustimmung"
@@ -268,7 +278,7 @@ export interface ActivityEntry {
   action: "create" | "update" | "delete"
   origin?: "mirror"
   targetId: string
-  targetType: string
+  targetType: ItemType
   summary?: string
 }
 
@@ -289,7 +299,7 @@ export interface ScopedActivityEntry {
   targetExists: boolean
   subject: {
     id: string
-    type: string
+    type: ItemType
     createdBy?: string
     title?: string
     moduleHints?: ModuleHints
@@ -1077,8 +1087,9 @@ export function stripEditStamp<T extends Record<string, unknown>>(input: T): T {
  * is a convention that keeps honest clients honest, and must never be
  * presented to users as protection.
  */
-export function isAuthoredSystemItem(type: string): boolean {
-  return (SYSTEM_ITEM_TYPES as readonly string[]).includes(type)
+export function isAuthoredSystemItem(type: ItemType): boolean {
+  // Ueber die Menge (Spec 06, Regel 8): eine Systemklasse darunter genuegt.
+  return normalizeItemType(type).some((t) => (SYSTEM_ITEM_TYPES as readonly string[]).includes(t))
 }
 
 /**
@@ -1093,7 +1104,7 @@ export function assertMayMutateAuthoredItem(
 ): void {
   if (!isAuthoredSystemItem(item.type)) return
   if (item.createdBy === actorId) return
-  throw new Error(`Not authorized to ${action} another author's ${item.type}`)
+  throw new Error(`Not authorized to ${action} another author's ${normalizeItemType(item.type).join(",")}`)
 }
 
 /**
@@ -1115,10 +1126,15 @@ export function assertAuthoredTypeUnchanged(
   existing: Pick<Item, "type">,
   updates: Partial<Item>,
 ): void {
-  if (updates.type === undefined || updates.type === existing.type) return
+  if (updates.type === undefined) return
+  // Mengen vergleichen, nicht Schreibweisen: dieselben Klassen in anderer
+  // Reihenfolge oder als IRI sind keine Aenderung (Spec 06, Regel 6 und 8).
+  const vorher = [...normalizeItemType(existing.type)].sort()
+  const nachher = [...normalizeItemType(updates.type)].sort()
+  if (vorher.length === nachher.length && vorher.every((t, i) => t === nachher[i])) return
   if (!isAuthoredSystemItem(existing.type) && !isAuthoredSystemItem(updates.type)) return
   throw new Error(
-    `cannot change type between "${existing.type}" and "${updates.type}" — authorship would be misattributed`,
+    `cannot change type between "${vorher.join(",")}" and "${nachher.join(",")}" — authorship would be misattributed`,
   )
 }
 

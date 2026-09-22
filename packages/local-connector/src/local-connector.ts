@@ -23,7 +23,7 @@ import type {
   RelationRecordUpdate,
   Source,
 } from "@real-life-stack/data-interface"
-import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, createObservable, createDefaultRelationStore, createRelationRecordWith, canonicalItem, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState } from "@real-life-stack/data-interface"
+import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, createObservable, createDefaultRelationStore, createRelationRecordWith, canonicalItem, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState, hasItemType } from "@real-life-stack/data-interface"
 import { get, set, del, createStore, update as updateStoredValue } from "idb-keyval"
 
 // --- Types ---
@@ -427,8 +427,8 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
     }
 
     const itemIds = this.groupItems[groupId]
-    if (!itemIds) return this.items.filter((i) => i.type === "feature")
-    return this.items.filter((i) => itemIds.includes(i.id) || i.type === "feature")
+    if (!itemIds) return this.items.filter((i) => hasItemType(i, "feature"))
+    return this.items.filter((i) => itemIds.includes(i.id) || hasItemType(i, "feature"))
   }
 
   async getItems(filter?: ItemFilter): Promise<Item[]> {
@@ -1042,7 +1042,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
     let subject: ScopedActivityEntry["subject"] = null
     if (entry.action === "delete") subject = { id: entry.targetId, type: entry.targetType, ...(entry.summary ? { title: entry.summary } : {}) }
     else if (target) {
-      const parentId = target.type === "reaction" || target.type === "comment"
+      const parentId = hasItemType(target, "reaction") || hasItemType(target, "comment")
         ? target.relations?.find((relation) => relation.predicate === "reactsTo" || relation.predicate === "commentOn")?.target.replace(/^item:/, "")
         : undefined
       const resolved = parentId ? this.items.find((item) => item.id === parentId && (groupId === "__personal__"

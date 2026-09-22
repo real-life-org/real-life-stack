@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import type { DataInterface, Item } from "@real-life-stack/data-interface"
-import { SYSTEM_ITEM_TYPES, hasAuthorization, isWritable } from "@real-life-stack/data-interface"
+import { isAuthoredSystemItem, hasAuthorization, isWritable } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 import { useOptionalCurrentUser } from "./use-auth"
 
@@ -48,7 +48,7 @@ export function resolveItemPermissions(
   }
   if (!currentUserId) return NONE
   const mine = item.createdBy === currentUserId
-  const speaksForSomeone = (SYSTEM_ITEM_TYPES as readonly string[]).includes(item.type)
+  const speaksForSomeone = isAuthoredSystemItem(item.type)
   const allowed = mine || !speaksForSomeone
   return { canEdit: allowed, canDelete: allowed }
 }

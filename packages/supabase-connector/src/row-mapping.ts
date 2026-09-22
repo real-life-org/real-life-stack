@@ -1,5 +1,5 @@
 import type { Group, Item, Relation, User } from "@real-life-stack/data-interface"
-import { canonicalTypeValue } from "@real-life-stack/data-interface"
+import { canonicalTypeValue, canonicalItemType, type ItemType } from "@real-life-stack/data-interface"
 
 /** Column layout of public.items (supabase/migrations/0001_rls_schema.sql). */
 export interface ItemRow {
@@ -30,7 +30,7 @@ export function rowToItem(row: Record<string, unknown>): Item {
   return {
     id: r.id,
     // Eingangsgrenze (Spec 06, Regel 7): bekannte IRI → Kurzname, fremde bleibt.
-    type: canonicalTypeValue(r.type) as string,
+    type: canonicalTypeValue(r.type),
     createdBy: r.created_by,
     createdAt: isoTimestamp(r.created_at),
     // Absent until first edit — `null` from Postgres normalises to "no key",
@@ -48,7 +48,7 @@ export function rowToItem(row: Record<string, unknown>): Item {
 
 export interface ItemInsert {
   id?: string
-  type: string
+  type: ItemType
   createdBy: string
   "@context"?: string[]
   schema?: string
@@ -58,10 +58,18 @@ export interface ItemInsert {
   tags?: string[]
 }
 
+function warnClassSet(type: readonly string[]): Record<string, never> {
+  console.warn(`[SupabaseConnector] type column holds one class; storing "${canonicalItemType(type)}" of [${type.join(", ")}] (rls#432)`)
+  return {}
+}
+
 export function itemToInsertRow(item: ItemInsert, groupId: string | null): Record<string, unknown> {
   return {
     ...(item.id !== undefined ? { id: item.id } : {}),
-    type: item.type,
+    // Die Spalte `type` ist Text: eine Klasse. Eine Menge legt hier ihre
+    // erste ab, bis das Schema Mengen kennt (rls#432) — nie stillschweigend:
+    ...(Array.isArray(item.type) && item.type.length > 1 ? warnClassSet(item.type) : {}),
+    type: canonicalItemType(item.type),
     created_by: item.createdBy,
     ...(item["@context"] !== undefined ? { context: item["@context"] } : {}),
     ...(item.schema !== undefined ? { schema: item.schema } : {}),

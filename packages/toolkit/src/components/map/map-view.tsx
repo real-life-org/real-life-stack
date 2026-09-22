@@ -18,6 +18,7 @@ import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { cn, getSpacePrimaryColor } from "../../lib/utils"
 import { hasViewportPadding, hasGlobe, hasUserPosition, hasUserGesture, type MapAdapter, type MapBounds, type MapMountOptions, type MapProjection } from "./adapter"
 import { useLocationPick } from "./location-pick"
+import { hasItemType } from "@real-life-stack/data-interface"
 const PICK_MARKER_ID = "__rls_pick__"
 const PICK_MARKER_COLOR = "#ef4444"
 const MAP_SHEET_FRACTION = .55
@@ -229,7 +230,7 @@ export function filterMapViewItems(items: readonly Item[], filter: FilterBarValu
   // aber mit DENSELBEN Funktionen wie Host und Flaeche, nicht mit einer
   // dritten Fassung (Anton, 21.09.2026). Ihr eigen bleibt nur: ein Ort ist,
   // was eine Position hat.
-  const verortet = items.filter((item) => item.type !== "relation" && !!latLngFromPoint(item.data.position))
+  const verortet = items.filter((item) => !hasItemType(item, "relation") && !!latLngFromPoint(item.data.position))
   return applyItemSearch(applyFilterBarValue(verortet, filter), search)
 }
 

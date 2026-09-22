@@ -34,29 +34,7 @@ import type {
   InitialSyncCapable,
   InitialSyncState,
 } from "@real-life-stack/data-interface"
-import {
-  deriveActivitySummary,
-  BaseConnector,
-  createDefaultRelationStore,
-  createRelationRecordWith,
-  jcsCanonicalize,
-  relationAuthorialPayload,
-  verifyRelationClaim,
-  createObservable,
-  deriveContext,
-  matchesFilter,
-  findRelatedItems,
-  applyPagination,
-  applyGroupDataPatch,
-  stripEditStamp,
-  assertMayMutateAuthoredItem,
-  assertAuthoredTypeUnchanged,
-  itemDisplayTitle,
-  moduleHintsFor,
-  maxTs,
-  pruneReadEntryKeys,
-  type ReactiveObservable,
-} from "@real-life-stack/data-interface"
+import { deriveActivitySummary, BaseConnector, createDefaultRelationStore, createRelationRecordWith, jcsCanonicalize, relationAuthorialPayload, verifyRelationClaim, createObservable, deriveContext, matchesFilter, findRelatedItems, applyPagination, applyGroupDataPatch, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, itemDisplayTitle, moduleHintsFor, maxTs, pruneReadEntryKeys, type ReactiveObservable, canonicalItemType, hasItemType } from "@real-life-stack/data-interface"
 
 import {
   PersonalDocSpaceMetadataStorage,
@@ -1537,7 +1515,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     let subject: ScopedActivityEntry["subject"] = null
     if (entry.action === "delete") subject = { id: entry.targetId, type: entry.targetType, ...(entry.summary ? { title: entry.summary } : {}) }
     else if (target) {
-      const parentId = target.type === "reaction" || target.type === "comment"
+      const parentId = hasItemType(target, "reaction") || hasItemType(target, "comment")
         ? target.relations?.find((relation) => relation.predicate === "reactsTo" || relation.predicate === "commentOn")?.target.replace(/^item:/, "")
         : undefined
       const parent = parentId ? (doc.items?.[parentId] ? deserializeItem(doc.items[parentId]!) : undefined) : target
@@ -2088,7 +2066,8 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
         }
         return map
       },
-      (item) => item.type,
+      // Der Index zaehlt je Typ — die erste Klasse (Spec 06, Regel 9).
+      (item) => canonicalItemType(item.type),
       {
         // Overview includes every visible space, including the private/personal
         // document used for overview-created items.

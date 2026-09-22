@@ -470,7 +470,7 @@ export function moduleForItem(
 export function modulePresentsItem(
   moduleId: string,
   itemOrHints: Item | ModuleHints | undefined,
-  itemType?: string,
+  itemType?: string | readonly string[],
 ): boolean {
   if (moduleId === "feed") return itemType === undefined || isAggregateVisibleItemType(itemType)
   const modul = getModules().find((m) => m.id === moduleId)

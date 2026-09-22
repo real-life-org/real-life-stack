@@ -20,7 +20,8 @@ import { GENERIC_BADGE, resolveTypePresentation } from "./type-presentation"
  * supplied via the `config` prop.
  */
 export interface ItemTypeBadgeProps {
-  type: string
+  /** Die Klasse(n) des Items; gezeigt wird die erste mit Vorlage (Spec 06, Regel 9). */
+  type: string | readonly string[]
   /** Override or extend the type → presentation registry. */
   config?: Record<string, ItemTypeBadgeConfig>
   /** Show a neutral badge with the raw type when no registry entry exists. */
@@ -53,7 +54,7 @@ export function ItemTypeBadge({ type, config, fallback = false, className }: Ite
     className: GENERIC_BADGE.className,
   }
   const cfg =
-    config?.[type] ?? registryCfg ?? (resolved.generic || fallback ? genericCfg : undefined)
+    config?.[resolved.id] ?? registryCfg ?? (resolved.generic || fallback ? genericCfg : undefined)
   if (!cfg) return null
   const Icon = cfg.icon
   return (

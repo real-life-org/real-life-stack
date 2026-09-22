@@ -1,4 +1,5 @@
 import { deriveContext } from "./vocab.js"
+import { hasItemType } from "./type-manifest.js"
 import { parseLocalItemTarget } from "./mirror.js"
 import { isAuthorialPredicate, signRelationClaim, verifyRelationClaim, type ClaimSigner } from "./claims.js"
 import type {
@@ -129,7 +130,7 @@ function matchingEndpointRelations(
 }
 
 export function relationRecordFromItem(item: Item): RelationRecord | null {
-  if (item.type !== "relation" || !isRecord(item.data)) return null
+  if (!hasItemType(item, "relation") || !isRecord(item.data)) return null
   const predicate = item.data.predicate
   if (typeof predicate !== "string" || predicate.length === 0) return null
 
@@ -536,7 +537,7 @@ export function createDefaultRelationStore(
 
   const deleteRelationRecord = async (id: string): Promise<void> => {
     const item = await connector.getItem(id)
-    if (!item || item.type !== "relation") throw new Error(`Relation record not found: ${id}`)
+    if (!item || !hasItemType(item, "relation")) throw new Error(`Relation record not found: ${id}`)
     await assertCanMutate(connector, "item/delete", item)
     await connector.deleteItem(id)
   }

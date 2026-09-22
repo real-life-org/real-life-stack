@@ -1,5 +1,6 @@
 import {
-  SYSTEM_ITEM_TYPES,
+  canonicalItemType,
+  isAuthoredSystemItem,
   type Item,
   type RelationRecord,
   type User,
@@ -97,8 +98,7 @@ export function projectSpaceGraph(
     resolveItemSpace?: (itemId: string) => string | null
   },
 ): GraphProjection {
-  const systemTypes = new Set<string>(SYSTEM_ITEM_TYPES)
-  const cardItems = items.filter((item) => !systemTypes.has(item.type))
+  const cardItems = items.filter((item) => !isAuthoredSystemItem(item.type))
   const itemIds = new Set(cardItems.map((item) => item.id))
   const usersById = new Map(users.map((user) => [user.id, user]))
 
@@ -109,8 +109,10 @@ export function projectSpaceGraph(
   for (const item of cardItems) {
     const nodeId = graphItemNodeId(item.id)
     const avatarUrl = itemAvatarUrl(item)
-    nodes.set(nodeId, { id: nodeId, label: label(item), type: item.type, ...(avatarUrl ? { avatarUrl } : {}) })
-    usedTypes.add(item.type)
+    // Der Knotentyp ist die erste Klasse (Farbe, Legende) — eine UI-Wahl (Spec 06, Regel 9).
+    const type = canonicalItemType(item.type)
+    nodes.set(nodeId, { id: nodeId, label: label(item), type, ...(avatarUrl ? { avatarUrl } : {}) })
+    usedTypes.add(type)
   }
 
   /** Adds the person node lazily; returns null for unknown endpoints. */

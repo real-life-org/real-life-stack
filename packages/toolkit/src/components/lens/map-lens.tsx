@@ -1,4 +1,4 @@
-import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType, hasItemType } from "@real-life-stack/data-interface"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 
@@ -59,7 +59,7 @@ export function mapLensMarkers(
   const markers: MapMarkerSpec[] = []
 
   for (const item of items) {
-    if (item.type === "relation") continue
+    if (hasItemType(item, "relation")) continue
     const position = latLngFromPoint(item.data.position)
     if (!position) continue
     const { lng, lat } = position

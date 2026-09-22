@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { isAggregateVisibleItemType, type Item } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType, type Item, itemTypes } from "@real-life-stack/data-interface"
 
 import { resolveTypePresentation } from "../components/preview/type-presentation"
 import type { FilterTypeOption } from "../components/filter/types"
@@ -25,7 +25,7 @@ export function spaceVocabulary(items: readonly Item[]): SpaceVocabulary {
   const typen = new Set<string>()
   for (const item of items) {
     if (!isAggregateVisibleItemType(item.type)) continue
-    typen.add(item.type)
+    for (const t of itemTypes(item)) typen.add(t)
     for (const tag of item.tags ?? []) tags.add(tag)
   }
   return {

@@ -22,6 +22,7 @@ import {
   hasClaimVerification,
   hasGroups,
   hasItemGroups,
+  hasItemType,
   hasRelationRecords,
   hasRelationRecordWriter,
   isWritable,
@@ -91,7 +92,7 @@ export function describeDataInterfaceContract(name: string, harness: ContractHar
           const created = await connector.createItem({ type, createdBy: currentUserId, data: { title: "a" } })
           const hit = await connector.getItems({ type })
           expect(hit.map(({ id }) => id)).toContain(created.id)
-          for (const item of hit) expect(item.type).toBe(type)
+          for (const item of hit) expect(hasItemType(item, type)).toBe(true)
           const miss = await connector.getItems({ type: unique("ct-none") })
           expect(miss).toEqual([])
         })
@@ -408,7 +409,7 @@ export function describeDataInterfaceContract(name: string, harness: ContractHar
           // und stillschweigend verwerfen (GraphQL, dessen Update-Input den
           // Typ gar nicht kennt) sind beide zulaessig — anwenden nicht.
           await connector.updateItem(created.id, { type: "comment" }).catch(() => undefined)
-          expect((await connector.getItem(created.id))!.type).toBe(created.type)
+          expect((await connector.getItem(created.id))!.type).toEqual(created.type)
         })
       })
 

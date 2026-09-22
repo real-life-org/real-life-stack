@@ -1,5 +1,5 @@
 import type { Item } from "@real-life-stack/data-interface"
-import { normalizeItemType } from "@real-life-stack/data-interface"
+import { normalizeItemType, canonicalItemType } from "@real-life-stack/data-interface"
 import type { ContentTypeConfig, WidgetData } from "./content-composer"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import {
@@ -156,7 +156,7 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
     // das mit voller IRI ankam, verliert sonst hier seine Vorbelegung (rls#417).
     // Regel 9: die erste Klasse, fuer die es eine Vorlage gibt.
     const klassen = normalizeItemType(item.type)
-    const type = klassen.find((k) => resolve(k) !== undefined) ?? klassen[0] ?? item.type
+    const type = klassen.find((k) => resolve(k) !== undefined) ?? klassen[0] ?? canonicalItemType(item.type)
     const typeConfig = resolve(type)
     const text = d[textFieldFor(type, typeConfig)]
     const people = typeConfig ? peopleRelationsToWidgetData(typeConfig, item.relations) : {}

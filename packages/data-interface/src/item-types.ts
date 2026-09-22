@@ -1,4 +1,5 @@
 // Item data type specification
+import { hasItemType, normalizeItemType } from "./type-manifest.js"
 // Companion types for type-safe narrowing of Item.data
 //
 // Embedded relation conventions:
@@ -108,7 +109,7 @@ export interface TaskRelations {
 }
 
 export function isTask(item: Item): item is TaskItem {
-  return item.type === "task"
+  return hasItemType(item, "task")
 }
 
 // ============================================================
@@ -153,7 +154,7 @@ export interface EventRelations {
 }
 
 export function isEvent(item: Item): item is EventItem {
-  return item.type === "event"
+  return hasItemType(item, "event")
 }
 
 // ============================================================
@@ -184,7 +185,7 @@ export interface PostRelations {
 }
 
 export function isPost(item: Item): item is PostItem {
-  return item.type === "post"
+  return hasItemType(item, "post")
 }
 
 // ============================================================
@@ -219,7 +220,7 @@ export interface PlaceRelations {
 }
 
 export function isPlace(item: Item): item is PlaceItem {
-  return item.type === "place"
+  return hasItemType(item, "place")
 }
 
 // ============================================================
@@ -240,7 +241,7 @@ export interface ProjectData {
 export type ProjectItem = Item & { type: "project"; data: ProjectData }
 
 export function isProject(item: Item): item is ProjectItem {
-  return item.type === "project"
+  return hasItemType(item, "project")
 }
 
 // ============================================================
@@ -261,7 +262,7 @@ export interface ResourceData {
 export type ResourceItem = Item & { type: "resource"; data: ResourceData }
 
 export function isResource(item: Item): item is ResourceItem {
-  return item.type === "resource"
+  return hasItemType(item, "resource")
 }
 
 // ============================================================
@@ -284,7 +285,7 @@ export interface FeatureData {
 export type FeatureItem = Item & { type: "feature"; data: FeatureData }
 
 export function isFeatureItem(item: Item): item is FeatureItem {
-  return item.type === "feature"
+  return hasItemType(item, "feature")
 }
 
 // ============================================================
@@ -328,7 +329,7 @@ export interface ProfileRelations {
 }
 
 export function isProfileItem(item: Item): item is ProfileItem {
-  return item.type === "person"
+  return hasItemType(item, "person")
 }
 
 // ============================================================
@@ -351,7 +352,7 @@ export interface ReactionRelations {
 }
 
 export function isReaction(item: Item): item is ReactionItem {
-  return item.type === "reaction"
+  return hasItemType(item, "reaction")
 }
 
 // ============================================================
@@ -368,7 +369,7 @@ export interface StatementData {
 export type StatementItem = Item & { type: "statement"; data: StatementData }
 
 export function isStatement(item: Item): item is StatementItem {
-  return item.type === "statement"
+  return hasItemType(item, "statement")
 }
 
 // ============================================================
@@ -413,7 +414,7 @@ export interface CommentRelations {
 }
 
 export function isComment(item: Item): item is CommentItem {
-  return item.type === "comment"
+  return hasItemType(item, "comment")
 }
 
 // ============================================================
@@ -508,6 +509,8 @@ export const AGGREGATE_HIDDEN_ITEM_TYPES = [...SYSTEM_ITEM_TYPES, "feature"] as 
  * not silently miss the surfaces that should show it
  * (docs/spec/06-schema-composition.md → Modul-Konsequenzen).
  */
-export function isAggregateVisibleItemType(type: string): boolean {
-  return !(AGGREGATE_HIDDEN_ITEM_TYPES as readonly string[]).includes(type)
+export function isAggregateVisibleItemType(type: string | readonly string[]): boolean {
+  // Ueber die Menge (Spec 06, Regel 8): traegt das Item eine der versteckten
+  // Klassen, steht es nicht als eigene Karte.
+  return !normalizeItemType(type).some((t) => (AGGREGATE_HIDDEN_ITEM_TYPES as readonly string[]).includes(t))
 }
