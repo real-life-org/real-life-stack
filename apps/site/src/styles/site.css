@@ -60,7 +60,27 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-card { border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; padding: 1rem; background: var(--sl-color-bg-sidebar); }
 .rl-card strong { display: block; margin-bottom: .2rem; }
 .rl-card span { font-size: .85rem; color: var(--sl-color-gray-2); }
-.rl-card.compact { padding: .6rem .75rem; }
+.rl-card.compact { padding: .6rem .75rem; display: flex; gap: .6rem; align-items: flex-start; }
+.rl-card.compact > div { min-width: 0; text-align: start; }
+.rl-card.compact > div span { display: block; }
+.rl-card.centered { text-align: center; }
+.rl-card.centered .rl-icon { margin: 0 auto .6rem; }
+.rl-list > div { display: flex; gap: .75rem; align-items: flex-start; }
+.rl-list > div > div { display: grid; }
+/* Farbige Symbole wie in der React-Landing vor der Astro-Site: Kachel in Pastell, Symbol in der Vollfarbe. */
+.rl-icon { display: inline-flex; align-items: center; justify-content: center; color: var(--rl-tone); flex-shrink: 0; }
+.rl-icon svg { width: 1.25rem; height: 1.25rem; }
+.rl-icon.tile { width: 2.5rem; height: 2.5rem; border-radius: .6rem; background: color-mix(in oklab, var(--rl-tone) 14%, transparent); margin-bottom: .6rem; }
+.rl-list .rl-icon.tile { width: 2rem; height: 2rem; margin-bottom: 0; }
+.rl-list .rl-icon.tile svg { width: 1rem; height: 1rem; }
+.rl-card.compact .rl-icon { margin-top: .1rem; }
+.rl-icon.tone-green { --rl-tone: oklch(0.62 0.15 150); }
+.rl-icon.tone-blue { --rl-tone: oklch(0.55 0.21 264); }
+.rl-icon.tone-orange { --rl-tone: oklch(0.68 0.18 50); }
+.rl-icon.tone-purple { --rl-tone: oklch(0.58 0.2 300); }
+.rl-icon.tone-red { --rl-tone: oklch(0.6 0.2 25); }
+.rl-icon.tone-teal { --rl-tone: oklch(0.62 0.13 190); }
+:root[data-theme='dark'] .rl-icon.tile { background: color-mix(in oklab, var(--rl-tone) 22%, transparent); }
 .rl-card.compact strong { font-size: .9rem; }
 .rl-card.compact span { font-size: .75rem; }
 .rl-list { display: grid; gap: 1rem; border-inline-start: 4px solid var(--rl-blue); padding: 1.25rem; border-radius: .7rem; background: var(--sl-color-bg-sidebar); }
