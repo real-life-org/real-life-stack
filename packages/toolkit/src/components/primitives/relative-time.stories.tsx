@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { RelativeTime } from "./relative-time"
 
+/**
+ * **RelativeTime** renders a timestamp the way people read it — "gerade eben",
+ * "vor 3 Std.", "gestern", then the date — and keeps the exact time in the
+ * tooltip. Every card and every comment uses it, so time reads the same
+ * everywhere. Output is German until the toolkit texts are translated.
+ */
 const meta: Meta<typeof RelativeTime> = {
   id: "rls-primitives-relativetime",
   title: "RLS/Foundations/UI primitives/RelativeTime",
@@ -15,42 +21,42 @@ export default meta
 type Story = StoryObj<typeof RelativeTime>
 
 export const JustNow: Story = {
-  name: "Gerade eben",
+  name: "Just now",
   args: {
     date: new Date(Date.now() - 10_000).toISOString(),
   },
 }
 
 export const Minutes: Story = {
-  name: "Vor 5 Min.",
+  name: "5 minutes ago",
   args: {
     date: new Date(Date.now() - 5 * 60_000).toISOString(),
   },
 }
 
 export const Hours: Story = {
-  name: "Vor 3 Std.",
+  name: "3 hours ago",
   args: {
     date: new Date(Date.now() - 3 * 3_600_000).toISOString(),
   },
 }
 
 export const Yesterday: Story = {
-  name: "Gestern",
+  name: "Yesterday",
   args: {
     date: new Date(Date.now() - 24 * 3_600_000).toISOString(),
   },
 }
 
 export const Days: Story = {
-  name: "Vor 4 Tagen",
+  name: "4 days ago",
   args: {
     date: new Date(Date.now() - 4 * 24 * 3_600_000).toISOString(),
   },
 }
 
 export const OlderSameYear: Story = {
-  name: "Aelteres Datum (gleiches Jahr)",
+  name: "Older date, same year",
   args: {
     date: new Date(new Date().getFullYear(), 0, 15).toISOString(),
   },

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Button } from './button'
 import { Mail, Loader2, ChevronRight } from 'lucide-react'
 
+/** **Button**: the one button, in its variants and sizes. Primary is the space's accent colour; destructive is reserved for decisions in dialogs. */
 const meta: Meta<typeof Button> = {
   id: "rls-primitives-button",
   title: "RLS/Foundations/UI primitives/Button",
