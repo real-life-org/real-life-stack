@@ -53,6 +53,8 @@ function useFilterValue(): SharedFilterValue {
 }
 
 /**
+ * The app-wide filter that survives the module switch.
+ *
  * Der geteilte Filter. Wirft ohne Provider — wie `useModulePanel`.
  *
  * Bewusst KEIN stiller Rueckfall auf lokalen Zustand: Jeder Aufrufer bekaeme
@@ -60,6 +62,12 @@ function useFilterValue(): SharedFilterValue {
  * passiert — die Leiste schrieb in ihren, der Inhalt las einen anderen; im
  * Suchfeld stand „Garten", gefiltert wurde nichts. Wer ohne App-Shell rendert,
  * setzt einen `FilterScope` an die Wurzel seiner Flaeche.
+ *
+ * @answers `{value, searchText, setSearchText, clear}`
+ * @without throws on render
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function useSharedFilter(): SharedFilterValue {
   const ctx = useContext(FilterContext)

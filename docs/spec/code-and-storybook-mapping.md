@@ -68,16 +68,24 @@ beziehungsweise bestehender Code-Name auffindbar. „Ansicht“ bezeichnet eine
 Darstellungsvariante. Allgemeine Item-Inhalte heißen „Detailansicht“;
 „Personenprofil“ benennt den fachlichen Spezialfall.
 
-Die konkreten Titel und stabilen IDs der migrierten Stories stehen in
-[`../reference/story-migration.json`](../reference/story-migration.json).
-Bestehende URLs bleiben durch explizite Meta-IDs erhalten. Neue Stories
-verwenden eine der obigen Kategorien; die Prüfung der IDs kommt mit den Handbuch-Skripten.
+Jede Story-Datei trägt ihre Id ausdrücklich in `meta.id`, nach dem Schema
+`rls-<abschnitt>-<seite>` (seit rls#436 durchgängig Englisch, z. B.
+`rls-app-04-loading-contract`, `rls-foundations-hooks`). URLs bleiben damit
+stabil, auch wenn Titel oder Dateien umziehen. Ob eine Id existiert, prüfen
+die Skripte: `scripts/site/check.mjs` gegen den gebauten Storybook-Index,
+`scripts/hooks/lib.mjs` (`storyIds()`) aus dem Quelltext.
 
 Am 19.09.2026 sind fünf Stories entfallen: PostCard, StatCard, ActionCard,
-KanbanToolbar und das GridView-Duplikat. Die Begründung steht je Eintrag unter
-`removed` in `story-migration.json`. Neu hinzugekommen sind
-`RLS/App shell/The module surface`, `RLS/Foundations/Hooks` und
-`RLS/Foundations/All hooks`.
+KanbanToolbar und das GridView-Duplikat (Begründung in rls#416). Neu
+hinzugekommen sind `RLS/App shell/The module surface`,
+`RLS/Foundations/Hooks` und `RLS/Foundations/All hooks`.
+
+`RLS/Foundations/All hooks` ist erzeugt: `scripts/hooks/generate.mjs` liest den
+Dokumentationskommentar über jedem öffentlichen Hook (erster Absatz = Frage,
+`@answers`, `@without`, `@group`, `@see story`, `@see spec`) und schreibt
+`src/hooks/all-hooks.json`, das die Seite rendert. `pnpm check:hooks` fällt in
+CI, wenn ein Hook ohne vollständigen Block exportiert wird, eine Story-Id oder
+Spec-Datei fehlt oder die Datei nicht mehr zum Code passt (`pnpm docs:hooks`).
 
 ## Overview Stories
 

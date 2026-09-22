@@ -18,12 +18,30 @@ function writable(connector: DataInterface) {
   return connector
 }
 
+/**
+ * Create a new item.
+ *
+ * @answers `{mutate}`
+ * @without throws on call
+ * @group write
+ * @see story rls-foundations-hooks--write
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useCreateItem() {
   const connector = useConnector()
   const mutate = useCallback((item: CreateItemInput) => writable(connector).createItem(item), [connector])
   return useMemo(() => ({ mutate }), [mutate])
 }
 
+/**
+ * Change an existing item.
+ *
+ * @answers `{mutate}`
+ * @without throws on call
+ * @group write
+ * @see story rls-foundations-hooks--write
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useUpdateItem() {
   const connector = useConnector()
   const mutate = useCallback(
@@ -33,6 +51,15 @@ export function useUpdateItem() {
   return useMemo(() => ({ mutate }), [mutate])
 }
 
+/**
+ * Delete an item.
+ *
+ * @answers `{mutate}`
+ * @without throws on call
+ * @group write
+ * @see story rls-foundations-hooks--write
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useDeleteItem() {
   const connector = useConnector()
   const mutate = useCallback((id: string) => writable(connector).deleteItem(id), [connector])

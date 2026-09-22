@@ -105,12 +105,32 @@ export function DraftItemProvider({ children }: { children: ReactNode }) {
   return <DraftItemContext.Provider value={value}>{children}</DraftItemContext.Provider>
 }
 
-/** The live draft item (or null). Returns null outside a DraftItemProvider. */
+/**
+ * What is someone typing right now that modules should preview?
+ *
+ * The live draft item (or null). Returns null outside a DraftItemProvider.
+ *
+ * @answers `Item | null`
+ * @without null — without provider
+ * @group write
+ * @see story rls-foundations-hooks--write
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useDraftItem(): Item | null {
   return useContext(DraftItemContext)?.draft ?? null
 }
 
-/** Publish/clear the live draft (used by the shared item composer). No-op without a provider. */
+/**
+ * Publish or discard the running draft.
+ *
+ * Publish/clear the live draft (used by the shared item composer). No-op without a provider.
+ *
+ * @answers `(draft) => void`
+ * @without no-op
+ * @group write
+ * @see story rls-foundations-hooks--write
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useSetDraftItem(): (draft: Item | null) => void {
   const ctx = useContext(DraftItemContext)
   return ctx?.setDraft ?? (() => {})

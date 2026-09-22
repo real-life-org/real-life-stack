@@ -99,13 +99,32 @@ export interface ModuleHostValue {
 
 const ModuleHostContext = createContext<ModuleHostValue | null>(null)
 
-/** Der Space-Kontext des Hosts. Wirft ausserhalb — ein Modul laeuft im Host. */
+/**
+ * The space context and the items the module host produced for this surface.
+ *
+ * Der Space-Kontext des Hosts. Wirft ausserhalb — ein Modul laeuft im Host.
+ *
+ * @answers `{entry, currentSpace, members, groups, items, setCreateAnchor, …}`
+ * @without throws on render
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useModuleHost(): ModuleHostValue {
   const ctx = useContext(ModuleHostContext)
   if (!ctx) throw new Error("useModuleHost: kein <ModuleHost> — Module laufen im Modul-Host (Spec 01).")
   return ctx
 }
 
+/**
+ * The host context, or `null` outside a module host.
+ *
+ * @answers `ModuleHostValue | null`
+ * @without value — null
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useOptionalModuleHost(): ModuleHostValue | null {
   return useContext(ModuleHostContext)
 }

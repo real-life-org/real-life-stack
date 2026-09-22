@@ -74,6 +74,15 @@ export interface TagLink {
   active: boolean
 }
 
+/**
+ * Does a click on this tag filter the view?
+ *
+ * @answers `{onClick, active} | null`
+ * @without null
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useTagLink(tag: string): TagLink | null {
   const navigation = useContext(TagNavigationContext)
   const oeffnen = navigation?.openTag(tag)

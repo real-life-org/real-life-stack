@@ -129,3 +129,10 @@ jobs:
       # ungeprueft — das tut der Deploy, der beides baut.
       - name: Site
         run: pnpm build:site && pnpm check:site && pnpm test:site
+
+      # Die Hook-Referenz im Storybook („All hooks") entsteht aus den
+      # TSDoc-Bloecken der oeffentlichen Hooks (scripts/hooks). Faellt, wenn
+      # ein Hook ohne Block exportiert wird, eine Story-Id oder Spec-Datei
+      # fehlt oder all-hooks.json nicht mehr zum Code passt.
+      - name: Hook reference
+        run: pnpm check:hooks && pnpm test:hooks

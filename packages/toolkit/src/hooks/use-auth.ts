@@ -19,9 +19,16 @@ function useAuthConnector() {
 }
 
 /**
+ * Who am I, if anyone at all?
+ *
  * Like {@link useCurrentUser}, but a connector without authentication yields no
  * user instead of throwing. For code that only needs to know *whether* someone
  * is signed in, e.g. permission checks on a read-only connector.
+ *
+ * @answers `{data, isLoading}`
+ * @without null
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useOptionalCurrentUser(): { data: User | null; isLoading: boolean } {
   const connector = useConnector()
@@ -41,6 +48,14 @@ export function useOptionalCurrentUser(): { data: User | null; isLoading: boolea
   return { data, isLoading: !!observable && data === null }
 }
 
+/**
+ * Who am I? For surfaces that make no sense without sign-in.
+ *
+ * @answers `{data, isLoading}`
+ * @without throws on render
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useCurrentUser() {
   const connector = useAuthConnector()
   const observable = useMemo(() => connector.observeCurrentUser(), [connector])

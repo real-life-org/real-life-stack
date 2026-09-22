@@ -5,9 +5,16 @@ import { useConnector } from "./connector-context"
 import { useInitialSync } from "./use-initial-sync"
 
 /**
+ * Where does an item belong that is shared with nobody?
+ *
  * Id of the user's personal/private space („share with nobody"), or `null` for
  * connectors without one. Used by the sharing-scope picker to offer a „Privat"
  * option (pass the id to `moveItemToGroup` to make an item private).
+ *
+ * @answers `string | null`
+ * @without null
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function usePersonalGroupId(): string | null {
   const connector = useConnector()
@@ -48,6 +55,14 @@ function useGroupMutation<A extends unknown[], R>(
 const NO_GROUPS: Group[] = []
 const NO_MEMBERS: User[] = []
 
+/**
+ * Which spaces do I see?
+ *
+ * @answers `{data, isLoading}`
+ * @without empty
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useGroups() {
   const connector = useOptionalGroupConnector()
   const observable = useMemo(() => connector?.observeGroups() ?? null, [connector])
@@ -71,6 +86,14 @@ export function useGroups() {
   return { data: observable.current, isLoading: observable.loaded === false || initialSync.active }
 }
 
+/**
+ * Which space am I in right now?
+ *
+ * @answers `Group | null`
+ * @without null
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useCurrentGroup(): Group | null {
   const connector = useOptionalGroupConnector()
   const observable = useMemo(() => connector?.observeCurrentGroup() ?? null, [connector])
@@ -84,18 +107,50 @@ export function useCurrentGroup(): Group | null {
   return observable?.current ?? null
 }
 
+/**
+ * Create a space.
+ *
+ * @answers `(name, data?) => Promise`
+ * @without throws on call
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useCreateGroup() {
   return useGroupMutation((c, name: string, data?: Record<string, unknown>) => c.createGroup(name, data))
 }
 
+/**
+ * Change a space's name or data.
+ *
+ * @answers `(id, patch) => Promise`
+ * @without throws on call
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useUpdateGroup() {
   return useGroupMutation((c, id: string, updates: Partial<Group>) => c.updateGroup(id, updates))
 }
 
+/**
+ * Delete a space.
+ *
+ * @answers `(id) => Promise`
+ * @without throws on call
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useDeleteGroup() {
   return useGroupMutation((c, id: string) => c.deleteGroup(id))
 }
 
+/**
+ * Who belongs to this space, or with `null` to all of mine?
+ *
+ * @answers `{data, isLoading}`
+ * @without empty
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useMembers(groupId: string | null) {
   const connector = useOptionalGroupConnector()
   const observable = useMemo(() => connector?.observeMembers(groupId) ?? null, [connector, groupId])
@@ -112,10 +167,26 @@ export function useMembers(groupId: string | null) {
   return { data: observable.current, isLoading: observable.loaded === false }
 }
 
+/**
+ * Invite someone into a space.
+ *
+ * @answers `(groupId, userId) => Promise`
+ * @without throws on call
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useInviteMember() {
   return useGroupMutation((c, groupId: string, userId: string) => c.inviteMember(groupId, userId))
 }
 
+/**
+ * Remove someone from a space.
+ *
+ * @answers `(groupId, userId) => Promise`
+ * @without throws on call
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useRemoveMember() {
   return useGroupMutation((c, groupId: string, userId: string) => c.removeMember(groupId, userId))
 }

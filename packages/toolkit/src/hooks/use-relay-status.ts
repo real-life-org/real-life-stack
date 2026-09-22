@@ -11,6 +11,14 @@ function useMessagingConnector() {
   return connector
 }
 
+/**
+ * Is this device attached to the relay, is anything unsent waiting?
+ *
+ * @answers `{state, isConnected, pendingCount}`
+ * @without throws on render
+ * @group environment
+ * @see spec docs/spec/11-runtime-config-und-branding.md
+ */
 export function useRelayStatus() {
   const connector = useMessagingConnector()
 

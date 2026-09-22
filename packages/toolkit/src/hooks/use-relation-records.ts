@@ -24,6 +24,15 @@ function useObservableSnapshot<T>(observable: Observable<T> | null, empty: T) {
   }
 }
 
+/**
+ * Which signed relation records match?
+ *
+ * @answers `{data, supported}`
+ * @without empty — `supported: false`
+ * @group relations
+ * @see story rls-foundations-hooks--relations
+ * @see spec docs/spec/08-relation-records.md
+ */
 export function useRelationRecords(filter?: RelationRecordFilter) {
   const connector = useConnector()
   const supported = hasRelationRecords(connector)

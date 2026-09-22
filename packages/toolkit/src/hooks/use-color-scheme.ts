@@ -3,6 +3,8 @@ import { useEffect, useState } from "react"
 import { type ColorScheme } from "../lib/color-scales"
 
 /**
+ * Is it light or dark right now?
+ *
  * Hell oder dunkel — was gerade gilt.
  *
  * Die Entscheidung gehört dem Menschen, nicht dem Space: wer nachts am
@@ -12,6 +14,11 @@ import { type ColorScheme } from "../lib/color-scales"
  * Gelesen wird beobachtend statt durchgereicht, weil mehr als eine Stelle es
  * braucht und keine davon unter dem Schalter hängt: die Token-Schicht der App
  * und der Space-Dialog, der eine Vorschau der Skala zeigt.
+ *
+ * @answers `"light" | "dark"`
+ * @without —
+ * @group environment
+ * @see spec docs/spec/11-runtime-config-und-branding.md
  */
 export function useColorScheme(): ColorScheme {
   const [scheme, setScheme] = useState<ColorScheme>(() =>

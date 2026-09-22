@@ -43,8 +43,16 @@ export function FieldNavigationProvider({
 }
 
 /**
+ * Does this field lead to a view that shows it?
+ *
  * Die Aktion fuer ein Feld — oder `null`. Aufrufer machen den Wert genau dann
  * anklickbar, wenn hier etwas zurueckkommt.
+ *
+ * @answers `(() => void) | null`
+ * @without null
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function useFieldLink(field: string, item: Item): (() => void) | null {
   const navigation = useContext(FieldNavigationContext)

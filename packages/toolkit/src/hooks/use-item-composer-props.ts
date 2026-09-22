@@ -6,6 +6,8 @@ import { useLocationPick } from "../components/map/location-pick"
 import { nominatimGeocode, nominatimReverseGeocode } from "../lib/geocode"
 
 /**
+ * Geocoder, map pick and people for the composer — one source for create and edit.
+ *
  * Die Laufzeit-Verdrahtung des Composers, geteilt von Erstellen UND
  * Bearbeiten, damit die beiden nie auseinanderlaufen: der Geocoder, die
  * Übergabe an die Karte zum Punkt-Setzen, und die Personen aus den
@@ -15,6 +17,12 @@ import { nominatimGeocode, nominatimReverseGeocode } from "../lib/geocode"
  * Feld- und Widget-Definitionen („Vorlagen") kommen aus dem Typ-Register;
  * hier stehen nur die Rückrufe je Space. Bis zum 21.09.2026 in der
  * Referenz-App (B0, Schritt 3).
+ *
+ * @answers `Partial<ContentComposerProps>`
+ * @without —
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function useItemComposerProps(members: readonly User[]): Partial<ContentComposerProps> {
   const { startPick, canPick } = useLocationPick()

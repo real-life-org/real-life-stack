@@ -6,11 +6,18 @@ import { useConnector } from "./connector-context"
 const NOT_SYNCING: InitialSyncState = { active: false, loadedGroups: 0, expectedGroups: null }
 
 /**
+ * Is the first fill still running, may "nothing there" be said?
+ *
  * Läuft gerade die Erstbefüllung dieses Geräts?
  *
  * Backends ohne Erstsync-Begriff (Local, Mock, Supabase) melden hier dauerhaft
  * `active: false` — dort gibt es kein Fenster, in dem „keine Gruppen" gelogen
  * wäre. Die Oberfläche braucht deshalb keine Fallunterscheidung nach Connector.
+ *
+ * @answers `{active, loadedGroups, expectedGroups}`
+ * @without value — permanently `active: false`
+ * @group environment
+ * @see spec docs/spec/11-runtime-config-und-branding.md
  */
 export function useInitialSync(): InitialSyncState {
   const connector = useConnector()

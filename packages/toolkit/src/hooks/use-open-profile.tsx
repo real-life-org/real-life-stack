@@ -26,12 +26,19 @@ export function OpenProfileProvider({ openProfile, children }: OpenProfileProvid
 }
 
 /**
+ * Open a person's profile.
+ *
  * Returns an `(userId: string) => void` callback that opens the user's
  * profile, or a no-op if no `OpenProfileProvider` is mounted above.
  *
  * The no-op fallback means avatar-click sites can call this hook
  * unconditionally without breaking stories or test harnesses that
  * don't bother to wire a provider.
+ *
+ * @answers `(userId) => void`
+ * @without no-op
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useOpenProfile(): OpenProfile {
   return useContext(OpenProfileContext) ?? noop

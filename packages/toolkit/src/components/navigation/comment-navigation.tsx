@@ -40,7 +40,17 @@ export function CommentNavigationProvider({
   )
 }
 
-/** Der Weg ins Kommentarfeld dieses Items — oder `null`. */
+/**
+ * Does the comment hint lead into the input field?
+ *
+ * Der Weg ins Kommentarfeld dieses Items — oder `null`.
+ *
+ * @answers `(() => void) | null`
+ * @without null
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useCommentLink(item: Item): (() => void) | null {
   const navigation = useContext(CommentNavigationContext)
   return navigation?.openComments(item) ?? null

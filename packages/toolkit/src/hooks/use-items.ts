@@ -5,6 +5,15 @@ import { useConnector } from "./connector-context"
 import { useDraftItem } from "./use-draft-item"
 import { useInitialSync } from "./use-initial-sync"
 
+/**
+ * Which items match this filter, and is the list still arriving?
+ *
+ * @answers `{data, isLoading}`
+ * @without —
+ * @group read
+ * @see story rls-foundations-hooks--read
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useItems(filter?: ItemFilter) {
   const connector = useConnector()
   const filterKey = JSON.stringify(filter)
@@ -46,11 +55,19 @@ export function useItems(filter?: ItemFilter) {
 }
 
 /**
+ * The same list, with the draft being typed already in it as a card.
+ *
  * Like {@link useItems}, but merges the live draft item (an in-progress
  * create/edit) when it matches the filter — so a module previews it before it's
  * saved. The draft replaces the real item on edit (same id) and is prepended on
  * create. The module's own sort/group/filter then places it (right column, date,
  * marker) for free. Nothing is persisted; on save/cancel the draft vanishes.
+ *
+ * @answers `{data, isLoading}`
+ * @without —
+ * @group read
+ * @see story rls-foundations-hooks--read
+ * @see spec docs/spec/02-data-interface.md
  */
 export function useItemsWithDraft(filter?: ItemFilter) {
   const { data, isLoading } = useItems(filter)
@@ -64,6 +81,15 @@ export function useItemsWithDraft(filter?: ItemFilter) {
   return { data: merged, isLoading }
 }
 
+/**
+ * Does this one item exist, and is "not found" already decided?
+ *
+ * @answers `{data, isLoading}`
+ * @without —
+ * @group read
+ * @see story rls-foundations-hooks--read
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useItem(id: string) {
   const connector = useConnector()
   const observable = useMemo(() => connector.observeItem(id), [connector, id])

@@ -19,9 +19,17 @@ import { Button } from "../components/primitives/button"
  */
 
 /**
+ * Warn the browser before a reload or tab close while something is unsaved.
+ *
  * Warnt vor dem harten Verlassen: Neuladen, Tab schließen, externer Link. Ein
  * Router sieht davon nichts, deshalb die eingebaute Rückfrage des Browsers.
  * Nur aktiv, solange wirklich etwas ungespeichert ist.
+ *
+ * @answers `void`
+ * @without —
+ * @group write
+ * @see story rls-foundations-hooks--write
+ * @see spec docs/spec/02-data-interface.md
  */
 export function useBeforeUnloadWarning(dirty: boolean): void {
   useEffect(() => {

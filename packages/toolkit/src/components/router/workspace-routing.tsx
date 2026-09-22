@@ -114,6 +114,15 @@ export interface WorkspaceRoutingOptions {
   fallbackModule?: string
 }
 
+/**
+ * Space, module and item resolved from the URL, with redirects to the canonical path (`/router`).
+ *
+ * @answers `{groups, workspaces, activeWorkspace, activeModule, modules, …}`
+ * @without throws on render — needs a router
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
+ */
 export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions = {}): WorkspaceRouting {
   const connector = useConnector()
   const navigate = useNavigate()

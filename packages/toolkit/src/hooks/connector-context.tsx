@@ -15,15 +15,32 @@ export function ConnectorProvider({ connector, children }: ConnectorProviderProp
 }
 
 /**
+ * The same for surfaces that render without data access too.
+ *
  * The connector if one is provided, otherwise `null`. For components that
  * MAY enrich themselves from live data but must keep rendering without a
  * provider — `ItemPreview` is deliberately usable in tests, SSR and
  * storybook-style contexts without connector wiring.
+ *
+ * @answers `DataInterface | null`
+ * @without null
+ * @group permissions
+ * @see story rls-foundations-hooks--permissions
+ * @see spec docs/spec/03-capabilities.md
  */
 export function useOptionalConnector(): DataInterface | null {
   return useContext(ConnectorContext)
 }
 
+/**
+ * Which data access applies here?
+ *
+ * @answers `DataInterface`
+ * @without throws on render — without provider
+ * @group permissions
+ * @see story rls-foundations-hooks--permissions
+ * @see spec docs/spec/03-capabilities.md
+ */
 export function useConnector(): DataInterface {
   const connector = useContext(ConnectorContext)
   if (!connector) {

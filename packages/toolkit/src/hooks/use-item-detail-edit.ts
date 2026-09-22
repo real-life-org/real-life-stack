@@ -25,6 +25,8 @@ export interface ItemDetailEditConfig {
 }
 
 /**
+ * The edit half of the detail, the same for all modules. The host calls it; a module does not need it.
+ *
  * Die Bearbeiten-Seite des Details, für alle Module gleich: das volle
  * Typ-Register (der Host sperrt auf den Typ des Items und zeigt dessen
  * Felder, wo immer es geöffnet wird — ein Task mit Ort bearbeitbar auf der
@@ -33,6 +35,12 @@ export interface ItemDetailEditConfig {
  *
  * Bis zum 21.09.2026 in der Referenz-App; jedes Modul rief es einzeln
  * (B0, Schritt 3).
+ *
+ * @answers `{contentTypes, mapper, editInitialData, composerProps}`
+ * @without —
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function useItemDetailEdit(members: readonly User[]): ItemDetailEditConfig {
   const { data: groups } = useGroups()

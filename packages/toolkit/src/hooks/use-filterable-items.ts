@@ -33,6 +33,8 @@ export function applyFilterBarValue(items: readonly Item[], filter: FilterBarVal
 }
 
 /**
+ * The shared filter applied to a list, for surfaces that hold the bar themselves.
+ *
  * Apply a shared `FilterBarValue` to a list of items, client-side.
  *
  * Memoised on the items reference and the filter's stringified arrays,
@@ -43,6 +45,12 @@ export function applyFilterBarValue(items: readonly Item[], filter: FilterBarVal
  * filter) is intentionally out of scope here — that's a data-interface
  * concern. This hook is the UI-layer guarantee that the same filter
  * shape applies the same way in every module.
+ *
+ * @answers `{items, value, setValue, …}`
+ * @without throws on render — without `FilterProvider`
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function useFilterableItems(items: readonly Item[], filter: FilterBarValue): Item[] {
   // JSON.stringify avoids the `["a", "b"]` vs `["a b"]` collision that
@@ -75,11 +83,19 @@ export function applyItemSearch(items: readonly Item[], search: string): Item[] 
 }
 
 /**
+ * Exactly what the toolbar in the module head promises: filter plus search text.
+ *
  * Die Items eines Moduls, gefiltert wie die Steuerleiste im Kopf es anzeigt:
  * geteilte Tag-/Typ-Auswahl plus geteilter Suchtext.
  *
  * Module wenden damit genau das an, was der Nutzer im Kopf sieht — statt je
  * eine eigene Reihenfolge aus Filter und Suche zu bauen.
+ *
+ * @answers `Item[]`
+ * @without throws on render — without `FilterProvider`
+ * @group read
+ * @see story rls-foundations-hooks--read
+ * @see spec docs/spec/02-data-interface.md
  */
 export function useModuleFilteredItems(items: readonly Item[]): Item[] {
   const { value, searchText } = useSharedFilter()

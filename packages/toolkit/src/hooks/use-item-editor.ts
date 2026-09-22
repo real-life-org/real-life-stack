@@ -168,6 +168,15 @@ async function applyItemGroup(
   await connector.moveItemToGroup(itemId, group)
 }
 
+/**
+ * Open the composer and save an input as an item, including its space.
+ *
+ * @answers `{isOpen, mode, submit, remove, …}`
+ * @without throws on call
+ * @group write
+ * @see story rls-foundations-hooks--write
+ * @see spec docs/spec/02-data-interface.md
+ */
 export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResult {
   const { currentUserId, mapSubmission, onCreated, onUpdated, onDeleted } = options
   const connector = useConnector()

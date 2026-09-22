@@ -238,6 +238,10 @@ Normativ in `docs/spec/01-app-composition.md` → „Der Modul-Host" und „Der 
 - **Alle sieben Toolkit-Module laufen ohne eine Zeile in der App** (seit 21.09.2026, B0–B5): Feed, Kanban, Kalender, Karte, Resonanz, Liste, Graph in `packages/toolkit/src/modules/`. Die Referenz-App erweitert das Register nicht mehr; eine App darf eigene Module einführen oder eine Fläche ersetzen — ausdrücklich, mit `replaces: ["view"]` am Fragment. Muster für ein neues Modul: eine Datei in `modules/`, ein Registereintrag, eine Story mit `HostWorld`. Muster für eine neue App: Connector, Router, Register, `MapLibreAdapterProvider`, `RoutedAppFrame` — sonst nichts (Spec 01, „Was bei der App bleibt").
 - **Der Plusknopf bietet immer alle Typen.** Ein Modul schlägt vor (`suggestType`), belegt vor (Kalendertag), schränkt nie ein.
 
+### Hooks dokumentieren
+
+Jeder Hook, den `packages/toolkit/src/index.ts` oder `router.tsx` exportiert, trägt direkt über dem Export einen Dokumentationskommentar mit festen Feldern (Plan D2, 22.09.2026): erster Absatz = die Frage, die er beantwortet (Englisch, ein Satz), `@answers` (Form der Antwort), `@without` (was ohne die Fähigkeit passiert: `—`, `empty`, `null`, `value`, `no-op`, `throws on call`, `throws on render`, optional `— Notiz`), `@group` (`read`, `write`, `people`, `permissions`, `relations`, `surface`, `environment`, `item`), optional `@see story <id>` und `@see spec <pfad>`. Weiterer Fließtext darunter bleibt Deutsch wie alle Code-Kommentare. Daraus entsteht die Storybook-Seite „All hooks“ (`pnpm docs:hooks` → `src/hooks/all-hooks.json`); `pnpm check:hooks` und `pnpm test:hooks` laufen in CI und fallen bei fehlendem Feld, unbekannter Story-Id, fehlender Spec-Datei oder veralteter Datei. Neuer Hook = Block schreiben, `pnpm docs:hooks`, beides committen.
+
 ## Reaktivität & Relations (WICHTIG — vor jedem reaktiven Feature lesen!)
 
 Ausführliche Spezifikation in `docs/spec/reaktivitaet.md`. Die wichtigsten Regeln:

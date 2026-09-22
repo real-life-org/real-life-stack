@@ -46,6 +46,8 @@ export function spaceVocabulary(items: readonly Item[]): SpaceVocabulary {
 }
 
 /**
+ * Which tags and types exist in the space? The one derivation for filter card, chips and tag suggestions.
+ *
  * Das Vokabular des Space: welche Tags und Typen es hier überhaupt gibt.
  *
  * **Es gehört der Fläche, nicht dem Modul** — nach derselben Regel wie die
@@ -73,6 +75,12 @@ export function spaceVocabulary(items: readonly Item[]): SpaceVocabulary {
  * Konfiguration des Space, und diese Ableitung bleibt höchstens der Rückfall
  * für einen Space ohne eigene. Dass es überhaupt nur EINE Ableitung gibt, ist
  * die Voraussetzung dafür: Es gibt genau eine Stelle umzustellen.
+ *
+ * @answers `{tags, types}`
+ * @without empty
+ * @group surface
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function useSpaceVocabulary(fallbackItems?: readonly Item[]): SpaceVocabulary {
   const connector = useOptionalConnector()

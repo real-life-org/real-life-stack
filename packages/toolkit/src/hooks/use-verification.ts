@@ -16,6 +16,14 @@ const NOOP_VERIFICATION = {
   reset: () => {},
 }
 
+/**
+ * Two people who meet in real life confirm each other.
+ *
+ * @answers `{supported, createChallenge, …}`
+ * @without empty — `supported: false`
+ * @group people
+ * @see spec docs/spec/04-items-relations-groups-spaces.md
+ */
 export function useVerification() {
   const connector = useConnector()
   const supported = hasEncounterVerification(connector)
