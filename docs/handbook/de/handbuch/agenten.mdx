@@ -1,0 +1,75 @@
+---
+title: Mit einem Agenten arbeiten
+description: Einstiege, Auftragsform, Regeln und die Prüfungen — für Coding-Agents, die eine App bauen oder am Stack mitarbeiten.
+sidebar:
+  order: 2
+sources:
+  - llms.txt
+  - docs/templates/AGENTS.md
+  - AGENTS.md
+  - docs/agent-workspace.md
+  - scripts/agents/generate.mjs
+  - .github/workflows/tests.yml
+---
+
+Ein Coding-Agent braucht dasselbe wie ein Mensch, nur in einer Datei: was Real Life Stack ist, was bei der App bleibt, wo die Wahrheit steht und welche Prüfung am Ende laufen muss. Diese Seite sagt, welche Datei das je nach Vorhaben ist, wie ein Auftrag aussieht, der ankommt, und woran ein Ergebnis gemessen wird.
+
+## Drei Einstiege
+
+| Vorhaben | Datei für den Agenten | Was drinsteht |
+|---|---|---|
+| Eine App auf den veröffentlichten Paketen | [App-Vorlage `AGENTS.md`](https://github.com/real-life-org/real-life-stack/blob/master/docs/templates/AGENTS.md) — in das Wurzelverzeichnis des neuen Repos kopieren | Pakete, die ganze erste App als Code, Datenmodell, Fähigkeiten, UI-Regeln, Übergabe |
+| Am Stack mitbauen | [`AGENTS.md`](https://github.com/real-life-org/real-life-stack/blob/master/AGENTS.md) des Repos, dann [`docs/agent-workspace.md`](https://github.com/real-life-org/real-life-stack/blob/master/docs/agent-workspace.md) | Spec als Quelle der Wahrheit, Paketgrenzen, Prüfungen, Übergabe; der Modul-Host, die Hook-Konvention |
+| Orientierung, egal wofür | [`/llms.txt`](/llms.txt) | Inhaltsverzeichnis: Pakete mit Version, jede Spec-Datei, alle 78 Hooks mit Frage und Verhalten ohne Fähigkeit, das Handbuch als Markdown |
+
+Die drei Dateien schreiben sich nicht auseinander: `llms.txt` und der Code-Block der Vorlage werden aus dem Repo erzeugt — aus den `package.json` der Pakete, dem Spec-Index, der Hook-Referenz und `examples/first-app`. Ein Wächter in CI fällt, wenn sie nicht mehr zum Stand passen (`pnpm check:agents`).
+
+## Die Standardantwort: der Rahmen
+
+Ein Agent, der eine App beginnt, sollte nicht bei Komponenten anfangen, sondern beim Rahmen. Eine App stellt **Connector, Router, Register, Karten-Engine und `RoutedAppFrame`** — sonst nichts (Spec 01, „Was bei der App bleibt“). Kopfzeile, Tabs, Panel, Erstellen, Detail und die sieben Module kommen aus dem Toolkit; ein Modul läuft ohne eine Zeile in der App. Wie das aussieht, zeigt [Erste App bauen](/handbuch/erste-app/), rund 40 Zeilen. Genau dieser Code steht in der App-Vorlage.
+
+Was ein Agent deshalb **nicht** tun sollte: eine eigene Shell aus `Navbar`, `AppShell` und Modul-Ansichten zusammensetzen, ein eigenes Detail-Panel bauen, Items im Modul selbst laden. Jede dieser Fassungen ist eine zweite Version von etwas, das im Toolkit einmal existiert (Spec 01, Regel 5), und sie fällt bei der nächsten Toolkit-Version zurück.
+
+## Ein brauchbarer erster Auftrag
+
+> Baue eine kleine Community-App auf Real Life Stack nach `AGENTS.md`. Beginne mit dem `MockConnector` und einem Space mit Kalender, Karte und Liste. Nimm `RoutedAppFrame`; schreibe kein eigenes Modul, kein eigenes Detail. Lege ein Item mit Datum und Ort an und zeige, dass es im Kalender und auf der Karte erscheint. Führe Typecheck und Build aus. Nenne ausdrücklich, was dir gefehlt hat: ein Export, eine Fähigkeit, eine unklare Stelle in der Spec.
+
+Der letzte Satz ist der wichtigste. Was einem Agenten fehlt, ist ein Befund über den Stack, nicht über den Agenten, und der Weg, auf dem der Stack für die nächste App besser wird.
+
+## Was in jeden Auftrag gehört
+
+- **Ziel:** ein beobachtbares Ergebnis. Nicht „Kalender verbessern“, sondern „ein Klick auf einen leeren Tag öffnet Erstellen mit vorbelegtem Datum“.
+- **Umfang:** welche App, welches Paket, welche Dateien. Was ausdrücklich nicht dazugehört.
+- **Vertrag:** die Spec-Stelle und die Begriffe, die gelten. Bei Widerspruch zwischen Code und Spec gewinnt die Spec; wer sie ändern will, tut es sichtbar, mit Begründung im PR.
+- **Prüfung:** welche Befehle grün sein müssen (unten).
+- **Übergabe:** was sich geändert hat, warum, welche Dateien, welche Prüfungen liefen, was offen ist und was ein Mensch entscheiden muss.
+
+## Regeln, die Agenten am häufigsten brechen
+
+1. **Komponieren statt erfinden.** Vorhandene Komponenten und Hooks zuerst prüfen; fehlt etwas, ist das ein Issue im Toolkit, kein Nachbau in der App.
+2. **Kein Backend in der Oberfläche.** Flächen fragen Hooks, Hooks lesen das `DataInterface`, der Connector entscheidet. Kein `fetch`, kein Griff in Connector-Interna.
+3. **Kein Kopieren interner Dateien**, um an einen fehlenden Export zu kommen. Den fehlenden Export benennen.
+4. **Fähigkeiten prüfen statt annehmen.** Nicht jeder Connector kann schreiben, Gruppen führen oder anmelden. Im Rahmen ist das erledigt: Lese-Hooks antworten leer, Schreib-Hooks scheitern beim Aufruf, Flächen verbergen, was der Connector nicht kann.
+5. **Karten aus `ItemPreview`, Dialoge aus der Toolkit-Familie.** Eine Komponente je Bedeutung; Varianten über Props und Fähigkeiten.
+6. **Keine Geheimnisse** in Code, Doku, Tests oder Prompts.
+
+## Die Prüfungen
+
+Das Repo prüft sich selbst, in CI und auf jedem Rechner. Ein Agent, der am Stack arbeitet, lässt vor der Übergabe laufen, was seinen Bereich betrifft; ein Agent, der eine App baut, mindestens Typecheck und Build seiner App.
+
+| Prüfung | Befehl | Was sie fängt |
+|---|---|---|
+| Tests, in zwei Zeitzonen | `pnpm test` | Verhalten; Datums- und Kalenderfehler, die nur in einer Zone auftreten |
+| Typecheck aller Pakete und Apps | `pnpm -r typecheck` | tote Importe, falsche Verträge |
+| Normative Wörter | `python3 scripts/check-normative-words.py` | Spec-Text, der von der Konvention der Familie abweicht |
+| Geteiltes bleibt geteilt | `python3 scripts/check-shared-derivations.py` | Ableitungen, die ein Modul selbst macht, obwohl sie der Fläche gehören (Spec 01, Regel 2a) |
+| Hook-Referenz | `pnpm check:hooks && pnpm test:hooks` | ein exportierter Hook ohne Dokumentationsblock, eine Story-Id oder Spec-Datei, die es nicht gibt |
+| Einstiege für Agenten | `pnpm check:agents && pnpm test:agents` | `llms.txt` oder App-Vorlage, die nicht mehr zum Repo passen |
+| Site und Handbuch | `pnpm build:site && pnpm check:site` | Quellen, die eine Seite nennt und die fehlen; Stories, die es nicht gibt; Links ins Leere; veraltete Übersetzungen |
+| Erste App | `pnpm exec turbo run build --filter=first-app` | das Handbuch-Beispiel baut nicht mehr gegen die Pakete |
+
+Ein Wächter, der nichts prüft, driftet lautlos; deshalb steht jeder dieser Punkte als Schritt in `.github/workflows/tests.yml`, und einige testen sich selbst mit Negativfällen.
+
+## Zusammenarbeit bleibt sichtbar
+
+Ein PR enthält das Problem, das Verhalten nach der Änderung und die tatsächlich ausgeführten Prüfungen. Review und Merge-Entscheidung bleiben bei Menschen; ein zweiter Agent darf reviewen, ersetzt sie aber nicht. Ein bestimmter Agent, ein Runner oder ein besonderer Zugang ist keine Voraussetzung für einen Beitrag: `AGENTS.md`, klare Aufträge und laufende Prüfungen genügen.

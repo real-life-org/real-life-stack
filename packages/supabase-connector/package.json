@@ -1,6 +1,7 @@
 {
   "name": "@real-life-stack/supabase-connector",
   "version": "0.2.1",
+  "description": "Connector for a central Supabase backend (auth, rows, realtime).",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/real-life-org/real-life-stack.git",

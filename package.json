@@ -24,7 +24,10 @@
     "docs:hooks": "node scripts/hooks/generate.mjs",
     "check:hooks": "node scripts/hooks/generate.mjs --check",
     "test:hooks": "node --test scripts/hooks/check.test.mjs",
-    "dev:first-app": "turbo run build --filter=first-app^... && pnpm --filter first-app dev"
+    "dev:first-app": "turbo run build --filter=first-app^... && pnpm --filter first-app dev",
+    "docs:agents": "node scripts/agents/generate.mjs",
+    "check:agents": "node scripts/agents/generate.mjs --check",
+    "test:agents": "node --test scripts/agents/check.test.mjs"
   },
   "devDependencies": {
     "turbo": "^2.3.3",
