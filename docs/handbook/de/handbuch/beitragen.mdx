@@ -9,6 +9,8 @@ sources:
   - docs/RELEASING.md
   - docs/ki-workflow.md
   - .github/workflows/pr-title.yml
+  - .github/workflows/deploy-prototypes.yml
+  - .github/workflows/publish-app-image.yml
 ---
 
 Ein Beitrag ist alles, was den Stack für die nächste Community besser macht: Code, eine Story, ein Satz in der Spec, ein Test mit echten Menschen, eine Grafik, eine bessere Erklärung. Der Weg ist für alle derselbe, und er braucht keinen bestimmten Agenten und keinen Runner.
@@ -43,9 +45,13 @@ Spec und Dokumentation sind Deutsch, Bezeichner im Code Englisch, Code-Kommentar
 
 Ein Agent schreibt Code wie ein Mensch, nur schneller und mit anderen Fehlern. Der Arbeitsablauf, der ihn zuverlässig macht, steht in `docs/ki-workflow.md`: erst Tests, dann Umsetzung, ein Modul nach dem anderen, Review durch einen Menschen. Was ein Agent zum Einstieg braucht und wie ein Auftrag aussieht, der ankommt: [Mit einem Agenten arbeiten](/handbuch/agenten/).
 
-## Vom Merge zum Release
+## Vom Merge zum Release: zwei Wege
 
-Ein Merge auf `master` veröffentlicht noch nichts. release-please hält aus den Conventional Commits eine Release-PR offen; wer sie mergt, erzeugt die Tags, und daraus werden die npm-Pakete (`@real-life-stack/*`) und die Referenz-App (F-Droid, Play, Web). Ein Fix in einem Paket kaskadiert auf die App, damit er auch dort ankommt. Der ganze Mechanismus, mit seinen zerbrechlichen Stellen, steht in `docs/RELEASING.md`.
+Ein Merge auf `master` erreicht Nutzer auf zwei verschiedenen Wegen, und nur einer davon braucht eine Versionsnummer.
+
+**Kontinuierlich, mit jedem passenden Merge.** `deploy-prototypes.yml` baut bei Änderungen an Apps, Paketen, Handbuch oder Site die Web-App, die Site und das Storybook und veröffentlicht sie unter real-life-stack.de; dazu die OTA-Bundles, mit denen installierte Apps (F-Droid, Obtainium, iOS) ihren Web-Inhalt nachladen. `publish-app-image.yml` veröffentlicht bei Änderungen an Referenz-App, Paketen oder `deploy/app/` das Container-Image der Edge-Instanz. Für all das wird keine Release-PR gemergt: Was auf `master` liegt, kann Nutzer noch am selben Tag erreichen.
+
+**Versioniert, über die Release-PR.** release-please hält aus den Conventional Commits eine Release-PR offen. Wer sie mergt, erzeugt die Tags, und daraus werden die npm-Pakete (`@real-life-stack/*`, für Apps außerhalb des Repos) und die nativen Artefakte der Referenz-App (APK für F-Droid, AAB für Play). Play bekommt keine OTA-Updates; eine Änderung erreicht Play erst mit diesem Weg. Ein Fix in einem Paket kaskadiert deshalb auf die App-Version, damit er auch dort ankommt. Der ganze Mechanismus, mit seinen zerbrechlichen Stellen, steht in `docs/RELEASING.md`.
 
 ## Zuständigkeiten und Erwartungen
 
