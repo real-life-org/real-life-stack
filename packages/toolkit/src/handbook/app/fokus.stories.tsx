@@ -32,7 +32,7 @@ function Adresszeile() {
   const q = params.toString()
   const url = `/${f.scope ?? "?"}/${f.module ?? "?"}${f.itemId ? `/${f.itemId}` : ""}${q ? `?${q}` : ""}`
   return (
-    <div className="pointer-events-auto fixed inset-x-0 bottom-0 z-[60] border-t bg-background/95 px-4 py-2 text-sm backdrop-blur">
+    <div className="pointer-events-auto fixed bottom-2 left-32 right-24 z-[60] rounded-lg border bg-background/95 px-4 py-2 text-sm shadow-lg backdrop-blur">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2">
         <span className="text-muted-foreground">In der App wäre die URL jetzt</span>
         <code className="rounded bg-muted px-2 py-0.5 font-mono text-[13px]">{url}</code>
@@ -61,7 +61,7 @@ function Panelzeile() {
   const { startCreate, isComposing } = useCreate()
   const f = useItemFocus()
   return (
-    <div className="pointer-events-auto fixed inset-x-0 bottom-0 z-[60] border-t bg-background/95 px-4 py-2 text-sm backdrop-blur">
+    <div className="pointer-events-auto fixed bottom-2 left-32 right-24 z-[60] rounded-lg border bg-background/95 px-4 py-2 text-sm shadow-lg backdrop-blur">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2">
         <span className="text-muted-foreground">Im Panel steht gerade</span>
         <code className="rounded bg-muted px-2 py-0.5 font-mono text-[13px]">{panel.current ? `${panel.current.kind}${panel.current.itemId ? ` · ${panel.current.itemId}` : ""}` : "nichts"}</code>
@@ -90,7 +90,7 @@ function Panelzeile() {
 function Erstellzeile() {
   const { startCreate, patchCreate, isComposing } = useCreate()
   return (
-    <div className="pointer-events-auto fixed inset-x-0 bottom-0 z-[60] border-t bg-background/95 px-4 py-2 text-sm backdrop-blur">
+    <div className="pointer-events-auto fixed bottom-2 left-32 right-24 z-[60] rounded-lg border bg-background/95 px-4 py-2 text-sm shadow-lg backdrop-blur">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2">
         <span className="text-muted-foreground">useCreate(): isComposing = {String(isComposing)}</span>
         <span className="ml-auto flex flex-wrap gap-1">
