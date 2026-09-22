@@ -10,15 +10,16 @@ import { ItemPreview } from "./item-preview"
 import { STORY_EVENT, STORY_ME, STORY_POST, STORY_TASK, StoryWorld } from "../../story-support/story-world"
 
 /**
- * **Die Beigaben der Item-Vorschau.**
+ * **The adornments of the item preview.**
  *
- * `ItemPreview` selbst weiß nichts über Typen, Spaces oder Gespräche. Sie hat
- * drei Steckplätze, und was dort steht, entscheidet die Fläche: das Typ-Zeichen
- * neben dem Urheber, die Fakten unter dem Titel, und unten die Fußzeile mit
- * Zuweisungen, Reaktionen und dem Kommentar-Hinweis. Deshalb sieht dieselbe Karte im Feed, auf der Karte und im Kanban
- * verschieden aus, ohne dass es drei Karten gäbe.
+ * `ItemPreview` itself knows nothing about types, spaces or conversations. It
+ * has three slots, and what stands there is decided by the type register and
+ * the surface: the type badge next to the author, the facts under the title
+ * (date row, place, status), and the footer with assignees, reactions and the
+ * comment hint. That is why the same card looks different in the feed, on the
+ * map and in the kanban without there being three cards.
  *
- * Alle Beigaben sind einzeln benutzbar, auch außerhalb einer Karte.
+ * Every adornment can be used on its own, outside a card too.
  */
 
 const meta: Meta = {
@@ -42,9 +43,9 @@ function Reihe({ titel, erklaerung, children }: { titel: string; erklaerung: str
   )
 }
 
-/** Alle Beigaben nebeneinander, mit dem Satz, den jede beantwortet. */
+/** All adornments side by side, each with the sentence it answers. */
 export const Alle: Story = {
-  name: "Alle Beigaben",
+  name: "All adornments",
   render: () => (
     <div className="mx-auto max-w-2xl">
       <Reihe titel="ItemTypeBadge" erklaerung={'Was für ein Ding ist das? Farbe und Zeichen kommen aus dem Typ-Register. Der Grundtyp „post“ hat keins, weil ein Beitrag keine Ansage braucht; ein unbekannter Typ bekommt nur mit fallback eines.'}>
@@ -76,9 +77,9 @@ export const Alle: Story = {
   ),
 }
 
-/** Dieselbe Karte, verschieden bestückt: so entsteht der Unterschied zwischen den Modulen. */
+/** The same card, equipped differently: this is where the difference between modules comes from. */
 export const InDerKarte: Story = {
-  name: "In der Karte",
+  name: "Inside the card",
   render: () => (
     <div className="mx-auto flex max-w-lg flex-col gap-4">
       <div>
@@ -112,9 +113,9 @@ export const InDerKarte: Story = {
   ),
 }
 
-/** Solange die Liste noch lädt. Dieselbe Höhe wie die Karte, damit nichts springt. */
+/** While the list is still loading. Same height as the card, so nothing jumps. */
 export const Ladezustand: Story = {
-  name: "Ladezustand",
+  name: "Loading state",
   render: () => (
     <div className="mx-auto flex max-w-lg flex-col gap-3">
       <ItemPreviewSkeleton />

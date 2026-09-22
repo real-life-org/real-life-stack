@@ -44,6 +44,13 @@ function PickerDemo({ style, label = "Add Reaction" }: PickerDemoProps) {
   )
 }
 
+/**
+ * **ReactionPicker** is the small emoji menu behind the trigger of the
+ * reaction bar. It opens where there is room — upward at the bottom edge,
+ * to the left at the right edge — so a card at the corner of the screen never
+ * pushes it out of view. The chosen emoji goes back to the bar, which writes
+ * the reaction.
+ */
 const meta: Meta = {
   id: "rls-module-components-reactions-reactionpicker",
   title: "RLS/Items/Detail view/Reactions and comments/ReactionPicker",
@@ -57,6 +64,7 @@ export default meta
 type Story = StoryObj
 
 export const Default: Story = {
+  name: "Opens downward",
   render: () => (
     <div className="p-8">
       <PickerDemo />

@@ -10,13 +10,19 @@ import { ReactionBar } from "../reactions/reaction-bar"
 import { STORY_EVENT, STORY_ME, STORY_POST, StoryWorld, storyReaction } from "../../story-support/story-world"
 
 /**
- * Die Leseansicht im Detail-Panel.
+ * **ItemDetailBody** is the reading view inside the detail panel: title, type
+ * badge, facts, text, tags, author. It brings no frame and no actions of its
+ * own — both are handed in by the surface. In the app that is `ItemDetailView`,
+ * which puts the ⋮ menu top right (`ItemDetailActions`: edit, share, delete,
+ * by permission) and the reaction bar at the bottom. Exactly these real
+ * building blocks stand here, so the story does not show what the app does
+ * not do.
  *
- * Sie bringt selbst keinen Rahmen mit und keine Aktionen: Beides reicht die
- * Fläche durch. In der App ist das `ItemDetailView`, das oben rechts das
- * ⋮-Menü (`ItemDetailActions`: Bearbeiten, Teilen, Löschen, je nach Recht) und
- * unten die Reaktionsleiste einsetzt. Genau diese echten Bausteine stehen hier,
- * damit die Story nicht zeigt, was die App nicht tut.
+ * What the body shows follows the **item**, never the module that opened it:
+ * the type register picks the presentation from the item's classes.
+ *
+ * Where next: comments and reactions under the body in
+ * [Content and discussion](?path=/docs/rls-module-components-detail-itemdetailpanel--docs).
  */
 
 const REACTED = {
@@ -24,6 +30,7 @@ const REACTED = {
 }
 
 const meta: Meta<typeof ItemDetailBody> = {
+  tags: ["autodocs"],
   id: "detail-itemdetailbody",
   title: "RLS/Items/Detail view/Anatomy and content",
   component: ItemDetailBody,
@@ -42,8 +49,9 @@ export default meta
 
 type Story = StoryObj<typeof ItemDetailBody>
 
-/** Ein Termin mit allem, was die Fläche beisteuert: Typ, Fakten, Menü, Reaktionen. */
+/** An event with everything the surface contributes: type, facts, menu, reactions. */
 export const Event: Story = {
+  name: "Event",
   render: () => (
     <ItemDetailBody
       item={STORY_EVENT}
@@ -56,8 +64,9 @@ export const Event: Story = {
   ),
 }
 
-/** Ein Beitrag ohne Titel, ohne Fakten, ohne Tags: nur Text und Urheber. */
+/** A post without title, facts or tags: only text and author. */
 export const NurText: Story = {
+  name: "Text only",
   render: () => (
     <ItemDetailBody
       item={{ ...STORY_POST, tags: undefined, data: { content: "Kurz notiert: der Schlüssel liegt wieder im Café." } } as Item}
@@ -66,8 +75,9 @@ export const NurText: Story = {
   ),
 }
 
-/** Viele Tags: sie kappen, der Urheber bleibt in seiner Zeile. */
+/** Many tags: they clamp, the author keeps their row. */
 export const VieleTags: Story = {
+  name: "Many tags",
   render: () => (
     <ItemDetailBody
       item={{ ...STORY_EVENT, tags: ["repair", "community", "nachbarschaft", "werkstatt", "offen"] } as Item}
@@ -79,7 +89,8 @@ export const VieleTags: Story = {
   ),
 }
 
-/** Solange das Item noch nicht da ist. */
+/** While the item is not there yet. */
 export const Laedt: Story = {
+  name: "Loading",
   render: () => <ItemDetailSkeleton />,
 }

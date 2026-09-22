@@ -1,7 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { ProfilePanelContent } from "./profile-panel-content"
 
+/**
+ * **ProfilePanelContent** is the profile overlay: a person with picture, name
+ * and bio, read-only for others, editable for yourself. It is opened from any
+ * avatar and from the person nodes of the graph (`useOpenProfile`).
+ *
+ * This is the last surface that is not an item. The profile is becoming an
+ * item of the class `person` (spec 09); then this overlay gives way to the
+ * shared detail view, and a person is shown like everything else.
+ */
 const meta: Meta<typeof ProfilePanelContent> = {
+  tags: ["autodocs"],
   id: "module-components-profilepanelcontent",
   title: "RLS/Items/Type examples/Person profile",
   component: ProfilePanelContent,
@@ -26,7 +36,7 @@ const baseProfile = {
 }
 
 export const ViewForeign: Story = {
-  name: "Read-only (fremdes Profil)",
+  name: "Read-only: someone else",
   render: () => (
     <ProfilePanelContent
       mode="view"
@@ -37,7 +47,7 @@ export const ViewForeign: Story = {
 }
 
 export const ViewNoBio: Story = {
-  name: "Read-only ohne Bio",
+  name: "Read-only without bio",
   render: () => (
     <ProfilePanelContent
       mode="view"
@@ -48,7 +58,7 @@ export const ViewNoBio: Story = {
 }
 
 export const EditOwn: Story = {
-  name: "Edit (eigenes Profil)",
+  name: "Edit: your own",
   render: () => (
     <ProfilePanelContent
       mode="edit"
