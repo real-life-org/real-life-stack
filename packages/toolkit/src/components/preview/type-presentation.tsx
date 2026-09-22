@@ -36,17 +36,7 @@ import {
   Shapes,
   User as UserIcon,
 } from "lucide-react"
-import {
-  composeTypeManifest,
-  TOOLKIT_TYPE_LAYER,
-  setTypeManifest as bindDataInterfaceManifest,
-  isTask,
-  relationAffordanceKey,
-  type ComposedTypeManifest,
-  type Item,
-  type User,
-  normalizeItemType,
-} from "@real-life-stack/data-interface"
+import { composeTypeManifest, TOOLKIT_TYPE_LAYER, setTypeManifest as bindDataInterfaceManifest, isTask, relationAffordanceKey, type ComposedTypeManifest, type Item, type User, normalizeItemType, canonicalItemType } from "@real-life-stack/data-interface"
 
 import { useMembers } from "../../hooks/use-groups"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
@@ -430,14 +420,14 @@ function composePresentation(): Map<string, TypePresentationEntry> {
  * unknown to the manifest OR has a manifest entry without presentation —
  * visible with title, meta row and neutral badge, never invisible or broken.
  */
-export function resolveTypePresentation(typeId: string): ResolvedTypePresentation {
+export function resolveTypePresentation(typeId: string | readonly string[]): ResolvedTypePresentation {
   // Ueber die normalisierte Klassenmenge (Spec 06, Regel 7 und 9): eine
   // volle IRI findet ihre Darstellung, und bei mehreren Klassen zaehlt die
   // erste, fuer die eine Vorlage existiert — eine UI-Wahl, keine Aussage
   // ueber das Item (rls#417).
   const klassen = normalizeItemType(typeId)
   const darstellungen = composePresentation()
-  const id = klassen.find((k) => darstellungen.has(k) && manifest.has(k)) ?? klassen[0] ?? typeId
+  const id = klassen.find((k) => darstellungen.has(k) && manifest.has(k)) ?? klassen[0] ?? canonicalItemType(typeId)
   const entry = darstellungen.get(id)
   if (!entry || !manifest.has(id)) {
     return { id, label: id, detail: GENERIC_DETAIL, generic: true }

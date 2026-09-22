@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 import type { DataInterface, Item, Relation } from "@real-life-stack/data-interface"
-import { deriveContext, hasItemGroups } from "@real-life-stack/data-interface"
+import { deriveContext, hasItemGroups, type ItemType } from "@real-life-stack/data-interface"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useConnector } from "./connector-context"
 import type { ContentComposerSubmitData } from "../components/composer/content-composer"
@@ -11,7 +11,7 @@ import type { ContentComposerSubmitData } from "../components/composer/content-c
  * on field-mapping (title/content/description, etc.).
  */
 export interface ItemEditorPayload {
-  type: string
+  type: ItemType
   createdBy?: string
   data: Record<string, unknown>
   tags?: string[]

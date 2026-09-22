@@ -5,6 +5,7 @@ import type { MirrorSnapshotPayload, SerializedItem } from "../types.js"
 import { canonicalSnapshotBytes, signedSnapshotFields } from "./canonical.js"
 import { mirrorMapKey } from "./keys.js"
 import { tiebreakOf } from "./version.js"
+import { hasItemType } from "@real-life-stack/data-interface"
 
 /** `typ` des Mirror-Schnappschusses — eigener Wert, damit eine JWS aus einem anderen Kontext hier nicht durchgeht. */
 export const MIRROR_SNAPSHOT_JWS_TYP = "rls-mirror+jws"
@@ -254,7 +255,7 @@ type ProfileMarker = { kind: "absent" } | { kind: "invalid" } | { kind: "did"; d
 
 function profileMarker(payload: MirrorSnapshotPayload): ProfileMarker {
   const item = payload.item
-  if (!item || item.type !== "person" || !("did" in item.data)) return { kind: "absent" }
+  if (!item || !hasItemType(item, "person") || !("did" in item.data)) return { kind: "absent" }
   const did = item.data["did"]
   if (typeof did !== "string" || did.length === 0) return { kind: "invalid" }
   return { kind: "did", did }

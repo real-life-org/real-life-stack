@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 import { useOptionalSharedFilter, useSharedFilter } from "../components/filter/filter-store"
 import type { FilterBarValue } from "../components/filter/types"
+import { itemTypes } from "@real-life-stack/data-interface"
 
 /**
  * Pure filter logic — exported for tests and for non-React callers.
@@ -26,7 +27,8 @@ export function applyFilterBarValue(items: readonly Item[], filter: FilterBarVal
       }
     }
     if (typeSet.size > 0) {
-      if (!typeSet.has(item.type)) return false
+      // Eine Klasse der Menge genuegt (Spec 06, Regel 8).
+      if (!itemTypes(item).some((t) => typeSet.has(t))) return false
     }
     return true
   })

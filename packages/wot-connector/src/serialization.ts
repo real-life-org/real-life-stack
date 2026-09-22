@@ -24,7 +24,7 @@ export function deserializeItem(serialized: SerializedItem): Item {
   const item: Item = {
     id: serialized.id,
     // Eingangsgrenze (Spec 06, Regel 7): bekannte IRI → Kurzname, fremde bleibt.
-    type: canonicalTypeValue(serialized.type) as string,
+    type: canonicalTypeValue(serialized.type),
     createdAt: serialized.createdAt,
     createdBy: serialized.createdBy,
     data: { ...serialized.data },

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef } from "react"
-import { isAggregateVisibleItemType, type ActivityEntry } from "@real-life-stack/data-interface"
+import { hasItemType, isAggregateVisibleItemType, type ActivityEntry } from "@real-life-stack/data-interface"
 
 import { useActivity } from "../../hooks/use-activity"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
@@ -94,7 +94,7 @@ function ActivityLogContent({ onOpenTarget }: { onOpenTarget: (entry: ActivityEn
   // Typen keine haben, sagt der Datenvertrag, keine Liste hier.
   const resolveOpenId = useCallback((entry: ActivityEntry) => {
     if (!isAggregateVisibleItemType(entry.targetType) || entry.action === "delete") return undefined
-    if (entry.targetType === "reaction") {
+    if (hasItemType({ type: entry.targetType }, "reaction")) {
       const reaction = itemById.get(entry.targetId)
       const target = reaction?.relations?.find((relation) => relation.predicate === "reactsTo")?.target
       const parentId = target?.startsWith("item:") ? target.slice("item:".length) : undefined

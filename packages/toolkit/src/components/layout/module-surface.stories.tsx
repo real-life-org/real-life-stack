@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { Calendar, Map as MapIcon, Newspaper } from "lucide-react"
-import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType, canonicalItemType } from "@real-life-stack/data-interface"
 import { AppShell, AppShellMain } from "./app-shell"
 import { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"
 import { WorkspaceSwitcher } from "./workspace-switcher"
@@ -109,7 +109,7 @@ function useOeffneDetail() {
               meta={<ItemMetaRow item={live} />}
             />
           )}
-          contentTypes={[{ id: item.type, label: "Inhalt", defaultWidgets: ["title", "text", "date"] }]}
+          contentTypes={[{ id: canonicalItemType(item.type), label: "Inhalt", defaultWidgets: ["title", "text", "date"] }]}
           mapper={mapping.mapSubmission}
           editInitialData={mapping.editInitialData}
           composerProps={{ showVisibility: false }}

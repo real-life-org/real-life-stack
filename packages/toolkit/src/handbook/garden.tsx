@@ -28,6 +28,7 @@ import { MapLibreMapAdapter } from '../maplibre'
 import { ConnectorProvider, useConnector } from '../hooks/connector-context'
 import { useItems } from '../hooks/use-items'
 import { seed } from './garden-data'
+import { canonicalItemType } from "@real-life-stack/data-interface"
 
 // This adapter intentionally exposes only the six DataInterface methods.
 // Hiding a button alone would not demonstrate capability detection.
@@ -233,7 +234,7 @@ function Garden({
                 }
               />
             )}
-            contentTypes={[contentTypeFor(item.type)]}
+            contentTypes={[contentTypeFor(canonicalItemType(item.type))]}
             mapper={mapping.mapSubmission}
             editInitialData={mapping.editInitialData}
             composerProps={{ showVisibility: false }}

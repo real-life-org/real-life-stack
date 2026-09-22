@@ -6,6 +6,7 @@ import { useComments } from "@/hooks/use-comments"
 import type { CommentWithAuthor } from "@/hooks/use-comments"
 import { CommentInput, type CommentQuote } from "./comment-input"
 import { CommentThread } from "./comment-thread"
+import { hasItemType } from "@real-life-stack/data-interface"
 
 export interface CommentSectionProps {
   /** ID of the item to show comments for. */
@@ -67,7 +68,7 @@ export function CommentSection({
   const repliesByParent = useMemo(() => {
     const map = new Map<string, CommentWithAuthor[]>()
     for (const c of allComments) {
-      if (c.type !== "comment") continue
+      if (!hasItemType(c, "comment")) continue
       const replyToId = (c.data as { replyTo?: string }).replyTo
       if (!replyToId) continue
 

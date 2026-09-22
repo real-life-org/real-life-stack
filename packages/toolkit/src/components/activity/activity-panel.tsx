@@ -4,6 +4,7 @@ import { History, MessageCircle, Pencil, Plus, Trash2, UserRound } from "lucide-
 import { Avatar, AvatarFallback, AvatarImage, EmptyState, RelativeTime } from "../primitives"
 import { cn } from "../../lib/utils"
 import { sectionFor } from "./notification-center"
+import { canonicalItemType, hasItemType } from "@real-life-stack/data-interface"
 
 export interface ActivityPanelProps {
   entries: readonly ActivityEntry[]
@@ -24,7 +25,7 @@ function shortActor(actorId: string): string {
 
 /** Reactions log "<emoji> auf „…"" — split the badge emoji from the target. */
 function reactionParts(entry: ActivityEntry): { emoji: string; target?: string } | undefined {
-  if (entry.targetType !== "reaction") return undefined
+  if (!hasItemType({ type: entry.targetType }, "reaction")) return undefined
   const [emoji, ...rest] = (entry.summary ?? "").split(" ")
   if (!emoji || emoji.startsWith("„")) return { emoji: "👍" }
   const target = rest.join(" ").replace(/^auf\s+/, "")
@@ -40,13 +41,13 @@ function rowPresentation(entry: ActivityEntry): { rest: React.ReactNode; badge: 
       : `hat ${reaction.target ? `auf ${reaction.target} ` : ""}reagiert`
     return { rest, badge: reaction.emoji }
   }
-  if (entry.targetType === "comment") {
+  if (hasItemType({ type: entry.targetType }, "comment")) {
     const rest = entry.action === "delete" ? "hat einen Kommentar gelöscht" : "hat kommentiert"
     return { rest, badge: <MessageCircle className="size-3 text-muted-foreground" />, quote: entry.action === "delete" ? undefined : entry.summary }
   }
   const Icon = ACTION_ICONS[entry.action as keyof typeof ACTION_ICONS] ?? Pencil
   const verb = ACTION_VERBS[entry.action as keyof typeof ACTION_VERBS] ?? entry.action
-  const title = entry.summary ?? entry.targetType
+  const title = entry.summary ?? canonicalItemType(entry.targetType)
   return { rest: `hat „${title}" ${verb}`, badge: <Icon className="size-3 text-muted-foreground" /> }
 }
 

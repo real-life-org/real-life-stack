@@ -11,6 +11,7 @@ import type { SpaceAdmission } from "@real-life/wot-core/types"
 import type { YjsCompactStore } from "@real-life/adapter-yjs"
 import type { YjsReplicationAdapter } from "@real-life/adapter-yjs"
 import type { WorkQueue } from "./work-queue-store.js"
+import { type ItemType } from "@real-life-stack/data-interface"
 
 /** Every DID-scoped IndexedDB store must close its real connection on teardown. */
 export interface ClosableIdentityStore {
@@ -264,7 +265,8 @@ export interface MirrorMarkStore {
 
 export interface SerializedItem {
   id: string
-  type: string
+  /** Klasse(n), Menge wie `Item.type` (Spec 06). */
+  type: ItemType
   createdAt: string // ISO string (Automerge can't store Date)
   createdBy: string // DID
   updatedAt?: string // ISO string, gesetzt beim Bearbeiten

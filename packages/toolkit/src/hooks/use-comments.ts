@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, startTransition } from "react"
 import type { Item, RelatedItemsOptions } from "@real-life-stack/data-interface"
-import { isWritable, hasRelations, isAuthenticatable, deriveContext } from "@real-life-stack/data-interface"
+import { isWritable, hasRelations, isAuthenticatable, deriveContext, hasItemType } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
 const NO_COMMENT_ITEMS: Item[] = []
@@ -66,7 +66,7 @@ export function useComments(itemId: string): UseCommentsResult {
 
   // Resolve authors and separate first/second level
   const comments: CommentWithAuthor[] = useMemo(() => {
-    const commentItems = allComments.filter((c) => c.type === "comment")
+    const commentItems = allComments.filter((c) => hasItemType(c, "comment"))
 
     // Count replies per first-level comment
     const replyCounts = new Map<string, number>()
@@ -204,7 +204,7 @@ export function useReplies(itemId: string, commentId: string): UseRepliesResult 
         if (cancelled) return
 
         const replyItems = allComments
-          .filter((c: Item) => c.type === "comment" && (c.data as { replyTo?: string }).replyTo === commentId)
+          .filter((c: Item) => hasItemType(c, "comment") && (c.data as { replyTo?: string }).replyTo === commentId)
           .sort((a: Item, b: Item) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 
         // Resolve authors

@@ -319,8 +319,8 @@ void VOCAB_BASE
  * The canonical spelling of a stored `type` value (Spec 06, Regel 7), shape
  * preserved: a string stays a string, a class SET stays a set — every known
  * IRI becomes its short name, a foreign IRI stays, nothing is dropped (Regel
- * 8: all classes count). The TypeScript type of `Item.type` is still `string`;
- * JSON-LD data may carry an array, and the ingress MUST keep it (rls#417).
+ * 8: all classes count). `Item.type` IS a set in the type since rls#433;
+ * the ingress keeps it (rls#417).
  */
 export function canonicalTypeValue(type: string | readonly string[]): string | string[] {
   if (Array.isArray(type)) return normalizeItemType(type)
@@ -360,11 +360,11 @@ export function typeSpellings(type: string | readonly string[]): string[] {
  * becomes its short name; a foreign IRI is kept. Returns the SAME object when
  * nothing changes, so memoised consumers keep their identity.
  */
-export function canonicalItem<T extends { type: string }>(item: T): T {
-  const roh = item.type as unknown as string | readonly string[]
+export function canonicalItem<T extends { type: string | string[] }>(item: T): T {
+  const roh = item.type
   const kanonisch = canonicalTypeValue(roh)
   const gleich = Array.isArray(roh)
     ? Array.isArray(kanonisch) && kanonisch.length === roh.length && kanonisch.every((k, i) => k === roh[i])
     : kanonisch === roh
-  return gleich ? item : { ...item, type: kanonisch as unknown as string }
+  return gleich ? item : { ...item, type: kanonisch }
 }
