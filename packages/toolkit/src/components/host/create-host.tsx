@@ -255,7 +255,7 @@ export function useRegisterCreate(module: string, config: CreateConfig): void {
  *
  * @answers `{isComposing, startCreate, patchCreate}`
  * @without throws on render
- * @group surface
+ * @group host
  * @see story rls-foundations-hooks--surfaces
  * @see spec docs/spec/01-app-composition.md
  */
@@ -272,7 +272,7 @@ export function useCreate(): CreateHostValue {
  *
  * @answers `CreateHostValue | null`
  * @without value — null
- * @group surface
+ * @group host
  * @see story rls-foundations-hooks--surfaces
  * @see spec docs/spec/01-app-composition.md
  */

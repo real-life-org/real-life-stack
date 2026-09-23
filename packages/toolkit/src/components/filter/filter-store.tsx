@@ -65,7 +65,7 @@ function useFilterValue(): SharedFilterValue {
  *
  * @answers `{value, searchText, setSearchText, clear}`
  * @without throws on render
- * @group surface
+ * @group host
  * @see story rls-foundations-hooks--surfaces
  * @see spec docs/spec/01-app-composition.md
  */

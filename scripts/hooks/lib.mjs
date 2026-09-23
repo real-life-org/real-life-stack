@@ -14,8 +14,9 @@ export const toolkitSrc = resolve(root, "packages/toolkit/src")
 
 export const WITHOUT = ["—", "empty", "null", "value", "no-op", "throws on call", "throws on render"]
 export const GROUPS = {
-  read: "Read items", write: "Write items", people: "People, spaces and membership", permissions: "Permissions and capabilities",
-  relations: "Relations", surface: "Surfaces and UI state", environment: "Environment", item: "Item properties",
+  read: "Read items", write: "Write items", groups: "Groups and members", people: "People",
+  relations: "Relations", permissions: "Permissions and capabilities", host: "Host and focus",
+  environment: "Environment", item: "Item properties",
 }
 
 /** Loest einen Modulpfad wie im Bundler auf: .ts, .tsx, /index.ts. */

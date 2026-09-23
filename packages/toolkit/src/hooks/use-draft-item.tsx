@@ -112,7 +112,7 @@ export function DraftItemProvider({ children }: { children: ReactNode }) {
  *
  * @answers `Item | null`
  * @without null — without provider
- * @group write
+ * @group read
  * @see story rls-foundations-hooks--write
  * @see spec docs/spec/02-data-interface.md
  */

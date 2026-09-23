@@ -78,7 +78,7 @@ export function groupVocabulary(items: readonly Item[]): GroupVocabulary {
  *
  * @answers `{tags, types}`
  * @without empty
- * @group surface
+ * @group groups
  * @see story rls-foundations-hooks--surfaces
  * @see spec docs/spec/01-app-composition.md
  */

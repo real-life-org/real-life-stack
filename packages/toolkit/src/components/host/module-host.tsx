@@ -106,7 +106,7 @@ const ModuleHostContext = createContext<ModuleHostValue | null>(null)
  *
  * @answers `{entry, currentSpace, members, groups, items, setCreateAnchor, …}`
  * @without throws on render
- * @group surface
+ * @group host
  * @see story rls-foundations-hooks--surfaces
  * @see spec docs/spec/01-app-composition.md
  */
