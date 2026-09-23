@@ -4,7 +4,7 @@ import { memo, useMemo, useCallback } from "react"
 import { FileText, SearchX } from "lucide-react"
 import type { Item, User } from "@real-life-stack/data-interface"
 
-import { useItemGroupResolver, useItemPrivacyResolver } from "../hooks/use-item-group-color"
+import { useItemPresentation } from "../hooks/use-item-presentation"
 import { useItemFocus } from "../hooks/use-item-focus"
 import { FeedComposerTrigger } from "../components/feed/feed-composer-trigger"
 import { useCreate } from "../components/host/create-host"
@@ -40,9 +40,8 @@ export function FeedModule({ items = [], itemsLoading: isLoading = false }: Modu
   const feedItems = useMemo(() => selectFeedItems(items), [items])
   const { focusItem } = useItemFocus()
   // Origin group per item — only surfaced as a badge in the aggregate view.
-  const resolveItemGroup = useItemGroupResolver()
+  const present = useItemPresentation()
   // Private items (in the personal space, shared with nobody) get a „Privat" badge.
-  const isItemPrivate = useItemPrivacyResolver()
   // Erstellen laeuft ueber den Modul-Host (Vollbild, `options.createShell`
   // im Eintrag). Die Pille schlaegt nur den Beitrag vor.
   const { startCreate } = useCreate()
@@ -81,7 +80,7 @@ export function FeedModule({ items = [], itemsLoading: isLoading = false }: Modu
           filteredFeedItems.map((item) => {
           // In the aggregate view, show which group an item comes from — a chip
           // next to the type badge (analogous to it). Omitted inside a single group.
-          const group = isOverview ? resolveItemGroup(item) : undefined
+          const group = isOverview ? present(item).group : undefined
           return (
             <FeedCard
               key={item.id}
@@ -91,7 +90,7 @@ export function FeedModule({ items = [], itemsLoading: isLoading = false }: Modu
               activeColor={resolveItemGroupColor(item)}
               groupName={group?.name}
               groupColor={group ? resolveItemGroupColor(item) : undefined}
-              isPrivate={isOverview && isItemPrivate(item)}
+              isPrivate={isOverview && present(item).isPrivate}
               onFocus={focusItem}
               registerRef={registerItemElement}
             />

@@ -50,7 +50,7 @@ The spec is the single source of truth of the repository; when code and spec dis
 - [architektur2.md](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/architektur2.md) (Historische Referenz, nicht direkt normativ): bisher beste Gesamtbeschreibung; wird schrittweise in die neue Spec-Struktur überführt
 - [reaktivitaet.md](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/reaktivitaet.md) (Ergänzende Referenz): Bestehendes Detailverhalten für Reaktivität und Relations; wird später in passende Kern-Slices überführt
 
-## Hooks (61, generated from the toolkit's documentation comments)
+## Hooks (58, generated from the toolkit's documentation comments)
 
 Every surface asks hooks, never the connector. Reading hooks answer empty without a capability; writing hooks fail on the call, not on render. Living examples: https://real-life-stack.de/storybook/?path=/docs/rls-foundations-all-hooks--docs
 
@@ -88,7 +88,6 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 - `useMembers(groupId)` → `{data, isLoading}`: Who belongs to this space, or with `null` to all of mine? Without capability: empty.
 - `useInviteMember()` → `(groupId, userId) => Promise`: Invite someone into a space. Without capability: throws on call.
 - `useRemoveMember()` → `(groupId, userId) => Promise`: Remove someone from a space. Without capability: throws on call.
-- `useItemAuthor(item, users)` → `User | undefined`: Who wrote this item? Without capability: —.
 - `useOpenProfile()` → `(userId) => void`: Open a person's profile. Without capability: no-op.
 - `useResolvedUsers(ids)` → `Map<string, User>`: For which ids do I know a name? Without capability: empty — map.
 - `useUserNameResolver()` → `(userId) => string`: A display name for a user id, falling back to the id. Without capability: value — value — the id itself.
@@ -134,9 +133,7 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 
 ### Item properties
 
-- `useItemGroupColorResolver(activeGroupId?)` → `(item) => string`: In which colour does an item appear, by its space? Without capability: value — palette colour.
-- `useItemGroupResolver()` → `(item) => Group | undefined`: Which space does it come from? Without capability: value — `undefined`.
-- `useItemPrivacyResolver()` → `(item) => boolean`: Is it private, shared with nobody? Without capability: value — always `false`.
+- `useItemPresentation(activeGroupId?)` → `(item) => {group, color, isPrivate}`: How does this item present itself: which group it comes from, in which colour, and whether it is private? Without capability: value — no group, palette colour, `false`.
 - `useItemTags(item)` → `string[]`: Which tags does this item carry? Without capability: —.
 
 ## Contributing to the stack itself

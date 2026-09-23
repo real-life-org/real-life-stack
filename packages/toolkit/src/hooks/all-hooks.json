@@ -382,19 +382,6 @@
           "line": 190
         },
         {
-          "name": "useItemAuthor",
-          "signature": "item, users",
-          "question": "Who wrote this item?",
-          "answers": "`User | undefined`",
-          "without": "—",
-          "stories": [],
-          "specs": [
-            "docs/spec/04-items-relations-groups-spaces.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-item-author.ts",
-          "line": 22
-        },
-        {
           "name": "useOpenProfile",
           "signature": "",
           "question": "Open a person's profile.",
@@ -855,43 +842,17 @@
       "title": "Item properties",
       "hooks": [
         {
-          "name": "useItemGroupColorResolver",
+          "name": "useItemPresentation",
           "signature": "activeGroupId?",
-          "question": "In which colour does an item appear, by its space?",
-          "answers": "`(item) => string`",
-          "without": "value — palette colour",
+          "question": "How does this item present itself: which group it comes from, in which colour, and whether it is private?",
+          "answers": "`(item) => {group, color, isPrivate}`",
+          "without": "value — no group, palette colour, `false`",
           "stories": [],
           "specs": [
-            "docs/spec/06-schema-composition.md"
+            "docs/spec/04-items-relations-groups-spaces.md"
           ],
-          "source": "packages/toolkit/src/hooks/use-item-group-color.ts",
-          "line": 25
-        },
-        {
-          "name": "useItemGroupResolver",
-          "signature": "",
-          "question": "Which space does it come from?",
-          "answers": "`(item) => Group | undefined`",
-          "without": "value — `undefined`",
-          "stories": [],
-          "specs": [
-            "docs/spec/06-schema-composition.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-item-group-color.ts",
-          "line": 60
-        },
-        {
-          "name": "useItemPrivacyResolver",
-          "signature": "",
-          "question": "Is it private, shared with nobody?",
-          "answers": "`(item) => boolean`",
-          "without": "value — always `false`",
-          "stories": [],
-          "specs": [
-            "docs/spec/06-schema-composition.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-item-group-color.ts",
-          "line": 89
+          "source": "packages/toolkit/src/hooks/use-item-presentation.ts",
+          "line": 32
         },
         {
           "name": "useItemTags",
