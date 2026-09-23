@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
 import { hasGroups, type Group } from "@real-life-stack/data-interface"
 
 import { AppFrame, type FrameRouting } from "../components/frame/app-frame"
+import { workspaceOf } from "../components/layout/workspace-switcher"
 import { useConnector } from "../hooks/connector-context"
 import { MemoryFocusProvider, useItemFocus } from "../hooks/use-item-focus"
 import { getModules } from "../lib/module-register"
@@ -54,7 +55,7 @@ function MemoryFrame({ groups, spaceId, onSpaceChange, module, onModuleChange, c
   // Alle Module mit Flaeche — eine Story soll jedes zeigen koennen, unabhaengig
   // davon, was der Space speichert.
   const modules = useMemo(() => getModules().filter((m) => m.view).map((m) => ({ id: m.id, label: m.label, icon: m.icon })), [])
-  const workspaces = useMemo(() => groups.map((g) => ({ id: g.id, name: g.name, primaryColor: typeof g.data?.primaryColor === "string" ? g.data.primaryColor : undefined })), [groups])
+  const workspaces = useMemo(() => groups.map(workspaceOf), [groups])
   const activeWorkspace = workspaces.find((w) => w.id === spaceId) ?? null
   const handleWorkspaceChange = useCallback((w: { id: string }) => {
     if (hasGroups(connector)) connector.setCurrentGroup(w.id)

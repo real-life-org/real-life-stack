@@ -12,7 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/primitives/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
-import { type GrayChoice, type RadiusStep, type Surfaces } from "../../lib/space-theme"
+import type { Group } from "@real-life-stack/data-interface"
+import { readGray, readRadius, readSurfaces, type GrayChoice, type RadiusStep, type Surfaces } from "../../lib/space-theme"
 
 export interface Workspace {
   id: string
@@ -29,6 +30,26 @@ export interface Workspace {
   radius?: RadiusStep
   /** Flächen der App-Hülle (`data.surfaces`): translucent | solid. */
   surfaces?: Surfaces
+}
+
+/**
+ * Was der Space-Wechsler von einer Gruppe zeigt (Spec 04): Name, Bild aus
+ * `data.image`, Farbe und Theme-Achsen aus `data`. Die eine Ableitung fuer
+ * Rahmen, Stories und Handbuch — wer sie nachbaut, vergisst ein Feld.
+ * Ungeprueft durchgereicht, was `scalesForColor` spaeter kappt und verwirft.
+ */
+export function workspaceOf(g: Group): Workspace {
+  return {
+    id: g.id,
+    name: g.name,
+    avatar: typeof g.data?.image === "string" ? g.data.image : undefined,
+    scope: typeof g.data?.scope === "string" ? g.data.scope : undefined,
+    primaryColor: typeof g.data?.primaryColor === "string" ? g.data.primaryColor : undefined,
+    tint: typeof g.data?.tint === "number" ? g.data.tint : undefined,
+    gray: readGray(g.data?.gray) ?? undefined,
+    radius: readRadius(g.data?.radius) ?? undefined,
+    surfaces: readSurfaces(g.data?.surfaces) ?? undefined,
+  }
 }
 
 interface WorkspaceSwitcherProps {

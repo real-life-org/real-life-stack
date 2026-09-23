@@ -2,7 +2,7 @@
 /**
  * Eine Story des Toolkits, live im Handbuch. Im Dev-Modus aus dem laufenden Storybook (6006), gebaut aus `/storybook/`.
  *
- * Die Vorschau hat zwei Rahmen: „Desktop“ rendert die App mit 1024px Breite und verkleinert sie auf die Spalte,
+ * Die Vorschau hat zwei Rahmen: „Desktop“ rendert die App mit 1040px Breite (knapp über dem Panel-Breakpoint) und verkleinert sie auf die Spalte,
  * damit das Seitenpanel wie am Laptop aufgeht; „Handy“ rendert sie 390px breit und verkleinert mit demselben Faktor,
  * damit beide Bilder im gleichen Maßstab stehen. Der Leser
  * schaltet um, die Wahl gilt für alle Vorschauen der Seite und wird im Browser gemerkt.
@@ -30,8 +30,8 @@ const t = en
 </figure>
 
 <script>
-  // Beide Rahmen teilen den Faktor Spaltenbreite/1024, damit Desktop und Handy im gleichen Massstab stehen.
-  const DESKTOP = 1024, PHONE = 390, PHONE_HEIGHT = 720
+  // Beide Rahmen teilen den Faktor Spaltenbreite/1040, damit Desktop und Handy im gleichen Massstab stehen.
+  const DESKTOP = 1040, PHONE = 390, PHONE_HEIGHT = 720
   const KEY = 'rls-story-frame'
   const figures = Array.from(document.querySelectorAll<HTMLElement>('.story-example'))
 

@@ -10,6 +10,7 @@ import {
   NavbarCenter,
   NavbarEnd,
   WorkspaceSwitcher,
+  workspaceOf,
   UserMenu,
   ModuleTabs,
   BottomNav,
@@ -106,6 +107,8 @@ export function GardenDemo({
     </ConnectorProvider>
   )
 }
+// Was der Space-Wechsler zeigt, leitet dieselbe Funktion ab wie der Rahmen (`RoutedAppFrame`).
+const WORKSPACES = seed.groups.map(workspaceOf)
 function Garden({
   source,
   initialModule,
@@ -115,7 +118,7 @@ function Garden({
 }) {
   const connector = useConnector()
   const { data: items, isLoading } = useItems()
-  const [space, setSpace] = useState(seed.groups[0])
+  const [space, setSpace] = useState(WORKSPACES[0])
   const [module, setModule] = useState(initialModule)
   const [selected, setSelected] = useState<string>()
   const [notice, setNotice] = useState('')
@@ -125,7 +128,7 @@ function Garden({
       <Navbar>
         <NavbarStart>
           <WorkspaceSwitcher
-            workspaces={seed.groups}
+            workspaces={WORKSPACES}
             activeWorkspace={space}
             onWorkspaceChange={(next) => {
               source.setCurrentGroup(next.id)

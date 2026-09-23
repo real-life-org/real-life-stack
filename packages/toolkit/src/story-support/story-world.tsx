@@ -2,6 +2,7 @@ import { useEffect, useMemo, type ReactNode } from "react"
 import type { Item, User } from "@real-life-stack/data-interface"
 import { MockConnector, type MockConnectorSeed } from "@real-life-stack/mock-connector"
 import { ConnectorProvider } from "../hooks/connector-context"
+import { GARDEN_IMAGE, WORKSHOP_IMAGE } from "./group-images"
 
 /**
  * Eine kleine, echte Welt für Stories.
@@ -19,10 +20,10 @@ import { ConnectorProvider } from "../hooks/connector-context"
 
 export const STORY_USERS: User[] = [
   { id: "mira", displayName: "Mira Beispiel", avatarUrl: "https://randomuser.me/api/portraits/women/44.jpg" },
-  { id: "jonas", displayName: "Jonas Klein" },
-  { id: "lea", displayName: "Lea Weber" },
+  { id: "jonas", displayName: "Jonas Klein", avatarUrl: "https://randomuser.me/api/portraits/men/22.jpg" },
+  { id: "lea", displayName: "Lea Weber", avatarUrl: "https://randomuser.me/api/portraits/women/68.jpg" },
   // Bekannt, aber in keiner Gruppe: fuer Stories, die Einladen und Entfernen zeigen (rls#456).
-  { id: "noah", displayName: "Noah Gast" },
+  { id: "noah", displayName: "Noah Gast", avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg" },
 ]
 
 /** Die angemeldete Person in allen Stories. */
@@ -92,9 +93,10 @@ export function storyReaction(id: string, createdBy: string, emoji: string, on =
 
 export const STORY_SEED: MockConnectorSeed = {
   users: STORY_USERS,
+  // Gruppenbild liegt wie in den Connectoren unter `data.image` (Spec 04); der Rahmen liest es von dort.
   groups: [
-    { id: "garden", name: "Gemeinschaftsgarten" },
-    { id: "workshop", name: "Offene Werkstatt" },
+    { id: "garden", name: "Gemeinschaftsgarten", data: { image: GARDEN_IMAGE } },
+    { id: "workshop", name: "Offene Werkstatt", data: { image: WORKSHOP_IMAGE } },
   ],
   groupMembers: { garden: ["mira", "jonas", "lea"], workshop: ["mira"] },
   groupItems: { garden: [STORY_POST.id, STORY_EVENT.id, STORY_TASK.id], workshop: [] },
