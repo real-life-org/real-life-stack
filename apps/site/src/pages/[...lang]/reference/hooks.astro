@@ -1,0 +1,48 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro'
+import { translations } from '../../../i18n/landing'
+// Eine Seite fuer jede Sprache (Starlight lokalisiert Sidebar-Links), der Inhalt bleibt Englisch.
+export function getStaticPaths() {
+  return [{ params: { lang: undefined } }, ...Object.keys(translations).filter((l) => l !== 'de').map((lang) => ({ params: { lang } }))]
+}
+import { hookGroups, hookCount, inline, without, REPO, storyUrl } from '../../../lib/reference'
+const headings = hookGroups.map((g) => ({ depth: 2, slug: g.id, text: `${g.title} (${g.hooks.length})` }))
+---
+<StarlightPage frontmatter={{ title: 'Hooks', description: `All ${hookCount} hooks the toolkit exports, with the question each answers and what happens without the capability.` }} headings={headings}>
+  <p>Every surface in Real Life Stack asks hooks, never the connector. This page lists all {hookCount} hooks the toolkit exports, with the question each answers and what happens when the connector lacks the capability. It is generated from each hook's documentation comment, the same file that feeds <a href={storyUrl('rls-foundations-all-hooks--docs')}>Storybook</a> and <a href="/llms.txt">llms.txt</a>.</p>
+  <p><strong>The column "without capability" is the important one.</strong> Reading hooks answer empty: "no groups", "nobody signed in", "zero comments" are true answers, not errors. Writing hooks fail on the call, not on preparation. Where it says "throws on render", the surface cannot exist without that capability.</p>
+  <ul class="rl-legend">
+    <li><strong>—</strong> the hook needs no capability</li>
+    <li><strong>empty</strong> an empty list or count, never an error</li>
+    <li><strong>null</strong> <code>null</code>, the caller decides</li>
+    <li><strong>value</strong> a neutral value (a default, the raw id)</li>
+    <li><strong>no-op</strong> the call does nothing</li>
+    <li><strong>throws on call</strong> the surface renders, the action fails</li>
+    <li><strong>throws on render</strong> the surface cannot exist without the capability</li>
+  </ul>
+  {hookGroups.map((g) => (
+    <section class="rl-ref">
+      <h2 id={g.id}>{g.title} <small>{g.hooks.length}</small></h2>
+      <div class="rl-hooks">
+        {g.hooks.map((h) => { const w = without(h.without); return (
+          <div class="rl-hook" id={h.name}>
+            <div class="rl-hook-head"><code>{h.name}({h.signature})</code> <span class="rl-arrow">→</span> <span set:html={inline(h.answers)} /></div>
+            <p class="rl-hook-q" set:html={inline(h.question)} />
+            <div class="rl-hook-meta">
+              <span>without capability: <span class={`rl-without ${w.tone}`}>{w.head}</span>{w.note ? <span class="rl-note" set:html={', ' + inline(w.note)} /> : null}</span>
+              <span class="rl-links"><a href={`${REPO}${h.source}#L${h.line}`}>source</a>{h.stories.map((s) => <a href={storyUrl(s)}>story</a>)}{h.specs.map((s) => <a href={`${REPO}${s}`}>spec</a>)}</span>
+            </div>
+          </div>
+        ) })}
+      </div>
+    </section>
+  ))}
+  <h2 id="pairs">Pairs easily confused</h2>
+  <ul>
+    <li><code>useCurrentUser</code> and <code>useOptionalCurrentUser</code> differ only in whether a missing sign-in throws or yields <code>null</code>. The same pattern with <code>useConnector</code>, <code>useModuleHost</code>, <code>useItemFocus</code>, <code>useCreate</code>.</li>
+    <li><code>useReactions</code> already carries in <code>reactions[].userIds</code> what <code>useReactionUsers</code> fetches again.</li>
+    <li><code>useCommentCount</code> is the cheap half of <code>useComments</code>.</li>
+    <li><code>useItems</code> and <code>useItemsWithDraft</code> are the same list, the latter with the running draft.</li>
+    <li><code>useIsMobile</code> and <code>useIsCompact</code> are the same mechanism with a different threshold: 768px for navigation, 1024px for the panel shape.</li>
+  </ul>
+</StarlightPage>

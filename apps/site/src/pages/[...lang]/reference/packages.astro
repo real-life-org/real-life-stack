@@ -1,0 +1,26 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro'
+import { translations } from '../../../i18n/landing'
+// Eine Seite fuer jede Sprache (Starlight lokalisiert Sidebar-Links), der Inhalt bleibt Englisch.
+export function getStaticPaths() {
+  return [{ params: { lang: undefined } }, ...Object.keys(translations).filter((l) => l !== 'de').map((lang) => ({ params: { lang } }))]
+}
+import { packages, REPO } from '../../../lib/reference'
+---
+<StarlightPage frontmatter={{ title: 'Packages', description: 'The packages of Real Life Stack on npm and what each is for.', tableOfContents: false }}>
+  <p>An app installs three of these: the contract, the toolkit and one connector. The versions live on npm; how a release comes about is described in the <a href="/handbuch/">handbook</a> (German).</p>
+  <div class="rl-table rl-ref">
+    <table>
+      <thead><tr><th>Package</th><th>What it is</th></tr></thead>
+      <tbody>
+        {packages.map((p) => (
+          <tr>
+            <td><code>{p.name}</code><div class="rl-links"><a href={`https://www.npmjs.com/package/${p.name}`}>npm</a><a href={`${REPO}packages/${p.dir}`}>source</a></div></td>
+            <td>{p.description}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p>Subpaths of the toolkit: <code>@real-life-stack/toolkit/router</code> (frame with URL focus, needs <code>react-router-dom</code>), <code>/maplibre</code> and <code>/leaflet</code> (map engines), <code>/styles/globals.css</code> (tokens).</p>
+</StarlightPage>

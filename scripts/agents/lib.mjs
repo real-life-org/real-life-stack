@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync } from "node:fs"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -8,7 +8,22 @@ import { fileURLToPath } from "node:url"
  * das App-Template traegt den Code der ersten App woertlich. Ein Waechter
  * faellt, wenn eines davon nicht mehr zum Repo passt.
  */
-export const root = fileURLToPath(new URL("../../", import.meta.url))
+/**
+ * Der Repo-Stamm: vom Arbeitsverzeichnis aufwaerts bis zur pnpm-workspace.yaml.
+ * Nicht ueber import.meta.url — wenn die Site diese Datei buendelt, liegt der
+ * Chunk unter apps/site/dist, und ../../ zeigte ins Leere.
+ */
+function findRoot() {
+  let dir = process.cwd()
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(resolve(dir, "pnpm-workspace.yaml"))) return dir + "/"
+    const up = resolve(dir, "..")
+    if (up === dir) break
+    dir = up
+  }
+  return fileURLToPath(new URL("../../", import.meta.url))
+}
+export const root = findRoot()
 export const REPO = "https://github.com/real-life-org/real-life-stack/blob/master/"
 const read = (p) => readFileSync(resolve(root, p), "utf8")
 

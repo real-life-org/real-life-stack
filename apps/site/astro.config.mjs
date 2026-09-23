@@ -73,6 +73,13 @@ export default defineConfig({
       editLink: { baseUrl: 'https://github.com/real-life-org/real-life-stack/edit/master/docs/handbook/' },
       sidebar: [
         { label: 'Handbuch', translations: { en: 'Handbook' }, items: handbookItems() },
+        // Die Referenz ist Englisch wie ihre Quellen (Hook-Kommentare, package.json, Spec-Index) und liegt als Astro-Seiten ausserhalb der Sammlung.
+        { label: 'Referenz', translations: { en: 'Reference' }, items: [
+          { label: 'Überblick', translations: { en: 'Overview' }, link: '/reference/' },
+          { label: 'Hooks', link: '/reference/hooks/' },
+          { label: 'Pakete', translations: { en: 'Packages' }, link: '/reference/packages/' },
+          { label: 'Spezifikation', translations: { en: 'Specification' }, link: '/reference/spec/' },
+        ] },
         { label: 'Storybook', link: 'https://real-life-stack.de/storybook/', attrs: { target: '_self' } },
         { label: 'App', link: 'https://real-life-stack.de/app/', attrs: { target: '_self' } },
       ],

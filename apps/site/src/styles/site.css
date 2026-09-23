@@ -113,3 +113,23 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .story-example iframe { display: block; width: 100%; border: 0; background: white; }
 .story-example p { padding: .6rem 1rem; font-size: .8rem; color: var(--sl-color-gray-2); margin: 0; }
 @media (max-width: 50rem) { :root { --sl-text-5xl: 2.4rem; } .rl-cards, .rl-cards.three { grid-template-columns: 1fr 1fr; } }
+
+/* Referenz: dichte Tabellen, das Verhalten ohne Faehigkeit farbig wie im Storybook. */
+.rl-table { overflow-x: auto; }
+.rl-ref table { font-size: .9rem; width: 100%; }
+.rl-ref td, .rl-ref th { vertical-align: top; }
+.rl-ref h2 small { font-weight: 400; color: var(--sl-color-gray-3); font-size: .7em; margin-inline-start: .35rem; }
+.rl-links { font-size: .8em; margin-top: .2rem; display: flex; gap: .5rem; }
+.rl-legend li { margin: 0; }
+.rl-without.throws { color: var(--sl-color-red); }
+.rl-without.none { color: var(--sl-color-gray-3); }
+.rl-note { color: var(--sl-color-gray-3); }
+
+.rl-hooks { display: grid; gap: .6rem; margin-top: 1rem; }
+.rl-hook { border: 1px solid var(--sl-color-gray-5); border-radius: .6rem; padding: .7rem .9rem; background: var(--sl-color-bg-sidebar); }
+.rl-hook-head { display: flex; flex-wrap: wrap; gap: .4rem .5rem; align-items: baseline; font-size: .95rem; }
+.rl-hook-head > code:first-child { font-weight: 600; }
+.rl-arrow { color: var(--sl-color-gray-3); }
+.rl-hook-q { margin: .35rem 0 .4rem !important; line-height: 1.5; }
+.rl-hook-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3rem 1rem; font-size: .82rem; color: var(--sl-color-gray-2); }
+.rl-hook-meta .rl-links { margin-top: 0; font-size: 1em; }
