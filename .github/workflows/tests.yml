@@ -123,6 +123,11 @@ jobs:
       - name: Packages load in Node ESM
         run: pnpm test:esm
 
+      # Der Build-Stand (Version, Commit, Kanal), den Apps im Nutzer-Menue und
+      # in build-info.json zeigen: Commit aus dem Checkout, nie aus GITHUB_SHA.
+      - name: Build info
+        run: pnpm test:build-info
+
       # Jedes Paket und jede App, die ein typecheck-Skript hat. Vorher lief nur
       # das Toolkit, und ein toter Import in apps/reference kam erst im Review
       # heraus (real-life-stack#403).

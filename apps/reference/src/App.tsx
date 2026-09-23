@@ -334,6 +334,7 @@ function Home({ activeConnectorId, onConnectorChange }: { activeConnectorId: str
     <MapLibreAdapterProvider>
       <RoutedAppFrame
         fallbackModule="feed"
+        build={__RLS_BUILD__}
         openProfile={openProfile}
         navbarEnd={hasMessaging(connector) ? <RelayStatusBadgeWrapper /> : null}
       >

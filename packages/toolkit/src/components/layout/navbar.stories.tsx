@@ -50,7 +50,7 @@ export const Default: Story = {
           <ModuleTabs modules={MODULES} activeModule={module} onModuleChange={setModule} />
         </NavbarCenter>
         <NavbarEnd>
-          <UserMenu user={STORY_ME} onProfile={() => {}} />
+          <UserMenu user={STORY_ME} onProfile={() => {}} build={{ version: '0.4.0', commit: 'a1b2c3d', channel: 'android-foss' }} />
         </NavbarEnd>
       </Navbar>
     )
@@ -76,7 +76,7 @@ export const WithMenuButton: Story = {
         </NavbarCenter>
         <NavbarEnd>
           <ActivityBell open={bell} onOpenChange={setBell} />
-          <UserMenu user={STORY_ME} onProfile={() => {}} />
+          <UserMenu user={STORY_ME} onProfile={() => {}} build={{ version: '0.4.0', commit: 'a1b2c3d', channel: 'android-foss' }} />
         </NavbarEnd>
       </Navbar>
     )
@@ -95,7 +95,7 @@ export const Simple: Story = {
           <WorkspaceSwitcher workspaces={STORY_SEED.groups} activeWorkspace={space} onWorkspaceChange={setSpace} />
         </NavbarStart>
         <NavbarEnd>
-          <UserMenu user={STORY_ME} onProfile={() => {}} />
+          <UserMenu user={STORY_ME} onProfile={() => {}} build={{ version: '0.4.0', commit: 'a1b2c3d', channel: 'android-foss' }} />
         </NavbarEnd>
       </Navbar>
     )

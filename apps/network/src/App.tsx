@@ -39,7 +39,7 @@ function NetworkShell() {
   return (
     <MapLibreAdapterProvider>
       {/* Der Rueckfall ohne Feld ist die Liste (Spec 01, Der Modul-Host). */}
-      <RoutedAppFrame fallbackModule="collection" openProfile={openProfile}>
+      <RoutedAppFrame fallbackModule="collection" openProfile={openProfile} build={__RLS_BUILD__}>
         <AdaptivePanel open={profileUser !== null} onClose={closeProfile} allowedModes={["modal"]} modalClassName="sm:max-w-sm">
           {profileUser && (
             <ProfilePanelContent

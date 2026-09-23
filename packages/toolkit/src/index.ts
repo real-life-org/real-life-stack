@@ -1,4 +1,5 @@
 // Utilities
+export { formatBuild, type BuildInfo } from "./lib/build-info"
 export { cn, getTagColor, getTagAccentColor, getSpacePrimaryColor, getReadableTextColor, getItemColor, resolveAssetUrl } from "./lib/utils"
 export {
   focusActiveItemOnce,

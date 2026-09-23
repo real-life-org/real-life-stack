@@ -15,6 +15,7 @@ Der Stack hat zwei Ausgänge: die **npm-Pakete** (`@real-life-stack/*`, für App
 
 ## Welche Version läuft bei mir?
 
+- **In der App:** ganz unten im Nutzer-Menü steht eine kleine Zeile mit Version, Commit und OTA-Kanal (antippen kopiert sie, für Fehlermeldungen). Dieselben Angaben liegen unter `/app/build-info.json`.
 - **Instanz:** `RLS_IMAGE_TAG` in `.env`; welches Image tatsächlich läuft, zeigt `docker compose images`.
 - **Image-Tags:** aus dem Release-Tag `app-v0.3.3` entstehen `0.3.3` (genau diese Fassung) und `0.3` (folgt Korrekturen in der Minor-Version). `edge` ist der Stand des Hauptzweigs. Ein `latest` gibt es nicht, ein Major-Tag erst ab 1.0. Alle Tags: [ghcr.io/real-life-org/rls-app](https://github.com/real-life-org/real-life-stack/pkgs/container/rls-app).
 - **Pakete:** die Version auf npm; Tags im Repo heißen `toolkit-vX.Y.Z`, `data-interface-vX.Y.Z`, `*-connector-vX.Y.Z`.

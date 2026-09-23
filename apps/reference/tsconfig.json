@@ -23,6 +23,8 @@
       "@real-life-stack/local-connector": ["../../packages/local-connector/src"],
       "@real-life-stack/mock-connector": ["../../packages/mock-connector/src"],
       "@real-life-stack/toolkit": ["../../packages/toolkit/src"],
+      "@real-life-stack/toolkit/router": ["../../packages/toolkit/src/router.tsx"],
+      "@real-life-stack/toolkit/maplibre": ["../../packages/toolkit/src/maplibre.ts"],
       "@/*": ["../../packages/toolkit/src/*"]
     }
   },
