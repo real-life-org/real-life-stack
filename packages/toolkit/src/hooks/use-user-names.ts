@@ -22,6 +22,7 @@ import { useOptionalConnector } from "./connector-context"
  * @answers `(userId) => string`
  * @without value — value — the id itself
  * @group people
+ * @see story rls-foundations-hooks--people
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useUserNameResolver(): (userId: string) => string {

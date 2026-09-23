@@ -27,6 +27,7 @@ export interface ItemPresentation {
  * @answers `(item) => {group, color, isPrivate}`
  * @without value — no group, palette colour, `false`
  * @group item
+ * @see story rls-foundations-hooks--item-properties
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useItemPresentation(activeGroupId?: string): (item: Item) => ItemPresentation {

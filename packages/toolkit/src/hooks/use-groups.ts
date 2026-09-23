@@ -14,6 +14,7 @@ import { useInitialSync } from "./use-initial-sync"
  * @answers `string | null`
  * @without null
  * @group groups
+ * @see story rls-foundations-hooks--groups
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function usePersonalGroupId(): string | null {
@@ -61,6 +62,7 @@ const NO_MEMBERS: User[] = []
  * @answers `{data, isLoading}`
  * @without empty
  * @group groups
+ * @see story rls-foundations-hooks--groups
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useGroups() {
@@ -92,6 +94,7 @@ export function useGroups() {
  * @answers `Group | null`
  * @without null
  * @group groups
+ * @see story rls-foundations-hooks--groups
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useCurrentGroup(): Group | null {
@@ -113,6 +116,7 @@ export function useCurrentGroup(): Group | null {
  * @answers `(name, data?) => Promise`
  * @without throws on call
  * @group groups
+ * @see story rls-foundations-hooks--groups
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useCreateGroup() {
@@ -125,6 +129,7 @@ export function useCreateGroup() {
  * @answers `(id, patch) => Promise`
  * @without throws on call
  * @group groups
+ * @see story rls-foundations-hooks--groups
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useUpdateGroup() {
@@ -137,6 +142,7 @@ export function useUpdateGroup() {
  * @answers `(id) => Promise`
  * @without throws on call
  * @group groups
+ * @see story rls-foundations-hooks--groups
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useDeleteGroup() {
@@ -149,6 +155,7 @@ export function useDeleteGroup() {
  * @answers `{data, isLoading}`
  * @without empty
  * @group groups
+ * @see story rls-foundations-hooks--groups
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useMembers(groupId: string | null) {
@@ -173,6 +180,7 @@ export function useMembers(groupId: string | null) {
  * @answers `(groupId, userId) => Promise`
  * @without throws on call
  * @group groups
+ * @see story rls-foundations-hooks--groups
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useInviteMember() {
@@ -185,6 +193,7 @@ export function useInviteMember() {
  * @answers `(groupId, userId) => Promise`
  * @without throws on call
  * @group groups
+ * @see story rls-foundations-hooks--groups
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useRemoveMember() {

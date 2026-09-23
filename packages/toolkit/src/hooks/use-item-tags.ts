@@ -18,6 +18,7 @@ const EMPTY_TAGS: readonly string[] = Object.freeze([])
  * @answers `string[]`
  * @without —
  * @group item
+ * @see story rls-foundations-hooks--item-properties
  * @see spec docs/spec/06-schema-composition.md
  */
 export function useItemTags(item: Item | null | undefined): readonly string[] {

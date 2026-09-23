@@ -218,12 +218,14 @@
           "question": "Where does an item belong that is shared with nobody?",
           "answers": "`string | null`",
           "without": "null",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--groups"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-groups.ts",
-          "line": 19
+          "line": 20
         },
         {
           "name": "useGroups",
@@ -231,12 +233,14 @@
           "question": "Which spaces do I see?",
           "answers": "`{data, isLoading}`",
           "without": "empty",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--groups"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-groups.ts",
-          "line": 66
+          "line": 68
         },
         {
           "name": "useCurrentGroup",
@@ -244,12 +248,14 @@
           "question": "Which space am I in right now?",
           "answers": "`Group | null`",
           "without": "null",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--groups"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-groups.ts",
-          "line": 97
+          "line": 100
         },
         {
           "name": "useCreateGroup",
@@ -257,12 +263,14 @@
           "question": "Create a space.",
           "answers": "`(name, data?) => Promise`",
           "without": "throws on call",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--groups"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-groups.ts",
-          "line": 118
+          "line": 122
         },
         {
           "name": "useUpdateGroup",
@@ -270,12 +278,14 @@
           "question": "Change a space's name or data.",
           "answers": "`(id, patch) => Promise`",
           "without": "throws on call",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--groups"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-groups.ts",
-          "line": 130
+          "line": 135
         },
         {
           "name": "useDeleteGroup",
@@ -283,12 +293,14 @@
           "question": "Delete a space.",
           "answers": "`(id) => Promise`",
           "without": "throws on call",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--groups"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-groups.ts",
-          "line": 142
+          "line": 148
         },
         {
           "name": "useMembers",
@@ -296,12 +308,14 @@
           "question": "Who belongs to this space, or with `null` to all of mine?",
           "answers": "`{data, isLoading}`",
           "without": "empty",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--groups"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-groups.ts",
-          "line": 154
+          "line": 161
         },
         {
           "name": "useInviteMember",
@@ -309,12 +323,14 @@
           "question": "Invite someone into a space.",
           "answers": "`(groupId, userId) => Promise`",
           "without": "throws on call",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--groups"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-groups.ts",
-          "line": 178
+          "line": 186
         },
         {
           "name": "useRemoveMember",
@@ -322,12 +338,14 @@
           "question": "Remove someone from a space.",
           "answers": "`(groupId, userId) => Promise`",
           "without": "throws on call",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--groups"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-groups.ts",
-          "line": 190
+          "line": 199
         }
       ]
     },
@@ -341,12 +359,14 @@
           "question": "Who am I, if anyone at all?",
           "answers": "`{data, isLoading}`",
           "without": "null",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--people"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-auth.ts",
-          "line": 33
+          "line": 34
         },
         {
           "name": "useCurrentUser",
@@ -354,12 +374,14 @@
           "question": "Who am I? For surfaces that make no sense without sign-in.",
           "answers": "`{data, isLoading}`",
           "without": "throws on render",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--people"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-auth.ts",
-          "line": 59
+          "line": 61
         },
         {
           "name": "useContacts",
@@ -367,12 +389,14 @@
           "question": "Whom do I know, who is waiting for confirmation?",
           "answers": "`{contacts, addContact, …}`",
           "without": "empty — actions no-op",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--people"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-contacts.ts",
-          "line": 17
+          "line": 18
         },
         {
           "name": "useIncomingEvents",
@@ -380,12 +404,14 @@
           "question": "Which incoming event is waiting for an answer?",
           "answers": "`{current, dismiss, …}`",
           "without": "throws on render — without provider",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--people"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-incoming-events.tsx",
-          "line": 41
+          "line": 42
         },
         {
           "name": "useOpenProfile",
@@ -393,12 +419,14 @@
           "question": "Open a person's profile.",
           "answers": "`(userId) => void`",
           "without": "no-op",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--people"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-open-profile.tsx",
-          "line": 43
+          "line": 44
         },
         {
           "name": "useResolvedUsers",
@@ -406,12 +434,14 @@
           "question": "For which ids do I know a name?",
           "answers": "`Map<string, User>`",
           "without": "empty — map",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--people"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-resolved-users.ts",
-          "line": 18
+          "line": 19
         },
         {
           "name": "useUserNameResolver",
@@ -419,12 +449,14 @@
           "question": "A display name for a user id, falling back to the id.",
           "answers": "`(userId) => string`",
           "without": "value — value — the id itself",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--people"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-user-names.ts",
-          "line": 27
+          "line": 28
         },
         {
           "name": "useVerification",
@@ -432,12 +464,14 @@
           "question": "Two people who meet in real life confirm each other.",
           "answers": "`{supported, createChallenge, …}`",
           "without": "empty — `supported: false`",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--people"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-verification.ts",
-          "line": 27
+          "line": 28
         }
       ]
     },
@@ -754,12 +788,14 @@
           "question": "Is it light or dark right now?",
           "answers": "`\"light\" | \"dark\"`",
           "without": "—",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--environment"
+          ],
           "specs": [
             "docs/spec/11-runtime-config-und-branding.md"
           ],
           "source": "packages/toolkit/src/hooks/use-color-scheme.ts",
-          "line": 23
+          "line": 24
         },
         {
           "name": "useInitialSync",
@@ -767,12 +803,14 @@
           "question": "Is the first fill still running, may \"nothing there\" be said?",
           "answers": "`{active, loadedGroups, expectedGroups}`",
           "without": "value — permanently `active: false`",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--environment"
+          ],
           "specs": [
             "docs/spec/11-runtime-config-und-branding.md"
           ],
           "source": "packages/toolkit/src/hooks/use-initial-sync.ts",
-          "line": 22
+          "line": 23
         },
         {
           "name": "useIsMobile",
@@ -780,12 +818,14 @@
           "question": "Narrower than 768px?",
           "answers": "`boolean`",
           "without": "—",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--environment"
+          ],
           "specs": [
             "docs/spec/11-runtime-config-und-branding.md"
           ],
           "source": "packages/toolkit/src/hooks/use-mobile.ts",
-          "line": 28
+          "line": 29
         },
         {
           "name": "useIsCompact",
@@ -793,12 +833,14 @@
           "question": "Below 1024px, where the panel becomes a drawer?",
           "answers": "`boolean`",
           "without": "—",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--environment"
+          ],
           "specs": [
             "docs/spec/11-runtime-config-und-branding.md"
           ],
           "source": "packages/toolkit/src/hooks/use-mobile.ts",
-          "line": 43
+          "line": 45
         },
         {
           "name": "useNotifications",
@@ -821,12 +863,14 @@
           "question": "Advance the seen boundary once per opening.",
           "answers": "—",
           "without": "no-op",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--environment"
+          ],
           "specs": [
             "docs/spec/11-runtime-config-und-branding.md"
           ],
           "source": "packages/toolkit/src/hooks/use-notifications.ts",
-          "line": 53
+          "line": 54
         },
         {
           "name": "useRelayStatus",
@@ -834,12 +878,14 @@
           "question": "Is this device attached to the relay, is anything unsent waiting?",
           "answers": "`{state, isConnected, pendingCount}`",
           "without": "throws on render",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--environment"
+          ],
           "specs": [
             "docs/spec/11-runtime-config-und-branding.md"
           ],
           "source": "packages/toolkit/src/hooks/use-relay-status.ts",
-          "line": 22
+          "line": 23
         }
       ]
     },
@@ -853,12 +899,14 @@
           "question": "How does this item present itself: which group it comes from, in which colour, and whether it is private?",
           "answers": "`(item) => {group, color, isPrivate}`",
           "without": "value — no group, palette colour, `false`",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--item-properties"
+          ],
           "specs": [
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-item-presentation.ts",
-          "line": 32
+          "line": 33
         },
         {
           "name": "useItemTags",
@@ -866,12 +914,14 @@
           "question": "Which tags does this item carry?",
           "answers": "`string[]`",
           "without": "—",
-          "stories": [],
+          "stories": [
+            "rls-foundations-hooks--item-properties"
+          ],
           "specs": [
             "docs/spec/06-schema-composition.md"
           ],
           "source": "packages/toolkit/src/hooks/use-item-tags.ts",
-          "line": 23
+          "line": 24
         }
       ]
     }

@@ -28,6 +28,7 @@ function useAuthConnector() {
  * @answers `{data, isLoading}`
  * @without null
  * @group people
+ * @see story rls-foundations-hooks--people
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useOptionalCurrentUser(): { data: User | null; isLoading: boolean } {
@@ -54,6 +55,7 @@ export function useOptionalCurrentUser(): { data: User | null; isLoading: boolea
  * @answers `{data, isLoading}`
  * @without throws on render
  * @group people
+ * @see story rls-foundations-hooks--people
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useCurrentUser() {

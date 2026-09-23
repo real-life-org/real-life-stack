@@ -36,6 +36,7 @@ const IncomingEventsContext = createContext<IncomingEventsContextType | null>(nu
  * @answers `{current, dismiss, …}`
  * @without throws on render — without provider
  * @group people
+ * @see story rls-foundations-hooks--people
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useIncomingEvents(): IncomingEventsContextType {

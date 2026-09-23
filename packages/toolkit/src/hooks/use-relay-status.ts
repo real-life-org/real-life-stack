@@ -17,6 +17,7 @@ function useMessagingConnector() {
  * @answers `{state, isConnected, pendingCount}`
  * @without throws on render
  * @group environment
+ * @see story rls-foundations-hooks--environment
  * @see spec docs/spec/11-runtime-config-und-branding.md
  */
 export function useRelayStatus() {

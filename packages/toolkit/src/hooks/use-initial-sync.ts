@@ -17,6 +17,7 @@ const NOT_SYNCING: InitialSyncState = { active: false, loadedGroups: 0, expected
  * @answers `{active, loadedGroups, expectedGroups}`
  * @without value — permanently `active: false`
  * @group environment
+ * @see story rls-foundations-hooks--environment
  * @see spec docs/spec/11-runtime-config-und-branding.md
  */
 export function useInitialSync(): InitialSyncState {

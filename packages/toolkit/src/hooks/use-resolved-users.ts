@@ -13,6 +13,7 @@ import { useConnector } from "./connector-context"
  * @answers `Map<string, User>`
  * @without empty — map
  * @group people
+ * @see story rls-foundations-hooks--people
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useResolvedUsers(ids: readonly string[]): ReadonlyMap<string, User> {

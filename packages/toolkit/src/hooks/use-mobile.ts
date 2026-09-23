@@ -23,6 +23,7 @@ function useBelowBreakpoint(breakpoint: number) {
  * @answers `boolean`
  * @without —
  * @group environment
+ * @see story rls-foundations-hooks--environment
  * @see spec docs/spec/11-runtime-config-und-branding.md
  */
 export function useIsMobile() {
@@ -38,6 +39,7 @@ export function useIsMobile() {
  * @answers `boolean`
  * @without —
  * @group environment
+ * @see story rls-foundations-hooks--environment
  * @see spec docs/spec/11-runtime-config-und-branding.md
  */
 export function useIsCompact() {
