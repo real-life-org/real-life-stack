@@ -1,6 +1,6 @@
 {
   "name": "@real-life-stack/local-connector",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Local persistence connector: offline-first, single device.",
   "repository": {
     "type": "git",

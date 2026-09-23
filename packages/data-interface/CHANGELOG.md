@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.2.1...data-interface-v0.3.0) (2026-09-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **toolkit:** Der Modul-Host — B0 komplett (Schritte 1–5b + Codex-Fixes #415–#417) ([#414](https://github.com/real-life-org/real-life-stack/issues/414))
+
+### Features
+
+* **network:** die Netzwerk-App läuft auf dem Modul-Host (Spec 01, Regel 5) ([#429](https://github.com/real-life-org/real-life-stack/issues/429)) ([55f571c](https://github.com/real-life-org/real-life-stack/commit/55f571c41cbb854493f8b4dd6de23166b8a26a45))
+* **toolkit:** Der Modul-Host — B0 komplett (Schritte 1–5b + Codex-Fixes [#415](https://github.com/real-life-org/real-life-stack/issues/415)–[#417](https://github.com/real-life-org/real-life-stack/issues/417)) ([#414](https://github.com/real-life-org/real-life-stack/issues/414)) ([97baf68](https://github.com/real-life-org/real-life-stack/commit/97baf683b212a784246711022b393d9002234be6))
+
 ## [0.2.1](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.2.0...data-interface-v0.2.1) (2026-09-16)
 
 

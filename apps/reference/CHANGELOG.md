@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.4.0](https://github.com/real-life-org/real-life-stack/compare/app-v0.3.3...app-v0.4.0) (2026-09-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **toolkit:** Der Modul-Host — B0 komplett (Schritte 1–5b + Codex-Fixes #415–#417) ([#414](https://github.com/real-life-org/real-life-stack/issues/414))
+* **toolkit:** Vokabular, Filterkarte und Chips gehören der Fläche ([#407](https://github.com/real-life-org/real-life-stack/issues/407))
+* **toolkit:** die Suche gehört der Fläche, das Modul nur seine eigenen Knöpfe ([#405](https://github.com/real-life-org/real-life-stack/issues/405))
+* **toolkit:** Nachzug von #400 und #401 auf master ([#403](https://github.com/real-life-org/real-life-stack/issues/403))
+
+### Features
+
+* **network:** die Netzwerk-App läuft auf dem Modul-Host (Spec 01, Regel 5) ([#429](https://github.com/real-life-org/real-life-stack/issues/429)) ([55f571c](https://github.com/real-life-org/real-life-stack/commit/55f571c41cbb854493f8b4dd6de23166b8a26a45))
+* **storybook:** Ordnung nach UI-Konzepten, feste Story-IDs, Gemeinschaftsgarten ([#398](https://github.com/real-life-org/real-life-stack/issues/398)) ([6099993](https://github.com/real-life-org/real-life-stack/commit/6099993dc56aee0643fbd5084b0ef92a0a333b4d))
+* **toolkit:** das Kanban kommt vollstaendig aus dem Toolkit (B5) — alle sieben Module laufen ohne eine Zeile in der App ([#428](https://github.com/real-life-org/real-life-stack/issues/428)) ([920622d](https://github.com/real-life-org/real-life-stack/commit/920622d2bad3b2aa818fc0ae86c67a6b1dfb18bf))
+* **toolkit:** der Feed kommt vollständig aus dem Toolkit (B1) ([#422](https://github.com/real-life-org/real-life-stack/issues/422)) ([36a04d0](https://github.com/real-life-org/real-life-stack/commit/36a04d01271117d813e11e32b4651fe737e2c0d5))
+* **toolkit:** der Graph kommt vollstaendig aus dem Toolkit (B3) ([#426](https://github.com/real-life-org/real-life-stack/issues/426)) ([48c9b00](https://github.com/real-life-org/real-life-stack/commit/48c9b002577193dcdbea4f1430221914b31ea9b9))
+* **toolkit:** Der Modul-Host — B0 komplett (Schritte 1–5b + Codex-Fixes [#415](https://github.com/real-life-org/real-life-stack/issues/415)–[#417](https://github.com/real-life-org/real-life-stack/issues/417)) ([#414](https://github.com/real-life-org/real-life-stack/issues/414)) ([97baf68](https://github.com/real-life-org/real-life-stack/commit/97baf683b212a784246711022b393d9002234be6))
+* **toolkit:** der Rahmen einer App liegt im Toolkit (AppFrame, RoutedAppFrame) ([#430](https://github.com/real-life-org/real-life-stack/issues/430)) ([7f6d780](https://github.com/real-life-org/real-life-stack/commit/7f6d780f403ba38a237741e9b2a3f2ab15f6ed28))
+* **toolkit:** die Liste kommt vollständig aus dem Toolkit (B2) ([#424](https://github.com/real-life-org/real-life-stack/issues/424)) ([464d145](https://github.com/real-life-org/real-life-stack/commit/464d14501cb68654273b5c6ca1da5e19f9cf1872))
+* **toolkit:** die Resonanz kommt vollstaendig aus dem Toolkit (B4) ([#427](https://github.com/real-life-org/real-life-stack/issues/427)) ([2bc1cbc](https://github.com/real-life-org/real-life-stack/commit/2bc1cbcb5af856ad6e4304a97ef6ce56d8cc3193))
+* **toolkit:** die Suche gehört der Fläche, das Modul nur seine eigenen Knöpfe ([#405](https://github.com/real-life-org/real-life-stack/issues/405)) ([a58f833](https://github.com/real-life-org/real-life-stack/commit/a58f8334f4ac02a4d00ce6cf72e80632a68d60b2))
+* **toolkit:** Host-Dienste — Autor, aktives Item, Filterzustand, Scrollen, Karten-Regel ([#425](https://github.com/real-life-org/real-life-stack/issues/425)) ([9e62cd1](https://github.com/real-life-org/real-life-stack/commit/9e62cd1994544f4a0b74e0fe0c11e7cd18143c9e))
+* **toolkit:** Vokabular, Filterkarte und Chips gehören der Fläche ([#407](https://github.com/real-life-org/real-life-stack/issues/407)) ([a0a7779](https://github.com/real-life-org/real-life-stack/commit/a0a7779f0c084460071f593ce56a2eda7691c9c6))
+
+
+### Code Refactoring
+
+* **toolkit:** Nachzug von [#400](https://github.com/real-life-org/real-life-stack/issues/400) und [#401](https://github.com/real-life-org/real-life-stack/issues/401) auf master ([#403](https://github.com/real-life-org/real-life-stack/issues/403)) ([fa2630f](https://github.com/real-life-org/real-life-stack/commit/fa2630f4ccc045af76d9d7986b4db98ed8806b25))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.3.0
+    * @real-life-stack/local-connector bumped to 0.2.0
+    * @real-life-stack/mock-connector bumped to 0.2.0
+    * @real-life-stack/supabase-connector bumped to 0.3.0
+    * @real-life-stack/toolkit bumped to 0.2.0
+    * @real-life-stack/wot-connector bumped to 0.2.0
+
 ## [0.3.3](https://github.com/real-life-org/real-life-stack/compare/app-v0.3.2...app-v0.3.3) (2026-09-16)
 
 
