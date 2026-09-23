@@ -30,30 +30,56 @@ export interface Translation {
     title: string
     p1: string
     p2: string
-    groups: string
-    groupsDesc: string
-    events: string
-    eventsDesc: string
-    trust: string
-    trustDesc: string
+    items: string
+    itemsDesc: string
+    spaces: string
+    spacesDesc: string
+    capabilities: string
+    capabilitiesDesc: string
   }
   connectors: {
     badge: string
     title: string
     p1: string
     p2: string
-    restDesc: string
-    graphqlDesc: string
-    localDesc: string
-    p2pDesc: string
-    e2eeDesc: string
-    didsDesc: string
+    wot: string
+    wotDesc: string
+    supabase: string
+    supabaseDesc: string
+    own: string
+    ownDesc: string
   }
   footer: { tagline: string; privacy: string; backHome: string }
 }
 
 export type TranslatedLanguage =
   | 'de' | 'en' | 'fr' | 'es' | 'pt' | 'it' | 'tr' | 'ar' | 'zh' | 'ru' | 'uk' | 'he'
+
+const EN_DATA_INTERFACE: Translation['dataInterface'] = {
+  badge: 'Data & identity interface',
+  title: 'One interface',
+  p1: 'All modules speak the same language. What they read and write are items in spaces, related to one another and to people; an event, a place, a task, a profile differ only in their fields. That is why the same neighbourhood festival can sit in the calendar and on the map without existing twice.',
+  p2: 'When an item changes, every surface showing it follows. And what the backend underneath can do decides what the surface offers: a connector that cannot write gets no write buttons, but an app that still runs.',
+  items: 'Items & relations',
+  itemsDesc: 'One object, many views',
+  spaces: 'Spaces & members',
+  spacesDesc: 'Who sees what, who belongs',
+  capabilities: 'Capabilities',
+  capabilitiesDesc: 'What a connector can do, the surface checks',
+}
+
+const EN_CONNECTORS: Translation['connectors'] = {
+  badge: 'Connector layer',
+  title: 'Two connectors, one contract',
+  p1: 'Below the interface sits the connector. It decides where the data lives; the surface does not notice the switch. Two ship ready-made, each an npm package: the Web of Trust for decentralized, end-to-end encrypted groups and Supabase for a central server.',
+  p2: 'A connector of your own implements the same interface against another source, with exactly the capabilities the source offers. What it cannot do, the surface hides.',
+  wot: 'Web of Trust',
+  wotDesc: 'Decentralized, end-to-end encrypted, identity as a DID',
+  supabase: 'Supabase',
+  supabaseDesc: 'Central server with sign-in, permissions and realtime',
+  own: 'Your own connector',
+  ownDesc: 'The same interface against your source: REST, GraphQL, local or P2P',
+}
 
 export const translations: Record<TranslatedLanguage, Translation> = {
   de: {
@@ -85,26 +111,26 @@ export const translations: Record<TranslatedLanguage, Translation> = {
     dataInterface: {
       badge: 'Daten- & Identitätsschnittstelle',
       title: 'Einheitliche Schnittstelle',
-      p1: 'Alle Module greifen auf eine gemeinsame Daten- und Identitätsschnittstelle im Frontend zu. Diese definiert einheitliche Funktionen zum Laden und Speichern von Gruppen, Terminen, Profilen und Vertrauensbeziehungen.',
-      p2: 'Die Module kennen nur diese Schnittstelle, unabhängig davon, welches Backend genutzt wird oder wie Identitäten verwaltet sind. Die offene Identitätsschnittstelle soll perspektivisch auch schlüsselbasierte Accounts und DIDs unterstützen.',
-      groups: 'Gruppen & Profile',
-      groupsDesc: 'Laden und Speichern von Mitgliedschaften',
-      events: 'Termine & Events',
-      eventsDesc: 'Einheitliche Funktionen für Kalendereinträge',
-      trust: 'Vertrauensbeziehungen',
-      trustDesc: 'Web of Trust & Identitätsverwaltung',
+      p1: 'Alle Module sprechen dieselbe Sprache. Was sie lesen und schreiben, sind Items in Spaces, mit Beziehungen zueinander und zu Menschen; ein Termin, ein Ort, eine Aufgabe, ein Profil unterscheiden sich nur in ihren Feldern. Deshalb kann dasselbe Nachbarschaftsfest im Kalender und auf der Karte stehen, ohne zweimal zu existieren.',
+      p2: 'Ändert sich ein Item, folgt jede Fläche, die es zeigt. Und was das Backend darunter kann, entscheidet, was die Oberfläche anbietet: Ein Connector, der nicht schreiben kann, bekommt keine Schreibknöpfe, aber eine App, die trotzdem läuft.',
+      items: 'Items & Relations',
+      itemsDesc: 'Ein Objekt, viele Ansichten',
+      spaces: 'Spaces & Mitglieder',
+      spacesDesc: 'Wer sieht was, wer gehört dazu',
+      capabilities: 'Fähigkeiten',
+      capabilitiesDesc: 'Was ein Connector kann, prüft die Fläche',
     },
     connectors: {
       badge: 'Connector-Schicht',
-      title: 'Flexibel wählbare Backends',
-      p1: 'Unterhalb der Datenschnittstelle liegt eine schlanke Connector-Struktur. Sie legt fest, wie Backends angebunden werden, und wir liefern eine erste Implementierung mit.',
-      p2: 'Weitere Connectoren können von Communities selbst entwickelt werden, von klassischen REST-APIs bis hin zu vollständig dezentralen, Ende-zu-Ende-verschlüsselten Systemen.',
-      restDesc: 'Klassischer Server',
-      graphqlDesc: 'Flexible Queries',
-      localDesc: 'Offline-fähig',
-      p2pDesc: 'Dezentral',
-      e2eeDesc: 'Verschlüsselt',
-      didsDesc: 'Dezentrale IDs',
+      title: 'Zwei Connectoren, ein Vertrag',
+      p1: 'Unterhalb der Schnittstelle liegt der Connector. Er entscheidet, wo die Daten leben; die Oberfläche merkt den Wechsel nicht. Zwei gibt es fertig, jeder ein npm-Paket: das Web of Trust für dezentrale, Ende-zu-Ende verschlüsselte Gruppen und Supabase für einen zentralen Server.',
+      p2: 'Ein eigener Connector implementiert dasselbe Interface gegen eine andere Quelle, mit genau den Fähigkeiten, die die Quelle hergibt. Was er nicht kann, blendet die Oberfläche aus.',
+      wot: 'Web of Trust',
+      wotDesc: 'Dezentral, Ende-zu-Ende verschlüsselt, Identität als DID',
+      supabase: 'Supabase',
+      supabaseDesc: 'Zentraler Server mit Anmeldung, Rechten und Echtzeit',
+      own: 'Eigener Connector',
+      ownDesc: 'Dasselbe Interface gegen eure Quelle: REST, GraphQL, lokal oder P2P',
     },
     footer: {
       tagline: 'Gemeinsam gestalten wir die Zukunft: lokal vernetzt, global gedacht.',
@@ -139,28 +165,28 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       more: 'Plus list, graph and resonance: every module live in Storybook',
     },
     dataInterface: {
-      badge: 'Data & Identity Interface',
-      title: 'One Unified Interface',
-      p1: 'All modules access a shared data and identity interface in the frontend. It defines unified functions for loading and saving groups, events, profiles, and trust relationships.',
-      p2: 'The modules only know this interface, regardless of which backend is used or how identities are managed. The open identity interface is also meant to support key-based accounts and DIDs in the future.',
-      groups: 'Groups & Profiles',
-      groupsDesc: 'Loading and saving memberships',
-      events: 'Dates & Events',
-      eventsDesc: 'Unified functions for calendar entries',
-      trust: 'Trust Relationships',
-      trustDesc: 'Web of Trust & identity management',
+      badge: 'Data & identity interface',
+      title: 'One interface',
+      p1: 'All modules speak the same language. What they read and write are items in spaces, related to one another and to people; an event, a place, a task, a profile differ only in their fields. That is why the same neighbourhood festival can sit in the calendar and on the map without existing twice.',
+      p2: 'When an item changes, every surface showing it follows. And what the backend underneath can do decides what the surface offers: a connector that cannot write gets no write buttons, but an app that still runs.',
+      items: 'Items & relations',
+      itemsDesc: 'One object, many views',
+      spaces: 'Spaces & members',
+      spacesDesc: 'Who sees what, who belongs',
+      capabilities: 'Capabilities',
+      capabilitiesDesc: 'What a connector can do, the surface checks',
     },
     connectors: {
-      badge: 'Connector Layer',
-      title: 'Flexibly Selectable Backends',
-      p1: 'Below the data interface sits a lean connector structure. It defines how backends are connected, and we ship a first implementation.',
-      p2: 'Communities can develop further connectors themselves, from classic REST APIs to fully decentralized, end-to-end encrypted systems.',
-      restDesc: 'Classic server',
-      graphqlDesc: 'Flexible queries',
-      localDesc: 'Works offline',
-      p2pDesc: 'Decentralized',
-      e2eeDesc: 'Encrypted',
-      didsDesc: 'Decentralized IDs',
+      badge: 'Connector layer',
+      title: 'Two connectors, one contract',
+      p1: 'Below the interface sits the connector. It decides where the data lives; the surface does not notice the switch. Two ship ready-made, each an npm package: the Web of Trust for decentralized, end-to-end encrypted groups and Supabase for a central server.',
+      p2: 'A connector of your own implements the same interface against another source, with exactly the capabilities the source offers. What it cannot do, the surface hides.',
+      wot: 'Web of Trust',
+      wotDesc: 'Decentralized, end-to-end encrypted, identity as a DID',
+      supabase: 'Supabase',
+      supabaseDesc: 'Central server with sign-in, permissions and realtime',
+      own: 'Your own connector',
+      ownDesc: 'The same interface against your source: REST, GraphQL, local or P2P',
     },
     footer: {
       tagline: 'Together we shape the future: locally connected, globally minded.',
@@ -192,30 +218,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       feed: 'Fil',
       feedDesc: "Flux d'activités",
     },
-    dataInterface: {
-      badge: 'Interface de données & identité',
-      title: 'Une interface unifiée',
-      p1: "Tous les modules accèdent à une interface commune de données et d'identité dans le frontend. Elle définit des fonctions unifiées pour charger et enregistrer groupes, événements, profils et relations de confiance.",
-      p2: "Les modules ne connaissent que cette interface, quel que soit le backend utilisé ou la gestion des identités. L'interface d'identité ouverte doit aussi, à terme, prendre en charge les comptes à clés et les DID.",
-      groups: 'Groupes & profils',
-      groupsDesc: 'Chargement et enregistrement des adhésions',
-      events: 'Dates & événements',
-      eventsDesc: 'Fonctions unifiées pour les entrées de calendrier',
-      trust: 'Relations de confiance',
-      trustDesc: "Web of Trust & gestion d'identité",
-    },
-    connectors: {
-      badge: 'Couche connecteurs',
-      title: 'Des backends au choix',
-      p1: "Sous l'interface de données se trouve une structure de connecteurs légère. Elle définit comment les backends sont reliés, et nous livrons une première implémentation.",
-      p2: "Les communautés peuvent développer leurs propres connecteurs, des API REST classiques aux systèmes entièrement décentralisés et chiffrés de bout en bout.",
-      restDesc: 'Serveur classique',
-      graphqlDesc: 'Requêtes flexibles',
-      localDesc: 'Fonctionne hors ligne',
-      p2pDesc: 'Décentralisé',
-      e2eeDesc: 'Chiffré',
-      didsDesc: 'IDs décentralisés',
-    },
+    // Bis zur Uebersetzung die englische Fassung (Sektion neu am 23.09.2026).
+    dataInterface: EN_DATA_INTERFACE,
+    connectors: EN_CONNECTORS,
     footer: {
       tagline: "Ensemble, nous façonnons l'avenir, connectés localement, pensés globalement.",
       privacy: 'Confidentialité',
@@ -246,30 +251,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       feed: 'Feed',
       feedDesc: 'Flujo de actividades',
     },
-    dataInterface: {
-      badge: 'Interfaz de datos e identidad',
-      title: 'Una interfaz unificada',
-      p1: 'Todos los módulos acceden a una interfaz común de datos e identidad en el frontend. Define funciones unificadas para cargar y guardar grupos, eventos, perfiles y relaciones de confianza.',
-      p2: 'Los módulos solo conocen esta interfaz, independientemente del backend utilizado o de cómo se gestionen las identidades. La interfaz de identidad abierta también debe admitir en el futuro cuentas basadas en claves y DIDs.',
-      groups: 'Grupos y perfiles',
-      groupsDesc: 'Carga y guardado de membresías',
-      events: 'Fechas y eventos',
-      eventsDesc: 'Funciones unificadas para entradas de calendario',
-      trust: 'Relaciones de confianza',
-      trustDesc: 'Web of Trust y gestión de identidad',
-    },
-    connectors: {
-      badge: 'Capa de conectores',
-      title: 'Backends a elegir',
-      p1: 'Debajo de la interfaz de datos hay una estructura de conectores ligera. Define cómo se conectan los backends, y entregamos una primera implementación.',
-      p2: 'Las comunidades pueden desarrollar más conectores: desde APIs REST clásicas hasta sistemas totalmente descentralizados y cifrados de extremo a extremo.',
-      restDesc: 'Servidor clásico',
-      graphqlDesc: 'Consultas flexibles',
-      localDesc: 'Funciona sin conexión',
-      p2pDesc: 'Descentralizado',
-      e2eeDesc: 'Cifrado',
-      didsDesc: 'IDs descentralizados',
-    },
+    // Bis zur Uebersetzung die englische Fassung (Sektion neu am 23.09.2026).
+    dataInterface: EN_DATA_INTERFACE,
+    connectors: EN_CONNECTORS,
     footer: {
       tagline: 'Juntos damos forma al futuro: conectados localmente, pensados globalmente.',
       privacy: 'Privacidad',
@@ -300,30 +284,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       feed: 'Feed',
       feedDesc: 'Fluxo de atividades',
     },
-    dataInterface: {
-      badge: 'Interface de dados e identidade',
-      title: 'Uma interface unificada',
-      p1: 'Todos os módulos acessam uma interface comum de dados e identidade no frontend. Ela define funções unificadas para carregar e salvar grupos, eventos, perfis e relações de confiança.',
-      p2: 'Os módulos conhecem apenas essa interface, independentemente do backend usado ou de como as identidades são gerenciadas. A interface de identidade aberta também deve suportar futuramente contas baseadas em chaves e DIDs.',
-      groups: 'Grupos e perfis',
-      groupsDesc: 'Carregar e salvar associações',
-      events: 'Datas e eventos',
-      eventsDesc: 'Funções unificadas para entradas de calendário',
-      trust: 'Relações de confiança',
-      trustDesc: 'Web of Trust e gestão de identidade',
-    },
-    connectors: {
-      badge: 'Camada de conectores',
-      title: 'Backends à escolha',
-      p1: 'Abaixo da interface de dados há uma estrutura de conectores enxuta. Ela define como os backends são conectados, e entregamos uma primeira implementação.',
-      p2: 'As comunidades podem desenvolver outros conectores, de APIs REST clássicas a sistemas totalmente descentralizados e criptografados de ponta a ponta.',
-      restDesc: 'Servidor clássico',
-      graphqlDesc: 'Consultas flexíveis',
-      localDesc: 'Funciona offline',
-      p2pDesc: 'Descentralizado',
-      e2eeDesc: 'Criptografado',
-      didsDesc: 'IDs descentralizados',
-    },
+    // Bis zur Uebersetzung die englische Fassung (Sektion neu am 23.09.2026).
+    dataInterface: EN_DATA_INTERFACE,
+    connectors: EN_CONNECTORS,
     footer: {
       tagline: 'Juntos moldamos o futuro, conectados localmente, pensados globalmente.',
       privacy: 'Privacidade',
@@ -354,30 +317,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       feed: 'Feed',
       feedDesc: 'Flusso di attività',
     },
-    dataInterface: {
-      badge: 'Interfaccia dati e identità',
-      title: "Un'interfaccia unificata",
-      p1: "Tutti i moduli accedono a un'interfaccia comune di dati e identità nel frontend. Definisce funzioni unificate per caricare e salvare gruppi, eventi, profili e relazioni di fiducia.",
-      p2: "I moduli conoscono solo questa interfaccia, indipendentemente dal backend utilizzato o da come vengono gestite le identità. L'interfaccia di identità aperta dovrà supportare in futuro anche account basati su chiavi e DID.",
-      groups: 'Gruppi e profili',
-      groupsDesc: 'Caricamento e salvataggio delle iscrizioni',
-      events: 'Date ed eventi',
-      eventsDesc: 'Funzioni unificate per le voci di calendario',
-      trust: 'Relazioni di fiducia',
-      trustDesc: 'Web of Trust e gestione delle identità',
-    },
-    connectors: {
-      badge: 'Livello connettori',
-      title: 'Backend a scelta',
-      p1: "Sotto l'interfaccia dati c'è una struttura di connettori snella. Definisce come collegare i backend, e forniamo una prima implementazione.",
-      p2: 'Le community possono sviluppare altri connettori, dalle classiche API REST a sistemi completamente decentralizzati e cifrati end-to-end.',
-      restDesc: 'Server classico',
-      graphqlDesc: 'Query flessibili',
-      localDesc: 'Funziona offline',
-      p2pDesc: 'Decentralizzato',
-      e2eeDesc: 'Cifrato',
-      didsDesc: 'ID decentralizzati',
-    },
+    // Bis zur Uebersetzung die englische Fassung (Sektion neu am 23.09.2026).
+    dataInterface: EN_DATA_INTERFACE,
+    connectors: EN_CONNECTORS,
     footer: {
       tagline: 'Insieme plasmiamo il futuro, connessi localmente, pensati globalmente.',
       privacy: 'Privacy',
@@ -408,30 +350,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       feed: 'Akış',
       feedDesc: 'Etkinlik akışı',
     },
-    dataInterface: {
-      badge: 'Veri ve Kimlik Arayüzü',
-      title: 'Birleşik bir arayüz',
-      p1: 'Tüm modüller frontend içinde ortak bir veri ve kimlik arayüzüne erişir. Bu arayüz; grupları, etkinlikleri, profilleri ve güven ilişkilerini yükleyip kaydetmek için birleşik işlevler tanımlar.',
-      p2: 'Modüller yalnızca bu arayüzü bilir, hangi backend kullanıldığından veya kimliklerin nasıl yönetildiğinden bağımsız olarak. Açık kimlik arayüzü, gelecekte anahtar tabanlı hesapları ve DID’leri de desteklemelidir.',
-      groups: 'Gruplar ve Profiller',
-      groupsDesc: 'Üyeliklerin yüklenmesi ve kaydedilmesi',
-      events: 'Tarihler ve Etkinlikler',
-      eventsDesc: 'Takvim girişleri için birleşik işlevler',
-      trust: 'Güven İlişkileri',
-      trustDesc: 'Web of Trust ve kimlik yönetimi',
-    },
-    connectors: {
-      badge: 'Bağlayıcı Katmanı',
-      title: 'Esnek seçilebilir backend’ler',
-      p1: 'Veri arayüzünün altında yalın bir bağlayıcı yapısı bulunur. Backend’lerin nasıl bağlanacağını tanımlar ve ilk bir uygulamayı biz sunuyoruz.',
-      p2: 'Topluluklar kendi bağlayıcılarını geliştirebilir, klasik REST API’lerden tamamen merkeziyetsiz, uçtan uca şifreli sistemlere kadar.',
-      restDesc: 'Klasik sunucu',
-      graphqlDesc: 'Esnek sorgular',
-      localDesc: 'Çevrimdışı çalışır',
-      p2pDesc: 'Merkeziyetsiz',
-      e2eeDesc: 'Şifreli',
-      didsDesc: 'Merkeziyetsiz kimlikler',
-    },
+    // Bis zur Uebersetzung die englische Fassung (Sektion neu am 23.09.2026).
+    dataInterface: EN_DATA_INTERFACE,
+    connectors: EN_CONNECTORS,
     footer: {
       tagline: 'Geleceği birlikte şekillendiriyoruz, yerelde bağlı, küresel düşünen.',
       privacy: 'Gizlilik',
@@ -462,30 +383,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       feed: 'الموجز',
       feedDesc: 'تدفق الأنشطة',
     },
-    dataInterface: {
-      badge: 'واجهة البيانات والهوية',
-      title: 'واجهة موحدة',
-      p1: 'تصل جميع الوحدات إلى واجهة مشتركة للبيانات والهوية في الواجهة الأمامية. تُعرِّف وظائف موحدة لتحميل وحفظ المجموعات والمواعيد والملفات الشخصية وعلاقات الثقة.',
-      p2: 'لا تعرف الوحدات سوى هذه الواجهة, بغض النظر عن الخادم الخلفي المستخدم أو كيفية إدارة الهويات. ومن المفترض أن تدعم واجهة الهوية المفتوحة مستقبلاً الحسابات المعتمدة على المفاتيح ومعرّفات DID.',
-      groups: 'المجموعات والملفات الشخصية',
-      groupsDesc: 'تحميل العضويات وحفظها',
-      events: 'المواعيد والفعاليات',
-      eventsDesc: 'وظائف موحدة لإدخالات التقويم',
-      trust: 'علاقات الثقة',
-      trustDesc: 'شبكة الثقة وإدارة الهوية',
-    },
-    connectors: {
-      badge: 'طبقة الموصلات',
-      title: 'خوادم خلفية قابلة للاختيار بمرونة',
-      p1: 'تحت واجهة البيانات توجد بنية موصلات خفيفة. تحدد كيفية ربط الخوادم الخلفية، ونحن نقدم تنفيذًا أوليًا.',
-      p2: 'يمكن للمجتمعات تطوير موصلات إضافية بنفسها, من واجهات REST الكلاسيكية إلى أنظمة لامركزية بالكامل ومشفرة من طرف إلى طرف.',
-      restDesc: 'خادم كلاسيكي',
-      graphqlDesc: 'استعلامات مرنة',
-      localDesc: 'يعمل دون اتصال',
-      p2pDesc: 'لامركزي',
-      e2eeDesc: 'مشفر',
-      didsDesc: 'معرّفات لامركزية',
-    },
+    // Bis zur Uebersetzung die englische Fassung (Sektion neu am 23.09.2026).
+    dataInterface: EN_DATA_INTERFACE,
+    connectors: EN_CONNECTORS,
     footer: {
       tagline: 'معًا نصنع المستقبل, مترابطون محليًا، نفكر عالميًا.',
       privacy: 'الخصوصية',
@@ -515,30 +415,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       feed: '动态',
       feedDesc: '活动流',
     },
-    dataInterface: {
-      badge: '数据与身份接口',
-      title: '统一的接口',
-      p1: '所有模块都访问前端中一个共享的数据与身份接口。它定义了加载和保存群组、日程、个人资料和信任关系的统一函数。',
-      p2: '模块只认识这个接口，无论使用哪种后端或如何管理身份。开放的身份接口未来还将支持基于密钥的账户和 DID。',
-      groups: '群组与个人资料',
-      groupsDesc: '加载和保存成员资格',
-      events: '日程与活动',
-      eventsDesc: '日历条目的统一函数',
-      trust: '信任关系',
-      trustDesc: 'Web of Trust 与身份管理',
-    },
-    connectors: {
-      badge: '连接器层',
-      title: '灵活可选的后端',
-      p1: '数据接口之下是一个精简的连接器结构。它定义了后端如何接入，我们提供了第一个实现。',
-      p2: '社区可以自行开发更多连接器，从经典的 REST API 到完全去中心化、端到端加密的系统。',
-      restDesc: '经典服务器',
-      graphqlDesc: '灵活查询',
-      localDesc: '支持离线',
-      p2pDesc: '去中心化',
-      e2eeDesc: '加密',
-      didsDesc: '去中心化 ID',
-    },
+    // Bis zur Uebersetzung die englische Fassung (Sektion neu am 23.09.2026).
+    dataInterface: EN_DATA_INTERFACE,
+    connectors: EN_CONNECTORS,
     footer: {
       tagline: '让我们共同塑造未来，本地相连，全球思考。',
       privacy: '隐私',
@@ -569,30 +448,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       feed: 'Лента',
       feedDesc: 'Поток активности',
     },
-    dataInterface: {
-      badge: 'Интерфейс данных и идентичности',
-      title: 'Единый интерфейс',
-      p1: 'Все модули обращаются к общему интерфейсу данных и идентичности во фронтенде. Он определяет единые функции загрузки и сохранения групп, событий, профилей и доверительных отношений.',
-      p2: 'Модули знают только этот интерфейс, независимо от используемого бэкенда и способа управления идентичностями. Открытый интерфейс идентичности в перспективе должен поддерживать и аккаунты на основе ключей, и DID.',
-      groups: 'Группы и профили',
-      groupsDesc: 'Загрузка и сохранение членства',
-      events: 'Даты и события',
-      eventsDesc: 'Единые функции для записей календаря',
-      trust: 'Доверительные отношения',
-      trustDesc: 'Web of Trust и управление идентичностью',
-    },
-    connectors: {
-      badge: 'Слой коннекторов',
-      title: 'Гибко выбираемые бэкенды',
-      p1: 'Под интерфейсом данных находится лёгкая структура коннекторов. Она определяет, как подключаются бэкенды, и мы поставляем первую реализацию.',
-      p2: 'Сообщества могут разрабатывать собственные коннекторы, от классических REST API до полностью децентрализованных систем со сквозным шифрованием.',
-      restDesc: 'Классический сервер',
-      graphqlDesc: 'Гибкие запросы',
-      localDesc: 'Работает офлайн',
-      p2pDesc: 'Децентрализованный',
-      e2eeDesc: 'Зашифрованный',
-      didsDesc: 'Децентрализованные ID',
-    },
+    // Bis zur Uebersetzung die englische Fassung (Sektion neu am 23.09.2026).
+    dataInterface: EN_DATA_INTERFACE,
+    connectors: EN_CONNECTORS,
     footer: {
       tagline: 'Вместе мы формируем будущее, связаны локально, мыслим глобально.',
       privacy: 'Конфиденциальность',
@@ -623,30 +481,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       feed: 'Стрічка',
       feedDesc: 'Потік активності',
     },
-    dataInterface: {
-      badge: 'Інтерфейс даних та ідентичності',
-      title: 'Єдиний інтерфейс',
-      p1: 'Усі модулі звертаються до спільного інтерфейсу даних та ідентичності у фронтенді. Він визначає єдині функції завантаження і збереження груп, подій, профілів і довірчих звʼязків.',
-      p2: 'Модулі знають лише цей інтерфейс, незалежно від бекенда чи способу керування ідентичностями. Відкритий інтерфейс ідентичності в перспективі має підтримувати й акаунти на основі ключів, і DID.',
-      groups: 'Групи та профілі',
-      groupsDesc: 'Завантаження і збереження членства',
-      events: 'Дати та події',
-      eventsDesc: 'Єдині функції для записів календаря',
-      trust: 'Довірчі звʼязки',
-      trustDesc: 'Web of Trust і керування ідентичністю',
-    },
-    connectors: {
-      badge: 'Шар конекторів',
-      title: 'Гнучко обирані бекенди',
-      p1: 'Під інтерфейсом даних розташована легка структура конекторів. Вона визначає, як підключаються бекенди, і ми постачаємо першу реалізацію.',
-      p2: 'Спільноти можуть розробляти власні конектори, від класичних REST API до повністю децентралізованих систем із наскрізним шифруванням.',
-      restDesc: 'Класичний сервер',
-      graphqlDesc: 'Гнучкі запити',
-      localDesc: 'Працює офлайн',
-      p2pDesc: 'Децентралізований',
-      e2eeDesc: 'Зашифрований',
-      didsDesc: 'Децентралізовані ID',
-    },
+    // Bis zur Uebersetzung die englische Fassung (Sektion neu am 23.09.2026).
+    dataInterface: EN_DATA_INTERFACE,
+    connectors: EN_CONNECTORS,
     footer: {
       tagline: 'Разом ми формуємо майбутнє, звʼязані локально, мислимо глобально.',
       privacy: 'Конфіденційність',
@@ -677,30 +514,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       feed: 'פיד',
       feedDesc: 'זרם פעילויות',
     },
-    dataInterface: {
-      badge: 'ממשק נתונים וזהות',
-      title: 'ממשק אחיד',
-      p1: 'כל המודולים ניגשים לממשק נתונים וזהות משותף בפרונטאנד. הוא מגדיר פונקציות אחידות לטעינה ושמירה של קבוצות, אירועים, פרופילים וקשרי אמון.',
-      p2: 'המודולים מכירים רק את הממשק הזה, ללא תלות בבקאנד שבשימוש או באופן ניהול הזהויות. ממשק הזהות הפתוח אמור לתמוך בעתיד גם בחשבונות מבוססי מפתחות וב-DID.',
-      groups: 'קבוצות ופרופילים',
-      groupsDesc: 'טעינה ושמירה של חברויות',
-      events: 'מועדים ואירועים',
-      eventsDesc: 'פונקציות אחידות לרשומות לוח שנה',
-      trust: 'קשרי אמון',
-      trustDesc: 'Web of Trust וניהול זהויות',
-    },
-    connectors: {
-      badge: 'שכבת המחברים',
-      title: 'בקאנדים לבחירה גמישה',
-      p1: 'מתחת לממשק הנתונים נמצא מבנה מחברים רזה. הוא קובע כיצד מחברים בקאנדים, ואנחנו מספקים מימוש ראשון.',
-      p2: 'קהילות יכולות לפתח מחברים נוספים בעצמן, מ-REST APIs קלאסיים ועד מערכות מבוזרות לחלוטין עם הצפנה מקצה לקצה.',
-      restDesc: 'שרת קלאסי',
-      graphqlDesc: 'שאילתות גמישות',
-      localDesc: 'עובד גם אופליין',
-      p2pDesc: 'מבוזר',
-      e2eeDesc: 'מוצפן',
-      didsDesc: 'מזהים מבוזרים',
-    },
+    // Bis zur Uebersetzung die englische Fassung (Sektion neu am 23.09.2026).
+    dataInterface: EN_DATA_INTERFACE,
+    connectors: EN_CONNECTORS,
     footer: {
       tagline: 'יחד אנחנו מעצבים את העתיד, מחוברים מקומית, חושבים גלובלית.',
       privacy: 'פרטיות',
