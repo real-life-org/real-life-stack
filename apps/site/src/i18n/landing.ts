@@ -58,8 +58,8 @@ export type TranslatedLanguage =
 const EN_DATA_INTERFACE: Translation['dataInterface'] = {
   badge: 'Data & identity interface',
   title: 'One interface',
-  p1: 'Every module reads and writes through one interface: the DataInterface. It knows four things: items, their relations, groups (spaces in the UI) and users. An event, a place, a task, a profile are items; which module shows one is decided by its field, not its type.',
-  p2: 'Modules observe the data instead of loading it: when an item changes, every surface showing it changes. What a backend can do it states as a capability: writing, groups, sign-in, relations, activity. The surface asks instead of assuming; a missing capability removes the surface, not the app.',
+  p1: 'A harvest festival is an item. It has a date, so it sits in the calendar; it has a place, so it sits on the map. Both show the same object, and whoever changes the title changes it everywhere. That is how every module works: it reads and writes through one interface, the DataInterface, which knows only items, their relations, spaces and people.',
+  p2: 'Modules do not query the data, they listen to it. And they assume nothing: whether a backend can write, sign people in or keep groups, it says so itself. If it cannot do something, the button for it disappears, not the app.',
   items: 'Items & relations',
   itemsDesc: 'One object, many views',
   spaces: 'Spaces & members',
@@ -111,8 +111,8 @@ export const translations: Record<TranslatedLanguage, Translation> = {
     dataInterface: {
       badge: 'Daten- & Identitätsschnittstelle',
       title: 'Einheitliche Schnittstelle',
-      p1: 'Alle Module lesen und schreiben über eine Schnittstelle: das DataInterface. Es kennt vier Dinge: Items, ihre Relations, Groups (in der Oberfläche Spaces) und Users. Ein Termin, ein Ort, eine Aufgabe, ein Profil sind Items; welches Modul eines zeigt, entscheidet sein Feld, nicht sein Typ.',
-      p2: 'Module beobachten die Daten, statt sie zu laden: Ändert sich ein Item, ändert sich jede Fläche, die es zeigt. Was ein Backend kann, sagt es als Fähigkeit: schreiben, Gruppen führen, anmelden, Relations, Aktivität. Die Oberfläche fragt danach, statt es anzunehmen; fehlt eine Fähigkeit, fehlt die Fläche, nicht die App.',
+      p1: 'Ein Erntefest ist ein Item. Es hat ein Datum, also steht es im Kalender; es hat einen Ort, also steht es auf der Karte. Beide zeigen dasselbe Objekt, und wer den Titel ändert, ändert ihn überall. So arbeiten alle Module: Sie lesen und schreiben über eine Schnittstelle, das DataInterface, das nur Items, ihre Beziehungen, Spaces und Menschen kennt.',
+      p2: 'Die Module fragen die Daten nicht ab, sie hören ihnen zu. Und sie nehmen nichts an: Ob ein Backend schreiben, anmelden oder Gruppen führen kann, sagt es selbst. Kann es etwas nicht, verschwindet der Knopf dafür, nicht die App.',
       items: 'Items & Relations',
       itemsDesc: 'Ein Objekt, viele Ansichten',
       spaces: 'Spaces & Mitglieder',
@@ -167,8 +167,8 @@ export const translations: Record<TranslatedLanguage, Translation> = {
     dataInterface: {
       badge: 'Data & identity interface',
       title: 'One interface',
-      p1: 'Every module reads and writes through one interface: the DataInterface. It knows four things: items, their relations, groups (spaces in the UI) and users. An event, a place, a task, a profile are items; which module shows one is decided by its field, not its type.',
-      p2: 'Modules observe the data instead of loading it: when an item changes, every surface showing it changes. What a backend can do it states as a capability: writing, groups, sign-in, relations, activity. The surface asks instead of assuming; a missing capability removes the surface, not the app.',
+      p1: 'A harvest festival is an item. It has a date, so it sits in the calendar; it has a place, so it sits on the map. Both show the same object, and whoever changes the title changes it everywhere. That is how every module works: it reads and writes through one interface, the DataInterface, which knows only items, their relations, spaces and people.',
+      p2: 'Modules do not query the data, they listen to it. And they assume nothing: whether a backend can write, sign people in or keep groups, it says so itself. If it cannot do something, the button for it disappears, not the app.',
       items: 'Items & relations',
       itemsDesc: 'One object, many views',
       spaces: 'Spaces & members',
