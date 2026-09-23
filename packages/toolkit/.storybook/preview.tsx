@@ -1,4 +1,7 @@
 import './storybook.css'
+// MapLibre bringt sein Stylesheet nicht selbst mit; ohne es sind Zoom-Knoepfe und Attribution unsichtbar.
+// Die Apps importieren es in main.tsx, hier gilt es fuer alle Stories mit Karte.
+import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Preview } from '@storybook/react-vite'
 import React from 'react'
 

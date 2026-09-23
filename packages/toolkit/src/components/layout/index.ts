@@ -14,7 +14,7 @@ export { ModuleSurfaceScope, type ModuleSurfaceScopeProps } from "./module-surfa
 export { PanelHeaderActions, PanelHeaderSlotContext, type PanelHeaderActionsProps } from "./panel-header-actions"
 export { readPanelEdges, type PanelEdges } from "./panel-edges"
 export { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"
-export { WorkspaceSwitcher } from "./workspace-switcher"
+export { WorkspaceSwitcher, workspaceOf } from "./workspace-switcher"
 export type { Workspace } from "./workspace-switcher"
 export { UserMenu } from "./user-menu"
 export type { UserData } from "./user-menu"

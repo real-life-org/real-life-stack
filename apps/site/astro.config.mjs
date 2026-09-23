@@ -32,20 +32,38 @@ export const LOCALES = {
  * Frontmatter, Übersicht zuerst. Andere Sprachen zeigen ihre Übersetzung,
  * wo es eine gibt, sonst die deutsche Seite — darum kein eigenes `label`.
  */
+// Die Seitenleiste ordnet nach Textsorte, wie Leser es von anderen Docs kennen: Loslegen (die vier Wege der Startseite,
+// je eine Einstiegsseite), Verstehen (Konzepte), Anleitungen (für alle, die schon drin sind), dann die Referenz.
+// Reihenfolge der Gruppen ergibt sich aus der kleinsten `sidebar.order` ihrer Seiten.
+const HANDBOOK_GROUPS = {
+  loslegen: { label: 'Loslegen', translations: { en: 'Get started' } },
+  verstehen: { label: 'Verstehen', translations: { en: 'Understand' } },
+  anleitungen: { label: 'Anleitungen', translations: { en: 'Guides' } },
+}
+
 function handbookItems() {
   const dir = new URL('../../docs/handbook/de/handbuch/', import.meta.url)
-  return readdirSync(dir)
+  const pages = readdirSync(dir)
     .filter((f) => /\.mdx?$/.test(f))
     .map((f) => {
       const text = readFileSync(new URL(f, dir), 'utf8')
       const id = f.replace(/\.mdx?$/, '')
       const title = text.match(/^title:\s*(.+)$/m)?.[1]?.trim().replace(/^(['"])(.*)\1$/, '$2') ?? id
       const order = id === 'index' ? -1 : Number(text.match(/^sidebar:\n\s+order:\s*(\d+)/m)?.[1] ?? 99)
+      const group = text.match(/^group:\s*(\S+)$/m)?.[1]
+      if (group && !HANDBOOK_GROUPS[group]) throw new Error(`${f}: unbekannte Gruppe „${group}“`)
       // Ohne `label`: Starlight nimmt den Titel der Seite in der jeweiligen Sprache (die Uebersetzung, wo es eine gibt).
-      return { slug: `handbuch/${id}`, order, title }
+      return { slug: `handbuch/${id}`, order, title, group }
     })
     .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))
-    .map(({ order, title, ...item }) => item)
+  const items = []
+  for (const { order, title, group, ...item } of pages) {
+    if (!group) { items.push(item); continue }
+    let g = items.find((i) => i.key === group)
+    if (!g) { g = { key: group, ...HANDBOOK_GROUPS[group], collapsed: true, items: [] }; items.push(g) }
+    g.items.push(item)
+  }
+  return items.map(({ key, ...i }) => i)
 }
 
 export default defineConfig({
@@ -73,9 +91,9 @@ export default defineConfig({
       ],
       editLink: { baseUrl: 'https://github.com/real-life-org/real-life-stack/edit/master/docs/handbook/' },
       sidebar: [
-        { label: 'Handbuch', translations: { en: 'Handbook' }, items: handbookItems() },
+        ...handbookItems(),
         // Die Referenz ist Englisch wie ihre Quellen (Hook-Kommentare, package.json, Spec-Index) und liegt als Astro-Seiten ausserhalb der Sammlung.
-        { label: 'Referenz', translations: { en: 'Reference' }, items: [
+        { label: 'Referenz', translations: { en: 'Reference' }, collapsed: true, items: [
           { label: 'Überblick', translations: { en: 'Overview' }, link: '/reference/' },
           { label: 'Module', translations: { en: 'Modules' }, link: '/reference/modules/' },
           { label: 'Hooks', link: '/reference/hooks/' },

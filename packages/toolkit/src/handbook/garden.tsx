@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Calendar, Map as MapIcon, Newspaper } from 'lucide-react'
-import { isWritable, type DataInterface } from '@real-life-stack/data-interface'
+import type { DataInterface } from '@real-life-stack/data-interface'
 import { MockConnector } from '@real-life-stack/mock-connector'
 import {
   AppShell,
@@ -10,6 +10,7 @@ import {
   NavbarCenter,
   NavbarEnd,
   WorkspaceSwitcher,
+  workspaceOf,
   UserMenu,
   ModuleTabs,
   BottomNav,
@@ -25,7 +26,7 @@ import { createComposerMapping } from '../components/composer/composer-mapping'
 import { CalendarView } from '../components/calendar/calendar-view'
 import { MapView } from '../components/map/map-view'
 import { MapLibreMapAdapter } from '../maplibre'
-import { ConnectorProvider, useConnector } from '../hooks/connector-context'
+import { ConnectorProvider } from '../hooks/connector-context'
 import { useItems } from '../hooks/use-items'
 import { seed } from './garden-data'
 
@@ -41,21 +42,6 @@ function reader(source: MockConnector): DataInterface {
     observeItem: (id) => source.observeItem(id),
   }
 }
-const mapStyle =
-  'data:application/json,' +
-  encodeURIComponent(
-    JSON.stringify({
-      version: 8,
-      sources: {},
-      layers: [
-        {
-          id: 'background',
-          type: 'background',
-          paint: { 'background-color': '#e4ece5' },
-        },
-      ],
-    }),
-  )
 const createAdapter = () => new MapLibreMapAdapter()
 
 // The three modules of this example, as the app shell lists them: tabs in the
@@ -106,6 +92,8 @@ export function GardenDemo({
     </ConnectorProvider>
   )
 }
+// Was der Space-Wechsler zeigt, leitet dieselbe Funktion ab wie der Rahmen (`RoutedAppFrame`).
+const WORKSPACES = seed.groups.map(workspaceOf)
 function Garden({
   source,
   initialModule,
@@ -113,9 +101,8 @@ function Garden({
   source: MockConnector
   initialModule: string
 }) {
-  const connector = useConnector()
   const { data: items, isLoading } = useItems()
-  const [space, setSpace] = useState(seed.groups[0])
+  const [space, setSpace] = useState(WORKSPACES[0])
   const [module, setModule] = useState(initialModule)
   const [selected, setSelected] = useState<string>()
   const [notice, setNotice] = useState('')
@@ -125,7 +112,7 @@ function Garden({
       <Navbar>
         <NavbarStart>
           <WorkspaceSwitcher
-            workspaces={seed.groups}
+            workspaces={WORKSPACES}
             activeWorkspace={space}
             onWorkspaceChange={(next) => {
               source.setCurrentGroup(next.id)
@@ -152,12 +139,6 @@ function Garden({
           />
         </NavbarEnd>
       </Navbar>
-      <div className="px-4 py-2 text-xs text-muted-foreground">
-        Lernbeispiel · September 2026 ·{' '}
-        {isWritable(connector)
-          ? 'Änderungen nur für diese Sitzung'
-          : 'Connector ohne Schreibfähigkeit'}
-      </div>
       <AppShellMain className="relative" inset={module !== 'Karte'} withBottomNav={module !== 'Karte'}>
         {isLoading ? (
           <p role="status">Lädt …</p>
@@ -200,7 +181,6 @@ function Garden({
             initialView={{
               center: [13.405, 52.52],
               zoom: 13,
-              tileSource: mapStyle,
             }}
             activeItemId={selected}
             focusedItem={item}

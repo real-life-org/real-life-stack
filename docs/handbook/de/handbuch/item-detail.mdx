@@ -1,0 +1,61 @@
+---
+title: Eine Detailansicht für alle Items
+description: Die Anatomie der Detailansicht, Lesen und Schreiben als Paar, die Zustände, und warum ein Profil kein zweites UI-System ist.
+group: verstehen
+sidebar:
+  order: 8
+sources:
+  - docs/spec/modules/shared-components.md
+  - docs/spec/12-profile.md
+  - packages/toolkit/src/components/detail/item-detail-body.tsx
+  - packages/toolkit/src/components/host/detail-host.tsx
+stories:
+  - rls-items-detail-body--event
+  - rls-items-detail-panel--feed-detail
+  - rls-items-detail-body--loading
+  - rls-items-content-composer--edit-mode
+---
+
+import Story from '@site/components/Story.astro'
+
+Jedes Item öffnet in derselben Detailansicht, ob Termin, Ort, Aufgabe, Beitrag oder Person. Was sich unterscheidet, sind die Felder und die Aktionen, nicht die Fläche. Das ist kein Sparzwang, sondern die Regel, die verhindert, dass jedes Modul sein eigenes Detail baut und die fünf Fassungen auseinanderlaufen.
+
+## Die Anatomie
+
+<Story id="rls-items-detail-body--event" title="Ein Termin: Kopf mit Typ, Meta-Box, Inhalt, Tags und Urheber" height={560} />
+
+Von oben nach unten, und jeder Bereich beantwortet eine Frage:
+
+- **Kopf und Badges:** Was sehe ich? Welcher Typ, aus welchem Space, privat oder gespiegelt?
+- **Meta-Box:** Wann, wo, mit wem, womit verbunden? Ein Datum führt in den Kalender, ein Ort auf die Karte, das ist die Navigationsregel „ein Feld führt in sein Modul“.
+- **Inhalt:** Was muss ich wissen? Text, Medien, Felder des Typs.
+- **Tags und Urheber:** Welche Themen, von wem, seit wann?
+- **Aktionen und Diskussion:** Was kann ich tun oder beitragen? Bearbeiten, Löschen, Reaktionen, Kommentare.
+
+Leere Fakten hinterlassen keine leere Meta-Box: Ein Baustein bekommt für einen leeren Platz `null`, nicht eine leere Hülle. Eine UI-Regel, die hält, braucht diesen technischen Vertrag.
+
+## Wo sie aufgeht
+
+`ItemDetailBody` ist der Leseinhalt, `ItemDetailPanel` legt Diskussion und Aktionen darum, und der **Host** entscheidet, wo das Ganze aufgeht: im geteilten Panel, als Drawer auf dem Handy, im Overlay über der Karte. Ein Modul öffnet kein Detail selbst; es sagt dem Fokus, welches Item aktiv ist, und der Host tut den Rest (Spec 01).
+
+<Story id="rls-items-detail-panel--feed-detail" title="Detail mit Diskussion im Panel, wie der Feed es öffnet" height={620} />
+
+## Lesen und Schreiben sind ein Paar
+
+Ein Datum ist lesend eine Zeitangabe mit Sprung in den Kalender und schreibend ein Datumsfeld. Beides gehört zu demselben Feld desselben Vokabulars; das Typ-Register hält Lese- und Schreibdarstellung zusammen, statt sie in zwei Komponenten zu trennen, die niemand gleichzeitig pflegt. Bearbeiten öffnet der Host in derselben Fläche (`?edit` im Fokus), mit dem Composer, der auch das Erstellen macht.
+
+<Story id="rls-items-content-composer--edit-mode" title="Derselbe Composer für Erstellen und Bearbeiten, mit den Widgets des Typs" height={560} />
+
+## Die Zustände gehören dazu
+
+Leer, ladend, fehlerhaft und nur lesbar sind reguläre Zustände, keine Ausnahmen. Ein Item, das noch nicht angekommen ist, zeigt seine Anatomie als Platzhalter statt einer leeren Fläche; ein Item, das es nicht gibt, sagt das, nachdem „nicht gefunden“ entschieden ist (`useItem`: `isLoading` erst falsch, wenn die Antwort da ist). Ein technisch vorhandener Schreib-Hook macht ein Item nicht bearbeitbar; das entscheidet die Berechtigung ([Fähigkeit, Berechtigung, Herkunft](/handbuch/rechte/)).
+
+<Story id="rls-items-detail-body--loading" title="Dieselbe Anatomie im Ladezustand" height={440} />
+
+## Personen sind kein zweites UI-System
+
+Ein Profil trägt andere Felder und andere Aktionen als ein Termin: Name, Bild, Kontakt aufnehmen, verifizieren. Aber es ist die Detailansicht eines Items vom Typ Person, das im persönlichen Space lebt und in Gruppen gespiegelt wird (Spec 12). Bis dahin trägt die Referenz-App noch ein eigenes Profil-Overlay; es verschwindet, sobald das Profil ein Item ist. Der Begriff „Profil“ bleibt als Name des fachlichen Inhalts, nicht als eigene Fläche.
+
+## Wo es weitergeht
+
+Im Storybook: [Items → Detail view](https://real-life-stack.de/storybook/?path=/docs/rls-items-detail-body--docs) mit allen Zuständen, [Items → Create and edit](https://real-life-stack.de/storybook/?path=/docs/rls-items-content-composer--docs) für den Composer. Spec: [Geteilte Komponenten der Module](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/modules/shared-components.md), [Spec 12 Profil](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/12-profile.md). Zurück zum Anfang des Wegs: [Lokal entwickeln](/handbuch/entwickeln/).

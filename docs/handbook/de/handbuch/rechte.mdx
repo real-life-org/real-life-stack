@@ -1,0 +1,50 @@
+---
+title: Fähigkeit, Berechtigung, Herkunft
+description: Kann der Connector schreiben, darf ich dieses Item bearbeiten, woher stammt es — drei Fragen, die nicht eine sind.
+group: verstehen
+sidebar:
+  order: 7
+sources:
+  - docs/spec/03-capabilities.md
+  - docs/spec/05-confirmations-and-trust.md
+  - docs/spec/09-mirror-bridge.md
+  - docs/spec/12-profile.md
+  - packages/toolkit/src/hooks/use-item-permissions.ts
+stories:
+  - rls-app-00-community-garden--read-only
+  - rls-foundations-hooks--capability-check
+---
+
+import Story from '@site/components/Story.astro'
+
+Ob ein Knopf „Bearbeiten“ erscheint, hängt von drei Antworten ab, und jede kommt von woanders. Wer sie zu einer Prüfung verkürzt, baut entweder Knöpfe, die ins Leere führen, oder versteckt Rechte, die da wären.
+
+## Fähigkeit: was die Datenquelle kann
+
+Der Kern des `DataInterface` liest und beobachtet. Alles darüber hinaus ist eine **Fähigkeit** (Spec 03): schreiben (`isWritable`), Gruppen führen (`hasGroups`), anmelden (`isAuthenticatable`), Relations, Aktivität, Benachrichtigungen. Ein Connector hat sie oder nicht; die Oberfläche fragt nach, statt anzunehmen.
+
+Im Rahmen ist das erledigt: Lesende Hooks antworten ohne Fähigkeit leer, schreibende scheitern beim Aufruf, nicht beim Rendern, und Flächen blenden aus, was der Connector nicht kann. Derselbe Garten mit einem Connector, der nur lesen kann:
+
+<Story id="rls-app-00-community-garden--read-only" title="Derselbe Garten ohne Schreibfähigkeit: kein Plusknopf, kein Bearbeiten, aber alles lesbar" height={620} />
+
+<Story id="rls-foundations-hooks--capability-check" title="Die Prüfung, die jede schreibende Fläche macht, bevor sie einen Knopf zeigt" height={360} />
+
+## Berechtigung: was ich hier darf
+
+Dass ein Connector schreiben kann, heißt nicht, dass ich dieses Item ändern darf. Die **Berechtigung** hängt an mir und am Item: Bin ich Mitglied des Space, bin ich Urheber, was erlaubt die Gruppe? `useItemPermissions(item)` beantwortet das für die Oberfläche als `{canEdit, canDelete}`, ohne Fähigkeit beides `false`.
+
+Wichtig ist die Richtung: Die Oberfläche zeigt passende Aktionen, aber der Schreibpfad setzt die Regel durch. Einen Knopf auszublenden ist keine Autorisierung. Wo ein Server steht, ist er die Grenze: Bei Supabase weist die Zeilenregel fremde Änderungen ab. Im Web of Trust gibt es diese Grenze für gewöhnliche Items heute nicht: Jedes Mitglied hält den Schlüssel des Space und kann das Dokument direkt schreiben; die Autorenprüfung beim Schreiben ist eine Konvention, die ehrliche Clients ehrlich hält, kein Schutz gegen andere Mitglieder. Signaturen prüfen dort nur, was signiert ist, etwa Relation-Records (Spec 08) und Spiegel-Snapshots (Spec 09). Wer die Regel nur in der Oberfläche hat, hat keine.
+
+## Herkunft: wo das Item zu Hause ist
+
+Ein Item hat genau einen Heimat-Space. Erscheint es in einem anderen, ist es dort ein **Spiegel** (Spec 09): lesbar, mit Hinweis auf die Herkunft, aber nicht dort zu bearbeiten, denn die Wahrheit liegt im Heimat-Space. Das Profil einer Person ist das erste Item, das so wandert: Es lebt im persönlichen Space und wird in jede Gruppe gespiegelt, der die Person es freigibt (Spec 12).
+
+Die Herkunft entscheidet also nicht allein über Schreibbarkeit; sie sagt, **wo** eine Änderung hingehört. Die Oberfläche zeigt sie als Badge (`ItemScopeBadge`: Gruppe, Farbe, privat), aus einer Ableitung für alle Flächen (`useItemPresentation`).
+
+## Vertrauen ist eine vierte Frage
+
+Ob eine Aussage stimmt, wer sie bestätigt hat und wie sehr ich der Quelle traue, ist keine Berechtigung und keine Fähigkeit. Spec 05 trennt Behauptungen, Bestätigungen und Vertrauensstufen; im Resonanz-Modul zählen nur Stellungnahmen, deren Signatur geprüft ist (`useVerifiedRelationRecords`). Ein Connector ohne Signaturprüfung liefert leere Zählungen, keine falschen.
+
+## Wo es weitergeht
+
+[Spec 03 Fähigkeiten](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/03-capabilities.md), [Spec 09 Spiegel und Brücke](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/09-mirror-bridge.md), die Hooks der Gruppe [Rechte und Fähigkeiten](/reference/hooks/#permissions). Die letzte Konzeptseite nimmt die Fläche auseinander, in der die drei Antworten zusammenkommen: [Eine Detailansicht für alle Items](/handbuch/item-detail/).

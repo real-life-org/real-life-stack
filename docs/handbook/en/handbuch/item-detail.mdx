@@ -1,0 +1,63 @@
+---
+title: One detail view for all items
+description: The anatomy of the detail view, reading and writing as a pair, the states, and why a profile is not a second UI system.
+translationOf: docs/handbook/de/handbuch/item-detail.mdx
+sourceHash: 9a0cfbda19688734cf197680b71b351ff982e32c77ddad01367b11761c74a0c8
+group: verstehen
+sidebar:
+  order: 8
+sources:
+  - docs/spec/modules/shared-components.md
+  - docs/spec/12-profile.md
+  - packages/toolkit/src/components/detail/item-detail-body.tsx
+  - packages/toolkit/src/components/host/detail-host.tsx
+stories:
+  - rls-items-detail-body--event
+  - rls-items-detail-panel--feed-detail
+  - rls-items-detail-body--loading
+  - rls-items-content-composer--edit-mode
+---
+
+import Story from '@site/components/Story.astro'
+
+Every item opens in the same detail view, whether event, place, task, post or person. What differs are the fields and the actions, not the surface. This is not austerity but the rule that prevents every module from building its own detail and the five versions drifting apart.
+
+## The anatomy
+
+<Story id="rls-items-detail-body--event" title="An event: header with type, meta box, content, tags and author" height={560} />
+
+From top to bottom, and each area answers a question:
+
+- **Header and badges:** What am I looking at? Which type, from which space, private or mirrored?
+- **Meta box:** When, where, with whom, connected to what? A date leads into the calendar, a place onto the map, that is the navigation rule "a field leads into its module".
+- **Content:** What do I need to know? Text, media, the fields of the type.
+- **Tags and author:** Which topics, by whom, since when?
+- **Actions and discussion:** What can I do or contribute? Edit, delete, reactions, comments.
+
+Empty facts leave no empty meta box: a building block receives `null` for an empty slot, not an empty shell. A UI rule that holds needs this technical contract.
+
+## Where it opens
+
+`ItemDetailBody` is the reading content, `ItemDetailPanel` wraps discussion and actions around it, and the **host** decides where the whole thing opens: in the shared panel, as a drawer on the phone, in the overlay above the map. A module opens no detail itself; it tells the focus which item is active, and the host does the rest (spec 01).
+
+<Story id="rls-items-detail-panel--feed-detail" title="Detail with discussion in the panel, as the feed opens it" height={620} />
+
+## Reading and writing are a pair
+
+A date is, when reading, a point in time with a jump into the calendar and, when writing, a date field. Both belong to the same field of the same vocabulary; the type register keeps reading and writing rendering together instead of splitting them into two components that nobody maintains at the same time. The host opens editing in the same surface (`?edit` in the focus), with the composer that also does creating.
+
+<Story id="rls-items-content-composer--edit-mode" title="The same composer for create and edit, with the widgets of the type" height={560} />
+
+## The states are part of it
+
+Empty, loading, failed and read-only are regular states, not exceptions. An item that has not arrived yet shows its anatomy as placeholders instead of an empty surface; an item that does not exist says so once "not found" has been decided (`useItem`: `isLoading` only becomes false when the answer is there). A technically present write hook does not make an item editable; the permission decides that ([Capability, permission, origin](/en/handbuch/rechte/)).
+
+<Story id="rls-items-detail-body--loading" title="The same anatomy in the loading state" height={440} />
+
+## People are not a second UI system
+
+A profile carries other fields and other actions than an event: name, picture, get in touch, verify. But it is the detail view of an item of type person that lives in the personal space and is mirrored into groups (spec 12). Until then the reference app still carries a profile overlay of its own; it disappears as soon as the profile is an item. The term "profile" stays as the name of the content, not as a surface of its own.
+
+## Where to go next
+
+In Storybook: [Items → Detail view](https://real-life-stack.de/storybook/?path=/docs/rls-items-detail-body--docs) with all states, [Items → Create and edit](https://real-life-stack.de/storybook/?path=/docs/rls-items-content-composer--docs) for the composer. Spec: [Shared components of the modules](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/modules/shared-components.md), [Spec 12 profile](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/12-profile.md). Back to the start of the path: [Develop locally](/en/handbuch/entwickeln/).

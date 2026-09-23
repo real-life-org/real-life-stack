@@ -1,9 +1,17 @@
 import type { MockConnectorSeed } from '@real-life-stack/mock-connector'
+import { GARDEN_IMAGE, WORKSHOP_IMAGE } from '../story-support/group-images'
 export const seed: MockConnectorSeed = {
-  users: [{ id: 'mira', displayName: 'Mira Beispiel' }],
+  users: [
+    {
+      id: 'mira',
+      displayName: 'Mira Beispiel',
+      avatarUrl: 'https://randomuser.me/api/portraits/women/44.jpg',
+    },
+  ],
+  // Das Gruppenbild liegt unter `data.image`, wie bei den Connectoren (Spec 04).
   groups: [
-    { id: 'garden', name: 'Gemeinschaftsgarten' },
-    { id: 'workshop', name: 'Offene Werkstatt' },
+    { id: 'garden', name: 'Gemeinschaftsgarten', data: { image: GARDEN_IMAGE } },
+    { id: 'workshop', name: 'Offene Werkstatt', data: { image: WORKSHOP_IMAGE } },
   ],
   groupMembers: { garden: ['mira'], workshop: ['mira'] },
   groupItems: { garden: ['harvest', 'watering'], workshop: ['repair'] },

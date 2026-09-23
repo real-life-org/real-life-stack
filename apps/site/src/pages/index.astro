@@ -1,11 +1,13 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro'
+import { heroPreviewHtml } from '../lib/story-embed'
 import Landing from '../components/Landing.astro'
 import { translations } from '../i18n/landing'
 const t = translations.de
 ---
 <StarlightPage frontmatter={{ title: 'Real Life Stack', template: 'splash', tableOfContents: false, hero: {
   title: `${t.hero.title} <span class="rl-accent">${t.hero.titleHighlight}</span>`, tagline: t.hero.subtitle,
+  image: { html: heroPreviewHtml('de') },
   actions: [
     { text: t.hero.demo, link: 'https://real-life-stack.de/app/', icon: 'right-arrow', variant: 'primary' },
     { text: 'Handbuch', link: '/handbuch/', icon: 'open-book', variant: 'secondary' },

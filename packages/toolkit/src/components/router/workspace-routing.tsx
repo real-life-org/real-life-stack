@@ -13,11 +13,11 @@ import { scalesForColor } from "../../lib/color-scales"
 import { getModule, moduleIds, resolveActiveModule, resolveSpaceModules } from "../../lib/module-register"
 import { resolveDefaultModule } from "../../lib/notification-target"
 import { instanceTheme } from "../../lib/runtime-config"
-import { layoutTokens, readGray, readRadius, readSurfaces } from "../../lib/space-theme"
+import { layoutTokens } from "../../lib/space-theme"
 import { applyThemeTokens, clearThemeTokens, themeTokens } from "../../lib/theme-tokens"
 import { getSpacePrimaryColor } from "../../lib/utils"
 import type { Module } from "../layout/module-tabs"
-import type { Workspace } from "../layout/workspace-switcher"
+import { workspaceOf, type Workspace } from "../layout/workspace-switcher"
 
 /**
  * Space, Modul und Item aus der URL — die Auflösung, die jede App mit Router
@@ -153,18 +153,7 @@ export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions 
   const workspaces: Workspace[] = useMemo(
     () => [
       OVERVIEW_WORKSPACE,
-      ...groups.map((g) => ({
-        id: g.id,
-        name: g.name,
-        avatar: g.data?.image as string | undefined,
-        scope: g.data?.scope as string | undefined,
-        primaryColor: g.data?.primaryColor as string | undefined,
-        // Ungeprueft durchgereicht; `scalesForColor` kappt und verwirft.
-        tint: g.data?.tint as number | undefined,
-        gray: readGray(g.data?.gray) ?? undefined,
-        radius: readRadius(g.data?.radius) ?? undefined,
-        surfaces: readSurfaces(g.data?.surfaces) ?? undefined,
-      })),
+      ...groups.map(workspaceOf),
     ],
     [groups]
   )

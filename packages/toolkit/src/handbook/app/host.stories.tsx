@@ -39,7 +39,7 @@ import { ProbeWorld } from "../../story-support/probe-world"
  * a date.
  */
 function TheModuleHost() {
-  return <HostWorld module="calendar" />
+  return <HostWorld module="calendar" mapEngine={false} />
 }
 
 /** A module that only shows what the host gives it — nothing else. */

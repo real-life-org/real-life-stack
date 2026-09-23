@@ -1,10 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import type { Item } from "@real-life-stack/data-interface"
 
-import { MapLibreAdapterProvider } from "../components/map/adapters/maplibre-provider"
 import { HostWorld } from "../story-support/host-world"
 import { STORY_SEED } from "../story-support/story-world"
-import "maplibre-gl/dist/maplibre-gl.css"
 
 /**
  * **The map** shows the items of a space that have a position, clustered,
@@ -35,9 +33,7 @@ const places: Item[] = [
 
 function MapModuleOverview() {
   return (
-    <MapLibreAdapterProvider>
-      <HostWorld module="map" seed={{ items: [...STORY_SEED.items, ...places] }} />
-    </MapLibreAdapterProvider>
+    <HostWorld module="map" seed={{ items: [...STORY_SEED.items, ...places] }} />
   )
 }
 

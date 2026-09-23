@@ -1,0 +1,82 @@
+---
+title: Vom Klick zur gemeinsamen Änderung
+description: Wie ein Item aussieht, was Typ, Vokabular, Tag und Modul jeweils tun, und wie eine Änderung durch die Schichten läuft.
+group: verstehen
+sidebar:
+  order: 6
+sources:
+  - docs/spec/02-data-interface.md
+  - docs/spec/03-capabilities.md
+  - docs/spec/06-schema-composition.md
+  - docs/spec/08-relation-records.md
+  - docs/spec/reaktivitaet.md
+  - packages/data-interface/src/module-hints.ts
+stories:
+  - rls-foundations-hooks--read
+  - rls-app-04-loading-contract--two-hints
+  - rls-foundations-hooks--relations
+---
+
+import Story from '@site/components/Story.astro'
+
+Ein Klick auf „Speichern“ ändert nicht die Fläche, die ihn ausgelöst hat. Er geht nach unten bis zum Connector, und von dort kommt die Änderung zu allen Flächen zurück, die das Item zeigen. Diese Seite folgt dem Weg.
+
+## Ein Item
+
+```json
+{
+  "id": "erntefest",
+  "type": "event",
+  "createdAt": "2026-09-01T09:00:00.000Z",
+  "createdBy": "mira",
+  "tags": ["garten"],
+  "data": {
+    "title": "Erntefest im Garten",
+    "start": "2026-09-26T14:00:00+02:00",
+    "position": { "type": "Point", "coordinates": [13.405, 52.52] }
+  }
+}
+```
+
+`id`, `type`, `createdAt`, `createdBy` sind der Kern; die fachlichen Felder liegen in `data`; `tags` sind eine eigene Achse. Der Typ ist eine Klasse mit einer IRI (Spec 06), es dürfen mehrere sein. Die Position ist GeoJSON, Längengrad vor Breitengrad.
+
+Vier Wörter, vier Aufgaben:
+
+- **Typ:** als was das Item angelegt wurde. Bestimmt Darstellung, Symbol und Farbe über das Typ-Register, und was der Composer beim Erstellen anbietet.
+- **Vokabular:** die Bedeutung und Form der Felder (`@context`, Spec 06). Das Vokabular macht `start` zu einem Zeitpunkt und `position` zu einem Ort, für jeden, der das Item liest.
+- **Tag:** thematische Einordnung durch Menschen. Frei, kein Schema.
+- **Modul:** ein Blickwinkel. Die Karte zeigt, was einen Ort hat, der Kalender, was einen Zeitpunkt hat. Das Feld entscheidet, nie der Typ; eine Aufgabe mit Datum steht im Kalender.
+
+## Der Ladevertrag
+
+Ein Modul sagt im Register, was es zeigen kann (`presents: ["start"]`). Der Host schlägt in der Hinweis-Tabelle nach, welcher Filter dazugehört (`hasField: ["start"]`), fragt den Connector danach und gibt dem Modul die Items schon gefiltert nach Suche, Tags und Typen. Zwei Hinweise ergeben die Vereinigung; die Karte lädt selbst, nach Kartenausschnitt, und der Host stellt dann keine Abfrage (Spec 01, Ladevertrag).
+
+<Story id="rls-app-04-loading-contract--two-hints" title="Zwei Hinweise: Der Host lädt die Vereinigung aus start und position" height={560} />
+
+Grob lädt der Connector, fein entscheidet das Modul: Der Connector prüft, ob ein Feld da ist, nicht, welchen Wert es hat. Ob ein Status in eine Kanban-Spalte gehört, prüft das Kanban auf dem geladenen Bestand.
+
+## Der Weg durch die Schichten
+
+1. Eine Fläche fragt einen Hook, etwa `useItems(filter)`.
+2. Der Hook abonniert das Observable des Connectors (`observe`), statt einmal zu laden (`getItems`).
+3. Eine erlaubte Änderung geht über den Schreib-Hook (`useUpdateItem`) an den Connector.
+4. Der Connector ändert seinen Bestand und meldet die Änderung an alle Abonnenten.
+5. Jede Fläche, die das Item zeigt, rendert neu, ohne dass jemand sie benachrichtigt hätte.
+
+<Story id="rls-foundations-hooks--read" title="Lesende Hooks beobachten die Datenquelle; die Fläche lädt nichts auf Zuruf" height={420} />
+
+Hooks besitzen keine eigene Kopie der Wahrheit. Wer eine Liste im Zustand einer Komponente hält und nach dem Speichern von Hand nachlädt, baut die Reaktivität nach, die es schon gibt, und verpasst Änderungen von anderen Geräten. Aufräumen gehört dazu: Ein Hook beendet sein Abonnement, wenn die Fläche verschwindet.
+
+## Relations
+
+Eine Relation verbindet ein Item über ein Prädikat mit einem Ziel. Kommentare und Reaktionen sind eigene Items mit einer Relation auf den Beitrag, Kommentare mit `commentOn`, Reaktionen mit `reactsTo`, nicht Arrays im Beitrag, die immer länger werden; Stellungnahmen im Resonanz-Modul sind signierte Relation-Records (Spec 08). Für jede Beziehungsart gibt es den passenden Hook (`useComments`, `useReactions`, `useVotes`, `useRelationRecords`), jeder mit eigener Auflösung von Autoren und Zählern. Einen allgemeinen UI-Hook für Rückwärts-Relationen gibt es absichtlich nicht; der Rückwärts-Lookup selbst bleibt im Connector (`observeRelatedItems` mit `direction: "to"`) und ist der Weg für eine Beziehungsart, die noch keinen Hook hat. Der neue Hook gehört dann ins Toolkit, nicht in die App.
+
+<Story id="rls-foundations-hooks--relations" title="Kommentare, Reaktionen, Votes: eigene Items mit Beziehung, je ein Hook" height={480} />
+
+## Leer ist nicht „lädt noch“
+
+Ein leeres Ergebnis kann fertig geladen sein. Deshalb antworten lesende Hooks mit `{data, isLoading}`, und der Connector trägt ein eigenes Signal für den ersten Sync (`useInitialSync`). Eine Fläche, die aus einer leeren Liste „nichts da“ macht, während der Sync noch läuft, zeigt eine falsche Wahrheit; die Vorschau-Komponenten haben dafür den Ladezustand.
+
+## Wo es weitergeht
+
+[Spec 02 DataInterface](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/02-data-interface.md), [Spec 06 Schema-Komposition](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/06-schema-composition.md), alle Hooks in der [Referenz](/reference/hooks/). Die nächste Seite trennt drei Fragen, die oft in eine gepresst werden: [Fähigkeit, Berechtigung, Herkunft](/handbuch/rechte/).

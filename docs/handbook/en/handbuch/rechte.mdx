@@ -1,0 +1,52 @@
+---
+title: Capability, permission, origin
+description: Can the connector write, may I edit this item, where does it come from — three questions that are not one.
+translationOf: docs/handbook/de/handbuch/rechte.mdx
+sourceHash: 5a09fcdc8ea92f19373a44808f23c0422a84b4ad8b141551a2c6dc4860009bd6
+group: verstehen
+sidebar:
+  order: 7
+sources:
+  - docs/spec/03-capabilities.md
+  - docs/spec/05-confirmations-and-trust.md
+  - docs/spec/09-mirror-bridge.md
+  - docs/spec/12-profile.md
+  - packages/toolkit/src/hooks/use-item-permissions.ts
+stories:
+  - rls-app-00-community-garden--read-only
+  - rls-foundations-hooks--capability-check
+---
+
+import Story from '@site/components/Story.astro'
+
+Whether an "Edit" button appears depends on three answers, and each comes from somewhere else. Whoever shortens them to one check either builds buttons that lead nowhere or hides rights that would be there.
+
+## Capability: what the data source can do
+
+The core of the `DataInterface` reads and observes. Everything beyond that is a **capability** (spec 03): writing (`isWritable`), managing groups (`hasGroups`), signing in (`isAuthenticatable`), relations, activity, notifications. A connector has it or not; the interface asks instead of assuming.
+
+Inside the frame this is taken care of: reading hooks answer empty without the capability, writing ones fail on the call, not on render, and surfaces hide what the connector cannot do. The same garden with a connector that can only read:
+
+<Story id="rls-app-00-community-garden--read-only" title="The same garden without write capability: no plus button, no edit, but everything readable" height={620} />
+
+<Story id="rls-foundations-hooks--capability-check" title="The check every writing surface makes before it shows a button" height={360} />
+
+## Permission: what I may do here
+
+That a connector can write does not mean I may change this item. The **permission** hangs on me and on the item: am I a member of the space, am I the author, what does the group allow? `useItemPermissions(item)` answers this for the interface as `{canEdit, canDelete}`, both `false` without the capability.
+
+The direction matters: the interface shows matching actions, but the write path enforces the rule. Hiding a button is not authorisation. Where a server exists, it is the boundary: with Supabase the row rule rejects foreign changes. In the Web of Trust there is no such boundary for ordinary items today: every member holds the space key and can write the document directly; the author check on write is a convention that keeps honest clients honest, not protection against other members. Signatures there verify only what is signed, such as relation records (spec 08) and mirror snapshots (spec 09). Whoever has the rule only in the interface has none.
+
+## Origin: where the item is at home
+
+An item has exactly one home space. If it appears in another one, it is a **mirror** there (spec 09): readable, with a hint to its origin, but not to be edited there, because the truth lives in the home space. A person's profile is the first item that travels this way: it lives in the personal space and is mirrored into every group the person releases it to (spec 12).
+
+So the origin does not decide writability on its own; it says **where** a change belongs. The interface shows it as a badge (`ItemScopeBadge`: group, colour, private), from one derivation for all surfaces (`useItemPresentation`).
+
+## Trust is a fourth question
+
+Whether a statement is true, who confirmed it and how much I trust the source is neither a permission nor a capability. Spec 05 separates claims, confirmations and trust levels; in the resonance module only statements whose signature has been verified count (`useVerifiedRelationRecords`). A connector without signature verification delivers empty counts, not wrong ones.
+
+## Where to go next
+
+[Spec 03 capabilities](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/03-capabilities.md), [Spec 09 mirror and bridge](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/09-mirror-bridge.md), the hooks of the group [Permissions and capabilities](/en/reference/hooks/#permissions). The last concept page takes apart the surface where the three answers meet: [One detail view for all items](/en/handbuch/item-detail/).

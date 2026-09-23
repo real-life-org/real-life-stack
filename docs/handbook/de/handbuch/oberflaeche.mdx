@@ -1,0 +1,57 @@
+---
+title: Vom Space zum Item
+description: Die Oberfläche als drei Ebenen — Rahmen, Space, Item — und warum ein Termin nicht dem Kalender gehört.
+group: verstehen
+sidebar:
+  order: 5
+sources:
+  - docs/spec/01-app-composition.md
+  - docs/spec/04-items-relations-groups-spaces.md
+  - packages/toolkit/src/handbook/garden.tsx
+  - packages/toolkit/src/components/frame/app-frame.tsx
+stories:
+  - rls-app-00-community-garden--garden
+  - rls-app-05-focus-panel-create--panel
+---
+
+import Story from '@site/components/Story.astro'
+
+Eine App auf Real Life Stack hat drei Ebenen, und jede beantwortet eine andere Frage. Der **Rahmen** fragt: Wer bist du, in welchem Space bist du, welches Modul schaust du an? Der **Space** fragt: Was gehört hierher, wer gehört dazu? Das **Item** ist das Ding selbst, ein Termin, ein Ort, eine Aufgabe, ein Beitrag. Die Module dazwischen sind Blickwinkel auf dieselben Items, keine Besitzer.
+
+Probier es am Garten aus: Öffne das Erntefest, wechsle in den Kalender, dann auf die Karte. Es ist dieselbe Adresse, dasselbe Item, dreimal gezeigt.
+
+<Story id="rls-app-00-community-garden--garden" title="Ein Gemeinschaftsgarten: Space wählen, Modul wechseln, Item öffnen" height={640} />
+
+## Der Rahmen
+
+Der Rahmen (`AppFrame`, in einer App mit Router `RoutedAppFrame`) ist überall gleich: links der Space-Wechsler, in der Mitte die Tabs der Module, rechts Benachrichtigungen und das Nutzer-Menü; darunter die Fläche des aktiven Moduls und das eine geteilte Panel für Detail, Erstellen und Verlauf. Eine App baut ihn nicht, sie stellt ihn (Spec 01, „Was bei der App bleibt“). Deshalb sieht jede App auf dem Stack an dieser Stelle gleich aus, und deshalb kann das Storybook denselben Rahmen zeigen wie die Apps.
+
+Der Rahmen hält den **Fokus**: welcher Space, welches Modul, welches Item offen ist, ob es bearbeitet wird. In einer App mit Router steht das in der Adresse (`/{space}/{modul}/{item}`), in einer Story im Speicher, mit demselben Vertrag. Zurück im Browser schließt das Detail, ein Link auf die Adresse öffnet es.
+
+## Der Space
+
+Ein Space ist der Arbeitskontext: eine Gruppe (im Datenmodell `Group`) mit Mitgliedern, Items und der Liste ihrer Module in Tab-Reihenfolge. Der Space wählt aus dem Register, was er zeigt; er erweitert es nicht (Spec 01). Ein Space „Gemeinschaftsgarten“ kann Kalender, Karte und Liste führen, ein Space „Offene Werkstatt“ nur die Liste. Der persönliche Space ist ein Space wie jeder andere, nur mit einem Mitglied.
+
+Was alle Module eines Space teilen, gehört der Fläche, nicht dem Modul: die Suche, das Vokabular der Tags und Typen, die Filterkarte, die Chips. Deshalb überlebt ein gesetzter Filter den Modulwechsel, und deshalb bietet kein Modul eine eigene Auswahl an, die ein anderes nicht kennt (Spec 01, Regel 2a).
+
+## Das Item, zweimal dargestellt
+
+Die **Vorschau** (`ItemPreview`) ist die Karte im Feed, in der Liste, im Kanban: erkennen und auswählen. Die **Detailansicht** ist das ganze Item mit seinen Aktionen und der Diskussion; sie öffnet im geteilten Panel, und es gibt nur dieses eine Panel. Ein zweiter Klick auf ein anderes Item tauscht den Inhalt, er stapelt nicht.
+
+<Story id="rls-app-05-focus-panel-create--panel" title="Das eine Panel: Detail, Erstellen und Verlauf tauschen den Inhalt, statt sich zu stapeln" height={560} />
+
+Ein Personenprofil ist dabei kein zweites UI-System. Es ist die Detailansicht eines Items vom Typ Person (Spec 12); „Profil“ nennt den fachlichen Inhalt, nicht eine andere Fläche.
+
+## Welche Ebene macht was
+
+- **Rahmen:** Space, Modul und Fokus halten; Panel, Kopfzeile, Benachrichtigungen, Space-Verwaltung; die drei Navigationsregeln (ein Feld führt in sein Modul, ein Kommentar in seine Diskussion, ein Tag in den Filter).
+- **Host des Moduls:** aus dem Registereintrag herstellen, was das Modul braucht: die Items nach `presents`, gefiltert nach Suche und Filter; Mitglieder, Autoren, Farben; Detail, Erstellen, Plusknopf. Ein Modul lädt nichts davon selbst (Spec 01, Regel 2).
+- **Modul:** seine Darstellung und seine eigenen Interaktionen, mehr nicht.
+- **Detailinhalt:** Titel, Fakten, Inhalt, passende Aktionen, Kommentare.
+- **Connector:** lesen, beobachten, erlaubtes Schreiben.
+
+Wer etwas aus einer unteren Ebene in einer oberen wiederfindet, hat einen Fehler gegen die Spec vor sich; das ist die Regel, die alle Apps zusammenhält.
+
+## Wo es weitergeht
+
+Im Storybook zeigen [RLS → App](https://real-life-stack.de/storybook/?path=/docs/rls-app-01-the-app-in-40-lines--docs) Register, Host, Ladevertrag, Fokus und Erstellen einzeln, [RLS → App shell](https://real-life-stack.de/storybook/?path=/docs/rls-app-shell-module-surface--docs) den Rahmen und seine Teile. Die nächste Seite folgt einem Klick bis in den Connector: [Vom Klick zur gemeinsamen Änderung](/handbuch/datenfluss/).
