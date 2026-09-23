@@ -61,12 +61,12 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-card { border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; padding: 1rem; background: var(--sl-color-bg-sidebar); display: flex; flex-direction: column; align-self: stretch; }
 a.rl-card { text-decoration: none; color: inherit; }
 a.rl-card:hover { border-color: var(--sl-color-accent); }
-.rl-more { margin: .75rem 0 0; font-size: .9rem; }
+.rl-more { margin: 1.25rem 0 0; font-size: .9rem; }
 .rl-more a { color: var(--sl-color-accent); text-decoration: none; }
 .rl-more a:hover { text-decoration: underline; }
 .rl-card strong { display: block; margin-bottom: .2rem; }
 .rl-card span { font-size: .85rem; color: var(--sl-color-gray-2); }
-.rl-card.compact { padding: .6rem .75rem; display: flex; gap: .6rem; align-items: flex-start; }
+.rl-card.compact { padding: .6rem .75rem; flex-direction: row; gap: .6rem; align-items: flex-start; }
 .rl-card.compact > div { min-width: 0; text-align: start; }
 .rl-card.compact > div span { display: block; }
 .rl-card.centered { text-align: center; align-items: center; }

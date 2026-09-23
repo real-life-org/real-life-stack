@@ -62,7 +62,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Real Life Stack',
-      description: 'Modularer Baukasten für lokale Vernetzung — Handbuch, Storybook, App.',
+      description: 'Modularer Baukasten für lokale Vernetzung: Handbuch, Storybook, App.',
       defaultLocale: 'root',
       locales: LOCALES,
       customCss: ['./src/styles/site.css'],
