@@ -58,8 +58,8 @@ export type TranslatedLanguage =
 const EN_DATA_INTERFACE: Translation['dataInterface'] = {
   badge: 'Data & identity interface',
   title: 'One interface',
-  p1: 'A harvest festival is an item. It has a date, so it sits in the calendar; it has a place, so it sits on the map. Both show the same object, and whoever changes the title changes it everywhere. That is how every module works: it reads and writes through one interface, the DataInterface, which knows only items, their relations, spaces and people.',
-  p2: 'Modules do not query the data, they listen to it. And they assume nothing: whether a backend can write, sign people in or keep groups, it says so itself. If it cannot do something, the button for it disappears, not the app.',
+  p1: 'All modules speak the same language. What they read and write are items in spaces, related to one another and to people; an event, a place, a task, a profile differ only in their fields. That is why the same neighbourhood festival can sit in the calendar and on the map without existing twice.',
+  p2: 'When an item changes, every surface showing it follows. And what the backend underneath can do decides what the surface offers: a connector that cannot write gets no write buttons, but an app that still runs.',
   items: 'Items & relations',
   itemsDesc: 'One object, many views',
   spaces: 'Spaces & members',
@@ -111,8 +111,8 @@ export const translations: Record<TranslatedLanguage, Translation> = {
     dataInterface: {
       badge: 'Daten- & Identitätsschnittstelle',
       title: 'Einheitliche Schnittstelle',
-      p1: 'Ein Erntefest ist ein Item. Es hat ein Datum, also steht es im Kalender; es hat einen Ort, also steht es auf der Karte. Beide zeigen dasselbe Objekt, und wer den Titel ändert, ändert ihn überall. So arbeiten alle Module: Sie lesen und schreiben über eine Schnittstelle, das DataInterface, das nur Items, ihre Beziehungen, Spaces und Menschen kennt.',
-      p2: 'Die Module fragen die Daten nicht ab, sie hören ihnen zu. Und sie nehmen nichts an: Ob ein Backend schreiben, anmelden oder Gruppen führen kann, sagt es selbst. Kann es etwas nicht, verschwindet der Knopf dafür, nicht die App.',
+      p1: 'Alle Module sprechen dieselbe Sprache. Was sie lesen und schreiben, sind Items in Spaces, mit Beziehungen zueinander und zu Menschen; ein Termin, ein Ort, eine Aufgabe, ein Profil unterscheiden sich nur in ihren Feldern. Deshalb kann dasselbe Nachbarschaftsfest im Kalender und auf der Karte stehen, ohne zweimal zu existieren.',
+      p2: 'Ändert sich ein Item, folgt jede Fläche, die es zeigt. Und was das Backend darunter kann, entscheidet, was die Oberfläche anbietet: Ein Connector, der nicht schreiben kann, bekommt keine Schreibknöpfe, aber eine App, die trotzdem läuft.',
       items: 'Items & Relations',
       itemsDesc: 'Ein Objekt, viele Ansichten',
       spaces: 'Spaces & Mitglieder',
@@ -167,8 +167,8 @@ export const translations: Record<TranslatedLanguage, Translation> = {
     dataInterface: {
       badge: 'Data & identity interface',
       title: 'One interface',
-      p1: 'A harvest festival is an item. It has a date, so it sits in the calendar; it has a place, so it sits on the map. Both show the same object, and whoever changes the title changes it everywhere. That is how every module works: it reads and writes through one interface, the DataInterface, which knows only items, their relations, spaces and people.',
-      p2: 'Modules do not query the data, they listen to it. And they assume nothing: whether a backend can write, sign people in or keep groups, it says so itself. If it cannot do something, the button for it disappears, not the app.',
+      p1: 'All modules speak the same language. What they read and write are items in spaces, related to one another and to people; an event, a place, a task, a profile differ only in their fields. That is why the same neighbourhood festival can sit in the calendar and on the map without existing twice.',
+      p2: 'When an item changes, every surface showing it follows. And what the backend underneath can do decides what the surface offers: a connector that cannot write gets no write buttons, but an app that still runs.',
       items: 'Items & relations',
       itemsDesc: 'One object, many views',
       spaces: 'Spaces & members',
