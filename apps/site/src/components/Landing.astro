@@ -23,6 +23,14 @@ const ways: { title: string; text: string; href: string; soon: boolean; icon: Ic
       { title: 'Extend the stack', text: 'Dev environment, spec, guards, review. How a contribution becomes a PR.', href: `${prefix}/handbuch/entwickeln/`, soon: false, icon: 'wrench', tone: 'blue' },
       { title: 'Work with agents', text: 'Entry points, task shape, rules and checks for coding agents.', href: `${prefix}/handbuch/agenten/`, soon: false, icon: 'bot', tone: 'purple' },
     ]
+// Die Modulkarten zeigen auf ihre Storybook-Seite; Kanban statt Marktplatz, weil der Marktplatz ein Modul der Netzwerk-App ist, kein Toolkit-Modul.
+const m = (key: 'kanban' | 'kanbanDesc' | 'more') => t.modules[key] ?? translations.en.modules[key] ?? ''
+const modules: { name: string; desc: string; icon: IconName; tone: Tone; story: string }[] = [
+  { name: t.modules.map, desc: t.modules.mapDesc, icon: 'map', tone: 'green', story: 'rls-modules-map--docs' },
+  { name: t.modules.calendar, desc: t.modules.calendarDesc, icon: 'calendar', tone: 'blue', story: 'rls-modules-calendar--docs' },
+  { name: m('kanban'), desc: m('kanbanDesc'), icon: 'kanban', tone: 'purple', story: 'rls-modules-kanban--docs' },
+  { name: t.modules.feed, desc: t.modules.feedDesc, icon: 'message-square', tone: 'orange', story: 'rls-modules-feed--docs' },
+]
 const waysTitle = de ? 'Loslegen' : 'Get started'
 const waysIntro = de ? 'Eine Instanz betreiben, eine eigene App bauen, den Stack erweitern oder mit Agenten arbeiten.' : 'Run an instance, build your own app, extend the stack or work with agents.'
 const soon = de ? 'folgt' : 'soon'
