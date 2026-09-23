@@ -10,12 +10,14 @@
 
   function layout(fig: HTMLElement) {
     const stage = fig.querySelector<HTMLElement>('.story-stage')!
-    const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
+    // Skaliert wird die Box, nicht der Iframe: Ein transformierter Iframe beschneidet seinen Inhalt in Chrome nicht
+    // an runden Ecken, eine Box mit overflow hidden schon.
+    const box = fig.querySelector<HTMLElement>('.story-box')!
     const height = Number(fig.dataset.height) || 560
     const phone = fig.dataset.frame === 'phone'
     const scale = phone ? Math.min(PHONE_SCALE, stage.clientWidth / PHONE) : Math.min(1, stage.clientWidth / DESKTOP)
     const w = phone ? PHONE : DESKTOP, h = phone ? PHONE_HEIGHT : height
-    iframe.style.width = `${w}px`; iframe.style.height = `${h}px`; iframe.style.transform = `scale(${scale})`
+    box.style.width = `${w}px`; box.style.height = `${h}px`; box.style.transform = `scale(${scale})`
     stage.style.height = `${Math.round(h * scale)}px`
     for (const b of fig.querySelectorAll<HTMLButtonElement>('.story-frames button'))
       b.setAttribute('aria-pressed', String(b.dataset.frame === fig.dataset.frame))
