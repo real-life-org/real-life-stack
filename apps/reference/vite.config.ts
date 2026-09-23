@@ -3,12 +3,13 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import wasm from 'vite-plugin-wasm'
 import path from 'path'
+import { buildInfo, buildInfoPlugin } from '../../scripts/build-info.mjs'
 
 const toolkitSrc = path.resolve(__dirname, '../../packages/toolkit/src')
 const basePath = process.env.VITE_BASE_PATH || '/'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), wasm()],
+  plugins: [react(), tailwindcss(), wasm(), buildInfoPlugin(buildInfo(new URL('./package.json', import.meta.url)))],
   base: basePath,
   build: {
     // Required for Automerge WASM which uses top-level await

@@ -38,6 +38,7 @@ import { ModuleTabs, type Module } from "../layout/module-tabs"
 import { Navbar, NavbarCenter, NavbarEnd, NavbarStart } from "../layout/navbar"
 import { SpaceThemeCard } from "../layout/space-theme-panel"
 import { UserMenu } from "../layout/user-menu"
+import type { BuildInfo } from "../../lib/build-info"
 import { WorkspaceSwitcher, type Workspace } from "../layout/workspace-switcher"
 import { LocationPickProvider, useLocationPick } from "../map/location-pick"
 import { ModulePanelProvider, useModulePanel } from "../module-panel/module-panel"
@@ -90,6 +91,8 @@ export interface AppFrameProps {
   noAccessContent?: ReactNode
   /** App-Eigenes im Shell-Baum: eigene Dialoge, Dev-Knoepfe. Steht unter allen Providern. */
   children?: ReactNode
+  /** Welcher Stand laeuft (Version, Commit, Kanal) — stille Zeile im Nutzer-Menue. */
+  build?: BuildInfo
 }
 
 /**
@@ -174,7 +177,7 @@ function useMemoryOverlay(): NonNullable<FrameRouting["overlay"]> {
  * die eine Zeile der App fuer die Karte) und alles, was einen Router braucht
  * (`RoutedAppFrame` in `/router` legt es um diesen Rahmen).
  */
-export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAccessContent, children }: AppFrameProps) {
+export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAccessContent, children, build }: AppFrameProps) {
   const { groups, workspaces, activeWorkspace, activeModule, modules, urlSpaceId, handleWorkspaceChange, handleModuleChange, goTo, goHome } = routing
   const connector = useConnector()
   const { data: currentUser } = useOptionalCurrentUser()
@@ -347,6 +350,7 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
                 contactCount={activeContacts.length}
                 onVerify={hasEncounterVerification(connector) ? () => overlay.open("verify") : undefined}
                 onLogout={isAuthenticatable(connector) ? async () => { await connector.logout(); window.location.reload() } : undefined}
+                build={build}
               />
             )}
           </NavbarEnd>

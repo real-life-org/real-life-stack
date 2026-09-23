@@ -1,6 +1,8 @@
 "use client"
 
 import type { User } from "@real-life-stack/data-interface"
+import { useState } from "react"
+import { formatBuild, type BuildInfo } from "../../lib/build-info"
 import { LogOut, QrCode, Settings, User as UserIcon, Users } from "lucide-react"
 
 import {
@@ -32,6 +34,33 @@ interface UserMenuProps {
   onVerify?: () => void
   onSettings?: () => void
   onLogout?: () => void
+  /** Welcher Stand laeuft — als stille Zeile ganz unten (lib/build-info). */
+  build?: BuildInfo
+}
+
+/**
+ * Die Build-Zeile: gedaempft, klein, ohne Rahmen; ein Tipp kopiert sie, damit
+ * sie in eine Fehlermeldung wandern kann. Ohne Angaben rendert sie nichts.
+ */
+export function BuildLine({ build }: { build?: BuildInfo }) {
+  const [copied, setCopied] = useState(false)
+  const text = formatBuild(build)
+  if (!text) return null
+  const copy = async () => {
+    try { await navigator.clipboard?.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1200) } catch { /* kein Zugriff auf die Zwischenablage — der Text bleibt markierbar */ }
+  }
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      title="Version · Commit · Kanal — antippen kopiert"
+      aria-label={`Build ${text}, antippen kopiert`}
+      data-testid="build-line"
+      className="block w-full select-all px-2 py-1 text-left font-mono text-[10px] leading-4 text-muted-foreground/60 hover:text-muted-foreground focus-visible:outline-none"
+    >
+      {copied ? "kopiert" : text}
+    </button>
+  )
 }
 
 export function UserMenu({
@@ -43,6 +72,7 @@ export function UserMenu({
   onVerify,
   onSettings,
   onLogout,
+  build,
 }: UserMenuProps) {
   const displayName = user.displayName ?? user.id
   const getInitials = (name: string) => {
@@ -106,6 +136,12 @@ export function UserMenu({
               <LogOut className="h-4 w-4" />
               <span>Abmelden</span>
             </DropdownMenuItem>
+          </>
+        )}
+        {formatBuild(build) && (
+          <>
+            <DropdownMenuSeparator />
+            <BuildLine build={build} />
           </>
         )}
       </DropdownMenuContent>
