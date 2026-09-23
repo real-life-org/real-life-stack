@@ -15,13 +15,13 @@ const ways: { title: string; text: string; href: string; soon: boolean; icon: Ic
       { title: 'Erste App bauen', text: 'In zehn Minuten eine eigene App auf dem Rahmen: Connector, Router, Rahmen, fertig.', href: '/handbuch/erste-app/', soon: false, icon: 'rocket', tone: 'orange' },
       { title: 'Mit einem Agenten arbeiten', text: 'Einstiege, Auftragsform, Regeln und Prüfungen für Coding-Agents, dieselben Verträge wie für Menschen.', href: '/handbuch/agenten/', soon: false, icon: 'bot', tone: 'purple' },
       { title: 'Am Stack mitbauen', text: 'Entwicklungsumgebung, Spec, Wächter, Review. So wird ein Beitrag zum PR.', href: '/handbuch/entwickeln/', soon: false, icon: 'wrench', tone: 'blue' },
-      { title: 'Eine Instanz betreiben', text: 'Die fertige App unter eigenem Namen und eigener Domain für eine Community.', href: '/handbuch/', soon: true, icon: 'server', tone: 'green' },
+      { title: 'Eine Instanz betreiben', text: 'Die fertige App unter eigenem Namen und eigener Domain: Image, Konfiguration, Branding, Updates.', href: '/handbuch/instanz/', soon: false, icon: 'server', tone: 'green' },
     ]
   : [
       { title: 'Build a first app', text: 'Your own app on the frame in ten minutes: connector, router, frame, done. German for now.', href: '/handbuch/erste-app/', soon: false, icon: 'rocket', tone: 'orange' },
       { title: 'Work with an agent', text: 'Entry points, task shape, rules and checks for coding agents, the same contracts as for people. German for now.', href: '/handbuch/agenten/', soon: false, icon: 'bot', tone: 'purple' },
       { title: 'Contribute to the stack', text: 'Dev environment, spec, guards, review. How a contribution becomes a PR. German for now.', href: '/handbuch/entwickeln/', soon: false, icon: 'wrench', tone: 'blue' },
-      { title: 'Run an instance', text: 'The finished app under your own name and domain for a community.', href: `${prefix}/handbuch/`, soon: true, icon: 'server', tone: 'green' },
+      { title: 'Run an instance', text: 'The finished app under your own name and domain: image, configuration, branding, updates. German for now.', href: '/handbuch/instanz/', soon: false, icon: 'server', tone: 'green' },
     ]
 // Die Modulkarten zeigen auf ihre Storybook-Seite; Kanban statt Marktplatz, weil der Marktplatz ein Modul der Netzwerk-App ist, kein Toolkit-Modul.
 const m = (key: 'kanban' | 'kanbanDesc' | 'more') => t.modules[key] ?? translations.en.modules[key] ?? ''

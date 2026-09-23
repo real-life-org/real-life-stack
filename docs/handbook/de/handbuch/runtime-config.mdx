@@ -1,0 +1,56 @@
+---
+title: Runtime-Konfiguration
+description: Was eine Instanz zur Laufzeit liest — Endpunkte, Connector, Branding — woher die Werte kommen und was mit falschen passiert.
+sidebar:
+  order: 7
+sources:
+  - docs/spec/11-runtime-config-und-branding.md
+  - packages/toolkit/src/lib/runtime-config.ts
+  - deploy/app/entrypoint.sh
+---
+
+Ein Image, viele Instanzen: Alles, was sich je Instanz unterscheidet, liest die App **einmal vor dem ersten Render** aus einer Datei, nicht aus dem Build. Diese Seite erklärt den Vertrag aus [Spec 11](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/11-runtime-config-und-branding.md); bei Widerspruch gilt die Spec.
+
+## Die Datei
+
+`/app/config.json`, im Container **beim Start** aus den Umgebungsvariablen erzeugt (`entrypoint.sh`), oder wörtlich eure eigene aus `branding/config.json` dorthin kopiert. Geänderte Umgebungsvariablen übernimmt `docker compose up -d` (Container wird neu erstellt), eine geänderte eigene `config.json` `docker compose restart app` (Start läuft erneut):
+
+```json
+{
+  "endpoints": { "relayUrl": "wss://relay.example.org" },
+  "defaultConnector": "wot",
+  "branding": {
+    "appName": "Waldgarten",
+    "faviconUrl": "/branding/favicon.svg",
+    "colorsUrl": "/branding/theme.json"
+  }
+}
+```
+
+- **`endpoints`:** `relayUrl` (`ws:`/`wss:`), `profilesUrl`, `supabaseUrl`, `supabaseAnonKey`. Der Anon-Key ist öffentlich by design; er steht in jedem Browser.
+- **`defaultConnector`:** eine der Connector-Ids der App (`wot`, `supabase`, `local`, `mock`). `?connector=` in der Adresse sticht ihn.
+- **`branding`:** `appName` (setzt auch den Dokumenttitel), `faviconUrl`, und die Farben als `colors` (hell und dunkel, im JSON) oder `colorsUrl` (dieselben Tokens in einer eigenen Datei).
+
+Die Datei geht an jeden Browser. **Keine Geheimnisse hineinschreiben.**
+
+## Woher die Werte kommen
+
+In dieser Reihenfolge, feldweise zusammengeführt: ein gesetztes Feld sticht, ein fehlendes fällt durch, ein leeres Objekt ändert nichts.
+
+1. `config.json` der Instanz
+2. einkompilierte `VITE_*`-Werte, sofern vorhanden
+3. die Standardwerte in `runtime-config.ts`
+
+Fehlt die Datei oder ist sie kaputt, startet die App mit Stufe 2 und 3 und nennt den Fehler in der Konsole. Ein Konfigurationsfehler führt nie zu einer weißen Seite. Die geladene Konfiguration ist für die Laufzeit der Seite unveränderlich.
+
+## Geprüft, bevor es gilt
+
+Werte werden validiert, nicht durchgereicht. Ein Endpunkt muss eine URL mit passendem Schema sein, ein Connector-Name eine bekannte Id, ein Farbtoken ein Name, den das Toolkit definiert; Werte sind CSS-Farbangaben inklusive `oklch()`, `rgb()`, `hsl()`, und alles, was eine Deklaration verlassen oder etwas nachladen könnte (`;`, `{}`, `@`, `url()`), wird verworfen. Verworfenes wird in der Konsole gemeldet. Der Grund: Ein Tippfehler im Connector-Namen würde sonst in der letzten Verzweigung der App landen und der Instanz Demo-Daten statt ihres Netzwerks zeigen.
+
+## Farben getrennt
+
+`colorsUrl` wird **getrennt** geladen: Ist `theme.json` kaputt, fehlen nur die Farben; Name, Relay und Connector stehen weiter. Ist `colorsUrl` gesetzt und lesbar, sticht sie ein gleichzeitig vorhandenes `colors`. Die Tokens landen als CSS-Custom-Properties auf dem Wurzelelement, je Schema.
+
+## Was nicht dazugehört
+
+Ein Instanz-Logo in der App-Shell (in v0.1 kein Feld, weil es keine Fläche dafür gibt; die Landingpage liefert ihres als eigene Datei aus), freies CSS (möglich, aber außerhalb der Kompatibilitätszusage), eigener Code in der App. Module lesen kein Branding: Ein Modul sieht in jeder Instanz gleich aus, abgesehen von den Tokens, die ohnehin global wirken.

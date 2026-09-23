@@ -1,0 +1,89 @@
+---
+title: Eine eigene Instanz betreiben
+description: Von der lokalen Vorschau zum Betrieb unter eigener Domain — ein fertiges Image, eure Konfiguration und Assets, kein Build.
+sidebar:
+  order: 6
+sources:
+  - deploy/app/README.md
+  - deploy/app/.env.example
+  - deploy/app/docker-compose.yml
+  - deploy/app/docker-compose.preview.yml
+  - deploy/app/entrypoint.sh
+  - docs/spec/11-runtime-config-und-branding.md
+---
+
+Eine Instanz ist die Referenz-App unter eurem Namen und eurer Domain: Landingpage auf `/`, App auf `/app`, alles aus **einem** fertigen Container-Image. Was sich je Instanz unterscheidet (Name, Farben, Dienste), kommt zur Laufzeit aus Konfiguration und Assets; gebaut wird nichts, und das Monorepo braucht ihr nicht.
+
+## Das braucht ihr
+
+Docker mit dem Compose-Plugin, einen Server mit Domain für den Betrieb, oder nur einen Rechner für die Vorschau. Die Deployment-Dateien liegen im Repo unter `deploy/app/`; holt euch den Ordner aus dem Release, das ihr betreiben wollt (die Release-Tags heißen `app-vX.Y.Z`):
+
+```bash
+mkdir rls-instanz && cd rls-instanz
+curl -fL https://github.com/real-life-org/real-life-stack/archive/refs/tags/app-v0.3.3.tar.gz | tar -xz --strip-components=3 real-life-stack-app-v0.3.3/deploy/app
+cp .env.example .env
+```
+
+## 1. Vorschau, ohne Domain
+
+```bash
+docker compose -p rls-vorschau -f docker-compose.preview.yml up -d
+```
+
+`-p rls-vorschau` gibt der Vorschau einen eigenen Compose-Projektnamen. Ohne ihn hieße das Projekt wie das produktive (beide Dateien heißen den Dienst `app`), und ein Vorschau-Start im selben Verzeichnis würde den laufenden Container ersetzen.
+
+http://localhost:8080/ zeigt die Landingpage, http://localhost:8080/app/ die App, http://localhost:8080/app/config.json die Konfiguration, die jeder Browser bekommt. Die Vorschau nimmt das Image `edge` (Stand des Hauptzweigs) und den Namen „Vorschau“, bis ihr `.env` füllt; `RLS_PORT` ändert den Port. Sie richtet kein TLS ein und gehört in ein vertrauenswürdiges Netz.
+
+## 2. Was euch gehört
+
+```
+deploy/app/
+├── .env          Domain, Name, Connector, Dienste, Image-Tag
+├── landing/      eure Landingpage — freies HTML auf /
+└── branding/     theme.json · favicon.svg · optional config.json
+```
+
+`landing/` und `branding/` sind read-only in den Container gemountet. Was davon direkt ausgeliefert wird (die Landingpage, `theme.json`, `favicon.svg`), wirkt beim nächsten Laden der Seite. Zwei Dinge liest der Container nur beim Start: `.env`, aus dem er die `config.json` erzeugt, und eine eigene `branding/config.json`, die er dorthin kopiert. Die beiden brauchen verschiedene Befehle: Nach einer Änderung an **`.env`** `docker compose up -d`, denn Compose erkennt die geänderten Umgebungsvariablen und erstellt den Container neu (ein `restart` übernähme sie nicht). Nach einer Änderung an **`branding/config.json`** oder einer **neu hinzugefügten** `theme.json` `docker compose restart app`, denn hier ändert sich für Compose nichts, ein `up -d` ließe den Container laufen; erst der Neustart führt den Startvorgang erneut aus. Änderungen an einer vorhandenen `theme.json` wirken sofort.
+
+`branding/theme.json` setzt Farbtokens, getrennt nach hell und dunkel; die Namen müssen Tokens des Toolkits sein, ein unbekannter Name wird verworfen und in der Browser-Konsole gemeldet. Was genau die App liest und in welcher Reihenfolge, steht unter [Runtime-Konfiguration](/handbuch/runtime-config/).
+
+## 3. Unter eurer Domain
+
+`docker-compose.yml` erwartet einen laufenden **Traefik** mit dem externen Docker-Netz `web`, dem EntryPoint `websecure` und dem Zertifikatsresolver `letsencrypt`; sie installiert ihn nicht. Setzt in `.env` die Pflichtfelder, ohne die Compose den Start verweigert:
+
+```dotenv
+RLS_DOMAIN=netzwerk.example.org
+RLS_APP_NAME=Unser Netzwerk
+RLS_IMAGE_TAG=0.3
+RLS_DEFAULT_CONNECTOR=wot
+```
+
+Dann DNS auf den Server, `docker compose up -d`, und HTTPS, Landingpage und App prüfen. Heißt euer Traefik-Netz anders, setzt `TRAEFIK_NETWORK`.
+
+## 4. Den Connector wählen
+
+Die App-Instanz liefert nur statische Dateien aus; die Daten liegen dort, wohin der Connector zeigt.
+
+| `RLS_DEFAULT_CONNECTOR` | Daten | Dazu nötig |
+|---|---|---|
+| `wot` (Voreinstellung) | Ende-zu-Ende verschlüsselt im Web of Trust | ein Relay; solange es ein gemeinsames gibt, ist `wss://relay.web-of-trust.de` vorbelegt, ein eigenes trägt `RLS_RELAY_URL` ein |
+| `supabase` | zentral in einem Supabase-Backend | `RLS_SUPABASE_URL` und `RLS_SUPABASE_ANON_KEY`; ein eigener Stack nach `deploy/supabase/` |
+| `local` | nur in diesem Browser | nichts; zum Ausprobieren, kein Mehrbenutzerbetrieb |
+| `mock` | im Speicher, mit Beispieldaten | nichts; nur für Demos |
+
+Ein unbekannter Wert wird verworfen, die App fällt auf `wot` zurück. Ein Nutzer kann den Connector per `?connector=` in der Adresse überstimmen.
+
+## 5. Aktualisieren
+
+`RLS_IMAGE_TAG` ist Pflicht, ein `latest` gibt es bewusst nicht: `0.3.3` ist genau diese Fassung, `0.3` folgt Korrekturen innerhalb der Minor-Version, `edge` ist der Hauptzweig zum Ausprobieren. Ein Major-Tag kommt erst mit 1.0. Zum Aktualisieren den neuen Tag in einer Vorschau mit eigenem Projektnamen und eigenem Port prüfen (`RLS_PORT=8081 RLS_IMAGE_TAG=0.4 docker compose -p rls-vorschau -f docker-compose.preview.yml up -d`), dann in `.env` eintragen, `docker compose pull && docker compose up -d`. Das alte Image lässt sich wieder starten; ob ältere Software mit inzwischen veränderten Daten läuft, ist damit nicht gesagt. Ein Image-Rollback ist kein Daten-Restore. Wo die Versionen herkommen: [Versionen und Releases](/handbuch/release/).
+
+## Grenzen
+
+Die Landingpage darf beliebig sein, sie ist eine eigene Seite. Das App-Layout ist es nicht: Dort gibt es Tokens, Name und Favicon, aber keinen eigenen Code. Alles darüber hinaus hieße, den Stack zu forken, und das nächste Update bräche die Instanz. Was ihr an Fläche braucht, das das Toolkit nicht hat, ist ein Beitrag zum Stack ([Zusammen am Stack arbeiten](/handbuch/beitragen/)).
+
+## Wenn etwas nicht funktioniert
+
+- **Container startet nicht:** `docker compose logs app`. Fehlt ein Pflichtfeld, sagt Compose, welches.
+- **Konfiguration ändert sich nicht:** Nach `.env`-Änderungen `docker compose up -d` (erstellt den Container mit den neuen Variablen), nach Änderungen an `branding/config.json` `docker compose restart app` (führt den Start erneut aus). Eine eigene `config.json` sticht alle Umgebungsvariablen.
+- **Farben wirken nicht:** Browser-Konsole lesen; ein unbekannter Token-Name wird dort genannt.
+- **App läuft, aber niemand sieht die anderen:** Connector, Relay-Adresse und Mitgliedschaft im Space prüfen.
