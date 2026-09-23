@@ -72,8 +72,7 @@ export default defineConfig({
       ],
       editLink: { baseUrl: 'https://github.com/real-life-org/real-life-stack/edit/master/docs/handbook/' },
       sidebar: [
-        // Zugeklappt, ausser auf Handbuchseiten (Starlight oeffnet die Gruppe der aktuellen Seite): die Landing bietet drei Tueren, kein Inhaltsverzeichnis.
-        { label: 'Handbuch', translations: { en: 'Handbook' }, collapsed: true, items: handbookItems() },
+        { label: 'Handbuch', translations: { en: 'Handbook' }, items: handbookItems() },
         { label: 'Storybook', link: 'https://real-life-stack.de/storybook/', attrs: { target: '_self' } },
         { label: 'App', link: 'https://real-life-stack.de/app/', attrs: { target: '_self' } },
       ],
