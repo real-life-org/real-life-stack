@@ -362,6 +362,43 @@
   backdrop-filter: blur(var(--surface-blur));
 }
 
+/* Steuerelemente der Karte (Zoom, Attribution): Abstand wie Plusknopf und Filterleiste, und sie weichen den
+   AdaptivePanels aus. Das gehoert zum Toolkit, nicht zur App — sonst hat es eine App und die naechste nicht.
+   MapLibres eigenes Stylesheet importiert die App weiterhin selbst (maplibre-gl/dist/maplibre-gl.css). */
+/* Equalize the map's overlay controls with the create-FAB (bottom-right) and
+   the FilterBar (top): 16px from every edge. MapLibre's stock controls sit 10px
+   from their corner, which read as "tighter" than the FAB — nudge the zoom box
+   (top-left) and the attribution "ⓘ" (bottom-left) out to match. The extra
+   `.maplibregl-map` class gives this rule higher specificity than
+   maplibre-gl.css, so it wins regardless of stylesheet import order. */
+.maplibregl-map .maplibregl-ctrl-top-left .maplibregl-ctrl {
+  margin: 16px 0 0 16px;
+}
+.maplibregl-map .maplibregl-ctrl-top-right .maplibregl-ctrl {
+  margin: 16px 16px 0 0;
+}
+.maplibregl-map .maplibregl-ctrl-bottom-left .maplibregl-ctrl {
+  margin: 0 0 16px 16px;
+}
+.maplibregl-map .maplibregl-ctrl-bottom-right .maplibregl-ctrl {
+  margin: 0 16px 16px 0;
+}
+/* Die Steuerelemente weichen den AdaptivePanels aus. Ein linkes Panel
+   (Feineinstellung) legte sich sonst ueber Zoom und Attribution, waehrend die
+   Werkzeugleiste darueber laengst ausgewichen war — die Suchleiste stand dann
+   scheinbar "zu weit rechts", weil sie Platz fuer Zoom-Knoepfe liess, die
+   niemand sah. Die Kanten kommen aus dem Panel-Stapel (adaptive-panel.tsx). */
+.maplibregl-map .maplibregl-ctrl-top-left,
+.maplibregl-map .maplibregl-ctrl-bottom-left {
+  left: var(--adaptive-panel-edge-left, 0px);
+  transition: left 200ms ease-out;
+}
+.maplibregl-map .maplibregl-ctrl-top-right,
+.maplibregl-map .maplibregl-ctrl-bottom-right {
+  right: var(--adaptive-panel-edge-right, 0px);
+  transition: right 200ms ease-out;
+}
+
 /* Drop shadow under map markers (the rendered pin SVG is an <img>; a CSS
    filter follows its alpha and is reliable across browsers). */
 .rls-marker-shadow {

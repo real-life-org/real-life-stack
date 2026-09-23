@@ -3,7 +3,6 @@ import type { Item } from "@real-life-stack/data-interface"
 
 import { HostWorld } from "../story-support/host-world"
 import { STORY_SEED } from "../story-support/story-world"
-import "maplibre-gl/dist/maplibre-gl.css"
 
 /**
  * **The map** shows the items of a space that have a position, clustered,
