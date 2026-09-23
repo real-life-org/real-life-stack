@@ -1,0 +1,77 @@
+---
+title: Work with an agent
+description: Entry points, task shape, rules and the checks — for coding agents that build an app or contribute to the stack.
+translationOf: docs/handbook/de/handbuch/agenten.mdx
+sourceHash: d03221c36dc5bffa2e86c5ce5435911972900899f10f8543ca84288dadfce5d1
+sidebar:
+  order: 2
+sources:
+  - llms.txt
+  - docs/templates/AGENTS.md
+  - AGENTS.md
+  - docs/agent-workspace.md
+  - scripts/agents/generate.mjs
+  - .github/workflows/tests.yml
+---
+
+A coding agent needs the same as a person, just in one file: what Real Life Stack is, what stays with the app, where the truth lives and which check has to run at the end. This page says which file that is depending on what you are up to, what a task looks like that lands, and what a result is measured against.
+
+## Three entry points
+
+| What you are up to | File for the agent | What is in it |
+|---|---|---|
+| An app on the published packages | [App template `AGENTS.md`](https://github.com/real-life-org/real-life-stack/blob/master/docs/templates/AGENTS.md) — copy it into the root of the new repository | packages, the whole first app as code, data model, capabilities, UI rules, handoff |
+| Contributing to the stack | the repository's [`AGENTS.md`](https://github.com/real-life-org/real-life-stack/blob/master/AGENTS.md), then [`docs/agent-workspace.md`](https://github.com/real-life-org/real-life-stack/blob/master/docs/agent-workspace.md) | the spec as source of truth, package boundaries, checks, handoff; the module host, the hook convention |
+| Orientation, whatever for | [`/llms.txt`](/llms.txt) | table of contents: packages, every spec document, all 58 public hooks with their question and behaviour without capability, the handbook as Markdown |
+
+The three files do not drift apart: `llms.txt` and the template's code block are generated from the repository — from the packages' `package.json`, the spec index, the hook reference and `examples/first-app`. A guard in CI fails when they no longer match (`pnpm check:agents`).
+
+## The default answer: the frame
+
+An agent starting an app should not start with components but with the frame. An app provides **connector, router, register, map engine and `RoutedAppFrame`** — nothing else (spec 01, "what stays with the app"). Header, tabs, panel, create, detail and the seven modules come from the toolkit; a module runs without a line in the app. [Build a first app](/en/handbuch/erste-app/) shows what that looks like, about 40 lines. Exactly this code is in the app template.
+
+What an agent therefore should **not** do: assemble a shell of its own from `Navbar`, `AppShell` and module views, build a detail panel of its own, load items inside the module. Each of these is a second version of something that exists once in the toolkit (spec 01, rule 5), and it falls behind with the next toolkit release.
+
+## A usable first task
+
+> Build a small community app on Real Life Stack following `AGENTS.md`. Start with the `MockConnector` and one space with calendar, map and list. Use `RoutedAppFrame`; write no module of your own, no detail of your own. Create an item with a date and a place and show that it appears in the calendar and on the map. Run typecheck and build. Say explicitly what you were missing: an export, a capability, an unclear spot in the spec.
+
+The last sentence is the most important one. What an agent is missing is a finding about the stack, not about the agent, and the way the stack gets better for the next app.
+
+## What belongs in every task
+
+- **Goal:** an observable result. Not "improve the calendar" but "a click on an empty day opens create with the date prefilled".
+- **Scope:** which app, which package, which files. What explicitly is not part of it.
+- **Contract:** the spec section and the terms that apply. When code and spec disagree, the spec wins; whoever wants to change it does so visibly, with the reason in the PR.
+- **Check:** which commands must be green (below).
+- **Handoff:** what changed, why, which files, which checks ran, what is open and what a person has to decide.
+
+## Rules agents break most often
+
+1. **Compose, do not invent.** Check existing components and hooks first; if something is missing, that is an issue in the toolkit, not a rebuild in the app.
+2. **No backend in the surface.** Surfaces ask hooks, hooks read the `DataInterface`, the connector decides. No `fetch`, no reaching into connector internals.
+3. **No copying of internal files** to get at a missing export. Name the missing export.
+4. **Check capabilities instead of assuming them.** Not every connector can write, keep groups or sign in. Inside the frame this is done: reading hooks answer empty, writing hooks fail on the call, surfaces hide what the connector cannot do.
+5. **Cards from `ItemPreview`, dialogs from the toolkit family.** One component per meaning; variants via props and capabilities.
+6. **No secrets** in code, docs, tests or prompts.
+
+## The checks
+
+The repository checks itself, in CI and on every machine. An agent working on the stack runs what concerns its area before handing off; an agent building an app runs at least typecheck and build of its app.
+
+| Check | Command | What it catches |
+|---|---|---|
+| Tests, in two time zones | `pnpm test` | behaviour; date and calendar bugs that only show in one zone |
+| Typecheck of all packages and apps | `pnpm -r typecheck` | dead imports, wrong contracts |
+| Normative words | `python3 scripts/check-normative-words.py` | spec text that deviates from the family's convention |
+| Shared stays shared | `python3 scripts/check-shared-derivations.py` | derivations a module makes itself although they belong to the surface (spec 01, rule 2a) |
+| Hook reference | `pnpm check:hooks && pnpm test:hooks` | an exported hook without documentation block, a story id or spec file that does not exist |
+| Agent entry points | `pnpm check:agents && pnpm test:agents` | `llms.txt` or app template that no longer match the repository |
+| Site and handbook | `pnpm build:site && pnpm check:site && pnpm test:site` | sources a page names that are missing; stories that do not exist; dead links; stale translations |
+| First app | `pnpm exec turbo run build --filter=first-app` | the handbook example no longer builds against the packages |
+
+A guard that checks nothing drifts silently; that is why each of these points is a step in `.github/workflows/tests.yml`, and some test themselves with negative cases.
+
+## Collaboration stays visible
+
+A PR contains the problem, the behaviour after the change and the checks that actually ran. Review and merge decision stay with people; a second agent may review, but does not replace them. A particular agent, a runner or special access is no prerequisite for a contribution: `AGENTS.md`, clear tasks and running checks suffice.

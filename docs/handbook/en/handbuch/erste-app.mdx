@@ -1,0 +1,85 @@
+---
+title: Build a first app
+description: Your own app on the frame in ten minutes — connector, router, frame, done.
+translationOf: docs/handbook/de/handbuch/erste-app.mdx
+sourceHash: 4c91f9a1ad46b145fa29faee74aabe679189d4939a32889caa053a0b2572190d
+sidebar:
+  order: 1
+sources:
+  - examples/first-app/src/main.tsx
+  - examples/first-app/src/App.tsx
+  - examples/first-app/src/index.css
+  - examples/first-app/package.json
+  - docs/spec/01-app-composition.md
+stories:
+  - rls-app-00-community-garden--garden
+---
+
+import Source from '@site/components/Source.astro'
+import Story from '@site/components/Story.astro'
+
+An app on Real Life Stack provides three things: a **connector** to its data, a **router** for the address and the **frame** from the toolkit. Header, tabs, panel, create, detail view and the seven modules (feed, list, kanban, calendar, map, graph, resonance) come ready-made. All the code below lives as a living example under `examples/first-app/` in the repository and is built and tested in every CI run.
+
+This is what the result looks like, with the same building blocks, in Storybook:
+
+<Story id="rls-app-00-community-garden--garden" title="A community garden on the frame: space, modules, one item in the calendar and on the map" height={620} />
+
+## 1. Packages
+
+Three packages from Real Life Stack and four from outside. `react-router-dom` carries the address, `maplibre-gl` draws the map.
+
+<Source file="examples/first-app/package.json" lang="json" title="package.json" />
+
+The three packages come from npm with exactly pinned versions, in the repository as well. The frame and the seven modules are included from `@real-life-stack/toolkit` 0.2.0 on.
+
+## 2. The data and the address: `main.tsx`
+
+<Source file="examples/first-app/src/main.tsx" title="src/main.tsx" />
+
+Line by line:
+
+- **`MockConnector`** keeps the data in memory: one person (`users`), one space (`groups`) with its modules in tab order (`data.modules`), the membership (`groupMembers`) and one item (`items`) assigned to the space (`groupItems`). The item has a date (`start`) and a place (`position`); that is why it appears in the calendar **and** on the map, as the same object.
+- **`await connector.init()`** waits until the connector is ready. **`setCurrentGroup`** picks the space the app shows first.
+- **`createBrowserRouter`** with a single route `*`: the frame reads the address `/{space}/{module}/{item}` itself. The app owns only the router; that is the part that stays with it (spec 01, "what stays with the app").
+- The two CSS imports: your stylesheet and the map's.
+
+## 3. The frame: `App.tsx`
+
+<Source file="examples/first-app/src/App.tsx" title="src/App.tsx" />
+
+- **`ConnectorProvider`** makes the connector reachable for every surface below. Surfaces ask hooks, never the connector directly.
+- **`MapLibreAdapterProvider`** is the map engine, the one line an app writes for the map. Without it the map module shows the note "no map engine".
+- **`RoutedAppFrame`** is the frame: providers, the shared panel, the header with space management, the tabs from the space's register, the focus in the address and the guard against losing unsaved input. `fallbackModule` says which module shows an item when none of its fields picks another: here the list.
+
+No register, no module, no detail is wired here. The register contains the toolkit's modules without further ado; a module of your own comes later as an addition (page "Your own module", to follow).
+
+## 4. Styles
+
+<Source file="examples/first-app/src/index.css" lang="css" title="src/index.css" />
+
+Tailwind, the toolkit's tokens (`globals.css`) and the instruction to collect the classes in the built toolkit (`@source`). Without the third line the frame has neither spacing nor colours.
+
+## 5. Start
+
+In the root of the repository:
+
+```bash
+pnpm install
+pnpm dev:first-app
+```
+
+Outside the repository it is `pnpm install && pnpm dev` in your own directory; in both cases the packages come from npm.
+
+In the browser: the space "Gemeinschaftsgarten" with three tabs. The calendar shows the harvest festival on 26 September, the map shows it in Berlin, the list shows it as a card. Clicking the item opens the detail view in the panel, the address becomes `/garten/calendar/erntefest`. The plus button bottom right creates a new item, with all types; in the calendar it suggests "Termin" (event). The header lets you create another space.
+
+## What the app does not do
+
+- It stores nothing: the `MockConnector` lives in memory. Another connector (local, Supabase, Web of Trust) swaps the data source without changing a line in `App.tsx` (page "Switch connectors", to follow).
+- It has no module of its own. Adding one takes three steps: a view, a register entry, a hint (page "Your own module", to follow).
+- It signs nobody in. Sign-in, permissions and encryption come with the connector that can do them; the frame then shows what the connector allows.
+
+## Where to go next
+
+- The spec on the frame: [01 App composition, "what stays with the app"](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/01-app-composition.md) (German).
+- In Storybook: [RLS → App](https://real-life-stack.de/storybook/?path=/docs/rls-app-01-the-app-in-40-lines--docs) shows register, host, loading contract, focus and create one by one.
+- Every hook a surface can ask: [All hooks](https://real-life-stack.de/storybook/?path=/docs/rls-foundations-all-hooks--docs) and the [reference](/reference/hooks/).
