@@ -12,16 +12,16 @@ const de = lang === 'de'
 type Tone = 'green' | 'blue' | 'orange' | 'purple' | 'red' | 'teal'
 const ways: { title: string; text: string; href: string; soon: boolean; icon: IconName; tone: Tone }[] = de
   ? [
-      { title: 'Erste App bauen', text: 'In zehn Minuten eine eigene App auf dem Rahmen: Connector, Router, Rahmen, fertig.', href: `${prefix}/handbuch/erste-app/`, soon: false, icon: 'rocket', tone: 'orange' },
-      { title: 'Mit einem Agenten arbeiten', text: 'Einstiege, Auftragsform, Regeln und Prüfungen für Coding-Agents.', href: `${prefix}/handbuch/agenten/`, soon: false, icon: 'bot', tone: 'purple' },
-      { title: 'Am Stack mitbauen', text: 'Entwicklungsumgebung, Spec, Wächter, Review. So wird ein Beitrag zum PR.', href: `${prefix}/handbuch/entwickeln/`, soon: false, icon: 'wrench', tone: 'blue' },
       { title: 'Eine Instanz betreiben', text: 'Die fertige App unter eigenem Namen und eigener Domain: Image, Konfiguration, Branding, Updates.', href: `${prefix}/handbuch/instanz/`, soon: false, icon: 'server', tone: 'green' },
+      { title: 'Eine eigene App bauen', text: 'In zehn Minuten eine eigene App auf dem Rahmen: Connector, Router, Rahmen, fertig.', href: `${prefix}/handbuch/erste-app/`, soon: false, icon: 'rocket', tone: 'orange' },
+      { title: 'Den Stack erweitern', text: 'Entwicklungsumgebung, Spec, Wächter, Review. So wird ein Beitrag zum PR.', href: `${prefix}/handbuch/entwickeln/`, soon: false, icon: 'wrench', tone: 'blue' },
+      { title: 'Mit Agenten arbeiten', text: 'Einstiege, Auftragsform, Regeln und Prüfungen für Coding-Agents.', href: `${prefix}/handbuch/agenten/`, soon: false, icon: 'bot', tone: 'purple' },
     ]
   : [
-      { title: 'Build a first app', text: 'Your own app on the frame in ten minutes: connector, router, frame, done.', href: `${prefix}/handbuch/erste-app/`, soon: false, icon: 'rocket', tone: 'orange' },
-      { title: 'Work with an agent', text: 'Entry points, task shape, rules and checks for coding agents.', href: `${prefix}/handbuch/agenten/`, soon: false, icon: 'bot', tone: 'purple' },
-      { title: 'Contribute to the stack', text: 'Dev environment, spec, guards, review. How a contribution becomes a PR.', href: `${prefix}/handbuch/entwickeln/`, soon: false, icon: 'wrench', tone: 'blue' },
       { title: 'Run an instance', text: 'The finished app under your own name and domain: image, configuration, branding, updates.', href: `${prefix}/handbuch/instanz/`, soon: false, icon: 'server', tone: 'green' },
+      { title: 'Build your own app', text: 'Your own app on the frame in ten minutes: connector, router, frame, done.', href: `${prefix}/handbuch/erste-app/`, soon: false, icon: 'rocket', tone: 'orange' },
+      { title: 'Extend the stack', text: 'Dev environment, spec, guards, review. How a contribution becomes a PR.', href: `${prefix}/handbuch/entwickeln/`, soon: false, icon: 'wrench', tone: 'blue' },
+      { title: 'Work with agents', text: 'Entry points, task shape, rules and checks for coding agents.', href: `${prefix}/handbuch/agenten/`, soon: false, icon: 'bot', tone: 'purple' },
     ]
 // Die Modulkarten zeigen auf ihre Storybook-Seite; Kanban statt Marktplatz, weil der Marktplatz ein Modul der Netzwerk-App ist, kein Toolkit-Modul.
 const m = (key: 'kanban' | 'kanbanDesc' | 'more') => t.modules[key] ?? translations.en.modules[key] ?? ''
@@ -32,7 +32,7 @@ const modules: { name: string; desc: string; icon: IconName; tone: Tone; story: 
   { name: t.modules.feed, desc: t.modules.feedDesc, icon: 'message-square', tone: 'orange', story: 'rls-modules-feed--docs' },
 ]
 const waysTitle = de ? 'Loslegen' : 'Get started'
-const waysIntro = de ? 'Eine App bauen, einen Agenten losschicken, am Stack mitbauen oder eine Instanz betreiben.' : 'Build an app, send off an agent, contribute to the stack or run an instance.'
+const waysIntro = de ? 'Eine Instanz betreiben, eine eigene App bauen, den Stack erweitern oder mit Agenten arbeiten.' : 'Run an instance, build your own app, extend the stack or work with agents.'
 const soon = de ? 'folgt' : 'soon'
 ---
 <div class="rl-landing not-content">

@@ -2,7 +2,7 @@
 title: Wie dieses Handbuch aktuell bleibt
 description: Eine Quelle je Aussage, Wächter für das Prüfbare, ein Mensch für den Rest.
 sidebar:
-  order: 5
+  order: 7
 sources:
   - scripts/site/check.mjs
   - scripts/site/prepare.mjs
@@ -30,7 +30,7 @@ Dokumentation veraltet nicht, weil jemand nachlässig ist, sondern weil dieselbe
 
 Jede Seite nennt im Frontmatter die Dateien, aus denen sie ihre Aussagen zieht (`sources`) und die Stories, die sie einbettet (`stories`). `pnpm check:site` fällt, wenn eine Quelldatei fehlt, eine Story-Id nicht im gebauten Storybook-Index steht, eine eingebettete Story nicht deklariert ist, ein Link zwischen Seiten ins Leere führt oder eine Übersetzung veraltet ist. Nach dem Build prüft es dazu jeden lokalen Link der fertigen Site. `pnpm test:site` prüft, dass der Wächter absichtlich beschädigte Seiten erkennt.
 
-`pnpm check:hooks` und `pnpm check:agents` prüfen dasselbe für die erzeugten Teile: Ein exportierter Hook ohne vollständigen Block, eine Story-Id, die es nicht gibt, ein Paket ohne Beschreibung, oder eine erzeugte Datei, die nicht mehr zum Repo passt, macht CI rot. Alle laufen in `.github/workflows/tests.yml`; die Übersicht steht unter [Mit einem Agenten arbeiten → Die Prüfungen](/handbuch/agenten/#die-prüfungen).
+`pnpm check:hooks` und `pnpm check:agents` prüfen dasselbe für die erzeugten Teile: Ein exportierter Hook ohne vollständigen Block, eine Story-Id, die es nicht gibt, ein Paket ohne Beschreibung, oder eine erzeugte Datei, die nicht mehr zum Repo passt, macht CI rot. Alle laufen in `.github/workflows/tests.yml`; die Übersicht steht unter [Mit Agenten arbeiten → Die Prüfungen](/handbuch/agenten/#die-prüfungen).
 
 ## Was automatisch mitwandert, und was nicht
 
