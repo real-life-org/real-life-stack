@@ -47,7 +47,7 @@ export function useNotifications() {
  *
  * @answers —
  * @without no-op
- * @group environment
+ * @group read
  * @see spec docs/spec/11-runtime-config-und-branding.md
  */
 export function useMarkNotificationsSeen(notifications: ReturnType<typeof useNotifications>) {

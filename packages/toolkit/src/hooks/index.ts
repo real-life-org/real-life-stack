@@ -49,13 +49,11 @@ export {
   type ItemEditorPayload,
 } from "./use-item-editor"
 export {
-  useFilterableItems,
-  useModuleFilteredItems,
   applyFilterBarValue,
   applyItemSearch,
 } from "./use-filterable-items"
 export { useResolvedUsers } from "./use-resolved-users"
-export { useSpaceVocabulary, spaceVocabulary, type SpaceVocabulary } from "./use-space-vocabulary"
+export { useGroupVocabulary, groupVocabulary, type GroupVocabulary } from "./use-group-vocabulary"
 export {
   useItemFocus,
   useOptionalItemFocus,
@@ -64,6 +62,5 @@ export {
   type ItemFocus,
   type MemoryFocusProviderProps,
 } from "./use-item-focus"
-export { useBeforeUnloadWarning, DiscardChangesDialog, type DiscardChangesDialogProps } from "./use-unsaved-warning"
-export { useItemComposerProps } from "./use-item-composer-props"
-export { useItemDetailEdit, type ItemDetailEditConfig } from "./use-item-detail-edit"
+export { DiscardChangesDialog, type DiscardChangesDialogProps } from "./use-unsaved-warning"
+export { type ItemDetailEditConfig } from "./use-item-detail-edit"

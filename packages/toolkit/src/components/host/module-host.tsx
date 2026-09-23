@@ -20,7 +20,7 @@ import { useItemDetailEdit } from "../../hooks/use-item-detail-edit"
 import { useItemGroupColorResolver } from "../../hooks/use-item-group-color"
 import { useSurfaceFilteredItems } from "../../hooks/use-filterable-items"
 import { useItemsUnionWithDraft } from "../../hooks/use-items"
-import { useSpaceVocabulary } from "../../hooks/use-space-vocabulary"
+import { useGroupVocabulary } from "../../hooks/use-group-vocabulary"
 import type { ModuleEntry } from "../../lib/module-register"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { contentTypesFromRegister, mapComposerSubmission, withGroupOptions } from "../composer/content-types"
@@ -262,7 +262,7 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
   // kommen aus dem Vokabular des Space (Spec 01, Regel 2a) — vorher hatte
   // nur das Kanban sie.
   const editConfig = useItemDetailEdit(members)
-  const vokabular = useSpaceVocabulary()
+  const vokabular = useGroupVocabulary()
   const composerProps = useMemo(
     () => ({
       ...editConfig.composerProps,

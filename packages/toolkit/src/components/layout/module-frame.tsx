@@ -14,7 +14,7 @@ import { FilterPill } from "../filter/filter-pill"
 import { useOptionalSharedFilter } from "../filter/filter-store"
 import { ModuleFilterChips } from "../filter/module-filter-chips"
 import { ModuleSearchBar } from "../filter/module-search-bar"
-import { useSpaceVocabulary } from "../../hooks/use-space-vocabulary"
+import { useGroupVocabulary } from "../../hooks/use-group-vocabulary"
 import { getModule, type ModuleFill, type ModulePanelFit } from "../../lib/module-register"
 import { cn } from "../../lib/utils"
 import { PanelSafeArea } from "./panel-safe-area"
@@ -283,7 +283,7 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
   // Tags und Typen des Space: eine Ableitung fuer alle Module (Spec 01,
   // Regel 2a). Vorher leitete sie jedes Modul selbst ab, siebenmal fuer Tags
   // und viermal fuer Typen, mit auseinanderlaufenden Ergebnissen.
-  const vokabular = useSpaceVocabulary(fallbackItems)
+  const vokabular = useGroupVocabulary(fallbackItems)
   const hatKopf = hatSuche || leisten > 0
   const raeumtObenLinks = obenLinks > 0
 

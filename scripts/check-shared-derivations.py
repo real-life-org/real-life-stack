@@ -32,7 +32,7 @@ from pathlib import Path
 # Wo das Geteilte hergestellt werden DARF: die Flaeche selbst und die eine
 # Ableitung, die sie benutzt.
 ERLAUBT = {
-    "packages/toolkit/src/hooks/use-space-vocabulary.ts",
+    "packages/toolkit/src/hooks/use-group-vocabulary.ts",
     "packages/toolkit/src/components/layout/module-frame.tsx",
     "packages/toolkit/src/components/filter/filter-pill.tsx",
     "packages/toolkit/src/components/filter/filter-bar.tsx",
@@ -46,7 +46,7 @@ ERLAUBT = {
 
 REGELN = [
     (re.compile(r"\bconst\s+available(?:Tags|Types)\s*="),
-     "eigene Ableitung des Vokabulars — useSpaceVocabulary() benutzen (Spec 01, Regel 2a)"),
+     "eigene Ableitung des Vokabulars — useGroupVocabulary() benutzen (Spec 01, Regel 2a)"),
     (re.compile(r"<ModuleSearchBar\b"),
      "die Suche rendert die Flaeche, nicht das Modul (Spec 01, Regel 2b)"),
     (re.compile(r"<FilterPill\b"),

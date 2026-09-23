@@ -7,7 +7,7 @@ import { resolveTypePresentation } from "../components/preview/type-presentation
 import type { FilterTypeOption } from "../components/filter/types"
 import { useOptionalConnector } from "./connector-context"
 
-export interface SpaceVocabulary {
+export interface GroupVocabulary {
   /** Alle Tags des Space, alphabetisch. */
   tags: readonly string[]
   /** Alle Typen des Space, mit Beschriftung, Symbol und Farbe aus dem Register. */
@@ -20,7 +20,7 @@ export interface SpaceVocabulary {
  * Systemtypen fallen raus (`isAggregateVisibleItemType`): Nach „Reaktion" oder
  * „Beziehung" filtert niemand, sie sind keine eigenen Einträge.
  */
-export function spaceVocabulary(items: readonly Item[]): SpaceVocabulary {
+export function groupVocabulary(items: readonly Item[]): GroupVocabulary {
   const tags = new Set<string>()
   const typen = new Set<string>()
   for (const item of items) {
@@ -82,7 +82,7 @@ export function spaceVocabulary(items: readonly Item[]): SpaceVocabulary {
  * @see story rls-foundations-hooks--surfaces
  * @see spec docs/spec/01-app-composition.md
  */
-export function useSpaceVocabulary(fallbackItems?: readonly Item[]): SpaceVocabulary {
+export function useGroupVocabulary(fallbackItems?: readonly Item[]): GroupVocabulary {
   const connector = useOptionalConnector()
   // Nicht über `useItems`: Das besteht auf einem Connector, und der Haken hier
   // muss auch ohne einen laufen. Bedingt aufrufen dürfte man ihn nicht.
@@ -101,5 +101,5 @@ export function useSpaceVocabulary(fallbackItems?: readonly Item[]): SpaceVocabu
   // ist die einzige, die sie kennt. Sonst verlöre sie Tag- und Typfilter, die
   // sie vor dem 20.09.2026 selbst ableitete (Codex-Review zu #407, rls#408).
   const quelle = observable ? items : (fallbackItems ?? [])
-  return useMemo(() => spaceVocabulary(quelle), [quelle])
+  return useMemo(() => groupVocabulary(quelle), [quelle])
 }
