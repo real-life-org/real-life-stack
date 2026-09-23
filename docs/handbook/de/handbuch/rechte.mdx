@@ -33,7 +33,7 @@ Im Rahmen ist das erledigt: Lesende Hooks antworten ohne Fähigkeit leer, schrei
 
 Dass ein Connector schreiben kann, heißt nicht, dass ich dieses Item ändern darf. Die **Berechtigung** hängt an mir und am Item: Bin ich Mitglied des Space, bin ich Urheber, was erlaubt die Gruppe? `useItemPermissions(item)` beantwortet das für die Oberfläche als `{canEdit, canDelete}`, ohne Fähigkeit beides `false`.
 
-Wichtig ist die Richtung: Die Oberfläche zeigt passende Aktionen, aber der Schreibpfad setzt die Regel durch. Einen Knopf auszublenden ist keine Autorisierung; im Web of Trust prüft die Signatur, bei Supabase die Zeilenregel auf dem Server. Wer die Regel nur in der Oberfläche hat, hat keine.
+Wichtig ist die Richtung: Die Oberfläche zeigt passende Aktionen, aber der Schreibpfad setzt die Regel durch. Einen Knopf auszublenden ist keine Autorisierung. Wo ein Server steht, ist er die Grenze: Bei Supabase weist die Zeilenregel fremde Änderungen ab. Im Web of Trust gibt es diese Grenze für gewöhnliche Items heute nicht: Jedes Mitglied hält den Schlüssel des Space und kann das Dokument direkt schreiben; die Autorenprüfung beim Schreiben ist eine Konvention, die ehrliche Clients ehrlich hält, kein Schutz gegen andere Mitglieder. Signaturen prüfen dort nur, was signiert ist, etwa Relation-Records (Spec 08) und Spiegel-Snapshots (Spec 09). Wer die Regel nur in der Oberfläche hat, hat keine.
 
 ## Herkunft: wo das Item zu Hause ist
 

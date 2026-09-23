@@ -2,7 +2,7 @@
 title: Capability, permission, origin
 description: Can the connector write, may I edit this item, where does it come from — three questions that are not one.
 translationOf: docs/handbook/de/handbuch/rechte.mdx
-sourceHash: 471cc59c340a4eb04d6c5068b33c6bac705843be589f5acf644036acf2563d42
+sourceHash: 5a09fcdc8ea92f19373a44808f23c0422a84b4ad8b141551a2c6dc4860009bd6
 group: verstehen
 sidebar:
   order: 7
@@ -35,7 +35,7 @@ Inside the frame this is taken care of: reading hooks answer empty without the c
 
 That a connector can write does not mean I may change this item. The **permission** hangs on me and on the item: am I a member of the space, am I the author, what does the group allow? `useItemPermissions(item)` answers this for the interface as `{canEdit, canDelete}`, both `false` without the capability.
 
-The direction matters: the interface shows matching actions, but the write path enforces the rule. Hiding a button is not authorisation; in the Web of Trust the signature checks, with Supabase the row rule on the server. Whoever has the rule only in the interface has none.
+The direction matters: the interface shows matching actions, but the write path enforces the rule. Hiding a button is not authorisation. Where a server exists, it is the boundary: with Supabase the row rule rejects foreign changes. In the Web of Trust there is no such boundary for ordinary items today: every member holds the space key and can write the document directly; the author check on write is a convention that keeps honest clients honest, not protection against other members. Signatures there verify only what is signed, such as relation records (spec 08) and mirror snapshots (spec 09). Whoever has the rule only in the interface has none.
 
 ## Origin: where the item is at home
 

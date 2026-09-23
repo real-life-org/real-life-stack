@@ -69,7 +69,7 @@ Hooks besitzen keine eigene Kopie der Wahrheit. Wer eine Liste im Zustand einer 
 
 ## Relations
 
-Eine Relation verbindet ein Item über ein Prädikat mit einem Ziel. Kommentare und Reaktionen sind eigene Items mit einer `commentOn`-Relation, nicht Arrays im Beitrag, die immer länger werden; Stellungnahmen im Resonanz-Modul sind signierte Relation-Records (Spec 08). Für jede Beziehungsart gibt es den passenden Hook (`useComments`, `useReactions`, `useVotes`, `useRelationRecords`); einen allgemeinen Rückwärts-Lookup gibt es absichtlich nicht.
+Eine Relation verbindet ein Item über ein Prädikat mit einem Ziel. Kommentare und Reaktionen sind eigene Items mit einer Relation auf den Beitrag, Kommentare mit `commentOn`, Reaktionen mit `reactsTo`, nicht Arrays im Beitrag, die immer länger werden; Stellungnahmen im Resonanz-Modul sind signierte Relation-Records (Spec 08). Für jede Beziehungsart gibt es den passenden Hook (`useComments`, `useReactions`, `useVotes`, `useRelationRecords`), jeder mit eigener Auflösung von Autoren und Zählern. Einen allgemeinen UI-Hook für Rückwärts-Relationen gibt es absichtlich nicht; der Rückwärts-Lookup selbst bleibt im Connector (`observeRelatedItems` mit `direction: "to"`) und ist der Weg für eine Beziehungsart, die noch keinen Hook hat. Der neue Hook gehört dann ins Toolkit, nicht in die App.
 
 <Story id="rls-foundations-hooks--relations" title="Kommentare, Reaktionen, Votes: eigene Items mit Beziehung, je ein Hook" height={480} />
 

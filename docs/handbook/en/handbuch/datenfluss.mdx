@@ -2,7 +2,7 @@
 title: From click to shared change
 description: What an item looks like, what type, vocabulary, tag and module each do, and how a change travels through the layers.
 translationOf: docs/handbook/de/handbuch/datenfluss.mdx
-sourceHash: 40e4b6635d9b9441c890c832d77b918f7e0913e0222cfbe7ea1b58b5aef078e3
+sourceHash: 9953fe1dfb9bc1f77b3d77314806aae60547726f153c1cc6d39281d28bf68939
 group: verstehen
 sidebar:
   order: 6
@@ -71,7 +71,7 @@ Hooks own no copy of the truth. Whoever keeps a list in component state and relo
 
 ## Relations
 
-A relation connects an item through a predicate to a target. Comments and reactions are items of their own with a `commentOn` relation, not arrays inside the post that keep growing; statements in the resonance module are signed relation records (spec 08). For every kind of relationship there is the matching hook (`useComments`, `useReactions`, `useVotes`, `useRelationRecords`); a general reverse lookup deliberately does not exist.
+A relation connects an item through a predicate to a target. Comments and reactions are items of their own with a relation to the post, comments with `commentOn`, reactions with `reactsTo`, not arrays inside the post that keep growing; statements in the resonance module are signed relation records (spec 08). For every kind of relationship there is the matching hook (`useComments`, `useReactions`, `useVotes`, `useRelationRecords`), each with its own resolution of authors and counts. A general UI hook for reverse relations deliberately does not exist; the reverse lookup itself stays in the connector (`observeRelatedItems` with `direction: "to"`) and is the way for a kind of relationship that has no hook yet. The new hook then belongs in the toolkit, not in the app.
 
 <Story id="rls-foundations-hooks--relations" title="Comments, reactions, votes: items of their own with a relation, one hook each" height={480} />
 
