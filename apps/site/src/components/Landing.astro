@@ -91,11 +91,11 @@ const soon = de ? 'folgt' : 'soon'
     </div>
     <div class="rl-cards one">
       {([
-        [t.connectors.wot, t.connectors.wotDesc, 'wot', 'orange'],
-        [t.connectors.supabase, t.connectors.supabaseDesc, 'database', 'green'],
-        [t.connectors.own, t.connectors.ownDesc, 'plug', 'blue'],
-      ] as const).map(([name, desc, icon, tone]) => (
-        <div class="rl-card compact"><Icon name={icon} tone={tone} tile={false} /><div><strong>{name}</strong><span>{desc}</span></div></div>
+        [t.connectors.wot, t.connectors.wotDesc, 'wot', 'orange', 'https://web-of-trust.de/'],
+        [t.connectors.supabase, t.connectors.supabaseDesc, 'database', 'green', 'https://www.npmjs.com/package/@real-life-stack/supabase-connector'],
+        [t.connectors.own, t.connectors.ownDesc, 'plug', 'blue', 'https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/03-capabilities.md'],
+      ] as const).map(([name, desc, icon, tone, href]) => (
+        <a class="rl-card compact" href={href}><Icon name={icon} tone={tone} tile={false} /><div><strong>{name}</strong><span>{desc}</span></div></a>
       ))}
     </div>
   </section>
