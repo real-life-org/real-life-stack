@@ -8,10 +8,11 @@
  * schaltet um, die Wahl gilt für alle Vorschauen der Seite und wird im Browser gemerkt.
  * Hell/Dunkel folgt der Site: Starlights `data-theme` wird als Storybook-Global `theme` mitgegeben.
  */
+import { storybookBase, storyFrameUrl } from '../lib/story-embed'
 interface Props { id: string; title: string; height?: number; frame?: 'desktop' | 'phone' }
 const { id, title, height = 560, frame = 'desktop' } = Astro.props
-const base = import.meta.env.PUBLIC_STORYBOOK_URL || (import.meta.env.DEV ? 'http://localhost:6006' : '/storybook')
-const url = `${base}/iframe.html?id=${encodeURIComponent(id)}&viewMode=story`
+const base = storybookBase()
+const url = storyFrameUrl(id)
 // Nur die englischen Seiten sind uebersetzt; alle anderen Sprachen zeigen die deutsche Seite und bekommen die deutsche Unterschrift.
 const en = Astro.currentLocale === 'en'
 const t = en
@@ -31,45 +32,5 @@ const t = en
 </figure>
 
 <script>
-  // Beide Rahmen teilen den Faktor Spaltenbreite/1040, damit Desktop und Handy im gleichen Massstab stehen.
-  const DESKTOP = 1040, PHONE = 390, PHONE_HEIGHT = 720
-  const KEY = 'rls-story-frame'
-  const figures = Array.from(document.querySelectorAll<HTMLElement>('.story-example'))
-
-  function layout(fig: HTMLElement) {
-    const stage = fig.querySelector<HTMLElement>('.story-stage')!
-    const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
-    const height = Number(fig.dataset.height) || 560
-    const scale = Math.min(1, stage.clientWidth / DESKTOP)
-    const phone = fig.dataset.frame === 'phone'
-    const w = phone ? PHONE : DESKTOP, h = phone ? PHONE_HEIGHT : height
-    iframe.style.width = `${w}px`; iframe.style.height = `${h}px`; iframe.style.transform = `scale(${scale})`
-    stage.style.height = `${Math.round(h * scale)}px`
-    for (const b of fig.querySelectorAll<HTMLButtonElement>('.story-frames button'))
-      b.setAttribute('aria-pressed', String(b.dataset.frame === fig.dataset.frame))
-  }
-
-  // Hell oder dunkel: Starlight stempelt `data-theme` auf <html>; Storybook nimmt es als Global `theme` in der Adresse.
-  const theme = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
-  function load(fig: HTMLElement) {
-    const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
-    const src = `${iframe.dataset.src}&globals=theme:${theme()}`
-    if (iframe.src !== src) iframe.src = src
-  }
-  new MutationObserver(() => figures.forEach(load)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
-
-  let remembered: string | null = null
-  try { remembered = localStorage.getItem(KEY) } catch {}
-  for (const fig of figures) {
-    if (remembered === 'phone' || remembered === 'desktop') fig.dataset.frame = remembered
-    layout(fig)
-    load(fig)
-    fig.querySelector('.story-frames')?.addEventListener('click', (e) => {
-      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-frame]')
-      if (!b) return
-      try { localStorage.setItem(KEY, b.dataset.frame!) } catch {}
-      for (const f of figures) { f.dataset.frame = b.dataset.frame; layout(f) }
-    })
-  }
-  new ResizeObserver(() => figures.forEach(layout)).observe(document.body)
+  import '../scripts/story-frames'
 </script>

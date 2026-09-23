@@ -43,6 +43,12 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-accent { color: var(--sl-color-accent); }
 /* Der farbige Teil der Hero-Zeile steht immer in einer eigenen Zeile. */
 .hero h1 .rl-accent { display: block; }
+/* Hero mit App-Vorschau rechts: das Telefon, mittig in Starlights Bildspalte. */
+.hero > .hero-html { width: 100%; }
+.hero-story { margin: 0; width: 100%; }
+.hero-story .story-stage { justify-content: center; }
+/* Unter 50rem stellt Starlight das Bild ueber die Ueberschrift; ein Telefon im Telefon bringt nichts und laedt nur Storybook. */
+@media (max-width: 49.99rem) { .hero > .hero-html { display: none; } }
 .hero { padding-block: 2rem 1rem; }
 .hero .tagline { line-height: 1.6; }
 .rl-hero { text-align: center; padding-block: 3rem 3.5rem; }
