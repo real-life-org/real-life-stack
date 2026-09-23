@@ -285,3 +285,12 @@ gegen einen `on: release`-Trigger tauscht, bricht das npm-Publish.
 - **Native App:** kein Downgrade (versionCode nur steigend) → Fix vorwärts,
   Patch-Release.
 - **npm:** `npm deprecate` / neue Patch-Version. Kein Unpublish.
+
+## App-Symbol
+
+Ein Symbol überall: `apps/reference/public/favicon.svg` ist die Quelle für die
+Web-App, die Site (prepare.mjs kopiert es) und die nativen Startsymbole.
+Ändert sich das SVG, erzeugt `node scripts/icons/android.mjs` (braucht
+`rsvg-convert`) die Android-Ressourcen (adaptiv: Vordergrund je Dichte plus
+Hintergrundfarbe; Legacy eckig und rund) und das iOS-Symbol neu; die PNGs sind
+eingecheckt, das Skript ist die Herleitung.
