@@ -1,0 +1,72 @@
+---
+title: Develop locally
+description: Get the source, start the reference app, Storybook and the site, see a first change, run the checks.
+translationOf: docs/handbook/de/handbuch/entwickeln.mdx
+sourceHash: 54538872c581f1c0b727ae066f8879ca72f19781da43f571dd883a999ae726e3
+sidebar:
+  order: 3
+sources:
+  - package.json
+  - CONTRIBUTING.md
+  - AGENTS.md
+  - docs/agent-workspace.md
+  - packages/toolkit/src/handbook/garden-data.ts
+  - .github/workflows/tests.yml
+---
+
+Whoever contributes to the stack works in the monorepo: packages under `packages/`, apps under `apps/`, examples under `examples/`, the spec under `docs/spec/`. Everything runs locally with Node and pnpm; a server, an account or Android tooling are not needed for the web entry.
+
+## Prerequisites
+
+Node **22 or newer** and pnpm in the version `package.json` pins; Corepack fetches it.
+
+```bash
+git clone https://github.com/real-life-org/real-life-stack.git
+cd real-life-stack
+corepack enable
+pnpm install --frozen-lockfile
+```
+
+## Four dev servers
+
+| What | Command | Address | For |
+|---|---|---|---|
+| Reference app | `pnpm dev:reference` | in the terminal | the app with all modules; connector via `?connector=mock` or `local` |
+| Network app | `pnpm dev:network` | in the terminal | an app with a module of its own (marketplace) on the frame |
+| Storybook | `pnpm storybook` | http://localhost:6006/ | every module, the app composition, all hooks — the place for toolkit work |
+| Site | `pnpm dev:site` | http://localhost:4321/ | landing and this handbook |
+
+The dev servers read the packages from source (`development` condition in the `package.json` files); no build beforehand, every change in the toolkit shows up in app and Storybook immediately. The exception is the handbook example: `pnpm dev:first-app` takes the published packages from npm, like an app outside the repository ([Build a first app](/en/handbuch/erste-app/)); a toolkit change reaches it only with the next release.
+
+In Storybook start at **RLS → Start → Read me first**: the reading path through Start, App, App shell, Spaces, Modules, Items, Foundations. All texts there are English, the sample data German.
+
+## The first change
+
+Open `packages/toolkit/src/handbook/garden-data.ts` and change the title of the harvest festival. Storybook shows the change under **RLS → App → 00 Community garden**, the site on the page [Build a first app](/en/handbuch/erste-app/). This data is fictional and part of the documentation.
+
+For a change in behaviour the order from `AGENTS.md` applies: read the spec section first (`docs/spec/`), then change code, story and test in the same step. Reusable surface belongs in the toolkit, never in an app; a module loads nothing itself that the host produces from its register entry (spec 01). The rules in detail are in `docs/agent-workspace.md`; they apply to people and agents alike.
+
+## Check
+
+What CI checks also runs locally. Before a pull request, at least:
+
+```bash
+pnpm test              # every package and app with tests; CI runs them in two time zones
+pnpm -r typecheck      # every package, every app, the example
+git diff --check
+```
+
+Depending on the area also: `pnpm build:storybook` (toolkit, stories), `pnpm build:site && pnpm check:site && pnpm test:site` (handbook), `pnpm check:hooks` (a hook was exported or changed), `pnpm check:agents` (packages, spec index, example), `python3 scripts/check-normative-words.py` (spec text), `python3 scripts/check-shared-derivations.py` (a module). The full list with what each check catches is under [Work with an agent → The checks](/en/handbuch/agenten/#the-checks).
+
+## Which contribution goes where?
+
+| Goal | Place |
+|---|---|
+| A community app of your own | a repository of your own on the published packages, [Build a first app](/en/handbuch/erste-app/) |
+| A surface every app needs | `packages/toolkit`, with a story; cards from `ItemPreview`, dialogs from the shared family |
+| A new module | one file in `packages/toolkit/src/modules/`, a register entry, a story with `HostWorld` |
+| A data source | a connector against `@real-life-stack/data-interface`; connectors do not import from each other |
+| Binding behaviour | spec, code, test and story in the same PR; when in doubt the spec wins |
+| A hook | with documentation block (`@answers`, `@without`, `@group`), then `pnpm docs:hooks` |
+
+Next: [Working on the stack together](/en/handbuch/beitragen/).

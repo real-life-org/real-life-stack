@@ -1,0 +1,58 @@
+---
+title: Runtime configuration
+description: What an instance reads at runtime — endpoints, connector, branding — where the values come from and what happens to wrong ones.
+translationOf: docs/handbook/de/handbuch/runtime-config.mdx
+sourceHash: 0afa24c497efa5145c5f16d8b753ac52d16ad269c41f4faa922afab3e7ac6e3f
+sidebar:
+  order: 7
+sources:
+  - docs/spec/11-runtime-config-und-branding.md
+  - packages/toolkit/src/lib/runtime-config.ts
+  - deploy/app/entrypoint.sh
+---
+
+One image, many instances: everything that differs per instance the app reads **once before the first render** from a file, not from the build. This page explains the contract from [spec 11](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/11-runtime-config-und-branding.md) (German); when in doubt the spec applies.
+
+## The file
+
+`/app/config.json`, generated in the container **at start** from the environment variables (`entrypoint.sh`), or your own from `branding/config.json` copied there verbatim. Changed environment variables are picked up by `docker compose up -d` (container is recreated), a changed `config.json` of your own by `docker compose restart app` (start-up runs again):
+
+```json
+{
+  "endpoints": { "relayUrl": "wss://relay.example.org" },
+  "defaultConnector": "wot",
+  "branding": {
+    "appName": "Waldgarten",
+    "faviconUrl": "/branding/favicon.svg",
+    "colorsUrl": "/branding/theme.json"
+  }
+}
+```
+
+- **`endpoints`:** `relayUrl` (`ws:`/`wss:`), `profilesUrl`, `supabaseUrl`, `supabaseAnonKey`. The anon key is public by design; it sits in every browser.
+- **`defaultConnector`:** one of the app's connector ids (`wot`, `supabase`, `local`, `mock`). `?connector=` in the address overrides it.
+- **`branding`:** `appName` (also sets the document title), `faviconUrl`, and the colours as `colors` (light and dark, inline in the JSON) or `colorsUrl` (the same tokens in a file of their own).
+
+The file goes to every browser. **Write no secrets into it.**
+
+## Where the values come from
+
+In this order, merged field by field: a set field wins, a missing one falls through, an empty object changes nothing.
+
+1. the instance's `config.json`
+2. compiled-in `VITE_*` values, if any
+3. the defaults in `runtime-config.ts`
+
+If the file is missing or broken, the app starts with levels 2 and 3 and names the error in the console. A configuration error never leads to a blank page. The loaded configuration is immutable for the lifetime of the page.
+
+## Checked before it applies
+
+Values are validated, not passed through. An endpoint must be a URL with a matching scheme, a connector name a known id, a colour token a name the toolkit defines; values are CSS colours including `oklch()`, `rgb()`, `hsl()`, and anything that could leave a declaration or load something (`;`, `{}`, `@`, `url()`) is dropped. What is dropped is reported in the console. The reason: a typo in the connector name would otherwise land in the app's last branch and show the instance demo data instead of its network.
+
+## Colours separately
+
+`colorsUrl` is loaded **separately**: if `theme.json` is broken, only the colours are missing; name, relay and connector still stand. If `colorsUrl` is set and readable, it overrides a `colors` present at the same time. The tokens land as CSS custom properties on the root element, per scheme.
+
+## What is not part of it
+
+An instance logo in the app shell (no field in v0.1, because there is no surface for it; the landing page serves its own as a file), free CSS (possible, but outside the compatibility promise), code of your own in the app. Modules read no branding: a module looks the same in every instance, apart from the tokens, which apply globally anyway.

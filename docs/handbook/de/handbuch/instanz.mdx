@@ -20,7 +20,7 @@ Docker mit dem Compose-Plugin, einen Server mit Domain für den Betrieb, oder nu
 
 ```bash
 mkdir rls-instanz && cd rls-instanz
-curl -fL https://github.com/real-life-org/real-life-stack/archive/refs/tags/app-v0.3.3.tar.gz | tar -xz --strip-components=3 real-life-stack-app-v0.3.3/deploy/app
+curl -fL https://github.com/real-life-org/real-life-stack/archive/refs/tags/app-v0.4.0.tar.gz | tar -xz --strip-components=3 real-life-stack-app-v0.4.0/deploy/app
 cp .env.example .env
 ```
 
@@ -54,7 +54,7 @@ deploy/app/
 ```dotenv
 RLS_DOMAIN=netzwerk.example.org
 RLS_APP_NAME=Unser Netzwerk
-RLS_IMAGE_TAG=0.3
+RLS_IMAGE_TAG=0.4
 RLS_DEFAULT_CONNECTOR=wot
 ```
 
@@ -75,7 +75,7 @@ Ein unbekannter Wert wird verworfen, die App fällt auf `wot` zurück. Ein Nutze
 
 ## 5. Aktualisieren
 
-`RLS_IMAGE_TAG` ist Pflicht, ein `latest` gibt es bewusst nicht: `0.3.3` ist genau diese Fassung, `0.3` folgt Korrekturen innerhalb der Minor-Version, `edge` ist der Hauptzweig zum Ausprobieren. Ein Major-Tag kommt erst mit 1.0. Zum Aktualisieren den neuen Tag in einer Vorschau mit eigenem Projektnamen und eigenem Port prüfen (`RLS_PORT=8081 RLS_IMAGE_TAG=0.4 docker compose -p rls-vorschau -f docker-compose.preview.yml up -d`), dann in `.env` eintragen, `docker compose pull && docker compose up -d`. Das alte Image lässt sich wieder starten; ob ältere Software mit inzwischen veränderten Daten läuft, ist damit nicht gesagt. Ein Image-Rollback ist kein Daten-Restore. Wo die Versionen herkommen: [Versionen und Releases](/handbuch/release/).
+`RLS_IMAGE_TAG` ist Pflicht, ein `latest` gibt es bewusst nicht: `0.4.0` ist genau diese Fassung, `0.4` folgt Korrekturen innerhalb der Minor-Version, `edge` ist der Hauptzweig zum Ausprobieren. Ein Major-Tag kommt erst mit 1.0. Zum Aktualisieren den neuen Tag in einer Vorschau mit eigenem Projektnamen und eigenem Port prüfen (`RLS_PORT=8081 RLS_IMAGE_TAG=0.5 docker compose -p rls-vorschau -f docker-compose.preview.yml up -d`), dann in `.env` eintragen, `docker compose pull && docker compose up -d`. Das alte Image lässt sich wieder starten; ob ältere Software mit inzwischen veränderten Daten läuft, ist damit nicht gesagt. Ein Image-Rollback ist kein Daten-Restore. Wo die Versionen herkommen: [Versionen und Releases](/handbuch/release/).
 
 ## Grenzen
 

@@ -1,0 +1,91 @@
+---
+title: Run an instance of your own
+description: From the local preview to running under your own domain — a finished image, your configuration and assets, no build.
+translationOf: docs/handbook/de/handbuch/instanz.mdx
+sourceHash: 3e995152d993d6be6bf970a97243959cd97deef31fbb155b9d60499a7f7d8b4c
+sidebar:
+  order: 6
+sources:
+  - deploy/app/README.md
+  - deploy/app/.env.example
+  - deploy/app/docker-compose.yml
+  - deploy/app/docker-compose.preview.yml
+  - deploy/app/entrypoint.sh
+  - docs/spec/11-runtime-config-und-branding.md
+---
+
+An instance is the reference app under your name and your domain: landing page at `/`, app at `/app`, all from **one** finished container image. What differs per instance (name, colours, services) comes at runtime from configuration and assets; nothing is built, and you do not need the monorepo.
+
+## What you need
+
+Docker with the Compose plugin, a server with a domain for production, or just a computer for the preview. The deployment files live in the repository under `deploy/app/`; take the folder from the release you want to run (release tags are named `app-vX.Y.Z`):
+
+```bash
+mkdir rls-instance && cd rls-instance
+curl -fL https://github.com/real-life-org/real-life-stack/archive/refs/tags/app-v0.4.0.tar.gz | tar -xz --strip-components=3 real-life-stack-app-v0.4.0/deploy/app
+cp .env.example .env
+```
+
+## 1. Preview, without a domain
+
+```bash
+docker compose -p rls-vorschau -f docker-compose.preview.yml up -d
+```
+
+`-p rls-vorschau` gives the preview a Compose project name of its own. Without it the project would be named like the production one (both files call the service `app`), and starting the preview in the same directory would replace the running container.
+
+http://localhost:8080/ shows the landing page, http://localhost:8080/app/ the app, http://localhost:8080/app/config.json the configuration every browser receives. The preview takes the image `edge` (state of the main branch) and the name "Vorschau" until you fill in `.env`; `RLS_PORT` changes the port. It sets up no TLS and belongs in a trusted network.
+
+## 2. What is yours
+
+```
+deploy/app/
+├── .env          domain, name, connector, services, image tag
+├── landing/      your landing page — free HTML at /
+└── branding/     theme.json · favicon.svg · optionally config.json
+```
+
+`landing/` and `branding/` are mounted read-only into the container. What is served directly (the landing page, `theme.json`, `favicon.svg`) takes effect on the next page load. Two things the container reads only at start: `.env`, from which it generates `config.json`, and a `branding/config.json` of your own, which it copies there. The two need different commands: after a change to **`.env`** run `docker compose up -d`, because Compose detects the changed environment variables and recreates the container (a `restart` would not pick them up). After a change to **`branding/config.json`** or a **newly added** `theme.json` run `docker compose restart app`, because nothing changes for Compose here, an `up -d` would leave the container running; only the restart runs the start-up again. Changes to an existing `theme.json` take effect immediately.
+
+`branding/theme.json` sets colour tokens, separately for light and dark; the names must be tokens of the toolkit, an unknown name is dropped and reported in the browser console. What exactly the app reads and in which order is under [Runtime configuration](/en/handbuch/runtime-config/).
+
+## 3. Under your domain
+
+`docker-compose.yml` expects a running **Traefik** with the external Docker network `web`, the entry point `websecure` and the certificate resolver `letsencrypt`; it does not install it. Set the required fields in `.env`, without which Compose refuses to start:
+
+```dotenv
+RLS_DOMAIN=netzwerk.example.org
+RLS_APP_NAME=Unser Netzwerk
+RLS_IMAGE_TAG=0.4
+RLS_DEFAULT_CONNECTOR=wot
+```
+
+Then point DNS at the server, `docker compose up -d`, and check HTTPS, landing page and app. If your Traefik network has another name, set `TRAEFIK_NETWORK`.
+
+## 4. Choose the connector
+
+The app instance serves only static files; the data lives where the connector points.
+
+| `RLS_DEFAULT_CONNECTOR` | Data | Also needed |
+|---|---|---|
+| `wot` (default) | end-to-end encrypted in the Web of Trust | a relay; as long as there is a shared one, `wss://relay.web-of-trust.de` is preset, your own goes into `RLS_RELAY_URL` |
+| `supabase` | centrally in a Supabase backend | `RLS_SUPABASE_URL` and `RLS_SUPABASE_ANON_KEY`; a stack of your own after `deploy/supabase/` |
+| `local` | only in this browser | nothing; for trying out, no multi-user operation |
+| `mock` | in memory, with sample data | nothing; demos only |
+
+An unknown value is dropped, the app falls back to `wot`. A user can override the connector with `?connector=` in the address.
+
+## 5. Update
+
+`RLS_IMAGE_TAG` is required, there is deliberately no `latest`: `0.4.0` is exactly this version, `0.4` follows fixes within the minor version, `edge` is the main branch for trying out. A major tag comes only with 1.0. To update, check the new tag in a preview with its own project name and port (`RLS_PORT=8081 RLS_IMAGE_TAG=0.5 docker compose -p rls-vorschau -f docker-compose.preview.yml up -d`), then set it in `.env`, `docker compose pull && docker compose up -d`. The old image can be started again; whether older software works with data that has changed since is not guaranteed. An image rollback is no data restore. Where the versions come from: [Versions and releases](/en/handbuch/release/).
+
+## Limits
+
+The landing page may be anything, it is a page of its own. The app layout is not: there are tokens, name and favicon, but no code of your own. Anything beyond that would mean forking the stack, and the next update would break the instance. Whatever surface you need that the toolkit lacks is a contribution to the stack ([Working on the stack together](/en/handbuch/beitragen/)).
+
+## When something does not work
+
+- **Container does not start:** `docker compose logs app`. If a required field is missing, Compose says which.
+- **Configuration does not change:** after `.env` changes `docker compose up -d` (recreates the container with the new variables), after changes to `branding/config.json` `docker compose restart app` (runs the start-up again). A `config.json` of your own overrides all environment variables.
+- **Colours have no effect:** read the browser console; an unknown token name is named there.
+- **App runs, but nobody sees the others:** check connector, relay address and membership in the space.

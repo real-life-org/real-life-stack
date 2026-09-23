@@ -20,7 +20,7 @@ Ein Coding-Agent braucht dasselbe wie ein Mensch, nur in einer Datei: was Real L
 |---|---|---|
 | Eine App auf den veröffentlichten Paketen | [App-Vorlage `AGENTS.md`](https://github.com/real-life-org/real-life-stack/blob/master/docs/templates/AGENTS.md) — in das Wurzelverzeichnis des neuen Repos kopieren | Pakete, die ganze erste App als Code, Datenmodell, Fähigkeiten, UI-Regeln, Übergabe |
 | Am Stack mitbauen | [`AGENTS.md`](https://github.com/real-life-org/real-life-stack/blob/master/AGENTS.md) des Repos, dann [`docs/agent-workspace.md`](https://github.com/real-life-org/real-life-stack/blob/master/docs/agent-workspace.md) | Spec als Quelle der Wahrheit, Paketgrenzen, Prüfungen, Übergabe; der Modul-Host, die Hook-Konvention |
-| Orientierung, egal wofür | [`/llms.txt`](/llms.txt) | Inhaltsverzeichnis: Pakete mit Version, jede Spec-Datei, alle 78 Hooks mit Frage und Verhalten ohne Fähigkeit, das Handbuch als Markdown |
+| Orientierung, egal wofür | [`/llms.txt`](/llms.txt) | Inhaltsverzeichnis: Pakete, jede Spec-Datei, alle 58 öffentlichen Hooks mit Frage und Verhalten ohne Fähigkeit, das Handbuch als Markdown |
 
 Die drei Dateien schreiben sich nicht auseinander: `llms.txt` und der Code-Block der Vorlage werden aus dem Repo erzeugt — aus den `package.json` der Pakete, dem Spec-Index, der Hook-Referenz und `examples/first-app`. Ein Wächter in CI fällt, wenn sie nicht mehr zum Stand passen (`pnpm check:agents`).
 
