@@ -89,7 +89,7 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-ways { padding-block: 3rem; border-top: 1px solid var(--sl-color-gray-6); }
 .rl-ways h2 { font-size: 1.9rem; margin: 0 0 .5rem; }
 .rl-ways > p { color: var(--sl-color-gray-2); margin: 0 0 1.5rem; }
-.rl-ways .rl-cards { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.rl-ways .rl-cards { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
 .rl-ways a.rl-card { text-decoration: none; color: inherit; display: block; }
 .rl-ways a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-ways .soon { opacity: .6; }

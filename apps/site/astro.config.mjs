@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'astro/config'
 import starlight from '@astrojs/starlight'
@@ -21,6 +22,29 @@ export const LOCALES = {
   ru: { label: 'Русский', lang: 'ru' },
   uk: { label: 'Українська', lang: 'uk' },
   he: { label: 'עברית', lang: 'he', dir: 'rtl' },
+}
+
+/**
+ * Die Handbuchseiten für die Seitenleiste, aus `docs/handbook/de/handbuch/`.
+ * Starlights `autogenerate` findet sie nicht: Es liest den Dateipfad relativ zu
+ * `src/content/docs`, und das Handbuch liegt bewusst außerhalb der Site. Also
+ * lesen wir die Verzeichnisliste selbst — Titel und `sidebar.order` aus dem
+ * Frontmatter, Übersicht zuerst. Andere Sprachen zeigen ihre Übersetzung,
+ * wo es eine gibt, sonst die deutsche Seite.
+ */
+function handbookItems() {
+  const dir = new URL('../../docs/handbook/de/handbuch/', import.meta.url)
+  return readdirSync(dir)
+    .filter((f) => /\.mdx?$/.test(f))
+    .map((f) => {
+      const text = readFileSync(new URL(f, dir), 'utf8')
+      const id = f.replace(/\.mdx?$/, '')
+      const title = text.match(/^title:\s*(.+)$/m)?.[1]?.trim().replace(/^(['"])(.*)\1$/, '$2') ?? id
+      const order = id === 'index' ? -1 : Number(text.match(/^sidebar:\n\s+order:\s*(\d+)/m)?.[1] ?? 99)
+      return { label: id === 'index' ? 'Überblick' : title, translations: id === 'index' ? { en: 'Overview' } : undefined, slug: `handbuch/${id}`, order }
+    })
+    .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
+    .map(({ order, ...item }) => item)
 }
 
 export default defineConfig({
@@ -48,7 +72,7 @@ export default defineConfig({
       ],
       editLink: { baseUrl: 'https://github.com/real-life-org/real-life-stack/edit/master/docs/handbook/' },
       sidebar: [
-        { label: 'Handbuch', translations: { en: 'Handbook' }, items: [{ autogenerate: { directory: 'handbuch' } }] },
+        { label: 'Handbuch', translations: { en: 'Handbook' }, items: handbookItems() },
         { label: 'Storybook', link: 'https://real-life-stack.de/storybook/', attrs: { target: '_self' } },
         { label: 'App', link: 'https://real-life-stack.de/app/', attrs: { target: '_self' } },
       ],
