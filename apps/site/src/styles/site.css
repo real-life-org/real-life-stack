@@ -10,10 +10,11 @@
   --sl-font-mono: "Source Code Pro", ui-monospace, monospace;
   --sl-content-width: 54rem;
   --sl-text-5xl: 3.4rem;
-  /* Orange der Marke (--primary: oklch(0.63 0.16 55)) */
+  /* Orange der Marke (--primary: oklch(0.63 0.16 55)). Dunkel: accent-high
+     traegt Seitentitel und Hauptknopf — ein echtes Orange, kein Beige (Anton, 23.09.). */
   --sl-color-accent-low: oklch(0.30 0.07 55);
   --sl-color-accent: oklch(0.72 0.15 55);
-  --sl-color-accent-high: oklch(0.90 0.07 55);
+  --sl-color-accent-high: oklch(0.80 0.16 55);
   --rl-blue: oklch(0.55 0.21 264);
   --rl-green: oklch(0.62 0.15 150);
 }
@@ -137,3 +138,5 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-hook-meta .rl-links { margin-top: 0; font-size: 1em; }
 /* Paketnamen nicht umbrechen: die erste Spalte traegt den ganzen Namen. */
 .rl-packages td:first-child, .rl-packages th:first-child { white-space: nowrap; width: 1%; padding-inline-end: 1.5rem; }
+.rl-ref th { text-align: start; white-space: nowrap; width: 1%; padding-inline-end: 1rem; font-weight: 600; }
+.rl-hint { display: inline-block; margin-inline-end: .75rem; }
