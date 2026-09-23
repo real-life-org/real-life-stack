@@ -1,17 +1,64 @@
 ---
-/** Eine Story des Toolkits, live im Handbuch. Im Dev-Modus aus dem laufenden Storybook (6006), gebaut aus `/storybook/`. */
-interface Props { id: string; title: string; height?: number }
-const { id, title, height = 560 } = Astro.props
+/**
+ * Eine Story des Toolkits, live im Handbuch. Im Dev-Modus aus dem laufenden Storybook (6006), gebaut aus `/storybook/`.
+ *
+ * Die Vorschau hat zwei Rahmen: „Desktop“ rendert die App mit 1024px Breite und verkleinert sie auf die Spalte,
+ * damit das Seitenpanel wie am Laptop aufgeht; „Handy“ rendert sie 390px breit und verkleinert mit demselben Faktor,
+ * damit beide Bilder im gleichen Maßstab stehen. Der Leser
+ * schaltet um, die Wahl gilt für alle Vorschauen der Seite und wird im Browser gemerkt.
+ */
+interface Props { id: string; title: string; height?: number; frame?: 'desktop' | 'phone' }
+const { id, title, height = 560, frame = 'desktop' } = Astro.props
 const base = import.meta.env.PUBLIC_STORYBOOK_URL || (import.meta.env.DEV ? 'http://localhost:6006' : '/storybook')
 const url = `${base}/iframe.html?id=${encodeURIComponent(id)}&viewMode=story`
 // Nur die englischen Seiten sind uebersetzt; alle anderen Sprachen zeigen die deutsche Seite und bekommen die deutsche Unterschrift.
 const en = Astro.currentLocale === 'en'
 const t = en
-  ? { try: 'Try it · real toolkit components', open: 'Open in Storybook ↗', note: 'The sample data is fictional. Changes last only for this session.' }
-  : { try: 'Ausprobieren · echte Toolkit-Komponenten', open: 'In Storybook öffnen ↗', note: 'Die Beispieldaten sind fiktiv. Änderungen bleiben nur für diese Sitzung.' }
+  ? { open: 'Open in Storybook ↗', note: 'The sample data is fictional. Changes last only for this session.', desktop: 'Desktop', phone: 'Phone' }
+  : { open: 'In Storybook öffnen ↗', note: 'Die Beispieldaten sind fiktiv. Änderungen bleiben nur für diese Sitzung.', desktop: 'Desktop', phone: 'Handy' }
 ---
-<figure class="story-example">
-  <figcaption><span>{t.try}</span><a href={`${base}/?path=/story/${id}`}>{t.open}</a></figcaption>
-  <iframe src={url} title={title} loading="lazy" style={`height:${height}px`} allow="fullscreen"></iframe>
+<figure class="story-example not-content" data-frame={frame} data-height={height}>
+  <figcaption>
+    <span class="story-frames" role="group">
+      <button type="button" data-frame="desktop" aria-pressed={frame === 'desktop'}>{t.desktop}</button>
+      <button type="button" data-frame="phone" aria-pressed={frame === 'phone'}>{t.phone}</button>
+    </span>
+    <a href={`${base}/?path=/story/${id}`}>{t.open}</a>
+  </figcaption>
+  <div class="story-stage"><iframe src={url} title={title} loading="lazy" allow="fullscreen"></iframe></div>
   <p>{title}. {t.note}</p>
 </figure>
+
+<script>
+  // Beide Rahmen teilen den Faktor Spaltenbreite/1024, damit Desktop und Handy im gleichen Massstab stehen.
+  const DESKTOP = 1024, PHONE = 390, PHONE_HEIGHT = 720
+  const KEY = 'rls-story-frame'
+  const figures = Array.from(document.querySelectorAll<HTMLElement>('.story-example'))
+
+  function layout(fig: HTMLElement) {
+    const stage = fig.querySelector<HTMLElement>('.story-stage')!
+    const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
+    const height = Number(fig.dataset.height) || 560
+    const scale = Math.min(1, stage.clientWidth / DESKTOP)
+    const phone = fig.dataset.frame === 'phone'
+    const w = phone ? PHONE : DESKTOP, h = phone ? PHONE_HEIGHT : height
+    iframe.style.width = `${w}px`; iframe.style.height = `${h}px`; iframe.style.transform = `scale(${scale})`
+    stage.style.height = `${Math.round(h * scale)}px`
+    for (const b of fig.querySelectorAll<HTMLButtonElement>('.story-frames button'))
+      b.setAttribute('aria-pressed', String(b.dataset.frame === fig.dataset.frame))
+  }
+
+  let remembered: string | null = null
+  try { remembered = localStorage.getItem(KEY) } catch {}
+  for (const fig of figures) {
+    if (remembered === 'phone' || remembered === 'desktop') fig.dataset.frame = remembered
+    layout(fig)
+    fig.querySelector('.story-frames')?.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-frame]')
+      if (!b) return
+      try { localStorage.setItem(KEY, b.dataset.frame!) } catch {}
+      for (const f of figures) { f.dataset.frame = b.dataset.frame; layout(f) }
+    })
+  }
+  new ResizeObserver(() => figures.forEach(layout)).observe(document.body)
+</script>
