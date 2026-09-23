@@ -32,15 +32,17 @@
 
   let remembered: string | null = null
   try { remembered = localStorage.getItem(KEY) } catch {}
+  // Nur Vorschauen mit Umschalter folgen der gemerkten Wahl; eine feste (Hero der Startseite) behaelt ihren Rahmen.
+  const switchable = figures.filter((f) => f.querySelector('.story-frames'))
   for (const fig of figures) {
-    if (remembered === 'phone' || remembered === 'desktop') fig.dataset.frame = remembered
+    if (switchable.includes(fig) && (remembered === 'phone' || remembered === 'desktop')) fig.dataset.frame = remembered
     layout(fig)
     load(fig)
     fig.querySelector('.story-frames')?.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-frame]')
       if (!b) return
       try { localStorage.setItem(KEY, b.dataset.frame!) } catch {}
-      for (const f of figures) { f.dataset.frame = b.dataset.frame; layout(f) }
+      for (const f of switchable) { f.dataset.frame = b.dataset.frame; layout(f) }
     })
   }
   new ResizeObserver(() => figures.forEach(layout)).observe(document.body)
