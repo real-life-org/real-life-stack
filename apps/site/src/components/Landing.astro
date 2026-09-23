@@ -1,5 +1,7 @@
 ---
 import { translations, type TranslatedLanguage } from '../i18n/landing'
+import Icon from './Icon.astro'
+import type { IconName } from './icons'
 interface Props { lang: TranslatedLanguage }
 const { lang } = Astro.props
 const t = translations[lang] ?? translations.en
@@ -7,18 +9,19 @@ const prefix = lang === 'de' ? '' : `/${lang}`
 const de = lang === 'de'
 // Die vier Wege ins Handbuch (Plan 22.09.2026). Deutsch und Englisch; die
 // übrigen Sprachen lesen die englische Fassung, bis das Handbuch sie hat.
-const ways = de
+type Tone = 'green' | 'blue' | 'orange' | 'purple' | 'red' | 'teal'
+const ways: { title: string; text: string; href: string; soon: boolean; icon: IconName; tone: Tone }[] = de
   ? [
-      { title: 'Erste App bauen', text: 'In zehn Minuten eine eigene App auf dem Rahmen: Connector, Register, fertig.', href: '/handbuch/', soon: true },
-      { title: 'Mit einem Agenten arbeiten', text: 'Einstiege, Auftragsform und Regeln für Coding-Agents — dieselben Verträge wie für Menschen.', href: '/handbuch/', soon: true },
-      { title: 'Am Stack mitbauen', text: 'Entwicklungsumgebung, Spec, Wächter, Review. So wird ein Beitrag zum PR.', href: '/handbuch/', soon: false },
-      { title: 'Eine Instanz betreiben', text: 'Die fertige App unter eigenem Namen und eigener Domain für eine Community.', href: '/handbuch/', soon: true },
+      { title: 'Erste App bauen', text: 'In zehn Minuten eine eigene App auf dem Rahmen: Connector, Router, Rahmen, fertig.', href: '/handbuch/erste-app/', soon: false, icon: 'rocket', tone: 'orange' },
+      { title: 'Mit einem Agenten arbeiten', text: 'Einstiege, Auftragsform, Regeln und Prüfungen für Coding-Agents — dieselben Verträge wie für Menschen.', href: '/handbuch/agenten/', soon: false, icon: 'bot', tone: 'purple' },
+      { title: 'Am Stack mitbauen', text: 'Entwicklungsumgebung, Spec, Wächter, Review. So wird ein Beitrag zum PR.', href: '/handbuch/entwickeln/', soon: false, icon: 'wrench', tone: 'blue' },
+      { title: 'Eine Instanz betreiben', text: 'Die fertige App unter eigenem Namen und eigener Domain für eine Community.', href: '/handbuch/', soon: true, icon: 'server', tone: 'green' },
     ]
   : [
-      { title: 'Build a first app', text: 'Your own app on the frame in ten minutes: connector, register, done.', href: `${prefix}/handbuch/`, soon: true },
-      { title: 'Work with an agent', text: 'Entry points, task shape and rules for coding agents — the same contracts as for people.', href: `${prefix}/handbuch/`, soon: true },
-      { title: 'Contribute to the stack', text: 'Dev environment, spec, guards, review. How a contribution becomes a PR.', href: `${prefix}/handbuch/`, soon: false },
-      { title: 'Run an instance', text: 'The finished app under your own name and domain for a community.', href: `${prefix}/handbuch/`, soon: true },
+      { title: 'Build a first app', text: 'Your own app on the frame in ten minutes: connector, router, frame, done. German for now.', href: '/handbuch/erste-app/', soon: false, icon: 'rocket', tone: 'orange' },
+      { title: 'Work with an agent', text: 'Entry points, task shape, rules and checks for coding agents — the same contracts as for people. German for now.', href: '/handbuch/agenten/', soon: false, icon: 'bot', tone: 'purple' },
+      { title: 'Contribute to the stack', text: 'Dev environment, spec, guards, review. How a contribution becomes a PR. German for now.', href: '/handbuch/entwickeln/', soon: false, icon: 'wrench', tone: 'blue' },
+      { title: 'Run an instance', text: 'The finished app under your own name and domain for a community.', href: `${prefix}/handbuch/`, soon: true, icon: 'server', tone: 'green' },
     ]
 const waysTitle = de ? 'Vier Wege hinein' : 'Four ways in'
 const waysIntro = de ? 'Je nachdem, was du vorhast. Jede Seite des Handbuchs gehört genau einem Weg.' : 'Depending on what you are up to. Every handbook page belongs to exactly one way.'
@@ -31,6 +34,7 @@ const soon = de ? 'folgt' : 'soon'
     <div class="rl-cards">
       {ways.map((w) => (
         <a class:list={['rl-card', { soon: w.soon }]} href={w.href}>
+          <Icon name={w.icon} tone={w.tone} />
           <strong>{w.title}{w.soon ? ` · ${soon}` : ''}</strong>
           <span>{w.text}</span>
         </a>
@@ -46,10 +50,10 @@ const soon = de ? 'folgt' : 'soon'
       <p>{t.modules.p2}</p>
     </div>
     <div class="rl-cards">
-      <div class="rl-card"><strong>{t.modules.map}</strong><span>{t.modules.mapDesc}</span></div>
-      <div class="rl-card"><strong>{t.modules.calendar}</strong><span>{t.modules.calendarDesc}</span></div>
-      <div class="rl-card"><strong>{t.modules.marketplace}</strong><span>{t.modules.marketplaceDesc}</span></div>
-      <div class="rl-card"><strong>{t.modules.feed}</strong><span>{t.modules.feedDesc}</span></div>
+      <div class="rl-card centered"><Icon name="map" tone="green" /><strong>{t.modules.map}</strong><span>{t.modules.mapDesc}</span></div>
+      <div class="rl-card centered"><Icon name="calendar" tone="blue" /><strong>{t.modules.calendar}</strong><span>{t.modules.calendarDesc}</span></div>
+      <div class="rl-card centered"><Icon name="store" tone="purple" /><strong>{t.modules.marketplace}</strong><span>{t.modules.marketplaceDesc}</span></div>
+      <div class="rl-card centered"><Icon name="message-square" tone="orange" /><strong>{t.modules.feed}</strong><span>{t.modules.feedDesc}</span></div>
     </div>
   </section>
 
@@ -61,9 +65,9 @@ const soon = de ? 'folgt' : 'soon'
       <p>{t.dataInterface.p2}</p>
     </div>
     <div class="rl-list">
-      <div><strong>{t.dataInterface.groups}</strong><span>{t.dataInterface.groupsDesc}</span></div>
-      <div><strong>{t.dataInterface.events}</strong><span>{t.dataInterface.eventsDesc}</span></div>
-      <div><strong>{t.dataInterface.trust}</strong><span>{t.dataInterface.trustDesc}</span></div>
+      <div><Icon name="users" tone="blue" /><div><strong>{t.dataInterface.groups}</strong><span>{t.dataInterface.groupsDesc}</span></div></div>
+      <div><Icon name="calendar" tone="blue" /><div><strong>{t.dataInterface.events}</strong><span>{t.dataInterface.eventsDesc}</span></div></div>
+      <div><Icon name="shield" tone="blue" /><div><strong>{t.dataInterface.trust}</strong><span>{t.dataInterface.trustDesc}</span></div></div>
     </div>
   </section>
 
@@ -75,11 +79,11 @@ const soon = de ? 'folgt' : 'soon'
       <p>{t.connectors.p2}</p>
     </div>
     <div class="rl-cards three">
-      {[
-        ['REST', t.connectors.restDesc], ['GraphQL', t.connectors.graphqlDesc], ['Local-first', t.connectors.localDesc],
-        ['P2P', t.connectors.p2pDesc], ['E2EE', t.connectors.e2eeDesc], ['DIDs', t.connectors.didsDesc],
-      ].map(([name, desc]) => (
-        <div class="rl-card compact"><strong>{name}</strong><span>{desc}</span></div>
+      {([
+        ['REST', t.connectors.restDesc, 'globe', 'blue'], ['GraphQL', t.connectors.graphqlDesc, 'waypoints', 'purple'], ['Local-first', t.connectors.localDesc, 'hard-drive', 'green'],
+        ['P2P', t.connectors.p2pDesc, 'wot', 'orange'], ['E2EE', t.connectors.e2eeDesc, 'lock', 'red'], ['DIDs', t.connectors.didsDesc, 'fingerprint', 'teal'],
+      ] as const).map(([name, desc, icon, tone]) => (
+        <div class="rl-card compact"><Icon name={icon} tone={tone} tile={false} /><div><strong>{name}</strong><span>{desc}</span></div></div>
       ))}
     </div>
   </section>

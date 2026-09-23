@@ -1,0 +1,9 @@
+---
+/** Ein farbiges Symbol in einer Kachel — die Farbe, die die alte Landing je Modul und Connector hatte. */
+import { icons, type IconName } from './icons'
+interface Props { name: IconName; tone?: 'green' | 'blue' | 'orange' | 'purple' | 'red' | 'teal'; tile?: boolean }
+const { name, tone = 'blue', tile = true } = Astro.props
+---
+<span class:list={['rl-icon', `tone-${tone}`, { tile }]} aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={icons[name]} />
+</span>
