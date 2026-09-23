@@ -1,23 +1,15 @@
-import { fileURLToPath } from "node:url"
 import { defineConfig } from "vitest/config"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 
-// Im Repo hängen die Pakete am Quelltext (`development`-Condition). Dieses
-// Beispiel nimmt bewusst die gebaute, veröffentlichte Form — so, wie eine App
-// außerhalb des Repos sie von npm bekommt. Im Repo baut `pnpm dev:first-app`
-// die Pakete vorher (turbo, `first-app^...`).
-// Außerhalb des Repos entfallen `resolve.conditions` und `test.alias`.
-const dist = (file: string) => fileURLToPath(new URL(`./node_modules/@real-life-stack/toolkit/dist/${file}`, import.meta.url))
-
+// Die Pakete kommen von npm, genau wie bei einer App ausserhalb des Repos.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  resolve: { conditions: ["module", "browser", "production"] },
   test: {
     environment: "jsdom",
-    alias: [
-      { find: /^@real-life-stack\/toolkit$/, replacement: dist("index.js") },
-      { find: /^@real-life-stack\/toolkit\/(maplibre|router)$/, replacement: dist("$1.js") },
-    ],
+    // mock-connector 0.2.0 auf npm importiert in dist ohne .js-Endung; Node-ESM
+    // findet das nicht, Vite schon. Bis zum naechsten Release laesst Vitest die
+    // Pakete darum durch Vite laufen (rls#458). Danach kann die Zeile weg.
+    server: { deps: { inline: [/@real-life-stack\//] } },
   },
 })
