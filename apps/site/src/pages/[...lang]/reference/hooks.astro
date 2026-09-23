@@ -39,8 +39,8 @@ const headings = hookGroups.map((g) => ({ depth: 2, slug: g.id, text: `${g.title
   ))}
   <h2 id="pairs">Pairs easily confused</h2>
   <ul>
-    <li><code>useCurrentUser</code> and <code>useOptionalCurrentUser</code> differ only in whether a missing sign-in throws or yields <code>null</code>. The same pattern with <code>useConnector</code>, <code>useModuleHost</code>, <code>useItemFocus</code>, <code>useCreate</code>.</li>
-    <li><code>useReactions</code> already carries in <code>reactions[].userIds</code> what <code>useReactionUsers</code> fetches again.</li>
+    <li><code>useCurrentUser</code> and <code>useOptionalCurrentUser</code> differ in what happens on a connector <strong>without the authentication capability</strong>: the first throws on render, the second yields <code>null</code>. While nobody is signed in, both answer <code>data: null</code>. The same pattern with <code>useConnector</code>/<code>useOptionalConnector</code>, <code>useItemFocus</code>/<code>useOptionalItemFocus</code>, <code>useCreate</code>/<code>useOptionalCreate</code>.</li>
+    <li><code>useReactions</code> already carries in <code>data[].userIds</code> what <code>useReactionUsers</code> fetches again.</li>
     <li><code>useCommentCount</code> is the cheap half of <code>useComments</code>.</li>
     <li><code>useItems</code> and <code>useItemsWithDraft</code> are the same list, the latter with the running draft.</li>
     <li><code>useIsMobile</code> and <code>useIsCompact</code> are the same mechanism with a different threshold: 768px for navigation, 1024px for the panel shape.</li>
