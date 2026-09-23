@@ -61,8 +61,7 @@ export const translations: Record<TranslatedLanguage, Translation> = {
     hero: {
       title: 'Der Baukasten für',
       titleHighlight: 'lokale Vernetzung',
-      // Antons Wortlaut (23.09.), der Gedankenstrich hier ausdruecklich gewollt.
-      subtitle: 'Werkzeuge für Communities, die sich dezentral organisieren — verwurzelt in echten Begegnungen.',
+      subtitle: 'Werkzeuge für Communities, die sich dezentral organisieren, verwurzelt in echten Begegnungen.',
       demo: 'Demo ansehen',
       storybook: 'Storybook',
     },
@@ -118,7 +117,7 @@ export const translations: Record<TranslatedLanguage, Translation> = {
     hero: {
       title: 'The toolkit for',
       titleHighlight: 'local connection',
-      subtitle: 'Tools for communities that organize in a decentralized way — rooted in real-world encounters.',
+      subtitle: 'Tools for communities that organize in a decentralized way, rooted in real-world encounters.',
       demo: 'View demo',
       storybook: 'Storybook',
     },
