@@ -133,3 +133,5 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-hook-q { margin: .35rem 0 .4rem !important; line-height: 1.5; }
 .rl-hook-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3rem 1rem; font-size: .82rem; color: var(--sl-color-gray-2); }
 .rl-hook-meta .rl-links { margin-top: 0; font-size: 1em; }
+/* Paketnamen nicht umbrechen: die erste Spalte traegt den ganzen Namen. */
+.rl-packages td:first-child, .rl-packages th:first-child { white-space: nowrap; width: 1%; padding-inline-end: 1.5rem; }
