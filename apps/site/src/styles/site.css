@@ -40,6 +40,8 @@ h2, h3 { letter-spacing: -.02em; }
 /* So breit wie der Hero darüber: Starlight setzt die Inhaltsbreite, die Sektionen folgen ihr. */
 .rl-landing { max-width: none; margin-inline: 0; padding-inline: 0; }
 .rl-accent { color: var(--sl-color-accent); }
+/* Der farbige Teil der Hero-Zeile steht immer in einer eigenen Zeile. */
+.hero h1 .rl-accent { display: block; }
 .hero { padding-block: 2rem 1rem; }
 .hero .tagline { line-height: 1.6; }
 .rl-hero { text-align: center; padding-block: 3rem 3.5rem; }
