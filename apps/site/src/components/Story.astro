@@ -4,9 +4,14 @@ interface Props { id: string; title: string; height?: number }
 const { id, title, height = 560 } = Astro.props
 const base = import.meta.env.PUBLIC_STORYBOOK_URL || (import.meta.env.DEV ? 'http://localhost:6006' : '/storybook')
 const url = `${base}/iframe.html?id=${encodeURIComponent(id)}&viewMode=story`
+// Nur die englischen Seiten sind uebersetzt; alle anderen Sprachen zeigen die deutsche Seite und bekommen die deutsche Unterschrift.
+const en = Astro.currentLocale === 'en'
+const t = en
+  ? { try: 'Try it · real toolkit components', open: 'Open in Storybook ↗', note: 'The sample data is fictional. Changes last only for this session.' }
+  : { try: 'Ausprobieren · echte Toolkit-Komponenten', open: 'In Storybook öffnen ↗', note: 'Die Beispieldaten sind fiktiv. Änderungen bleiben nur für diese Sitzung.' }
 ---
 <figure class="story-example">
-  <figcaption><span>Ausprobieren · echte Toolkit-Komponenten</span><a href={`${base}/?path=/story/${id}`}>In Storybook öffnen ↗</a></figcaption>
+  <figcaption><span>{t.try}</span><a href={`${base}/?path=/story/${id}`}>{t.open}</a></figcaption>
   <iframe src={url} title={title} loading="lazy" style={`height:${height}px`} allow="fullscreen"></iframe>
-  <p>{title}. Die Beispieldaten sind fiktiv. Änderungen bleiben nur für diese Sitzung.</p>
+  <p>{title}. {t.note}</p>
 </figure>

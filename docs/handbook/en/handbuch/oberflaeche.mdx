@@ -1,0 +1,58 @@
+---
+title: From space to item
+description: The interface as three levels — frame, space, item — and why an event does not belong to the calendar.
+translationOf: docs/handbook/de/handbuch/oberflaeche.mdx
+sourceHash: b43cf28631c17a250b18536cac77e4931187bd1733aa0b9549dea9f8e2365a17
+sidebar:
+  order: 6
+sources:
+  - docs/spec/01-app-composition.md
+  - docs/spec/04-items-relations-groups-spaces.md
+  - packages/toolkit/src/handbook/garden.tsx
+  - packages/toolkit/src/components/frame/app-frame.tsx
+stories:
+  - rls-app-00-community-garden--garden
+  - rls-app-05-focus-panel-create--panel
+---
+
+import Story from '@site/components/Story.astro'
+
+An app on Real Life Stack has three levels, and each answers a different question. The **frame** asks: who are you, which space are you in, which module are you looking at? The **space** asks: what belongs here, who belongs to it? The **item** is the thing itself, an event, a place, a task, a post. The modules in between are views onto the same items, not owners.
+
+Try it in the garden: open the harvest festival, switch to the calendar, then to the map. It is the same address, the same item, shown three times.
+
+<Story id="rls-app-00-community-garden--garden" title="A community garden: pick a space, switch modules, open an item" height={640} />
+
+## The frame
+
+The frame (`AppFrame`, in an app with a router `RoutedAppFrame`) is the same everywhere: the space switcher on the left, the module tabs in the middle, notifications and the user menu on the right; below it the surface of the active module and the one shared panel for detail, create and history. An app does not build it, it provides it (spec 01, "what stays with the app"). That is why every app on the stack looks the same at this point, and why Storybook can show the same frame as the apps.
+
+The frame holds the **focus**: which space, which module, which item is open, whether it is being edited. In an app with a router this lives in the address (`/{space}/{module}/{item}`), in a story in memory, with the same contract. Back in the browser closes the detail, a link to the address opens it.
+
+## The space
+
+A space is the working context: a group (`Group` in the data model) with members, items and the list of its modules in tab order. The space chooses from the register what it shows; it does not extend it (spec 01). A space "Community garden" can carry calendar, map and list, a space "Open workshop" only the list. The personal space is a space like any other, just with one member.
+
+What all modules of a space share belongs to the surface, not to the module: the search, the vocabulary of tags and types, the filter card, the chips. That is why a filter survives switching modules, and why no module offers a selection of its own that another one does not know (spec 01, rule 2a).
+
+## The item, shown twice
+
+The **preview** (`ItemPreview`) is the card in the feed, in the list, on the kanban board: recognise and select. The **detail view** is the whole item with its actions and the discussion; it opens in the shared panel, and there is only this one panel. A second click on another item swaps the content, it does not stack.
+
+<Story id="rls-app-05-focus-panel-create--panel" title="The one panel: detail, create and history swap the content instead of stacking" height={560} />
+
+A person's profile is not a second UI system here. It is the detail view of an item of type person (spec 12); "profile" names the content, not another surface.
+
+## Which level does what
+
+- **Frame:** hold space, module and focus; panel, header, notifications, space administration; the three navigation rules (a field leads into its module, a comment into its discussion, a tag into the filter).
+- **Host of the module:** produce from the register entry what the module needs: the items by `presents`, filtered by search and filter; members, authors, colours; detail, create, plus button. A module loads none of this itself (spec 01, rule 2).
+- **Module:** its rendering and its own interactions, nothing more.
+- **Detail content:** title, facts, content, matching actions, comments.
+- **Connector:** read, observe, permitted writes.
+
+Whoever finds something from a lower level inside an upper one is looking at a violation of the spec; that is the rule that holds all apps together.
+
+## Where to go next
+
+In Storybook, [RLS → App](https://real-life-stack.de/storybook/?path=/docs/rls-app-01-the-app-in-40-lines--docs) shows register, host, loading contract, focus and create one by one, [RLS → App shell](https://real-life-stack.de/storybook/?path=/docs/rls-app-shell-module-surface--docs) the frame and its parts. The next page follows a click down into the connector: [From click to shared change](/en/handbuch/datenfluss/).

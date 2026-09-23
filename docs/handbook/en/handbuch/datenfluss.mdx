@@ -1,0 +1,83 @@
+---
+title: From click to shared change
+description: What an item looks like, what type, vocabulary, tag and module each do, and how a change travels through the layers.
+translationOf: docs/handbook/de/handbuch/datenfluss.mdx
+sourceHash: 917fce37ed4c8b9be6c2c265c234f6452b90fc58cee9fa81d460f0bc6b9b125f
+sidebar:
+  order: 7
+sources:
+  - docs/spec/02-data-interface.md
+  - docs/spec/03-capabilities.md
+  - docs/spec/06-schema-composition.md
+  - docs/spec/08-relation-records.md
+  - docs/spec/reaktivitaet.md
+  - packages/data-interface/src/module-hints.ts
+stories:
+  - rls-foundations-hooks--read
+  - rls-app-04-loading-contract--two-hints
+  - rls-foundations-hooks--relations
+---
+
+import Story from '@site/components/Story.astro'
+
+A click on "Save" does not change the surface that triggered it. It goes down to the connector, and from there the change comes back to every surface that shows the item. This page follows that path.
+
+## An item
+
+```json
+{
+  "id": "erntefest",
+  "type": "event",
+  "createdAt": "2026-09-01T09:00:00.000Z",
+  "createdBy": "mira",
+  "tags": ["garten"],
+  "data": {
+    "title": "Harvest festival in the garden",
+    "start": "2026-09-26T14:00:00+02:00",
+    "position": { "type": "Point", "coordinates": [13.405, 52.52] }
+  }
+}
+```
+
+`id`, `type`, `createdAt`, `createdBy` are the core; the domain fields live in `data`; `tags` are an axis of their own. The type is a class with an IRI (spec 06), and there may be several. The position is GeoJSON, longitude before latitude.
+
+Four words, four jobs:
+
+- **Type:** what the item was created as. Determines rendering, symbol and colour through the type register, and what the composer offers when creating.
+- **Vocabulary:** the meaning and shape of the fields (`@context`, spec 06). The vocabulary turns `start` into a point in time and `position` into a place, for everyone who reads the item.
+- **Tag:** thematic classification by people. Free, no schema.
+- **Module:** a view. The map shows what has a place, the calendar what has a point in time. The field decides, never the type; a task with a date appears in the calendar.
+
+## The loading contract
+
+A module says in the register what it can show (`presents: ["start"]`). The host looks up in the hints table which filter belongs to it (`hasField: ["start"]`), asks the connector for it and hands the module the items already filtered by search, tags and types. Two hints produce the union; the map loads itself, by viewport, and the host then issues no query (spec 01, loading contract).
+
+<Story id="rls-app-04-loading-contract--two-hints" title="Two hints: the host loads the union of start and position" height={560} />
+
+The connector loads coarsely, the module decides finely: the connector checks whether a field is present, not which value it has. Whether a status belongs in a kanban column is checked by the kanban on the loaded set.
+
+## The path through the layers
+
+1. A surface asks a hook, say `useItems(filter)`.
+2. The hook subscribes to the connector's observable (`observe`) instead of loading once (`getItems`).
+3. A permitted change goes through the write hook (`useUpdateItem`) to the connector.
+4. The connector changes its data and reports the change to all subscribers.
+5. Every surface that shows the item re-renders, without anyone having notified it.
+
+<Story id="rls-foundations-hooks--read" title="Reading hooks observe the data source; the surface loads nothing on demand" height={420} />
+
+Hooks own no copy of the truth. Whoever keeps a list in component state and reloads by hand after saving rebuilds the reactivity that already exists, and misses changes from other devices. Cleaning up is part of it: a hook ends its subscription when the surface goes away.
+
+## Relations
+
+A relation connects an item through a predicate to a target. Comments and reactions are items of their own with a `commentOn` relation, not arrays inside the post that keep growing; statements in the resonance module are signed relation records (spec 08). For every kind of relationship there is the matching hook (`useComments`, `useReactions`, `useVotes`, `useRelationRecords`); a general reverse lookup deliberately does not exist.
+
+<Story id="rls-foundations-hooks--relations" title="Comments, reactions, votes: items of their own with a relation, one hook each" height={480} />
+
+## Empty is not "still loading"
+
+An empty result can be fully loaded. That is why reading hooks answer with `{data, isLoading}`, and the connector carries its own signal for the first sync (`useInitialSync`). A surface that turns an empty list into "nothing here" while the sync is still running shows a false truth; the preview components have the loading state for this.
+
+## Where to go next
+
+[Spec 02 DataInterface](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/02-data-interface.md), [Spec 06 schema composition](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/06-schema-composition.md), all hooks in the [reference](/en/reference/hooks/). The next page separates three questions that are often squeezed into one: [Capability, permission, origin](/en/handbuch/rechte/).
