@@ -112,10 +112,11 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-family small { display: block; }
 
 /* Eingebettete Stories */
-.story-example { margin-block: 2rem; border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; overflow: hidden; }
-.story-example figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; padding: .7rem 1rem; font-size: .78rem; background: var(--sl-color-bg-sidebar); }
-.story-example iframe { display: block; width: 100%; border: 0; background: white; }
-.story-example p { padding: .6rem 1rem; font-size: .8rem; color: var(--sl-color-gray-2); margin: 0; }
+/* Story-Einbettung: der Rahmen liegt nur um die Vorschau, damit sie wie die App wirkt; Zeile davor und Satz danach stehen frei. */
+.story-example { margin-block: 2rem; }
+.story-example figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; padding: 0 .1rem .5rem; font-size: .78rem; color: var(--sl-color-gray-2); }
+.story-example iframe { display: block; width: 100%; border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; background: white; }
+.story-example p { padding: .6rem .1rem 0; font-size: .8rem; color: var(--sl-color-gray-2); margin: 0; }
 @media (max-width: 50rem) { :root { --sl-text-5xl: 2.4rem; } .rl-cards, .rl-cards.three { grid-template-columns: 1fr 1fr; } .rl-cards.one { grid-template-columns: 1fr; } }
 
 /* Referenz: dichte Tabellen, das Verhalten ohne Faehigkeit farbig wie im Storybook. */
