@@ -6,6 +6,7 @@
  * damit das Seitenpanel wie am Laptop aufgeht; „Handy“ rendert sie 390px breit und verkleinert mit demselben Faktor,
  * damit beide Bilder im gleichen Maßstab stehen. Der Leser
  * schaltet um, die Wahl gilt für alle Vorschauen der Seite und wird im Browser gemerkt.
+ * Hell/Dunkel folgt der Site: Starlights `data-theme` wird als Storybook-Global `theme` mitgegeben.
  */
 interface Props { id: string; title: string; height?: number; frame?: 'desktop' | 'phone' }
 const { id, title, height = 560, frame = 'desktop' } = Astro.props
@@ -25,7 +26,7 @@ const t = en
     </span>
     <a href={`${base}/?path=/story/${id}`}>{t.open}</a>
   </figcaption>
-  <div class="story-stage"><iframe src={url} title={title} loading="lazy" allow="fullscreen"></iframe></div>
+  <div class="story-stage"><iframe data-src={url} title={title} loading="lazy" allow="fullscreen"></iframe></div>
   <p>{title}. {t.note}</p>
 </figure>
 
@@ -48,11 +49,21 @@ const t = en
       b.setAttribute('aria-pressed', String(b.dataset.frame === fig.dataset.frame))
   }
 
+  // Hell oder dunkel: Starlight stempelt `data-theme` auf <html>; Storybook nimmt es als Global `theme` in der Adresse.
+  const theme = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+  function load(fig: HTMLElement) {
+    const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
+    const src = `${iframe.dataset.src}&globals=theme:${theme()}`
+    if (iframe.src !== src) iframe.src = src
+  }
+  new MutationObserver(() => figures.forEach(load)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+
   let remembered: string | null = null
   try { remembered = localStorage.getItem(KEY) } catch {}
   for (const fig of figures) {
     if (remembered === 'phone' || remembered === 'desktop') fig.dataset.frame = remembered
     layout(fig)
+    load(fig)
     fig.querySelector('.story-frames')?.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-frame]')
       if (!b) return
