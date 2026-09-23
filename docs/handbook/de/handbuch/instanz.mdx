@@ -43,7 +43,7 @@ deploy/app/
 └── branding/     theme.json · favicon.svg · optional config.json
 ```
 
-`landing/` und `branding/` sind read-only in den Container gemountet. Was davon direkt ausgeliefert wird (die Landingpage, `theme.json`, `favicon.svg`), wirkt beim nächsten Laden der Seite. Zwei Dinge liest der Container nur beim Start: `.env`, aus dem er die `config.json` erzeugt, und eine eigene `branding/config.json`, die er dorthin kopiert. Nach Änderungen daran braucht es einen Neustart, `docker compose restart app`; ein bloßes `up -d` startet einen unveränderten Container nicht neu. Auch eine **neu hinzugefügte** `theme.json` wird erst nach einem Neustart verlinkt (`colorsUrl`), Änderungen an einer vorhandenen wirken sofort.
+`landing/` und `branding/` sind read-only in den Container gemountet. Was davon direkt ausgeliefert wird (die Landingpage, `theme.json`, `favicon.svg`), wirkt beim nächsten Laden der Seite. Zwei Dinge liest der Container nur beim Start: `.env`, aus dem er die `config.json` erzeugt, und eine eigene `branding/config.json`, die er dorthin kopiert. Die beiden brauchen verschiedene Befehle: Nach einer Änderung an **`.env`** `docker compose up -d`, denn Compose erkennt die geänderten Umgebungsvariablen und erstellt den Container neu (ein `restart` übernähme sie nicht). Nach einer Änderung an **`branding/config.json`** oder einer **neu hinzugefügten** `theme.json` `docker compose restart app`, denn hier ändert sich für Compose nichts, ein `up -d` ließe den Container laufen; erst der Neustart führt den Startvorgang erneut aus. Änderungen an einer vorhandenen `theme.json` wirken sofort.
 
 `branding/theme.json` setzt Farbtokens, getrennt nach hell und dunkel; die Namen müssen Tokens des Toolkits sein, ein unbekannter Name wird verworfen und in der Browser-Konsole gemeldet. Was genau die App liest und in welcher Reihenfolge, steht unter [Runtime-Konfiguration](/handbuch/runtime-config/).
 
@@ -84,6 +84,6 @@ Die Landingpage darf beliebig sein, sie ist eine eigene Seite. Das App-Layout is
 ## Wenn etwas nicht funktioniert
 
 - **Container startet nicht:** `docker compose logs app`. Fehlt ein Pflichtfeld, sagt Compose, welches.
-- **Konfiguration ändert sich nicht:** `.env` und eine eigene `branding/config.json` liest der Container nur beim Start: `docker compose restart app`. Eine eigene `config.json` sticht alle Umgebungsvariablen.
+- **Konfiguration ändert sich nicht:** Nach `.env`-Änderungen `docker compose up -d` (erstellt den Container mit den neuen Variablen), nach Änderungen an `branding/config.json` `docker compose restart app` (führt den Start erneut aus). Eine eigene `config.json` sticht alle Umgebungsvariablen.
 - **Farben wirken nicht:** Browser-Konsole lesen; ein unbekannter Token-Name wird dort genannt.
 - **App läuft, aber niemand sieht die anderen:** Connector, Relay-Adresse und Mitgliedschaft im Space prüfen.
