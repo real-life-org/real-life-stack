@@ -17,7 +17,7 @@ import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import { useResolvedUsers } from "../../hooks/use-resolved-users"
 import { useGroups, useMembers, usePersonalGroupId } from "../../hooks/use-groups"
 import { useItemDetailEdit } from "../../hooks/use-item-detail-edit"
-import { useItemGroupColorResolver } from "../../hooks/use-item-group-color"
+import { useItemPresentation } from "../../hooks/use-item-presentation"
 import { useSurfaceFilteredItems } from "../../hooks/use-filterable-items"
 import { useItemsUnionWithDraft } from "../../hooks/use-items"
 import { useGroupVocabulary } from "../../hooks/use-group-vocabulary"
@@ -106,7 +106,7 @@ const ModuleHostContext = createContext<ModuleHostValue | null>(null)
  *
  * @answers `{entry, currentSpace, members, groups, items, setCreateAnchor, …}`
  * @without throws on render
- * @group surface
+ * @group host
  * @see story rls-foundations-hooks--surfaces
  * @see spec docs/spec/01-app-composition.md
  */
@@ -205,7 +205,9 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
   const { data: groupsLive } = useGroups()
   const groups = groupsProp ?? groupsLive
   const personalGroupId = usePersonalGroupId()
-  const resolveItemGroupColor = useItemGroupColorResolver(currentSpace)
+  // Die Farbe kommt aus derselben Ableitung wie Herkunft und Privatheit (useItemPresentation); der Host reicht nur die Farbe weiter.
+  const present = useItemPresentation(currentSpace)
+  const resolveItemGroupColor = useCallback((item: Item) => present(item).color, [present])
   const { items, itemsLoading } = useContext(ItemsContext)
   const { data: currentUser } = useCurrentUser()
 

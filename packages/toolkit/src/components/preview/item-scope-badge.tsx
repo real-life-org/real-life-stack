@@ -3,11 +3,7 @@
 import type { Item } from "@real-life-stack/data-interface"
 import { ItemGroupBadge } from "./item-group-badge"
 import { ItemPrivateBadge } from "./item-private-badge"
-import {
-  useItemGroupResolver,
-  useItemGroupColorResolver,
-  useItemPrivacyResolver,
-} from "../../hooks/use-item-group-color"
+import { useItemPresentation } from "../../hooks/use-item-presentation"
 
 /**
  * `ItemScopeBadge` — shows an item's sharing scope as a single chip next to
@@ -21,12 +17,10 @@ import {
  * — the read-view counterpart to the group/private badges shown on list cards.
  */
 export function ItemScopeBadge({ item }: { item: Item }) {
-  const isPrivate = useItemPrivacyResolver()
-  const resolveGroup = useItemGroupResolver()
-  const resolveColor = useItemGroupColorResolver()
+  const present = useItemPresentation()
 
-  if (isPrivate(item)) return <ItemPrivateBadge />
-  const group = resolveGroup(item)
+  const { group, color, isPrivate } = present(item)
+  if (isPrivate) return <ItemPrivateBadge />
   if (!group) return null
-  return <ItemGroupBadge name={group.name} color={resolveColor(item)} />
+  return <ItemGroupBadge name={group.name} color={color} />
 }

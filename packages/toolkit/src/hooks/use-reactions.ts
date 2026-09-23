@@ -23,7 +23,7 @@ export interface AggregatedReaction {
 /** Return value of useReactions hook. */
 export interface UseReactionsResult {
   /** Aggregated reactions sorted by count (highest first). */
-  reactions: AggregatedReaction[]
+  data: AggregatedReaction[]
   /** Set or toggle the current user's reaction. Same emoji = remove, different emoji = switch. */
   react: (emoji: string) => Promise<void>
   /** Whether the hook is loading initial data. */
@@ -39,7 +39,7 @@ export interface UseReactionsResult {
  * Reads from item.data.reactions (summary) and item.data.myReaction (current user).
  * Uses optimistic updates with latest-wins for rapid clicks.
  *
- * @answers `{reactions, react, canReact}`
+ * @answers `{data, isLoading, react, canReact}`
  * @without empty — `react` no-op
  * @group relations
  * @see story rls-foundations-hooks--relations
@@ -174,7 +174,7 @@ export function useReactions(itemId: string): UseReactionsResult {
   }, [performReact])
 
   return {
-    reactions,
+    data: reactions,
     react,
     isLoading: relatedObservable === null,
     canReact,
@@ -192,7 +192,7 @@ export interface ReactionUser {
 /** Return value of useReactionUsers hook. */
 export interface UseReactionUsersResult {
   /** Users who reacted, sorted reverse chronologically. */
-  users: ReactionUser[]
+  data: ReactionUser[]
   /** Whether the data is still loading. */
   isLoading: boolean
 }
@@ -203,7 +203,7 @@ export interface UseReactionUsersResult {
  * Hook for loading the list of users who reacted to an item.
  * Lazy-loaded — only fetches when called.
  *
- * @answers `{users, isLoading}`
+ * @answers `{data, isLoading}`
  * @without empty
  * @group relations
  * @see story rls-foundations-hooks--relations
@@ -281,5 +281,5 @@ export function useReactionUsers(itemId: string, emojiFilter?: string): UseReact
     return () => { cancelled = true }
   }, [connector, canRelate, canAuth, itemId, emojiFilter])
 
-  return { users, isLoading }
+  return { data: users, isLoading }
 }

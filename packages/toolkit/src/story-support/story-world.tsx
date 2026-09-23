@@ -21,6 +21,8 @@ export const STORY_USERS: User[] = [
   { id: "mira", displayName: "Mira Beispiel", avatarUrl: "https://randomuser.me/api/portraits/women/44.jpg" },
   { id: "jonas", displayName: "Jonas Klein" },
   { id: "lea", displayName: "Lea Weber" },
+  // Bekannt, aber in keiner Gruppe: fuer Stories, die Einladen und Entfernen zeigen (rls#456).
+  { id: "noah", displayName: "Noah Gast" },
 ]
 
 /** Die angemeldete Person in allen Stories. */

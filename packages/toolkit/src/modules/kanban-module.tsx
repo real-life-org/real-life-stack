@@ -61,7 +61,7 @@ export function KanbanModule({ items: tasks = [], itemsLoading: tasksLoading = f
     (item: Item) => (isAggregate ? <ItemScopeBadge item={item} /> : null),
     [isAggregate],
   )
-  const { mutate: updateItem } = useUpdateItem()
+  const updateItem = useUpdateItem()
   // Tags, Typen und Suchtext hat der Host angewendet; „Nur meine" und die
   // Zuweisung bedeuten nur hier etwas und bleiben darum lokal (Spec
   // shared-components → Filter-State, Regel 2).

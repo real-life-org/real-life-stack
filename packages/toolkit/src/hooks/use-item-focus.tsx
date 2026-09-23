@@ -70,7 +70,7 @@ export const ItemFocusContext = createContext<ItemFocus | null>(null)
  *
  * @answers `{itemId, isEditing, composeType, focusItem, editItem, startCompose, …}`
  * @without throws on render
- * @group surface
+ * @group host
  * @see story rls-foundations-hooks--surfaces
  * @see spec docs/spec/01-app-composition.md
  */
@@ -89,7 +89,7 @@ export function useItemFocus(): ItemFocus {
  *
  * @answers `ItemFocus | null`
  * @without value — null
- * @group surface
+ * @group host
  * @see story rls-foundations-hooks--surfaces
  * @see spec docs/spec/01-app-composition.md
  */

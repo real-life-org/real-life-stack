@@ -38,7 +38,7 @@ export function CommentSection({
   onReplyChange,
   className,
 }: CommentSectionProps) {
-  const { comments, allComments, authors, canComment, createComment } = useComments(itemId)
+  const { data: comments, allComments, authors, canComment, createComment } = useComments(itemId)
   const [replyTo, setReplyTo] = useState<CommentQuote | null>(null)
   const [replyToFirstLevel, setReplyToFirstLevel] = useState<string | null>(null)
 

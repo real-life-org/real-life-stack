@@ -50,35 +50,31 @@ The spec is the single source of truth of the repository; when code and spec dis
 - [architektur2.md](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/architektur2.md) (Historische Referenz, nicht direkt normativ): bisher beste Gesamtbeschreibung; wird schrittweise in die neue Spec-Struktur überführt
 - [reaktivitaet.md](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/reaktivitaet.md) (Ergänzende Referenz): Bestehendes Detailverhalten für Reaktivität und Relations; wird später in passende Kern-Slices überführt
 
-## Hooks (61, generated from the toolkit's documentation comments)
+## Hooks (58, generated from the toolkit's documentation comments)
 
 Every surface asks hooks, never the connector. Reading hooks answer empty without a capability; writing hooks fail on the call, not on render. Living examples: https://real-life-stack.de/storybook/?path=/docs/rls-foundations-all-hooks--docs
 
 ### Read items
 
 - `useActivity(limit?)` → `{data, supported}`: What happened in this space recently? Without capability: empty — `supported: false`.
+- `useDraftItem()` → `Item | null`: What is someone typing right now that modules should preview? Without capability: null — without provider.
 - `useItems(filter?)` → `{data, isLoading}`: Which items match this filter, and is the list still arriving? Without capability: —.
 - `useItemsWithDraft(filter?)` → `{data, isLoading}`: The same list, with the draft being typed already in it as a card. Without capability: —.
 - `useItem(id)` → `{data, isLoading}`: Does this one item exist, and is "not found" already decided? Without capability: —.
-- `useNotifications()` → `{notifications, badgeCount, …}`: What is new for me, and how much is unread? Without capability: empty.
-- `useMarkNotificationsSeen(notifications)` → —: Advance the seen boundary once per opening. Without capability: no-op.
 
 ### Write items
 
-- `useDraftItem()` → `Item | null`: What is someone typing right now that modules should preview? Without capability: null — without provider.
 - `useSetDraftItem()` → `(draft) => void`: Publish or discard the running draft. Without capability: no-op.
 - `useItemEditor(options)` → `{isOpen, mode, submit, remove, …}`: Open the composer and save an input as an item, including its space. Without capability: throws on call.
-- `useCreateItem()` → `{mutate}`: Create a new item. Without capability: throws on call.
-- `useUpdateItem()` → `{mutate}`: Change an existing item. Without capability: throws on call.
-- `useDeleteItem()` → `{mutate}`: Delete an item. Without capability: throws on call.
+- `useCreateItem()` → `(input) => Promise<Item>`: Create a new item. Without capability: throws on call.
+- `useUpdateItem()` → `(id, updates) => Promise<Item>`: Change an existing item. Without capability: throws on call.
+- `useDeleteItem()` → `(id) => Promise<void>`: Delete an item. Without capability: throws on call.
 - `useUnsavedChanges()` → `{dirty, setDirty} | null`: Are there unsaved inputs that leaving must intercept? Without capability: null — without provider.
 - `useSetUnsavedDirty()` → `(dirty) => void`: Report that something unsaved sits in the form. Without capability: no-op.
 
-### People, spaces and membership
+### Groups and members
 
-- `useOptionalCurrentUser()` → `{data, isLoading}`: Who am I, if anyone at all? Without capability: null.
-- `useCurrentUser()` → `{data, isLoading}`: Who am I? For surfaces that make no sense without sign-in. Without capability: throws on render.
-- `useContacts()` → `{contacts, addContact, …}`: Whom do I know, who is waiting for confirmation? Without capability: empty — actions no-op.
+- `useGroupVocabulary(fallbackItems?)` → `{tags, types}`: Which tags and types exist in the space? The one derivation for filter card, chips and tag suggestions. Without capability: empty.
 - `usePersonalGroupId()` → `string | null`: Where does an item belong that is shared with nobody? Without capability: null.
 - `useGroups()` → `{data, isLoading}`: Which spaces do I see? Without capability: empty.
 - `useCurrentGroup()` → `Group | null`: Which space am I in right now? Without capability: null.
@@ -88,55 +84,59 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 - `useMembers(groupId)` → `{data, isLoading}`: Who belongs to this space, or with `null` to all of mine? Without capability: empty.
 - `useInviteMember()` → `(groupId, userId) => Promise`: Invite someone into a space. Without capability: throws on call.
 - `useRemoveMember()` → `(groupId, userId) => Promise`: Remove someone from a space. Without capability: throws on call.
-- `useItemAuthor(item, users)` → `User | undefined`: Who wrote this item? Without capability: —.
+
+### People
+
+- `useOptionalCurrentUser()` → `{data, isLoading}`: Who am I, if anyone at all? Without capability: null.
+- `useCurrentUser()` → `{data, isLoading}`: Who am I? For surfaces that make no sense without sign-in. Without capability: throws on render.
+- `useContacts()` → `{contacts, addContact, …}`: Whom do I know, who is waiting for confirmation? Without capability: empty — actions no-op.
+- `useIncomingEvents()` → `{current, dismiss, …}`: Which incoming event is waiting for an answer? Without capability: throws on render — without provider.
 - `useOpenProfile()` → `(userId) => void`: Open a person's profile. Without capability: no-op.
 - `useResolvedUsers(ids)` → `Map<string, User>`: For which ids do I know a name? Without capability: empty — map.
 - `useUserNameResolver()` → `(userId) => string`: A display name for a user id, falling back to the id. Without capability: value — value — the id itself.
 - `useVerification()` → `{supported, createChallenge, …}`: Two people who meet in real life confirm each other. Without capability: empty — `supported: false`.
 
-### Permissions and capabilities
-
-- `useItemPermissions(item)` → `{canEdit, canDelete}`: May I show the ⋮ menu here? Without capability: value — both `false`.
-
 ### Relations
 
 - `useCommentCount(itemId)` → `number`: Is there a conversation on this card? Without capability: value — `0`.
-- `useComments(itemId)` → `{comments, createComment, canComment}`: What was said, by whom, and may I reply? Without capability: empty — writing no-op.
-- `useReplies(itemId, commentId)` → `{replies, isLoading}`: Which replies does this comment have? Without capability: empty.
-- `useReactions(itemId)` → `{reactions, react, canReact}`: How was reacted, and can I set my reaction? Without capability: empty — `react` no-op.
-- `useReactionUsers(itemId, emojiFilter?)` → `{users, isLoading}`: Who reacted with which emoji? Without capability: empty.
+- `useComments(itemId)` → `{data, isLoading, canComment, createComment, …}`: What was said, by whom, and may I reply? Without capability: empty — writing no-op.
+- `useReplies(itemId, commentId)` → `{data, isLoading}`: Which replies does this comment have? Without capability: empty.
+- `useReactions(itemId)` → `{data, isLoading, react, canReact}`: How was reacted, and can I set my reaction? Without capability: empty — `react` no-op.
+- `useReactionUsers(itemId, emojiFilter?)` → `{data, isLoading}`: Who reacted with which emoji? Without capability: empty.
 - `useRelationRecords(filter?)` → `{data, supported}`: Which signed relation records match? Without capability: empty — `supported: false`.
 - `useVerifiedRelationRecords(records)` → `RelationRecord[]`: Which of those are cryptographically covered? Without capability: empty — also while checking.
-- `useVotes(statementId)` → `{summary, vote, canVote}`: How does the resonance stand, and how do I vote? Without capability: empty — without signature verification no vote counts.
-- `useVoteUsers(statementId, enabled?)` → `{users, isLoading}`: Who voted how? Without capability: empty.
+- `useVotes(statementId)` → `{data, isLoading, vote, canVote}`: How does the resonance stand, and how do I vote? Without capability: empty — without signature verification no vote counts.
+- `useVoteUsers(statementId, enabled?)` → `{data, isLoading}`: Who voted how? Without capability: empty.
 
-### Surfaces and UI state
+### Permissions and capabilities
+
+- `useOptionalConnector()` → `DataInterface | null`: The same for surfaces that render without data access too. Without capability: null.
+- `useConnector()` → `DataInterface`: Which data access applies here? Without capability: throws on render — without provider.
+- `useItemPermissions(item)` → `{canEdit, canDelete}`: May I show the ⋮ menu here? Without capability: value — both `false`.
+
+### Host and focus
 
 - `useSharedFilter()` → `{value, searchText, setSearchText, clear}`: The app-wide filter that survives the module switch. Without capability: throws on render.
 - `useCreate()` → `{isComposing, startCreate, patchCreate}`: Start creating — with suggestion and prefill, never with restriction. Without capability: throws on render.
 - `useOptionalCreate()` → `CreateHostValue | null`: The create host, or `null` where a surface may stand without one (story, test). Without capability: value — null.
 - `useModuleHost()` → `{entry, currentSpace, members, groups, items, setCreateAnchor, …}`: The space context and the items the module host produced for this surface. Without capability: throws on render.
 - `useModulePanel()` → `{current, open, close}`: Open a panel beside the module. There is only one. Without capability: throws on render.
-- `useGroupVocabulary(fallbackItems?)` → `{tags, types}`: Which tags and types exist in the space? The one derivation for filter card, chips and tag suggestions. Without capability: empty.
-- `useIncomingEvents()` → `{current, dismiss, …}`: Which incoming event is waiting for an answer? Without capability: throws on render — without provider.
 - `useItemFocus()` → `{itemId, isEditing, composeType, focusItem, editItem, startCompose, …}`: Which item is open, is it being edited, is something being created? The focus contract — in the app the URL (`UrlFocusProvider` from `/router`), otherwise memory. Without capability: throws on render.
 - `useOptionalItemFocus()` → `ItemFocus | null`: The focus, or `null` where a surface may stand without one. Without capability: value — null.
 
 ### Environment
 
-- `useOptionalConnector()` → `DataInterface | null`: The same for surfaces that render without data access too. Without capability: null.
-- `useConnector()` → `DataInterface`: Which data access applies here? Without capability: throws on render — without provider.
 - `useColorScheme()` → `"light" | "dark"`: Is it light or dark right now? Without capability: —.
 - `useInitialSync()` → `{active, loadedGroups, expectedGroups}`: Is the first fill still running, may "nothing there" be said? Without capability: value — permanently `active: false`.
 - `useIsMobile()` → `boolean`: Narrower than 768px? Without capability: —.
 - `useIsCompact()` → `boolean`: Below 1024px, where the panel becomes a drawer? Without capability: —.
+- `useNotifications()` → `{notifications, badgeCount, …}`: What is new for me, and how much is unread? Without capability: empty.
+- `useMarkNotificationsSeen(notifications)` → —: Advance the seen boundary once per opening. Without capability: no-op.
 - `useRelayStatus()` → `{state, isConnected, pendingCount}`: Is this device attached to the relay, is anything unsent waiting? Without capability: throws on render.
 
 ### Item properties
 
-- `useItemGroupColorResolver(activeGroupId?)` → `(item) => string`: In which colour does an item appear, by its space? Without capability: value — palette colour.
-- `useItemGroupResolver()` → `(item) => Group | undefined`: Which space does it come from? Without capability: value — `undefined`.
-- `useItemPrivacyResolver()` → `(item) => boolean`: Is it private, shared with nobody? Without capability: value — always `false`.
+- `useItemPresentation(activeGroupId?)` → `(item) => {group, color, isPrivate}`: How does this item present itself: which group it comes from, in which colour, and whether it is private? Without capability: value — no group, palette colour, `false`.
 - `useItemTags(item)` → `string[]`: Which tags does this item carry? Without capability: —.
 
 ## Contributing to the stack itself

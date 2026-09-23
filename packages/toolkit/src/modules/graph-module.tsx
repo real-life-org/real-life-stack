@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react"
 
 import { useItemFocus } from "../hooks/use-item-focus"
-import { useItemGroupResolver } from "../hooks/use-item-group-color"
+import { useItemPresentation } from "../hooks/use-item-presentation"
 import { useOpenProfile } from "../hooks/use-open-profile"
 import { useRelationRecords } from "../hooks/use-relation-records"
 import { GraphView } from "../components/graph/graph-view"
@@ -41,14 +41,14 @@ export function GraphModule({ items = [] }: ModuleViewProps) {
 
   // Der Heimat-Space eines Items laut Connector — um space-qualifizierte
   // Relationsziele (`space:B/item:x`) gegen Id-Kollisionen zu pruefen.
-  const resolveGroup = useItemGroupResolver()
+  const present = useItemPresentation()
   const itemById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
   const resolveItemSpace = useCallback(
     (itemId: string) => {
       const item = itemById.get(itemId)
-      return item ? resolveGroup(item)?.id ?? null : null
+      return item ? present(item).group?.id ?? null : null
     },
-    [itemById, resolveGroup],
+    [itemById, present],
   )
 
   const projection = useMemo(

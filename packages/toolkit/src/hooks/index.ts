@@ -36,10 +36,9 @@ export { useVotes, useVoteUsers, useVerifiedRelationRecords, type VoteSummary, t
 export { useIncomingEvents, IncomingEventsProvider } from "./use-incoming-events"
 
 // Item-Detail Hooks (shared across modules — Feed, Kanban, Calendar, Map)
-export { useItemAuthor } from "./use-item-author"
 export { useItemTags } from "./use-item-tags"
 export { useColorScheme } from "./use-color-scheme"
-export { useItemGroupColorResolver, useItemGroupResolver, useItemPrivacyResolver } from "./use-item-group-color"
+export { useItemPresentation, type ItemPresentation } from "./use-item-presentation"
 export { useOpenProfile, OpenProfileProvider, type OpenProfile, type OpenProfileProviderProps } from "./use-open-profile"
 export {
   useItemEditor,

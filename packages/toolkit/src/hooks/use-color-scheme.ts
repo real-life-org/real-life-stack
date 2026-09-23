@@ -18,6 +18,7 @@ import { type ColorScheme } from "../lib/color-scales"
  * @answers `"light" | "dark"`
  * @without —
  * @group environment
+ * @see story rls-foundations-hooks--environment
  * @see spec docs/spec/11-runtime-config-und-branding.md
  */
 export function useColorScheme(): ColorScheme {

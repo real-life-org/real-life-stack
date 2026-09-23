@@ -8,7 +8,19 @@ import { useItemAuthor } from "./use-item-author"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useItemPermissions } from "./use-item-permissions"
 import { useOptionalCurrentUser } from "./use-auth"
-import { useGroups, useCurrentGroup, useMembers } from "./use-groups"
+import { useGroups, useCurrentGroup, useMembers, usePersonalGroupId, useCreateGroup, useInviteMember, useRemoveMember } from "./use-groups"
+import { useGroupVocabulary } from "./use-group-vocabulary"
+import { useUserNameResolver } from "./use-user-names"
+import { useResolvedUsers } from "./use-resolved-users"
+import { useContacts } from "./use-contacts"
+import { useVerification } from "./use-verification"
+import { useIsMobile, useIsCompact } from "./use-mobile"
+import { useColorScheme } from "./use-color-scheme"
+import { useInitialSync } from "./use-initial-sync"
+import { useRelayStatus } from "./use-relay-status"
+import { useNotifications } from "./use-notifications"
+import { useItemPresentation } from "./use-item-presentation"
+import { useItemTags } from "./use-item-tags"
 import { useComments } from "./use-comments"
 import { useReactions } from "./use-reactions"
 import { useCommentCount } from "./use-comment-count"
@@ -98,9 +110,9 @@ function ItemsLesen() {
 
 function ItemsSchreiben() {
   const { data: items } = useItems()
-  const { mutate: anlegen } = useCreateItem()
-  const { mutate: aendern } = useUpdateItem()
-  const { mutate: loeschen } = useDeleteItem()
+  const anlegen = useCreateItem()
+  const aendern = useUpdateItem()
+  const loeschen = useDeleteItem()
   const eigene = items.filter((i) => i.type === "post" && i.id.startsWith("neu-"))
   return (
     <Tafel
@@ -189,8 +201,8 @@ function RechteVergleich() {
 // ── 4. Beziehungen ─────────────────────────────────────────────────────────
 
 function Beziehungen() {
-  const { comments, createComment } = useComments(STORY_POST.id)
-  const { reactions, react, canReact } = useReactions(STORY_POST.id)
+  const { data: comments, createComment } = useComments(STORY_POST.id)
+  const { data: reactions, react, canReact } = useReactions(STORY_POST.id)
   const [text, setText] = useState("")
   return (
     <Tafel
@@ -274,6 +286,120 @@ function Flaechen() {
   )
 }
 
+// ── 7. Gruppen und Mitglieder ──────────────────────────────────────────────
+
+function GruppenUndMitglieder() {
+  const { data: groups } = useGroups()
+  const current = useCurrentGroup()
+  const personal = usePersonalGroupId()
+  const { data: members } = useMembers(current?.id ?? null)
+  const vokabular = useGroupVocabulary()
+  const anlegen = useCreateGroup()
+  const einladen = useInviteMember()
+  const entfernen = useRemoveMember()
+  const [zuletzt, setZuletzt] = useState<string | null>(null)
+  const gast = "noah" // im Seed bekannt, anfangs in keiner Gruppe
+  const istDrin = members.some((m) => m.id === gast)
+  return (
+    <Tafel
+      titel="Gruppen und Mitglieder"
+      hinweis="Eine Gruppe ist das Datenobjekt (Spec 04); die Oberfläche nennt sie Space. Lesen antwortet leer ohne Fähigkeit, Schreiben scheitert beim Aufruf — hier kann der Connector beides."
+    >
+      <Zeile name="useGroups()">{groups.map((g) => g.name).join(" · ") || "keine"}</Zeile>
+      <Zeile name="useCurrentGroup()">{current?.name ?? "—"}</Zeile>
+      <Zeile name="usePersonalGroupId()">{personal ?? "null (kein persönlicher Space)"}</Zeile>
+      <Zeile name="useMembers(groupId)">{members.map((m) => m.displayName ?? m.id).join(", ") || "niemand"}</Zeile>
+      <Zeile name="useGroupVocabulary()">
+        {vokabular.types.length} Typen · {vokabular.tags.length} Tags
+      </Zeile>
+      <Zeile name="useCreateGroup()">
+        <Button size="sm" onClick={async () => { const g = await anlegen(`Neuer Space ${groups.length + 1}`); setZuletzt(g.name) }}>Space anlegen</Button>
+        {zuletzt && <span className="ml-3 text-muted-foreground">angelegt: {zuletzt}</span>}
+      </Zeile>
+      <Zeile name="useInviteMember() / useRemoveMember()">
+        <Button size="sm" variant="outline" disabled={!current} onClick={() => current && (istDrin ? entfernen(current.id, gast) : einladen(current.id, gast))}>
+          {istDrin ? "Gast entfernen" : "Gast einladen"}
+        </Button>
+      </Zeile>
+    </Tafel>
+  )
+}
+
+// ── 8. Menschen ────────────────────────────────────────────────────────────
+
+function Menschen() {
+  const { data: ich, isLoading } = useOptionalCurrentUser()
+  const name = useUserNameResolver()
+  const aufgeloest = useResolvedUsers([STORY_ME.id, "did:example:unbekannt"])
+  const kontakte = useContacts()
+  const verifikation = useVerification()
+  return (
+    <Tafel
+      titel="Menschen"
+      hinweis="Wer angemeldet ist, wie eine Id zum Namen wird, und was der Connector an Kontakten und Verifikation kann. Ohne Fähigkeit: null, die Id selbst, leer mit supported: false."
+    >
+      <Zeile name="useOptionalCurrentUser()">{isLoading ? "lädt …" : ich?.displayName ?? "null (niemand angemeldet)"}</Zeile>
+      <Zeile name="useUserNameResolver()">
+        {name(STORY_ME.id)} · {name("did:example:unbekannt")}
+      </Zeile>
+      <Zeile name="useResolvedUsers(ids)">{aufgeloest.size} von 2 aufgelöst</Zeile>
+      <Zeile name="useContacts()">
+        {kontakte.supportsContacts ? `${kontakte.contacts.length} Kontakte` : "supportsContacts: false — Liste leer, Aktionen ohne Wirkung"}
+      </Zeile>
+      <Zeile name="useVerification()">{verifikation.supported ? "unterstützt" : "supported: false"}</Zeile>
+    </Tafel>
+  )
+}
+
+// ── 9. Umgebung ────────────────────────────────────────────────────────────
+
+function Umgebung() {
+  const mobil = useIsMobile()
+  const kompakt = useIsCompact()
+  const schema = useColorScheme()
+  const sync = useInitialSync()
+  const relay = useRelayStatus()
+  const { notifications, badgeCount, supported } = useNotifications()
+  return (
+    <Tafel
+      titel="Umgebung"
+      hinweis="Was um die Fläche herum gilt: Bildschirm, Farbschema, Synchronisation, Relay, Benachrichtigungen. Zieh das Fenster schmaler — die ersten beiden Zeilen folgen."
+    >
+      <Zeile name="useIsMobile()">{String(mobil)} (unter 768px)</Zeile>
+      <Zeile name="useIsCompact()">{String(kompakt)} (unter 1024px)</Zeile>
+      <Zeile name="useColorScheme()">{schema}</Zeile>
+      <Zeile name="useInitialSync()">{sync.active ? "läuft" : "nicht aktiv (kein Sync in dieser Welt)"}</Zeile>
+      <Zeile name="useRelayStatus()">{relay.state} · {relay.pendingCount} ausstehend</Zeile>
+      <Zeile name="useNotifications()">{supported ? `${notifications.length} Benachrichtigungen, ${badgeCount} ungelesen` : "supported: false — leer"}</Zeile>
+    </Tafel>
+  )
+}
+
+// ── 10. Item-Eigenschaften ─────────────────────────────────────────────────
+
+function ItemEigenschaften() {
+  const { data: items } = useItems()
+  const present = useItemPresentation()
+  const tags = useItemTags(items[0])
+  return (
+    <Tafel
+      titel="Item-Eigenschaften"
+      hinweis="Was ein Item über sich sagt: Herkunftsgruppe, Farbe, privat — eine Ableitung für alle Flächen. Und seine Tags, ohne Laden."
+    >
+      {items.slice(0, 4).map((item) => {
+        const p = present(item)
+        return (
+          <Zeile key={item.id} name={`useItemPresentation()(${item.id})`}>
+            <span className="mr-2 inline-block size-3 rounded-full align-middle" style={{ background: p.color }} />
+            {p.group?.name ?? "ohne Herkunft"}{p.isPrivate ? " · privat" : ""}
+          </Zeile>
+        )
+      })}
+      <Zeile name="useItemTags(item)">{tags.length ? tags.join(", ") : "keine Tags"}</Zeile>
+    </Tafel>
+  )
+}
+
 // ── Stories ────────────────────────────────────────────────────────────────
 
 const meta: Meta = {
@@ -319,7 +445,7 @@ export const Relations: Story = {
 }
 
 export const Surfaces: Story = {
-  name: "5 · Surfaces",
+  name: "5 · Host and focus",
   render: () => (
     <StoryWorld>
       <FilterProvider>
@@ -376,4 +502,40 @@ export const CapabilityCheck: Story = {
       </div>
     )
   },
+}
+
+export const Groups: Story = {
+  name: "7 · Groups and members",
+  render: () => (
+    <StoryWorld>
+      <GruppenUndMitglieder />
+    </StoryWorld>
+  ),
+}
+
+export const People: Story = {
+  name: "8 · People",
+  render: () => (
+    <StoryWorld>
+      <Menschen />
+    </StoryWorld>
+  ),
+}
+
+export const Environment: Story = {
+  name: "9 · Environment",
+  render: () => (
+    <StoryWorld>
+      <Umgebung />
+    </StoryWorld>
+  ),
+}
+
+export const ItemProperties: Story = {
+  name: "10 · Item properties",
+  render: () => (
+    <StoryWorld>
+      <ItemEigenschaften />
+    </StoryWorld>
+  ),
 }

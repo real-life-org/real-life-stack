@@ -99,7 +99,7 @@ export interface VoteSummary {
 
 /** Return value of useVotes hook. */
 export interface UseVotesResult {
-  summary: VoteSummary
+  data: VoteSummary
   /** Set or toggle the current user's vote. Same value = withdraw, different value = switch. */
   vote: (value: VoteValue) => Promise<void>
   isLoading: boolean
@@ -119,7 +119,7 @@ export interface UseVotesResult {
  * (`votesFromRelationRecords`): endpoint bound to the author, at most one
  * counted vote per (statement, voter). See docs/spec/modules/resonance.md.
  *
- * @answers `{summary, vote, canVote}`
+ * @answers `{data, isLoading, vote, canVote}`
  * @without empty — without signature verification no vote counts
  * @group relations
  * @see story rls-foundations-hooks--relations
@@ -245,7 +245,7 @@ export function useVotes(statementId: string): UseVotesResult {
     return next
   }, [performVote])
 
-  return { summary, vote, isLoading: recordsObservable === null, canVote }
+  return { data: summary, vote, isLoading: recordsObservable === null, canVote }
 }
 
 /** Voter entry for the transparent voter list — votes are transparent by design. */
@@ -257,7 +257,7 @@ export interface VoteUser {
 }
 
 export interface UseVoteUsersResult {
-  users: VoteUser[]
+  data: VoteUser[]
   isLoading: boolean
 }
 
@@ -267,7 +267,7 @@ export interface UseVoteUsersResult {
  * Reactive list of voters (with stance) for a statement: subscribes to the
  * vote records and re-resolves display names when the set changes.
  *
- * @answers `{users, isLoading}`
+ * @answers `{data, isLoading}`
  * @without empty
  * @group relations
  * @see story rls-foundations-hooks--relations
@@ -329,5 +329,5 @@ export function useVoteUsers(statementId: string, enabled = true): UseVoteUsersR
     return () => { cancelled = true }
   }, [connector, recordsObservable, votes])
 
-  return { users, isLoading }
+  return { data: users, isLoading }
 }

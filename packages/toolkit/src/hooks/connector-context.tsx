@@ -24,7 +24,7 @@ export function ConnectorProvider({ connector, children }: ConnectorProviderProp
  *
  * @answers `DataInterface | null`
  * @without null
- * @group environment
+ * @group permissions
  * @see story rls-foundations-hooks--permissions
  * @see spec docs/spec/03-capabilities.md
  */
@@ -37,7 +37,7 @@ export function useOptionalConnector(): DataInterface | null {
  *
  * @answers `DataInterface`
  * @without throws on render — without provider
- * @group environment
+ * @group permissions
  * @see story rls-foundations-hooks--permissions
  * @see spec docs/spec/03-capabilities.md
  */

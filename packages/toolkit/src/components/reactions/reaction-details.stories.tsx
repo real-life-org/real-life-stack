@@ -43,7 +43,7 @@ function withReactors(...groups: { emoji: string; count: number }[]) {
 
 /** How a surface opens the list: counts from `useReactions`, names it fetches itself. */
 function DetailsSurface({ initialEmoji }: { initialEmoji?: string }) {
-  const { reactions } = useReactions(STORY_POST.id)
+  const { data: reactions } = useReactions(STORY_POST.id)
   return (
     <div className="mx-auto h-80 max-w-sm overflow-hidden rounded-lg border bg-background shadow-lg">
       <ReactionDetails

@@ -22,6 +22,7 @@ const NOOP_VERIFICATION = {
  * @answers `{supported, createChallenge, …}`
  * @without empty — `supported: false`
  * @group people
+ * @see story rls-foundations-hooks--people
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
 export function useVerification() {

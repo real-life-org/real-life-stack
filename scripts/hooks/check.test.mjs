@@ -133,3 +133,19 @@ test("every public hook of the toolkit is documented", () => {
   assert.ok(storyIds().has("rls-foundations-hooks--read"))
   for (const g of Object.keys(GROUPS)) assert.ok(rows.some((r) => r.group === g), `group ${g} has no hook`)
 })
+
+// rls#457 (Codex): Der Handtext („Pairs easily confused") nennt Hooks, die die
+// erzeugte Tabelle nicht prueft. Jeder Name darin muss ein oeffentlicher Hook sein.
+test("hand-written hook mentions name public hooks only", () => {
+  const hooks = publicHooks()
+  const files = [
+    "packages/toolkit/src/hooks/all-hooks.mdx",
+    "apps/site/src/pages/[...lang]/reference/hooks.astro",
+  ].map((f) => resolve(root, f)).filter(existsSync)
+  for (const f of files) {
+    const text = readFileSync(f, "utf8")
+    const mentioned = new Set([...text.matchAll(/\buse[A-Z]\w+/g)].map((m) => m[0]))
+    const unknown = [...mentioned].filter((n) => !hooks.has(n))
+    assert.deepEqual(unknown, [], `${f.slice(root.length)} mentions non-public hooks`)
+  }
+})

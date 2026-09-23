@@ -27,8 +27,8 @@ Living examples are under [Foundations → Hooks](?path=/story/rls-foundations-h
 
 ## Pairs easily confused
 
-- `useCurrentUser` and `useOptionalCurrentUser` differ only in whether a missing sign-in throws or yields `null`. The same pattern with `useConnector`, `useModuleHost`, `useItemFocus`, `useCreate`.
-- `useReactions` already carries in `reactions[].userIds` what `useReactionUsers` fetches again.
+- `useCurrentUser` and `useOptionalCurrentUser` differ in what happens on a connector **without the authentication capability**: the first throws on render, the second yields `null`. While nobody is signed in, both answer `data: null`. The same pattern with `useConnector`/`useOptionalConnector`, `useItemFocus`/`useOptionalItemFocus`, `useCreate`/`useOptionalCreate`.
+- `useReactions` already carries in `data[].userIds` what `useReactionUsers` fetches again.
 - `useCommentCount` is the cheap half of `useComments`.
 - `useItems` and `useItemsWithDraft` are the same list, the latter with the running draft.
 - `useIsMobile` and `useIsCompact` are the same mechanism with a different threshold: 768px for navigation, 1024px for the panel shape.

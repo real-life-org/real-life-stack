@@ -12,7 +12,7 @@ import { useOptionalCurrentUser } from "./use-auth"
  *
  * @answers `{notifications, badgeCount, …}`
  * @without empty
- * @group read
+ * @group environment
  * @see story rls-foundations-hooks--read
  * @see spec docs/spec/02-data-interface.md
  */
@@ -47,7 +47,8 @@ export function useNotifications() {
  *
  * @answers —
  * @without no-op
- * @group read
+ * @group environment
+ * @see story rls-foundations-hooks--environment
  * @see spec docs/spec/11-runtime-config-und-branding.md
  */
 export function useMarkNotificationsSeen(notifications: ReturnType<typeof useNotifications>) {

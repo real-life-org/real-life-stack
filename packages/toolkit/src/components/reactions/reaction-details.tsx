@@ -49,7 +49,7 @@ export function ReactionDetails({
   className,
 }: ReactionDetailsProps) {
   const [activeFilter, setActiveFilter] = useState<string | undefined>(initialEmoji)
-  const { users, isLoading } = useReactionUsers(itemId, activeFilter)
+  const { data: users, isLoading } = useReactionUsers(itemId, activeFilter)
 
   const totalCount = reactions.reduce((sum, r) => sum + r.count, 0)
 
