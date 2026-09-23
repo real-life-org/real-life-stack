@@ -30,7 +30,7 @@ export const LOCALES = {
  * `src/content/docs`, und das Handbuch liegt bewusst außerhalb der Site. Also
  * lesen wir die Verzeichnisliste selbst — Titel und `sidebar.order` aus dem
  * Frontmatter, Übersicht zuerst. Andere Sprachen zeigen ihre Übersetzung,
- * wo es eine gibt, sonst die deutsche Seite.
+ * wo es eine gibt, sonst die deutsche Seite — darum kein eigenes `label`.
  */
 function handbookItems() {
   const dir = new URL('../../docs/handbook/de/handbuch/', import.meta.url)
@@ -41,10 +41,11 @@ function handbookItems() {
       const id = f.replace(/\.mdx?$/, '')
       const title = text.match(/^title:\s*(.+)$/m)?.[1]?.trim().replace(/^(['"])(.*)\1$/, '$2') ?? id
       const order = id === 'index' ? -1 : Number(text.match(/^sidebar:\n\s+order:\s*(\d+)/m)?.[1] ?? 99)
-      return { label: id === 'index' ? 'Überblick' : title, translations: id === 'index' ? { en: 'Overview' } : undefined, slug: `handbuch/${id}`, order }
+      // Ohne `label`: Starlight nimmt den Titel der Seite in der jeweiligen Sprache (die Uebersetzung, wo es eine gibt).
+      return { slug: `handbuch/${id}`, order, title }
     })
-    .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
-    .map(({ order, ...item }) => item)
+    .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))
+    .map(({ order, title, ...item }) => item)
 }
 
 export default defineConfig({
