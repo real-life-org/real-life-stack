@@ -29,7 +29,10 @@
     "check:agents": "node scripts/agents/generate.mjs --check",
     "test:agents": "node --test scripts/agents/check.test.mjs",
     "test:esm": "node --test scripts/packages/esm.test.mjs",
-    "test:build-info": "node --test scripts/packages/build-info.test.mjs"
+    "test:build-info": "node --test scripts/packages/build-info.test.mjs",
+    "docs:modules": "node scripts/modules/generate.mjs",
+    "check:modules": "node scripts/modules/generate.mjs --check",
+    "test:modules": "node --test scripts/modules/check.test.mjs"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

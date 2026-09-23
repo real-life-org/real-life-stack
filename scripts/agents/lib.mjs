@@ -53,6 +53,11 @@ export function specDocs(text = read("docs/spec/README.md")) {
   return rows
 }
 
+/** Die Modul-Referenz, wie scripts/modules sie erzeugt. */
+export function modules() {
+  return JSON.parse(read("packages/toolkit/src/lib/all-modules.json")).modules
+}
+
 /** Die Hook-Referenz, wie D2 sie erzeugt. */
 export function hooks() {
   return JSON.parse(read("packages/toolkit/src/hooks/all-hooks.json")).groups
@@ -63,17 +68,19 @@ export function hooks() {
  * und ohne Versionen — ein Release-Bump (release-please) darf die eingecheckte
  * Datei nicht veralten lassen (rls#443); die Version steht auf npm.
  */
-export function renderLlms({ pkgs: pkgList = packages(), spec: specList = specDocs(), groups = hooks() } = {}) {
+export function renderLlms({ pkgs: pkgList = packages(), spec: specList = specDocs(), groups = hooks(), mods = modules() } = {}) {
   const head = read("scripts/agents/llms.head.md").trimEnd()
   const tail = read("scripts/agents/llms.tail.md").trimEnd()
   const pkgs = pkgList.map((p) => `- [${p.name}](https://www.npmjs.com/package/${p.name}): ${p.description}`).join("\n")
   const spec = specList.map((d) => `- [${d.label}](${REPO}docs/spec/${d.href})${d.status ? ` (${d.status})` : ""}: ${d.description}`).join("\n")
   const n = groups.reduce((s, g) => s + g.hooks.length, 0)
+  const moduleLines = mods.map((m) => `- \`${m.id}\` (${m.label}): ${m.intro.replace(/\*\*/g, "")} presents: ${m.presents.length ? m.presents.map((p) => `\`${p}\``).join(", ") : "everything that stands as a card"}; loads: ${m.loads}${m.options.suggestType ? `; suggests \`${m.options.suggestType}\`` : ""}${m.spec ? `; spec: ${REPO}${m.spec}` : ""}; story: https://real-life-stack.de/storybook/?path=/docs/${m.story}`).join("\n")
   const hookLines = groups.map((g) => `### ${g.title}\n\n${g.hooks.map((h) => `- \`${h.name}(${h.signature})\` → ${h.answers}: ${h.question} Without capability: ${h.without}.`).join("\n")}`).join("\n\n")
   return [
     head,
     "## Packages (npm)\n\n" + pkgs,
     "## Specification (normative, German)\n\nThe spec is the single source of truth of the repository; when code and spec disagree, the spec wins. Index: " + REPO + "docs/spec/README.md\n\n" + spec,
+    `## Modules (${mods.length}, generated from the module register)\n\nA module is a register entry plus a view; the host loads what a module presents and provides detail, create and the plus button. Register order is tab order. Reference: https://real-life-stack.de/reference/modules/\n\n` + moduleLines,
     `## Hooks (${n}, generated from the toolkit's documentation comments)\n\nEvery surface asks hooks, never the connector. Reading hooks answer empty without a capability; writing hooks fail on the call, not on render. Living examples: https://real-life-stack.de/storybook/?path=/docs/rls-foundations-all-hooks--docs\n\n` + hookLines,
     tail,
   ].join("\n\n") + "\n"

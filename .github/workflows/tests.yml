@@ -154,6 +154,12 @@ jobs:
       - name: Agent entry points
         run: pnpm check:agents && pnpm test:agents
 
+      # Die Modul-Referenz (Site, llms.txt) entsteht aus dem Register und der
+      # Hinweis-Tabelle (scripts/modules). Faellt, wenn ein Eintrag ohne Story
+      # oder Hinweis dazukommt oder all-modules.json nicht mehr passt.
+      - name: Module reference
+        run: pnpm check:modules && pnpm test:modules
+
       # Das Beispiel aus dem Handbuch („Erste App bauen") baut gegen die
       # gebaute Form der Pakete — was die Seite zeigt, läuft auch.
       - name: First app (examples/first-app)

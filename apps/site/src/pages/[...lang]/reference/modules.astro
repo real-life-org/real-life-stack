@@ -1,0 +1,41 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro'
+import { translations } from '../../../i18n/landing'
+import { modules, intro, REPO, storyUrl } from '../../../lib/reference'
+// Eine Seite fuer jede Sprache (Starlight lokalisiert Sidebar-Links), der Inhalt bleibt Englisch.
+export function getStaticPaths() {
+  return [{ params: { lang: undefined } }, ...Object.keys(translations).filter((l) => l !== 'de').map((lang) => ({ params: { lang } }))]
+}
+const headings = modules.map((m) => ({ depth: 2, slug: m.id, text: m.label }))
+const fmt = (v: unknown) => typeof v === 'string' ? v : JSON.stringify(v)
+---
+<StarlightPage frontmatter={{ title: 'Modules', description: 'The seven modules the toolkit ships: what each shows, who loads its items, which options its register entry knows, its story and its spec.' }} headings={headings}>
+  <p>A module is a register entry plus a view (spec 01). The host produces from the entry what all modules share: it loads the items a module can <strong>present</strong> (a field like a date or a position, or a class like a statement), applies search and filter, and provides detail, create and the plus button. This page is generated from the register (<code>TOOLKIT_MODULES</code>) and the hint table in <code>data-interface</code>; the intro of each module is the first paragraph of its Storybook page. Register order is tab order.</p>
+  <ul class="rl-legend">
+    <li><strong>presents</strong> the item fields or classes the module shows; the host derives its query from them</li>
+    <li><strong>loads</strong> <code>host</code>: the host queries by <em>presents</em>; <code>module</code>: the module queries itself (the map, by viewport)</li>
+    <li><strong>suggests</strong> the item type the plus button proposes inside this module; the menu always offers all types</li>
+    <li><strong>default</strong> whether a newly created space gets the module</li>
+  </ul>
+  {modules.map((m) => (
+    <section class="rl-ref">
+      <h2 id={m.id}>{m.label} <small><code>{m.id}</code></small></h2>
+      <p set:html={intro(m.intro)} />
+      <div class="rl-table">
+        <table>
+          <tbody>
+            <tr><th>presents</th><td>{m.presents.length ? m.hints.map((h) => <span class="rl-hint"><code>{h.name}</code> <span class="rl-note">→ <code>{h.filter}</code></span></span>) : <span class="rl-note">everything that stands as a card of its own</span>}</td></tr>
+            <tr><th>loads</th><td><code>{m.loads}</code></td></tr>
+            <tr><th>suggests</th><td>{m.options.suggestType ? <code>{String(m.options.suggestType)}</code> : <span class="rl-note">—</span>}</td></tr>
+            <tr><th>options</th><td>{Object.keys(m.options).length ? Object.entries(m.options).map(([k, v]) => <span class="rl-hint"><code>{k}: {fmt(v)}</code></span>) : <span class="rl-note">—</span>}</td></tr>
+            <tr><th>surface</th><td><code>fill: {m.fill}</code> <code>panelFit: {m.panelFit}</code>{m.maxWidth ? <code>{m.maxWidth}</code> : null}{m.keepMounted ? <code>keepMounted</code> : null}</td></tr>
+            <tr><th>default</th><td>{m.enabledByDefault ? 'yes' : 'opt-in'}</td></tr>
+            <tr><th>links</th><td class="rl-links"><a href={storyUrl(m.story)}>story</a>{m.spec ? <a href={`${REPO}${m.spec}`}>spec</a> : null}<a href={`${REPO}packages/toolkit/src/lib/module-register.ts`}>register</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ))}
+  <h2 id="own">A module of your own</h2>
+  <p>Three steps, no line in the frame: a view (<code>ModuleViewProps</code>, it receives the items already filtered), a register entry contributed via <code>composeModules([TOOLKIT_DEFINITION, yours])</code> and bound once with <code>setModuleRegistry</code>, and — if it presents a field or class the toolkit does not know — a row in the hint table via <code>registerModuleHint</code>. The network app's marketplace is the worked example: <a href={`${REPO}apps/network/src/module-register.tsx`}>module-register.tsx</a>.</p>
+</StarlightPage>

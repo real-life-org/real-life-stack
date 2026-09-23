@@ -77,6 +77,7 @@ export default defineConfig({
         // Die Referenz ist Englisch wie ihre Quellen (Hook-Kommentare, package.json, Spec-Index) und liegt als Astro-Seiten ausserhalb der Sammlung.
         { label: 'Referenz', translations: { en: 'Reference' }, items: [
           { label: 'Überblick', translations: { en: 'Overview' }, link: '/reference/' },
+          { label: 'Module', translations: { en: 'Modules' }, link: '/reference/modules/' },
           { label: 'Hooks', link: '/reference/hooks/' },
           { label: 'Pakete', translations: { en: 'Packages' }, link: '/reference/packages/' },
           { label: 'Spezifikation', translations: { en: 'Specification' }, link: '/reference/spec/' },
