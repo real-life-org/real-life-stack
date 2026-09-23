@@ -27,8 +27,10 @@ cp .env.example .env
 ## 1. Vorschau, ohne Domain
 
 ```bash
-docker compose -f docker-compose.preview.yml up -d
+docker compose -p rls-vorschau -f docker-compose.preview.yml up -d
 ```
+
+`-p rls-vorschau` gibt der Vorschau einen eigenen Compose-Projektnamen. Ohne ihn hieße das Projekt wie das produktive (beide Dateien heißen den Dienst `app`), und ein Vorschau-Start im selben Verzeichnis würde den laufenden Container ersetzen.
 
 http://localhost:8080/ zeigt die Landingpage, http://localhost:8080/app/ die App, http://localhost:8080/app/config.json die Konfiguration, die jeder Browser bekommt. Die Vorschau nimmt das Image `edge` (Stand des Hauptzweigs) und den Namen „Vorschau“, bis ihr `.env` füllt; `RLS_PORT` ändert den Port. Sie richtet kein TLS ein und gehört in ein vertrauenswürdiges Netz.
 
@@ -41,7 +43,7 @@ deploy/app/
 └── branding/     theme.json · favicon.svg · optional config.json
 ```
 
-`landing/` und `branding/` sind read-only in den Container gemountet: Datei speichern, Seite neu laden, fertig. Nur eine Änderung an `.env` braucht ein erneutes `docker compose up -d`, weil daraus beim Start die `config.json` entsteht.
+`landing/` und `branding/` sind read-only in den Container gemountet. Was davon direkt ausgeliefert wird (die Landingpage, `theme.json`, `favicon.svg`), wirkt beim nächsten Laden der Seite. Zwei Dinge liest der Container nur beim Start: `.env`, aus dem er die `config.json` erzeugt, und eine eigene `branding/config.json`, die er dorthin kopiert. Nach Änderungen daran braucht es einen Neustart, `docker compose restart app`; ein bloßes `up -d` startet einen unveränderten Container nicht neu. Auch eine **neu hinzugefügte** `theme.json` wird erst nach einem Neustart verlinkt (`colorsUrl`), Änderungen an einer vorhandenen wirken sofort.
 
 `branding/theme.json` setzt Farbtokens, getrennt nach hell und dunkel; die Namen müssen Tokens des Toolkits sein, ein unbekannter Name wird verworfen und in der Browser-Konsole gemeldet. Was genau die App liest und in welcher Reihenfolge, steht unter [Runtime-Konfiguration](/handbuch/runtime-config/).
 
@@ -73,7 +75,7 @@ Ein unbekannter Wert wird verworfen, die App fällt auf `wot` zurück. Ein Nutze
 
 ## 5. Aktualisieren
 
-`RLS_IMAGE_TAG` ist Pflicht, ein `latest` gibt es bewusst nicht: `0.3.3` ist genau diese Fassung, `0.3` folgt Korrekturen innerhalb der Minor-Version, `edge` ist der Hauptzweig zum Ausprobieren. Ein Major-Tag kommt erst mit 1.0. Zum Aktualisieren den neuen Tag in einer Vorschau prüfen, dann in `.env` eintragen, `docker compose pull && docker compose up -d`. Das alte Image lässt sich wieder starten; ob ältere Software mit inzwischen veränderten Daten läuft, ist damit nicht gesagt. Ein Image-Rollback ist kein Daten-Restore. Wo die Versionen herkommen: [Versionen und Releases](/handbuch/release/).
+`RLS_IMAGE_TAG` ist Pflicht, ein `latest` gibt es bewusst nicht: `0.3.3` ist genau diese Fassung, `0.3` folgt Korrekturen innerhalb der Minor-Version, `edge` ist der Hauptzweig zum Ausprobieren. Ein Major-Tag kommt erst mit 1.0. Zum Aktualisieren den neuen Tag in einer Vorschau mit eigenem Projektnamen und eigenem Port prüfen (`RLS_PORT=8081 RLS_IMAGE_TAG=0.4 docker compose -p rls-vorschau -f docker-compose.preview.yml up -d`), dann in `.env` eintragen, `docker compose pull && docker compose up -d`. Das alte Image lässt sich wieder starten; ob ältere Software mit inzwischen veränderten Daten läuft, ist damit nicht gesagt. Ein Image-Rollback ist kein Daten-Restore. Wo die Versionen herkommen: [Versionen und Releases](/handbuch/release/).
 
 ## Grenzen
 
@@ -82,6 +84,6 @@ Die Landingpage darf beliebig sein, sie ist eine eigene Seite. Das App-Layout is
 ## Wenn etwas nicht funktioniert
 
 - **Container startet nicht:** `docker compose logs app`. Fehlt ein Pflichtfeld, sagt Compose, welches.
-- **Konfiguration ändert sich nicht:** Liegt eine eigene `branding/config.json` vor? Sie sticht alle Umgebungsvariablen. Nach `.env`-Änderungen `up -d` nicht vergessen.
+- **Konfiguration ändert sich nicht:** `.env` und eine eigene `branding/config.json` liest der Container nur beim Start: `docker compose restart app`. Eine eigene `config.json` sticht alle Umgebungsvariablen.
 - **Farben wirken nicht:** Browser-Konsole lesen; ein unbekannter Token-Name wird dort genannt.
 - **App läuft, aber niemand sieht die anderen:** Connector, Relay-Adresse und Mitgliedschaft im Space prüfen.

@@ -39,7 +39,7 @@ Ein Fix in einem Paket kaskadiert auf die App-Version, damit er auch Play erreic
 
 ## Aktualisieren einer Instanz
 
-1. Den neuen Tag in einer Vorschau prüfen (`RLS_IMAGE_TAG=0.4 docker compose -f docker-compose.preview.yml up -d`).
+1. Den neuen Tag in einer Vorschau prüfen, mit eigenem Compose-Projektnamen und eigenem Port, damit sie den laufenden Container nicht ersetzt: `RLS_PORT=8081 RLS_IMAGE_TAG=0.4 docker compose -p rls-vorschau -f docker-compose.preview.yml up -d`. Danach `docker compose -p rls-vorschau -f docker-compose.preview.yml down`.
 2. Konfiguration, Assets und die Daten des Backends sichern; den bisherigen Tag notieren.
 3. `RLS_IMAGE_TAG` in `.env` ändern, `docker compose pull && docker compose up -d`.
 4. Zurück geht es mit dem alten Tag; ob ältere Software mit inzwischen veränderten Daten läuft, muss vorher geprüft sein.

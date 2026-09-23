@@ -13,7 +13,7 @@ Ein Image, viele Instanzen: Alles, was sich je Instanz unterscheidet, liest die 
 
 ## Die Datei
 
-`/app/config.json`, im Container beim Start aus den Umgebungsvariablen erzeugt (`entrypoint.sh`), oder wörtlich eure eigene aus `branding/config.json`:
+`/app/config.json`, im Container **beim Start** aus den Umgebungsvariablen erzeugt (`entrypoint.sh`), oder wörtlich eure eigene aus `branding/config.json` dorthin kopiert. Änderungen an beidem brauchen darum einen Neustart des Containers:
 
 ```json
 {
