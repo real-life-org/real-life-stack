@@ -34,7 +34,7 @@ pnpm install --frozen-lockfile
 | Storybook | `pnpm storybook` | http://localhost:6006/ | jedes Modul, die App-Komposition, alle Hooks — der Ort für Toolkit-Arbeit |
 | Site | `pnpm dev:site` | http://localhost:4321/ | Landing und dieses Handbuch |
 
-Die Dev-Server lesen die Pakete aus dem Quelltext (`development`-Condition in den `package.json`); ein Build vorher ist nicht nötig, jede Änderung im Toolkit erscheint sofort in App und Storybook. Die Ausnahme ist das Handbuch-Beispiel: `pnpm dev:first-app` baut die Pakete erst, weil es sie bewusst in der veröffentlichten Form nimmt ([Erste App bauen](/handbuch/erste-app/)).
+Die Dev-Server lesen die Pakete aus dem Quelltext (`development`-Condition in den `package.json`); ein Build vorher ist nicht nötig, jede Änderung im Toolkit erscheint sofort in App und Storybook. Die Ausnahme ist das Handbuch-Beispiel: `pnpm dev:first-app` nimmt die veröffentlichten Pakete von npm, so wie eine App außerhalb des Repos ([Erste App bauen](/handbuch/erste-app/)); eine Toolkit-Änderung erreicht es erst mit dem nächsten Release.
 
 Im Storybook beginnst du bei **RLS → Start → Read me first**: der Lesepfad durch Start, App, App shell, Spaces, Modules, Items, Foundations. Alle Texte dort sind Englisch, die Beispieldaten Deutsch.
 

@@ -117,6 +117,12 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Jedes veroeffentlichte Paket laedt in reinem Node-ESM, nicht nur in
+      # Vite: ein relativer Import ohne Endung in einem tsc-gebauten dist
+      # faellt hier, bevor er auf npm liegt (mock-connector 0.2.0, 23.09.2026).
+      - name: Packages load in Node ESM
+        run: pnpm test:esm
+
       # Jedes Paket und jede App, die ein typecheck-Skript hat. Vorher lief nur
       # das Toolkit, und ein toter Import in apps/reference kam erst im Review
       # heraus (real-life-stack#403).

@@ -22,7 +22,7 @@ import {
   VOCAB_PROJECT,
   VOCAB_RESOURCE,
   VOCAB_TASK,
-} from "./vocab"
+} from "./vocab.js"
 
 /** Which role THIS item plays on an edge. `either` is for symmetric
  *  predicates only (08 canonicalizes their endpoints — there is no direction). */
