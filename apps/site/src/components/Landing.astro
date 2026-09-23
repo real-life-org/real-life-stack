@@ -32,13 +32,11 @@ const modules: { name: string; desc: string; icon: IconName; tone: Tone; story: 
   { name: t.modules.feed, desc: t.modules.feedDesc, icon: 'message-square', tone: 'orange', story: 'rls-modules-feed--docs' },
 ]
 const waysTitle = de ? 'Loslegen' : 'Get started'
-const waysIntro = de ? 'Eine Instanz betreiben, eine eigene App bauen, den Stack erweitern oder mit Agenten arbeiten.' : 'Run an instance, build your own app, extend the stack or work with agents.'
 const soon = de ? 'folgt' : 'soon'
 ---
 <div class="rl-landing not-content">
   <section class="rl-ways" id="wege">
     <h2>{waysTitle}</h2>
-    <p>{waysIntro}</p>
     <div class="rl-cards">
       {ways.map((w) => (
         <a class:list={['rl-card', { soon: w.soon }]} href={w.href}>
