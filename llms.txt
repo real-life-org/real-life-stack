@@ -50,18 +50,18 @@ The spec is the single source of truth of the repository; when code and spec dis
 - [architektur2.md](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/architektur2.md) (Historische Referenz, nicht direkt normativ): bisher beste Gesamtbeschreibung; wird schrittweise in die neue Spec-Struktur überführt
 - [reaktivitaet.md](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/reaktivitaet.md) (Ergänzende Referenz): Bestehendes Detailverhalten für Reaktivität und Relations; wird später in passende Kern-Slices überführt
 
-## Hooks (78, generated from the toolkit's documentation comments)
+## Hooks (61, generated from the toolkit's documentation comments)
 
 Every surface asks hooks, never the connector. Reading hooks answer empty without a capability; writing hooks fail on the call, not on render. Living examples: https://real-life-stack.de/storybook/?path=/docs/rls-foundations-all-hooks--docs
 
 ### Read items
 
 - `useActivity(limit?)` → `{data, supported}`: What happened in this space recently? Without capability: empty — `supported: false`.
-- `useModuleFilteredItems(items)` → `Item[]`: Exactly what the toolbar in the module head promises: filter plus search text. Without capability: throws on render — without `FilterProvider`.
 - `useItems(filter?)` → `{data, isLoading}`: Which items match this filter, and is the list still arriving? Without capability: —.
 - `useItemsWithDraft(filter?)` → `{data, isLoading}`: The same list, with the draft being typed already in it as a card. Without capability: —.
 - `useItem(id)` → `{data, isLoading}`: Does this one item exist, and is "not found" already decided? Without capability: —.
 - `useNotifications()` → `{notifications, badgeCount, …}`: What is new for me, and how much is unread? Without capability: empty.
+- `useMarkNotificationsSeen(notifications)` → —: Advance the seen boundary once per opening. Without capability: no-op.
 
 ### Write items
 
@@ -73,7 +73,6 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 - `useDeleteItem()` → `{mutate}`: Delete an item. Without capability: throws on call.
 - `useUnsavedChanges()` → `{dirty, setDirty} | null`: Are there unsaved inputs that leaving must intercept? Without capability: null — without provider.
 - `useSetUnsavedDirty()` → `(dirty) => void`: Report that something unsaved sits in the form. Without capability: no-op.
-- `useBeforeUnloadWarning(dirty)` → `void`: Warn the browser before a reload or tab close while something is unsaved. Without capability: —.
 
 ### People, spaces and membership
 
@@ -89,7 +88,6 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 - `useMembers(groupId)` → `{data, isLoading}`: Who belongs to this space, or with `null` to all of mine? Without capability: empty.
 - `useInviteMember()` → `(groupId, userId) => Promise`: Invite someone into a space. Without capability: throws on call.
 - `useRemoveMember()` → `(groupId, userId) => Promise`: Remove someone from a space. Without capability: throws on call.
-- `useIncomingEvents()` → `{current, dismiss, …}`: Which incoming event is waiting for an answer? Without capability: throws on render — without provider.
 - `useItemAuthor(item, users)` → `User | undefined`: Who wrote this item? Without capability: —.
 - `useOpenProfile()` → `(userId) => void`: Open a person's profile. Without capability: no-op.
 - `useResolvedUsers(ids)` → `Map<string, User>`: For which ids do I know a name? Without capability: empty — map.
@@ -98,8 +96,6 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 
 ### Permissions and capabilities
 
-- `useOptionalConnector()` → `DataInterface | null`: The same for surfaces that render without data access too. Without capability: null.
-- `useConnector()` → `DataInterface`: Which data access applies here? Without capability: throws on render — without provider.
 - `useItemPermissions(item)` → `{canEdit, canDelete}`: May I show the ⋮ menu here? Without capability: value — both `false`.
 
 ### Relations
@@ -117,36 +113,23 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 ### Surfaces and UI state
 
 - `useSharedFilter()` → `{value, searchText, setSearchText, clear}`: The app-wide filter that survives the module switch. Without capability: throws on render.
-- `useRegisterCreate(module, config)` → `void`: Register the create configuration of the active module — the host's job, never a module's (guarded by `check-shared-derivations`). Without capability: no-op.
 - `useCreate()` → `{isComposing, startCreate, patchCreate}`: Start creating — with suggestion and prefill, never with restriction. Without capability: throws on render.
 - `useOptionalCreate()` → `CreateHostValue | null`: The create host, or `null` where a surface may stand without one (story, test). Without capability: value — null.
-- `useRegisterDetail(module, config)` → `void`: Register the detail configuration of the active module — the host's job, never a module's. Without capability: no-op.
 - `useModuleHost()` → `{entry, currentSpace, members, groups, items, setCreateAnchor, …}`: The space context and the items the module host produced for this surface. Without capability: throws on render.
-- `useOptionalModuleHost()` → `ModuleHostValue | null`: The host context, or `null` outside a module host. Without capability: value — null.
-- `useModuleLayout()` → `ModuleLayout | null`: Which geometry does the module surface prescribe? Without capability: null.
-- `useModuleContentClass()` → `string`: In which width does the content stand? Without capability: value — default.
-- `useOptionalModuleHead()` → `… | null`: Where does a module portal its toolbar? Without capability: null.
-- `usePanelEdges()` → `{left, right}`: How much does an open panel cover right now? Without capability: —.
-- `useLocationPick()` → `{isPicking, startPick, …}`: Pick a place on the map from within the form. Without capability: value — `canPick: false`.
 - `useModulePanel()` → `{current, open, close}`: Open a panel beside the module. There is only one. Without capability: throws on render.
-- `useCommentLink(item)` → `(() => void) | null`: Does the comment hint lead into the input field? Without capability: null.
-- `useFieldLink(field, item)` → `(() => void) | null`: Does this field lead to a view that shows it? Without capability: null.
-- `useTagLink(tag)` → `{onClick, active} | null`: Does a click on this tag filter the view? Without capability: null.
-- `useWorkspaceRouting(options?)` → `{groups, workspaces, activeWorkspace, activeModule, modules, …}`: Space, module and item resolved from the URL, with redirects to the canonical path (`/router`). Without capability: throws on render — needs a router.
-- `useFilterableItems(items, filter)` → `{items, value, setValue, …}`: The shared filter applied to a list, for surfaces that hold the bar themselves. Without capability: throws on render — without `FilterProvider`.
-- `useItemComposerProps(members)` → `Partial<ContentComposerProps>`: Geocoder, map pick and people for the composer — one source for create and edit. Without capability: —.
-- `useItemDetailEdit(members)` → `{contentTypes, mapper, editInitialData, composerProps}`: The edit half of the detail, the same for all modules. The host calls it; a module does not need it. Without capability: —.
+- `useGroupVocabulary(fallbackItems?)` → `{tags, types}`: Which tags and types exist in the space? The one derivation for filter card, chips and tag suggestions. Without capability: empty.
+- `useIncomingEvents()` → `{current, dismiss, …}`: Which incoming event is waiting for an answer? Without capability: throws on render — without provider.
 - `useItemFocus()` → `{itemId, isEditing, composeType, focusItem, editItem, startCompose, …}`: Which item is open, is it being edited, is something being created? The focus contract — in the app the URL (`UrlFocusProvider` from `/router`), otherwise memory. Without capability: throws on render.
 - `useOptionalItemFocus()` → `ItemFocus | null`: The focus, or `null` where a surface may stand without one. Without capability: value — null.
-- `useSpaceVocabulary(fallbackItems?)` → `{tags, types}`: Which tags and types exist in the space? The one derivation for filter card, chips and tag suggestions. Without capability: empty.
 
 ### Environment
 
+- `useOptionalConnector()` → `DataInterface | null`: The same for surfaces that render without data access too. Without capability: null.
+- `useConnector()` → `DataInterface`: Which data access applies here? Without capability: throws on render — without provider.
 - `useColorScheme()` → `"light" | "dark"`: Is it light or dark right now? Without capability: —.
 - `useInitialSync()` → `{active, loadedGroups, expectedGroups}`: Is the first fill still running, may "nothing there" be said? Without capability: value — permanently `active: false`.
 - `useIsMobile()` → `boolean`: Narrower than 768px? Without capability: —.
 - `useIsCompact()` → `boolean`: Below 1024px, where the panel becomes a drawer? Without capability: —.
-- `useMarkNotificationsSeen(notifications)` → —: Advance the seen boundary once per opening. Without capability: no-op.
 - `useRelayStatus()` → `{state, isConnected, pendingCount}`: Is this device attached to the relay, is anything unsent waiting? Without capability: throws on render.
 
 ### Item properties

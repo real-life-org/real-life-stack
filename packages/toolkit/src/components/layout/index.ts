@@ -7,15 +7,12 @@ export {
   moduleContainerClass,
   moduleBleedContentClass,
   resolveModuleLayout,
-  useModuleLayout,
-  useModuleContentClass,
-  useOptionalModuleHead,
   type ModuleFrameProps,
   type ModuleLayout,
 } from "./module-frame"
 export { ModuleSurfaceScope, type ModuleSurfaceScopeProps } from "./module-surface-scope"
 export { PanelHeaderActions, PanelHeaderSlotContext, type PanelHeaderActionsProps } from "./panel-header-actions"
-export { readPanelEdges, usePanelEdges, type PanelEdges } from "./panel-edges"
+export { readPanelEdges, type PanelEdges } from "./panel-edges"
 export { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"
 export { WorkspaceSwitcher } from "./workspace-switcher"
 export type { Workspace } from "./workspace-switcher"

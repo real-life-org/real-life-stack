@@ -21,21 +21,6 @@
           "line": 16
         },
         {
-          "name": "useModuleFilteredItems",
-          "signature": "items",
-          "question": "Exactly what the toolbar in the module head promises: filter plus search text.",
-          "answers": "`Item[]`",
-          "without": "throws on render — without `FilterProvider`",
-          "stories": [
-            "rls-foundations-hooks--read"
-          ],
-          "specs": [
-            "docs/spec/02-data-interface.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-filterable-items.ts",
-          "line": 100
-        },
-        {
           "name": "useItems",
           "signature": "filter?",
           "question": "Which items match this filter, and is the list still arriving?",
@@ -94,6 +79,19 @@
           ],
           "source": "packages/toolkit/src/hooks/use-notifications.ts",
           "line": 19
+        },
+        {
+          "name": "useMarkNotificationsSeen",
+          "signature": "notifications",
+          "question": "Advance the seen boundary once per opening.",
+          "answers": "—",
+          "without": "no-op",
+          "stories": [],
+          "specs": [
+            "docs/spec/11-runtime-config-und-branding.md"
+          ],
+          "source": "packages/toolkit/src/hooks/use-notifications.ts",
+          "line": 53
         }
       ]
     },
@@ -220,21 +218,6 @@
           ],
           "source": "packages/toolkit/src/hooks/use-unsaved-changes.tsx",
           "line": 79
-        },
-        {
-          "name": "useBeforeUnloadWarning",
-          "signature": "dirty",
-          "question": "Warn the browser before a reload or tab close while something is unsaved.",
-          "answers": "`void`",
-          "without": "—",
-          "stories": [
-            "rls-foundations-hooks--write"
-          ],
-          "specs": [
-            "docs/spec/02-data-interface.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-unsaved-warning.tsx",
-          "line": 34
         }
       ]
     },
@@ -399,19 +382,6 @@
           "line": 190
         },
         {
-          "name": "useIncomingEvents",
-          "signature": "",
-          "question": "Which incoming event is waiting for an answer?",
-          "answers": "`{current, dismiss, …}`",
-          "without": "throws on render — without provider",
-          "stories": [],
-          "specs": [
-            "docs/spec/04-items-relations-groups-spaces.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-incoming-events.tsx",
-          "line": 41
-        },
-        {
           "name": "useItemAuthor",
           "signature": "item, users",
           "question": "Who wrote this item?",
@@ -482,36 +452,6 @@
       "id": "permissions",
       "title": "Permissions and capabilities",
       "hooks": [
-        {
-          "name": "useOptionalConnector",
-          "signature": "",
-          "question": "The same for surfaces that render without data access too.",
-          "answers": "`DataInterface | null`",
-          "without": "null",
-          "stories": [
-            "rls-foundations-hooks--permissions"
-          ],
-          "specs": [
-            "docs/spec/03-capabilities.md"
-          ],
-          "source": "packages/toolkit/src/hooks/connector-context.tsx",
-          "line": 31
-        },
-        {
-          "name": "useConnector",
-          "signature": "",
-          "question": "Which data access applies here?",
-          "answers": "`DataInterface`",
-          "without": "throws on render — without provider",
-          "stories": [
-            "rls-foundations-hooks--permissions"
-          ],
-          "specs": [
-            "docs/spec/03-capabilities.md"
-          ],
-          "source": "packages/toolkit/src/hooks/connector-context.tsx",
-          "line": 44
-        },
         {
           "name": "useItemPermissions",
           "signature": "item",
@@ -690,21 +630,6 @@
           "line": 72
         },
         {
-          "name": "useRegisterCreate",
-          "signature": "module, config",
-          "question": "Register the create configuration of the active module — the host's job, never a module's (guarded by `check-shared-derivations`).",
-          "answers": "`void`",
-          "without": "no-op",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/components/host/create-host.tsx",
-          "line": 243
-        },
-        {
           "name": "useCreate",
           "signature": "",
           "question": "Start creating — with suggestion and prefill, never with restriction.",
@@ -735,21 +660,6 @@
           "line": 279
         },
         {
-          "name": "useRegisterDetail",
-          "signature": "module, config",
-          "question": "Register the detail configuration of the active module — the host's job, never a module's.",
-          "answers": "`void`",
-          "without": "no-op",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/components/host/detail-host.tsx",
-          "line": 134
-        },
-        {
           "name": "useModuleHost",
           "signature": "",
           "question": "The space context and the items the module host produced for this surface.",
@@ -763,96 +673,6 @@
           ],
           "source": "packages/toolkit/src/components/host/module-host.tsx",
           "line": 113
-        },
-        {
-          "name": "useOptionalModuleHost",
-          "signature": "",
-          "question": "The host context, or `null` outside a module host.",
-          "answers": "`ModuleHostValue | null`",
-          "without": "value — null",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/components/host/module-host.tsx",
-          "line": 128
-        },
-        {
-          "name": "useModuleLayout",
-          "signature": "",
-          "question": "Which geometry does the module surface prescribe?",
-          "answers": "`ModuleLayout | null`",
-          "without": "null",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/components/layout/module-frame.tsx",
-          "line": 114
-        },
-        {
-          "name": "useModuleContentClass",
-          "signature": "",
-          "question": "In which width does the content stand?",
-          "answers": "`string`",
-          "without": "value — default",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/components/layout/module-frame.tsx",
-          "line": 133
-        },
-        {
-          "name": "useOptionalModuleHead",
-          "signature": "",
-          "question": "Where does a module portal its toolbar?",
-          "answers": "`… | null`",
-          "without": "null",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/components/layout/module-frame.tsx",
-          "line": 198
-        },
-        {
-          "name": "usePanelEdges",
-          "signature": "",
-          "question": "How much does an open panel cover right now?",
-          "answers": "`{left, right}`",
-          "without": "—",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/components/layout/panel-edges.ts",
-          "line": 56
-        },
-        {
-          "name": "useLocationPick",
-          "signature": "",
-          "question": "Pick a place on the map from within the form.",
-          "answers": "`{isPicking, startPick, …}`",
-          "without": "value — `canPick: false`",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/components/map/location-pick.tsx",
-          "line": 84
         },
         {
           "name": "useModulePanel",
@@ -870,109 +690,32 @@
           "line": 153
         },
         {
-          "name": "useCommentLink",
-          "signature": "item",
-          "question": "Does the comment hint lead into the input field?",
-          "answers": "`(() => void) | null`",
-          "without": "null",
+          "name": "useGroupVocabulary",
+          "signature": "fallbackItems?",
+          "question": "Which tags and types exist in the space? The one derivation for filter card, chips and tag suggestions.",
+          "answers": "`{tags, types}`",
+          "without": "empty",
           "stories": [
             "rls-foundations-hooks--surfaces"
           ],
           "specs": [
             "docs/spec/01-app-composition.md"
           ],
-          "source": "packages/toolkit/src/components/navigation/comment-navigation.tsx",
-          "line": 54
+          "source": "packages/toolkit/src/hooks/use-group-vocabulary.ts",
+          "line": 85
         },
         {
-          "name": "useFieldLink",
-          "signature": "field, item",
-          "question": "Does this field lead to a view that shows it?",
-          "answers": "`(() => void) | null`",
-          "without": "null",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
+          "name": "useIncomingEvents",
+          "signature": "",
+          "question": "Which incoming event is waiting for an answer?",
+          "answers": "`{current, dismiss, …}`",
+          "without": "throws on render — without provider",
+          "stories": [],
           "specs": [
-            "docs/spec/01-app-composition.md"
+            "docs/spec/04-items-relations-groups-spaces.md"
           ],
-          "source": "packages/toolkit/src/components/navigation/field-navigation.tsx",
-          "line": 57
-        },
-        {
-          "name": "useTagLink",
-          "signature": "tag",
-          "question": "Does a click on this tag filter the view?",
-          "answers": "`{onClick, active} | null`",
-          "without": "null",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/components/navigation/tag-navigation.tsx",
-          "line": 86
-        },
-        {
-          "name": "useWorkspaceRouting",
-          "signature": "options?",
-          "question": "Space, module and item resolved from the URL, with redirects to the canonical path (`/router`).",
-          "answers": "`{groups, workspaces, activeWorkspace, activeModule, modules, …}`",
-          "without": "throws on render — needs a router",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/components/router/workspace-routing.tsx",
-          "line": 126
-        },
-        {
-          "name": "useFilterableItems",
-          "signature": "items, filter",
-          "question": "The shared filter applied to a list, for surfaces that hold the bar themselves.",
-          "answers": "`{items, value, setValue, …}`",
-          "without": "throws on render — without `FilterProvider`",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-filterable-items.ts",
-          "line": 55
-        },
-        {
-          "name": "useItemComposerProps",
-          "signature": "members",
-          "question": "Geocoder, map pick and people for the composer — one source for create and edit.",
-          "answers": "`Partial<ContentComposerProps>`",
-          "without": "—",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-item-composer-props.ts",
-          "line": 27
-        },
-        {
-          "name": "useItemDetailEdit",
-          "signature": "members",
-          "question": "The edit half of the detail, the same for all modules. The host calls it; a module does not need it.",
-          "answers": "`{contentTypes, mapper, editInitialData, composerProps}`",
-          "without": "—",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-item-detail-edit.ts",
-          "line": 45
+          "source": "packages/toolkit/src/hooks/use-incoming-events.tsx",
+          "line": 41
         },
         {
           "name": "useItemFocus",
@@ -1003,21 +746,6 @@
           ],
           "source": "packages/toolkit/src/hooks/use-item-focus.tsx",
           "line": 96
-        },
-        {
-          "name": "useSpaceVocabulary",
-          "signature": "fallbackItems?",
-          "question": "Which tags and types exist in the space? The one derivation for filter card, chips and tag suggestions.",
-          "answers": "`{tags, types}`",
-          "without": "empty",
-          "stories": [
-            "rls-foundations-hooks--surfaces"
-          ],
-          "specs": [
-            "docs/spec/01-app-composition.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-space-vocabulary.ts",
-          "line": 85
         }
       ]
     },
@@ -1025,6 +753,36 @@
       "id": "environment",
       "title": "Environment",
       "hooks": [
+        {
+          "name": "useOptionalConnector",
+          "signature": "",
+          "question": "The same for surfaces that render without data access too.",
+          "answers": "`DataInterface | null`",
+          "without": "null",
+          "stories": [
+            "rls-foundations-hooks--permissions"
+          ],
+          "specs": [
+            "docs/spec/03-capabilities.md"
+          ],
+          "source": "packages/toolkit/src/hooks/connector-context.tsx",
+          "line": 31
+        },
+        {
+          "name": "useConnector",
+          "signature": "",
+          "question": "Which data access applies here?",
+          "answers": "`DataInterface`",
+          "without": "throws on render — without provider",
+          "stories": [
+            "rls-foundations-hooks--permissions"
+          ],
+          "specs": [
+            "docs/spec/03-capabilities.md"
+          ],
+          "source": "packages/toolkit/src/hooks/connector-context.tsx",
+          "line": 44
+        },
         {
           "name": "useColorScheme",
           "signature": "",
@@ -1076,19 +834,6 @@
           ],
           "source": "packages/toolkit/src/hooks/use-mobile.ts",
           "line": 43
-        },
-        {
-          "name": "useMarkNotificationsSeen",
-          "signature": "notifications",
-          "question": "Advance the seen boundary once per opening.",
-          "answers": "—",
-          "without": "no-op",
-          "stories": [],
-          "specs": [
-            "docs/spec/11-runtime-config-und-branding.md"
-          ],
-          "source": "packages/toolkit/src/hooks/use-notifications.ts",
-          "line": 53
         },
         {
           "name": "useRelayStatus",

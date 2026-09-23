@@ -124,8 +124,10 @@ test("storyIds() matches the built Storybook index (skipped without a build)", (
 // jede Gruppe ist bekannt, jede Story-Id existiert im Quelltext.
 test("every public hook of the toolkit is documented", () => {
   const hooks = publicHooks()
-  assert.ok(hooks.size >= 70, `found only ${hooks.size} hooks — export resolution broken?`)
-  assert.ok(hooks.has("useItems") && hooks.has("useWorkspaceRouting"), "index.ts and router.tsx are both entries")
+  // 61 oeffentliche Hooks seit dem Schnitt oeffentlich/intern (23.09.2026); die Schwelle faengt eine kaputte Export-Aufloesung, nicht eine bewusste Kuerzung.
+  assert.ok(hooks.size >= 50, `found only ${hooks.size} hooks — export resolution broken?`)
+  // router.tsx exportiert seit dem Schnitt (23.09.2026) keinen Hook mehr; es bleibt Einstieg, falls einer dazukommt.
+  assert.ok(hooks.has("useItems") && hooks.has("useModuleHost") && !hooks.has("useRegisterDetail"), "public hooks in, wiring out")
   const rows = reference(hooks)
   assert.deepEqual(checkReference(rows), [])
   assert.ok(storyIds().has("rls-foundations-hooks--read"))

@@ -14,7 +14,6 @@
 export { UrlFocusProvider, parsePath, buildUrl } from "./components/router/url-focus"
 export { resolveDefaultModule } from "./lib/notification-target"
 export {
-  useWorkspaceRouting,
   canonicalPath,
   scopeToSlug,
   STORAGE_KEY_GROUP,
