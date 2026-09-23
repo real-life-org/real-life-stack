@@ -298,7 +298,7 @@ function GruppenUndMitglieder() {
   const einladen = useInviteMember()
   const entfernen = useRemoveMember()
   const [zuletzt, setZuletzt] = useState<string | null>(null)
-  const gast = "gast-aus-der-story"
+  const gast = "noah" // im Seed bekannt, anfangs in keiner Gruppe
   const istDrin = members.some((m) => m.id === gast)
   return (
     <Tafel
