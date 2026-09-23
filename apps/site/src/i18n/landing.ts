@@ -59,10 +59,10 @@ export const translations: Record<TranslatedLanguage, Translation> = {
   de: {
     nav: { modules: 'Module', dataInterface: 'Schnittstelle', connectors: 'Connectoren' },
     hero: {
-      title: 'Modularer Baukasten für',
+      title: 'Der Baukasten für',
       titleHighlight: 'lokale Vernetzung',
-      subtitle:
-        'Werkzeuge, die es Communities ermöglichen, sich dezentral zu organisieren, selbstbestimmt und verwurzelt in echten Begegnungen.',
+      // Antons Wortlaut (23.09.), der Gedankenstrich hier ausdruecklich gewollt.
+      subtitle: 'Werkzeuge für Communities, die sich dezentral organisieren — verwurzelt in echten Begegnungen.',
       demo: 'Demo ansehen',
       storybook: 'Storybook',
     },
@@ -116,10 +116,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
   en: {
     nav: { modules: 'Modules', dataInterface: 'Data Interface', connectors: 'Connectors' },
     hero: {
-      title: 'A modular toolkit for',
+      title: 'The toolkit for',
       titleHighlight: 'local connection',
-      subtitle:
-        'Tools that enable communities to organize in a decentralized way, self-determined and rooted in real-world encounters.',
+      subtitle: 'Tools for communities that organize in a decentralized way — rooted in real-world encounters.',
       demo: 'View demo',
       storybook: 'Storybook',
     },
