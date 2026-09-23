@@ -76,9 +76,9 @@ const soon = de ? 'folgt' : 'soon'
       <p>{t.dataInterface.p2}</p>
     </div>
     <div class="rl-list">
-      <div><Icon name="users" tone="blue" /><div><strong>{t.dataInterface.groups}</strong><span>{t.dataInterface.groupsDesc}</span></div></div>
-      <div><Icon name="calendar" tone="blue" /><div><strong>{t.dataInterface.events}</strong><span>{t.dataInterface.eventsDesc}</span></div></div>
-      <div><Icon name="shield" tone="blue" /><div><strong>{t.dataInterface.trust}</strong><span>{t.dataInterface.trustDesc}</span></div></div>
+      <div><Icon name="layers" tone="blue" /><div><strong>{t.dataInterface.items}</strong><span>{t.dataInterface.itemsDesc}</span></div></div>
+      <div><Icon name="users" tone="blue" /><div><strong>{t.dataInterface.spaces}</strong><span>{t.dataInterface.spacesDesc}</span></div></div>
+      <div><Icon name="shield-check" tone="blue" /><div><strong>{t.dataInterface.capabilities}</strong><span>{t.dataInterface.capabilitiesDesc}</span></div></div>
     </div>
   </section>
 
@@ -89,10 +89,11 @@ const soon = de ? 'folgt' : 'soon'
       <p>{t.connectors.p1}</p>
       <p>{t.connectors.p2}</p>
     </div>
-    <div class="rl-cards three">
+    <div class="rl-cards one">
       {([
-        ['REST', t.connectors.restDesc, 'globe', 'blue'], ['GraphQL', t.connectors.graphqlDesc, 'waypoints', 'purple'], ['Local-first', t.connectors.localDesc, 'hard-drive', 'green'],
-        ['P2P', t.connectors.p2pDesc, 'wot', 'orange'], ['E2EE', t.connectors.e2eeDesc, 'lock', 'red'], ['DIDs', t.connectors.didsDesc, 'fingerprint', 'teal'],
+        [t.connectors.wot, t.connectors.wotDesc, 'wot', 'orange'],
+        [t.connectors.supabase, t.connectors.supabaseDesc, 'database', 'green'],
+        [t.connectors.own, t.connectors.ownDesc, 'plug', 'blue'],
       ] as const).map(([name, desc, icon, tone]) => (
         <div class="rl-card compact"><Icon name={icon} tone={tone} tile={false} /><div><strong>{name}</strong><span>{desc}</span></div></div>
       ))}
