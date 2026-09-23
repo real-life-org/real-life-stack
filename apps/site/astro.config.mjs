@@ -32,11 +32,13 @@ export const LOCALES = {
  * Frontmatter, Übersicht zuerst. Andere Sprachen zeigen ihre Übersetzung,
  * wo es eine gibt, sonst die deutsche Seite — darum kein eigenes `label`.
  */
-// Gruppen der Seitenleiste; Reihenfolge der Gruppen ergibt sich aus der kleinsten `sidebar.order` ihrer Seiten.
+// Die Seitenleiste ordnet nach Textsorte, wie Leser es von anderen Docs kennen: Loslegen (die vier Wege der Startseite,
+// je eine Einstiegsseite), Verstehen (Konzepte), Anleitungen (für alle, die schon drin sind), dann die Referenz.
+// Reihenfolge der Gruppen ergibt sich aus der kleinsten `sidebar.order` ihrer Seiten.
 const HANDBOOK_GROUPS = {
+  loslegen: { label: 'Loslegen', translations: { en: 'Get started' } },
   verstehen: { label: 'Verstehen', translations: { en: 'Understand' } },
-  betreiben: { label: 'Eine Instanz betreiben', translations: { en: 'Run an instance' } },
-  erweitern: { label: 'Den Stack erweitern', translations: { en: 'Extend the stack' } },
+  anleitungen: { label: 'Anleitungen', translations: { en: 'Guides' } },
 }
 
 function handbookItems() {
@@ -89,9 +91,9 @@ export default defineConfig({
       ],
       editLink: { baseUrl: 'https://github.com/real-life-org/real-life-stack/edit/master/docs/handbook/' },
       sidebar: [
-        { label: 'Handbuch', translations: { en: 'Handbook' }, items: handbookItems() },
+        ...handbookItems(),
         // Die Referenz ist Englisch wie ihre Quellen (Hook-Kommentare, package.json, Spec-Index) und liegt als Astro-Seiten ausserhalb der Sammlung.
-        { label: 'Referenz', translations: { en: 'Reference' }, items: [
+        { label: 'Referenz', translations: { en: 'Reference' }, collapsed: true, items: [
           { label: 'Überblick', translations: { en: 'Overview' }, link: '/reference/' },
           { label: 'Module', translations: { en: 'Modules' }, link: '/reference/modules/' },
           { label: 'Hooks', link: '/reference/hooks/' },
