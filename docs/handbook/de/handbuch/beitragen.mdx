@@ -1,0 +1,60 @@
+---
+title: Zusammen am Stack arbeiten
+description: Wie ein Beitrag zum Pull Request wird, wer reviewt, was gemergt wird, wie daraus ein Release entsteht.
+sidebar:
+  order: 4
+sources:
+  - AGENTS.md
+  - CONTRIBUTING.md
+  - docs/RELEASING.md
+  - docs/ki-workflow.md
+  - .github/workflows/pr-title.yml
+  - .github/workflows/deploy-prototypes.yml
+  - .github/workflows/publish-app-image.yml
+---
+
+Ein Beitrag ist alles, was den Stack für die nächste Community besser macht: Code, eine Story, ein Satz in der Spec, ein Test mit echten Menschen, eine Grafik, eine bessere Erklärung. Der Weg ist für alle derselbe, und er braucht keinen bestimmten Agenten und keinen Runner.
+
+## Vor dem ersten Handgriff
+
+Beschreibe das Problem oder den Nutzerweg, nicht die Lösung. Lies die Spec-Stelle, die das Verhalten festlegt, und suche das Beispiel im Storybook. Bei einer größeren Verhaltensänderung klärst du die Produktfrage vorher im Issue, sonst entstehen zwei Umsetzungen nebeneinander. Was Architektur ändert, wird vorher besprochen, nicht im PR entdeckt.
+
+## Der normale Weg
+
+1. Ein Branch für einen überschaubaren Beitrag. Klein und prüfbar schlägt vollständig und groß; zwei PRs sind besser als einer, der zwei Dinge tut.
+2. Verhalten, Code, Story, Test und Erklärung gemeinsam ändern. Berührt der Beitrag Items, Schemas, Module, Fähigkeiten, Connectoren oder Hooks, geht die Spec mit: Entweder der Code folgt ihr, oder sie ändert sich sichtbar, mit Begründung im PR.
+3. Die Prüfungen laufen lassen, die den Bereich betreffen ([Lokal entwickeln → Prüfen](/handbuch/entwickeln/#prüfen)).
+4. Ein Pull Request mit Problem, Verhalten nach der Änderung und den tatsächlich ausgeführten Prüfungen. Der Titel folgt Conventional Commits (`feat(toolkit): …`, `fix(network): …`, `docs(spec): …`); CI prüft das, weil release-please daraus die Versionen ableitet.
+5. Review. Zuerst reviewt meist ein Agent (Codex im Loop-Review, CodeRabbit), dann ein Mensch; Befunde werden im PR beantwortet und im selben Branch behoben. Die Merge-Entscheidung bleibt bei einem Menschen.
+
+## Was ein PR sichtbar macht
+
+- was sich geändert hat und warum,
+- welche Dateien betroffen sind,
+- welche Prüfungen liefen, und welche nicht laufen konnten und warum,
+- was offen ist und was ein Mensch entscheiden muss,
+- die Dokumentationswirkung: Ändert sich ein Begriff, ein Ablauf, ein öffentlicher Vertrag, ein Startbefehl? Welche Seiten und Stories wurden angepasst? Wenn keine, warum nicht?
+
+Das Handbuch nennt je Seite seine Quellen im Frontmatter; `pnpm check:site` fällt, wenn eine fehlt. Ob eine Erklärung fachlich noch stimmt, prüft ein Mensch.
+
+## Sprache und Konventionen
+
+Spec und Dokumentation sind Deutsch, Bezeichner im Code Englisch, Code-Kommentare in der Sprache ihrer Umgebung (im Toolkit Deutsch). Storybook ist Englisch, seine Beispieldaten Deutsch, bis das Toolkit mehrsprachig ist. Normative Wörter in der Spec (`MUSS`, `SOLLTE`, `DARF NICHT`) folgen der Konvention der ganzen Familie in [`real-life-org/meta` → `CONVENTIONS.md`](https://github.com/real-life-org/meta/blob/main/CONVENTIONS.md); ein Wächter prüft sie.
+
+## Mit einem Agenten
+
+Ein Agent schreibt Code wie ein Mensch, nur schneller und mit anderen Fehlern. Der Arbeitsablauf, der ihn zuverlässig macht, steht in `docs/ki-workflow.md`: erst Tests, dann Umsetzung, ein Modul nach dem anderen, Review durch einen Menschen. Was ein Agent zum Einstieg braucht und wie ein Auftrag aussieht, der ankommt: [Mit einem Agenten arbeiten](/handbuch/agenten/).
+
+## Vom Merge zum Release: zwei Wege
+
+Ein Merge auf `master` erreicht Nutzer auf zwei verschiedenen Wegen, und nur einer davon braucht eine Versionsnummer.
+
+**Kontinuierlich, mit jedem passenden Merge.** `deploy-prototypes.yml` baut bei Änderungen an Apps, Paketen, Handbuch oder Site die Web-App, die Site und das Storybook und veröffentlicht sie unter real-life-stack.de; dazu die OTA-Bundles, mit denen installierte Apps (F-Droid, Obtainium, iOS) ihren Web-Inhalt nachladen. `publish-app-image.yml` veröffentlicht bei Änderungen an Referenz-App, Paketen oder `deploy/app/` das Container-Image der Edge-Instanz. Für all das wird keine Release-PR gemergt: Was auf `master` liegt, kann Nutzer noch am selben Tag erreichen.
+
+**Versioniert, über die Release-PR.** release-please hält aus den Conventional Commits eine Release-PR offen. Wer sie mergt, erzeugt die Tags, und daraus werden die npm-Pakete (`@real-life-stack/*`, für Apps außerhalb des Repos) und die nativen Artefakte der Referenz-App (APK für F-Droid, AAB für Play). Play bekommt keine OTA-Updates; eine Änderung erreicht Play erst mit diesem Weg. Ein Fix in einem Paket kaskadiert deshalb auf die App-Version, damit er auch dort ankommt. Der ganze Mechanismus, mit seinen zerbrechlichen Stellen, steht in `docs/RELEASING.md`.
+
+## Zuständigkeiten und Erwartungen
+
+Feste Zeitbudgets, Meetingpflichten und persönliche Zusagen erfindet diese Seite nicht. Was ein Beitrag sein soll und wer ihn reviewt, wird beim Einstieg mit den Maintainern vereinbart; das persönliche Onboarding mit einer Ansprechperson ist das Prinzip, das das Team dafür beschlossen hat. Die Fragen, die neue Mitbauende stellen (Ziel, Stand, Entscheidungen, Zeit, Geld), bekommen eine eigene Seite mit ehrlichen Antworten.
+
+[Repository und Issues](https://github.com/real-life-org/real-life-stack) · [Wie dieses Handbuch aktuell bleibt](/handbuch/pflege/)
