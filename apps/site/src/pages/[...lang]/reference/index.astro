@@ -1,0 +1,20 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro'
+import { translations } from '../../../i18n/landing'
+// Eine Seite fuer jede Sprache (Starlight lokalisiert Sidebar-Links), der Inhalt bleibt Englisch.
+export function getStaticPaths() {
+  return [{ params: { lang: undefined } }, ...Object.keys(translations).filter((l) => l !== 'de').map((lang) => ({ params: { lang } }))]
+}
+import { hookCount, packages, specDocs, STORYBOOK } from '../../../lib/reference'
+---
+<StarlightPage frontmatter={{ title: 'Reference', description: 'The complete reference of Real Life Stack: every hook, every package, every spec document. Generated from the same sources as Storybook and llms.txt.', tableOfContents: false }}>
+  <p>The handbook shows the way in; this reference lists what there is. It is generated from the repository and cannot drift from it: the hook table from each hook's documentation comment, the packages from their <code>package.json</code>, the spec list from the spec index. Guards in CI fail when any of them is stale. The reference is English because its sources are.</p>
+  <ul>
+    <li><a href="/reference/hooks/"><strong>Hooks</strong></a>: all {hookCount} hooks the toolkit exports, the question each answers and what happens without the capability.</li>
+    <li><a href="/reference/packages/"><strong>Packages</strong></a>: the {packages.length} packages on npm and what each is for.</li>
+    <li><a href="/reference/spec/"><strong>Specification</strong></a>: the {specDocs.length} documents of the normative spec (German), with status.</li>
+    <li><a href={STORYBOOK}><strong>Storybook</strong></a>: every module, the app composition and every hook, live.</li>
+    <li><a href="/llms.txt"><strong>llms.txt</strong></a>: the same reference as one text file for agents.</li>
+  </ul>
+  <p>Modules (what each shows, its options, its story) follow once the register produces its own list.</p>
+</StarlightPage>

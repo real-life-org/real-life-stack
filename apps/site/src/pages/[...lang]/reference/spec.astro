@@ -1,0 +1,22 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro'
+import { translations } from '../../../i18n/landing'
+// Eine Seite fuer jede Sprache (Starlight lokalisiert Sidebar-Links), der Inhalt bleibt Englisch.
+export function getStaticPaths() {
+  return [{ params: { lang: undefined } }, ...Object.keys(translations).filter((l) => l !== 'de').map((lang) => ({ params: { lang } }))]
+}
+import { specDocs, REPO } from '../../../lib/reference'
+---
+<StarlightPage frontmatter={{ title: 'Specification', description: 'The documents of the normative spec, with status. The spec is German and the single source of truth of the repository.', tableOfContents: false }}>
+  <p>The spec is the single source of truth: when code and spec disagree, the spec wins. It is written in German; the type definitions in <code>@real-life-stack/data-interface</code> are the precise English contract for all data shapes. Index: <a href={`${REPO}docs/spec/README.md`}>docs/spec/README.md</a>.</p>
+  <div class="rl-table rl-ref">
+    <table>
+      <thead><tr><th>Document</th><th>Status</th><th>Content (German)</th></tr></thead>
+      <tbody>
+        {specDocs.map((d) => (
+          <tr><td><a href={`${REPO}docs/spec/${d.href}`}>{d.label}</a></td><td>{d.status}</td><td>{d.description}</td></tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</StarlightPage>
