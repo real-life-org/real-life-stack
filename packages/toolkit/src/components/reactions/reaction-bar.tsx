@@ -137,7 +137,7 @@ function ReactionPill({ reaction, onReact, onOpenDetails, reactorNames }: PillPr
  * and supports opening ReactionDetails via count click / long press.
  */
 export function ReactionBar({ itemId, maxVisible = 6, onOpenDetails, className }: ReactionBarProps) {
-  const { reactions, react, canReact } = useReactions(itemId)
+  const { data: reactions, react, canReact } = useReactions(itemId)
   const [pickerOpen, setPickerOpen] = useState(false)
   const addButtonRef = useRef<HTMLButtonElement>(null)
   // Own details layer, unless the consumer supplies one.

@@ -148,7 +148,7 @@
           "name": "useCreateItem",
           "signature": "",
           "question": "Create a new item.",
-          "answers": "`{mutate}`",
+          "answers": "`(input) => Promise<Item>`",
           "without": "throws on call",
           "stories": [
             "rls-foundations-hooks--write"
@@ -163,7 +163,7 @@
           "name": "useUpdateItem",
           "signature": "",
           "question": "Change an existing item.",
-          "answers": "`{mutate}`",
+          "answers": "`(id, updates) => Promise<Item>`",
           "without": "throws on call",
           "stories": [
             "rls-foundations-hooks--write"
@@ -172,13 +172,13 @@
             "docs/spec/02-data-interface.md"
           ],
           "source": "packages/toolkit/src/hooks/use-mutations.ts",
-          "line": 45
+          "line": 44
         },
         {
           "name": "useDeleteItem",
           "signature": "",
           "question": "Delete an item.",
-          "answers": "`{mutate}`",
+          "answers": "`(id) => Promise<void>`",
           "without": "throws on call",
           "stories": [
             "rls-foundations-hooks--write"
@@ -187,7 +187,7 @@
             "docs/spec/02-data-interface.md"
           ],
           "source": "packages/toolkit/src/hooks/use-mutations.ts",
-          "line": 63
+          "line": 61
         },
         {
           "name": "useUnsavedChanges",
@@ -492,7 +492,7 @@
           "name": "useComments",
           "signature": "itemId",
           "question": "What was said, by whom, and may I reply?",
-          "answers": "`{comments, createComment, canComment}`",
+          "answers": "`{data, isLoading, canComment, createComment, …}`",
           "without": "empty — writing no-op",
           "stories": [
             "rls-foundations-hooks--relations"
@@ -507,7 +507,7 @@
           "name": "useReplies",
           "signature": "itemId, commentId",
           "question": "Which replies does this comment have?",
-          "answers": "`{replies, isLoading}`",
+          "answers": "`{data, isLoading}`",
           "without": "empty",
           "stories": [
             "rls-foundations-hooks--relations"
@@ -522,7 +522,7 @@
           "name": "useReactions",
           "signature": "itemId",
           "question": "How was reacted, and can I set my reaction?",
-          "answers": "`{reactions, react, canReact}`",
+          "answers": "`{data, isLoading, react, canReact}`",
           "without": "empty — `react` no-op",
           "stories": [
             "rls-foundations-hooks--relations"
@@ -537,7 +537,7 @@
           "name": "useReactionUsers",
           "signature": "itemId, emojiFilter?",
           "question": "Who reacted with which emoji?",
-          "answers": "`{users, isLoading}`",
+          "answers": "`{data, isLoading}`",
           "without": "empty",
           "stories": [
             "rls-foundations-hooks--relations"
@@ -582,7 +582,7 @@
           "name": "useVotes",
           "signature": "statementId",
           "question": "How does the resonance stand, and how do I vote?",
-          "answers": "`{summary, vote, canVote}`",
+          "answers": "`{data, isLoading, vote, canVote}`",
           "without": "empty — without signature verification no vote counts",
           "stories": [
             "rls-foundations-hooks--relations"
@@ -597,7 +597,7 @@
           "name": "useVoteUsers",
           "signature": "statementId, enabled?",
           "question": "Who voted how?",
-          "answers": "`{users, isLoading}`",
+          "answers": "`{data, isLoading}`",
           "without": "empty",
           "stories": [
             "rls-foundations-hooks--relations"

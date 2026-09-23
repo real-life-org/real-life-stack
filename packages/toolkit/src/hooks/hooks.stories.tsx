@@ -98,9 +98,9 @@ function ItemsLesen() {
 
 function ItemsSchreiben() {
   const { data: items } = useItems()
-  const { mutate: anlegen } = useCreateItem()
-  const { mutate: aendern } = useUpdateItem()
-  const { mutate: loeschen } = useDeleteItem()
+  const anlegen = useCreateItem()
+  const aendern = useUpdateItem()
+  const loeschen = useDeleteItem()
   const eigene = items.filter((i) => i.type === "post" && i.id.startsWith("neu-"))
   return (
     <Tafel
@@ -189,8 +189,8 @@ function RechteVergleich() {
 // ── 4. Beziehungen ─────────────────────────────────────────────────────────
 
 function Beziehungen() {
-  const { comments, createComment } = useComments(STORY_POST.id)
-  const { reactions, react, canReact } = useReactions(STORY_POST.id)
+  const { data: comments, createComment } = useComments(STORY_POST.id)
+  const { data: reactions, react, canReact } = useReactions(STORY_POST.id)
   const [text, setText] = useState("")
   return (
     <Tafel

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react"
+import { useCallback } from "react"
 import type { CreateItemInput, DataInterface, Item } from "@real-life-stack/data-interface"
 import { isWritable } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
@@ -21,7 +21,7 @@ function writable(connector: DataInterface) {
 /**
  * Create a new item.
  *
- * @answers `{mutate}`
+ * @answers `(input) => Promise<Item>`
  * @without throws on call
  * @group write
  * @see story rls-foundations-hooks--write
@@ -29,14 +29,13 @@ function writable(connector: DataInterface) {
  */
 export function useCreateItem() {
   const connector = useConnector()
-  const mutate = useCallback((item: CreateItemInput) => writable(connector).createItem(item), [connector])
-  return useMemo(() => ({ mutate }), [mutate])
+  return useCallback((item: CreateItemInput) => writable(connector).createItem(item), [connector])
 }
 
 /**
  * Change an existing item.
  *
- * @answers `{mutate}`
+ * @answers `(id, updates) => Promise<Item>`
  * @without throws on call
  * @group write
  * @see story rls-foundations-hooks--write
@@ -44,17 +43,16 @@ export function useCreateItem() {
  */
 export function useUpdateItem() {
   const connector = useConnector()
-  const mutate = useCallback(
+  return useCallback(
     (id: string, updates: Partial<Item>) => writable(connector).updateItem(id, updates),
     [connector],
   )
-  return useMemo(() => ({ mutate }), [mutate])
 }
 
 /**
  * Delete an item.
  *
- * @answers `{mutate}`
+ * @answers `(id) => Promise<void>`
  * @without throws on call
  * @group write
  * @see story rls-foundations-hooks--write
@@ -62,6 +60,5 @@ export function useUpdateItem() {
  */
 export function useDeleteItem() {
   const connector = useConnector()
-  const mutate = useCallback((id: string) => writable(connector).deleteItem(id), [connector])
-  return useMemo(() => ({ mutate }), [mutate])
+  return useCallback((id: string) => writable(connector).deleteItem(id), [connector])
 }

@@ -54,9 +54,9 @@ const DOT_CLASSES: Record<VoteValue, string> = {
  * Sits in ItemPreview's footerAdornment, so all interactions stop propagation.
  */
 export function VoteBar({ statementId, className }: VoteBarProps) {
-  const { summary, vote, canVote } = useVotes(statementId)
+  const { data: summary, vote, canVote } = useVotes(statementId)
   // Votes are transparent: the tooltip names who voted how (resonance.md).
-  const { users: voters } = useVoteUsers(statementId, summary.total > 0)
+  const { data: voters } = useVoteUsers(statementId, summary.total > 0)
 
   const tooltipFor = useCallback(
     (value: VoteValue, isMine: boolean) => {

@@ -16,7 +16,7 @@ export interface CommentWithAuthor {
 /** Return value of useComments hook. */
 export interface UseCommentsResult {
   /** First-level comments sorted chronologically (oldest first). */
-  comments: CommentWithAuthor[]
+  data: CommentWithAuthor[]
   /** All comments (first + second level) for threading. */
   allComments: Item[]
   /**
@@ -40,7 +40,7 @@ export interface UseCommentsResult {
  * Hook for reading and creating comments on an item.
  * Returns first-level comments with reply counts.
  *
- * @answers `{comments, createComment, canComment}`
+ * @answers `{data, isLoading, canComment, createComment, …}`
  * @without empty — writing no-op
  * @group relations
  * @see story rls-foundations-hooks--relations
@@ -169,7 +169,7 @@ export function useComments(itemId: string): UseCommentsResult {
   }, [connector, itemId])
 
   return {
-    comments: commentsWithAuthors,
+    data: commentsWithAuthors,
     allComments,
     authors: resolvedAuthors,
     isLoading: false,
@@ -181,7 +181,7 @@ export function useComments(itemId: string): UseCommentsResult {
 /** Return value of useReplies hook. */
 export interface UseRepliesResult {
   /** Second-level replies sorted chronologically (oldest first). */
-  replies: CommentWithAuthor[]
+  data: CommentWithAuthor[]
   /** Whether the data is still loading. */
   isLoading: boolean
 }
@@ -192,7 +192,7 @@ export interface UseRepliesResult {
  * Hook for loading second-level replies to a first-level comment.
  * Filters from the parent item's full comment list.
  *
- * @answers `{replies, isLoading}`
+ * @answers `{data, isLoading}`
  * @without empty
  * @group relations
  * @see story rls-foundations-hooks--relations
@@ -258,5 +258,5 @@ export function useReplies(itemId: string, commentId: string): UseRepliesResult 
     return () => { cancelled = true }
   }, [connector, supportsRelations, itemId, commentId])
 
-  return { replies, isLoading }
+  return { data: replies, isLoading }
 }

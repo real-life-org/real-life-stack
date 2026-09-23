@@ -99,8 +99,8 @@ describe("Schreiben vorbereiten", () => {
       const c = useCreateItem()
       const u = useUpdateItem()
       const d = useDeleteItem()
-      create = c.mutate as never
-      return <output data-ready={String([c, u, d].every((m) => typeof m.mutate === "function"))} />
+      create = c as never
+      return <output data-ready={String([c, u, d].every((m) => typeof m === "function"))} />
     })
     expect(data).toMatchObject({ ready: "true" })
     await expect(async () => create?.({} as never)).rejects.toThrow("does not support writing")
@@ -155,7 +155,7 @@ describe("Wechsel auf einen Connector ohne die Fähigkeit", () => {
   it("vergisst die Kommentare", async () => {
     const { useComments } = await import("../src/hooks/use-comments")
     const { vorher, nachher } = await renderSwap(() => {
-      const { comments } = useComments("i1")
+      const { data: comments } = useComments("i1")
       return <output data-n={String(comments.length)} />
     })
     expect(vorher).toMatchObject({ n: "1" })

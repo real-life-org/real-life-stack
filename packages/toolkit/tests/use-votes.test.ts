@@ -299,7 +299,7 @@ describe("useVotes — aggregation (shared validation)", () => {
       voteRecord("rel-4", ME, "yellow"),
     ]).connector
     const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
-    expect(result.summary).toEqual({ green: 2, yellow: 1, red: 1, total: 4, myVote: "yellow" })
+    expect(result.data).toEqual({ green: 2, yellow: 1, red: 1, total: 4, myVote: "yellow" })
   })
 
   it("ignores forged records (endpoint not bound to author) and malformed values", async () => {
@@ -310,7 +310,7 @@ describe("useVotes — aggregation (shared validation)", () => {
       voteRecord("rel-3", "did:key:third", "purple"),
     ]).connector
     const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
-    expect(result.summary).toEqual({ green: 1, yellow: 0, red: 0, total: 1 })
+    expect(result.data).toEqual({ green: 1, yellow: 0, red: 0, total: 1 })
   })
 
   it("counts at most one vote per voter even when duplicate records exist", async () => {
@@ -319,8 +319,8 @@ describe("useVotes — aggregation (shared validation)", () => {
       voteRecord("rel-a", OTHER, "red"),
     ]).connector
     const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
-    expect(result.summary.total).toBe(1)
-    expect(result.summary.red).toBe(1) // deterministic winner: smallest record id
+    expect(result.data.total).toBe(1)
+    expect(result.data.red).toBe(1) // deterministic winner: smallest record id
   })
 })
 
@@ -329,10 +329,10 @@ describe("useVotes — claim verdicts (fail closed, spec 08 L1-L3)", () => {
     harness.connector = connector([voteRecord("rel-1", OTHER, "green")]).connector
     // First frames: verdicts pending → nothing counts.
     const early = renderHookSettled(() => hooks.useVotes(STATEMENT))
-    expect(early.summary.total).toBe(0)
+    expect(early.data.total).toBe(0)
     // After the verdict effect settles: counted (monotone unverified→counted).
     const settled = await renderHookVerified(() => hooks.useVotes(STATEMENT))
-    expect(settled.summary).toEqual({ green: 1, yellow: 0, red: 0, total: 1 })
+    expect(settled.data).toEqual({ green: 1, yellow: 0, red: 0, total: 1 })
   })
 
   it("invalid records never count", async () => {
@@ -341,13 +341,13 @@ describe("useVotes — claim verdicts (fail closed, spec 08 L1-L3)", () => {
       voteRecord("rel-bad", "did:key:third", "red"),
     ], { verdicts: (record) => (record.id === "rel-bad" ? "invalid" : "valid") }).connector
     const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
-    expect(result.summary).toEqual({ green: 1, yellow: 0, red: 0, total: 1 })
+    expect(result.data).toEqual({ green: 1, yellow: 0, red: 0, total: 1 })
   })
 
   it("a connector WITHOUT the verification capability yields an empty authorial aggregate", async () => {
     harness.connector = connector([voteRecord("rel-1", OTHER, "green")], { verdicts: false }).connector
     const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
-    expect(result.summary.total).toBe(0)
+    expect(result.data.total).toBe(0)
   })
 })
 
@@ -373,7 +373,7 @@ describe("useVotes — verdict binds CONTENT, not just the record id (#235 revie
       .mockImplementation(() => live)
     harness.connector = c
     const counted = await renderHookVerified(() => hooks.useVotes(STATEMENT))
-    expect(counted.summary.total).toBe(1)
+    expect(counted.data.total).toBe(1)
 
     // A manipulated peer write: SAME id, changed content, emitted as a new
     // array — exactly what the real observable does.
@@ -383,11 +383,11 @@ describe("useVotes — verdict binds CONTENT, not just the record id (#235 revie
     // FAIL CLOSED immediately: the stale id-keyed verdict must not carry
     // over to different content — even BEFORE re-verification settles.
     const early = renderHook(() => hooks.useVotes(STATEMENT))
-    expect(early.summary.total).toBe(0)
+    expect(early.data.total).toBe(0)
 
     // And after settling, the invalid verdict keeps it out.
     const settled = await renderHookVerified(() => hooks.useVotes(STATEMENT))
-    expect(settled.summary.total).toBe(0)
+    expect(settled.data.total).toBe(0)
   })
 })
 
@@ -396,16 +396,16 @@ describe("useVotes — verdicts are bound to the connector instance (#235 round 
     const records = [voteRecord("rel-1", OTHER, "green")]
     harness.connector = connector(records).connector
     const counted = await renderHookVerified(() => hooks.useVotes(STATEMENT))
-    expect(counted.summary.total).toBe(1)
+    expect(counted.data.total).toBe(1)
 
     // New connector instance, same records: the previous instance's verdicts
     // must not carry over for even one frame.
     harness.connector = connector(records).connector
     const early = renderHook(() => hooks.useVotes(STATEMENT))
-    expect(early.summary.total).toBe(0)
+    expect(early.data.total).toBe(0)
 
     const settled = await renderHookVerified(() => hooks.useVotes(STATEMENT))
-    expect(settled.summary.total).toBe(1)
+    expect(settled.data.total).toBe(1)
   })
 })
 

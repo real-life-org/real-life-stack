@@ -68,9 +68,9 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 - `useDraftItem()` → `Item | null`: What is someone typing right now that modules should preview? Without capability: null — without provider.
 - `useSetDraftItem()` → `(draft) => void`: Publish or discard the running draft. Without capability: no-op.
 - `useItemEditor(options)` → `{isOpen, mode, submit, remove, …}`: Open the composer and save an input as an item, including its space. Without capability: throws on call.
-- `useCreateItem()` → `{mutate}`: Create a new item. Without capability: throws on call.
-- `useUpdateItem()` → `{mutate}`: Change an existing item. Without capability: throws on call.
-- `useDeleteItem()` → `{mutate}`: Delete an item. Without capability: throws on call.
+- `useCreateItem()` → `(input) => Promise<Item>`: Create a new item. Without capability: throws on call.
+- `useUpdateItem()` → `(id, updates) => Promise<Item>`: Change an existing item. Without capability: throws on call.
+- `useDeleteItem()` → `(id) => Promise<void>`: Delete an item. Without capability: throws on call.
 - `useUnsavedChanges()` → `{dirty, setDirty} | null`: Are there unsaved inputs that leaving must intercept? Without capability: null — without provider.
 - `useSetUnsavedDirty()` → `(dirty) => void`: Report that something unsaved sits in the form. Without capability: no-op.
 
@@ -101,14 +101,14 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 ### Relations
 
 - `useCommentCount(itemId)` → `number`: Is there a conversation on this card? Without capability: value — `0`.
-- `useComments(itemId)` → `{comments, createComment, canComment}`: What was said, by whom, and may I reply? Without capability: empty — writing no-op.
-- `useReplies(itemId, commentId)` → `{replies, isLoading}`: Which replies does this comment have? Without capability: empty.
-- `useReactions(itemId)` → `{reactions, react, canReact}`: How was reacted, and can I set my reaction? Without capability: empty — `react` no-op.
-- `useReactionUsers(itemId, emojiFilter?)` → `{users, isLoading}`: Who reacted with which emoji? Without capability: empty.
+- `useComments(itemId)` → `{data, isLoading, canComment, createComment, …}`: What was said, by whom, and may I reply? Without capability: empty — writing no-op.
+- `useReplies(itemId, commentId)` → `{data, isLoading}`: Which replies does this comment have? Without capability: empty.
+- `useReactions(itemId)` → `{data, isLoading, react, canReact}`: How was reacted, and can I set my reaction? Without capability: empty — `react` no-op.
+- `useReactionUsers(itemId, emojiFilter?)` → `{data, isLoading}`: Who reacted with which emoji? Without capability: empty.
 - `useRelationRecords(filter?)` → `{data, supported}`: Which signed relation records match? Without capability: empty — `supported: false`.
 - `useVerifiedRelationRecords(records)` → `RelationRecord[]`: Which of those are cryptographically covered? Without capability: empty — also while checking.
-- `useVotes(statementId)` → `{summary, vote, canVote}`: How does the resonance stand, and how do I vote? Without capability: empty — without signature verification no vote counts.
-- `useVoteUsers(statementId, enabled?)` → `{users, isLoading}`: Who voted how? Without capability: empty.
+- `useVotes(statementId)` → `{data, isLoading, vote, canVote}`: How does the resonance stand, and how do I vote? Without capability: empty — without signature verification no vote counts.
+- `useVoteUsers(statementId, enabled?)` → `{data, isLoading}`: Who voted how? Without capability: empty.
 
 ### Surfaces and UI state
 

@@ -180,9 +180,9 @@ async function applyItemGroup(
 export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResult {
   const { currentUserId, mapSubmission, onCreated, onUpdated, onDeleted } = options
   const connector = useConnector()
-  const { mutate: createItem } = useCreateItem()
-  const { mutate: updateItem } = useUpdateItem()
-  const { mutate: deleteItem } = useDeleteItem()
+  const createItem = useCreateItem()
+  const updateItem = useUpdateItem()
+  const deleteItem = useDeleteItem()
 
   const [isOpen, setIsOpen] = useState(false)
   const [currentItem, setCurrentItem] = useState<Item | null>(null)
