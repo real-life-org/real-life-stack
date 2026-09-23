@@ -1,8 +1,8 @@
 ---
-title: Mit einem Agenten arbeiten
+title: Mit Agenten arbeiten
 description: Einstiege, Auftragsform, Regeln und die Prüfungen — für Coding-Agents, die eine App bauen oder am Stack mitarbeiten.
 sidebar:
-  order: 2
+  order: 8
 sources:
   - llms.txt
   - docs/templates/AGENTS.md
@@ -26,7 +26,7 @@ Die drei Dateien schreiben sich nicht auseinander: `llms.txt` und der Code-Block
 
 ## Die Standardantwort: der Rahmen
 
-Ein Agent, der eine App beginnt, sollte nicht bei Komponenten anfangen, sondern beim Rahmen. Eine App stellt **Connector, Router, Register, Karten-Engine und `RoutedAppFrame`** — sonst nichts (Spec 01, „Was bei der App bleibt“). Kopfzeile, Tabs, Panel, Erstellen, Detail und die sieben Module kommen aus dem Toolkit; ein Modul läuft ohne eine Zeile in der App. Wie das aussieht, zeigt [Erste App bauen](/handbuch/erste-app/), rund 40 Zeilen. Genau dieser Code steht in der App-Vorlage.
+Ein Agent, der eine App beginnt, sollte nicht bei Komponenten anfangen, sondern beim Rahmen. Eine App stellt **Connector, Router, Register, Karten-Engine und `RoutedAppFrame`** — sonst nichts (Spec 01, „Was bei der App bleibt“). Kopfzeile, Tabs, Panel, Erstellen, Detail und die sieben Module kommen aus dem Toolkit; ein Modul läuft ohne eine Zeile in der App. Wie das aussieht, zeigt [Eine eigene App bauen](/handbuch/erste-app/), rund 40 Zeilen. Genau dieser Code steht in der App-Vorlage.
 
 Was ein Agent deshalb **nicht** tun sollte: eine eigene Shell aus `Navbar`, `AppShell` und Modul-Ansichten zusammensetzen, ein eigenes Detail-Panel bauen, Items im Modul selbst laden. Jede dieser Fassungen ist eine zweite Version von etwas, das im Toolkit einmal existiert (Spec 01, Regel 5), und sie fällt bei der nächsten Toolkit-Version zurück.
 

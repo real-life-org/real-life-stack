@@ -2,7 +2,7 @@
 title: Lokal entwickeln
 description: Quelltext holen, Referenz-App, Storybook und Site starten, die erste Änderung sehen, die Prüfungen laufen lassen.
 sidebar:
-  order: 3
+  order: 5
 sources:
   - package.json
   - CONTRIBUTING.md
@@ -34,13 +34,13 @@ pnpm install --frozen-lockfile
 | Storybook | `pnpm storybook` | http://localhost:6006/ | jedes Modul, die App-Komposition, alle Hooks — der Ort für Toolkit-Arbeit |
 | Site | `pnpm dev:site` | http://localhost:4321/ | Landing und dieses Handbuch |
 
-Die Dev-Server lesen die Pakete aus dem Quelltext (`development`-Condition in den `package.json`); ein Build vorher ist nicht nötig, jede Änderung im Toolkit erscheint sofort in App und Storybook. Die Ausnahme ist das Handbuch-Beispiel: `pnpm dev:first-app` nimmt die veröffentlichten Pakete von npm, so wie eine App außerhalb des Repos ([Erste App bauen](/handbuch/erste-app/)); eine Toolkit-Änderung erreicht es erst mit dem nächsten Release.
+Die Dev-Server lesen die Pakete aus dem Quelltext (`development`-Condition in den `package.json`); ein Build vorher ist nicht nötig, jede Änderung im Toolkit erscheint sofort in App und Storybook. Die Ausnahme ist das Handbuch-Beispiel: `pnpm dev:first-app` nimmt die veröffentlichten Pakete von npm, so wie eine App außerhalb des Repos ([Eine eigene App bauen](/handbuch/erste-app/)); eine Toolkit-Änderung erreicht es erst mit dem nächsten Release.
 
 Im Storybook beginnst du bei **RLS → Start → Read me first**: der Lesepfad durch Start, App, App shell, Spaces, Modules, Items, Foundations. Alle Texte dort sind Englisch, die Beispieldaten Deutsch.
 
 ## Die erste Änderung
 
-Öffne `packages/toolkit/src/handbook/garden-data.ts` und ändere den Titel des Erntefests. Storybook zeigt die Änderung in **RLS → App → 00 Community garden**, in der Site auf der Seite [Erste App bauen](/handbuch/erste-app/). Diese Daten sind fiktiv und Teil der Dokumentation.
+Öffne `packages/toolkit/src/handbook/garden-data.ts` und ändere den Titel des Erntefests. Storybook zeigt die Änderung in **RLS → App → 00 Community garden**, in der Site auf der Seite [Eine eigene App bauen](/handbuch/erste-app/). Diese Daten sind fiktiv und Teil der Dokumentation.
 
 Für eine Änderung am Verhalten gilt die Reihenfolge aus `AGENTS.md`: erst die Spec-Stelle lesen (`docs/spec/`), dann Code, Story und Test im selben Schritt ändern. Wiederverwendbare Oberfläche gehört ins Toolkit, nie in eine App; ein Modul lädt nichts selbst, was der Host aus seinem Registereintrag herstellt (Spec 01). Die Regeln im Einzelnen stehen in `docs/agent-workspace.md`; sie gelten für Menschen und Agenten gleich.
 
@@ -54,13 +54,13 @@ pnpm -r typecheck      # jedes Paket, jede App, das Beispiel
 git diff --check
 ```
 
-Je nach Bereich dazu: `pnpm build:storybook` (Toolkit, Stories), `pnpm build:site && pnpm check:site && pnpm test:site` (Handbuch), `pnpm check:hooks` (ein Hook wurde exportiert oder geändert), `pnpm check:agents` (Pakete, Spec-Index, Beispiel), `python3 scripts/check-normative-words.py` (Spec-Text), `python3 scripts/check-shared-derivations.py` (ein Modul). Die vollständige Liste mit dem, was jede Prüfung fängt, steht unter [Mit einem Agenten arbeiten → Die Prüfungen](/handbuch/agenten/#die-prüfungen).
+Je nach Bereich dazu: `pnpm build:storybook` (Toolkit, Stories), `pnpm build:site && pnpm check:site && pnpm test:site` (Handbuch), `pnpm check:hooks` (ein Hook wurde exportiert oder geändert), `pnpm check:agents` (Pakete, Spec-Index, Beispiel), `python3 scripts/check-normative-words.py` (Spec-Text), `python3 scripts/check-shared-derivations.py` (ein Modul). Die vollständige Liste mit dem, was jede Prüfung fängt, steht unter [Mit Agenten arbeiten → Die Prüfungen](/handbuch/agenten/#die-prüfungen).
 
 ## Welcher Beitrag gehört wohin?
 
 | Ziel | Ort |
 |---|---|
-| Eine eigene Community-App | ein eigenes Repo auf den veröffentlichten Paketen, [Erste App bauen](/handbuch/erste-app/) |
+| Eine eigene Community-App | ein eigenes Repo auf den veröffentlichten Paketen, [Eine eigene App bauen](/handbuch/erste-app/) |
 | Eine Fläche, die alle Apps brauchen | `packages/toolkit`, mit Story; Karten aus `ItemPreview`, Dialoge aus der gemeinsamen Familie |
 | Ein neues Modul | eine Datei in `packages/toolkit/src/modules/`, ein Registereintrag, eine Story mit `HostWorld` |
 | Eine Datenquelle | ein Connector gegen `@real-life-stack/data-interface`; Connectoren importieren nicht voneinander |

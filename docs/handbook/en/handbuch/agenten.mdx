@@ -1,10 +1,10 @@
 ---
-title: Work with an agent
+title: Work with agents
 description: Entry points, task shape, rules and the checks — for coding agents that build an app or contribute to the stack.
 translationOf: docs/handbook/de/handbuch/agenten.mdx
-sourceHash: d03221c36dc5bffa2e86c5ce5435911972900899f10f8543ca84288dadfce5d1
+sourceHash: e391c4d761b29b4d2a2c2f54ae0a3a3b24ecc6666a05378ed0436ef8c220717a
 sidebar:
-  order: 2
+  order: 8
 sources:
   - llms.txt
   - docs/templates/AGENTS.md
@@ -28,7 +28,7 @@ The three files do not drift apart: `llms.txt` and the template's code block are
 
 ## The default answer: the frame
 
-An agent starting an app should not start with components but with the frame. An app provides **connector, router, register, map engine and `RoutedAppFrame`** — nothing else (spec 01, "what stays with the app"). Header, tabs, panel, create, detail and the seven modules come from the toolkit; a module runs without a line in the app. [Build a first app](/en/handbuch/erste-app/) shows what that looks like, about 40 lines. Exactly this code is in the app template.
+An agent starting an app should not start with components but with the frame. An app provides **connector, router, register, map engine and `RoutedAppFrame`** — nothing else (spec 01, "what stays with the app"). Header, tabs, panel, create, detail and the seven modules come from the toolkit; a module runs without a line in the app. [Build your own app](/en/handbuch/erste-app/) shows what that looks like, about 40 lines. Exactly this code is in the app template.
 
 What an agent therefore should **not** do: assemble a shell of its own from `Navbar`, `AppShell` and module views, build a detail panel of its own, load items inside the module. Each of these is a second version of something that exists once in the toolkit (spec 01, rule 5), and it falls behind with the next toolkit release.
 

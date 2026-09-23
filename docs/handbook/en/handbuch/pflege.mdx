@@ -2,9 +2,9 @@
 title: How this handbook stays current
 description: One source per statement, guards for what can be checked, a person for the rest.
 translationOf: docs/handbook/de/handbuch/pflege.mdx
-sourceHash: edb2aed09dd2c09f77efa82c578ca7ad3787a4a36d6d9a34554efebcd4266120
+sourceHash: d62e5f6b83913a3d940d5769ee54125128885e3ecabfe13e3499c5e0dbcfe1b2
 sidebar:
-  order: 5
+  order: 7
 sources:
   - scripts/site/check.mjs
   - scripts/site/prepare.mjs
@@ -32,7 +32,7 @@ Documentation does not go stale because someone is careless, but because the sam
 
 Every page names in its frontmatter the files it draws its statements from (`sources`) and the stories it embeds (`stories`). `pnpm check:site` fails when a source file is missing, a story id is not in the built Storybook index, an embedded story is not declared, a link between pages leads nowhere or a translation is stale. After the build it also checks every local link of the finished site. `pnpm test:site` checks that the guard recognises deliberately broken pages.
 
-`pnpm check:hooks` and `pnpm check:agents` check the same for the generated parts: an exported hook without a complete block, a story id that does not exist, a package without description, or a generated file that no longer matches the repository turns CI red. All of them run in `.github/workflows/tests.yml`; the overview is under [Work with an agent → The checks](/en/handbuch/agenten/#the-checks).
+`pnpm check:hooks` and `pnpm check:agents` check the same for the generated parts: an exported hook without a complete block, a story id that does not exist, a package without description, or a generated file that no longer matches the repository turns CI red. All of them run in `.github/workflows/tests.yml`; the overview is under [Work with agents → The checks](/en/handbuch/agenten/#the-checks).
 
 ## What moves along automatically, and what does not
 
