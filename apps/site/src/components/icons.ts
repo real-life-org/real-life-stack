@@ -19,6 +19,7 @@ export const icons = {
   "bot": "<path d=\"M12 8V4H8\" /><rect width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\" /><path d=\"M2 14h2\" /><path d=\"M20 14h2\" /><path d=\"M15 13v2\" /><path d=\"M9 13v2\" />",
   "wrench": "<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" />",
   "server": "<rect width=\"20\" height=\"8\" x=\"2\" y=\"2\" rx=\"2\" ry=\"2\" /><rect width=\"20\" height=\"8\" x=\"2\" y=\"14\" rx=\"2\" ry=\"2\" /><line x1=\"6\" x2=\"6.01\" y1=\"6\" y2=\"6\" /><line x1=\"6\" x2=\"6.01\" y1=\"18\" y2=\"18\" />",
+  "kanban": "<path d=\"M6 5v11\" /><path d=\"M12 5v6\" /><path d=\"M18 5v14\" />",
   "wot": "<circle cx=\"18.72\" cy=\"8.82\" r=\"3\" /><circle cx=\"5.28\" cy=\"5.28\" r=\"3\" /><circle cx=\"8.82\" cy=\"18.72\" r=\"3\" /><line x1=\"6.04\" x2=\"8.06\" y1=\"8.18\" y2=\"15.82\" /><line x1=\"15.81\" x2=\"8.18\" y1=\"8.05\" y2=\"6.04\" /><line x1=\"16.59\" x2=\"10.94\" y1=\"10.94\" y2=\"16.59\" />"
 } as const
 export type IconName = keyof typeof icons

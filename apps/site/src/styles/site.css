@@ -37,7 +37,8 @@ h2, h3 { letter-spacing: -.02em; }
 .site-title { letter-spacing: -.03em; font-weight: 750; }
 
 /* Landing */
-.rl-landing { max-width: 64rem; margin-inline: auto; padding-inline: 1rem; }
+/* So breit wie der Hero darüber: Starlight setzt die Inhaltsbreite, die Sektionen folgen ihr. */
+.rl-landing { max-width: none; margin-inline: 0; padding-inline: 0; }
 .rl-accent { color: var(--sl-color-accent); }
 .hero { padding-block: 2rem 1rem; }
 .hero .tagline { line-height: 1.6; }
@@ -55,21 +56,27 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-badge::before { content: ''; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
 .rl-section h2 { font-size: 1.9rem; margin: 0 0 .75rem; }
 .rl-section p { color: var(--sl-color-gray-2); line-height: 1.65; margin: 0 0 1rem; }
-.rl-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.rl-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; align-items: stretch; }
 .rl-cards.three { grid-template-columns: repeat(3, 1fr); }
-.rl-card { border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; padding: 1rem; background: var(--sl-color-bg-sidebar); }
+.rl-card { border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; padding: 1rem; background: var(--sl-color-bg-sidebar); display: flex; flex-direction: column; align-self: stretch; }
+a.rl-card { text-decoration: none; color: inherit; }
+a.rl-card:hover { border-color: var(--sl-color-accent); }
+.rl-more { margin: .75rem 0 0; font-size: .9rem; }
+.rl-more a { color: var(--sl-color-accent); text-decoration: none; }
+.rl-more a:hover { text-decoration: underline; }
 .rl-card strong { display: block; margin-bottom: .2rem; }
 .rl-card span { font-size: .85rem; color: var(--sl-color-gray-2); }
 .rl-card.compact { padding: .6rem .75rem; display: flex; gap: .6rem; align-items: flex-start; }
 .rl-card.compact > div { min-width: 0; text-align: start; }
 .rl-card.compact > div span { display: block; }
-.rl-card.centered { text-align: center; }
+.rl-card.centered { text-align: center; align-items: center; }
 .rl-card.centered .rl-icon { margin: 0 auto .6rem; }
 .rl-list > div { display: flex; gap: .75rem; align-items: flex-start; }
 .rl-list > div > div { display: grid; }
 /* Farbige Symbole wie in der React-Landing vor der Astro-Site: Kachel in Pastell, Symbol in der Vollfarbe. */
 .rl-icon { display: inline-flex; align-items: center; justify-content: center; color: var(--rl-tone); flex-shrink: 0; }
-.rl-icon svg { width: 1.25rem; height: 1.25rem; }
+/* Auf dem svg selbst, nicht auf dem span: `.rl-card span` setzt Grau mit hoeherer Spezifitaet (rls#447). */
+.rl-icon svg { width: 1.25rem; height: 1.25rem; color: var(--rl-tone); }
 .rl-icon.tile { width: 2.5rem; height: 2.5rem; border-radius: .6rem; background: color-mix(in oklab, var(--rl-tone) 14%, transparent); margin-bottom: .6rem; }
 .rl-list .rl-icon.tile { width: 2rem; height: 2rem; margin-bottom: 0; }
 .rl-list .rl-icon.tile svg { width: 1rem; height: 1rem; }

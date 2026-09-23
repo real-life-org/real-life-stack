@@ -23,6 +23,14 @@ const ways: { title: string; text: string; href: string; soon: boolean; icon: Ic
       { title: 'Contribute to the stack', text: 'Dev environment, spec, guards, review. How a contribution becomes a PR. German for now.', href: '/handbuch/entwickeln/', soon: false, icon: 'wrench', tone: 'blue' },
       { title: 'Run an instance', text: 'The finished app under your own name and domain for a community.', href: `${prefix}/handbuch/`, soon: true, icon: 'server', tone: 'green' },
     ]
+// Die Modulkarten zeigen auf ihre Storybook-Seite; Kanban statt Marktplatz, weil der Marktplatz ein Modul der Netzwerk-App ist, kein Toolkit-Modul.
+const m = (key: 'kanban' | 'kanbanDesc' | 'more') => t.modules[key] ?? translations.en.modules[key] ?? ''
+const modules: { name: string; desc: string; icon: IconName; tone: Tone; story: string }[] = [
+  { name: t.modules.map, desc: t.modules.mapDesc, icon: 'map', tone: 'green', story: 'rls-modules-map--docs' },
+  { name: t.modules.calendar, desc: t.modules.calendarDesc, icon: 'calendar', tone: 'blue', story: 'rls-modules-calendar--docs' },
+  { name: m('kanban'), desc: m('kanbanDesc'), icon: 'kanban', tone: 'purple', story: 'rls-modules-kanban--docs' },
+  { name: t.modules.feed, desc: t.modules.feedDesc, icon: 'message-square', tone: 'orange', story: 'rls-modules-feed--docs' },
+]
 const waysTitle = de ? 'Vier Wege hinein' : 'Four ways in'
 const waysIntro = de ? 'Je nachdem, was du vorhast. Jede Seite des Handbuchs gehört genau einem Weg.' : 'Depending on what you are up to. Every handbook page belongs to exactly one way.'
 const soon = de ? 'folgt' : 'soon'
@@ -49,11 +57,16 @@ const soon = de ? 'folgt' : 'soon'
       <p>{t.modules.p1}</p>
       <p>{t.modules.p2}</p>
     </div>
-    <div class="rl-cards">
-      <div class="rl-card centered"><Icon name="map" tone="green" /><strong>{t.modules.map}</strong><span>{t.modules.mapDesc}</span></div>
-      <div class="rl-card centered"><Icon name="calendar" tone="blue" /><strong>{t.modules.calendar}</strong><span>{t.modules.calendarDesc}</span></div>
-      <div class="rl-card centered"><Icon name="store" tone="purple" /><strong>{t.modules.marketplace}</strong><span>{t.modules.marketplaceDesc}</span></div>
-      <div class="rl-card centered"><Icon name="message-square" tone="orange" /><strong>{t.modules.feed}</strong><span>{t.modules.feedDesc}</span></div>
+    <div>
+      <div class="rl-cards">
+        {modules.map((m) => (
+          <a class="rl-card centered" href={`https://real-life-stack.de/storybook/?path=/docs/${m.story}`}>
+            <Icon name={m.icon} tone={m.tone} />
+            <strong>{m.name}</strong><span>{m.desc}</span>
+          </a>
+        ))}
+      </div>
+      <p class="rl-more"><a href="https://real-life-stack.de/storybook/?path=/docs/rls-start-read-me-first--docs">{m('more')} →</a></p>
     </div>
   </section>
 

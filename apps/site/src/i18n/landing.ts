@@ -20,6 +20,10 @@ export interface Translation {
     marketplaceDesc: string
     feed: string
     feedDesc: string
+    /** Optional; fehlt es, gilt die englische Fassung. */
+    kanban?: string
+    kanbanDesc?: string
+    more?: string
   }
   dataInterface: {
     badge: string
@@ -75,6 +79,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       marketplaceDesc: 'Teilen & Tauschen',
       feed: 'Feed',
       feedDesc: 'Aktivitäten-Stream',
+      kanban: 'Kanban',
+      kanbanDesc: 'Aufgaben in Spalten',
+      more: 'Dazu Liste, Graph und Resonanz — alle Module live im Storybook',
     },
     dataInterface: {
       badge: 'Daten- & Identitätsschnittstelle',
@@ -129,6 +136,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       marketplaceDesc: 'Sharing & swapping',
       feed: 'Feed',
       feedDesc: 'Activity stream',
+      kanban: 'Kanban',
+      kanbanDesc: 'Tasks in columns',
+      more: 'Plus list, graph and resonance — every module live in Storybook',
     },
     dataInterface: {
       badge: 'Data & Identity Interface',
