@@ -20,6 +20,8 @@ export const collections = {
         sources: z.array(z.string()).default([]),
         /** Story-Ids, die die Seite einbettet — geprüft gegen den Storybook-Index. */
         stories: z.array(z.string()).default([]),
+        /** Gruppe in der Seitenleiste (`verstehen`, `betreiben`, `erweitern`); ohne Gruppe steht die Seite direkt unter „Handbuch“. Gelesen von `handbookItems()` in astro.config.mjs. */
+        group: z.enum(['verstehen', 'betreiben', 'erweitern']).optional(),
         /** Für Übersetzungen: die deutsche Quelle und ihr Hash zum Zeitpunkt der Übersetzung. */
         translationOf: z.string().optional(),
         sourceHash: z.string().optional(),

@@ -32,20 +32,36 @@ export const LOCALES = {
  * Frontmatter, Übersicht zuerst. Andere Sprachen zeigen ihre Übersetzung,
  * wo es eine gibt, sonst die deutsche Seite — darum kein eigenes `label`.
  */
+// Gruppen der Seitenleiste; Reihenfolge der Gruppen ergibt sich aus der kleinsten `sidebar.order` ihrer Seiten.
+const HANDBOOK_GROUPS = {
+  verstehen: { label: 'Verstehen', translations: { en: 'Understand' } },
+  betreiben: { label: 'Eine Instanz betreiben', translations: { en: 'Run an instance' } },
+  erweitern: { label: 'Den Stack erweitern', translations: { en: 'Extend the stack' } },
+}
+
 function handbookItems() {
   const dir = new URL('../../docs/handbook/de/handbuch/', import.meta.url)
-  return readdirSync(dir)
+  const pages = readdirSync(dir)
     .filter((f) => /\.mdx?$/.test(f))
     .map((f) => {
       const text = readFileSync(new URL(f, dir), 'utf8')
       const id = f.replace(/\.mdx?$/, '')
       const title = text.match(/^title:\s*(.+)$/m)?.[1]?.trim().replace(/^(['"])(.*)\1$/, '$2') ?? id
       const order = id === 'index' ? -1 : Number(text.match(/^sidebar:\n\s+order:\s*(\d+)/m)?.[1] ?? 99)
+      const group = text.match(/^group:\s*(\S+)$/m)?.[1]
+      if (group && !HANDBOOK_GROUPS[group]) throw new Error(`${f}: unbekannte Gruppe „${group}“`)
       // Ohne `label`: Starlight nimmt den Titel der Seite in der jeweiligen Sprache (die Uebersetzung, wo es eine gibt).
-      return { slug: `handbuch/${id}`, order, title }
+      return { slug: `handbuch/${id}`, order, title, group }
     })
     .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))
-    .map(({ order, title, ...item }) => item)
+  const items = []
+  for (const { order, title, group, ...item } of pages) {
+    if (!group) { items.push(item); continue }
+    let g = items.find((i) => i.key === group)
+    if (!g) { g = { key: group, ...HANDBOOK_GROUPS[group], collapsed: true, items: [] }; items.push(g) }
+    g.items.push(item)
+  }
+  return items.map(({ key, ...i }) => i)
 }
 
 export default defineConfig({
