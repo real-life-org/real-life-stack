@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.0](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.1.6...mock-connector-v0.2.0) (2026-09-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **toolkit:** Der Modul-Host — B0 komplett (Schritte 1–5b + Codex-Fixes #415–#417) ([#414](https://github.com/real-life-org/real-life-stack/issues/414))
+
+### Features
+
+* **toolkit:** Der Modul-Host — B0 komplett (Schritte 1–5b + Codex-Fixes [#415](https://github.com/real-life-org/real-life-stack/issues/415)–[#417](https://github.com/real-life-org/real-life-stack/issues/417)) ([#414](https://github.com/real-life-org/real-life-stack/issues/414)) ([97baf68](https://github.com/real-life-org/real-life-stack/commit/97baf683b212a784246711022b393d9002234be6))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.3.0
+
 ## [0.1.6](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.1.5...mock-connector-v0.1.6) (2026-09-16)
 
 
