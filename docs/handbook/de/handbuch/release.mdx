@@ -1,0 +1,49 @@
+---
+title: Versionen und Releases
+description: Welche Version läuft, woher Image-Tags und npm-Versionen kommen, was ein Release auslöst und was ein Merge schon veröffentlicht.
+sidebar:
+  order: 8
+sources:
+  - docs/RELEASING.md
+  - deploy/app/README.md
+  - .github/workflows/publish-app-image.yml
+  - .github/workflows/deploy-prototypes.yml
+  - release-please-config.json
+---
+
+Der Stack hat zwei Ausgänge: die **npm-Pakete** (`@real-life-stack/*`, für Apps außerhalb des Repos) und die **App** (Referenz-App als Web, Container-Image, APK, AAB). Ein Motor treibt beide: release-please liest die Conventional Commits auf `master`, hält eine Release-PR offen und erzeugt beim Merge die Tags. Ausführlich, mit den zerbrechlichen Stellen, in `docs/RELEASING.md`.
+
+## Welche Version läuft bei mir?
+
+- **Instanz:** `RLS_IMAGE_TAG` in `.env`; welches Image tatsächlich läuft, zeigt `docker compose images`.
+- **Image-Tags:** aus dem Release-Tag `app-v0.3.3` entstehen `0.3.3` (genau diese Fassung) und `0.3` (folgt Korrekturen in der Minor-Version). `edge` ist der Stand des Hauptzweigs. Ein `latest` gibt es nicht, ein Major-Tag erst ab 1.0. Alle Tags: [ghcr.io/real-life-org/rls-app](https://github.com/real-life-org/real-life-stack/pkgs/container/rls-app).
+- **Pakete:** die Version auf npm; Tags im Repo heißen `toolkit-vX.Y.Z`, `data-interface-vX.Y.Z`, `*-connector-vX.Y.Z`.
+
+## Was ein Merge auf master schon veröffentlicht
+
+Ohne Release-PR, mit jedem passenden Merge:
+
+- **Web-App, Site, Storybook** auf real-life-stack.de, plus die **OTA-Bundles**, mit denen installierte Apps (F-Droid, Obtainium, iOS) ihren Web-Inhalt nachladen (`deploy-prototypes.yml`).
+- Das **Image `edge`** (`publish-app-image.yml`), bei Änderungen an Referenz-App, Paketen oder `deploy/app/`.
+
+Wer `edge` betreibt, bekommt also Änderungen am selben Tag. Für den Betrieb pinnt eine Instanz die Minor-Version, die sie geprüft hat.
+
+## Was ein Release auslöst
+
+Der Merge der Release-PR erzeugt die Tags; daraus:
+
+- `toolkit-v*`, `data-interface-v*`, `*-connector-v*` → Publish nach npm.
+- `app-v*` → nativer Build: APK für F-Droid und Obtainium (mit OTA), AAB für Play (ohne OTA, Google verbietet Self-Updates), und das Image mit den Tags `X.Y.Z` und `X.Y`.
+
+Ein Fix in einem Paket kaskadiert auf die App-Version, damit er auch Play erreicht; ohne das bliebe ein Paket-Fix dort unsichtbar. Der App-Build nimmt die Workspace-Pakete aus dem Quelltext, er wartet nie auf den npm-Publish.
+
+## Aktualisieren einer Instanz
+
+1. Den neuen Tag in einer Vorschau prüfen (`RLS_IMAGE_TAG=0.4 docker compose -f docker-compose.preview.yml up -d`).
+2. Konfiguration, Assets und die Daten des Backends sichern; den bisherigen Tag notieren.
+3. `RLS_IMAGE_TAG` in `.env` ändern, `docker compose pull && docker compose up -d`.
+4. Zurück geht es mit dem alten Tag; ob ältere Software mit inzwischen veränderten Daten läuft, muss vorher geprüft sein.
+
+## Was in einem Release steht
+
+Die Release-Notes erzeugt release-please aus den Commits. Solange die Versionen bei `0.x` stehen, erhöhen `feat` und `fix` die Patch-Version und nur ein Breaking Change (`!` oder `BREAKING CHANGE`) die Minor-Version (`release-please-config.json`: `bump-minor-pre-major`, `bump-patch-for-minor-pre-major`). Ein Wechsel von `0.3` auf `0.4` ist also die Ansage, dass sich etwas geändert hat, was Betreiber prüfen sollten; was genau, steht in den Commit-Betreffs und nicht in einer zweiten Liste.
