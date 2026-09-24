@@ -15,12 +15,24 @@ import { fileURLToPath } from "node:url"
  * einem aelteren Tag (build-on-tag mit inputs.tag) checkt aber den Tag aus.
  * Sonst zeigte die App die richtige Version zum falschen Commit (rls#462).
  * GITHUB_SHA ist nur der Rueckfall, wenn kein Git da ist.
+ *
+ * RLS_BUILD_COMMIT sticht beides, weil es der einzige Weg in einen
+ * Container-Build ist: `node:22-alpine` bringt kein git mit, und der
+ * Build-Kontext ist kein Checkout. Ohne diesen Weg trug das Image nur die
+ * Version — so stand reallife.network am 24.09.2026 mit einer Build-Zeile
+ * ohne Commit da. Den Wert ermittelt der Workflow dort, wo git noch da ist,
+ * und reicht ihn als Build-Arg herein; es ist also weiterhin der Commit des
+ * TATSAECHLICH gebauten Baums und nicht der Event-SHA.
  */
 export function buildInfo(packageJsonUrl, { env = process.env, revParse = gitHead } = {}) {
   const pkgPath = typeof packageJsonUrl === "string" ? packageJsonUrl : fileURLToPath(packageJsonUrl)
   const version = JSON.parse(readFileSync(pkgPath, "utf8")).version
-  let commit
-  try { commit = revParse(dirname(pkgPath)) } catch { commit = env.GITHUB_SHA }
+  let commit = env.RLS_BUILD_COMMIT || undefined
+  // `|| undefined`: Docker setzt ein nicht uebergebenes ARG als LEEREN String.
+  // Als "gesetzt" gezaehlt wuerde er den Git-Stand mit nichts verdecken.
+  if (!commit) {
+    try { commit = revParse(dirname(pkgPath)) } catch { commit = env.GITHUB_SHA }
+  }
   const channel = env.VITE_UPDATE_CHANNEL || undefined
   return { version, commit: commit?.slice(0, 7) || undefined, channel }
 }

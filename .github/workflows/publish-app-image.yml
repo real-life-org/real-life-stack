@@ -48,6 +48,14 @@ jobs:
           # Bei einem Nachlauf fuer ein Release den Tag bauen, nicht master.
           ref: ${{ inputs.tag || github.ref }}
 
+      - id: commit
+        name: Commit des ausgecheckten Baums
+        # Bewusst `git rev-parse HEAD` statt `github.sha`: bei einem Nachlauf
+        # fuer ein Release ist der Checkout der TAG, waehrend der Event-SHA zum
+        # ausloesenden Lauf gehoert. Die App zeigte sonst die richtige Version
+        # zum falschen Commit (rls#462).
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - id: ver
         name: Version aus dem Tag ableiten
         env:
@@ -116,6 +124,8 @@ jobs:
         with:
           context: .
           file: deploy/app/Dockerfile
+          build-args: |
+            BUILD_COMMIT=${{ steps.commit.outputs.sha }}
           push: false
           load: true
           tags: rls-app:candidate
