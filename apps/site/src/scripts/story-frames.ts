@@ -39,6 +39,46 @@
     }
     poll()
   }
+  /**
+   * Ein Klick in die Vorschau gibt dem Iframe den Fokus, und der Browser holt
+   * ihn dafuer ins Bild: Die Seite darunter scrollte weg. Die Vorschau ist ein
+   * Fenster, kein Formular — sie darf nichts ausserhalb von sich bewegen.
+   *
+   * Der Halter laeuft dauerhaft, nicht als Anmeldung auf ein Ereignis: Ein
+   * Iframe meldet dem Elternteil kein `focus`, und beim zweiten Klick in
+   * dieselbe Vorschau faellt auch kein `blur` mehr — das Fenster hat den Fokus
+   * ja laengst abgegeben. Unterschieden wird darum am Scrollereignis selbst:
+   * Liegt der Fokus in einer Vorschau und hat gerade niemand gescrollt,
+   * getippt oder gezogen, kommt die Bewegung nicht vom Menschen und wird
+   * zurueckgenommen. Scrollen ueber der Vorschau selbst zaehlt mit: Das
+   * meldet die Vorschau per Nachricht, weil ihre Ereignisse hier nicht ankommen.
+   */
+  // Eine Eingabe erklaert Bewegung fuer EINGABEFENSTER ms. Danach traegt die Bewegung sich selbst: Ausrollen nach
+  // einem Wisch und weiches Scrollen liefern luekenlos Ereignisse, ein Fokus-Sprung ist ein einzelner Satz. Jede
+  // menschliche Bewegung erklaert darum auch die naechste, wenn sie innerhalb von NACHLAUF ms folgt.
+  const EINGABEFENSTER = 400, NACHLAUF = 250
+  let ruhigePosition = window.scrollY
+  let letzteEingabe = 0
+  let letzteMenschlicheBewegung = 0
+  const merkeEingabe = () => { letzteEingabe = performance.now() }
+  for (const ereignis of ['wheel', 'touchstart', 'touchmove', 'keydown', 'pointerdown'])
+    window.addEventListener(ereignis, merkeEingabe, { passive: true, capture: true })
+  // Rad, Wischen und Tasten in der Vorschau kommen im Iframe an, nicht hier. Die Storybook-Vorschau meldet sie
+  // per postMessage (siehe .storybook/preview.tsx); so bleibt Scroll-Chaining aus der Vorschau erlaubt.
+  window.addEventListener('message', (e) => {
+    if (e.data?.type !== 'rls-story-scroll') return
+    if (figures.some((f) => f.querySelector('iframe')?.contentWindow === e.source)) merkeEingabe()
+  })
+
+  window.addEventListener('scroll', () => {
+    const jetzt = performance.now()
+    const ziel = document.activeElement
+    const vorschauImFokus = ziel instanceof HTMLIFrameElement && !!ziel.closest('.story-example')
+    const menschScrollt = jetzt - letzteEingabe < EINGABEFENSTER || jetzt - letzteMenschlicheBewegung < NACHLAUF
+    if (!vorschauImFokus || menschScrollt) { ruhigePosition = window.scrollY; letzteMenschlicheBewegung = jetzt; return }
+    if (window.scrollY !== ruhigePosition) window.scrollTo(0, ruhigePosition)
+  }, { passive: true })
+
   function load(fig: HTMLElement) {
     const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
     const src = `${iframe.dataset.src}&globals=theme:${theme()}`

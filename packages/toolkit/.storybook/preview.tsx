@@ -6,6 +6,23 @@ import type { Preview } from '@storybook/react-vite'
 import React from 'react'
 
 /**
+ * Eingebettet (Handbuch, Startseite) meldet die Vorschau dem Elternfenster, wenn
+ * jemand ueber ihr scrollt. Rad, Wischen und Tasten bleiben im Iframe; erreicht
+ * die Bewegung per Scroll-Chaining die Seite darunter, kann die den Ursprung
+ * sonst nicht von einem Fokus-Sprung unterscheiden und nimmt sie zurueck.
+ */
+const MELDER = '__rlsStoryScrollMelder'
+if (typeof window !== 'undefined' && window.parent !== window && !(MELDER in window)) {
+  // Merker am Fenster: Storybooks HMR fuehrt dieses Modul erneut aus, die Listener sollen nur einmal haengen.
+  ;(window as unknown as Record<string, boolean>)[MELDER] = true
+  const melde = () => window.parent.postMessage({ type: 'rls-story-scroll' }, '*')
+  // Nicht passiv, mit Absicht: Bei passiven Listenern scrollt der Browser schon auf dem Compositor, bevor das
+  // Ereignis hier ankommt, und die Meldung traefe nach dem Scroll-Ereignis der Seite ein. So wartet er auf uns.
+  for (const ereignis of ['wheel', 'touchstart', 'touchmove', 'keydown'])
+    window.addEventListener(ereignis, melde, { passive: false, capture: true })
+}
+
+/**
  * Hell und Dunkel als EIN Signal.
  *
  * Vorher hing der Dunkelmodus am Hintergrund-Addon, und der Dekorator verglich

@@ -64,6 +64,9 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-badge { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 600; color: var(--rl-accent, var(--sl-color-accent)); margin-bottom: .75rem; }
 .rl-badge::before { content: ''; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
 .rl-section h2 { font-size: 1.9rem; margin: 0 0 .75rem; }
+/* Ueberschriften tragen ihre eigene Zeilenhoehe: Starlights 1.75 fuer Fliesstext liess
+   um jede von ihnen eine halbe Leerzeile stehen — auf dem Telefon je Umbruch. */
+.rl-section h2, .rl-ways h2 { line-height: 1.2; }
 .rl-section p { color: var(--sl-color-gray-2); line-height: 1.65; margin: 0 0 1rem; }
 .rl-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; align-items: stretch; }
 .rl-cards.three { grid-template-columns: repeat(3, 1fr); }
@@ -75,7 +78,9 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-more a { color: var(--sl-color-accent); text-decoration: none; }
 .rl-more a:hover { text-decoration: underline; }
 .rl-card strong { display: block; margin-bottom: .2rem; }
-.rl-card span { font-size: .85rem; color: var(--sl-color-gray-2); }
+/* 1.75 auf 13.6px zog die Karten auseinander; auf dem Telefon, wo der Text vier Zeilen
+   braucht statt zwei, wurde daraus eine halbe Bildschirmhoehe. */
+.rl-card span { font-size: .85rem; line-height: 1.5; color: var(--sl-color-gray-2); }
 .rl-card.compact { padding: .6rem .75rem; flex-direction: row; gap: .6rem; align-items: flex-start; }
 .rl-card.compact > div { min-width: 0; text-align: start; }
 .rl-card.compact > div span { display: block; }
@@ -102,7 +107,7 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-card.compact span { font-size: .75rem; }
 .rl-list { display: grid; gap: 1rem; border-inline-start: 4px solid var(--rl-blue); padding: 1.25rem; border-radius: .7rem; background: var(--sl-color-bg-sidebar); }
 .rl-list strong { display: block; }
-.rl-list span { font-size: .9rem; color: var(--sl-color-gray-2); }
+.rl-list span { font-size: .9rem; line-height: 1.5; color: var(--sl-color-gray-2); }
 .rl-ways { padding-block: 3rem; border-top: 1px solid var(--sl-color-gray-6); }
 .rl-ways h2 { font-size: 1.9rem; margin: 0 0 .5rem; }
 .rl-ways > p { color: var(--sl-color-gray-2); margin: 0 0 1.5rem; }
@@ -130,7 +135,12 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .story-frames button[aria-pressed="true"] { background: var(--sl-color-accent); color: var(--sl-color-black); }
 .story-frames button:focus-visible { outline: 2px solid var(--sl-color-accent); outline-offset: -2px; }
 .story-example p { margin: 0; }
-.story-stage { display: flex; justify-content: flex-start; overflow: hidden; }
+/* `clip` statt `hidden`: Die Box behaelt ihre ungestauchte Groesse im Layout (die
+   Verkleinerung ist eine Transformation), also ragt sie ueber die Buehne hinaus.
+   Ein `hidden`-Container laesst sich vom Browser trotzdem scrollen — ein Klick in
+   die Vorschau schob das Telefon nach oben und schnitt es dort ab. `clip` ist kein
+   Scroll-Container. */
+.story-stage { display: flex; justify-content: flex-start; overflow: clip; }
 /* clip-path zusaetzlich zu overflow: Die Karte (WebGL) liegt als eigene Ebene, die Chrome mit GPU nicht an border-radius beschneidet. */
 .story-box { --rl-r: .7rem; flex: none; overflow: hidden; border: 1px solid var(--sl-color-gray-5); border-radius: var(--rl-r); clip-path: inset(0 round var(--rl-r)); background: var(--sl-color-bg); transform-origin: top left; isolation: isolate; }
 .story-example iframe { display: block; width: 100%; height: 100%; max-width: none; border: 0; background: var(--sl-color-bg); }
@@ -142,6 +152,21 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .story-example[data-frame="phone"] .story-box { --rl-r: 1.4rem; border-width: 2px; transform-origin: top center; }
 .story-example p { padding: .6rem .1rem 0; font-size: .8rem; color: var(--sl-color-gray-2); margin: 0; }
 @media (max-width: 50rem) { :root { --sl-text-5xl: 2.4rem; } .rl-cards, .rl-cards.three { grid-template-columns: 1fr 1fr; } .rl-cards.one { grid-template-columns: 1fr; } }
+/* Telefon: Die Abstaende der Landing sind fuer zwei Spalten gedacht. Untereinander
+   gestapelt ergaben 3rem zwischen den Abschnitten und 2.5rem zwischen Text und Bild
+   Strecken, auf denen nichts steht. */
+@media (max-width: 49.99rem) {
+  .rl-ways, .rl-section { padding-block: 2rem; }
+  .rl-section { gap: 1.5rem; }
+  .rl-section h2, .rl-ways h2 { font-size: 1.5rem; }
+  .rl-landing .rl-cards { gap: .75rem; }
+  .hero { padding-block: 1.5rem .5rem; }
+  /* Starlight klemmt die Hero-Zeile unten bei --sl-text-3xl (1.8rem) fest; auf dem
+     Telefon blieb davon eine Ueberschrift uebrig, die kaum groesser war als der Text
+     darunter. Hier waechst sie mit der Breite und fuellt die Zeile. */
+  .hero h1 { font-size: clamp(2.2rem, 9vw, 3rem); line-height: 1.1; }
+  .hero .tagline { font-size: 1.05rem; }
+}
 
 /* Referenz: dichte Tabellen, das Verhalten ohne Faehigkeit farbig wie im Storybook. */
 .rl-table { overflow-x: auto; }
