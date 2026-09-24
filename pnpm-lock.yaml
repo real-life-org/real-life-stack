@@ -329,7 +329,7 @@ importers:
         version: 0.2.0
       '@real-life-stack/toolkit':
         specifier: 0.2.0
-        version: 0.2.0(@floating-ui/dom@1.7.4)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
+        version: 0.2.0(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       maplibre-gl:
         specifier: ^5.24.0
         version: 5.24.0
@@ -591,11 +591,11 @@ importers:
         specifier: workspace:*
         version: link:../toolkit
       '@real-life/adapter-yjs':
-        specifier: npm:@web_of_trust/adapter-yjs@^0.2.9
-        version: '@web_of_trust/adapter-yjs@0.2.9(@web_of_trust/core@0.5.9(react@19.2.3))'
+        specifier: npm:@web_of_trust/adapter-yjs@^0.2.10
+        version: '@web_of_trust/adapter-yjs@0.2.10(@web_of_trust/core@0.5.10(react@19.2.3))'
       '@real-life/wot-core':
-        specifier: npm:@web_of_trust/core@^0.5.9
-        version: '@web_of_trust/core@0.5.9(react@19.2.3)'
+        specifier: npm:@web_of_trust/core@^0.5.10
+        version: '@web_of_trust/core@0.5.10(react@19.2.3)'
       react:
         specifier: ^18 || ^19
         version: 19.2.3
@@ -3335,13 +3335,13 @@ packages:
   '@vue/shared@3.5.26':
     resolution: {integrity: sha512-7Z6/y3uFI5PRoKeorTOSXKcDj0MSasfNNltcslbFrPpcw6aXRUALq4IfJlaTRspiWIUOEZbrpM+iQGmCOiWe4A==}
 
-  '@web_of_trust/adapter-yjs@0.2.9':
-    resolution: {integrity: sha512-lMozghk0pwSLO7kFOydqu/I8Fji6ZjYfVj6WBdpl54RFUfmJ3GzgaeiBXCSoZX671palOY2aotNbqIRE6wfFgw==}
+  '@web_of_trust/adapter-yjs@0.2.10':
+    resolution: {integrity: sha512-7cn+8YRO57ojzEs78yEhuQ2tqv9pCe5zbBqc3LcAg3hqHfTPScb+VFcEjt5+6j1PRKyVKOdFkfCva72y1ya67Q==}
     peerDependencies:
-      '@web_of_trust/core': ^0.5.9
+      '@web_of_trust/core': ^0.5.10
 
-  '@web_of_trust/core@0.5.9':
-    resolution: {integrity: sha512-dzAp4iB+bVB9S7K6TPNNhw5TO2Hfg7qu+awycKtYDsKUVbJVvwuKfrQlMk/VRF0Jq59RBb5aKdU3AAUX9NH6Sw==}
+  '@web_of_trust/core@0.5.10':
+    resolution: {integrity: sha512-R/dz+b33rHw6OING4b/SrcjQs8LQ7tp9ddELo+wPR20lOb12VbXe3uh05qx4hvJFiZLCKyWSbHcxeL1DcEwezg==}
     peerDependencies:
       react: ^19.0.0
     peerDependenciesMeta:
@@ -7852,7 +7852,7 @@ snapshots:
     dependencies:
       '@real-life-stack/data-interface': 0.3.0
 
-  '@real-life-stack/toolkit@0.2.0(@floating-ui/dom@1.7.4)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
+  '@real-life-stack/toolkit@0.2.0(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@radix-ui/colors': 3.0.0
       '@radix-ui/react-avatar': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -8843,13 +8843,13 @@ snapshots:
 
   '@vue/shared@3.5.26': {}
 
-  '@web_of_trust/adapter-yjs@0.2.9(@web_of_trust/core@0.5.9(react@19.2.3))':
+  '@web_of_trust/adapter-yjs@0.2.10(@web_of_trust/core@0.5.10(react@19.2.3))':
     dependencies:
-      '@web_of_trust/core': 0.5.9(react@19.2.3)
+      '@web_of_trust/core': 0.5.10(react@19.2.3)
       y-protocols: 1.0.7(yjs@13.6.31)
       yjs: 13.6.31
 
-  '@web_of_trust/core@0.5.9(react@19.2.3)':
+  '@web_of_trust/core@0.5.10(react@19.2.3)':
     dependencies:
       '@noble/ed25519': 3.1.0
       '@scure/base': 2.3.0
