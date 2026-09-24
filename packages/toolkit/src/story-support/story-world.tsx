@@ -1,5 +1,5 @@
 import { useEffect, useMemo, type ReactNode } from "react"
-import type { Item, User } from "@real-life-stack/data-interface"
+import type { DataInterface, Item, User } from "@real-life-stack/data-interface"
 import { MockConnector, type MockConnectorSeed } from "@real-life-stack/mock-connector"
 import { ConnectorProvider } from "../hooks/connector-context"
 import { GARDEN_IMAGE, WORKSHOP_IMAGE } from "./group-images"
@@ -118,6 +118,24 @@ export interface StoryWorldOptions {
   seed?: Partial<MockConnectorSeed>
   /** Welcher Space beim Start aktiv ist. Standard: der Gemeinschaftsgarten. */
   group?: string
+  /** Nur die sechs Kernmethoden des DataInterface: kein Schreiben, keine Gruppen, keine Relations. Zeigt, wie der Rahmen ohne Fähigkeiten aussieht. */
+  readOnly?: boolean
+}
+
+/**
+ * Die Nur-Lese-Sicht auf einen Connector: absichtlich nur der Kern (Spec 03).
+ * Einen Knopf zu verstecken würde nichts beweisen — erst der fehlende
+ * Vertrag zeigt, dass Flächen nach Fähigkeiten fragen statt anzunehmen.
+ */
+export function readOnlyView(source: MockConnector): DataInterface {
+  return {
+    init: () => source.init(),
+    dispose: () => source.dispose(),
+    getItems: (f) => source.getItems(f),
+    getItem: (id) => source.getItem(id),
+    observe: (f) => source.observe(f),
+    observeItem: (id) => source.observeItem(id),
+  }
 }
 
 /**
@@ -156,9 +174,10 @@ export function StoryWorld({ children, ...options }: StoryWorldOptions & { child
   // in `HostWorld`), verschwand mit jedem Tabwechsel alles, was die Story
   // geschrieben hatte (rls#431). Neu entsteht er nur, wenn Seed oder Space
   // wirklich andere sind — der bewusste Reset einer Story bleibt moeglich.
-  const key = JSON.stringify([options.group ?? null, options.seed ?? null])
-  const connector = useMemo(() => makeStoryConnector(options), [key]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => void connector.dispose(), [connector])
+  const key = JSON.stringify([options.group ?? null, options.seed ?? null, options.readOnly ?? false])
+  const source = useMemo(() => makeStoryConnector(options), [key]) // eslint-disable-line react-hooks/exhaustive-deps
+  const connector = useMemo(() => (options.readOnly ? readOnlyView(source) : source), [source, options.readOnly])
+  useEffect(() => () => void source.dispose(), [source])
   return <ConnectorProvider connector={connector}>{children}</ConnectorProvider>
 }
 

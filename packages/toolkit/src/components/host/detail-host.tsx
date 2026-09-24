@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react"
 import type { Item, User } from "@real-life-stack/data-interface"
 
-import { useCurrentUser } from "../../hooks/use-auth"
+import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { useMembers } from "../../hooks/use-groups"
 import { useItemFocus } from "../../hooks/use-item-focus"
 import type { ItemDetailEditConfig } from "../../hooks/use-item-detail-edit"
@@ -156,7 +156,8 @@ export function ItemDetailRead({ item, actions, groupId }: { item: Item; actions
   const isOverview = groupId === "__overview__"
   const scopedGroupId = isOverview ? null : groupId
   const { data: members } = useMembers(scopedGroupId)
-  const { data: currentUser } = useCurrentUser()
+  // Optional, nicht werfend: Ein Connector ohne Anmeldung (Nur-Lese-Sicht, Spec 03) laesst den Host stehen — Flaechen scheitern beim Aufruf, nie beim Rendern.
+  const { data: currentUser } = useOptionalCurrentUser()
 
   // Space members first, then the signed-in user — who is not in `members` for
   // their own personal space.

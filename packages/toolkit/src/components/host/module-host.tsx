@@ -12,7 +12,7 @@ import {
 } from "@real-life-stack/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
-import { useCurrentUser } from "../../hooks/use-auth"
+import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import { useResolvedUsers } from "../../hooks/use-resolved-users"
 import { useGroups, useMembers, usePersonalGroupId } from "../../hooks/use-groups"
@@ -209,7 +209,8 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
   const present = useItemPresentation(currentSpace)
   const resolveItemGroupColor = useCallback((item: Item) => present(item).color, [present])
   const { items, itemsLoading } = useContext(ItemsContext)
-  const { data: currentUser } = useCurrentUser()
+  // Optional, nicht werfend: Ein Connector ohne Anmeldung (Nur-Lese-Sicht, Spec 03) laesst den Host stehen — Flaechen scheitern beim Aufruf, nie beim Rendern.
+  const { data: currentUser } = useOptionalCurrentUser()
 
   // Autor-Aufloesung: Mitglied → ich selbst → Kontakte (nachgeschlagen nur
   // fuer die Ids, die die Items dieses Moduls wirklich tragen).

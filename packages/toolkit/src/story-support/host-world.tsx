@@ -6,7 +6,7 @@ import { MapLibreAdapterProvider } from "../components/map/adapters/maplibre-pro
 import { workspaceOf } from "../components/layout/workspace-switcher"
 import { useConnector } from "../hooks/connector-context"
 import { MemoryFocusProvider, useItemFocus } from "../hooks/use-item-focus"
-import { getModules } from "../lib/module-register"
+import { getModule, getModules, resolveSpaceModules } from "../lib/module-register"
 import { STORY_SEED, StoryWorld, type StoryWorldOptions } from "./story-world"
 
 /**
@@ -35,13 +35,44 @@ export function hostWorldSpace(options: StoryWorldOptions): { groups: Group[]; s
  * `mapEngine={false}` lässt sie weg, für die eine Story, die den Hinweis
  * „keine Karten-Engine gestellt" zeigen soll.
  */
+/**
+ * Die Module eines Space in der Story-Welt: fuehrt er `data.modules`, gelten
+ * sie wie in der App (`resolveSpaceModules`); sonst alle Module mit Flaeche,
+ * damit eine Story jedes zeigen kann, ohne es in den Seed zu schreiben.
+ */
+export function hostWorldModules(groups: readonly Group[], spaceId: string): string[] {
+  const stored = groups.find((g) => g.id === spaceId)?.data?.modules as string[] | undefined
+  return stored ? resolveSpaceModules(stored) : getModules().filter((m) => m.view).map((m) => m.id)
+}
+
+/** Das aktive Modul nach einem Space-Wechsel: bleibt, wenn der neue Space es fuehrt, sonst sein erstes (wie `resolveActiveModule`). */
+export function hostWorldModuleFor(groups: readonly Group[], spaceId: string, candidate: string): string {
+  const available = hostWorldModules(groups, spaceId)
+  return available.includes(candidate) ? candidate : available[0]
+}
+
+/**
+ * Welche Spaces der Wechsler anbietet: alle, wenn der Connector Gruppen kann;
+ * sonst nur den aktiven. Ohne die Faehigkeit kann niemand den Space wechseln
+ * (`setCurrentGroup` fehlt) — ein Wechsler, der es trotzdem anbietet, zeigt
+ * danach die alten Daten unter neuem Namen (Codex-Befund zu rls#477).
+ */
+export function hostWorldGroups(canSwitch: boolean, groups: readonly Group[], spaceId: string): Group[] {
+  return canSwitch ? [...groups] : groups.filter((g) => g.id === spaceId)
+}
+
 export function HostWorld({ module: start, children, mapEngine = true, ...options }: StoryWorldOptions & { module: string; mapEngine?: boolean; children?: ReactNode }) {
-  const [module, setModule] = useState(start)
   const { groups, space: startSpace } = hostWorldSpace(options)
   const [spaceId, setSpaceId] = useState(startSpace.id)
+  const [module, setModule] = useState(() => hostWorldModuleFor(groups, startSpace.id, start))
+  // Beim Space-Wechsel bleibt ein Modul nur aktiv, wenn der neue Space es fuehrt (Codex-Befund zu rls#477).
+  const changeSpace = useCallback((id: string) => {
+    setSpaceId(id)
+    setModule((current) => hostWorldModuleFor(groups, id, current))
+  }, [groups])
   const frame = (
     <MemoryFocusProvider module={module} scope={spaceId} onModuleChange={setModule}>
-      <MemoryFrame groups={groups} spaceId={spaceId} onSpaceChange={setSpaceId} module={module} onModuleChange={setModule}>
+      <MemoryFrame groups={groups} spaceId={spaceId} onSpaceChange={changeSpace} module={module} onModuleChange={setModule}>
         {children}
       </MemoryFrame>
     </MemoryFocusProvider>
@@ -54,7 +85,7 @@ export function HostWorld({ module: start, children, mapEngine = true, ...option
 }
 
 /** Das Routing im Speicher: dieselbe Auskunft, die `useWorkspaceRouting` aus der URL zieht. */
-function MemoryFrame({ groups, spaceId, onSpaceChange, module, onModuleChange, children }: {
+function MemoryFrame({ groups: allGroups, spaceId, onSpaceChange, module, onModuleChange, children }: {
   groups: Group[]; spaceId: string; onSpaceChange: (id: string) => void
   module: string; onModuleChange: (id: string) => void; children?: ReactNode
 }) {
@@ -62,9 +93,11 @@ function MemoryFrame({ groups, spaceId, onSpaceChange, module, onModuleChange, c
   const { focusItem } = useItemFocus()
   const focusRef = useRef(focusItem)
   focusRef.current = focusItem
-  // Alle Module mit Flaeche — eine Story soll jedes zeigen koennen, unabhaengig
-  // davon, was der Space speichert.
-  const modules = useMemo(() => getModules().filter((m) => m.view).map((m) => ({ id: m.id, label: m.label, icon: m.icon })), [])
+  const modules = useMemo(
+    () => hostWorldModules(allGroups, spaceId).map(getModule).filter((m): m is NonNullable<typeof m> => !!m).map((m) => ({ id: m.id, label: m.label, icon: m.icon })),
+    [allGroups, spaceId],
+  )
+  const groups = useMemo(() => hostWorldGroups(hasGroups(connector), allGroups, spaceId), [connector, allGroups, spaceId])
   const workspaces = useMemo(() => groups.map(workspaceOf), [groups])
   const activeWorkspace = workspaces.find((w) => w.id === spaceId) ?? null
   const handleWorkspaceChange = useCallback((w: { id: string }) => {

@@ -12,7 +12,7 @@ type Story = StoryObj<typeof meta>
 export const Garden: Story = { name: '01 · From space to item' }
 export const Calendar: Story = {
   name: '02 · The same item in the calendar',
-  args: { initialModule: 'Kalender' },
+  args: { module: 'calendar' },
 }
 export const ReadOnly: Story = {
   name: '03 · Without write capability',

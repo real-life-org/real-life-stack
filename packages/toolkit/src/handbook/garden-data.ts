@@ -8,10 +8,11 @@ export const seed: MockConnectorSeed = {
       avatarUrl: 'https://randomuser.me/api/portraits/women/44.jpg',
     },
   ],
-  // Das Gruppenbild liegt unter `data.image`, wie bei den Connectoren (Spec 04).
+  // Gruppenbild und Module liegen unter `data`, wie bei den Connectoren (Spec 04):
+  // der Space wählt aus dem Register, was er zeigt (Spec 01).
   groups: [
-    { id: 'garden', name: 'Gemeinschaftsgarten', data: { image: GARDEN_IMAGE } },
-    { id: 'workshop', name: 'Offene Werkstatt', data: { image: WORKSHOP_IMAGE } },
+    { id: 'garden', name: 'Gemeinschaftsgarten', data: { image: GARDEN_IMAGE, modules: ['feed', 'calendar', 'map'] } },
+    { id: 'workshop', name: 'Offene Werkstatt', data: { image: WORKSHOP_IMAGE, modules: ['collection'] } },
   ],
   groupMembers: { garden: ['mira'], workshop: ['mira'] },
   groupItems: { garden: ['harvest', 'watering'], workshop: ['repair'] },
