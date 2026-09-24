@@ -53,24 +53,29 @@
    * zurueckgenommen. Scrollen ueber der Vorschau selbst zaehlt mit: Das
    * meldet die Vorschau per Nachricht, weil ihre Ereignisse hier nicht ankommen.
    */
-  const EINGABEFENSTER = 400
+  // Eine Eingabe erklaert Bewegung fuer EINGABEFENSTER ms. Danach traegt die Bewegung sich selbst: Ausrollen nach
+  // einem Wisch und weiches Scrollen liefern luekenlos Ereignisse, ein Fokus-Sprung ist ein einzelner Satz. Jede
+  // menschliche Bewegung erklaert darum auch die naechste, wenn sie innerhalb von NACHLAUF ms folgt.
+  const EINGABEFENSTER = 400, NACHLAUF = 250
   let ruhigePosition = window.scrollY
   let letzteEingabe = 0
+  let letzteMenschlicheBewegung = 0
   const merkeEingabe = () => { letzteEingabe = performance.now() }
   for (const ereignis of ['wheel', 'touchstart', 'touchmove', 'keydown', 'pointerdown'])
     window.addEventListener(ereignis, merkeEingabe, { passive: true, capture: true })
-  // Rad und Wischen ueber der Vorschau kommen im Iframe an, nicht hier. Die Storybook-Vorschau meldet sie
-  // per postMessage (siehe .storybook/preview.tsx); so bleibt Scroll-Chaining ueber die Vorschau erlaubt.
+  // Rad, Wischen und Tasten in der Vorschau kommen im Iframe an, nicht hier. Die Storybook-Vorschau meldet sie
+  // per postMessage (siehe .storybook/preview.tsx); so bleibt Scroll-Chaining aus der Vorschau erlaubt.
   window.addEventListener('message', (e) => {
     if (e.data?.type !== 'rls-story-scroll') return
     if (figures.some((f) => f.querySelector('iframe')?.contentWindow === e.source)) merkeEingabe()
   })
 
   window.addEventListener('scroll', () => {
+    const jetzt = performance.now()
     const ziel = document.activeElement
     const vorschauImFokus = ziel instanceof HTMLIFrameElement && !!ziel.closest('.story-example')
-    const menschScrollt = performance.now() - letzteEingabe < EINGABEFENSTER
-    if (!vorschauImFokus || menschScrollt) { ruhigePosition = window.scrollY; return }
+    const menschScrollt = jetzt - letzteEingabe < EINGABEFENSTER || jetzt - letzteMenschlicheBewegung < NACHLAUF
+    if (!vorschauImFokus || menschScrollt) { ruhigePosition = window.scrollY; letzteMenschlicheBewegung = jetzt; return }
     if (window.scrollY !== ruhigePosition) window.scrollTo(0, ruhigePosition)
   }, { passive: true })
 
