@@ -135,7 +135,12 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .story-frames button[aria-pressed="true"] { background: var(--sl-color-accent); color: var(--sl-color-black); }
 .story-frames button:focus-visible { outline: 2px solid var(--sl-color-accent); outline-offset: -2px; }
 .story-example p { margin: 0; }
-.story-stage { display: flex; justify-content: flex-start; overflow: hidden; }
+/* `clip` statt `hidden`: Die Box behaelt ihre ungestauchte Groesse im Layout (die
+   Verkleinerung ist eine Transformation), also ragt sie ueber die Buehne hinaus.
+   Ein `hidden`-Container laesst sich vom Browser trotzdem scrollen — ein Klick in
+   die Vorschau schob das Telefon nach oben und schnitt es dort ab. `clip` ist kein
+   Scroll-Container. */
+.story-stage { display: flex; justify-content: flex-start; overflow: clip; }
 /* clip-path zusaetzlich zu overflow: Die Karte (WebGL) liegt als eigene Ebene, die Chrome mit GPU nicht an border-radius beschneidet. */
 .story-box { --rl-r: .7rem; flex: none; overflow: hidden; border: 1px solid var(--sl-color-gray-5); border-radius: var(--rl-r); clip-path: inset(0 round var(--rl-r)); background: var(--sl-color-bg); transform-origin: top left; isolation: isolate; }
 .story-example iframe { display: block; width: 100%; height: 100%; max-width: none; border: 0; background: var(--sl-color-bg); }
