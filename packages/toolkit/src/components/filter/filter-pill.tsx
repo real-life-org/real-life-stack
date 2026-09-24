@@ -103,7 +103,11 @@ export function FilterPill({
         className={cn(
           "overflow-hidden border border-border bg-card text-foreground",
           // Die Form steht sofort; nur der Inhalt blendet kurz ein (unten).
-          offen ? "w-[232px] rounded-2xl shadow-xl" : "w-auto rounded-pill shadow-md sm:shadow-lg",
+          // Geschlossen auf dem Telefon: ein abgerundetes Quadrat in derselben
+          // Rundung wie die offene Karte — so bleibt es beim Oeffnen dieselbe
+          // Form und liest sich nicht als zweiter Plusknopf. Ab `sm` wieder die
+          // Pille mit Text.
+          offen ? "w-[232px] rounded-2xl shadow-xl" : "w-auto rounded-2xl shadow-md sm:rounded-pill sm:shadow-lg",
         )}
       >
         {offen ? (
@@ -134,10 +138,11 @@ export function FilterPill({
             aria-expanded={false}
             aria-label="Filter"
             // Auf dem Telefon nur das Symbol — der Text nahm der schmalen
-            // Flaeche Platz, ohne mehr zu sagen. Kleiner und ruhiger als der
-            // Plusknopf gegenueber: Der ist die Handlung, dies eine Einstellung
-            // der Flaeche. Gleich gross und gleich laut waeren sie Zwillinge.
-            className="flex h-10 w-10 items-center justify-center gap-2 text-sm font-medium text-muted-foreground sm:h-12 sm:w-auto sm:px-[18px] sm:text-foreground"
+            // Flaeche Platz, ohne mehr zu sagen. Quadratisch und ruhiger als
+            // der runde Plusknopf gegenueber: Der ist die Handlung, dies eine
+            // Einstellung der Flaeche. Gleiche Form und gleiche Groesse liessen
+            // die beiden wie Zwillinge aussehen.
+            className="flex h-11 w-11 items-center justify-center gap-2 text-sm font-medium text-muted-foreground sm:h-12 sm:w-auto sm:px-[18px] sm:text-foreground"
           >
             <Filter className="h-4 w-4 shrink-0" />
             <span className="hidden sm:inline">Filter</span>
