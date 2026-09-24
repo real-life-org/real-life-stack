@@ -50,7 +50,8 @@
    * ja laengst abgegeben. Unterschieden wird darum am Scrollereignis selbst:
    * Liegt der Fokus in einer Vorschau und hat gerade niemand gescrollt,
    * getippt oder gezogen, kommt die Bewegung nicht vom Menschen und wird
-   * zurueckgenommen.
+   * zurueckgenommen. Scrollen ueber der Vorschau selbst zaehlt mit: Das
+   * meldet die Vorschau per Nachricht, weil ihre Ereignisse hier nicht ankommen.
    */
   const EINGABEFENSTER = 400
   let ruhigePosition = window.scrollY
@@ -58,6 +59,12 @@
   const merkeEingabe = () => { letzteEingabe = performance.now() }
   for (const ereignis of ['wheel', 'touchstart', 'touchmove', 'keydown', 'pointerdown'])
     window.addEventListener(ereignis, merkeEingabe, { passive: true, capture: true })
+  // Rad und Wischen ueber der Vorschau kommen im Iframe an, nicht hier. Die Storybook-Vorschau meldet sie
+  // per postMessage (siehe .storybook/preview.tsx); so bleibt Scroll-Chaining ueber die Vorschau erlaubt.
+  window.addEventListener('message', (e) => {
+    if (e.data?.type !== 'rls-story-scroll') return
+    if (figures.some((f) => f.querySelector('iframe')?.contentWindow === e.source)) merkeEingabe()
+  })
 
   window.addEventListener('scroll', () => {
     const ziel = document.activeElement
