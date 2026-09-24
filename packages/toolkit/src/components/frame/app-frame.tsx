@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Moon, Plus, Sun } from "lucide-react"
 import type { Group, Item } from "@real-life-stack/data-interface"
-import { hasEncounterVerification, isAuthenticatable, moduleHintsFor } from "@real-life-stack/data-interface"
+import { hasGroups, hasEncounterVerification, isAuthenticatable, moduleHintsFor } from "@real-life-stack/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useActivity } from "../../hooks/use-activity"
@@ -318,8 +318,9 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
                 workspaces={workspaces}
                 activeWorkspace={activeWorkspace}
                 onWorkspaceChange={handleWorkspaceChange}
-                onCreateWorkspace={openCreateDialog}
-                onEditWorkspace={openEditDialog}
+                // Anlegen und Bearbeiten nur, wenn der Connector Gruppen kann (Spec 03): sonst Knoepfe ins Leere.
+                onCreateWorkspace={hasGroups(connector) ? openCreateDialog : undefined}
+                onEditWorkspace={hasGroups(connector) ? openEditDialog : undefined}
                 syncing={initialSync.active}
                 syncExpected={initialSync.expectedGroups}
               />
