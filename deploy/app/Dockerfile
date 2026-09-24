@@ -31,6 +31,13 @@ COPY . .
 # Die App liegt unter /app, die Landingpage der Instanz auf /.
 ARG BASE_PATH=/app
 ENV VITE_BASE_PATH=${BASE_PATH}
+
+# Der Commit des gebauten Baums. Muss hereingereicht werden: `node:22-alpine`
+# hat kein git, und der Build-Kontext ist kein Checkout — scripts/build-info.mjs
+# faende hier sonst nichts, und die App zeigte ihre Version ohne Commit.
+# Der Workflow ermittelt ihn nach dem Checkout, wo git noch da ist.
+ARG BUILD_COMMIT=""
+ENV RLS_BUILD_COMMIT=${BUILD_COMMIT}
 RUN pnpm --filter reference... build
 
 # ---------- Laufzeit ----------
