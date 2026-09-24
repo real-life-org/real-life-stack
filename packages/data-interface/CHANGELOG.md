@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.3.0...data-interface-v0.3.1) (2026-09-24)
+
+
+### Features
+
+* **examples:** erste App gegen npm (toolkit 0.2.0); Wächter: Pakete laden in Node-ESM ([#459](https://github.com/real-life-org/real-life-stack/issues/459)) ([144abe8](https://github.com/real-life-org/real-life-stack/commit/144abe8375a69869dfbe50dd3b9fb5f298c87c10))
+
 ## [0.3.0](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.2.1...data-interface-v0.3.0) (2026-09-23)
 
 

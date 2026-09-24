@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.1](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.2.0...toolkit-v0.2.1) (2026-09-24)
+
+
+### Features
+
+* **site:** Referenz „Module" aus dem Register; Dunkelmodus mit echtem Orange ([#467](https://github.com/real-life-org/real-life-stack/issues/467)) ([cec044b](https://github.com/real-life-org/real-life-stack/commit/cec044b8e8109d61a60f211b9b6aae86a7222246))
+* **toolkit:** Build-Zeile im Nutzer-Menü — welcher Stand läuft, so dezent wie möglich ([#461](https://github.com/real-life-org/real-life-stack/issues/461)) ([b68c3ad](https://github.com/real-life-org/real-life-stack/commit/b68c3ad96af68d95011f2f37c45d60362209afd0))
+* **toolkit:** Gemeinschaftsgarten auf dem echten Rahmen ([#477](https://github.com/real-life-org/real-life-stack/issues/477)) ([2c9902f](https://github.com/real-life-org/real-life-stack/commit/2c9902f7a0aa8892a8c15b74e311ad68ee8f6e1c))
+
+
+### Bug Fixes
+
+* **toolkit:** Drawer deckend, Space-Name kürzt nur bei Platzmangel ([#475](https://github.com/real-life-org/real-life-stack/issues/475)) ([f21583c](https://github.com/real-life-org/real-life-stack/commit/f21583ca5a99d6718b1617c2c98bf7356beae19a))
+* **toolkit:** Filter und Plusknopf auf einer Grundlinie über der Bottom-Nav ([#480](https://github.com/real-life-org/real-life-stack/issues/480)) ([84b6f3f](https://github.com/real-life-org/real-life-stack/commit/84b6f3faf9f47d6025c6b3c8a3a7e29ec20ee4da))
+* **toolkit:** Kartensteuerung aus den Tokens für alle Apps und Stories ([#476](https://github.com/real-life-org/real-life-stack/issues/476)) ([895f810](https://github.com/real-life-org/real-life-stack/commit/895f8103e53e907b8d899b0d549bb76136b5a82b))
+* **toolkit:** Schreib-Einstiege nach Fähigkeit, Tabs und Kopfzeile auf dem Telefon ([#481](https://github.com/real-life-org/real-life-stack/issues/481)) ([4a819c6](https://github.com/real-life-org/real-life-stack/commit/4a819c6b3dfb1803ed31232ce326bf11958347d5))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.3.1
+  * devDependencies
+    * @real-life-stack/mock-connector bumped to 0.2.1
+
 ## [0.2.0](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.1.10...toolkit-v0.2.0) (2026-09-23)
 
 

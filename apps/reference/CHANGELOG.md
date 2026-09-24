@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.4.1](https://github.com/real-life-org/real-life-stack/compare/app-v0.4.0...app-v0.4.1) (2026-09-24)
+
+
+### Features
+
+* **app:** ein Symbol überall — das Puzzle-Favicon der Landing für Web-App, Site, Android und iOS ([#463](https://github.com/real-life-org/real-life-stack/issues/463)) ([c58adeb](https://github.com/real-life-org/real-life-stack/commit/c58adeb4e4e28d5e7ce3539bb8db737b31bb18b8))
+* **toolkit:** Build-Zeile im Nutzer-Menü — welcher Stand läuft, so dezent wie möglich ([#461](https://github.com/real-life-org/real-life-stack/issues/461)) ([b68c3ad](https://github.com/real-life-org/real-life-stack/commit/b68c3ad96af68d95011f2f37c45d60362209afd0))
+
+
+### Bug Fixes
+
+* **toolkit:** Kartensteuerung aus den Tokens für alle Apps und Stories ([#476](https://github.com/real-life-org/real-life-stack/issues/476)) ([895f810](https://github.com/real-life-org/real-life-stack/commit/895f8103e53e907b8d899b0d549bb76136b5a82b))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.3.1
+    * @real-life-stack/local-connector bumped to 0.2.1
+    * @real-life-stack/mock-connector bumped to 0.2.1
+    * @real-life-stack/supabase-connector bumped to 0.3.1
+    * @real-life-stack/toolkit bumped to 0.2.1
+    * @real-life-stack/wot-connector bumped to 0.2.1
+
 ## [0.4.0](https://github.com/real-life-org/real-life-stack/compare/app-v0.3.3...app-v0.4.0) (2026-09-23)
 
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.1](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.2.0...wot-connector-v0.2.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **deps:** update wot-pakete ([#479](https://github.com/real-life-org/real-life-stack/issues/479)) ([88dbead](https://github.com/real-life-org/real-life-stack/commit/88dbead9d010f75402a120d04c940fa269a427c1))
+* **wot-connector:** Gruppe verlassen entfernt sich nicht zusaetzlich selbst ([#474](https://github.com/real-life-org/real-life-stack/issues/474)) ([abd5dcc](https://github.com/real-life-org/real-life-stack/commit/abd5dcc5e67e14893431b35ed29105ed61f6adda))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.3.1
+    * @real-life-stack/toolkit bumped to 0.2.1
+
 ## [0.2.0](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.1.10...wot-connector-v0.2.0) (2026-09-23)
 
 
