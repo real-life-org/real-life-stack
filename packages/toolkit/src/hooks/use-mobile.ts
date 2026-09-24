@@ -18,6 +18,15 @@ function useBelowBreakpoint(breakpoint: number) {
 }
 
 /**
+ * Ist die Flaeche in diesem Augenblick schmal (< 1024px)? Synchron, fuer
+ * Entscheidungen beim Einhaengen — `useIsCompact` meldet sich erst nach dem
+ * ersten Render, und ein `autoFocus` ist dann laengst gesetzt.
+ */
+export function istKompaktJetzt(): boolean {
+  return typeof window !== "undefined" && window.innerWidth < COMPACT_BREAKPOINT
+}
+
+/**
  * Narrower than 768px?
  *
  * @answers `boolean`
