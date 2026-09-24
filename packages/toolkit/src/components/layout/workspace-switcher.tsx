@@ -142,9 +142,10 @@ export function WorkspaceSwitcher({
             <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
           </div>
         )}
-        {/* Name now also shows on mobile, truncated so a long space name can't
-            push the trailing nav actions off-screen (NavbarStart is shrink-0). */}
-        <span className="truncate max-w-[34vw] text-base font-semibold sm:max-w-none sm:text-lg">
+        {/* Der Name kuerzt sich nur, wenn der Platz wirklich fehlt: NavbarStart
+            ist min-w-0, NavbarEnd shrink-0 — ein fester Deckel (34vw) schnitt
+            „Gemeinschaftsgarten" auf dem Telefon ab, obwohl Platz war. */}
+        <span className="min-w-0 truncate text-base font-semibold sm:text-lg">
           {activeWorkspace ? activeWorkspace.name : "Space wählen"}
         </span>
         {syncing ? (
