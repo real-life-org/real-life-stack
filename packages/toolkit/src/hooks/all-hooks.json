@@ -507,7 +507,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-comments.ts",
-          "line": 49
+          "line": 62
         },
         {
           "name": "useReplies",
@@ -522,7 +522,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-comments.ts",
-          "line": 201
+          "line": 213
         },
         {
           "name": "useReactions",

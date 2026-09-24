@@ -2,8 +2,9 @@
 
 import { memo, useMemo, useCallback } from "react"
 import { FileText, SearchX } from "lucide-react"
-import type { Item, User } from "@real-life-stack/data-interface"
+import { isWritable, type Item, type User } from "@real-life-stack/data-interface"
 
+import { useConnector } from "../hooks/connector-context"
 import { useItemPresentation } from "../hooks/use-item-presentation"
 import { useItemFocus } from "../hooks/use-item-focus"
 import { FeedComposerTrigger } from "../components/feed/feed-composer-trigger"
@@ -45,21 +46,26 @@ export function FeedModule({ items = [], itemsLoading: isLoading = false }: Modu
   // Erstellen laeuft ueber den Modul-Host (Vollbild, `options.createShell`
   // im Eintrag). Die Pille schlaegt nur den Beitrag vor.
   const { startCreate } = useCreate()
+  const darfSchreiben = isWritable(useConnector())
   const filteredFeedItems = feedItems
 
   return (
     <div className="space-y-4">
       <ModuleToolbar />
 
-      {/* Composer trigger — hands off to the create host (fullscreen). */}
-      <div ref={setCreateAnchor}>
-        <FeedComposerTrigger
-          placeholder="Was gibt's Neues?"
-          userName={currentUser?.displayName}
-          userAvatar={currentUser?.avatarUrl}
-          onCompose={(initialText) => startCreate("post", initialText ? { text: initialText } : undefined)}
-        />
-      </div>
+      {/* Composer trigger — hands off to the create host (fullscreen). Nur mit
+          Schreibfaehigkeit: Ohne sie fuehrt die Pille ins Leere, genau wie der
+          Plusknopf, der sie schon prueft (Spec 03). */}
+      {darfSchreiben && (
+        <div ref={setCreateAnchor}>
+          <FeedComposerTrigger
+            placeholder="Was gibt's Neues?"
+            userName={currentUser?.displayName}
+            userAvatar={currentUser?.avatarUrl}
+            onCompose={(initialText) => startCreate("post", initialText ? { text: initialText } : undefined)}
+          />
+        </div>
+      )}
 
       {/* Feed items — skeleton while loading, empty state once loaded with
           nothing, otherwise the list. */}

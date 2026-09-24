@@ -132,10 +132,13 @@ export function FilterPill({
             data-filter-pill-trigger
             onClick={() => setOffen(true)}
             aria-expanded={false}
-            className="flex h-12 items-center gap-2 px-[18px] text-sm font-medium"
+            aria-label="Filter"
+            // Auf dem Telefon nur das Symbol, rund wie der Plusknopf gegenueber:
+            // Der Text nahm der schmalen Flaeche Platz, ohne mehr zu sagen.
+            className="flex h-12 w-12 items-center justify-center gap-2 text-sm font-medium sm:w-auto sm:px-[18px]"
           >
-            <Filter className="h-4 w-4" />
-            Filter
+            <Filter className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">Filter</span>
           </button>
         )}
       </div>

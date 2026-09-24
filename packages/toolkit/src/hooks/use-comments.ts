@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, startTransition } from "react"
 import type { Item, RelatedItemsOptions } from "@real-life-stack/data-interface"
 import { isWritable, hasRelations, isAuthenticatable, deriveContext } from "@real-life-stack/data-interface"
-import { useConnector } from "./connector-context"
+import { useOptionalConnector, useConnector } from "./connector-context"
 
 const NO_COMMENT_ITEMS: Item[] = []
 
@@ -35,6 +35,19 @@ export interface UseCommentsResult {
 }
 
 /**
+ * Darf hier ueberhaupt kommentiert werden? Nur die Faehigkeiten (Spec 03),
+ * ohne die Kommentare zu laden — fuer Flaechen, die allein entscheiden, ob
+ * sie zum Kommentieren einladen (die Karte im Feed). Intern: `useComments`
+ * beantwortet dieselbe Frage nebenbei mit.
+ */
+export function useCanComment(): boolean {
+  // Optional, nicht werfend: Eine Karte darf auch ohne Provider gerendert
+  // werden (Storybook, Tests) — dann kann niemand kommentieren.
+  const connector = useOptionalConnector()
+  return !!connector && isWritable(connector) && hasRelations(connector)
+}
+
+/**
  * What was said, by whom, and may I reply?
  *
  * Hook for reading and creating comments on an item.
@@ -49,8 +62,7 @@ export interface UseCommentsResult {
 export function useComments(itemId: string): UseCommentsResult {
   const connector = useConnector()
   const supportsRelations = hasRelations(connector)
-  const canWrite = isWritable(connector)
-  const canComment = canWrite && supportsRelations
+  const canComment = useCanComment()
 
   const optionsKey = JSON.stringify({ direction: "to" } satisfies RelatedItemsOptions)
 

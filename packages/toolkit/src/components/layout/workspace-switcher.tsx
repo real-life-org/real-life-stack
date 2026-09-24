@@ -151,7 +151,7 @@ export function WorkspaceSwitcher({
         {syncing ? (
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" aria-label="Gruppen werden geladen" />
         ) : (
-          <ChevronsUpDown className="h-4 w-4 opacity-50 hidden sm:block" />
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
