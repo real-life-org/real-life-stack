@@ -6,7 +6,7 @@ import { MapLibreAdapterProvider } from "../components/map/adapters/maplibre-pro
 import { workspaceOf } from "../components/layout/workspace-switcher"
 import { useConnector } from "../hooks/connector-context"
 import { MemoryFocusProvider, useItemFocus } from "../hooks/use-item-focus"
-import { getModules } from "../lib/module-register"
+import { getModule, getModules, resolveSpaceModules } from "../lib/module-register"
 import { STORY_SEED, StoryWorld, type StoryWorldOptions } from "./story-world"
 
 /**
@@ -62,9 +62,14 @@ function MemoryFrame({ groups, spaceId, onSpaceChange, module, onModuleChange, c
   const { focusItem } = useItemFocus()
   const focusRef = useRef(focusItem)
   focusRef.current = focusItem
-  // Alle Module mit Flaeche — eine Story soll jedes zeigen koennen, unabhaengig
-  // davon, was der Space speichert.
-  const modules = useMemo(() => getModules().filter((m) => m.view).map((m) => ({ id: m.id, label: m.label, icon: m.icon })), [])
+  // Fuehrt der Space seine Module (`data.modules`), gelten sie wie in der App
+  // (resolveSpaceModules). Sonst alle Module mit Flaeche, damit eine Story
+  // jedes zeigen kann, ohne es in den Seed zu schreiben.
+  const stored = groups.find((g) => g.id === spaceId)?.data?.modules as string[] | undefined
+  const modules = useMemo(() => {
+    const ids = stored ? resolveSpaceModules(stored) : getModules().filter((m) => m.view).map((m) => m.id)
+    return ids.map(getModule).filter((m): m is NonNullable<typeof m> => !!m).map((m) => ({ id: m.id, label: m.label, icon: m.icon }))
+  }, [stored])
   const workspaces = useMemo(() => groups.map(workspaceOf), [groups])
   const activeWorkspace = workspaces.find((w) => w.id === spaceId) ?? null
   const handleWorkspaceChange = useCallback((w: { id: string }) => {
