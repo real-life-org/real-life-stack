@@ -17,7 +17,7 @@ export function heroPreviewHtml(lang: string): string {
   const title = lang === 'de' ? 'Ein Gemeinschaftsgarten als App auf Real Life Stack' : 'A community garden as an app on Real Life Stack'
   return (
     `<figure class="story-example hero-story not-content" data-frame="phone">` +
-    `<div class="story-stage"><iframe data-src="${storyFrameUrl('rls-app-00-community-garden--garden')}" title="${title}" loading="lazy" allow="fullscreen"></iframe></div>` +
+    `<div class="story-stage"><div class="story-box"><iframe data-src="${storyFrameUrl('rls-app-00-community-garden--garden')}" title="${title}" loading="lazy" allow="fullscreen"></iframe></div></div>` +
     `</figure>`
   )
 }

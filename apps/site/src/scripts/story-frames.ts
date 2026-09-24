@@ -10,12 +10,14 @@
 
   function layout(fig: HTMLElement) {
     const stage = fig.querySelector<HTMLElement>('.story-stage')!
-    const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
+    // Skaliert wird die Box, nicht der Iframe: Ein transformierter Iframe beschneidet seinen Inhalt in Chrome nicht
+    // an runden Ecken, eine Box mit overflow hidden schon.
+    const box = fig.querySelector<HTMLElement>('.story-box')!
     const height = Number(fig.dataset.height) || 560
     const phone = fig.dataset.frame === 'phone'
     const scale = phone ? Math.min(PHONE_SCALE, stage.clientWidth / PHONE) : Math.min(1, stage.clientWidth / DESKTOP)
     const w = phone ? PHONE : DESKTOP, h = phone ? PHONE_HEIGHT : height
-    iframe.style.width = `${w}px`; iframe.style.height = `${h}px`; iframe.style.transform = `scale(${scale})`
+    box.style.width = `${w}px`; box.style.height = `${h}px`; box.style.transform = `scale(${scale})`
     stage.style.height = `${Math.round(h * scale)}px`
     for (const b of fig.querySelectorAll<HTMLButtonElement>('.story-frames button'))
       b.setAttribute('aria-pressed', String(b.dataset.frame === fig.dataset.frame))
@@ -23,10 +25,27 @@
 
   // Hell oder dunkel: Starlight stempelt `data-theme` auf <html>; Storybook nimmt es als Global `theme` in der Adresse.
   const theme = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+  // Die App bleibt unsichtbar, bis Storybook die Story gerendert hat, und blendet dann ein. Gleicher Ursprung
+  // (gebaute Site): auf den Inhalt der Story-Wurzel warten; sonst (Dev-Server auf anderem Port) reicht `load` plus Puffer.
+  function reveal(fig: HTMLElement, iframe: HTMLIFrameElement) {
+    const box = fig.querySelector<HTMLElement>('.story-box')!
+    const ready = () => box.classList.add('is-ready')
+    const started = Date.now()
+    const poll = () => {
+      let rendered = false
+      try { rendered = !!iframe.contentDocument?.querySelector('#storybook-root > *') } catch { rendered = Date.now() - started > 800 }
+      if (rendered || Date.now() - started > 6000) ready()
+      else setTimeout(poll, 100)
+    }
+    poll()
+  }
   function load(fig: HTMLElement) {
     const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
     const src = `${iframe.dataset.src}&globals=theme:${theme()}`
-    if (iframe.src !== src) iframe.src = src
+    if (iframe.src === src) return
+    fig.querySelector('.story-box')?.classList.remove('is-ready')
+    iframe.addEventListener('load', () => reveal(fig, iframe), { once: true })
+    iframe.src = src
   }
   new MutationObserver(() => figures.forEach(load)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 

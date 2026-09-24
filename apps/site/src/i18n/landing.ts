@@ -141,7 +141,7 @@ export const translations: Record<TranslatedLanguage, Translation> = {
   en: {
     nav: { modules: 'Modules', dataInterface: 'Data Interface', connectors: 'Connectors' },
     hero: {
-      title: 'The toolkit for',
+      title: 'Your toolkit for',
       titleHighlight: 'local connection',
       subtitle: 'Tools for communities that organize in a decentralized way, rooted in real-world encounters.',
       demo: 'View demo',

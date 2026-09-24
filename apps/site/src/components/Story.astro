@@ -27,7 +27,7 @@ const t = en
     </span>
     <a href={`${base}/?path=/story/${id}`}>{t.open}</a>
   </figcaption>
-  <div class="story-stage"><iframe data-src={url} title={title} loading="lazy" allow="fullscreen"></iframe></div>
+  <div class="story-stage"><div class="story-box"><iframe data-src={url} title={title} loading="lazy" allow="fullscreen"></iframe></div></div>
   <p>{title}. {t.note}</p>
 </figure>
 
