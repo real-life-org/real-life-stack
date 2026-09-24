@@ -409,7 +409,11 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
             weicht dem Panel aus (PanelSafeArea) und liegt ueber dem Inhalt,
             statt ihm eine Zeile wegzunehmen. Unten polstert sie so weit wie
             der Erstellen-Knopf gegenueber. */}
-        <ModuleControls>{controlsSlot}</ModuleControls>
+        {/* Dieselbe Grundlinie wie der Plusknopf (5.25rem + Schutzzone ueber
+            der Bottom-Nav): die Shell polstert schon 5rem, also nur noch 0.25rem.
+            Mit p-4 stand der Filter 12px hoeher als der Plusknopf. Ab md gibt es
+            keine Bottom-Nav, dort gilt wieder der normale Rand. */}
+        <ModuleControls className="pb-1 md:pb-4">{controlsSlot}</ModuleControls>
       </div>
     </ModuleHeadContext.Provider>
     </ModuleLayoutContext.Provider>
