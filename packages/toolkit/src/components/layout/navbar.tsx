@@ -30,7 +30,8 @@ interface NavbarSectionProps {
 
 export function NavbarStart({ children, className }: NavbarSectionProps) {
   return (
-    <div className={cn("flex items-center gap-2 shrink-0", className)}>{children}</div>
+    // min-w-0 statt shrink-0: der Space-Name darin kuerzt sich erst, wenn wirklich kein Platz ist (NavbarEnd bleibt shrink-0).
+    <div className={cn("flex items-center gap-2 min-w-0", className)}>{children}</div>
   )
 }
 

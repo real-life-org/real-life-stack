@@ -819,11 +819,12 @@ export function AdaptivePanel({
               "flex-1 flex flex-col overflow-hidden",
               isLeft ? "border-r" : "border-l",
             ),
-            // Drawer styling
-            // Die Glasflaeche der App-Huelle (Achse `surfaces`): deckend oder
-            // durchscheinend, wie Navbar und Bottom-Nav. Radix nennt genau das
-            // `panelBackground` — Panels sind die Flaechen, um die es geht.
-            mode === "drawer" && "surface-glass rounded-t-xl shadow-xl flex flex-col",
+            // Drawer: deckende Karte wie der Modal. Ueber dem abgedunkelten
+            // Hintergrund (bg-black/50) wuerde die Glasflaeche zu 80 % Weiss auf
+            // Dunkel, also Grau — und der Kommentar-Fuss (surface-glass-inner)
+            // haebe sich als hellerer Kasten davon ab. Glas bleibt dort, wo
+            // nichts abgedunkelt wird: Sidebar und schwebende Karte.
+            mode === "drawer" && "bg-card rounded-t-xl shadow-xl flex flex-col",
             // Schwebende Karte: eigene Huelle mit Rand und Schatten; Kopf und
             // Fuss bleiben stehen, der Body scrollt darin (flex + overflow).
             mode === "floating" && cn(
