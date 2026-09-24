@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1](https://github.com/real-life-org/real-life-stack/compare/local-connector-v0.2.0...local-connector-v0.2.1) (2026-09-24)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.3.1
+
 ## [0.2.0](https://github.com/real-life-org/real-life-stack/compare/local-connector-v0.1.6...local-connector-v0.2.0) (2026-09-23)
 
 
