@@ -15,8 +15,12 @@ const autor: User = { id: "u1", displayName: "Sebastian" } as User
 const kommentar = (id: string): Item =>
   ({ id, type: "comment", createdAt: "2026-06-06T10:00:00.000Z", createdBy: "u1", data: { content: id } }) as Item
 
-/** Nur was ItemPreview für den Kommentar-Zähler liest. */
-function connectorMit(kommentare: Item[]) {
+/**
+ * Nur was ItemPreview für den Kommentar-Zähler liest — und die Schreibseite,
+ * denn die Einladung zum Kommentieren haengt an der Faehigkeit (Spec 03).
+ * `schreibbar: false` ist die Nur-Lese-Quelle.
+ */
+function connectorMit(kommentare: Item[], schreibbar = true) {
   const beobachtet = createObservable<Item[]>(kommentare)
   return {
     observeRelatedItems: () => beobachtet,
@@ -27,13 +31,20 @@ function connectorMit(kommentare: Item[]) {
     observeItems: () => createObservable<Item[]>([]),
     getItem: async () => null,
     observeItem: () => createObservable<Item | null>(null),
+    ...(schreibbar
+      ? { createItem: async (i: Item) => i, updateItem: async (i: Item) => i, deleteItem: async () => {} }
+      : {}),
   }
 }
 
-function markup(kommentare: Item[], navigation?: { openComments: () => (() => void) | null }) {
+function markup(
+  kommentare: Item[],
+  navigation?: { openComments: () => (() => void) | null },
+  schreibbar = true,
+) {
   const karte = <ItemPreview item={beitrag} author={autor} />
   return renderToStaticMarkup(
-    <ConnectorProvider connector={connectorMit(kommentare) as never}>
+    <ConnectorProvider connector={connectorMit(kommentare, schreibbar) as never}>
       {navigation ? (
         <CommentNavigationProvider value={navigation}>{karte}</CommentNavigationProvider>
       ) : (
@@ -101,6 +112,16 @@ describe("Der Kommentar-Hinweis als Weg", () => {
 
   it("nennt sie auch ohne Weg, wo die Zahl sonst unerklärt bliebe", () => {
     expect(markup([kommentar("k1")])).toContain('aria-label="1 Kommentar, kommentieren"')
+  })
+
+  /**
+   * Ohne Schreibfaehigkeit (Spec 03) faellt die Einladung weg — sie waere ein
+   * Versprechen ohne Deckung (rls#478). Vorhandene Kommentare bleiben, denn
+   * Lesen kann die Quelle.
+   */
+  it("laedt nicht ein, wo niemand schreiben kann", () => {
+    expect(markup([], navigation, false)).not.toContain("Kommentieren")
+    expect(markup([kommentar("k1")], navigation, false)).toContain("1")
   })
 
   it("zeigt in der dichten Ansicht nur die Zahl", () => {

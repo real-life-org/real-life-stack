@@ -3,18 +3,34 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 const COMPACT_BREAKPOINT = 1024
 
+/** Ist die Flaeche in diesem Augenblick schmaler als `breakpoint`? */
+export function istBreiteUnter(breakpoint: number): boolean {
+  return typeof window !== "undefined" && window.innerWidth < breakpoint
+}
+
 function useBelowBreakpoint(breakpoint: number) {
-  const [below, setBelow] = React.useState<boolean | undefined>(undefined)
+  // Synchron aus der aktuellen Breite, nicht erst im Effekt: Entscheidungen
+  // beim Einhaengen — `autoFocus` etwa — fallen im ersten Render, und ein
+  // Wert, der erst danach kommt, ist dort noch falsch (rls#481). Der Effekt
+  // haelt ihn aktuell, damit ein Groessen- oder Lagewechsel ankommt.
+  const [below, setBelow] = React.useState(() => istBreiteUnter(breakpoint))
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
-    const onChange = () => setBelow(window.innerWidth < breakpoint)
-    mql.addEventListener("change", onChange)
-    setBelow(window.innerWidth < breakpoint)
-    return () => mql.removeEventListener("change", onChange)
+    const onChange = () => setBelow(istBreiteUnter(breakpoint))
+    // `matchMedia` fehlt in jsdom und aelteren Umgebungen; dort traegt
+    // `resize` allein. Beide zu hoeren kostet nichts: React verwirft eine
+    // Zuweisung desselben Werts.
+    const mql = typeof window.matchMedia === "function" ? window.matchMedia(`(max-width: ${breakpoint - 1}px)`) : null
+    mql?.addEventListener("change", onChange)
+    window.addEventListener("resize", onChange)
+    onChange()
+    return () => {
+      mql?.removeEventListener("change", onChange)
+      window.removeEventListener("resize", onChange)
+    }
   }, [breakpoint])
 
-  return !!below
+  return below
 }
 
 /**

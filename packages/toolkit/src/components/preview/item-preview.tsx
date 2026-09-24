@@ -11,6 +11,7 @@ import { editedLabel } from "@/lib/item-text"
 import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
 import { useUserNameResolver } from "../../hooks/use-user-names"
+import { useCanComment } from "../../hooks/use-comments"
 import { useCommentCount } from "../../hooks/use-comment-count"
 import { useCommentLink } from "../navigation/comment-navigation"
 import { MessageSquare } from "lucide-react"
@@ -241,9 +242,11 @@ export const ItemPreview = memo(function ItemPreview({
   // Eingabefeld), nicht diese Karte.
   const zumKommentieren = useCommentLink(item)
   // Ohne Kommentare steht dort keine Null, sondern eine Einladung — aber nur,
-  // wenn man ihr auch folgen kann. Sonst bliebe „Kommentieren" ein Versprechen
-  // ohne Deckung.
-  const showCommentHint = !isPanel && (commentCount > 0 || zumKommentieren !== null)
+  // wenn man ihr auch folgen kann: ein Ziel (Route, Panel) UND die Faehigkeit
+  // zu schreiben (Spec 03). Sonst bliebe „Kommentieren" ein Versprechen ohne
+  // Deckung. Vorhandene Kommentare zeigt die Karte weiter, auch nur lesend.
+  const darfKommentieren = useCanComment()
+  const showCommentHint = !isPanel && (commentCount > 0 || (zumKommentieren !== null && darfKommentieren))
 
   const authorName = author?.displayName ?? item.createdBy
   const authorAvatar = author?.avatarUrl

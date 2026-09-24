@@ -103,7 +103,12 @@ export function FilterPill({
         className={cn(
           "overflow-hidden border border-border bg-card text-foreground",
           // Die Form steht sofort; nur der Inhalt blendet kurz ein (unten).
-          offen ? "w-[232px] rounded-2xl shadow-xl" : "w-auto rounded-pill shadow-lg",
+          // Dieselbe Rundung wie die Karte, die er oeffnet: So bleibt es beim
+          // Oeffnen dieselbe Form, und der Filter liest sich nicht als zweiter
+          // Plusknopf — der Kreis gehoert der Handlung, das abgerundete Rechteck
+          // ist eine Einstellung der Flaeche. Auf dem Telefon ohne Text, also
+          // ein Quadrat; ab `sm` mit Text.
+          offen ? "w-[232px] rounded-2xl shadow-xl" : "w-auto rounded-2xl shadow-md sm:shadow-lg",
         )}
       >
         {offen ? (
@@ -132,10 +137,16 @@ export function FilterPill({
             data-filter-pill-trigger
             onClick={() => setOffen(true)}
             aria-expanded={false}
-            className="flex h-12 items-center gap-2 px-[18px] text-sm font-medium"
+            aria-label="Filter"
+            // Auf dem Telefon nur das Symbol — der Text nahm der schmalen
+            // Flaeche Platz, ohne mehr zu sagen. Quadratisch und ruhiger als
+            // der runde Plusknopf gegenueber: Der ist die Handlung, dies eine
+            // Einstellung der Flaeche. Gleiche Form und gleiche Groesse liessen
+            // die beiden wie Zwillinge aussehen.
+            className="flex h-11 w-11 items-center justify-center gap-2 text-sm font-medium text-muted-foreground sm:h-12 sm:w-auto sm:px-[18px] sm:text-foreground"
           >
-            <Filter className="h-4 w-4" />
-            Filter
+            <Filter className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">Filter</span>
           </button>
         )}
       </div>
