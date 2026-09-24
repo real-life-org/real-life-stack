@@ -103,11 +103,12 @@ export function FilterPill({
         className={cn(
           "overflow-hidden border border-border bg-card text-foreground",
           // Die Form steht sofort; nur der Inhalt blendet kurz ein (unten).
-          // Geschlossen auf dem Telefon: ein abgerundetes Quadrat in derselben
-          // Rundung wie die offene Karte — so bleibt es beim Oeffnen dieselbe
-          // Form und liest sich nicht als zweiter Plusknopf. Ab `sm` wieder die
-          // Pille mit Text.
-          offen ? "w-[232px] rounded-2xl shadow-xl" : "w-auto rounded-2xl shadow-md sm:rounded-pill sm:shadow-lg",
+          // Dieselbe Rundung wie die Karte, die er oeffnet: So bleibt es beim
+          // Oeffnen dieselbe Form, und der Filter liest sich nicht als zweiter
+          // Plusknopf — der Kreis gehoert der Handlung, das abgerundete Rechteck
+          // ist eine Einstellung der Flaeche. Auf dem Telefon ohne Text, also
+          // ein Quadrat; ab `sm` mit Text.
+          offen ? "w-[232px] rounded-2xl shadow-xl" : "w-auto rounded-2xl shadow-md sm:shadow-lg",
         )}
       >
         {offen ? (
