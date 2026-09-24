@@ -39,6 +39,37 @@
     }
     poll()
   }
+  /**
+   * Ein Klick in die Vorschau gibt dem Iframe den Fokus, und der Browser holt
+   * ihn dafuer ins Bild: Die Seite darunter scrollte weg. Die Vorschau ist ein
+   * Fenster, kein Formular — sie darf nichts ausserhalb von sich bewegen.
+   *
+   * Das Ereignis dafuer ist `blur` am Fenster (ein Iframe meldet dem Elternteil
+   * kein `focus`), und der Browser scrollt weich ueber mehrere Bilder. Also die
+   * Position halten, solange die Vorschau den Fokus hat, laengstens eine halbe
+   * Sekunde — und sofort loslassen, wenn jemand selbst scrollt.
+   */
+  function haltePositionBeiFokus() {
+    window.addEventListener('blur', () => {
+      const ziel = document.activeElement
+      if (!(ziel instanceof HTMLIFrameElement) || !ziel.closest('.story-example')) return
+      const y = window.scrollY
+      const bis = performance.now() + 500
+      let losgelassen = false
+      const loslassen = () => { losgelassen = true }
+      for (const ereignis of ['wheel', 'touchstart', 'keydown'])
+        window.addEventListener(ereignis, loslassen, { once: true, passive: true })
+      const halten = () => {
+        if (losgelassen) return
+        if (window.scrollY !== y) window.scrollTo({ top: y, behavior: 'instant' })
+        if (performance.now() < bis) requestAnimationFrame(halten)
+        else for (const ereignis of ['wheel', 'touchstart', 'keydown']) window.removeEventListener(ereignis, loslassen)
+      }
+      requestAnimationFrame(halten)
+    })
+  }
+  haltePositionBeiFokus()
+
   function load(fig: HTMLElement) {
     const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
     const src = `${iframe.dataset.src}&globals=theme:${theme()}`

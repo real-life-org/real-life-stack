@@ -161,6 +161,11 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
   .rl-section h2, .rl-ways h2 { font-size: 1.5rem; }
   .rl-landing .rl-cards { gap: .75rem; }
   .hero { padding-block: 1.5rem .5rem; }
+  /* Starlight klemmt die Hero-Zeile unten bei --sl-text-3xl (1.8rem) fest; auf dem
+     Telefon blieb davon eine Ueberschrift uebrig, die kaum groesser war als der Text
+     darunter. Hier waechst sie mit der Breite und fuellt die Zeile. */
+  .hero h1 { font-size: clamp(2.2rem, 9vw, 3rem); line-height: 1.1; }
+  .hero .tagline { font-size: 1.05rem; }
 }
 
 /* Referenz: dichte Tabellen, das Verhalten ohne Faehigkeit farbig wie im Storybook. */
