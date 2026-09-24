@@ -399,6 +399,64 @@
   transition: right 200ms ease-out;
 }
 
+/* Aussehen der Kartensteuerung (Zoom, Attribution) aus den Tokens und dem Dunkelmodus, plus der Abstand zur
+   Bottom-Nav auf dem Telefon. Lag nur in der Referenz-App: Storybook, Handbuch und Netzwerk-App zeigten im Dunkeln
+   MapLibres weisse Knoepfe. Querschnitts-UX gehoert ins Toolkit. */
+/* MapLibres Steuerelemente aus den Tokens statt aus seinem festen Weiss:
+   so folgen sie Flaechen, Rahmen, Rundung und dem Dunkelmodus. Die Symbole
+   sind SVG-Hintergrundbilder in Schwarz — im Dunkeln invertiert. */
+.maplibregl-map .maplibregl-ctrl-group {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
+  overflow: hidden;
+}
+.maplibregl-map .maplibregl-ctrl-group:not(:empty) {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
+}
+.maplibregl-map .maplibregl-ctrl-group button {
+  background-color: transparent;
+}
+.maplibregl-map .maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--border);
+}
+.maplibregl-map .maplibregl-ctrl-group button:not(:disabled):hover {
+  background-color: var(--muted);
+}
+.dark .maplibregl-map .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+/* Drei Klassen, weil maplibre-gl.css die Attribution mit zwei setzt
+   (`.maplibregl-ctrl.maplibregl-ctrl-attrib`) — sonst bliebe sie weiss. */
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib,
+.maplibregl-map .maplibregl-ctrl-attrib.maplibregl-compact {
+  background: var(--card);
+  color: var(--muted-foreground);
+  border-radius: var(--radius-md);
+}
+.maplibregl-map .maplibregl-ctrl-attrib a {
+  color: var(--foreground);
+}
+.maplibregl-map .maplibregl-ctrl-attrib-button {
+  background-color: transparent;
+}
+.dark .maplibregl-map .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
+
+/* On mobile (< Tailwind `md`) the map is full-bleed behind the fixed BottomNav
+   (App.tsx: `withBottomNav={false}` for the map). Lift the bottom controls clear
+   of the bar so the attribution "ⓘ" isn't hidden behind it — same offset as the
+   create-FAB (`5.25rem + safe-area`), so the bottom-left "ⓘ" and bottom-right FAB
+   line up. md+ has no BottomNav, so the 16px rule above applies there. */
+@media (max-width: 47.99rem) {
+  .maplibregl-map .maplibregl-ctrl-bottom-left .maplibregl-ctrl,
+  .maplibregl-map .maplibregl-ctrl-bottom-right .maplibregl-ctrl {
+    margin-bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* Drop shadow under map markers (the rendered pin SVG is an <img>; a CSS
    filter follows its alpha and is reliable across browsers). */
 .rls-marker-shadow {
