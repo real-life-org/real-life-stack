@@ -1064,15 +1064,21 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     if (id === null) throw new Error("Cannot delete personal view")
     if (!this.replication) throw new Error("Not authenticated")
 
-    // "Delete" = leave the space: remove self from members, clean up local data
-    const did = this.identity.getDid()
-    try {
-      await this.replication.removeMember(id, did)
-    } catch {
-      // May fail if already removed or single member
-    }
-
-    // Remove space from replication adapter (stops sync, removes from spaces map)
+    // "Delete" = die Gruppe verlassen. leaveSpace IST der dedizierte
+    // Austritts-Flow: es schreibt das eigene removed-Ereignis in den Log,
+    // verteilt die member-updates an die Verbleibenden und raeumt lokal auf.
+    //
+    // Hier stand frueher ein removeMember(self) davor. Das ist der Admin-Pfad:
+    // unter log-sync stagt er durable ein Removal und bittet den Home-Broker um
+    // einen space-rotate, den ein normales Mitglied nicht admin-signieren kann.
+    // Der Broker lehnte mit AUTH_INVALID ab, der Fehler wurde hier verschluckt —
+    // aber der Staging-Record blieb liegen und zog danach JEDEN leaveSpace in
+    // dessen securePending-Zweig, der denselben unmoeglichen Rotate wiederholte.
+    // Das Ergebnis war ein Mitglied, das die Gruppe nie wieder verlassen konnte.
+    //
+    // Ein Fehler aus dem Austritt propagiert bewusst: der Dialog zeigt ihn an und
+    // der Space bleibt bestehen. Ihn zu schlucken wuerde einen gescheiterten
+    // Austritt als Erfolg melden.
     await this.replication.leaveSpace(id)
 
     // If this was the current group, switch away
