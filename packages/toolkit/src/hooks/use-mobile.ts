@@ -3,27 +3,34 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 const COMPACT_BREAKPOINT = 1024
 
-function useBelowBreakpoint(breakpoint: number) {
-  const [below, setBelow] = React.useState<boolean | undefined>(undefined)
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
-    const onChange = () => setBelow(window.innerWidth < breakpoint)
-    mql.addEventListener("change", onChange)
-    setBelow(window.innerWidth < breakpoint)
-    return () => mql.removeEventListener("change", onChange)
-  }, [breakpoint])
-
-  return !!below
+/** Ist die Flaeche in diesem Augenblick schmaler als `breakpoint`? */
+export function istBreiteUnter(breakpoint: number): boolean {
+  return typeof window !== "undefined" && window.innerWidth < breakpoint
 }
 
-/**
- * Ist die Flaeche in diesem Augenblick schmal (< 1024px)? Synchron, fuer
- * Entscheidungen beim Einhaengen — `useIsCompact` meldet sich erst nach dem
- * ersten Render, und ein `autoFocus` ist dann laengst gesetzt.
- */
-export function istKompaktJetzt(): boolean {
-  return typeof window !== "undefined" && window.innerWidth < COMPACT_BREAKPOINT
+function useBelowBreakpoint(breakpoint: number) {
+  // Synchron aus der aktuellen Breite, nicht erst im Effekt: Entscheidungen
+  // beim Einhaengen — `autoFocus` etwa — fallen im ersten Render, und ein
+  // Wert, der erst danach kommt, ist dort noch falsch (rls#481). Der Effekt
+  // haelt ihn aktuell, damit ein Groessen- oder Lagewechsel ankommt.
+  const [below, setBelow] = React.useState(() => istBreiteUnter(breakpoint))
+
+  React.useEffect(() => {
+    const onChange = () => setBelow(istBreiteUnter(breakpoint))
+    // `matchMedia` fehlt in jsdom und aelteren Umgebungen; dort traegt
+    // `resize` allein. Beide zu hoeren kostet nichts: React verwirft eine
+    // Zuweisung desselben Werts.
+    const mql = typeof window.matchMedia === "function" ? window.matchMedia(`(max-width: ${breakpoint - 1}px)`) : null
+    mql?.addEventListener("change", onChange)
+    window.addEventListener("resize", onChange)
+    onChange()
+    return () => {
+      mql?.removeEventListener("change", onChange)
+      window.removeEventListener("resize", onChange)
+    }
+  }, [breakpoint])
+
+  return below
 }
 
 /**

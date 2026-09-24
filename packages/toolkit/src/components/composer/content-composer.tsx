@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/primitives/dropdown-menu"
-import { istKompaktJetzt } from "@/hooks/use-mobile"
+import { useIsCompact } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { latLngFromPoint, pointFromLatLng, type GeoJSONPoint } from "@/lib/geo"
 import { WidgetWrapper } from "./widgets/widget-wrapper"
@@ -501,9 +501,10 @@ export function ContentComposer({
   // Auf dem Telefon oeffnet ein Autofokus die Tastatur und schiebt den Kopf des
   // Formulars (Typ, Gruppe) aus dem Bild. Dort ist der Typ die erste
   // Entscheidung, nicht der Titel — die Tastatur kommt, wenn jemand tippt.
-  // Synchron gelesen: `autoFocus` wirkt beim Einhaengen, ein Hook, der sich
-  // erst danach meldet, kaeme zu spaet.
-  const [imDrawer] = React.useState(istKompaktJetzt)
+  // Der Hook antwortet schon im ersten Render und bleibt aktuell: Wer die
+  // Breite beim Einhaengen einfriert, haengt nach einem Groessenwechsel den
+  // Edit-Widgets den alten Wert an (rls#481).
+  const imDrawer = useIsCompact()
 
   // Active widgets = defaults + manually added
   const defaultWidgets = new Set(currentConfig.defaultWidgets)

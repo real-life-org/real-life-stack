@@ -825,7 +825,7 @@
             "docs/spec/11-runtime-config-und-branding.md"
           ],
           "source": "packages/toolkit/src/hooks/use-mobile.ts",
-          "line": 38
+          "line": 45
         },
         {
           "name": "useIsCompact",
@@ -840,7 +840,7 @@
             "docs/spec/11-runtime-config-und-branding.md"
           ],
           "source": "packages/toolkit/src/hooks/use-mobile.ts",
-          "line": 54
+          "line": 61
         },
         {
           "name": "useNotifications",
