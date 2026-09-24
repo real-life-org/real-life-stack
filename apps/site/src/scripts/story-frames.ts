@@ -44,31 +44,28 @@
    * ihn dafuer ins Bild: Die Seite darunter scrollte weg. Die Vorschau ist ein
    * Fenster, kein Formular — sie darf nichts ausserhalb von sich bewegen.
    *
-   * Das Ereignis dafuer ist `blur` am Fenster (ein Iframe meldet dem Elternteil
-   * kein `focus`), und der Browser scrollt weich ueber mehrere Bilder. Also die
-   * Position halten, solange die Vorschau den Fokus hat, laengstens eine halbe
-   * Sekunde — und sofort loslassen, wenn jemand selbst scrollt.
+   * Der Halter laeuft dauerhaft, nicht als Anmeldung auf ein Ereignis: Ein
+   * Iframe meldet dem Elternteil kein `focus`, und beim zweiten Klick in
+   * dieselbe Vorschau faellt auch kein `blur` mehr — das Fenster hat den Fokus
+   * ja laengst abgegeben. Unterschieden wird darum am Scrollereignis selbst:
+   * Liegt der Fokus in einer Vorschau und hat gerade niemand gescrollt,
+   * getippt oder gezogen, kommt die Bewegung nicht vom Menschen und wird
+   * zurueckgenommen.
    */
-  function haltePositionBeiFokus() {
-    window.addEventListener('blur', () => {
-      const ziel = document.activeElement
-      if (!(ziel instanceof HTMLIFrameElement) || !ziel.closest('.story-example')) return
-      const y = window.scrollY
-      const bis = performance.now() + 500
-      let losgelassen = false
-      const loslassen = () => { losgelassen = true }
-      for (const ereignis of ['wheel', 'touchstart', 'keydown'])
-        window.addEventListener(ereignis, loslassen, { once: true, passive: true })
-      const halten = () => {
-        if (losgelassen) return
-        if (window.scrollY !== y) window.scrollTo({ top: y, behavior: 'instant' })
-        if (performance.now() < bis) requestAnimationFrame(halten)
-        else for (const ereignis of ['wheel', 'touchstart', 'keydown']) window.removeEventListener(ereignis, loslassen)
-      }
-      requestAnimationFrame(halten)
-    })
-  }
-  haltePositionBeiFokus()
+  const EINGABEFENSTER = 400
+  let ruhigePosition = window.scrollY
+  let letzteEingabe = 0
+  const merkeEingabe = () => { letzteEingabe = performance.now() }
+  for (const ereignis of ['wheel', 'touchstart', 'touchmove', 'keydown', 'pointerdown'])
+    window.addEventListener(ereignis, merkeEingabe, { passive: true, capture: true })
+
+  window.addEventListener('scroll', () => {
+    const ziel = document.activeElement
+    const vorschauImFokus = ziel instanceof HTMLIFrameElement && !!ziel.closest('.story-example')
+    const menschScrollt = performance.now() - letzteEingabe < EINGABEFENSTER
+    if (!vorschauImFokus || menschScrollt) { ruhigePosition = window.scrollY; return }
+    if (window.scrollY !== ruhigePosition) window.scrollTo(0, ruhigePosition)
+  }, { passive: true })
 
   function load(fig: HTMLElement) {
     const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
