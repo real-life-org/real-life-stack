@@ -5,7 +5,7 @@ import Landing from '../components/Landing.astro'
 import { translations } from '../i18n/landing'
 const t = translations.de
 ---
-<StarlightPage frontmatter={{ title: 'Real Life Stack', template: 'splash', tableOfContents: false, hero: {
+<StarlightPage frontmatter={{ title: 'Real Life Stack', description: t.hero.subtitle, template: 'splash', tableOfContents: false, hero: {
   title: `${t.hero.title} <span class="rl-accent">${t.hero.titleHighlight}</span>`, tagline: t.hero.subtitle,
   image: { html: heroPreviewHtml('de') },
   actions: [

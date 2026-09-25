@@ -1,0 +1,55 @@
+<!doctype html>
+<!--
+  Quelle der Vorschaubilder fuer geteilte Links (og:image), 1200 x 630.
+  Die Bilder liegen daneben (de.png, en.png); scripts/site/prepare.mjs kopiert sie nach public/og,
+  apps/site/src/route-data.ts setzt sie als og:image.
+
+  Neu erzeugen: Storybook starten (pnpm --filter @real-life-stack/toolkit storybook, Port 6006),
+  dann diese Datei in einem Headless-Browser mit 1200 x 630 aufnehmen, je einmal mit ?lang=de und ?lang=en,
+  und das Ergebnis hier als de.png bzw. en.png ablegen, z. B.
+  npx playwright screenshot --viewport-size=1200,630 --wait-for-timeout=8000 "file://$PWD/vorschau.html?lang=de" de.png
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* Werte aus apps/site/src/styles/site.css (helles Theme). */
+  :root { --bg: oklch(0.975 0.003 70); --text: oklch(0.20 0.02 265); --muted: oklch(0.45 0.02 265); --accent: oklch(0.63 0.16 55); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: var(--bg); font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .bild { position: relative; width: 1200px; height: 630px; padding: 72px 0 64px 80px; display: flex; flex-direction: column; }
+  .marke { font-size: 30px; font-weight: 750; letter-spacing: -.03em; color: var(--accent); }
+  h1 { margin: auto 0 0; width: 700px; font-size: 68px; line-height: 1.08; letter-spacing: -.04em; font-weight: 800; color: var(--text); }
+  h1 span { display: block; color: var(--accent); }
+  p { margin: 28px 0 auto; width: 640px; font-size: 27px; line-height: 1.45; color: var(--muted); }
+  .adresse { font-size: 22px; font-weight: 600; color: var(--muted); }
+  /* Das Telefon rechts, wie im Hero: 390 breit, auf 0.8; unten angeschnitten. */
+  .telefon { position: absolute; top: 56px; right: 72px; width: 390px; height: 820px; transform: scale(.8); transform-origin: top right;
+    border: 1px solid oklch(0.85 0.01 265); border-radius: 1.6rem; overflow: hidden; background: #fff;
+    box-shadow: 0 24px 60px -20px oklch(0.3 0.03 265 / .35); }
+  .telefon iframe { width: 390px; height: 820px; border: 0; display: block; }
+</style>
+</head>
+<body>
+<div class="bild">
+  <div class="marke">Real Life Stack</div>
+  <h1 id="titel"></h1>
+  <p id="text"></p>
+  <div class="adresse">real-life-stack.de</div>
+  <div class="telefon"><iframe id="app" title="App"></iframe></div>
+</div>
+<script>
+  const texte = {
+    de: ['Der Baukasten für', 'lokale Vernetzung', 'Werkzeuge für Communities, die sich dezentral organisieren, verwurzelt in echten Begegnungen.'],
+    en: ['Your toolkit for', 'local connection', 'Tools for communities that organize in a decentralized way, rooted in real-world encounters.'],
+  }
+  const lang = new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'de'
+  const [a, b, c] = texte[lang]
+  document.documentElement.lang = lang
+  document.getElementById('titel').innerHTML = `${a} <span>${b}</span>`
+  document.getElementById('text').textContent = c
+  const storybook = new URLSearchParams(location.search).get('storybook') || 'http://localhost:6006'
+  document.getElementById('app').src = `${storybook}/iframe.html?id=rls-app-00-community-garden--garden&viewMode=story&globals=theme:light`
+</script>
+</body>
+</html>

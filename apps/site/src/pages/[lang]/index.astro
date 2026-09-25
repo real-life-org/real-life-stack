@@ -9,7 +9,7 @@ export function getStaticPaths() {
 const lang = Astro.params.lang as TranslatedLanguage
 const t = translations[lang] ?? translations.en
 ---
-<StarlightPage frontmatter={{ title: 'Real Life Stack', template: 'splash', tableOfContents: false, hero: {
+<StarlightPage frontmatter={{ title: 'Real Life Stack', description: t.hero.subtitle, template: 'splash', tableOfContents: false, hero: {
   title: `${t.hero.title} <span class="rl-accent">${t.hero.titleHighlight}</span>`, tagline: t.hero.subtitle,
   image: { html: heroPreviewHtml(lang) },
   actions: [
