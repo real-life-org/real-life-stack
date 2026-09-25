@@ -486,6 +486,9 @@ selbst von der Autorin signiert sein, anders als bei kollaborativen Items.
    mit Kennzeichnung („verändert") zeigen. Einen Altbestand-Modus gibt es
    nicht: Die Abwesenheit eines Claims beweist keine Herkunft und kann in
    einem Multi-Writer-Store jederzeit hergestellt werden.
+8. Kanonische **Testvektoren** liegen unter
+   `schemas/claims/vectors/resonance-1.json` (Gruppe `statementClaims`) und
+   sind für Implementierungen verbindlich.
 
 ### Schreibregeln (Fassade)
 
