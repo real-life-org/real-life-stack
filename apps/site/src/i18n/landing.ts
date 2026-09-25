@@ -8,7 +8,6 @@ export interface Translation {
     storybook: string
   }
   modules: {
-    badge: string
     title: string
     p1: string
     p2: string
@@ -26,7 +25,6 @@ export interface Translation {
     more?: string
   }
   dataInterface: {
-    badge: string
     title: string
     p1: string
     p2: string
@@ -38,7 +36,6 @@ export interface Translation {
     capabilitiesDesc: string
   }
   connectors: {
-    badge: string
     title: string
     p1: string
     p2: string
@@ -56,8 +53,7 @@ export type TranslatedLanguage =
   | 'de' | 'en' | 'fr' | 'es' | 'pt' | 'it' | 'tr' | 'ar' | 'zh' | 'ru' | 'uk' | 'he'
 
 const EN_DATA_INTERFACE: Translation['dataInterface'] = {
-  badge: 'Data & identity interface',
-  title: 'One interface',
+  title: 'One interface for all modules',
   p1: 'All modules speak the same language. What they read and write are items in spaces, related to one another and to people; an event, a place, a task, a profile differ only in their fields. That is why the same neighbourhood festival can sit in the calendar and on the map without existing twice.',
   p2: 'When an item changes, every surface showing it follows. And what the backend underneath can do decides what the surface offers: a connector that cannot write gets no write buttons, but an app that still runs.',
   items: 'Items & relations',
@@ -69,9 +65,8 @@ const EN_DATA_INTERFACE: Translation['dataInterface'] = {
 }
 
 const EN_CONNECTORS: Translation['connectors'] = {
-  badge: 'Connector layer',
   title: 'Two connectors, one contract',
-  p1: 'Below the interface sits the connector. It decides where the data lives; the surface does not notice the switch. Two ship ready-made, each an npm package: the Web of Trust for decentralized, end-to-end encrypted groups and Supabase for a central server.',
+  p1: 'Below the interface sits the connector. It decides where the data lives; the surface does not notice the switch. Two ship ready-made, each an npm package.',
   p2: 'A connector of your own implements the same interface against another source, with exactly the capabilities the source offers. What it cannot do, the surface hides.',
   wot: 'Web of Trust',
   wotDesc: 'Decentralized, end-to-end encrypted, identity as a DID',
@@ -92,10 +87,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App-Shell & Module',
-      title: 'Modularer Frontend-Baukasten',
-      p1: 'Real Life Stack wird als modularer Frontend-Baukasten in TypeScript mit React entwickelt. Er umfasst eigenständige Komponenten, die sowohl in der Referenzanwendung als auch als wiederverwendbare Library in eigenen Projekten eingesetzt werden können.',
-      p2: 'Zusätzlich entsteht eine selbsthostbare White-Label-App mit einer intuitiven Admin-Konfigurationsoberfläche, über die Gruppen ohne technisches Know-how Module aktivieren, Farben und Inhalte anpassen können.',
+      title: 'Module, die zusammenpassen',
+      p1: 'Karte, Kalender, Kanban und Feed sind eigenständige React-Komponenten in TypeScript. Jede läuft für sich, zusammen ergeben sie eine App. Die Referenz-App setzt sie zusammen, deine App kann es genauso.',
+      p2: 'Wer nicht programmieren will, betreibt die fertige White-Label-App und stellt Module, Farben und Inhalte in der Konfiguration ein.',
       map: 'Karte',
       mapDesc: 'OpenStreetMap via MapLibre',
       calendar: 'Kalender',
@@ -109,8 +103,7 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       more: 'Dazu Liste, Graph und Resonanz: alle Module live im Storybook',
     },
     dataInterface: {
-      badge: 'Daten- & Identitätsschnittstelle',
-      title: 'Einheitliche Schnittstelle',
+      title: 'Eine Schnittstelle für alle Module',
       p1: 'Alle Module sprechen dieselbe Sprache. Was sie lesen und schreiben, sind Items in Spaces, mit Beziehungen zueinander und zu Menschen; ein Termin, ein Ort, eine Aufgabe, ein Profil unterscheiden sich nur in ihren Feldern. Deshalb kann dasselbe Nachbarschaftsfest im Kalender und auf der Karte stehen, ohne zweimal zu existieren.',
       p2: 'Ändert sich ein Item, folgt jede Fläche, die es zeigt. Und was das Backend darunter kann, entscheidet, was die Oberfläche anbietet: Ein Connector, der nicht schreiben kann, bekommt keine Schreibknöpfe, aber eine App, die trotzdem läuft.',
       items: 'Items & Relations',
@@ -121,9 +114,8 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       capabilitiesDesc: 'Was ein Connector kann, prüft die Fläche',
     },
     connectors: {
-      badge: 'Connector-Schicht',
       title: 'Zwei Connectoren, ein Vertrag',
-      p1: 'Unterhalb der Schnittstelle liegt der Connector. Er entscheidet, wo die Daten leben; die Oberfläche merkt den Wechsel nicht. Zwei gibt es fertig, jeder ein npm-Paket: das Web of Trust für dezentrale, Ende-zu-Ende verschlüsselte Gruppen und Supabase für einen zentralen Server.',
+      p1: 'Unter der Schnittstelle liegt der Connector. Er entscheidet, wo die Daten leben; die Oberfläche merkt den Wechsel nicht. Zwei gibt es fertig, jeder ein npm-Paket.',
       p2: 'Ein eigener Connector implementiert dasselbe Interface gegen eine andere Quelle, mit genau den Fähigkeiten, die die Quelle hergibt. Was er nicht kann, blendet die Oberfläche aus.',
       wot: 'Web of Trust',
       wotDesc: 'Dezentral, Ende-zu-Ende verschlüsselt, Identität als DID',
@@ -148,10 +140,9 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell & Modules',
-      title: 'Modular Frontend Toolkit',
-      p1: 'Real Life Stack is being developed as a modular frontend toolkit in TypeScript with React. It includes standalone components that can be used both in the reference application and as a reusable library in your own projects.',
-      p2: 'In addition, a self-hostable white-label app is being built with an intuitive admin configuration interface that lets groups enable modules and customize colors and content without technical know-how.',
+      title: 'Modules that fit together',
+      p1: 'Map, calendar, kanban and feed are standalone React components in TypeScript. Each runs on its own; together they make an app. The reference app composes them, and your app can do the same.',
+      p2: 'If you would rather not write code, run the finished white-label app and choose modules, colours and content in its configuration.',
       map: 'Map',
       mapDesc: 'OpenStreetMap via MapLibre',
       calendar: 'Calendar',
@@ -165,8 +156,7 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       more: 'Plus list, graph and resonance: every module live in Storybook',
     },
     dataInterface: {
-      badge: 'Data & identity interface',
-      title: 'One interface',
+      title: 'One interface for all modules',
       p1: 'All modules speak the same language. What they read and write are items in spaces, related to one another and to people; an event, a place, a task, a profile differ only in their fields. That is why the same neighbourhood festival can sit in the calendar and on the map without existing twice.',
       p2: 'When an item changes, every surface showing it follows. And what the backend underneath can do decides what the surface offers: a connector that cannot write gets no write buttons, but an app that still runs.',
       items: 'Items & relations',
@@ -177,9 +167,8 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       capabilitiesDesc: 'What a connector can do, the surface checks',
     },
     connectors: {
-      badge: 'Connector layer',
       title: 'Two connectors, one contract',
-      p1: 'Below the interface sits the connector. It decides where the data lives; the surface does not notice the switch. Two ship ready-made, each an npm package: the Web of Trust for decentralized, end-to-end encrypted groups and Supabase for a central server.',
+      p1: 'Below the interface sits the connector. It decides where the data lives; the surface does not notice the switch. Two ship ready-made, each an npm package.',
       p2: 'A connector of your own implements the same interface against another source, with exactly the capabilities the source offers. What it cannot do, the surface hides.',
       wot: 'Web of Trust',
       wotDesc: 'Decentralized, end-to-end encrypted, identity as a DID',
@@ -205,7 +194,6 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell & Modules',
       title: 'Boîte à outils frontend modulaire',
       p1: "Real Life Stack est développé comme une boîte à outils frontend modulaire en TypeScript avec React. Elle comprend des composants autonomes utilisables aussi bien dans l'application de référence que comme bibliothèque réutilisable dans vos propres projets.",
       p2: "S'y ajoute une application white-label auto-hébergeable avec une interface d'administration intuitive permettant aux groupes d'activer des modules et de personnaliser couleurs et contenus sans connaissances techniques.",
@@ -238,7 +226,6 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell y módulos',
       title: 'Kit frontend modular',
       p1: 'Real Life Stack se desarrolla como un kit frontend modular en TypeScript con React. Incluye componentes independientes que pueden usarse tanto en la aplicación de referencia como en tus propios proyectos como biblioteca reutilizable.',
       p2: 'Además se está creando una app white-label autoalojable con una interfaz de administración intuitiva, con la que los grupos pueden activar módulos y personalizar colores y contenidos sin conocimientos técnicos.',
@@ -271,7 +258,6 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell e módulos',
       title: 'Kit frontend modular',
       p1: 'O Real Life Stack está sendo desenvolvido como um kit frontend modular em TypeScript com React. Inclui componentes independentes que podem ser usados tanto no aplicativo de referência quanto como biblioteca reutilizável em seus próprios projetos.',
       p2: 'Além disso, está sendo criado um app white-label auto-hospedável com uma interface de administração intuitiva, com a qual grupos podem ativar módulos e personalizar cores e conteúdos sem conhecimento técnico.',
@@ -304,7 +290,6 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell e moduli',
       title: 'Kit frontend modulare',
       p1: "Real Life Stack viene sviluppato come kit frontend modulare in TypeScript con React. Comprende componenti autonomi utilizzabili sia nell'applicazione di riferimento sia come libreria riutilizzabile nei propri progetti.",
       p2: "Inoltre nasce un'app white-label self-hostable con un'interfaccia di amministrazione intuitiva, con cui i gruppi possono attivare moduli e personalizzare colori e contenuti senza conoscenze tecniche.",
@@ -337,7 +322,6 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell ve Modüller',
       title: 'Modüler frontend araç seti',
       p1: 'Real Life Stack, TypeScript ve React ile modüler bir frontend araç seti olarak geliştiriliyor. Hem referans uygulamada hem de kendi projelerinizde yeniden kullanılabilir kitaplık olarak kullanılabilen bağımsız bileşenler içerir.',
       p2: 'Ayrıca, grupların teknik bilgi olmadan modülleri etkinleştirip renkleri ve içerikleri özelleştirebildiği sezgisel bir yönetici arayüzüne sahip, kendi sunucunuzda barındırılabilir bir white-label uygulama geliştiriliyor.',
@@ -370,7 +354,6 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell والوحدات',
       title: 'مجموعة أدوات واجهة أمامية معيارية',
       p1: 'يُطوَّر Real Life Stack كمجموعة أدوات واجهة أمامية معيارية بلغة TypeScript مع React. يتضمن مكونات مستقلة يمكن استخدامها في التطبيق المرجعي وكذلك كمكتبة قابلة لإعادة الاستخدام في مشاريعك الخاصة.',
       p2: 'إضافةً إلى ذلك، يجري تطوير تطبيق white-label قابل للاستضافة الذاتية مع واجهة إدارة سهلة تتيح للمجموعات تفعيل الوحدات وتخصيص الألوان والمحتوى دون معرفة تقنية.',
@@ -402,7 +385,6 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell 与模块',
       title: '模块化前端工具箱',
       p1: 'Real Life Stack 是一个用 TypeScript 和 React 开发的模块化前端工具箱。它包含独立组件，既可用于参考应用，也可作为可复用库用于你自己的项目。',
       p2: '此外还在开发一个可自托管的白标应用，配有直观的管理配置界面，让团体无需技术知识即可启用模块、自定义颜色和内容。',
@@ -435,7 +417,6 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell и модули',
       title: 'Модульный фронтенд-конструктор',
       p1: 'Real Life Stack разрабатывается как модульный фронтенд-конструктор на TypeScript с React. Он включает автономные компоненты, которые можно использовать как в референсном приложении, так и в собственных проектах как переиспользуемую библиотеку.',
       p2: 'Кроме того, создаётся white-label-приложение для самостоятельного хостинга с интуитивной админ-панелью, в которой группы без технических знаний могут включать модули и настраивать цвета и содержимое.',
@@ -468,7 +449,6 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell і модулі',
       title: 'Модульний фронтенд-конструктор',
       p1: 'Real Life Stack розробляється як модульний фронтенд-конструктор на TypeScript із React. Він містить автономні компоненти, які можна використовувати як у референсному застосунку, так і у власних проєктах як бібліотеку багаторазового використання.',
       p2: 'Крім того, створюється white-label-застосунок для самостійного хостингу з інтуїтивною адмін-панеллю, за допомогою якої групи без технічних знань можуть вмикати модулі та налаштовувати кольори і вміст.',
@@ -501,7 +481,6 @@ export const translations: Record<TranslatedLanguage, Translation> = {
       storybook: 'Storybook',
     },
     modules: {
-      badge: 'App Shell ומודולים',
       title: 'ערכת פרונטאנד מודולרית',
       p1: 'Real Life Stack מפותח כערכת פרונטאנד מודולרית ב-TypeScript עם React. הוא כולל רכיבים עצמאיים שניתן להשתמש בהם גם באפליקציית הייחוס וגם כספרייה לשימוש חוזר בפרויקטים משלכם.',
       p2: 'בנוסף נבנית אפליקציית white-label לאירוח עצמי עם ממשק ניהול אינטואיטיבי, שבאמצעותו קבוצות ללא ידע טכני יכולות להפעיל מודולים ולהתאים צבעים ותכנים.',

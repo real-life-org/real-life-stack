@@ -17,6 +17,7 @@
   --sl-color-accent-high: oklch(0.80 0.16 55);
   --rl-blue: oklch(0.55 0.21 264);
   --rl-green: oklch(0.62 0.15 150);
+  --rl-purple: oklch(0.58 0.2 300);
 }
 :root[data-theme='light'] {
   --sl-color-accent-low: oklch(0.92 0.06 55);
@@ -98,12 +99,15 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-hero p { font-size: 1.2rem; color: var(--sl-color-gray-2); max-width: 40rem; margin: 0 auto 1.75rem; line-height: 1.6; }
 .rl-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; }
 .rl-btn { display: inline-flex; align-items: center; gap: .5rem; border-radius: .6rem; padding: .7rem 1.2rem; font-weight: 600; text-decoration: none; border: 1px solid var(--sl-color-gray-5); color: var(--sl-color-white); }
-.rl-btn.primary { background: var(--sl-color-accent); color: #fff; border-color: transparent; }
+/* Wie Starlights Hauptknopf im Hero: Schrift in --sl-color-black, dunkel auf dem hellen Orange des Dunkelmodus. */
+.rl-btn.primary { background: var(--sl-color-accent); color: var(--sl-color-black); border-color: transparent; }
+.rl-btn.primary:hover { color: var(--sl-color-black); }
 .rl-btn:hover { border-color: var(--sl-color-accent); }
 .rl-section { display: grid; gap: 2.5rem; align-items: center; padding-block: 3rem; border-top: 1px solid var(--sl-color-gray-6); }
 @media (min-width: 52rem) { .rl-section { grid-template-columns: 1fr 1fr; } .rl-section.flip > :first-child { order: 2; } }
-.rl-badge { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 600; color: var(--rl-accent, var(--sl-color-accent)); margin-bottom: .75rem; }
-.rl-badge::before { content: ''; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
+/* Die Marke traegt Namen und Farbe der Schicht aus dem Bild; mit Textfarbe gemischt wie die Schichtbeschriftung, damit Blau und Lila auch dunkel lesbar bleiben. */
+.rl-badge { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 600; color: color-mix(in oklab, var(--rl-accent, var(--sl-color-accent)) 62%, var(--sl-color-white)); margin-bottom: .75rem; }
+.rl-badge::before { content: ''; width: .5rem; height: .5rem; border-radius: 50%; background: var(--rl-accent, var(--sl-color-accent)); }
 .rl-section h2 { font-size: 1.9rem; margin: 0 0 .75rem; }
 /* Ueberschriften tragen ihre eigene Zeilenhoehe: Starlights 1.75 fuer Fliesstext liess
    um jede von ihnen eine halbe Leerzeile stehen — auf dem Telefon je Umbruch. */
@@ -116,27 +120,26 @@ h2, h3 { letter-spacing: -.02em; }
 a.rl-card { text-decoration: none; color: inherit; }
 a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-more { margin: 1.25rem 0 0; font-size: .9rem; }
-.rl-more a { color: var(--sl-color-accent); text-decoration: none; }
-.rl-more a:hover { text-decoration: underline; }
+.rl-more-link { color: var(--sl-color-accent); font-weight: 600; text-decoration: none; }
+.rl-more-link:hover { text-decoration: underline; }
 .rl-card strong { display: block; margin-bottom: .2rem; }
 /* 1.75 auf 13.6px zog die Karten auseinander; auf dem Telefon, wo der Text vier Zeilen
    braucht statt zwei, wurde daraus eine halbe Bildschirmhoehe. */
 .rl-card span { font-size: .85rem; line-height: 1.5; color: var(--sl-color-gray-2); }
-.rl-card.compact { padding: .6rem .75rem; flex-direction: row; gap: .6rem; align-items: flex-start; }
-.rl-card.compact > div { min-width: 0; text-align: start; }
-.rl-card.compact > div span { display: block; }
+/* Zeilenkarte: Kachel links, Text rechts, rechts aussen optional ein Hinweis (npm, Spec). Schnittstelle und Connectoren. */
+.rl-card.row { flex-direction: row; gap: 1rem; align-items: center; }
+.rl-card.row > div { min-width: 0; flex: 1; text-align: start; }
+.rl-card.row > div span { display: block; }
+.rl-card.row .rl-icon.tile { margin-bottom: 0; }
+.rl-card.open { border-style: dashed; }
+.rl-tag { font-style: normal; font-size: .75rem; font-weight: 600; padding: .15rem .5rem; border-radius: .35rem; border: 1px solid var(--sl-color-gray-5); color: var(--sl-color-gray-2); flex-shrink: 0; }
 .rl-card.centered { text-align: center; align-items: center; }
 .rl-card.centered .rl-icon { margin: 0 auto .6rem; }
-.rl-list > div { display: flex; gap: .75rem; align-items: flex-start; }
-.rl-list > div > div { display: grid; }
 /* Farbige Symbole wie in der React-Landing vor der Astro-Site: Kachel in Pastell, Symbol in der Vollfarbe. */
 .rl-icon { display: inline-flex; align-items: center; justify-content: center; color: var(--rl-tone); flex-shrink: 0; }
 /* Auf dem svg selbst, nicht auf dem span: `.rl-card span` setzt Grau mit hoeherer Spezifitaet (rls#447). */
 .rl-icon svg { width: 1.25rem; height: 1.25rem; color: var(--rl-tone); }
 .rl-icon.tile { width: 2.5rem; height: 2.5rem; border-radius: .6rem; background: color-mix(in oklab, var(--rl-tone) 14%, transparent); margin-bottom: .6rem; }
-.rl-list .rl-icon.tile { width: 2rem; height: 2rem; margin-bottom: 0; }
-.rl-list .rl-icon.tile svg { width: 1rem; height: 1rem; }
-.rl-card.compact .rl-icon { margin-top: .1rem; }
 .rl-icon.tone-green { --rl-tone: oklch(0.62 0.15 150); }
 .rl-icon.tone-blue { --rl-tone: oklch(0.55 0.21 264); }
 .rl-icon.tone-orange { --rl-tone: oklch(0.68 0.18 50); }
@@ -144,18 +147,21 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-icon.tone-red { --rl-tone: oklch(0.6 0.2 25); }
 .rl-icon.tone-teal { --rl-tone: oklch(0.62 0.13 190); }
 :root[data-theme='dark'] .rl-icon.tile { background: color-mix(in oklab, var(--rl-tone) 22%, transparent); }
-.rl-card.compact strong { font-size: .9rem; }
-.rl-card.compact span { font-size: .75rem; }
-.rl-list { display: grid; gap: 1rem; border-inline-start: 4px solid var(--rl-blue); padding: 1.25rem; border-radius: .7rem; background: var(--sl-color-bg-sidebar); }
-.rl-list strong { display: block; }
-.rl-list span { font-size: .9rem; line-height: 1.5; color: var(--sl-color-gray-2); }
 .rl-ways { padding-block: 3rem; border-top: 1px solid var(--sl-color-gray-6); }
 .rl-ways h2 { font-size: 1.9rem; margin: 0 0 .5rem; }
-.rl-ways > p { color: var(--sl-color-gray-2); margin: 0 0 1.5rem; }
+.rl-ways-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: .5rem 1.5rem; margin-bottom: 1.5rem; }
+.rl-ways-head p { color: var(--sl-color-gray-2); margin: 0; }
 .rl-ways .rl-cards { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
 .rl-ways a.rl-card { text-decoration: none; color: inherit; display: block; }
 .rl-ways a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-ways .soon { opacity: .6; }
+
+/* Schluss der Landing: die beiden Einstiege aus dem Hero noch einmal, als Band in der Markenfarbe. */
+.rl-outro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.5rem 2.5rem; margin-block: 1rem 2rem; padding: 2.5rem; border-radius: 1.2rem; border: 1px solid color-mix(in oklab, var(--sl-color-accent) 35%, transparent); background: color-mix(in oklab, var(--sl-color-accent) 7%, transparent); }
+.rl-outro > div:first-child { max-width: 34rem; }
+.rl-outro h2 { font-size: 1.7rem; line-height: 1.2; margin: 0 0 .5rem; }
+.rl-outro p { color: var(--sl-color-gray-2); line-height: 1.65; margin: 0; }
+.rl-outro .rl-actions { justify-content: flex-start; margin: 0; }
 
 /* Fußzeile: Teil von Real Life */
 .rl-family { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--sl-color-gray-5); font-size: .85rem; color: var(--sl-color-gray-2); display: grid; gap: .5rem; }
@@ -200,6 +206,9 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
   .rl-ways, .rl-section { padding-block: 2rem; }
   .rl-section { gap: 1.5rem; }
   .rl-section h2, .rl-ways h2 { font-size: 1.5rem; }
+  .rl-outro { padding: 1.75rem 1.25rem; }
+  .rl-outro h2 { font-size: 1.4rem; }
+  .rl-outro .rl-actions, .rl-outro .rl-btn { width: 100%; justify-content: center; }
   .rl-landing .rl-cards { gap: .75rem; }
   .hero { padding-block: 1.5rem .5rem; }
   /* Starlight klemmt die Hero-Zeile unten bei --sl-text-3xl (1.8rem) fest; auf dem
