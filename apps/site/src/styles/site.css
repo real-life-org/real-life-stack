@@ -74,7 +74,8 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-stack-label {
   display: block; margin-bottom: .45rem; text-align: center;
   font-size: .72rem; font-weight: 650; letter-spacing: .06em; text-transform: uppercase;
-  color: color-mix(in oklab, var(--rl-tone) 80%, var(--sl-color-white));
+  /* Mit Textfarbe gemischt: 4.5:1 auch bei kleiner Schrift, hell wie dunkel, und die Farbe der Schicht bleibt erkennbar. */
+  color: color-mix(in oklab, var(--rl-tone) 62%, var(--sl-color-white));
 }
 .rl-stack-layer ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; }
 .rl-stack-layer li {
