@@ -1,6 +1,7 @@
 ---
 import { translations, type TranslatedLanguage } from '../i18n/landing'
 import Icon from './Icon.astro'
+import { stackDiagramHtml } from '../lib/stack-diagram'
 import type { IconName } from './icons'
 interface Props { lang: TranslatedLanguage }
 const { lang } = Astro.props
@@ -32,11 +33,30 @@ const modules: { name: string; desc: string; icon: IconName; tone: Tone; story: 
   { name: t.modules.feed, desc: t.modules.feedDesc, icon: 'message-square', tone: 'orange', story: 'rls-modules-feed--docs' },
 ]
 const waysTitle = de ? 'Loslegen' : 'Get started'
+const waysIntro = de ? 'Vier Wege ins Handbuch, je nachdem, was du vorhast.' : 'Four ways into the handbook, depending on what you have in mind.'
+const waysAll = de ? 'Ganzes Handbuch' : 'Full handbook'
+// Die Abschnitte tragen Namen und Farbe ihrer Schicht im Bild darüber, damit Bild und Seite sich decken.
+const layer = { toolkit: 'Toolkit', interface: 'Data Interface', connectors: de ? 'Connectoren' : 'Connectors' }
+// Schluss der Seite: zurück zu den beiden Einstiegen aus dem Hero.
+const outro = de
+  ? { title: 'Sieh es dir in Aktion an', text: 'Die Demo zeigt die Referenz-App mit allen Modulen. Das Handbuch führt dich von dort zur eigenen Instanz oder App.', demo: t.hero.demo, handbook: 'Handbuch' }
+  : { title: 'See it in action', text: 'The demo shows the reference app with every module. From there, the handbook takes you to your own instance or app.', demo: t.hero.demo, handbook: 'Handbook' }
+// Der Stack als eigener Abschnitt: vier Schichten, zugleich die Karte der drei Abschnitte darunter.
+// Deutsch und Englisch; die übrigen Sprachen lesen die englische Fassung wie bei den Wegen.
+const stack = de
+  ? { badge: 'Aufbau', title: 'Vier Schichten', p1: 'Eine App setzt sich aus Modulen des Toolkits zusammen. Die Module lesen über das Data Interface und schreiben über die Fähigkeiten, die der Connector anbietet. Ein Connector verbindet es mit einer Datenquelle: Web of Trust, Supabase oder einer eigenen.', p2: 'Apps, Module und Connectoren lassen sich austauschen, solange sie sich an das Data Interface halten: Es ist der feste Vertrag in der Mitte. Die Abschnitte darunter gehen sie von oben nach unten durch.' }
+  : { badge: 'Architecture', title: 'Four layers', p1: 'An app is composed of toolkit modules. The modules read through the Data Interface and write through the capabilities the connector offers. A connector links it to a data source: Web of Trust, Supabase or your own.', p2: 'Apps, modules and connectors can be swapped as long as they keep to the Data Interface: it is the fixed contract in the middle. The sections below walk through them from top to bottom.' }
 const soon = de ? 'folgt' : 'soon'
 ---
 <div class="rl-landing not-content">
   <section class="rl-ways" id="wege">
-    <h2>{waysTitle}</h2>
+    <div class="rl-ways-head">
+      <div>
+        <h2>{waysTitle}</h2>
+        <p>{waysIntro}</p>
+      </div>
+      <a class="rl-more-link" href={`${prefix}/handbuch/`}>{waysAll} →</a>
+    </div>
     <div class="rl-cards">
       {ways.map((w) => (
         <a class:list={['rl-card', { soon: w.soon }]} href={w.href}>
@@ -48,9 +68,19 @@ const soon = de ? 'folgt' : 'soon'
     </div>
   </section>
 
-  <section class="rl-section" id="module">
+  <section class="rl-section flip" id="aufbau">
     <div>
-      <div class="rl-badge">{t.modules.badge}</div>
+      <div class="rl-badge">{stack.badge}</div>
+      <h2>{stack.title}</h2>
+      <p>{stack.p1}</p>
+      <p>{stack.p2}</p>
+    </div>
+    <Fragment set:html={stackDiagramHtml(lang, prefix)} />
+  </section>
+
+  <section class="rl-section" id="module" style="--rl-accent: var(--rl-purple)">
+    <div>
+      <div class="rl-badge">{layer.toolkit}</div>
       <h2>{t.modules.title}</h2>
       <p>{t.modules.p1}</p>
       <p>{t.modules.p2}</p>
@@ -58,45 +88,56 @@ const soon = de ? 'folgt' : 'soon'
     <div>
       <div class="rl-cards">
         {modules.map((m) => (
-          <a class="rl-card centered" href={`https://real-life-stack.de/storybook/?path=/docs/${m.story}`}>
+          <a class="rl-card" href={`https://real-life-stack.de/storybook/?path=/docs/${m.story}`}>
             <Icon name={m.icon} tone={m.tone} />
             <strong>{m.name}</strong><span>{m.desc}</span>
           </a>
         ))}
       </div>
-      <p class="rl-more"><a href="https://real-life-stack.de/storybook/?path=/docs/rls-start-read-me-first--docs">{m('more')} →</a></p>
+      <p class="rl-more"><a class="rl-more-link" href="https://real-life-stack.de/storybook/?path=/docs/rls-start-read-me-first--docs">{m('more')} →</a></p>
     </div>
   </section>
 
   <section class="rl-section flip" id="schnittstelle" style="--rl-accent: var(--rl-blue)">
     <div>
-      <div class="rl-badge">{t.dataInterface.badge}</div>
+      <div class="rl-badge">{layer.interface}</div>
       <h2>{t.dataInterface.title}</h2>
       <p>{t.dataInterface.p1}</p>
       <p>{t.dataInterface.p2}</p>
     </div>
-    <div class="rl-list">
-      <div><Icon name="layers" tone="orange" /><div><strong>{t.dataInterface.items}</strong><span>{t.dataInterface.itemsDesc}</span></div></div>
-      <div><Icon name="users" tone="purple" /><div><strong>{t.dataInterface.spaces}</strong><span>{t.dataInterface.spacesDesc}</span></div></div>
-      <div><Icon name="shield-check" tone="teal" /><div><strong>{t.dataInterface.capabilities}</strong><span>{t.dataInterface.capabilitiesDesc}</span></div></div>
+    <div class="rl-cards one">
+      <div class="rl-card row"><Icon name="layers" tone="orange" /><div><strong>{t.dataInterface.items}</strong><span>{t.dataInterface.itemsDesc}</span></div></div>
+      <div class="rl-card row"><Icon name="users" tone="purple" /><div><strong>{t.dataInterface.spaces}</strong><span>{t.dataInterface.spacesDesc}</span></div></div>
+      <div class="rl-card row"><Icon name="shield-check" tone="teal" /><div><strong>{t.dataInterface.capabilities}</strong><span>{t.dataInterface.capabilitiesDesc}</span></div></div>
     </div>
   </section>
 
   <section class="rl-section" id="connectoren" style="--rl-accent: var(--rl-green)">
     <div>
-      <div class="rl-badge">{t.connectors.badge}</div>
+      <div class="rl-badge">{layer.connectors}</div>
       <h2>{t.connectors.title}</h2>
       <p>{t.connectors.p1}</p>
       <p>{t.connectors.p2}</p>
     </div>
     <div class="rl-cards one">
       {([
-        [t.connectors.wot, t.connectors.wotDesc, 'wot', 'orange', 'https://web-of-trust.de/'],
-        [t.connectors.supabase, t.connectors.supabaseDesc, 'database', 'green', 'https://www.npmjs.com/package/@real-life-stack/supabase-connector'],
-        [t.connectors.own, t.connectors.ownDesc, 'plug', 'blue', 'https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/03-capabilities.md'],
-      ] as const).map(([name, desc, icon, tone, href]) => (
-        <a class="rl-card compact" href={href}><Icon name={icon} tone={tone} tile={false} /><div><strong>{name}</strong><span>{desc}</span></div></a>
+        [t.connectors.wot, t.connectors.wotDesc, 'wot', 'orange', 'https://www.npmjs.com/package/@real-life-stack/wot-connector', 'npm'],
+        [t.connectors.supabase, t.connectors.supabaseDesc, 'database', 'green', 'https://www.npmjs.com/package/@real-life-stack/supabase-connector', 'npm'],
+        [t.connectors.own, t.connectors.ownDesc, 'plug', 'blue', 'https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/03-capabilities.md', 'Spec'],
+      ] as const).map(([name, desc, icon, tone, href, tag]) => (
+        <a class:list={['rl-card row', { open: tag === 'Spec' }]} href={href}><Icon name={icon} tone={tone} /><div><strong>{name}</strong><span>{desc}</span></div><em class="rl-tag">{tag}</em></a>
       ))}
+    </div>
+  </section>
+
+  <section class="rl-outro">
+    <div>
+      <h2>{outro.title}</h2>
+      <p>{outro.text}</p>
+    </div>
+    <div class="rl-actions">
+      <a class="rl-btn primary" href="https://real-life-stack.de/app/">{outro.demo} →</a>
+      <a class="rl-btn" href={`${prefix}/handbuch/`}>{outro.handbook}</a>
     </div>
   </section>
 </div>
