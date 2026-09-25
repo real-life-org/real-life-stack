@@ -473,7 +473,7 @@ selbst von der Autorin signiert sein, anders als bei kollaborativen Items.
    dem gespeicherten Item, `content` gleich dem gespeicherten Wortlaut.
    Abweichung ist `invalid`.
 5. Signieren darf nur die Autorin. Ob eine Änderung des Wortlauts zulässig
-   ist, regelt das Resonanzmodul (Einfrieren nach der ersten Stimme). Die
+   ist, regelt das Resonanzmodul (Einfrieren nach der ersten Stimme einer anderen Person). Die
    Prüfung hängt davon nicht ab: Stimmen tragen den Inhalts-Hash, und eine
    nachträgliche Änderung lässt sie nicht mehr zählen.
 6. Claim-Modi wie oben: `signed`-Connectoren MÜSSEN den Claim schreiben und

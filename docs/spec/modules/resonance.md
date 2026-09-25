@@ -74,9 +74,11 @@ Regeln:
    Autorin über den Wortlaut tragen, sofern der Connector einen Claim-Modus
    hat (Spec 08).
 2. Den Wortlaut DARF nur die Autorin ändern, und nur solange zu dem
-   Statement keine Stimme existiert, auch keine eigene. Jede Änderung MUSS
-   neu signiert werden.
-3. Sobald eine Stimme existiert, ist das Statement **eingefroren**: Die UI
+   Statement keine Stimme einer anderen Person existiert. Jede Änderung
+   MUSS neu signiert werden. Die eigene Stimme der Autorin zählt nach einer
+   Änderung erst wieder, wenn sie neu abstimmt (Vote-Regel 5).
+3. Sobald eine Stimme einer anderen Person existiert, ist das Statement
+   **eingefroren**: Die UI
    MUSS „Bearbeiten" für den Wortlaut ausblenden und stattdessen
    „Variante anlegen" anbieten. Tags bleiben nach den allgemeinen
    Item-Berechtigungen bearbeitbar.
@@ -188,7 +190,7 @@ neues Statement mit `data.variantOf` auf die Aussage, von der es abweicht.
 | Aktion | Voraussetzung | Effekt |
 |---|---|---|
 | Statement einbringen | `ItemWriter` | `createItem(type: "statement")` |
-| Statement bearbeiten | `ItemWriter` + Autorschaft + keine Stimme vorhanden | `updateItem` mit neuem `statement-authorial`-Claim |
+| Statement bearbeiten | `ItemWriter` + Autorschaft + keine Stimme einer anderen Person | `updateItem` mit neuem `statement-authorial`-Claim |
 | Variante anlegen | `ItemWriter` | `createItem(type: "statement")` mit `data.variantOf` |
 | Tags ändern | `ItemWriter` + Berechtigung | `updateItem` auf `tags`; berührt den Wortlaut nicht |
 | Stimme abgeben | `RelationRecordCapable` + `RelationRecordWriterCapable` + `Authenticatable` | `createRelationRecord` (kanonische ID, `createdBy` aus der Identität, `fields.contentHash` des angezeigten Wortlauts); der Record entsteht im Owner-Space des Statements |
