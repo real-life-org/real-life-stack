@@ -13,7 +13,7 @@ const svg = (name: IconName) =>
 
 function layers(de: boolean, prefix: string): Layer[] {
   return [
-    { key: 'apps', label: 'Apps', tone: 'orange', href: `${prefix}/handbuch/erste-app/`, chips: [['globe', de ? 'Referenz-App' : 'Reference app'], ['users', de ? 'Netzwerk-App' : 'Network app'], ['rocket', de ? 'Deine App' : 'Your app']] },
+    { key: 'apps', label: 'Apps', tone: 'orange', href: `${prefix}/handbuch/erste-app/`, chips: [['globe', de ? 'Referenz-App' : 'Reference app'], ['rocket', de ? 'Deine App' : 'Your app']] },
     { key: 'toolkit', label: 'Toolkit', tone: 'purple', href: '#module', chips: [['map', de ? 'Karte' : 'Map'], ['calendar', de ? 'Kalender' : 'Calendar'], ['kanban', 'Kanban'], ['message-square', 'Feed']] },
     { key: 'interface', label: 'Data Interface', tone: 'blue', href: '#schnittstelle', chips: [['layers', 'Items'], ['users', 'Spaces'], ['shield-check', 'Capabilities']] },
     { key: 'connectors', label: de ? 'Connectoren' : 'Connectors', tone: 'green', href: '#connectoren', chips: [['wot', 'Web of Trust'], ['database', 'Supabase'], ['plug', de ? 'Eigener' : 'Your own']] },
