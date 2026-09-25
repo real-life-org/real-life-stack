@@ -44,8 +44,8 @@ const outro = de
 // Der Stack als eigener Abschnitt: vier Schichten, zugleich die Karte der drei Abschnitte darunter.
 // Deutsch und Englisch; die übrigen Sprachen lesen die englische Fassung wie bei den Wegen.
 const stack = de
-  ? { badge: 'Aufbau', title: 'Vier Schichten', p1: 'Eine App setzt sich aus Modulen des Toolkits zusammen. Die Module lesen über das Data Interface und schreiben über die Fähigkeiten, die der Connector anbietet. Ein Connector verbindet es mit einer Datenquelle: Web of Trust, Supabase oder einer eigenen.', p2: 'Jede Schicht lässt sich austauschen, ohne die anderen anzufassen. Die Abschnitte darunter gehen sie von oben nach unten durch.' }
-  : { badge: 'Architecture', title: 'Four layers', p1: 'An app is composed of toolkit modules. The modules read through the Data Interface and write through the capabilities the connector offers. A connector links it to a data source: Web of Trust, Supabase or your own.', p2: 'Each layer can be replaced without touching the others. The sections below walk through them from top to bottom.' }
+  ? { badge: 'Aufbau', title: 'Vier Schichten', p1: 'Eine App setzt sich aus Modulen des Toolkits zusammen. Die Module lesen über das Data Interface und schreiben über die Fähigkeiten, die der Connector anbietet. Ein Connector verbindet es mit einer Datenquelle: Web of Trust, Supabase oder einer eigenen.', p2: 'Apps, Module und Connectoren lassen sich austauschen, solange sie sich an das Data Interface halten: Es ist der feste Vertrag in der Mitte. Die Abschnitte darunter gehen sie von oben nach unten durch.' }
+  : { badge: 'Architecture', title: 'Four layers', p1: 'An app is composed of toolkit modules. The modules read through the Data Interface and write through the capabilities the connector offers. A connector links it to a data source: Web of Trust, Supabase or your own.', p2: 'Apps, modules and connectors can be swapped as long as they keep to the Data Interface: it is the fixed contract in the middle. The sections below walk through them from top to bottom.' }
 const soon = de ? 'folgt' : 'soon'
 ---
 <div class="rl-landing not-content">
