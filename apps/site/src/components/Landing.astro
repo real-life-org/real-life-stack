@@ -1,6 +1,7 @@
 ---
 import { translations, type TranslatedLanguage } from '../i18n/landing'
 import Icon from './Icon.astro'
+import { stackDiagramHtml } from '../lib/stack-diagram'
 import type { IconName } from './icons'
 interface Props { lang: TranslatedLanguage }
 const { lang } = Astro.props
@@ -32,6 +33,11 @@ const modules: { name: string; desc: string; icon: IconName; tone: Tone; story: 
   { name: t.modules.feed, desc: t.modules.feedDesc, icon: 'message-square', tone: 'orange', story: 'rls-modules-feed--docs' },
 ]
 const waysTitle = de ? 'Loslegen' : 'Get started'
+// Der Stack als eigener Abschnitt: vier Schichten, zugleich die Karte der drei Abschnitte darunter.
+// Deutsch und Englisch; die übrigen Sprachen lesen die englische Fassung wie bei den Wegen.
+const stack = de
+  ? { badge: 'Aufbau', title: 'Vier Schichten', p1: 'Eine App setzt sich aus Modulen des Toolkits zusammen. Die Module lesen und schreiben nur über das Data Interface. Ein Connector verbindet es mit einer Datenquelle: Web of Trust, Supabase oder einer eigenen.', p2: 'Jede Schicht lässt sich austauschen, ohne die anderen anzufassen.' }
+  : { badge: 'Architecture', title: 'Four layers', p1: 'An app is composed of toolkit modules. The modules read and write only through the Data Interface. A connector links it to a data source: Web of Trust, Supabase or your own.', p2: 'Each layer can be replaced without touching the others.' }
 const soon = de ? 'folgt' : 'soon'
 ---
 <div class="rl-landing not-content">
@@ -46,6 +52,16 @@ const soon = de ? 'folgt' : 'soon'
         </a>
       ))}
     </div>
+  </section>
+
+  <section class="rl-section flip" id="aufbau">
+    <div>
+      <div class="rl-badge">{stack.badge}</div>
+      <h2>{stack.title}</h2>
+      <p>{stack.p1}</p>
+      <p>{stack.p2}</p>
+    </div>
+    <Fragment set:html={stackDiagramHtml(lang, prefix)} />
   </section>
 
   <section class="rl-section" id="module">
