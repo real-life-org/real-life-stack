@@ -99,8 +99,13 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-hero p { font-size: 1.2rem; color: var(--sl-color-gray-2); max-width: 40rem; margin: 0 auto 1.75rem; line-height: 1.6; }
 .rl-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; }
 .rl-btn { display: inline-flex; align-items: center; gap: .5rem; border-radius: .6rem; padding: .7rem 1.2rem; font-weight: 600; text-decoration: none; border: 1px solid var(--sl-color-gray-5); color: var(--sl-color-white); }
-/* Wie Starlights Hauptknopf im Hero: Schrift in --sl-color-black, dunkel auf dem hellen Orange des Dunkelmodus. */
-.rl-btn.primary { background: var(--sl-color-accent); color: var(--sl-color-black); border-color: transparent; }
+/* Hauptknoepfe (Hero und Schluss) teilen eine Flaeche: dunkel Starlights helles Orange mit dunkler Schrift.
+   Hell traegt weisse Schrift auf dem Markenorange nur 3,7:1; ein tieferes Orange nur fuer die Knopfflaeche
+   erreicht 4,5:1, Links und Marken behalten ihr Orange. */
+:root { --rl-primary-bg: var(--sl-color-text-accent); }
+:root[data-theme='light'] { --rl-primary-bg: oklch(0.56 0.15 52); }
+.hero .sl-link-button.primary { background: var(--rl-primary-bg); border-color: var(--rl-primary-bg); }
+.rl-btn.primary { background: var(--rl-primary-bg); color: var(--sl-color-black); border-color: transparent; }
 .rl-btn.primary:hover { color: var(--sl-color-black); }
 .rl-btn:hover { border-color: var(--sl-color-accent); }
 /* Luft wie im Entwurf: jeder Abschnitt steht fuer sich, Text und Bild mit deutlichem Abstand. */
