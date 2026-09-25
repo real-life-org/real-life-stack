@@ -3,6 +3,7 @@
     "@version": 1.1,
     "rls": "https://real-life-stack.org/vocab/statement/v1#",
 
-    "statement": "rls:Statement"
+    "statement": "rls:Statement",
+    "variantOf": { "@id": "rls:variantOf", "@type": "@id" }
   }
 }

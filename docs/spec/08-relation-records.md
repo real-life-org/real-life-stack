@@ -415,6 +415,7 @@ Typ-Register, 06).
 |---|---|---|---|
 | `authorial` | `relation-authorial` (Identität **+ Inhalt** inkl. `fields` und `confirmationRef`) | nur der Autor; jedes `updateRelationRecord` (auch `confirmationRef`-Änderung) MUSS re-signieren | `votesOn`, `knows`, `connectedWith`, `takesPlaceAt` |
 | `structural` | kein Record-Claim; als eigenständiges Relation-Item trägt der Record den **Item-Herkunfts-Claim** (unten) | kollaborativ | — (heute keine Record-Prädikate; eingebettete `assignedTo`/`invited`/`blocks`/`childOf` deckt der Herkunfts-Claim des Trägeritems) |
+| `statement-authorial` | Item-Claim über Identität **+ Wortlaut** einer Aussage (unten) | nur die Autorin; jede Änderung des Wortlauts MUSS neu signieren | Items mit `type: "statement"` (Resonanzmodul) |
 
 **Exklusivität (ein Claim pro Datensatz):** `data.claim` trägt genau EINEN
 Claim — kein Array, keine parallelen Felder. Ein `authorial`-Record trägt
@@ -439,6 +440,52 @@ legitimen Fremd-Edit (zwei parallel gemergte Edits hätten keinen Zustand, den
 je jemand signiert hat). Er gilt für ALLE Items — Relation-Items
 eingeschlossen, wodurch auch eigenständige `structural`-Records eine
 Herkunftsbindung bekommen.
+
+### `statement-authorial`
+
+**Status:** Normativer Entwurf. Gegenstück zu `relation-authorial` für die
+Aussagen des Resonanzmoduls ([modules/resonance.md](modules/resonance.md)).
+Eine Stimme bezeugt einen Wortlaut. Damit das prüfbar ist, muss der Wortlaut
+selbst von der Autorin signiert sein, anders als bei kollaborativen Items.
+
+```json
+{
+  "v": "rls-claim/1",
+  "profile": "statement-authorial",
+  "id": "…",
+  "type": "statement",
+  "createdBy": "did:key:…",
+  "createdAt": "2026-09-25T12:00:00.000Z",
+  "content": { "title": "…", "description": null, "variantOf": null }
+}
+```
+
+1. Alle Member sind IMMER präsent. `content` ist der Wortlaut nach
+   [modules/resonance.md → Wortlaut und Einfrieren](modules/resonance.md#wortlaut-und-einfrieren);
+   fehlende Felder sind `null`. Tags gehören nicht dazu.
+2. Das Profil gilt nur für Items mit `type: "statement"`. Auf jedem anderen
+   Datensatz ist es `invalid`.
+3. Der Claim ersetzt für Statements den Herkunfts-Claim, dessen
+   unveränderliche Felder er mitbindet (Exklusivität wie oben). Gespeichert
+   wird er als Vertragsfeld `data.claim`, das nie Teil des Wortlauts ist.
+4. Verifier prüfen wie bei `relation-authorial`: Schlüssel aus `kid`,
+   `didOrKidToDid(kid) === payload.createdBy`, jedes Payload-Member gleich
+   dem gespeicherten Item, `content` gleich dem gespeicherten Wortlaut.
+   Abweichung ist `invalid`.
+5. Signieren darf nur die Autorin. Ob eine Änderung des Wortlauts zulässig
+   ist, regelt das Resonanzmodul (Einfrieren nach der ersten Stimme einer anderen Person). Die
+   Prüfung hängt davon nicht ab: Stimmen tragen den Inhalts-Hash, und eine
+   nachträgliche Änderung lässt sie nicht mehr zählen.
+6. Claim-Modi wie oben: `signed`-Connectoren MÜSSEN den Claim schreiben und
+   prüfen; ein Statement ohne Claim ist dort `invalid`. `authoritative`-Connectoren
+   schreiben keinen Claim; `trusted` DÜRFEN sie nur beanspruchen, wenn jeder
+   Ingress-Pfad die Autorbindung erzwingt und Änderungen am Wortlaut auf die
+   Autorin beschränkt.
+7. Leseregeln analog L1/L2: Ein Statement mit `invalid`-Claim zählt in
+   keiner Auswertung, seine Stimmen ebenso wenig. Anzeigeflächen DÜRFEN es
+   mit Kennzeichnung („verändert") zeigen. Einen Altbestand-Modus gibt es
+   nicht: Die Abwesenheit eines Claims beweist keine Herkunft und kann in
+   einem Multi-Writer-Store jederzeit hergestellt werden.
 
 ### Schreibregeln (Fassade)
 
