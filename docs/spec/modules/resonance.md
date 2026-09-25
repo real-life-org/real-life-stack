@@ -42,7 +42,7 @@ dem Inhalt, nicht aus Feature-Varianten des Moduls.
 | `data.title` | die Aussage — ein Satz; Pflicht |
 | `data.description` | optionaler Kontext |
 | `data.variantOf` | optional: `item:<statementId>` der Aussage, von der dieses Statement eine Variante ist (siehe „Varianten") |
-| `data.claim` | SignedClaim der Autorin über den Wortlaut (Profil `statement-authorial`, [08-relation-records.md](../08-relation-records.md#statement-authorial)); Vertragsfeld, nie Teil des Wortlauts |
+| `data.claim` | im Modus `signed`: SignedClaim der Autorin über den Wortlaut (Profil `statement-authorial`, [08-relation-records.md](../08-relation-records.md#statement-authorial)); Vertragsfeld, nie Teil des Wortlauts |
 | `tags` | Top-level am Item, Kategorisierung — siehe [07-tags.md](../07-tags.md); ein Tag ordnet die Aussage einem Modul zu |
 | `createdBy` | Autorin der Aussage |
 
@@ -70,12 +70,11 @@ Hex in Kleinbuchstaben). Tags gehören nicht zum Wortlaut.
 
 Regeln:
 
-1. Ein Statement MUSS beim Anlegen einen `statement-authorial`-Claim der
-   Autorin über den Wortlaut tragen, sofern der Connector einen Claim-Modus
-   hat (Spec 08).
+1. Ein Statement zählt nur, wenn seine Bindung an Autorin und Wortlaut
+   geprüft ist. Was das je Claim-Modus heißt, regelt die Tabelle unten.
 2. Den Wortlaut DARF nur die Autorin ändern, und nur solange zu dem
-   Statement keine Stimme einer anderen Person existiert. Jede Änderung
-   MUSS neu signiert werden. Die eigene Stimme der Autorin zählt nach einer
+   Statement keine Stimme einer anderen Person existiert. Im Modus `signed`
+   MUSS jede Änderung neu signiert werden. Die eigene Stimme der Autorin zählt nach einer
    Änderung erst wieder, wenn sie neu abstimmt (Vote-Regel 5).
 3. Sobald eine Stimme einer anderen Person existiert, ist das Statement
    **eingefroren**: Die UI
@@ -84,11 +83,18 @@ Regeln:
    Item-Berechtigungen bearbeitbar.
 4. Editoren DÜRFEN NICHT den gespeicherten Wortlaut beim Öffnen normalisiert
    zurückschreiben: Jede Byte-Änderung ändert den Inhalts-Hash.
-5. **Altbestand:** Ein Statement ohne `statement-authorial`-Claim gilt als
-   **offen**. Es verhält sich wie vor dieser Fassung: Stimmen ohne
-   `contentHash` zählen, und die UI MUSS es als „nicht eingefroren"
-   kennzeichnen. Offene Statements werden nicht nachträglich signiert; wer
-   eines festhalten will, legt eine Variante an.
+5. Es gibt keinen Altbestand-Modus. Ein Statement ohne positives Verdikt
+   zählt nicht, gleich woher es kommt.
+
+Claim-Modi (Spec 08) und was jeweils zählt:
+
+| Claim-Modus | Statement | Stimme | Zählt |
+|---|---|---|---|
+| `signed` | MUSS einen gültigen `statement-authorial`-Claim tragen; fehlt er oder ist er ungültig, ist das Statement `invalid` | MUSS einen gültigen `relation-authorial`-Claim mit `fields.contentHash` tragen | bei Verdikt `valid` für Statement und Stimme |
+| `authoritative` | trägt keinen Claim; der Store MUSS die Autorbindung erzwingen und Änderungen am Wortlaut auf die Autorin beschränken | trägt keinen Claim, MUSS aber `fields.contentHash` tragen | bei Verdikt `trusted` |
+| kein Claim-Modus | unverifiziert | unverifiziert | nie (Spec 08, L1) |
+
+In allen Modi gilt die Wortlautbindung der Stimme (Vote-Regel 5).
 
 ### Vote (die Stellungnahme)
 
@@ -102,7 +108,7 @@ niemals ein Feld am Statement und kein eigener Item-Typ:
 | `from` | `global:<voterDid>` — MUSS gleich `global:<createdBy>` sein |
 | `to` | `item:<statementId>` |
 | `fields.value` | `"green"` \| `"yellow"` \| `"red"` |
-| `fields.contentHash` | Inhalts-Hash des Wortlauts, dem die Stimme gilt; Pflicht bei signierten Statements, fehlt bei offenen (Altbestand) |
+| `fields.contentHash` | Inhalts-Hash des Wortlauts, dem die Stimme gilt; Pflicht in jedem Claim-Modus |
 | `createdBy` | vom Connector aus der authentifizierten Identität gesetzt — nie vom Aufrufer |
 
 Regeln (MUSS):
@@ -132,14 +138,13 @@ Regeln (MUSS):
    für alle Mitglieder lesbar, und die VoteBar zeigt die Voter-Namen je
    Stufe im Tooltip. Anonymität wird nicht versprochen, weil sie technisch
    nicht existiert.
-5. **Eine Stimme gilt einem Wortlaut.** Eine Stimme zu einem signierten
-   Statement zählt nur, wenn ihr `fields.contentHash` gleich dem
-   Inhalts-Hash des aktuell gespeicherten Wortlauts ist. Weil `fields` im
-   `relation-authorial`-Claim signiert ist, bezeugt die Stimmende damit
-   genau diesen Wortlaut. Stimmen mit abweichendem Hash zählen nicht; die
+5. **Eine Stimme gilt einem Wortlaut.** Eine Stimme zählt nur, wenn ihr
+   `fields.contentHash` gleich dem Inhalts-Hash des aktuell gespeicherten
+   Wortlauts ist. Im Modus `signed` ist `fields` im
+   `relation-authorial`-Claim signiert, die Stimmende bezeugt damit genau
+   diesen Wortlaut. Stimmen mit abweichendem Hash zählen nicht; die
    UI MUSS sie der Stimmenden als „Stimme für eine andere Fassung" zeigen,
-   damit sie neu abstimmen kann. Stimmen ohne `contentHash` zählen nur bei
-   offenen Statements.
+   damit sie neu abstimmen kann. Stimmen ohne `contentHash` zählen nie.
 
 **Vertrauensgrenze:** Die Fassade bindet ehrliche Clients an ihre
 Identität, und die geteilte Lese-Validierung macht Mehrfach-Stimmen
@@ -366,8 +371,11 @@ wann angelegt wurde, ist aber nicht die Quelle für Wortlaute.
 ## Offene Punkte
 
 - Testvektoren für `statement-authorial` und für Stimmen mit
-  `contentHash` (unter `docs/spec/schemas/claims/vectors/`). Ohne sie ist
-  das Format nicht fertig.
+  `contentHash` (unter `docs/spec/schemas/claims/vectors/`), darunter die
+  negativen Fälle: Claim entfernt, claimloses Statement mit fremder
+  Autorschaft, Stimme ohne `contentHash`, Stimme mit fremdem Hash,
+  Snapshot ohne lokale Historie, dazu normales Anlegen und Abstimmen im
+  Modus `authoritative`. Ohne sie ist das Format nicht fertig.
 - Item-Claims sind im Code noch nicht umgesetzt (auch `item-provenance`
   nicht). `statement-authorial` ist der erste Claim über einen
   Item-Inhalt und braucht die Signier- und Prüfwege in den Connectoren.

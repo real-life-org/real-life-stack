@@ -477,12 +477,15 @@ selbst von der Autorin signiert sein, anders als bei kollaborativen Items.
    Prüfung hängt davon nicht ab: Stimmen tragen den Inhalts-Hash, und eine
    nachträgliche Änderung lässt sie nicht mehr zählen.
 6. Claim-Modi wie oben: `signed`-Connectoren MÜSSEN den Claim schreiben und
-   prüfen. `trusted` DARF ein Connector nur beanspruchen, wenn jeder
-   Ingress-Pfad Änderungen am Wortlaut auf die Autorin beschränkt.
+   prüfen; ein Statement ohne Claim ist dort `invalid`. `authoritative`-Connectoren
+   schreiben keinen Claim; `trusted` DÜRFEN sie nur beanspruchen, wenn jeder
+   Ingress-Pfad die Autorbindung erzwingt und Änderungen am Wortlaut auf die
+   Autorin beschränkt.
 7. Leseregeln analog L1/L2: Ein Statement mit `invalid`-Claim zählt in
    keiner Auswertung, seine Stimmen ebenso wenig. Anzeigeflächen DÜRFEN es
-   mit Kennzeichnung („verändert") zeigen. Statements ohne Claim sind
-   Altbestand und folgen der Regel für offene Statements im Resonanzmodul.
+   mit Kennzeichnung („verändert") zeigen. Einen Altbestand-Modus gibt es
+   nicht: Die Abwesenheit eines Claims beweist keine Herkunft und kann in
+   einem Multi-Writer-Store jederzeit hergestellt werden.
 
 ### Schreibregeln (Fassade)
 
