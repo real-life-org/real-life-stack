@@ -88,7 +88,7 @@ const soon = de ? 'folgt' : 'soon'
     <div>
       <div class="rl-cards">
         {modules.map((m) => (
-          <a class="rl-card centered" href={`https://real-life-stack.de/storybook/?path=/docs/${m.story}`}>
+          <a class="rl-card" href={`https://real-life-stack.de/storybook/?path=/docs/${m.story}`}>
             <Icon name={m.icon} tone={m.tone} />
             <strong>{m.name}</strong><span>{m.desc}</span>
           </a>

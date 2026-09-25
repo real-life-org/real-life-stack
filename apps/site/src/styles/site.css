@@ -52,7 +52,7 @@ h2, h3 { letter-spacing: -.02em; }
 @media (max-width: 49.99rem) { .hero > .hero-html { display: none; } }
 
 /* Der Stack als Karte der Seite (Abschnitt Aufbau): vier Schichten, jede fuehrt zu ihrem Abschnitt. */
-.rl-stack { margin: 0; display: flex; flex-direction: column; align-items: center; gap: .9rem; width: 100%; max-width: 26rem; margin-inline: auto; }
+.rl-stack { margin: 0; display: flex; flex-direction: column; align-items: center; gap: .9rem; width: 100%; max-width: 28rem; margin-inline: auto; }
 .rl-stack-layer {
   --rl-tone: var(--sl-color-accent);
   position: relative; display: block; width: 100%; box-sizing: border-box; text-decoration: none; color: inherit;
@@ -81,7 +81,7 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-stack-layer ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; }
 .rl-stack-layer li {
   margin: 0; display: inline-flex; align-items: center; gap: .3rem;
-  padding: .2rem .5rem; border-radius: 999px; font-size: .76rem; line-height: 1.3; white-space: nowrap;
+  padding: .25rem .6rem; border-radius: 999px; font-size: .8rem; line-height: 1.3; white-space: nowrap;
   background: var(--sl-color-bg); border: 1px solid var(--sl-color-gray-5); color: var(--sl-color-white);
 }
 .rl-stack-layer li svg { width: .85rem; height: .85rem; color: var(--rl-tone); flex-shrink: 0; }
@@ -103,31 +103,39 @@ h2, h3 { letter-spacing: -.02em; }
 .rl-btn.primary { background: var(--sl-color-accent); color: var(--sl-color-black); border-color: transparent; }
 .rl-btn.primary:hover { color: var(--sl-color-black); }
 .rl-btn:hover { border-color: var(--sl-color-accent); }
-.rl-section { display: grid; gap: 2.5rem; align-items: center; padding-block: 3rem; border-top: 1px solid var(--sl-color-gray-6); }
+/* Luft wie im Entwurf: jeder Abschnitt steht fuer sich, Text und Bild mit deutlichem Abstand. */
+.rl-section { display: grid; gap: 4.5rem; align-items: center; padding-block: 6rem; border-top: 1px solid var(--sl-color-gray-6); }
 @media (min-width: 52rem) { .rl-section { grid-template-columns: 1fr 1fr; } .rl-section.flip > :first-child { order: 2; } }
 /* Die Marke traegt Namen und Farbe der Schicht aus dem Bild; mit Textfarbe gemischt wie die Schichtbeschriftung, damit Blau und Lila auch dunkel lesbar bleiben. */
 .rl-badge { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 600; color: color-mix(in oklab, var(--rl-accent, var(--sl-color-accent)) 62%, var(--sl-color-white)); margin-bottom: .75rem; }
 .rl-badge::before { content: ''; width: .5rem; height: .5rem; border-radius: 50%; background: var(--rl-accent, var(--sl-color-accent)); }
-.rl-section h2 { font-size: 1.9rem; margin: 0 0 .75rem; }
+.rl-section h2 { font-size: 2.25rem; font-weight: 700; letter-spacing: -.025em; color: var(--sl-color-white); margin: 0 0 1.1rem; }
 /* Ueberschriften tragen ihre eigene Zeilenhoehe: Starlights 1.75 fuer Fliesstext liess
    um jede von ihnen eine halbe Leerzeile stehen — auf dem Telefon je Umbruch. */
 .rl-section h2, .rl-ways h2 { line-height: 1.2; }
-.rl-section p { color: var(--sl-color-gray-2); line-height: 1.65; margin: 0 0 1rem; }
+.rl-section p { color: var(--sl-color-gray-2); font-size: 1.06rem; line-height: 1.7; margin: 0 0 1.1rem; }
+.rl-section p:last-child { margin-bottom: 0; }
 .rl-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; align-items: stretch; }
 .rl-cards.three { grid-template-columns: repeat(3, 1fr); }
 .rl-cards.one { grid-template-columns: 1fr; }
-.rl-card { border: 1px solid var(--sl-color-gray-5); border-radius: .7rem; padding: 1rem; background: var(--sl-color-bg-sidebar); display: flex; flex-direction: column; align-self: stretch; }
+/* Karten: etwas heller als die Seite, zarter Rand, beim Zeigen Rand in der Markenfarbe. */
+.rl-card { border: 1px solid color-mix(in oklab, var(--sl-color-gray-5) 70%, var(--sl-color-bg)); border-radius: .9rem; padding: 1.25rem; background: color-mix(in oklab, var(--sl-color-bg-sidebar) 70%, var(--sl-color-gray-6)); display: flex; flex-direction: column; gap: .3rem; align-self: stretch; transition: border-color .15s ease, background-color .15s ease; }
+:root[data-theme='light'] .rl-card { background: oklch(1 0 0 / .7); }
 a.rl-card { text-decoration: none; color: inherit; }
 a.rl-card:hover { border-color: var(--sl-color-accent); }
-.rl-more { margin: 1.25rem 0 0; font-size: .9rem; }
+.rl-section .rl-more { margin: 1.5rem 0 0; font-size: .95rem; line-height: 1.5; }
 .rl-more-link { color: var(--sl-color-accent); font-weight: 600; text-decoration: none; }
 .rl-more-link:hover { text-decoration: underline; }
-.rl-card strong { display: block; margin-bottom: .2rem; }
+.rl-card strong { display: block; font-size: 1rem; font-weight: 600; color: var(--sl-color-white); }
 /* 1.75 auf 13.6px zog die Karten auseinander; auf dem Telefon, wo der Text vier Zeilen
    braucht statt zwei, wurde daraus eine halbe Bildschirmhoehe. */
-.rl-card span { font-size: .85rem; line-height: 1.5; color: var(--sl-color-gray-2); }
+/* Als Block: inline erbte der Text Starlights Zeilenhoehe 1.75 vom Elternteil und lief auseinander. */
+.rl-card span { display: block; font-size: .875rem; line-height: 1.5; color: var(--sl-color-gray-2); }
+/* Die Symbolkachel ist auch ein span: sie bleibt eine zentrierende Flexbox. */
+.rl-card .rl-icon { display: inline-flex; }
 /* Zeilenkarte: Kachel links, Text rechts, rechts aussen optional ein Hinweis (npm, Spec). Schnittstelle und Connectoren. */
-.rl-card.row { flex-direction: row; gap: 1rem; align-items: center; }
+.rl-card.row { flex-direction: row; gap: 1rem; align-items: center; padding-block: 1.1rem; }
+.rl-card.row > div strong { margin-bottom: .15rem; }
 .rl-card.row > div { min-width: 0; flex: 1; text-align: start; }
 .rl-card.row > div span { display: block; }
 .rl-card.row .rl-icon.tile { margin-bottom: 0; }
@@ -147,20 +155,22 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-icon.tone-red { --rl-tone: oklch(0.6 0.2 25); }
 .rl-icon.tone-teal { --rl-tone: oklch(0.62 0.13 190); }
 :root[data-theme='dark'] .rl-icon.tile { background: color-mix(in oklab, var(--rl-tone) 22%, transparent); }
-.rl-ways { padding-block: 3rem; border-top: 1px solid var(--sl-color-gray-6); }
-.rl-ways h2 { font-size: 1.9rem; margin: 0 0 .5rem; }
-.rl-ways-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: .5rem 1.5rem; margin-bottom: 1.5rem; }
-.rl-ways-head p { color: var(--sl-color-gray-2); margin: 0; }
+.rl-ways { padding-block: 5rem 6rem; border-top: 1px solid var(--sl-color-gray-6); }
+.rl-ways h2 { font-size: 2.25rem; font-weight: 700; letter-spacing: -.025em; color: var(--sl-color-white); margin: 0 0 .6rem; }
+.rl-ways-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: .5rem 1.5rem; margin-bottom: 2rem; }
+.rl-ways-head p { color: var(--sl-color-gray-2); font-size: 1.06rem; margin: 0; }
 .rl-ways .rl-cards { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
-.rl-ways a.rl-card { text-decoration: none; color: inherit; display: block; }
+.rl-ways a.rl-card { text-decoration: none; color: inherit; }
+.rl-ways .rl-icon.tile { margin-bottom: .75rem; }
 .rl-ways a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-ways .soon { opacity: .6; }
 
 /* Schluss der Landing: die beiden Einstiege aus dem Hero noch einmal, als Band in der Markenfarbe. */
-.rl-outro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.5rem 2.5rem; margin-block: 1rem 2rem; padding: 2.5rem; border-radius: 1.2rem; border: 1px solid color-mix(in oklab, var(--sl-color-accent) 35%, transparent); background: color-mix(in oklab, var(--sl-color-accent) 7%, transparent); }
+.rl-outro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.5rem 2.5rem; margin-block: 2rem 0; padding: 3.5rem; border-radius: 1.5rem; border: 1px solid color-mix(in oklab, var(--sl-color-accent) 35%, transparent); background: color-mix(in oklab, var(--sl-color-accent) 7%, transparent); }
 .rl-outro > div:first-child { max-width: 34rem; }
-.rl-outro h2 { font-size: 1.7rem; line-height: 1.2; margin: 0 0 .5rem; }
-.rl-outro p { color: var(--sl-color-gray-2); line-height: 1.65; margin: 0; }
+.rl-outro h2 { font-size: 2rem; font-weight: 700; letter-spacing: -.025em; line-height: 1.2; color: var(--sl-color-white); margin: 0 0 .75rem; }
+.rl-outro p { color: var(--sl-color-gray-2); font-size: 1.06rem; line-height: 1.7; margin: 0; }
+.rl-outro .rl-btn { min-height: 3rem; box-sizing: border-box; padding-inline: 1.4rem; border-radius: .75rem; }
 .rl-outro .rl-actions { justify-content: flex-start; margin: 0; }
 
 /* Fußzeile: Teil von Real Life */
@@ -203,9 +213,13 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
    gestapelt ergaben 3rem zwischen den Abschnitten und 2.5rem zwischen Text und Bild
    Strecken, auf denen nichts steht. */
 @media (max-width: 49.99rem) {
-  .rl-ways, .rl-section { padding-block: 2rem; }
-  .rl-section { gap: 1.5rem; }
-  .rl-section h2, .rl-ways h2 { font-size: 1.5rem; }
+  .rl-ways, .rl-section { padding-block: 3.5rem; }
+  .rl-section { gap: 2.25rem; }
+  .rl-section h2, .rl-ways h2 { font-size: 1.65rem; }
+  .rl-section p, .rl-ways-head p { font-size: 1rem; }
+  /* Die Wege als Zeilen wie im Entwurf: Kachel links neben Titel und Text, statt vier hoher Karten untereinander. */
+  .rl-ways .rl-card { display: grid; grid-template-columns: 2.5rem 1fr; column-gap: 1rem; row-gap: .2rem; align-items: start; padding: 1rem; }
+  .rl-ways .rl-icon.tile { grid-row: span 2; margin-bottom: 0; }
   .rl-outro { padding: 1.75rem 1.25rem; }
   .rl-outro h2 { font-size: 1.4rem; }
   .rl-outro .rl-actions, .rl-outro .rl-btn { width: 100%; justify-content: center; }
