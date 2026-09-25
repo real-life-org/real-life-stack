@@ -368,14 +368,24 @@ wann angelegt wurde, ist aber nicht die Quelle für Wortlaute.
 - Prototyp: `web-of-trust-prototyp/narrative-app` (Schema
   `opinion-graph.ts`, `VoteBar.tsx`)
 
+## Testvektoren
+
+[`schemas/claims/vectors/resonance-1.json`](../schemas/claims/vectors/resonance-1.json)
+ist für Implementierungen verbindlich (erzeugt von
+`schemas/claims/generate-vectors.mjs`). Er enthält drei Gruppen:
+
+- `contentHash`: Wortlaut → JCS → Inhalts-Hash, einschließlich eines
+  Paares aus NFC und NFD, das zeigt, dass nicht normalisiert wird.
+- `statementClaims`: gültige und ungültige `statement-authorial`-Claims,
+  darunter fehlender Claim, claimloses Statement mit fremder Autorschaft,
+  fremder Signer, `kid` ungleich Autorin, falscher Typ, fehlendes
+  Content-Member und Snapshot ohne lokale Historie.
+- `counting`: ob eine Stimme zählt, je Claim-Modus. Darunter Stimme ohne
+  `contentHash`, Stimme für eine andere Fassung, geänderter Wortlaut nach
+  der Stimme und normales Anlegen und Abstimmen im Modus `authoritative`.
+
 ## Offene Punkte
 
-- Testvektoren für `statement-authorial` und für Stimmen mit
-  `contentHash` (unter `docs/spec/schemas/claims/vectors/`), darunter die
-  negativen Fälle: Claim entfernt, claimloses Statement mit fremder
-  Autorschaft, Stimme ohne `contentHash`, Stimme mit fremdem Hash,
-  Snapshot ohne lokale Historie, dazu normales Anlegen und Abstimmen im
-  Modus `authoritative`. Ohne sie ist das Format nicht fertig.
 - Item-Claims sind im Code noch nicht umgesetzt (auch `item-provenance`
   nicht). `statement-authorial` ist der erste Claim über einen
   Item-Inhalt und braucht die Signier- und Prüfwege in den Connectoren.
