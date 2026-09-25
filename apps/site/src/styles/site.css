@@ -165,13 +165,14 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-ways a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-ways .soon { opacity: .6; }
 
-/* Schluss der Landing: die beiden Einstiege aus dem Hero noch einmal, als Band in der Markenfarbe, mittig mit viel Luft. */
-.rl-outro { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2rem; margin-block: 3rem 6rem; padding: 5rem 4.5rem; border-radius: 1.75rem; border: 1px solid color-mix(in oklab, var(--sl-color-accent) 35%, transparent); background: color-mix(in oklab, var(--sl-color-accent) 7%, transparent); }
-.rl-outro > div:first-child { max-width: 36rem; }
-.rl-outro h2 { text-wrap: balance; font-size: 2.25rem; font-weight: 700; letter-spacing: -.025em; line-height: 1.2; color: var(--sl-color-white); margin: 0 0 1rem; }
+/* Schluss der Landing: die beiden Einstiege aus dem Hero noch einmal, als Band in der Markenfarbe.
+   Oben so viel Abstand wie zwischen zwei Abschnitten (6rem Polster + 6rem), sonst klebt es an den Connectoren. */
+.rl-outro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.5rem 2.5rem; margin-block: 6rem 4rem; padding: 3.5rem; border-radius: 1.5rem; border: 1px solid color-mix(in oklab, var(--sl-color-accent) 35%, transparent); background: color-mix(in oklab, var(--sl-color-accent) 7%, transparent); }
+.rl-outro > div:first-child { max-width: 34rem; }
+.rl-outro h2 { text-wrap: balance; font-size: 2rem; font-weight: 700; letter-spacing: -.025em; line-height: 1.2; color: var(--sl-color-white); margin: 0 0 .75rem; }
 .rl-outro p { color: var(--sl-color-gray-2); font-size: 1.06rem; line-height: 1.7; margin: 0; }
 .rl-outro .rl-btn { min-height: 3rem; box-sizing: border-box; padding-inline: 1.4rem; border-radius: .75rem; }
-.rl-outro .rl-actions { justify-content: center; margin: 0; }
+.rl-outro .rl-actions { justify-content: flex-start; margin: 0; }
 
 /* Fußzeile: Teil von Real Life */
 .rl-family { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--sl-color-gray-5); font-size: .85rem; color: var(--sl-color-gray-2); display: grid; gap: .5rem; }
@@ -220,8 +221,8 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
   /* Die Wege als Zeilen wie im Entwurf: Kachel links neben Titel und Text, statt vier hoher Karten untereinander. */
   .rl-ways .rl-card { display: grid; grid-template-columns: 2.5rem 1fr; column-gap: 1rem; row-gap: .2rem; align-items: start; padding: 1rem; }
   .rl-ways .rl-icon.tile { grid-row: span 2; margin-bottom: 0; }
-  .rl-outro { margin-block: 1.5rem 3.5rem; padding: 2.75rem 1.5rem; gap: 1.75rem; }
-  .rl-outro h2 { font-size: 1.6rem; }
+  .rl-outro { margin-block: 3.5rem 2.5rem; padding: 1.75rem 1.25rem; }
+  .rl-outro h2 { font-size: 1.4rem; }
   .rl-outro .rl-actions, .rl-outro .rl-btn { width: 100%; justify-content: center; }
   .rl-landing .rl-cards { gap: .75rem; }
   .hero { padding-block: 1.5rem .5rem; }
