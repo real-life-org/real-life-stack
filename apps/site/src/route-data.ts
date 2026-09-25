@@ -1,3 +1,5 @@
+// Starlights Haupttypen haengen `starlightRoute` an die Locals; die Site bindet sie sonst nur in der Konfiguration ein.
+/// <reference types="@astrojs/starlight" />
 import { defineRouteMiddleware } from '@astrojs/starlight/route-data'
 
 /**
@@ -22,7 +24,7 @@ export const onRequest = defineRouteMiddleware((context) => {
   meta({ name: 'twitter:image', content: bild })
   meta({ name: 'twitter:image:alt', content: alt })
   if (route.entry.data.template === 'splash') {
-    const typ = route.head.find((t) => t.tag === 'meta' && t.attrs?.property === 'og:type')
+    const typ = route.head.find((t: (typeof route.head)[number]) => t.tag === 'meta' && t.attrs?.property === 'og:type')
     if (typ?.attrs) typ.attrs.content = 'website'
   }
 })
