@@ -86,6 +86,8 @@ export default defineConfig({
       locales: LOCALES,
       customCss: ['./src/styles/site.css'],
       components: { Footer: './src/components/Footer.astro' },
+      // Vorschaubild fuer geteilte Links (og:image) je Sprache.
+      routeMiddleware: './src/route-data.ts',
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/real-life-org/real-life-stack' },
       ],

@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { root, read, pages, route } from './lib.mjs'
 
@@ -25,6 +25,8 @@ const info = {
 rmSync(new URL('apps/site/public', root), { recursive: true, force: true })
 write('apps/site/public/build-info.json', JSON.stringify(info, null, 2))
 write('apps/site/public/favicon.svg', read('apps/reference/public/favicon.svg'))
+// Vorschaubilder fuer geteilte Links (og:image); Quelle und Anleitung in apps/site/og/vorschau.html.
+for (const lang of ['de', 'en']) write(`apps/site/public/og/${lang}.png`, readFileSync(new URL(`apps/site/og/${lang}.png`, root)))
 
 const all = pages()
 for (const p of all) {
