@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://real-life-stack.org/vocab/statement/v1/schema.json",
   "title": "RLS Statement Vocabulary",
-  "description": "Vocabulary for statements the group takes a stance on (Resonance module). It introduces no own data properties: the statement sentence lives in the base/v1 `title`, optional context in `description`. Its context defines the class `statement` (rls:Statement). Activation for the Resonance module follows from the class's declared affordance `votesOn` in the type manifest, not from carrying this vocabulary (spec 06, classes have IRIs).",
+  "description": "Vocabulary for statements the group takes a stance on (Resonance module). The statement sentence lives in the base/v1 `title`, optional context in `description`. Its only own data property is `variantOf`, the item reference of the statement this one is a variant of (part of the signed wording, immutable). Its context defines the class `statement` (rls:Statement). Activation for the Resonance module follows from the class's declared affordance `votesOn` in the type manifest, not from carrying this vocabulary (spec 06, classes have IRIs).",
   "type": "object",
   "additionalProperties": true,
   "properties": {
@@ -15,6 +15,11 @@
           "type": "string",
           "minLength": 1,
           "description": "The statement itself — one sentence (base/v1 term, required by this vocabulary)."
+        },
+        "variantOf": {
+          "type": "string",
+          "pattern": "^item:.+",
+          "description": "Optional: `item:<statementId>` of the statement this one is a variant of. Part of the signed wording; immutable; target MUST live in the same space."
         }
       }
     }
