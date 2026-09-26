@@ -60,9 +60,9 @@ dem Typ zuweist.
 
 Ein Statement ist eine Aussage einer Person im Sinn von Spec 08
 ([item-authorial](../08-relation-records.md#aussagen-einer-person-item-authorial)).
-Sein **Wortlaut** ist sein Inhalt nach dem dortigen Katalog, also
-`title`, `description` und `variantOf`; der **Inhalts-Hash** ist dort
-definiert. Tags gehören nicht zum Wortlaut. Signatur, Schreibweg,
+Sein **Wortlaut** ist sein Inhalt nach dem dortigen Katalog: die
+Inhaltsfelder `title`, `description` und `variantOf`, Inhaltsrelationen hat
+ein Statement keine. Der **Inhalts-Hash** ist dort definiert. Tags gehören nicht zum Wortlaut. Signatur, Schreibweg,
 Einfrieren und die Regel gegen Normalisierung gelten wie in Spec 08; hier
 steht nur, was das Modul ergänzt.
 
@@ -369,7 +369,8 @@ Verbindlich für Implementierungen, erzeugt von
 - [`schemas/claims/vectors/item-authorial-1.json`](../schemas/claims/vectors/item-authorial-1.json)
   (Spec 08): Inhalts-Hash je Katalogtyp, einschließlich eines Paares aus
   NFC und NFD, und gültige wie ungültige `item-authorial`-Claims für
-  Statement, Kommentar und Reaktion.
+  Statement, Kommentar und Reaktion, einschließlich umgehängter,
+  entfernter und zusätzlicher Ziele.
 - [`schemas/claims/vectors/resonance-1.json`](../schemas/claims/vectors/resonance-1.json):
   ob eine Stimme zählt, je Claim-Modus. Darunter Stimme ohne
   `contentHash`, Stimme für eine andere Fassung, geänderter Wortlaut nach

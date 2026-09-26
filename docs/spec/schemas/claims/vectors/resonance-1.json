@@ -29,7 +29,7 @@
         "data": {
           "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
           "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
-          "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.EsLmACNLfx3Do-e6A2CunOVfqQoT7vJkVSA-dr1R-F7HOz-MKXPePsbQM7zc6xlR1t8N1707HghRd7fC27ogDw"
+          "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiZGVzY3JpcHRpb24iOiJJbiBkZXIgRWlubGFkdW5nLCBiZXZvciBqZW1hbmQgc2VpbmVuIEFiZW5kIGRhZsO8ciBoZXJnaWJ0LiIsInRpdGxlIjoiV2VubiBpY2ggZWlubGFkZSwgZ2ViZSBpY2ggdm9yaGVyIEFnZW5kYSB1bmQgRm9ybWF0IHZvci4iLCJ2YXJpYW50T2YiOm51bGx9LCJyZWxhdGlvbnMiOnt9fSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.CWyt3yFYQLuYrpWoQ3wllLXU2r9sU5CxLjaVv4sNO7OB00ktttUmOuOveGhiZEbgdEXg97XjlsJ1Xy_L9mBWDQ"
         },
         "tags": [
           "modul:grundsaetze"
@@ -42,12 +42,12 @@
         "to": "item:statement-grundsatz-einladen",
         "fields": {
           "value": "green",
-          "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953"
+          "contentHash": "sha256:24ea1c8a6385a2a86293eccd4b278a52fd0b3f0736940e8bf0e5274689577904"
         },
         "confirmationRef": null,
         "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
         "createdAt": "2026-09-25T14:00:00.000Z",
-        "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb25maXJtYXRpb25SZWYiOm51bGwsImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTQ6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1IiwiZmllbGRzIjp7ImNvbnRlbnRIYXNoIjoic2hhMjU2OjIyNmZlNDIyNTBmNGE0NTYwMDJhMGZkYjVlOTYzZGVhYWIyN2Q5ZTBhOWUzNDg2NzRkNmUxYTUzY2E3NTI5NTMiLCJ2YWx1ZSI6ImdyZWVuIn0sImZyb20iOiJnbG9iYWw6ZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6InJlbC1kMWFjY2NkZGFlZTk2MTc1NzcyMzQyMTYyZTJmYzgzM2YxNmMzOWM2NzRiZmM3ZGU0NDA4MTc5NDllMmJlODAyIiwicHJlZGljYXRlIjoidm90ZXNPbiIsInByb2ZpbGUiOiJyZWxhdGlvbi1hdXRob3JpYWwiLCJ0byI6Iml0ZW06c3RhdGVtZW50LWdydW5kc2F0ei1laW5sYWRlbiIsInYiOiJybHMtY2xhaW0vMSJ9.DBk6z9la4GjLL4XwdgmD-WXuNfHAzA-Kzn2pHYAL86TFlX_c8ZHNDb2pddRDX8hXj65b7D25SS-jeMMS4UOoDw"
+        "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb25maXJtYXRpb25SZWYiOm51bGwsImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTQ6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1IiwiZmllbGRzIjp7ImNvbnRlbnRIYXNoIjoic2hhMjU2OjI0ZWExYzhhNjM4NWEyYTg2MjkzZWNjZDRiMjc4YTUyZmQwYjNmMDczNjk0MGU4YmYwZTUyNzQ2ODk1Nzc5MDQiLCJ2YWx1ZSI6ImdyZWVuIn0sImZyb20iOiJnbG9iYWw6ZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6InJlbC1kMWFjY2NkZGFlZTk2MTc1NzcyMzQyMTYyZTJmYzgzM2YxNmMzOWM2NzRiZmM3ZGU0NDA4MTc5NDllMmJlODAyIiwicHJlZGljYXRlIjoidm90ZXNPbiIsInByb2ZpbGUiOiJyZWxhdGlvbi1hdXRob3JpYWwiLCJ0byI6Iml0ZW06c3RhdGVtZW50LWdydW5kc2F0ei1laW5sYWRlbiIsInYiOiJybHMtY2xhaW0vMSJ9.91Z1uVWJbvXgbWiwkX0FJkCuAi8pz6nh8iH-AxHzRjXDWMIr66Lvz2wyk5GnryXvckBTbIG1M0bKVtGuVj_sCw"
       }
     },
     {
@@ -63,7 +63,7 @@
         "data": {
           "title": "Wenn ich einlade, gebe ich vorher Agenda und Format an.",
           "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
-          "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCBhbi4iLCJ2YXJpYW50T2YiOm51bGx9LCJjcmVhdGVkQXQiOiIyMDI2LTA5LTI1VDEyOjAwOjAwLjAwMFoiLCJjcmVhdGVkQnkiOiJkaWQ6a2V5Ono2TWt0VUx1ZFR0QXNBaFJlZ1lQaVo2NjMxUlYzdml2MTJxZDRHUUY4ejF4QjIyUyIsImlkIjoic3RhdGVtZW50LWdydW5kc2F0ei1laW5sYWRlbiIsInByb2ZpbGUiOiJpdGVtLWF1dGhvcmlhbCIsInR5cGUiOiJzdGF0ZW1lbnQiLCJ2IjoicmxzLWNsYWltLzEifQ.tQ5vgjWzhK4UWISiWuopa-e2e8EYIhCjZ8G2mDg8kuE6QHo-DHk79eShMrTE_IqjkCmBdF0Rp7W7CvL-QY6ZAQ"
+          "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiZGVzY3JpcHRpb24iOiJJbiBkZXIgRWlubGFkdW5nLCBiZXZvciBqZW1hbmQgc2VpbmVuIEFiZW5kIGRhZsO8ciBoZXJnaWJ0LiIsInRpdGxlIjoiV2VubiBpY2ggZWlubGFkZSwgZ2ViZSBpY2ggdm9yaGVyIEFnZW5kYSB1bmQgRm9ybWF0IGFuLiIsInZhcmlhbnRPZiI6bnVsbH0sInJlbGF0aW9ucyI6e319LCJjcmVhdGVkQXQiOiIyMDI2LTA5LTI1VDEyOjAwOjAwLjAwMFoiLCJjcmVhdGVkQnkiOiJkaWQ6a2V5Ono2TWt0VUx1ZFR0QXNBaFJlZ1lQaVo2NjMxUlYzdml2MTJxZDRHUUY4ejF4QjIyUyIsImlkIjoic3RhdGVtZW50LWdydW5kc2F0ei1laW5sYWRlbiIsInByb2ZpbGUiOiJpdGVtLWF1dGhvcmlhbCIsInR5cGUiOiJzdGF0ZW1lbnQiLCJ2IjoicmxzLWNsYWltLzEifQ.ON8Zaw-jpJCuSMcyFMyP9GEaSE1zghmwoE7lWg3pilA6ZX58py56zTNRWl7CYJW-FMZOCumU-eB0u2F-qj5kBw"
         },
         "tags": [
           "modul:grundsaetze"
@@ -76,12 +76,12 @@
         "to": "item:statement-grundsatz-einladen",
         "fields": {
           "value": "green",
-          "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953"
+          "contentHash": "sha256:24ea1c8a6385a2a86293eccd4b278a52fd0b3f0736940e8bf0e5274689577904"
         },
         "confirmationRef": null,
         "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
         "createdAt": "2026-09-25T14:00:00.000Z",
-        "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb25maXJtYXRpb25SZWYiOm51bGwsImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTQ6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1IiwiZmllbGRzIjp7ImNvbnRlbnRIYXNoIjoic2hhMjU2OjIyNmZlNDIyNTBmNGE0NTYwMDJhMGZkYjVlOTYzZGVhYWIyN2Q5ZTBhOWUzNDg2NzRkNmUxYTUzY2E3NTI5NTMiLCJ2YWx1ZSI6ImdyZWVuIn0sImZyb20iOiJnbG9iYWw6ZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6InJlbC1kMWFjY2NkZGFlZTk2MTc1NzcyMzQyMTYyZTJmYzgzM2YxNmMzOWM2NzRiZmM3ZGU0NDA4MTc5NDllMmJlODAyIiwicHJlZGljYXRlIjoidm90ZXNPbiIsInByb2ZpbGUiOiJyZWxhdGlvbi1hdXRob3JpYWwiLCJ0byI6Iml0ZW06c3RhdGVtZW50LWdydW5kc2F0ei1laW5sYWRlbiIsInYiOiJybHMtY2xhaW0vMSJ9.DBk6z9la4GjLL4XwdgmD-WXuNfHAzA-Kzn2pHYAL86TFlX_c8ZHNDb2pddRDX8hXj65b7D25SS-jeMMS4UOoDw"
+        "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb25maXJtYXRpb25SZWYiOm51bGwsImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTQ6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1IiwiZmllbGRzIjp7ImNvbnRlbnRIYXNoIjoic2hhMjU2OjI0ZWExYzhhNjM4NWEyYTg2MjkzZWNjZDRiMjc4YTUyZmQwYjNmMDczNjk0MGU4YmYwZTUyNzQ2ODk1Nzc5MDQiLCJ2YWx1ZSI6ImdyZWVuIn0sImZyb20iOiJnbG9iYWw6ZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6InJlbC1kMWFjY2NkZGFlZTk2MTc1NzcyMzQyMTYyZTJmYzgzM2YxNmMzOWM2NzRiZmM3ZGU0NDA4MTc5NDllMmJlODAyIiwicHJlZGljYXRlIjoidm90ZXNPbiIsInByb2ZpbGUiOiJyZWxhdGlvbi1hdXRob3JpYWwiLCJ0byI6Iml0ZW06c3RhdGVtZW50LWdydW5kc2F0ei1laW5sYWRlbiIsInYiOiJybHMtY2xhaW0vMSJ9.91Z1uVWJbvXgbWiwkX0FJkCuAi8pz6nh8iH-AxHzRjXDWMIr66Lvz2wyk5GnryXvckBTbIG1M0bKVtGuVj_sCw"
       }
     },
     {
@@ -97,7 +97,7 @@
         "data": {
           "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
           "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
-          "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.EsLmACNLfx3Do-e6A2CunOVfqQoT7vJkVSA-dr1R-F7HOz-MKXPePsbQM7zc6xlR1t8N1707HghRd7fC27ogDw"
+          "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiZGVzY3JpcHRpb24iOiJJbiBkZXIgRWlubGFkdW5nLCBiZXZvciBqZW1hbmQgc2VpbmVuIEFiZW5kIGRhZsO8ciBoZXJnaWJ0LiIsInRpdGxlIjoiV2VubiBpY2ggZWlubGFkZSwgZ2ViZSBpY2ggdm9yaGVyIEFnZW5kYSB1bmQgRm9ybWF0IHZvci4iLCJ2YXJpYW50T2YiOm51bGx9LCJyZWxhdGlvbnMiOnt9fSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.CWyt3yFYQLuYrpWoQ3wllLXU2r9sU5CxLjaVv4sNO7OB00ktttUmOuOveGhiZEbgdEXg97XjlsJ1Xy_L9mBWDQ"
         },
         "tags": [
           "modul:grundsaetze"
@@ -130,7 +130,7 @@
         "data": {
           "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
           "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
-          "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.EsLmACNLfx3Do-e6A2CunOVfqQoT7vJkVSA-dr1R-F7HOz-MKXPePsbQM7zc6xlR1t8N1707HghRd7fC27ogDw"
+          "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiZGVzY3JpcHRpb24iOiJJbiBkZXIgRWlubGFkdW5nLCBiZXZvciBqZW1hbmQgc2VpbmVuIEFiZW5kIGRhZsO8ciBoZXJnaWJ0LiIsInRpdGxlIjoiV2VubiBpY2ggZWlubGFkZSwgZ2ViZSBpY2ggdm9yaGVyIEFnZW5kYSB1bmQgRm9ybWF0IHZvci4iLCJ2YXJpYW50T2YiOm51bGx9LCJyZWxhdGlvbnMiOnt9fSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.CWyt3yFYQLuYrpWoQ3wllLXU2r9sU5CxLjaVv4sNO7OB00ktttUmOuOveGhiZEbgdEXg97XjlsJ1Xy_L9mBWDQ"
         },
         "tags": [
           "modul:grundsaetze"
@@ -143,12 +143,12 @@
         "to": "item:statement-grundsatz-einladen",
         "fields": {
           "value": "green",
-          "contentHash": "sha256:e093d01ae261b3f6060dac68bcb051459ae678a0260351a261ea34a3d439695a"
+          "contentHash": "sha256:64e8268120b65760240c6ae9d8cbf908c50ad57812932fff83d60c1c75204b83"
         },
         "confirmationRef": null,
         "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
         "createdAt": "2026-09-25T14:00:00.000Z",
-        "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb25maXJtYXRpb25SZWYiOm51bGwsImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTQ6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1IiwiZmllbGRzIjp7ImNvbnRlbnRIYXNoIjoic2hhMjU2OmUwOTNkMDFhZTI2MWIzZjYwNjBkYWM2OGJjYjA1MTQ1OWFlNjc4YTAyNjAzNTFhMjYxZWEzNGEzZDQzOTY5NWEiLCJ2YWx1ZSI6ImdyZWVuIn0sImZyb20iOiJnbG9iYWw6ZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6InJlbC1kMWFjY2NkZGFlZTk2MTc1NzcyMzQyMTYyZTJmYzgzM2YxNmMzOWM2NzRiZmM3ZGU0NDA4MTc5NDllMmJlODAyIiwicHJlZGljYXRlIjoidm90ZXNPbiIsInByb2ZpbGUiOiJyZWxhdGlvbi1hdXRob3JpYWwiLCJ0byI6Iml0ZW06c3RhdGVtZW50LWdydW5kc2F0ei1laW5sYWRlbiIsInYiOiJybHMtY2xhaW0vMSJ9.6HU-hR63f0Cxz6HZk9Q_RcjN2l33iJy2etUy_DwM-mG8FrtMT8rPblXryYtD9nL8TLY1exuc6dZvwJ9lHEeeAw"
+        "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb25maXJtYXRpb25SZWYiOm51bGwsImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTQ6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1IiwiZmllbGRzIjp7ImNvbnRlbnRIYXNoIjoic2hhMjU2OjY0ZTgyNjgxMjBiNjU3NjAyNDBjNmFlOWQ4Y2JmOTA4YzUwYWQ1NzgxMjkzMmZmZjgzZDYwYzFjNzUyMDRiODMiLCJ2YWx1ZSI6ImdyZWVuIn0sImZyb20iOiJnbG9iYWw6ZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6InJlbC1kMWFjY2NkZGFlZTk2MTc1NzcyMzQyMTYyZTJmYzgzM2YxNmMzOWM2NzRiZmM3ZGU0NDA4MTc5NDllMmJlODAyIiwicHJlZGljYXRlIjoidm90ZXNPbiIsInByb2ZpbGUiOiJyZWxhdGlvbi1hdXRob3JpYWwiLCJ0byI6Iml0ZW06c3RhdGVtZW50LWdydW5kc2F0ei1laW5sYWRlbiIsInYiOiJybHMtY2xhaW0vMSJ9.2nMMEUNk__dF_4tXBkQH5az8DAWJVR2ghsnvrEB8F5TR456AYKYTJV_pg_9YIt6P2dJUv-z3oMAFZmkSW4H2AA"
       }
     },
     {
@@ -175,12 +175,12 @@
         "to": "item:statement-untergeschoben",
         "fields": {
           "value": "green",
-          "contentHash": "sha256:2acb9465594a9a7d319aafe909307a4032308cbff622bfb3e94fd6a129a4e6f3"
+          "contentHash": "sha256:e793a7f2de2500259dcb5071bc92b5b1838fa9594128cfb33c53754e0bd94d56"
         },
         "confirmationRef": null,
         "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
         "createdAt": "2026-09-25T14:00:00.000Z",
-        "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb25maXJtYXRpb25SZWYiOm51bGwsImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTQ6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1IiwiZmllbGRzIjp7ImNvbnRlbnRIYXNoIjoic2hhMjU2OjJhY2I5NDY1NTk0YTlhN2QzMTlhYWZlOTA5MzA3YTQwMzIzMDhjYmZmNjIyYmZiM2U5NGZkNmExMjlhNGU2ZjMiLCJ2YWx1ZSI6ImdyZWVuIn0sImZyb20iOiJnbG9iYWw6ZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6InJlbC0yNGFlMTEwZTkzNDc0OTU5YjAyMWRmOWI2MDAxNzA0Y2E1MzM1MTVkNTc3N2ZiNTZjYTJmZjg2YjJlMGEzYWU5IiwicHJlZGljYXRlIjoidm90ZXNPbiIsInByb2ZpbGUiOiJyZWxhdGlvbi1hdXRob3JpYWwiLCJ0byI6Iml0ZW06c3RhdGVtZW50LXVudGVyZ2VzY2hvYmVuIiwidiI6InJscy1jbGFpbS8xIn0.ExPp4tWnslyjtME_IHxOntLmMY4N0kUzh-R73asNkwVzUHupe9fGIrzNma2wAB_32BT4BfUTC87xNRsrlR30Aw"
+        "claim": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb25maXJtYXRpb25SZWYiOm51bGwsImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTQ6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1IiwiZmllbGRzIjp7ImNvbnRlbnRIYXNoIjoic2hhMjU2OmU3OTNhN2YyZGUyNTAwMjU5ZGNiNTA3MWJjOTJiNWIxODM4ZmE5NTk0MTI4Y2ZiMzNjNTM3NTRlMGJkOTRkNTYiLCJ2YWx1ZSI6ImdyZWVuIn0sImZyb20iOiJnbG9iYWw6ZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6InJlbC0yNGFlMTEwZTkzNDc0OTU5YjAyMWRmOWI2MDAxNzA0Y2E1MzM1MTVkNTc3N2ZiNTZjYTJmZjg2YjJlMGEzYWU5IiwicHJlZGljYXRlIjoidm90ZXNPbiIsInByb2ZpbGUiOiJyZWxhdGlvbi1hdXRob3JpYWwiLCJ0byI6Iml0ZW06c3RhdGVtZW50LXVudGVyZ2VzY2hvYmVuIiwidiI6InJscy1jbGFpbS8xIn0.7tbUluuQ5-YyeXOpAIPJIH_khbCrNf17zuTeEyUpkfB4mcCVwnIcCCmDTmaUZknZ8cdkWQ8mOWriNBKgOgxECA"
       }
     },
     {
@@ -208,7 +208,7 @@
         "to": "item:statement-grundsatz-einladen",
         "fields": {
           "value": "yellow",
-          "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953"
+          "contentHash": "sha256:24ea1c8a6385a2a86293eccd4b278a52fd0b3f0736940e8bf0e5274689577904"
         },
         "confirmationRef": null,
         "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
@@ -271,7 +271,7 @@
         "to": "item:statement-grundsatz-einladen",
         "fields": {
           "value": "yellow",
-          "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953"
+          "contentHash": "sha256:24ea1c8a6385a2a86293eccd4b278a52fd0b3f0736940e8bf0e5274689577904"
         },
         "confirmationRef": null,
         "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
@@ -303,7 +303,7 @@
         "to": "item:statement-grundsatz-einladen",
         "fields": {
           "value": "green",
-          "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953"
+          "contentHash": "sha256:24ea1c8a6385a2a86293eccd4b278a52fd0b3f0736940e8bf0e5274689577904"
         },
         "confirmationRef": null,
         "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",

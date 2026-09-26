@@ -211,15 +211,25 @@ console.log(`wrote ${vectors.length} vectors — alice=${ALICE}`)
 const bob = keyFromSeed(0x33)
 const BOB = didKey(bob.publicKey)
 
-// Closed catalog (spec 08): type → content fields. Content = those fields
-// from data, null when absent. Nothing else from data belongs to it.
+// Closed catalog (spec 08): type → content fields (from data) and content
+// relations (predicates of embedded relations whose targets belong to the
+// statement, e.g. what a comment is on). Nothing else belongs to the content.
 const AUTHORIAL_ITEM_TYPES = {
-  statement: ["title", "description", "variantOf"],
-  comment: ["content", "replyTo", "replyToComment"],
-  reaction: ["emoji"],
+  statement: { data: ["title", "description", "variantOf"], relations: [] },
+  comment: { data: ["content", "replyTo", "replyToComment"], relations: ["commentOn"] },
+  reaction: { data: ["emoji"], relations: ["reactsTo"] },
 }
-const contentOf = (type, data) =>
-  Object.fromEntries(AUTHORIAL_ITEM_TYPES[type].map((field) => [field, data[field] ?? null]))
+// Content = { data: declared fields (null when absent), relations: for each
+// declared predicate the sorted list of targets (meta excluded) }.
+const contentOf = (type, item) => ({
+  data: Object.fromEntries(AUTHORIAL_ITEM_TYPES[type].data.map((field) => [field, item.data?.[field] ?? null])),
+  relations: Object.fromEntries(
+    AUTHORIAL_ITEM_TYPES[type].relations.map((predicate) => [
+      predicate,
+      (item.relations ?? []).filter((relation) => relation.predicate === predicate).map((relation) => relation.target).sort(),
+    ]),
+  ),
+})
 const contentHashOf = (content) => "sha256:" + createHash("sha256").update(jcs(content), "utf8").digest("hex")
 
 // --- 1. Content hash vectors (pure: type + data → content → JCS → hash) ---
@@ -238,15 +248,17 @@ const hashCases = [
   },
   {
     name: "comment-with-aggregates",
-    description: "Comment: connector-maintained fields (reactions, myReaction, commentCount) and tags are not part of the content.",
+    description: "Comment: its commentOn target is part of the content; connector-maintained fields (reactions, myReaction), tags and relations with other predicates (relatedTo) are not.",
     type: "comment",
     data: { content: "Gute Idee, ich bin dabei.", replyTo: "comment-1", reactions: { "👍": 2 }, myReaction: "👍" },
+    relations: [{ predicate: "commentOn", target: "item:post-a" }, { predicate: "relatedTo", target: "item:elsewhere" }],
   },
   {
     name: "reaction",
     description: "Reaction: the emoji is the whole content.",
     type: "reaction",
     data: { emoji: "❤️" },
+    relations: [{ predicate: "reactsTo", target: "item:post-a" }],
   },
   {
     name: "nfc",
@@ -262,7 +274,7 @@ const hashCases = [
   },
 ]
 const contentHashVectors = hashCases.map((c) => {
-  const content = contentOf(c.type, c.data)
+  const content = contentOf(c.type, c)
   return { ...c, content, jcs: jcs(content), contentHash: contentHashOf(content) }
 })
 
@@ -274,7 +286,7 @@ const itemPayloadOf = (item, overrides = {}) => ({
   type: item.type,
   createdBy: item.createdBy,
   createdAt: item.createdAt,
-  content: contentOf(AUTHORIAL_ITEM_TYPES[item.type] ? item.type : "statement", item.data),
+  content: contentOf(AUTHORIAL_ITEM_TYPES[item.type] ? item.type : "statement", item),
   ...overrides,
 })
 
@@ -305,6 +317,7 @@ const commentItem = {
   createdBy: BOB,
   createdAt: "2026-09-25T15:00:00.000Z",
   data: { content: "Gute Idee, ich bin dabei.", replyTo: "comment-1" },
+  relations: [{ predicate: "commentOn", target: "item:post-a" }],
 }
 const reactionItem = {
   id: "reaction-herz",
@@ -312,6 +325,7 @@ const reactionItem = {
   createdBy: ALICE,
   createdAt: "2026-09-25T16:00:00.000Z",
   data: { emoji: "❤️" },
+  relations: [{ predicate: "reactsTo", target: "item:post-a" }],
 }
 
 const statementPayload = itemPayloadOf(statementItem)
@@ -330,7 +344,7 @@ const claimVector = (name, expect, description, item, payload, jws) => ({
   expect,
   description,
   item,
-  contentHash: AUTHORIAL_ITEM_TYPES[item.type] ? contentHashOf(contentOf(item.type, item.data)) : null,
+  contentHash: AUTHORIAL_ITEM_TYPES[item.type] ? contentHashOf(contentOf(item.type, item)) : null,
   payload,
   jws,
 })
@@ -350,7 +364,15 @@ const itemClaimVectors = [
     commentPayload,
     commentSigned.jws,
   ),
-  claimVector("reaction-create-valid", "valid", "A reaction signed by its author; the emoji is the whole content.", reactionItem, reactionPayload, reactionSigned.jws),
+  claimVector("reaction-create-valid", "valid", "A reaction signed by its author; emoji and reactsTo target are the content.", reactionItem, reactionPayload, reactionSigned.jws),
+  claimVector(
+    "comment-other-relation-added-valid",
+    "valid",
+    "A relation with a predicate outside the type's content relations (relatedTo) is not content; adding it leaves the claim valid.",
+    { ...commentItem, relations: [...commentItem.relations, { predicate: "relatedTo", target: "item:elsewhere" }] },
+    commentPayload,
+    commentSigned.jws,
+  ),
 
   claimVector("statement-content-mismatch-invalid", "invalid", "Stored title differs from the signed content (raw-CRDT edit without re-signing) — MUST fail.", editedItem, statementPayload, statementSigned.jws),
   claimVector(
@@ -362,6 +384,38 @@ const itemClaimVectors = [
     commentSigned.jws,
   ),
   claimVector("reaction-emoji-changed-invalid", "invalid", "The stored emoji differs from the signed one — MUST fail.", { ...reactionItem, data: { emoji: "👎" } }, reactionPayload, reactionSigned.jws),
+  claimVector(
+    "comment-target-changed-invalid",
+    "invalid",
+    "The signed comment was moved from post A to post B (commentOn target changed). The target is content — MUST fail.",
+    { ...commentItem, relations: [{ predicate: "commentOn", target: "item:post-b" }] },
+    commentPayload,
+    commentSigned.jws,
+  ),
+  claimVector(
+    "comment-target-missing-invalid",
+    "invalid",
+    "The commentOn relation was removed. An empty content relation differs from the signed one — MUST fail.",
+    { ...commentItem, relations: [] },
+    commentPayload,
+    commentSigned.jws,
+  ),
+  claimVector(
+    "comment-target-added-invalid",
+    "invalid",
+    "A second commentOn target was added (the comment now also appears under post B) — MUST fail.",
+    { ...commentItem, relations: [...commentItem.relations, { predicate: "commentOn", target: "item:post-b" }] },
+    commentPayload,
+    commentSigned.jws,
+  ),
+  claimVector(
+    "reaction-target-changed-invalid",
+    "invalid",
+    "The signed reaction was moved from post A to post B (reactsTo target changed) — MUST fail.",
+    { ...reactionItem, relations: [{ predicate: "reactsTo", target: "item:post-b" }] },
+    reactionPayload,
+    reactionSigned.jws,
+  ),
   claimVector("claim-missing-invalid", "invalid", "Signed mode: an item of a catalog type without claim is invalid. Absence of a claim proves no provenance (no legacy mode).", statementItem, null, null),
   claimVector("foreign-author-without-claim-invalid", "invalid", "An attacker writes a claimless statement naming alice as author. Invalid, so neither it nor any reference to it counts.", foreignAuthorItem, null, null),
   claimVector("foreign-signer-invalid", "invalid", "kid names the author but the signature was produced by mallory's key — signature verification MUST fail.", statementItem, statementPayload, signClaim(statementPayload, alice, {}, mallory).jws),
@@ -379,8 +433,12 @@ const itemClaimVectors = [
     return claimVector("type-not-in-catalog-invalid", "invalid", "item-authorial is only valid on items of a catalog type; post is not in the catalog.", postItem, postPayload, signClaim(postPayload, alice).jws)
   })(),
   (() => {
-    const mismatch = { ...commentPayload, type: "statement", id: STATEMENT_ID, createdBy: ALICE, createdAt: statementItem.createdAt }
-    return claimVector("payload-type-mismatch-invalid", "invalid", "The payload's type differs from the stored item's type — MUST fail even with a valid signature.", statementItem, mismatch, signClaim(mismatch, alice).jws)
+    const mismatch = { ...commentPayload, type: "statement" }
+    return claimVector("payload-type-mismatch-invalid", "invalid", "Identical to comment-create-valid except that the payload says type statement while the stored item is a comment. Only the type check decides — MUST fail.", commentItem, mismatch, signClaim(mismatch, bob).jws)
+  })(),
+  (() => {
+    const provenance = { v: "rls-claim/1", profile: "item-provenance", id: statementItem.id, type: "statement", createdBy: ALICE, createdAt: statementItem.createdAt }
+    return claimVector("provenance-on-catalog-type-invalid", "invalid", "Exclusivity: an item of a catalog type must carry item-authorial; an item-provenance claim on it is invalid even with a valid signature.", statementItem, provenance, signClaim(provenance, alice).jws)
   })(),
   claimVector("wrong-typ-invalid", "invalid", "Domain separation: any typ other than rls-claim+jws MUST be rejected even with a valid signature.", statementItem, statementPayload, signClaim(statementPayload, alice, { typ: "vc+jwt" }).jws),
   (() => {
@@ -388,8 +446,8 @@ const itemClaimVectors = [
     return claimVector("unknown-version-invalid", "invalid", "Unknown payload version MUST fail closed.", statementItem, unknown, signClaim(unknown, alice).jws)
   })(),
   (() => {
-    const missing = { ...statementPayload, content: { title: statementPayload.content.title, description: statementPayload.content.description } }
-    return claimVector("missing-member-invalid", "invalid", "content contains exactly the type's content fields, absent ones as null; a content object without variantOf (instead of null) is not structurally equal — MUST fail.", statementItem, missing, signClaim(missing, alice).jws)
+    const missing = { ...statementPayload, content: { data: { title: statementPayload.content.data.title, description: statementPayload.content.data.description }, relations: {} } }
+    return claimVector("missing-member-invalid", "invalid", "content.data contains exactly the type's content fields, absent ones as null; a content object without variantOf (instead of null) is not structurally equal — MUST fail.", statementItem, missing, signClaim(missing, alice).jws)
   })(),
 ]
 
@@ -401,7 +459,7 @@ const itemAuthorialOut = {
     bob: { did: BOB, seed: "0x33 * 32 (test-only, deliberately public)" },
   },
   catalog: AUTHORIAL_ITEM_TYPES,
-  contentHashNote: "content = the type's content fields from data, null when absent; contentHash = \"sha256:\" + lowercase hex of SHA-256 over UTF-8 of JCS(content). No Unicode normalisation.",
+  contentHashNote: "content = { data: the type's content fields from data (null when absent), relations: for each of the type's content predicates the targets of the item's embedded relations with that predicate, sorted by UTF-16 code units, meta excluded }; contentHash = \"sha256:\" + lowercase hex of SHA-256 over UTF-8 of JCS(content). No Unicode normalisation.",
   jcsNote: out.jcsNote,
   contentHash: contentHashVectors,
   itemClaims: itemClaimVectors,
@@ -471,7 +529,7 @@ const countingVectors = [
     expect: "notCounted",
     description: "The vote itself is valid and hash-matching, but the statement has no claim: invalid statement, nothing counts.",
     statement: foreignAuthorItem,
-    vote: signedVote(voteRecord(foreignAuthorItem.id, { value: "green", contentHash: contentHashOf(contentOf("statement", foreignAuthorItem.data)) })),
+    vote: signedVote(voteRecord(foreignAuthorItem.id, { value: "green", contentHash: contentHashOf(contentOf("statement", foreignAuthorItem)) })),
   },
   {
     name: "authoritative-hash-match-counts",

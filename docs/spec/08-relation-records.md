@@ -415,7 +415,7 @@ Typ-Register, 06).
 |---|---|---|---|
 | `authorial` | `relation-authorial` (Identität **+ Inhalt** inkl. `fields` und `confirmationRef`) | nur der Autor; jedes `updateRelationRecord` (auch `confirmationRef`-Änderung) MUSS re-signieren | `votesOn`, `knows`, `connectedWith`, `takesPlaceAt` |
 | `structural` | kein Record-Claim; als eigenständiges Relation-Item trägt der Record den **Item-Herkunfts-Claim** (unten) | kollaborativ | — (heute keine Record-Prädikate; eingebettete `assignedTo`/`invited`/`blocks`/`childOf` deckt der Herkunfts-Claim des Trägeritems) |
-| `item-authorial` | Item-Claim über Identität **+ Inhalt** einer Aussage einer Person (unten) | nur die Autorin; jede Änderung der Inhaltsfelder MUSS neu signieren | Items der Typen `statement`, `comment`, `reaction` |
+| `item-authorial` | Item-Claim über Identität **+ Inhalt** einer Aussage einer Person (unten) | nur die Autorin; jede Änderung des Inhalts MUSS neu signieren | Items der Typen `statement`, `comment`, `reaction` |
 
 **Exklusivität (ein Claim pro Datensatz):** `data.claim` trägt genau EINEN
 Claim — kein Array, keine parallelen Felder. Ein `authorial`-Record trägt
@@ -438,9 +438,11 @@ kollaborative Objekte, Umsetzung separat): Payload
 `{ "v": "rls-claim/1", "profile": "item-provenance", "id", "type", "createdBy", "createdAt" }` —
 nur die unveränderlichen Felder. Beglaubigt die Herkunft, überlebt jeden
 legitimen Fremd-Edit (zwei parallel gemergte Edits hätten keinen Zustand, den
-je jemand signiert hat). Er gilt für ALLE Items — Relation-Items
-eingeschlossen, wodurch auch eigenständige `structural`-Records eine
-Herkunftsbindung bekommen.
+je jemand signiert hat). Er gilt für alle Items, die kein anderes Profil
+tragen: nicht für Katalog-`authorial`-Relation-Records (`relation-authorial`)
+und nicht für Items eines Katalogtyps der Aussagen einer Person
+(`item-authorial`). Eigenständige `structural`-Records bekommen so eine
+Herkunftsbindung.
 
 ### Aussagen einer Person: `item-authorial`
 
@@ -450,27 +452,39 @@ diese Typen signiert die Autorin den Inhalt, so wie bei `relation-authorial`.
 Alle anderen Items sind kollaborativ und tragen den Herkunfts-Claim.
 
 **Katalog (geschlossen, v0.1).** Welche Typen Aussagen einer Person sind und
-welche Felder ihren Inhalt bilden, steht ausschließlich hier und nie in
-Space-Daten, damit kein Client einen Typ anders einstufen kann:
+was ihren Inhalt bildet, steht ausschließlich hier und nie in Space-Daten,
+damit kein Client einen Typ anders einstufen kann. Zum Inhalt gehören
+**Inhaltsfelder** aus `data` und **Inhaltsrelationen**: eingebettete
+Relationen (`item.relations`), deren Ziel zur Aussage gehört, etwa worauf
+sich ein Kommentar bezieht.
 
-| Typ | Inhaltsfelder |
-|---|---|
-| `statement` | `title`, `description`, `variantOf` ([modules/resonance.md](modules/resonance.md)) |
-| `comment` | `content`, `replyTo`, `replyToComment` |
-| `reaction` | `emoji` |
+| Typ | Inhaltsfelder | Inhaltsrelationen |
+|---|---|---|
+| `statement` | `title`, `description`, `variantOf` ([modules/resonance.md](modules/resonance.md)) | — |
+| `comment` | `content`, `replyTo`, `replyToComment` | `commentOn` |
+| `reaction` | `emoji` | `reactsTo` |
 
 `post` ist nicht im Katalog und bleibt gemeinsam bearbeitbar (rls#263). Wird
 die Einstufung später je Space oder Item konfigurierbar, MUSS sie so gebunden
 sein, dass kein Client einen Typ nachträglich zwischen „Aussage einer Person"
 und „kollaborativ" umstufen kann.
 
-**Inhalt und Inhalts-Hash.** Der Inhalt eines Items ist das Objekt aus den
-Inhaltsfeldern seines Typs, jedes aus `data`, fehlende als `null`. Andere
-Felder in `data` gehören nicht dazu, insbesondere vom Connector gepflegte
-Zählungen wie `reactions`, `myReaction` und `commentCount`, ebenso wenig
-`tags` und Vertragsfelder wie `data.claim`. Der Inhalts-Hash ist
+**Inhalt und Inhalts-Hash.** Der Inhalt eines Items ist das Objekt
+`{ "data": …, "relations": … }`:
+
+- `data` enthält die Inhaltsfelder des Typs, jedes aus `data`, fehlende als
+  `null`.
+- `relations` enthält für jedes Prädikat der Inhaltsrelationen des Typs die
+  Liste der Ziele (`target`) aller eingebetteten Relationen mit diesem
+  Prädikat, sortiert nach UTF-16-Codeeinheiten wie die Schlüssel in JCS,
+  ohne `meta`. Gibt es keine, ist die Liste leer. Ein Typ ohne
+  Inhaltsrelationen hat `"relations": {}`.
+
+Alles andere gehört nicht zum Inhalt, insbesondere vom Connector gepflegte
+Zählungen wie `reactions`, `myReaction` und `commentCount`, Relationen mit
+anderen Prädikaten, `tags` und Vertragsfelder wie `data.claim`. Der Inhalts-Hash ist
 `"sha256:" + hex(SHA-256(UTF-8(JCS(Inhalt))))`, Hex in Kleinbuchstaben. Es wird
-nicht normalisiert: Editoren DÜRFEN NICHT Inhaltsfelder beim Öffnen
+nicht normalisiert: Editoren DÜRFEN NICHT den Inhalt beim Öffnen
 normalisiert zurückschreiben, denn jede Byte-Änderung ändert den Hash.
 
 ```json
@@ -481,12 +495,18 @@ normalisiert zurückschreiben, denn jede Byte-Änderung ändert den Hash.
   "type": "comment",
   "createdBy": "did:key:…",
   "createdAt": "2026-09-25T15:00:00.000Z",
-  "content": { "content": "…", "replyTo": null, "replyToComment": null }
+  "content": {
+    "data": { "content": "…", "replyTo": null, "replyToComment": null },
+    "relations": { "commentOn": ["item:…"] }
+  }
 }
 ```
 
-1. Alle Member sind IMMER präsent. `content` enthält genau die Inhaltsfelder
-   des Typs, fehlende als `null`.
+1. Alle Member sind IMMER präsent. `content.data` enthält genau die
+   Inhaltsfelder des Typs, fehlende als `null`; `content.relations` enthält
+   genau die Prädikate seiner Inhaltsrelationen. Damit ist auch gebunden,
+   worauf sich eine Aussage bezieht: Wird ein Kommentar oder eine Reaktion
+   an ein anderes Ziel gehängt, ist der Claim ungültig.
 2. Das Profil ist nur auf Items eines Katalogtyps gültig, und `type` im
    Payload MUSS dem Item entsprechen. Sonst ist es `invalid`.
 3. Der Claim ersetzt für Katalogtypen den Herkunfts-Claim, dessen
@@ -496,14 +516,15 @@ normalisiert zurückschreiben, denn jede Byte-Änderung ändert den Hash.
    `kid === "<createdBy>#sig-0"`, jedes Payload-Member gleich dem
    gespeicherten Item, `content` gleich dem gespeicherten Inhalt. Abweichung
    ist `invalid`.
-5. Die Inhaltsfelder ändert nur die Autorin, und jede Änderung MUSS neu
-   signiert werden. Felder außerhalb des Inhalts dürfen nach den allgemeinen
-   Item-Regeln geschrieben werden; der Claim bleibt dabei gültig.
+5. Den Inhalt, also Inhaltsfelder und Inhaltsrelationen, ändert nur die
+   Autorin, und jede Änderung MUSS neu signiert werden. Alles außerhalb des
+   Inhalts darf nach den allgemeinen Item-Regeln geschrieben werden; der
+   Claim bleibt dabei gültig.
 6. Claim-Modi wie oben: `signed`-Connectoren MÜSSEN den Claim schreiben und
    prüfen; ein Item eines Katalogtyps ohne Claim ist dort `invalid`.
    `authoritative`-Connectoren schreiben keinen Claim; `trusted` DÜRFEN sie
    nur beanspruchen, wenn jeder Ingress-Pfad die Autorbindung erzwingt und
-   Änderungen an Inhaltsfeldern auf die Autorin beschränkt. Ohne Claim-Modus
+   Änderungen am Inhalt auf die Autorin beschränkt. Ohne Claim-Modus
    ist ein solches Item unverifiziert.
 7. Leseregeln analog L1/L2: Ein Item mit `invalid`-Claim zählt in keiner
    Auswertung, Bezugnahmen darauf ebenso wenig. Anzeigeflächen DÜRFEN es mit
@@ -519,7 +540,7 @@ gesteuert allein durch den Katalog:
 
 1. Connectoren DÜRFEN dafür keine typspezifische Logik enthalten. Sie lesen
    aus dem Katalog, ob ein Typ eine Aussage einer Person ist und welche
-   Felder seinen Inhalt bilden.
+   Inhaltsfelder und Inhaltsrelationen seinen Inhalt bilden.
 2. Beim regulären Anlegen und Ändern wird ein vom Aufrufer mitgegebenes
    `data.claim` ignoriert. Pfade, die ein bestehendes Item unverändert
    übernehmen (Sync, Snapshot, Mirror/Bridge), übernehmen seinen Claim
@@ -545,8 +566,8 @@ gesteuert allein durch den Katalog:
 2. Welche Prädikate inhaltsgebunden sein MÜSSEN, legt die Spec des Prädikats
    oder Moduls fest. `votesOn` MUSS inhaltsgebunden sein (Resonanzmodul).
 3. **Einfrieren:** Existiert zu einem Item eine inhaltsgebundene Bezugnahme
-   einer anderen Person, ist es eingefroren, und seine Inhaltsfelder DÜRFEN
-   nicht mehr geändert werden. Clients und Connectoren MÜSSEN solche
+   einer anderen Person, ist es eingefroren, und sein Inhalt DARF nicht mehr
+   geändert werden. Clients und Connectoren MÜSSEN solche
    Änderungen ablehnen. Gegen manipulierte Clients schützt Regel 1: Eine
    spätere Änderung lässt die Bezugnahmen nicht mehr gelten.
 4. Wie ein eingefrorenes Item neu gefasst wird, regelt sein Typ. Beim
