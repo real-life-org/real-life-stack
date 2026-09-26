@@ -39,10 +39,17 @@ function renderHookSettled<T>(render: () => T): T {
     only counts after verification settles. Several rounds: record and item
     verdicts settle first, the statement's content hash after them. */
 async function renderHookVerified<T>(render: () => T): Promise<T> {
+  // Not a fixed number of rounds: under a loaded full-suite run the async
+  // verification and hashing take longer. Settle until the result has been
+  // unchanged for 100 ms (min 4 rounds, max ~2 s).
   renderHook(render)
-  for (let round = 0; round < 4; round++) {
-    renderHook(render)
-    await new Promise((resolve) => setTimeout(resolve, 5))
+  let last = ""
+  let stable = 0
+  for (let round = 0; round < 200 && (round < 4 || stable < 10); round++) {
+    const snapshot = JSON.stringify((renderHook(render) as { data?: unknown }).data ?? null)
+    stable = snapshot === last ? stable + 1 : 0
+    last = snapshot
+    await new Promise((resolve) => setTimeout(resolve, 10))
   }
   return renderHook(render)
 }
