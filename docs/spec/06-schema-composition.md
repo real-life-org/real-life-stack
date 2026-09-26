@@ -137,7 +137,7 @@ Das Register besteht aus zwei Schichten entlang der Paketgrenze. Die Abhängigke
 | Schicht | Paket | hält | ändert sich wenn |
 |---|---|---|---|
 | **Typ-Manifest** | `data-interface` (UI-frei) | `id`, Vokabular-Bindung, `relations` | die Datensemantik eines Typs sich ändert |
-| **Darstellungs-Register** | `toolkit` | `label`, `icon`, `composerWidgets`, `preview`/`detail`/`footer` | die Darstellung sich ändert |
+| **Darstellungs-Register** | `toolkit` | `label`, `icon`, `badge`, `fields`, `edges`, `composer`, `preview` | die Darstellung sich ändert |
 
 Das Manifest ist die **einzige Quelle für Typ-Identität**: die Typ-Guards und `KnownItemType` in `data-interface` werden aus ihm abgeleitet, nicht daneben gepflegt. Das Darstellungs-Register hängt seine Einträge an Manifest-Ids an und DARF KEINE Typen einführen. Konsumenten lesen nur ihre Schicht: ein Connector oder Validator braucht das Manifest und zieht keine React-Abhängigkeit; eine Fläche liest die Slots.
 
@@ -150,29 +150,96 @@ Das Manifest ist die **einzige Quelle für Typ-Identität**: die Typ-Guards und 
 | `relations` | Manifest | welche Kanten der Typ eingehen kann: `{ predicate, itemRole, otherKind }`, keyed by (`predicate`, `itemRole`), siehe „Verhältnis zu Relations" |
 | `label` | Darstellung | Anzeigename (Badge, Composer-Auswahl, User-Filter); Anzeigename und Lokalisierung sind Darstellungsgründe, darum nicht im Manifest |
 | `icon` | Darstellung | Typ-Icon |
-| `composerWidgets` | Darstellung | Widget-Set beim Erstellen (heute `ContentTypeConfig.defaultWidgets`) |
-| `relationWidgets` | Darstellung | welches Composer-Widget eine deklarierte Kante bedient, keyed by (`predicate`, `itemRole`) — Widgets sind UI und gehören darum nicht ins Manifest |
-| `preview` | Darstellung | knappe Darstellung für Karten und Zeilen (heute `getItemPreviewAdornments`) |
-| `detail` | Darstellung | ausführliche Darstellung für das Detail-Panel |
-| `footer` | Darstellung | typ-eigene Fußzeile zusätzlich zur Fläche (Task → Assignees) |
+| `badge` | Darstellung | Icon und Farbe des Typ-Badges; zugleich die Typfarbe der Item-Chips |
+| `fields` | Darstellung | Feldliste (`FieldEntry[]`), siehe „Feld- und Kantenregister" |
+| `edges` | Darstellung | Kantenliste (`EdgeEntry[]`), keyed by (`predicate`, `itemRole`), siehe „Feld- und Kantenregister"; Widgets sind UI und gehören darum nicht ins Manifest |
+| `composer` | Darstellung | was nur der Composer braucht und kein Feld ist: `submitLabel`, `groupRequired` |
+| `composerWidgets` | Darstellung | abgeleitet aus `fields` und `edges`; nur noch für Typen ohne Feldliste gesetzt |
+| `preview` | Darstellung | knappe Darstellung für Karten und Zeilen; abgeleitet aus `fields` und `edges`, eigener Slot nur als Ausnahme |
 
-`preview`/`detail`/`footer` liefern Slot-Inhalte für die geteilte `ItemPreview`-Hülle — keine eigenen Karten. Karten-Markup bleibt Sache der Fläche.
+`preview` liefert Slot-Inhalte für die geteilte `ItemPreview`-Hülle, keine eigene Karte. Karten-Markup bleibt Sache der Fläche.
+
+*Bis zum Entwurf S0 (26.09.2026) hatte der Eintrag vier Slots (`composerWidgets`, `preview`, `detail`, `footer`) und `relationWidgets`. `relationWidgets` geht in `edges` auf. `detail` und `footer` entfallen: Meta-Box, Aktionszeile und Rückwärts-Listen leiten sich aus `fields` und `edges` ab. `statusOptions` und `widgetLabels` wandern aus `composer` in die Feldeinträge (`options`, `label`).*
 
 #### Regeln
 
 1. Das Typ-Manifest MUSS in `data-interface` leben und UI-frei sein; das Darstellungs-Register MUSS im Toolkit leben und ist über die Typ-Id an das Manifest gebunden. Apps DÜRFEN Einträge ergänzen und app-spezifische Felder (Gruppen-Optionen, Submit-Labels) über registrierte Einträge legen. Das Ersetzen bestehender Einträge ist in v0.1 nicht vorgesehen — siehe „Erweiterung und Merge".
 2. Jede Fläche, die ein Item darstellt, MUSS ihre typabhängigen Anteile aus dem Register beziehen. Flächen steuern **Dichte und Rahmen** bei (`compact`/`comfortable`, Karte/Panel/Zeile). Der Typ sagt *was*, die Fläche sagt *wieviel*.
 3. Module DÜRFEN KEINE eigene Typ-Verzweigung besitzen: kein `if (type === …)` in Modul-Code, keine typabhängige Komponentenwahl am Register vorbei. Modul-eigene **Mechanik** (Drag im Kanban, Pins auf der Karte, Zeitraster im Kalender) bleibt Modulsache — sie verzweigt über Felder und Capabilities, nie über `type`.
-4. Das Register DARF NICHT die Modul-Aktivierung tragen (kein `showIn`-Feld). Die bleibt feldbasiert, siehe „Die Rolle von `type`". Ebenso wenig trägt es Capabilities oder Rechte: ob eine Interaktion (Reagieren, Bearbeiten, Kommentieren) verfügbar ist, entscheiden Connector-Capability und Autorisierung — nicht der Typ. Reaktionen insbesondere sind nicht typabhängig.
+4. Das Register DARF NICHT die Modul-Aktivierung tragen (kein `showIn`-Feld). Die bleibt feldbasiert, siehe „Die Rolle von `type`". Ebenso wenig trägt es Capabilities oder Rechte: ob eine Interaktion (Reagieren, Bearbeiten, Kommentieren) verfügbar ist, entscheiden Connector-Capability und Autorisierung — nicht der Typ. Einzige Ausnahme: Ein Typ DARF Reaktionen und Kommentare für sich ausschließen (`person`: ein Profil trägt keine Kommentare und Reaktionen). Er DARF sie nicht einschalten, wo Capability oder Autorisierung fehlen.
 5. Ein unbekannter `type` — und ebenso ein Manifest-Eintrag ohne Darstellungs-Eintrag — MUSS auf einen generischen Eintrag zurückfallen (Titel, Beschreibung, `base/v1`-Felder, neutrales Badge). Jeder Registereintrag MUSS auf jeder Fläche darstellbar sein; ein Eintrag, der nur auf einer Fläche funktioniert, ist ungültig. Ein Item ohne Registereintrag darf nie unsichtbar oder kaputt sein — sonst bestraft das Register die Erweiterbarkeit, die es ermöglichen soll.
 6. Ein neuer Typ wird durch genau **einen Manifest-Eintrag** eingeführt. Andere Schichten hängen Einträge an dessen Id an; fehlt einer, greift Regel 5 — sichtbar generisch, nie kaputt. Wenn die Einführung eines Typs die Pflege einer zweiten **unabhängigen** Liste erfordert (eine, die Typen einführen oder widersprechen kann), ist das ein Fehler in dieser Spec.
+
+#### Feld- und Kantenregister
+
+**Status:** Normativer Entwurf (S0, 26.09.2026). Erweitert das Darstellungs-Register um eine Feld- und eine Kantenliste je Typ. Daraus leiten sich Composer-Defaults (`ContentTypeConfig`), Meta-Box, Aktionszeile, Rückwärts-Listen und Karte ab ([shared-components.md → Item-Detail aus dem Register](modules/shared-components.md#item-detail-aus-dem-register)).
+
+```ts
+type WidgetId =
+  | "title" | "text" | "date" | "location" | "media" | "status" | "number"
+  | "select" | "url" | "chips" | "avatar" | "contact" | "group" | "tags"   // B1–B14
+
+interface FieldEntry {
+  key: string                    // data-Schlüssel, z. B. "start", "hours"
+  widget: WidgetId
+  pos: "head" | "meta" | "content" | "tags" | "badge" | "system" | "module"
+  label?: string                 // Intl-Schlüssel
+  required?: boolean
+  unit?: string                  // number (B7)
+  options?: { id: string; label: string; tone?: string }[]   // status (B6), select (B8)
+  edit?: false                   // pos "system" und "module": nie editierbar
+}
+
+interface EdgeEntry {
+  predicate: string              // zusammen mit itemRole: Schlüssel einer Manifest-Kante
+  itemRole: "from" | "to" | "either"
+  storage: "embedded" | "record"
+  widget: "people" | "item-relation" | "membership" | "vote" | "origin" | "confirmations" | "activity"
+  pos: "meta" | "actions" | "list" | "badge"
+  label: string                  // Intl-Schlüssel: „Braucht", „Teil von", „Findet hier statt"
+  qualifier?: { key: string; values: { id: string; label: string; tone?: string }[] }
+  selfAction?: { label: string; mine: string; qualifiers?: string[] }   // C2
+  list?: { filter?: "open" | "upcoming"; sort?: string }                // für itemRole "to"
+}
+```
+
+Regeln:
+
+1. Jeder `EdgeEntry` MUSS eine Kante adressieren, die das Manifest für den Typ deklariert, über denselben Schlüssel (`predicate`, `itemRole`). Was am anderen Endpunkt steht, sagt das Manifest (`otherKind`); der Eintrag wiederholt es nicht.
+2. `relationWidgets` geht in `edges` auf. Das Widget einer Kante ist `EdgeEntry.widget`.
+3. Es gibt ein Widget je Datentyp, nicht je Fachfeld. Beschriftung, Einheit und Optionen stehen im Eintrag, nicht im Widget.
+4. `pos: "module"` (z. B. `order`, `stage`) und `pos: "system"` (z. B. `did`, `id`, `createdBy`) erscheinen nie im Formular. `system` erscheint als Fußnote im Kopf.
+5. Die Body-Feld-Regel ist ein Feldeintrag, kein `if`: `post` führt `content` als `text @content`, die anderen Typen `description`.
+6. `storage` hält fest, wo die Kante liegt. Der Wert MUSS den Regeln aus [04](04-items-relations-groups-spaces.md) und [08, Regel 9](08-relation-records.md#relationrecord-als-item) folgen; das Register wählt den Mechanismus nicht frei. Lese- und Schreibform lesen und schreiben dort.
+7. Ein Qualifier liegt bei `storage: "embedded"` als `meta.role` an der Relation, bei `storage: "record"` als Feld `qualifier.key` am Record. `qualifier.values` ist die Menge der erlaubten Werte ([08 → Qualifier an Personen-Kanten](08-relation-records.md#qualifier-an-personen-kanten)).
+8. Eine Kante mit `selfAction` erscheint im Slot `actions` als Pill-Zeile. `qualifiers` nennt die Werte, die die Pills setzen; `mine` ist die Beschriftung meines Zustands.
+9. Rückwärts-Listen (`itemRole: "to"`, `pos: "list"`) deklariert der Typ, dessen Detail sie zeigt, mit Filter und Sortierung. Es werden alle Einträge gezeigt.
+10. Apps liefern Einträge, keine Mappings. Die Abbildung Composer ↔ Item (`composer-mapping.ts`) und die Detail-Leseansicht liegen im Toolkit und lesen nur das Register.
+11. `ContentTypeConfig` wird abgeleitet: `defaultWidgets` aus den Feldern und Kanten mit `pos` `head`, `meta`, `content`, `tags` oder `badge` und ohne `edit: false`, in der Reihenfolge der Meta-Box; `peopleRelations` aus den Kanten mit `widget: "people"` und `pos: "meta"`; `statusOptions` aus `options` des `status`-Feldes; `widgetLabels` aus `label`.
+
+**Register je Typ (nichtnormativ).** So sehen die Einträge der Toolkit-Typen und eines App-Typs aus. Schreibweise: Feld `key` Widget @`pos`; Kante `predicate` (→ `from`, ← `to`) Widget @`pos`.
+
+| Typ | Felder | Kanten | Selbstaktion | Rückwärts-Listen |
+|---|---|---|---|---|
+| `post` | content B2 @content · media B5 @content · tags B14 | reactsTo/commentOn C7 @bar | – | – |
+| `event` | title B1 · description B2 · start/end/rrule B3 @meta · meetingLink B9 @meta · group B13 @badge · tags B14 | →locatedAt place C3 @meta · Personen-Kante C1 @meta (zugesagt · vielleicht · eingeladen; Prädikat offen, siehe Hinweis) | Zusagen · Vielleicht · Absagen | – |
+| `place` | title · description · address/position B4 @meta · tags | ←locatedAt C3 @list | – | „Findet hier statt" (Events, upcoming) |
+| `task` | title · description · status B6 @meta · dueAt B3 @meta · tags · order @module | →assignedTo person C1 @meta · →partOf project C3 @meta („Teil von") · →blocks task C3 @meta („Ermöglicht") · ←blocks task C3 @meta („Braucht") | assignedTo: Übernehmen | – |
+| `person` | displayName B1 @head · avatarUrl B11 @head · bio B2 · address/position B4 @meta · skills/offers/needs B10 @meta („Kann", „Bietet", „Sucht") · phone/email B12 @meta · did @system | keine Kommentare, keine Reaktionen | – | „Nächste Termine" (upcoming) · „Aufgaben" (←assignedTo, open) |
+| `project` | title · description · website/repo B9 @meta · address/position B4 @meta · tags | ←partOf C3 @list | – | „Offene Aufgaben" (←partOf task, open) · „Nächste Termine" (←partOf event, upcoming) |
+| `resource` | title · description · kind B8 @meta · availability B8 oder B2 @meta · tags | – | – | – |
+| `statement` | title B1 („Aussage") · description B2 („Begründung") · tags | ←votesOn person C4 @actions, Qualifier `value`: green · yellow · red | Dafür · Skeptisch · Dagegen | – |
+| App: Karabirrdt-Karte (`task`) | title · description · status B6 @meta (Offen · Erledigt) · hours/euros B7 @meta („Aufwand") · stage @module · tags | →assignedTo person C1 @meta (kann · lernt) · ←blocks task C3 @meta („Braucht") · →partOf project C3 @meta („Führt zu") | Übernehmen · Will lernen | – |
+| App: Karabirrdt-Ziel (`project`) | title · description („Traumsatz") · priority B8 @meta (Hoch · Mittel · Niedrig) · order @module | ←partOf C3 @list, je Stufe gruppiert | – | „Karten" (←partOf task, je Stufe) |
+
+Hinweise zur Tabelle: Die Kanban-Aufgabe hat nur „Übernehmen"; kann/lernt bleibt eine Funktion der Karabirrdt-App. `project` hat keine Selbstaktion „Beitreten". Mitgliedschaft (`memberOf`, C5), Verifizieren (C6) und Herkunft (C8) folgen später. Welche Kante die Teilnahme am Event trägt (`attends` oder das bestehende `invited`), ist offen. Neue Prädikate (`partOf`, `locatedAt` am Event, `attends`) kommen erst mit ihrer Relation-Typ-Definition ins Manifest (Verhältnis zu Relations, Regel 3).
 
 #### Erweiterung und Merge
 
 Register-Einträge werden in deterministischer Reihenfolge zusammengesetzt: **Core → App → Space.** Eine Schicht liefert Beiträge in genau einer von zwei Formen:
 
 1. **Typdefinition** — führt eine neue `id` ein. Eine bereits vergebene `id` ist ein **Konflikt** und MUSS abgelehnt werden.
-2. **Erweiterungsfragment** — adressiert eine vorhandene `id` und ergänzt sie additiv. Mengen-Felder (Kanten keyed by (`predicate`, `itemRole`), Vokabular-Bindung als Menge) werden vereinigt; neue Keys/Member sind erlaubt, das Entfernen oder Umdefinieren vorhandener ist ein Konflikt. Skalare Felder (`label`, `icon`, Slots) DARF ein Fragment nur setzen, wenn die Basis sie nicht setzt — sonst Konflikt.
+2. **Erweiterungsfragment** — adressiert eine vorhandene `id` und ergänzt sie additiv. Mengen-Felder (Kanten keyed by (`predicate`, `itemRole`), Vokabular-Bindung als Menge, `fields` keyed by `key`, `edges` keyed by (`predicate`, `itemRole`)) werden vereinigt; neue Keys/Member sind erlaubt, das Entfernen oder Umdefinieren vorhandener ist ein Konflikt. Skalare Felder (`label`, `icon`, Slots) DARF ein Fragment nur setzen, wenn die Basis sie nicht setzt — sonst Konflikt.
 3. **Override** ist in v0.1 nicht vorgesehen: Konflikte werden abgelehnt, nicht aufgelöst. Eine spätere Version KANN eine explizite Override-Operation mit Ziel-Key und Prioritätsregel einführen; bis dahin gibt es kein Shadowing, still oder ausdrücklich.
 
 Die zusammengesetzte Sicht ist pro Space deterministisch: gleiche Schichten, gleiches Ergebnis, unabhängig von Lade- oder Registrierungsreihenfolge — Vereinigung und Konfliktprüfung sind ordnungsunabhängig definiert.
@@ -197,11 +264,11 @@ Regeln:
    - `"from"` / `"to"` für gerichtete Kanten — welche Rolle **dieses Item** hat. Beide Rollen desselben Prädikats DÜRFEN am selben Typ koexistieren: `task` deklariert `{ blocks, from, task }` **und** `{ blocks, to, task }`, denn ein Task kann blockieren und blockiert werden.
    - `"either"` für symmetrische Prädikate — `person` → `{ knows, either, person }`. Eine symmetrische Kante hat keine Richtung; 08 kanonisiert ihre Endpunkte gerade deshalb. `"either"` und `"from"`/`"to"` schließen sich für dasselbe Prädikat am selben Typ aus (Konflikt), und `itemRole` MUSS zur Symmetrie-Deklaration der Relation-Typ-Definition passen: symmetrisch ⇒ `"either"`, gerichtet ⇒ `"from"`/`"to"`.
 
-   Beispiele, nichtnormativ: `task` → `{ assignedTo, from, person }`; `statement` → `{ votesOn, to, person }` (eingehende Stimmen; der `footer`-Slot weiß darüber, dass er Records **zu** diesem Item abfragt). Welches Composer-Widget eine Kante bedient, deklariert das Darstellungs-Register (`relationWidgets`, gleicher Schlüssel) — Kanten ohne Widget entstehen anderswo, z.B. per Karten-Pick oder Modul-Interaktion. Normativ wird ein Prädikat erst durch seine Relation-Typ-Definition.
+   Beispiele, nichtnormativ: `task` → `{ assignedTo, from, person }`; `statement` → `{ votesOn, to, person }` (eingehende Stimmen; das `vote`-Widget weiß darüber, dass es Records **zu** diesem Item abfragt). Welches Widget eine Kante bedient, deklariert das Darstellungs-Register (`edges`, gleicher Schlüssel) — Kanten ohne Widget entstehen anderswo, z.B. per Karten-Pick oder Modul-Interaktion. Normativ wird ein Prädikat erst durch seine Relation-Typ-Definition.
 2. `otherKind` bindet an die Target-Konventionen aus 04: `person` persistiert als `global:`-Target (User-Id oder DID), item-artige Kinds (`place`, `project`, …) als `item:` bzw. `space:{id}/item:`. Composer und Abfrage leiten die Target-Form der Gegenstelle aus `otherKind` ab, nie umgekehrt.
 3. Das Typ-Register definiert **keine** Prädikat-Semantik. Gerichtetheit, Symmetrie und Sichtbarkeit eines Prädikats gehören in die Relation-Typ-Definition (08, Regel 3) — heute App-Konfiguration, Ziel ist die versionierte RelationTypeDefinition im Space. Ein Prädikat, das im Typ-Register auftaucht, MUSS dort definiert sein.
-4. Ob eine Kante eingebettet (`item.relations[]`) oder als Relation-Record persistiert wird, entscheiden die Forward/Reverse-Regeln aus 04 — nicht das Typ-Register. Es deklariert die Möglichkeit, nicht den Mechanismus.
-5. Personen-Kanten sind ein Fall unter vielen, kein Sonderfall: `peopleRelation` aus `ContentTypeConfig` geht auf in einem Manifest-Eintrag `{ assignedTo, from, person }` plus der `relationWidgets`-Zuordnung `people` im Darstellungs-Register. Ein Typ KANN mehrere Personen-Kanten führen (`peopleRelations`, siehe [shared-components.md → Personenfelder](modules/shared-components.md)) — je Kante ein eigenes Feld, alle über dieselbe Widget-Zuordnung.
+4. Ob eine Kante eingebettet (`item.relations[]`) oder als Relation-Record persistiert wird, entscheiden die Forward/Reverse-Regeln aus 04 und 08 (Regel 9) — nicht das Typ-Register. Das Manifest deklariert die Möglichkeit; `EdgeEntry.storage` hält den Mechanismus fest, den diese Regeln vorgeben, damit Lese- und Schreibform wissen, wo die Kante liegt.
+5. Personen-Kanten sind ein Fall unter vielen, kein Sonderfall: `peopleRelation` aus `ContentTypeConfig` geht auf in einem Manifest-Eintrag `{ assignedTo, from, person }` plus einem `EdgeEntry` mit `widget: "people"` im Darstellungs-Register. Ein Typ KANN mehrere Personen-Kanten führen (`peopleRelations`, siehe [shared-components.md → Personenfelder](modules/shared-components.md)) — je Kante ein eigenes Feld, alle über dieselbe Widget-Zuordnung.
 
 #### Nicht-Ziele des Registers
 
