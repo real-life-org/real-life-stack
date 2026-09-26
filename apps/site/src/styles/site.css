@@ -179,7 +179,7 @@ a.rl-card:hover { border-color: var(--sl-color-accent); }
 .rl-outro .rl-btn { min-height: 3rem; box-sizing: border-box; padding-inline: 1.4rem; border-radius: .75rem; }
 .rl-outro .rl-actions { justify-content: flex-start; margin: 0; }
 
-/* Fußzeile: Teil von Real Life */
+/* Fußzeile: Teil des Real Life Projekts */
 .rl-family { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--sl-color-gray-5); font-size: .85rem; color: var(--sl-color-gray-2); display: grid; gap: .5rem; }
 .rl-family nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .rl-family a { color: inherit; }
