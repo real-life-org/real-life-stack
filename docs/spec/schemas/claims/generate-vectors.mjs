@@ -201,241 +201,214 @@ writeFileSync(join(here, "vectors", "rls-claim-1.json"), JSON.stringify(out, nul
 console.log(`wrote ${vectors.length} vectors — alice=${ALICE}`)
 
 // ---------------------------------------------------------------------------
-// Resonance vectors (modules/resonance.md → Wortlaut und Einfrieren, Vote
-// rule 5; spec 08 → statement-authorial). Written to vectors/resonance-1.json.
-// Kept in a separate file: rls-claim-1.json is consumed by the relation
-// verifier suite, which knows nothing about item claims.
+// item-authorial vectors (spec 08 → "Aussagen einer Person: item-authorial")
+// → vectors/item-authorial-1.json, and Resonance counting vectors
+// (modules/resonance.md → Vote rule 5) → vectors/resonance-1.json.
+// Separate files: rls-claim-1.json is consumed by the relation verifier
+// suite, which knows nothing about item claims.
 // ---------------------------------------------------------------------------
 
 const bob = keyFromSeed(0x33)
 const BOB = didKey(bob.publicKey)
 
-// Wording = { title, description, variantOf } with null for absent members.
-const wordingOf = (data) => ({
-  title: data.title,
-  description: data.description ?? null,
-  variantOf: data.variantOf ?? null,
-})
-const contentHashOf = (wording) => "sha256:" + createHash("sha256").update(jcs(wording), "utf8").digest("hex")
+// Closed catalog (spec 08): type → content fields. Content = those fields
+// from data, null when absent. Nothing else from data belongs to it.
+const AUTHORIAL_ITEM_TYPES = {
+  statement: ["title", "description", "variantOf"],
+  comment: ["content", "replyTo", "replyToComment"],
+  reaction: ["emoji"],
+}
+const contentOf = (type, data) =>
+  Object.fromEntries(AUTHORIAL_ITEM_TYPES[type].map((field) => [field, data[field] ?? null]))
+const contentHashOf = (content) => "sha256:" + createHash("sha256").update(jcs(content), "utf8").digest("hex")
 
-// --- 1. Content hash vectors (pure: wording → JCS → hash) ---
+// --- 1. Content hash vectors (pure: type + data → content → JCS → hash) ---
 const hashCases = [
   {
-    name: "with-description",
-    description: "Title and description, no variant.",
-    wording: { title: "Wenn ich einlade, gebe ich vorher Agenda und Format vor.", description: "In der Einladung, bevor jemand seinen Abend dafür hergibt.", variantOf: null },
+    name: "statement-with-description",
+    description: "Statement: title and description, no variant.",
+    type: "statement",
+    data: { title: "Wenn ich einlade, gebe ich vorher Agenda und Format vor.", description: "In der Einladung, bevor jemand seinen Abend dafür hergibt." },
   },
   {
-    name: "variant-without-description",
-    description: "Absent description is null; variantOf is part of the wording.",
-    wording: { title: "Wenn ich einlade, nenne ich vorher Agenda und Format.", description: null, variantOf: "item:statement-grundsatz-einladen" },
+    name: "statement-variant-without-description",
+    description: "Absent description is null; variantOf is part of the statement's content.",
+    type: "statement",
+    data: { title: "Wenn ich einlade, nenne ich vorher Agenda und Format.", variantOf: "item:statement-grundsatz-einladen" },
+  },
+  {
+    name: "comment-with-aggregates",
+    description: "Comment: connector-maintained fields (reactions, myReaction, commentCount) and tags are not part of the content.",
+    type: "comment",
+    data: { content: "Gute Idee, ich bin dabei.", replyTo: "comment-1", reactions: { "👍": 2 }, myReaction: "👍" },
+  },
+  {
+    name: "reaction",
+    description: "Reaction: the emoji is the whole content.",
+    type: "reaction",
+    data: { emoji: "❤️" },
   },
   {
     name: "nfc",
-    description: "Precomposed ü (U+00FC). Compare with nfd: no Unicode normalisation happens, so the hashes differ (editor rule 4).",
-    wording: { title: "Einführung", description: null, variantOf: null },
+    description: "Precomposed ü (U+00FC). Compare with nfd: no Unicode normalisation happens, so the hashes differ.",
+    type: "statement",
+    data: { title: "Einführung" },
   },
   {
     name: "nfd",
     description: "Decomposed u + U+0308. Same visible text as nfc, different bytes, different hash.",
-    wording: { title: "Einführung", description: null, variantOf: null },
+    type: "statement",
+    data: { title: "Einführung" },
   },
 ]
-const contentHashVectors = hashCases.map((c) => ({ ...c, jcs: jcs(c.wording), contentHash: contentHashOf(c.wording) }))
+const contentHashVectors = hashCases.map((c) => {
+  const content = contentOf(c.type, c.data)
+  return { ...c, content, jcs: jcs(content), contentHash: contentHashOf(content) }
+})
 
-// --- 2. statement-authorial claim vectors ---
+// --- 2. item-authorial claim vectors ---
+const itemPayloadOf = (item, overrides = {}) => ({
+  v: "rls-claim/1",
+  profile: "item-authorial",
+  id: item.id,
+  type: item.type,
+  createdBy: item.createdBy,
+  createdAt: item.createdAt,
+  content: contentOf(AUTHORIAL_ITEM_TYPES[item.type] ? item.type : "statement", item.data),
+  ...overrides,
+})
+
 const STATEMENT_ID = "statement-grundsatz-einladen"
 const VARIANT_ID = "statement-grundsatz-einladen-v2"
-const statementCreatedAt = "2026-09-25T12:00:00.000Z"
 
 const statementItem = {
   id: STATEMENT_ID,
   type: "statement",
   createdBy: ALICE,
-  createdAt: statementCreatedAt,
-  data: { title: hashCases[0].wording.title, description: hashCases[0].wording.description },
+  createdAt: "2026-09-25T12:00:00.000Z",
+  data: hashCases[0].data,
   tags: ["modul:grundsaetze"],
 }
-const statementPayloadOf = (item, overrides = {}) => ({
-  v: "rls-claim/1",
-  profile: "statement-authorial",
-  id: item.id,
-  type: item.type,
-  createdBy: item.createdBy,
-  createdAt: item.createdAt,
-  content: wordingOf(item.data),
-  ...overrides,
-})
-
-const statementVectors = []
-const statementPayload = statementPayloadOf(statementItem)
-const statementSigned = signClaim(statementPayload, alice)
-statementVectors.push({
-  name: "create-valid",
-  expect: "valid",
-  description: "Fresh statement signed by its author; content equals the stored wording.",
-  item: statementItem,
-  contentHash: contentHashOf(statementPayload.content),
-  payload: statementPayload,
-  jws: statementSigned.jws,
-})
-
 const variantItem = {
   id: VARIANT_ID,
   type: "statement",
   createdBy: BOB,
   createdAt: "2026-09-25T13:00:00.000Z",
-  data: { title: hashCases[1].wording.title, variantOf: `item:${STATEMENT_ID}` },
+  data: hashCases[1].data,
   tags: ["modul:grundsaetze"],
 }
-const variantPayload = statementPayloadOf(variantItem)
-const variantSigned = signClaim(variantPayload, bob)
-statementVectors.push({
-  name: "variant-valid",
-  expect: "valid",
-  description: "A variant by another person. Absent description is null in content; variantOf is signed.",
-  item: variantItem,
-  contentHash: contentHashOf(variantPayload.content),
-  payload: variantPayload,
-  jws: variantSigned.jws,
-})
-
-statementVectors.push({
-  name: "tags-changed-valid",
-  expect: "valid",
-  description: "Tags are not part of the wording: changing them after signing leaves the claim valid.",
-  item: { ...statementItem, tags: ["modul:open-space"] },
-  contentHash: contentHashOf(statementPayload.content),
-  payload: statementPayload,
-  jws: statementSigned.jws,
-})
-
-statementVectors.push({
-  name: "snapshot-reverify-valid",
-  expect: "valid",
-  description: "Identical to create-valid, verified from the stored data.claim after a snapshot bootstrap without local history — must verify from the item alone.",
-  item: statementItem,
-  contentHash: contentHashOf(statementPayload.content),
-  payload: statementPayload,
-  jws: statementSigned.jws,
-})
-
 const editedItem = { ...statementItem, data: { ...statementItem.data, title: "Wenn ich einlade, gebe ich vorher Agenda und Format an." } }
-const editedPayload = statementPayloadOf(editedItem)
-const editedSigned = signClaim(editedPayload, alice)
-statementVectors.push({
-  name: "edit-resigned-valid",
-  expect: "valid",
-  description: "The author changed the wording (before any foreign vote) and re-signed. Valid claim, new content hash.",
-  item: editedItem,
-  contentHash: contentHashOf(editedPayload.content),
-  payload: editedPayload,
-  jws: editedSigned.jws,
-})
-
-statementVectors.push({
-  name: "content-mismatch-invalid",
-  expect: "invalid",
-  description: "Stored title differs from the signed content (raw-CRDT edit without re-signing) — MUST fail.",
-  item: editedItem,
-  contentHash: contentHashOf(wordingOf(editedItem.data)),
-  payload: statementPayload,
-  jws: statementSigned.jws,
-})
-
-statementVectors.push({
-  name: "claim-missing-invalid",
-  expect: "invalid",
-  description: "Signed mode: a statement without claim is invalid. Absence of a claim proves no provenance (no legacy mode).",
-  item: statementItem,
-  contentHash: contentHashOf(statementPayload.content),
-  payload: null,
-  jws: null,
-})
-
 const foreignAuthorItem = { ...statementItem, id: "statement-untergeschoben", data: { title: "Wer einlädt, entscheidet allein." } }
-statementVectors.push({
-  name: "foreign-author-without-claim-invalid",
-  expect: "invalid",
-  description: "An attacker writes a claimless statement naming alice as author. Invalid, so neither it nor any vote on it counts.",
-  item: foreignAuthorItem,
-  contentHash: contentHashOf(wordingOf(foreignAuthorItem.data)),
-  payload: null,
-  jws: null,
+const commentItem = {
+  id: "comment-dabei",
+  type: "comment",
+  createdBy: BOB,
+  createdAt: "2026-09-25T15:00:00.000Z",
+  data: { content: "Gute Idee, ich bin dabei.", replyTo: "comment-1" },
+}
+const reactionItem = {
+  id: "reaction-herz",
+  type: "reaction",
+  createdBy: ALICE,
+  createdAt: "2026-09-25T16:00:00.000Z",
+  data: { emoji: "❤️" },
+}
+
+const statementPayload = itemPayloadOf(statementItem)
+const statementSigned = signClaim(statementPayload, alice)
+const variantPayload = itemPayloadOf(variantItem)
+const variantSigned = signClaim(variantPayload, bob)
+const editedPayload = itemPayloadOf(editedItem)
+const editedSigned = signClaim(editedPayload, alice)
+const commentPayload = itemPayloadOf(commentItem)
+const commentSigned = signClaim(commentPayload, bob)
+const reactionPayload = itemPayloadOf(reactionItem)
+const reactionSigned = signClaim(reactionPayload, alice)
+
+const claimVector = (name, expect, description, item, payload, jws) => ({
+  name,
+  expect,
+  description,
+  item,
+  contentHash: AUTHORIAL_ITEM_TYPES[item.type] ? contentHashOf(contentOf(item.type, item.data)) : null,
+  payload,
+  jws,
 })
 
-const forgedStatement = signClaim(statementPayload, alice, {}, mallory)
-statementVectors.push({
-  name: "foreign-signer-invalid",
-  expect: "invalid",
-  description: "kid names the author but the signature was produced by mallory's key — signature verification MUST fail.",
-  item: statementItem,
-  contentHash: contentHashOf(statementPayload.content),
-  payload: statementPayload,
-  jws: forgedStatement.jws,
-})
+const itemClaimVectors = [
+  claimVector("statement-create-valid", "valid", "Fresh statement signed by its author; content equals the stored content.", statementItem, statementPayload, statementSigned.jws),
+  claimVector("statement-variant-valid", "valid", "A variant by another person. Absent description is null; variantOf is signed.", variantItem, variantPayload, variantSigned.jws),
+  claimVector("statement-tags-changed-valid", "valid", "Tags are not part of the content: changing them after signing leaves the claim valid.", { ...statementItem, tags: ["modul:open-space"] }, statementPayload, statementSigned.jws),
+  claimVector("statement-snapshot-reverify-valid", "valid", "Identical to statement-create-valid, verified from the stored data.claim after a snapshot bootstrap without local history — must verify from the item alone.", statementItem, statementPayload, statementSigned.jws),
+  claimVector("statement-edit-resigned-valid", "valid", "The author changed the content (item not frozen) and re-signed. Valid claim, new content hash.", editedItem, editedPayload, editedSigned.jws),
+  claimVector("comment-create-valid", "valid", "A comment signed by its author.", commentItem, commentPayload, commentSigned.jws),
+  claimVector(
+    "comment-aggregates-changed-valid",
+    "valid",
+    "Connector-maintained fields changed after others reacted and replied (reactions, myReaction, commentCount). They are not content, so the claim stays valid.",
+    { ...commentItem, data: { ...commentItem.data, reactions: { "👍": 3 }, myReaction: "👍", commentCount: 2 } },
+    commentPayload,
+    commentSigned.jws,
+  ),
+  claimVector("reaction-create-valid", "valid", "A reaction signed by its author; the emoji is the whole content.", reactionItem, reactionPayload, reactionSigned.jws),
 
-const selfSigned = signClaim(statementPayload, mallory, { kid: `${MALLORY}#sig-0` })
-statementVectors.push({
-  name: "kid-not-author-invalid",
-  expect: "invalid",
-  description: "Mallory signs correctly with her own key and kid, but createdBy is alice: didOrKidToDid(kid) !== createdBy — MUST fail.",
-  item: statementItem,
-  contentHash: contentHashOf(statementPayload.content),
-  payload: statementPayload,
-  jws: selfSigned.jws,
-})
+  claimVector("statement-content-mismatch-invalid", "invalid", "Stored title differs from the signed content (raw-CRDT edit without re-signing) — MUST fail.", editedItem, statementPayload, statementSigned.jws),
+  claimVector(
+    "comment-content-changed-by-other-invalid",
+    "invalid",
+    "Someone other than the author changed the comment text. Only the author can produce a valid claim for new content.",
+    { ...commentItem, data: { ...commentItem.data, content: "Schlechte Idee." } },
+    commentPayload,
+    commentSigned.jws,
+  ),
+  claimVector("reaction-emoji-changed-invalid", "invalid", "The stored emoji differs from the signed one — MUST fail.", { ...reactionItem, data: { emoji: "👎" } }, reactionPayload, reactionSigned.jws),
+  claimVector("claim-missing-invalid", "invalid", "Signed mode: an item of a catalog type without claim is invalid. Absence of a claim proves no provenance (no legacy mode).", statementItem, null, null),
+  claimVector("foreign-author-without-claim-invalid", "invalid", "An attacker writes a claimless statement naming alice as author. Invalid, so neither it nor any reference to it counts.", foreignAuthorItem, null, null),
+  claimVector("foreign-signer-invalid", "invalid", "kid names the author but the signature was produced by mallory's key — signature verification MUST fail.", statementItem, statementPayload, signClaim(statementPayload, alice, {}, mallory).jws),
+  claimVector(
+    "kid-not-author-invalid",
+    "invalid",
+    "Mallory signs correctly with her own key and kid, but createdBy is alice: kid MUST be <createdBy>#sig-0.",
+    statementItem,
+    statementPayload,
+    signClaim(statementPayload, mallory, { kid: `${MALLORY}#sig-0` }).jws,
+  ),
+  (() => {
+    const postItem = { id: "post-1", type: "post", createdBy: ALICE, createdAt: "2026-09-25T17:00:00.000Z", data: { title: "Hallo", content: "Ein Post." } }
+    const postPayload = { v: "rls-claim/1", profile: "item-authorial", id: postItem.id, type: "post", createdBy: ALICE, createdAt: postItem.createdAt, content: { title: "Hallo", content: "Ein Post." } }
+    return claimVector("type-not-in-catalog-invalid", "invalid", "item-authorial is only valid on items of a catalog type; post is not in the catalog.", postItem, postPayload, signClaim(postPayload, alice).jws)
+  })(),
+  (() => {
+    const mismatch = { ...commentPayload, type: "statement", id: STATEMENT_ID, createdBy: ALICE, createdAt: statementItem.createdAt }
+    return claimVector("payload-type-mismatch-invalid", "invalid", "The payload's type differs from the stored item's type — MUST fail even with a valid signature.", statementItem, mismatch, signClaim(mismatch, alice).jws)
+  })(),
+  claimVector("wrong-typ-invalid", "invalid", "Domain separation: any typ other than rls-claim+jws MUST be rejected even with a valid signature.", statementItem, statementPayload, signClaim(statementPayload, alice, { typ: "vc+jwt" }).jws),
+  (() => {
+    const unknown = { ...statementPayload, v: "rls-claim/9" }
+    return claimVector("unknown-version-invalid", "invalid", "Unknown payload version MUST fail closed.", statementItem, unknown, signClaim(unknown, alice).jws)
+  })(),
+  (() => {
+    const missing = { ...statementPayload, content: { title: statementPayload.content.title, description: statementPayload.content.description } }
+    return claimVector("missing-member-invalid", "invalid", "content contains exactly the type's content fields, absent ones as null; a content object without variantOf (instead of null) is not structurally equal — MUST fail.", statementItem, missing, signClaim(missing, alice).jws)
+  })(),
+]
 
-const postItem = { ...statementItem, type: "post" }
-const postPayload = statementPayloadOf(postItem)
-const postSigned = signClaim(postPayload, alice)
-statementVectors.push({
-  name: "wrong-type-invalid",
-  expect: "invalid",
-  description: "statement-authorial is only valid on items with type statement.",
-  item: postItem,
-  contentHash: contentHashOf(postPayload.content),
-  payload: postPayload,
-  jws: postSigned.jws,
-})
+const itemAuthorialOut = {
+  description: "Canonical item-authorial vectors (rls-claim/1): content hash per catalog type and item claims. Binding for every implementation — see docs/spec/08-relation-records.md → Aussagen einer Person: item-authorial.",
+  keys: {
+    alice: { did: ALICE, seed: "0x11 * 32 (test-only, deliberately public)" },
+    mallory: { did: MALLORY, seed: "0x22 * 32 (test-only, deliberately public)" },
+    bob: { did: BOB, seed: "0x33 * 32 (test-only, deliberately public)" },
+  },
+  catalog: AUTHORIAL_ITEM_TYPES,
+  contentHashNote: "content = the type's content fields from data, null when absent; contentHash = \"sha256:\" + lowercase hex of SHA-256 over UTF-8 of JCS(content). No Unicode normalisation.",
+  jcsNote: out.jcsNote,
+  contentHash: contentHashVectors,
+  itemClaims: itemClaimVectors,
+}
+writeFileSync(join(here, "vectors", "item-authorial-1.json"), JSON.stringify(itemAuthorialOut, null, 2) + "\n")
 
-const wrongTypStatement = signClaim(statementPayload, alice, { typ: "vc+jwt" })
-statementVectors.push({
-  name: "wrong-typ-invalid",
-  expect: "invalid",
-  description: "Domain separation: any typ other than rls-claim+jws MUST be rejected even with a valid signature.",
-  item: statementItem,
-  contentHash: contentHashOf(statementPayload.content),
-  payload: statementPayload,
-  jws: wrongTypStatement.jws,
-})
-
-const unknownVersionStatement = { ...statementPayload, v: "rls-claim/9" }
-statementVectors.push({
-  name: "unknown-version-invalid",
-  expect: "invalid",
-  description: "Unknown payload version MUST fail closed.",
-  item: statementItem,
-  contentHash: contentHashOf(statementPayload.content),
-  payload: unknownVersionStatement,
-  jws: signClaim(unknownVersionStatement, alice).jws,
-})
-
-const missingMemberPayload = { ...statementPayload, content: { title: statementPayload.content.title, description: statementPayload.content.description } }
-statementVectors.push({
-  name: "missing-member-invalid",
-  expect: "invalid",
-  description: "All content members are always present; a content object without variantOf (instead of variantOf: null) is not structurally equal — MUST fail.",
-  item: statementItem,
-  contentHash: contentHashOf(statementPayload.content),
-  payload: missingMemberPayload,
-  jws: signClaim(missingMemberPayload, alice).jws,
-})
-
-// --- 3. Counting vectors: does a vote count? ---
-// A vote counts iff statement and vote both have a positive verdict for the
-// connector's claim mode AND vote.fields.contentHash equals the content hash
-// of the statement's currently stored wording (Vote rule 5).
+// --- 3. Resonance counting vectors: does a vote count? ---
 const voteFrom = `global:${BOB}`
 function voteRecord(statementId, fields) {
   const to = `item:${statementId}`
@@ -457,7 +430,6 @@ function signedVote(record) {
 const withClaim = (item, jws) => ({ ...item, data: { ...item.data, claim: jws } })
 
 const originalHash = contentHashOf(statementPayload.content)
-const editedHash = contentHashOf(editedPayload.content)
 const variantHash = contentHashOf(variantPayload.content)
 
 const countingVectors = [
@@ -465,7 +437,7 @@ const countingVectors = [
     name: "signed-hash-match-counts",
     mode: "signed",
     expect: "counts",
-    description: "Valid statement claim, valid vote claim, vote hash equals the stored wording's hash.",
+    description: "Valid item-authorial claim on the statement, valid vote claim, vote hash equals the stored content's hash.",
     statement: withClaim(statementItem, statementSigned.jws),
     vote: signedVote(voteRecord(STATEMENT_ID, { value: "green", contentHash: originalHash })),
   },
@@ -473,7 +445,7 @@ const countingVectors = [
     name: "signed-statement-edited-after-vote-not-counted",
     mode: "signed",
     expect: "notCounted",
-    description: "The vote was cast on the original wording; the statement now carries a validly re-signed, different wording. The vote is shown as a vote for another version and does not count.",
+    description: "The vote was cast on the original content; the statement now carries a validly re-signed, different content. The vote is a vote for another version and does not count.",
     statement: withClaim(editedItem, editedSigned.jws),
     vote: signedVote(voteRecord(STATEMENT_ID, { value: "green", contentHash: originalHash })),
   },
@@ -481,15 +453,15 @@ const countingVectors = [
     name: "signed-vote-without-content-hash-not-counted",
     mode: "signed",
     expect: "notCounted",
-    description: "A validly signed vote without fields.contentHash never counts.",
+    description: "A validly signed vote without fields.contentHash never counts (votesOn MUST be content-bound).",
     statement: withClaim(statementItem, statementSigned.jws),
     vote: signedVote(voteRecord(STATEMENT_ID, { value: "green" })),
   },
   {
-    name: "signed-vote-for-other-wording-not-counted",
+    name: "signed-vote-for-other-content-not-counted",
     mode: "signed",
     expect: "notCounted",
-    description: "The vote carries the hash of the variant's wording but points at the original statement.",
+    description: "The vote carries the hash of the variant's content but points at the original statement.",
     statement: withClaim(statementItem, statementSigned.jws),
     vote: signedVote(voteRecord(STATEMENT_ID, { value: "green", contentHash: variantHash })),
   },
@@ -499,7 +471,7 @@ const countingVectors = [
     expect: "notCounted",
     description: "The vote itself is valid and hash-matching, but the statement has no claim: invalid statement, nothing counts.",
     statement: foreignAuthorItem,
-    vote: signedVote(voteRecord(foreignAuthorItem.id, { value: "green", contentHash: contentHashOf(wordingOf(foreignAuthorItem.data)) })),
+    vote: signedVote(voteRecord(foreignAuthorItem.id, { value: "green", contentHash: contentHashOf(contentOf("statement", foreignAuthorItem.data)) })),
   },
   {
     name: "authoritative-hash-match-counts",
@@ -513,7 +485,7 @@ const countingVectors = [
     name: "authoritative-without-content-hash-not-counted",
     mode: "authoritative",
     expect: "notCounted",
-    description: "contentHash is mandatory in every claim mode.",
+    description: "contentHash is mandatory for votesOn in every claim mode.",
     statement: statementItem,
     vote: voteRecord(STATEMENT_ID, { value: "yellow" }),
   },
@@ -521,7 +493,7 @@ const countingVectors = [
     name: "authoritative-edited-not-counted",
     mode: "authoritative",
     expect: "notCounted",
-    description: "Wording binding holds without signatures: the stored wording changed, the vote's hash is the old one.",
+    description: "Content binding holds without signatures: the stored content changed, the vote's hash is the old one.",
     statement: editedItem,
     vote: voteRecord(STATEMENT_ID, { value: "yellow", contentHash: originalHash }),
   },
@@ -536,17 +508,9 @@ const countingVectors = [
 ]
 
 const resonanceOut = {
-  description: "Canonical Resonance vectors: content hash of the wording, statement-authorial claims (rls-claim/1) and vote counting. Binding for every implementation — see docs/spec/modules/resonance.md and docs/spec/08-relation-records.md → statement-authorial.",
-  keys: {
-    alice: { did: ALICE, seed: "0x11 * 32 (test-only, deliberately public)" },
-    mallory: { did: MALLORY, seed: "0x22 * 32 (test-only, deliberately public)" },
-    bob: { did: BOB, seed: "0x33 * 32 (test-only, deliberately public)" },
-  },
-  contentHashNote: "contentHash = \"sha256:\" + lowercase hex of SHA-256 over UTF-8 of JCS(wording); wording = { title, description, variantOf } with null for absent members. No Unicode normalisation.",
-  jcsNote: out.jcsNote,
-  countingRule: "A vote counts iff (1) the statement has a positive verdict for the mode (signed: valid statement-authorial claim; authoritative: trusted; none: never), (2) the vote has a positive verdict (signed: valid relation-authorial claim; authoritative: trusted; none: never), and (3) vote.fields.contentHash equals the content hash of the statement's stored wording.",
-  contentHash: contentHashVectors,
-  statementClaims: statementVectors,
+  description: "Canonical Resonance counting vectors: does a vote count? Binding for every implementation — see docs/spec/modules/resonance.md (Vote rule 5) and docs/spec/08-relation-records.md → Inhaltsgebundene Bezugnahme. Item claims and content hashes: item-authorial-1.json.",
+  keys: itemAuthorialOut.keys,
+  countingRule: "A vote counts iff (1) the statement has a positive verdict for the mode (signed: valid item-authorial claim; authoritative: trusted; none: never), (2) the vote has a positive verdict (signed: valid relation-authorial claim; authoritative: trusted; none: never), and (3) vote.fields.contentHash equals the content hash of the statement's stored content.",
   counting: countingVectors,
 }
 writeFileSync(join(here, "vectors", "resonance-1.json"), JSON.stringify(resonanceOut, null, 2) + "\n")

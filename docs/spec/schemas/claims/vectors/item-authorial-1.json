@@ -1,0 +1,747 @@
+{
+  "description": "Canonical item-authorial vectors (rls-claim/1): content hash per catalog type and item claims. Binding for every implementation — see docs/spec/08-relation-records.md → Aussagen einer Person: item-authorial.",
+  "keys": {
+    "alice": {
+      "did": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+      "seed": "0x11 * 32 (test-only, deliberately public)"
+    },
+    "mallory": {
+      "did": "did:key:z6MkqGC3nWZhYieEVTVDKW5v588CiGfsDSmRVG9ZwwWTvLSK",
+      "seed": "0x22 * 32 (test-only, deliberately public)"
+    },
+    "bob": {
+      "did": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+      "seed": "0x33 * 32 (test-only, deliberately public)"
+    }
+  },
+  "catalog": {
+    "statement": [
+      "title",
+      "description",
+      "variantOf"
+    ],
+    "comment": [
+      "content",
+      "replyTo",
+      "replyToComment"
+    ],
+    "reaction": [
+      "emoji"
+    ]
+  },
+  "contentHashNote": "content = the type's content fields from data, null when absent; contentHash = \"sha256:\" + lowercase hex of SHA-256 over UTF-8 of JCS(content). No Unicode normalisation.",
+  "jcsNote": "Payload/header canonicalisation is RFC 8785 over I-JSON values; the signing input is base64url(JCS(header)) + '.' + base64url(JCS(payload)) as ASCII.",
+  "contentHash": [
+    {
+      "name": "statement-with-description",
+      "description": "Statement: title and description, no variant.",
+      "type": "statement",
+      "data": {
+        "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+        "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+      },
+      "content": {
+        "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+        "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
+        "variantOf": null
+      },
+      "jcs": "{\"description\":\"In der Einladung, bevor jemand seinen Abend dafür hergibt.\",\"title\":\"Wenn ich einlade, gebe ich vorher Agenda und Format vor.\",\"variantOf\":null}",
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953"
+    },
+    {
+      "name": "statement-variant-without-description",
+      "description": "Absent description is null; variantOf is part of the statement's content.",
+      "type": "statement",
+      "data": {
+        "title": "Wenn ich einlade, nenne ich vorher Agenda und Format.",
+        "variantOf": "item:statement-grundsatz-einladen"
+      },
+      "content": {
+        "title": "Wenn ich einlade, nenne ich vorher Agenda und Format.",
+        "description": null,
+        "variantOf": "item:statement-grundsatz-einladen"
+      },
+      "jcs": "{\"description\":null,\"title\":\"Wenn ich einlade, nenne ich vorher Agenda und Format.\",\"variantOf\":\"item:statement-grundsatz-einladen\"}",
+      "contentHash": "sha256:e093d01ae261b3f6060dac68bcb051459ae678a0260351a261ea34a3d439695a"
+    },
+    {
+      "name": "comment-with-aggregates",
+      "description": "Comment: connector-maintained fields (reactions, myReaction, commentCount) and tags are not part of the content.",
+      "type": "comment",
+      "data": {
+        "content": "Gute Idee, ich bin dabei.",
+        "replyTo": "comment-1",
+        "reactions": {
+          "👍": 2
+        },
+        "myReaction": "👍"
+      },
+      "content": {
+        "content": "Gute Idee, ich bin dabei.",
+        "replyTo": "comment-1",
+        "replyToComment": null
+      },
+      "jcs": "{\"content\":\"Gute Idee, ich bin dabei.\",\"replyTo\":\"comment-1\",\"replyToComment\":null}",
+      "contentHash": "sha256:6e908eda3355df8c40e15d99b2b62101aa7de493e8f1ac8cedaac04e4b5b8a19"
+    },
+    {
+      "name": "reaction",
+      "description": "Reaction: the emoji is the whole content.",
+      "type": "reaction",
+      "data": {
+        "emoji": "❤️"
+      },
+      "content": {
+        "emoji": "❤️"
+      },
+      "jcs": "{\"emoji\":\"❤️\"}",
+      "contentHash": "sha256:4fb4c59bad283eace0080577c8439076e538026214ce3ae76559c8322cdc089d"
+    },
+    {
+      "name": "nfc",
+      "description": "Precomposed ü (U+00FC). Compare with nfd: no Unicode normalisation happens, so the hashes differ.",
+      "type": "statement",
+      "data": {
+        "title": "Einführung"
+      },
+      "content": {
+        "title": "Einführung",
+        "description": null,
+        "variantOf": null
+      },
+      "jcs": "{\"description\":null,\"title\":\"Einführung\",\"variantOf\":null}",
+      "contentHash": "sha256:fc3aa732f79f6cc4383cf545affac2dde9bc40331cbd6495c3dfb8dde241bd26"
+    },
+    {
+      "name": "nfd",
+      "description": "Decomposed u + U+0308. Same visible text as nfc, different bytes, different hash.",
+      "type": "statement",
+      "data": {
+        "title": "Einführung"
+      },
+      "content": {
+        "title": "Einführung",
+        "description": null,
+        "variantOf": null
+      },
+      "jcs": "{\"description\":null,\"title\":\"Einführung\",\"variantOf\":null}",
+      "contentHash": "sha256:96435b9b790d70b4b9a36c9e4e91b4b3e063cd78056b90eec40f04fdf19a4413"
+    }
+  ],
+  "itemClaims": [
+    {
+      "name": "statement-create-valid",
+      "expect": "valid",
+      "description": "Fresh statement signed by its author; content equals the stored content.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
+          "variantOf": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.EsLmACNLfx3Do-e6A2CunOVfqQoT7vJkVSA-dr1R-F7HOz-MKXPePsbQM7zc6xlR1t8N1707HghRd7fC27ogDw"
+    },
+    {
+      "name": "statement-variant-valid",
+      "expect": "valid",
+      "description": "A variant by another person. Absent description is null; variantOf is signed.",
+      "item": {
+        "id": "statement-grundsatz-einladen-v2",
+        "type": "statement",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T13:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, nenne ich vorher Agenda und Format.",
+          "variantOf": "item:statement-grundsatz-einladen"
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:e093d01ae261b3f6060dac68bcb051459ae678a0260351a261ea34a3d439695a",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen-v2",
+        "type": "statement",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T13:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, nenne ich vorher Agenda und Format.",
+          "description": null,
+          "variantOf": "item:statement-grundsatz-einladen"
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjpudWxsLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIG5lbm5lIGljaCB2b3JoZXIgQWdlbmRhIHVuZCBGb3JtYXQuIiwidmFyaWFudE9mIjoiaXRlbTpzdGF0ZW1lbnQtZ3J1bmRzYXR6LWVpbmxhZGVuIn0sImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTM6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1IiwiaWQiOiJzdGF0ZW1lbnQtZ3J1bmRzYXR6LWVpbmxhZGVuLXYyIiwicHJvZmlsZSI6Iml0ZW0tYXV0aG9yaWFsIiwidHlwZSI6InN0YXRlbWVudCIsInYiOiJybHMtY2xhaW0vMSJ9.gxNnoYcamcBV_wecQ2r9l1uVoPOyrEb6SMDiW4OwtIxwzt0wD1N33tmtvVTyjMxphjd_pep3smwDuXCPcjnhCg"
+    },
+    {
+      "name": "statement-tags-changed-valid",
+      "expect": "valid",
+      "description": "Tags are not part of the content: changing them after signing leaves the claim valid.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:open-space"
+        ]
+      },
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
+          "variantOf": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.EsLmACNLfx3Do-e6A2CunOVfqQoT7vJkVSA-dr1R-F7HOz-MKXPePsbQM7zc6xlR1t8N1707HghRd7fC27ogDw"
+    },
+    {
+      "name": "statement-snapshot-reverify-valid",
+      "expect": "valid",
+      "description": "Identical to statement-create-valid, verified from the stored data.claim after a snapshot bootstrap without local history — must verify from the item alone.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
+          "variantOf": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.EsLmACNLfx3Do-e6A2CunOVfqQoT7vJkVSA-dr1R-F7HOz-MKXPePsbQM7zc6xlR1t8N1707HghRd7fC27ogDw"
+    },
+    {
+      "name": "statement-edit-resigned-valid",
+      "expect": "valid",
+      "description": "The author changed the content (item not frozen) and re-signed. Valid claim, new content hash.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format an.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:a59ab321e1ea6ddd2c7c13fbb7f493688bf01ac7bbe6c470994dbe86515503db",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format an.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
+          "variantOf": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCBhbi4iLCJ2YXJpYW50T2YiOm51bGx9LCJjcmVhdGVkQXQiOiIyMDI2LTA5LTI1VDEyOjAwOjAwLjAwMFoiLCJjcmVhdGVkQnkiOiJkaWQ6a2V5Ono2TWt0VUx1ZFR0QXNBaFJlZ1lQaVo2NjMxUlYzdml2MTJxZDRHUUY4ejF4QjIyUyIsImlkIjoic3RhdGVtZW50LWdydW5kc2F0ei1laW5sYWRlbiIsInByb2ZpbGUiOiJpdGVtLWF1dGhvcmlhbCIsInR5cGUiOiJzdGF0ZW1lbnQiLCJ2IjoicmxzLWNsYWltLzEifQ.tQ5vgjWzhK4UWISiWuopa-e2e8EYIhCjZ8G2mDg8kuE6QHo-DHk79eShMrTE_IqjkCmBdF0Rp7W7CvL-QY6ZAQ"
+    },
+    {
+      "name": "comment-create-valid",
+      "expect": "valid",
+      "description": "A comment signed by its author.",
+      "item": {
+        "id": "comment-dabei",
+        "type": "comment",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T15:00:00.000Z",
+        "data": {
+          "content": "Gute Idee, ich bin dabei.",
+          "replyTo": "comment-1"
+        }
+      },
+      "contentHash": "sha256:6e908eda3355df8c40e15d99b2b62101aa7de493e8f1ac8cedaac04e4b5b8a19",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "comment-dabei",
+        "type": "comment",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T15:00:00.000Z",
+        "content": {
+          "content": "Gute Idee, ich bin dabei.",
+          "replyTo": "comment-1",
+          "replyToComment": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImNvbnRlbnQiOiJHdXRlIElkZWUsIGljaCBiaW4gZGFiZWkuIiwicmVwbHlUbyI6ImNvbW1lbnQtMSIsInJlcGx5VG9Db21tZW50IjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxNTowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6ImNvbW1lbnQtZGFiZWkiLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoiY29tbWVudCIsInYiOiJybHMtY2xhaW0vMSJ9.qhjWTblzxYulstwQFtkUU9fhLsFUOdKjgV8qUmJXpNVx-jWFXZxj5YZQvofAR4qDcY5m7gc5QK_2awbPw6YtCQ"
+    },
+    {
+      "name": "comment-aggregates-changed-valid",
+      "expect": "valid",
+      "description": "Connector-maintained fields changed after others reacted and replied (reactions, myReaction, commentCount). They are not content, so the claim stays valid.",
+      "item": {
+        "id": "comment-dabei",
+        "type": "comment",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T15:00:00.000Z",
+        "data": {
+          "content": "Gute Idee, ich bin dabei.",
+          "replyTo": "comment-1",
+          "reactions": {
+            "👍": 3
+          },
+          "myReaction": "👍",
+          "commentCount": 2
+        }
+      },
+      "contentHash": "sha256:6e908eda3355df8c40e15d99b2b62101aa7de493e8f1ac8cedaac04e4b5b8a19",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "comment-dabei",
+        "type": "comment",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T15:00:00.000Z",
+        "content": {
+          "content": "Gute Idee, ich bin dabei.",
+          "replyTo": "comment-1",
+          "replyToComment": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImNvbnRlbnQiOiJHdXRlIElkZWUsIGljaCBiaW4gZGFiZWkuIiwicmVwbHlUbyI6ImNvbW1lbnQtMSIsInJlcGx5VG9Db21tZW50IjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxNTowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6ImNvbW1lbnQtZGFiZWkiLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoiY29tbWVudCIsInYiOiJybHMtY2xhaW0vMSJ9.qhjWTblzxYulstwQFtkUU9fhLsFUOdKjgV8qUmJXpNVx-jWFXZxj5YZQvofAR4qDcY5m7gc5QK_2awbPw6YtCQ"
+    },
+    {
+      "name": "reaction-create-valid",
+      "expect": "valid",
+      "description": "A reaction signed by its author; the emoji is the whole content.",
+      "item": {
+        "id": "reaction-herz",
+        "type": "reaction",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T16:00:00.000Z",
+        "data": {
+          "emoji": "❤️"
+        }
+      },
+      "contentHash": "sha256:4fb4c59bad283eace0080577c8439076e538026214ce3ae76559c8322cdc089d",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "reaction-herz",
+        "type": "reaction",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T16:00:00.000Z",
+        "content": {
+          "emoji": "❤️"
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImVtb2ppIjoi4p2k77iPIn0sImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTY6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTIiwiaWQiOiJyZWFjdGlvbi1oZXJ6IiwicHJvZmlsZSI6Iml0ZW0tYXV0aG9yaWFsIiwidHlwZSI6InJlYWN0aW9uIiwidiI6InJscy1jbGFpbS8xIn0.TyDLJXrlTaUQse1-uhToJRtsg3B_fI_zVG1TE-fgrNU5I5x1pltI7UnDRasctz_i-7CQ7m-5j5gHftx1FJhQAQ"
+    },
+    {
+      "name": "statement-content-mismatch-invalid",
+      "expect": "invalid",
+      "description": "Stored title differs from the signed content (raw-CRDT edit without re-signing) — MUST fail.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format an.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:a59ab321e1ea6ddd2c7c13fbb7f493688bf01ac7bbe6c470994dbe86515503db",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
+          "variantOf": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.EsLmACNLfx3Do-e6A2CunOVfqQoT7vJkVSA-dr1R-F7HOz-MKXPePsbQM7zc6xlR1t8N1707HghRd7fC27ogDw"
+    },
+    {
+      "name": "comment-content-changed-by-other-invalid",
+      "expect": "invalid",
+      "description": "Someone other than the author changed the comment text. Only the author can produce a valid claim for new content.",
+      "item": {
+        "id": "comment-dabei",
+        "type": "comment",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T15:00:00.000Z",
+        "data": {
+          "content": "Schlechte Idee.",
+          "replyTo": "comment-1"
+        }
+      },
+      "contentHash": "sha256:1c7b8d1b94e70ed8eea9c8203ef98d0745d0b67d9485aeabec59d18a97530ce6",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "comment-dabei",
+        "type": "comment",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T15:00:00.000Z",
+        "content": {
+          "content": "Gute Idee, ich bin dabei.",
+          "replyTo": "comment-1",
+          "replyToComment": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImNvbnRlbnQiOiJHdXRlIElkZWUsIGljaCBiaW4gZGFiZWkuIiwicmVwbHlUbyI6ImNvbW1lbnQtMSIsInJlcGx5VG9Db21tZW50IjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxNTowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6ImNvbW1lbnQtZGFiZWkiLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoiY29tbWVudCIsInYiOiJybHMtY2xhaW0vMSJ9.qhjWTblzxYulstwQFtkUU9fhLsFUOdKjgV8qUmJXpNVx-jWFXZxj5YZQvofAR4qDcY5m7gc5QK_2awbPw6YtCQ"
+    },
+    {
+      "name": "reaction-emoji-changed-invalid",
+      "expect": "invalid",
+      "description": "The stored emoji differs from the signed one — MUST fail.",
+      "item": {
+        "id": "reaction-herz",
+        "type": "reaction",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T16:00:00.000Z",
+        "data": {
+          "emoji": "👎"
+        }
+      },
+      "contentHash": "sha256:e81d4ff574da8983946c919e35287090ac7ef55c088c33b692447663ef510d80",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "reaction-herz",
+        "type": "reaction",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T16:00:00.000Z",
+        "content": {
+          "emoji": "❤️"
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImVtb2ppIjoi4p2k77iPIn0sImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTY6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTIiwiaWQiOiJyZWFjdGlvbi1oZXJ6IiwicHJvZmlsZSI6Iml0ZW0tYXV0aG9yaWFsIiwidHlwZSI6InJlYWN0aW9uIiwidiI6InJscy1jbGFpbS8xIn0.TyDLJXrlTaUQse1-uhToJRtsg3B_fI_zVG1TE-fgrNU5I5x1pltI7UnDRasctz_i-7CQ7m-5j5gHftx1FJhQAQ"
+    },
+    {
+      "name": "claim-missing-invalid",
+      "expect": "invalid",
+      "description": "Signed mode: an item of a catalog type without claim is invalid. Absence of a claim proves no provenance (no legacy mode).",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953",
+      "payload": null,
+      "jws": null
+    },
+    {
+      "name": "foreign-author-without-claim-invalid",
+      "expect": "invalid",
+      "description": "An attacker writes a claimless statement naming alice as author. Invalid, so neither it nor any reference to it counts.",
+      "item": {
+        "id": "statement-untergeschoben",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wer einlädt, entscheidet allein."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:2acb9465594a9a7d319aafe909307a4032308cbff622bfb3e94fd6a129a4e6f3",
+      "payload": null,
+      "jws": null
+    },
+    {
+      "name": "foreign-signer-invalid",
+      "expect": "invalid",
+      "description": "kid names the author but the signature was produced by mallory's key — signature verification MUST fail.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
+          "variantOf": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.P88PWsQM9BuZpB4bEpIR9WIMm19kBUn_9hRsv1rskVNY9EaOQxFhpE8ITsTYxhbMnUqGbfXT7pray0PZPqWjCw"
+    },
+    {
+      "name": "kid-not-author-invalid",
+      "expect": "invalid",
+      "description": "Mallory signs correctly with her own key and kid, but createdBy is alice: kid MUST be <createdBy>#sig-0.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
+          "variantOf": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3FHQzNuV1poWWllRVZUVkRLVzV2NTg4Q2lHZnNEU21SVkc5Wnd3V1R2TFNLI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.jNRxcopPIU3txsdtBY2hvRhUu_Tx_OF2M_fdfRkxnRT3azV2-XlDMzE5TeUzi7826AEiO5gmLXWqLRvRZjsnBA"
+    },
+    {
+      "name": "type-not-in-catalog-invalid",
+      "expect": "invalid",
+      "description": "item-authorial is only valid on items of a catalog type; post is not in the catalog.",
+      "item": {
+        "id": "post-1",
+        "type": "post",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T17:00:00.000Z",
+        "data": {
+          "title": "Hallo",
+          "content": "Ein Post."
+        }
+      },
+      "contentHash": null,
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "post-1",
+        "type": "post",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T17:00:00.000Z",
+        "content": {
+          "title": "Hallo",
+          "content": "Ein Post."
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImNvbnRlbnQiOiJFaW4gUG9zdC4iLCJ0aXRsZSI6IkhhbGxvIn0sImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTc6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTIiwiaWQiOiJwb3N0LTEiLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoicG9zdCIsInYiOiJybHMtY2xhaW0vMSJ9.L04mHXpz49YNdoWnbeJSSdlC4T1fm57NPWO5z7hrknOzLNwxaDnfyl3rPTjQ65AA-Th5Og8pPoDfwLnqd8sRCQ"
+    },
+    {
+      "name": "payload-type-mismatch-invalid",
+      "expect": "invalid",
+      "description": "The payload's type differs from the stored item's type — MUST fail even with a valid signature.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "content": "Gute Idee, ich bin dabei.",
+          "replyTo": "comment-1",
+          "replyToComment": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImNvbnRlbnQiOiJHdXRlIElkZWUsIGljaCBiaW4gZGFiZWkuIiwicmVwbHlUbyI6ImNvbW1lbnQtMSIsInJlcGx5VG9Db21tZW50IjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.xQ9QP1Sh-RAGbdAR3d15tDWPMEKHSN_N56ZyvQkiBJ8nmcSz1UmRS8AGUeG5q7Q4_EO3qAn9cE0YRi07-x-sBg"
+    },
+    {
+      "name": "wrong-typ-invalid",
+      "expect": "invalid",
+      "description": "Domain separation: any typ other than rls-claim+jws MUST be rejected even with a valid signature.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
+          "variantOf": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoidmMrand0In0.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.euRk4XNAu0d3aC0IC8mqd2s6RlVWUD6fbNW7apziY6hWz9Ckh24U4MGywhTJLH-x4pmvVtqdQjo7k-qkskPJAg"
+    },
+    {
+      "name": "unknown-version-invalid",
+      "expect": "invalid",
+      "description": "Unknown payload version MUST fail closed.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953",
+      "payload": {
+        "v": "rls-claim/9",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt.",
+          "variantOf": null
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIiwidmFyaWFudE9mIjpudWxsfSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS85In0.3qFu1nh69GFknKtwEdDji2OKwO_JkGTDwMIgXDgC8kQLa2LRlIu0mYzCQulQE8fjNPsCJ1cVsEfVjKOv2y7DCw"
+    },
+    {
+      "name": "missing-member-invalid",
+      "expect": "invalid",
+      "description": "content contains exactly the type's content fields, absent ones as null; a content object without variantOf (instead of null) is not structurally equal — MUST fail.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "contentHash": "sha256:226fe42250f4a456002a0fdb5e963deaab27d9e0a9e348674d6e1a53ca752953",
+      "payload": {
+        "v": "rls-claim/1",
+        "profile": "item-authorial",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "content": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        }
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRlc2NyaXB0aW9uIjoiSW4gZGVyIEVpbmxhZHVuZywgYmV2b3IgamVtYW5kIHNlaW5lbiBBYmVuZCBkYWbDvHIgaGVyZ2lidC4iLCJ0aXRsZSI6Ildlbm4gaWNoIGVpbmxhZGUsIGdlYmUgaWNoIHZvcmhlciBBZ2VuZGEgdW5kIEZvcm1hdCB2b3IuIn0sImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTI6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTIiwiaWQiOiJzdGF0ZW1lbnQtZ3J1bmRzYXR6LWVpbmxhZGVuIiwicHJvZmlsZSI6Iml0ZW0tYXV0aG9yaWFsIiwidHlwZSI6InN0YXRlbWVudCIsInYiOiJybHMtY2xhaW0vMSJ9.hk8td-wc2FcAf5DRZP5gkla_IuZk2nb3UcsTMpTzC0WTPVS4om0qk-PAe1QJCIjJ8DoCBoKQ0UHy0wcJFc5jDA"
+    }
+  ]
+}
