@@ -20,7 +20,10 @@ const SPACE_B = "space-b"
 
 async function connectorWith(task: Record<string, unknown>) {
   const connector = new MockConnector({
-    items: [],
+    // The statement lives in the store: the vote bar reads its wording from
+    // there and votes only on a verified, counting wording (resonance.md,
+    // vote rule 5) — an item that exists only in props has none.
+    items: [statement()],
     groups: [
       { id: SPACE_A, name: "Space A", data: {} },
       { id: SPACE_B, name: "Space B", data: {} },
@@ -30,7 +33,7 @@ async function connectorWith(task: Record<string, unknown>) {
       { id: MATE, displayName: "Kollegin" },
     ],
     groupMembers: { [SPACE_A]: [MATE], [SPACE_B]: [MATE] },
-    groupItems: {},
+    groupItems: { [SPACE_A]: ["statement-1"] },
   } as never)
   await connector.init()
   return { connector, task }
@@ -57,7 +60,7 @@ async function readWith(
       }),
     )
   })
-  await act(async () => { await Promise.resolve() })
+  await settle()
   const text = container.textContent ?? ""
   const reactionButtons = container.querySelectorAll('[aria-label="Add reaction"]').length
   const voteButtons = container.querySelectorAll('[aria-label^="Zustimmung"]').length
@@ -79,14 +82,24 @@ const task = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-const statement = (overrides: Record<string, unknown> = {}) => ({
-  id: "statement-1",
-  type: "statement",
-  createdBy: MATE,
-  createdAt: "2026-08-01T10:00:00.000Z",
-  data: { title: "Wir brauchen einen zweiten Brunnen" },
-  ...overrides,
-})
+function statement(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "statement-1",
+    type: "statement",
+    createdBy: MATE,
+    createdAt: "2026-08-01T10:00:00.000Z",
+    data: { title: "Wir brauchen einen zweiten Brunnen" },
+    ...overrides,
+  }
+}
+
+/** Verification and the content hash settle asynchronously (fail closed
+    until then): flush a few macrotasks inside act. */
+async function settle() {
+  for (let round = 0; round < 5; round++) {
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 5)) })
+  }
+}
 
 describe("shared detail read view", () => {
   let connector: MockConnector
@@ -207,7 +220,7 @@ describe("feed card footer", () => {
         }),
       )
     })
-    await act(async () => { await Promise.resolve() })
+    await settle()
     expect(container.querySelectorAll('[aria-label^="Zustimmung"]').length).toBe(1)
     // Reactions stay available alongside the votes.
     expect(container.querySelectorAll('[aria-label="Add reaction"]').length).toBe(1)

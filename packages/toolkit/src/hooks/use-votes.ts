@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, startTransition } fr
 import type { ClaimVerdict, DataInterface, Item, RelationRecord, VoteRecord, VoteValue } from "@real-life-stack/data-interface"
 import {
   VOTE_PREDICATE,
-  itemContentHash,
   partitionVotesByContent,
   hasClaimVerification,
   hasRelationRecords,
@@ -196,12 +195,17 @@ export function useVotes(statementId: string): UseVotesResult {
   // Without Authenticatable there is no identity, hence no voting.
   const canWrite = hasRelationRecordWriter(connector)
   const verifiedRecords = useVerifiedRelationRecords(records)
-  const { statement, contentHash, counted: votes, notCounted } = useVotesForWording(statementId, verifiedRecords)
-  const canVote = canWrite && canRead && isAuthenticatable(connector) && currentUserId !== undefined && statement !== null
+  const { contentHash, counted: votes, notCounted } = useVotesForWording(statementId, verifiedRecords)
+  // Voting needs a COUNTING wording: the verified content hash of a statement
+  // with a positive verdict — never a hash computed from unverified content.
+  const canVote = canWrite && canRead && isAuthenticatable(connector) && currentUserId !== undefined && contentHash !== null
 
   // Optimistic overlay for the own vote: applied on click, dropped as soon as
-  // the records observable reflects the write.
-  const [pending, setPending] = useState<{ value: VoteValue | null } | null>(null)
+  // the records observable reflects the write. Bound to the wording it was
+  // cast on: once that wording no longer counts (changed content, lost
+  // verdict), the overlay is void and never counts.
+  const [rawPending, setPending] = useState<{ value: VoteValue | null; contentHash: string } | null>(null)
+  const pending = rawPending !== null && rawPending.contentHash === contentHash ? rawPending : null
 
   const persistedMyVote = useMemo(
     () => (currentUserId ? votes.find((vote) => vote.voterId === currentUserId)?.value : undefined),
@@ -210,9 +214,9 @@ export function useVotes(statementId: string): UseVotesResult {
   const myVote = pending ? pending.value ?? undefined : persistedMyVote
 
   useEffect(() => {
-    if (!pending) return
-    if ((pending.value ?? undefined) === persistedMyVote) setPending(null)
-  }, [pending, persistedMyVote])
+    if (!rawPending) return
+    if (!pending || (pending.value ?? undefined) === persistedMyVote) setPending(null)
+  }, [rawPending, pending, persistedMyVote])
 
   const summary: VoteSummary = useMemo(() => {
     const result: VoteSummary = { green: 0, yellow: 0, red: 0, total: 0 }
@@ -243,17 +247,19 @@ export function useVotes(statementId: string): UseVotesResult {
     if (!hasRelationRecordWriter(connector) || !hasRelationRecords(connector)) return
     if (!isAuthenticatable(connector)) return
 
+    // The vote binds the wording on display (resonance.md → Aktionen) — the
+    // verified, counting one. Without it there is nothing to vote on.
+    if (contentHash === null) return
+
     const requestId = ++latestRef.current
     // Optimistic feedback from the rendered state; the WRITE decision below
     // uses freshly read records, so serialized double-clicks resolve against
     // the true current stance, not a stale render.
-    setPending({ value: myVote === value ? null : value })
+    setPending({ value: myVote === value ? null : value, contentHash })
 
     try {
       const userId = currentUserId ?? (await connector.getCurrentUser())?.id
-      // The vote binds the wording on display (resonance.md → Aktionen).
-      const contentHash = statement ? await itemContentHash(statement) : null
-      if (userId === undefined || contentHash === null) {
+      if (userId === undefined) {
         if (latestRef.current === requestId) setPending(null)
         return
       }
@@ -268,7 +274,7 @@ export function useVotes(statementId: string): UseVotesResult {
       if (existingMine) {
         if (existingMine.value === value && existingMine.contentHash === contentHash) {
           // Same stance on the same wording again — withdraw the own vote.
-          if (latestRef.current === requestId) setPending({ value: null })
+          if (latestRef.current === requestId) setPending({ value: null, contentHash })
           await connector.deleteRelationRecord(existingMine.recordId)
         } else {
           // Stance change, or a vote for an earlier wording renewed: update
@@ -289,7 +295,7 @@ export function useVotes(statementId: string): UseVotesResult {
     } catch {
       if (latestRef.current === requestId) setPending(null)
     }
-  }, [connector, statementId, statement, myVote, currentUserId])
+  }, [connector, statementId, contentHash, myVote, currentUserId])
 
   const vote = useCallback((value: VoteValue) => {
     const next = chainRef.current.then(() => performVote(value))
