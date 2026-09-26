@@ -114,4 +114,47 @@ describe("WotConnector — authorial items (spec 08, signed)", () => {
     expect(frozen.data.title).toBe("zweite Fassung")
     expect(await aliceSide.verifyItemClaim(frozen)).toBe("valid")
   })
+
+  it("re-checks the freeze at commit: a vote arriving while the author signs blocks the content change (#497)", async () => {
+    const handle = space()
+    const aliceSide = connectorFor(alice, handle)
+    const created = await aliceSide.createItem({ type: "statement", createdBy: alice.did, data: { title: "Original" } })
+
+    // Hold Alice's signer for the next signature; Bob votes in between.
+    let entered!: () => void
+    const inSigner = new Promise<void>((resolve) => { entered = resolve })
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    ;(aliceSide as any).identity = {
+      getDid: () => alice.did,
+      signEd25519: async (bytes: Uint8Array) => { entered(); await gate; return alice.signEd25519(bytes) },
+    }
+
+    const pending = aliceSide.updateItem(created.id, { data: { title: "Umgeschrieben" } })
+    await inSigner
+    await connectorFor(bob, handle).createRelationRecord({
+      predicate: "votesOn",
+      from: `global:${bob.did}`,
+      to: `item:${created.id}`,
+      fields: { value: "green", contentHash: (await itemContentHash(created))! },
+    })
+    release()
+
+    await expect(pending).rejects.toThrow(/frozen/)
+    expect((await aliceSide.getItem(created.id))!.data.title).toBe("Original")
+  })
+
+  it("a change outside the content still commits after a concurrent freeze", async () => {
+    const handle = space()
+    const aliceSide = connectorFor(alice, handle)
+    const created = await aliceSide.createItem({ type: "statement", createdBy: alice.did, data: { title: "Original" } })
+    await connectorFor(bob, handle).createRelationRecord({
+      predicate: "votesOn",
+      from: `global:${bob.did}`,
+      to: `item:${created.id}`,
+      fields: { value: "green", contentHash: (await itemContentHash(created))! },
+    })
+    await aliceSide.updateItem(created.id, { tags: ["später"] })
+    expect((await aliceSide.getItem(created.id))!.tags).toEqual(["später"])
+  })
 })

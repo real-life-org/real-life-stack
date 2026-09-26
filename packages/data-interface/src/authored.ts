@@ -77,8 +77,11 @@ export async function withAuthoredCreateClaim(item: Item, ingress: AuthoredIngre
 export interface AuthoredUpdatePlan {
   updates: Partial<Item>
   /** JCS of the content the plan was based on; the connector re-checks it
-      inside its write transaction ({@link assertContentUnchanged}). */
+      inside its write transaction ({@link assertAuthoredCommitAllowed}). */
   contentGuard: string | null
+  /** Whether the plan changes the content — then the freeze is re-checked
+      at commit, because a foreign vote may arrive while signing. */
+  changesContent: boolean
 }
 
 const contentKey = (item: Item): string => jcsCanonicalize(itemContent(item))
@@ -145,16 +148,21 @@ export async function planAuthoredUpdate(
   ingress: AuthoredIngress,
   frozen: boolean,
 ): Promise<AuthoredUpdatePlan> {
-  if (!isAuthorialItemType(existing.type)) return { updates, contentGuard: null }
+  if (!isAuthorialItemType(existing.type)) return { updates, contentGuard: null, changesContent: false }
   const resolved = resolveAuthoredUpdate(existing, updates, ingress.actorId, frozen)
+  const changesContent = resolved.changed !== null
   if (resolved.changed === null || ingress.mode === "authoritative") {
-    return { updates: resolved.updates, contentGuard: resolved.base }
+    return { updates: resolved.updates, contentGuard: resolved.base, changesContent }
   }
   if (!ingress.signer) {
     throw new Error(`Changing a ${existing.type} needs the signing identity — it is never written unsigned (spec 08)`)
   }
   const claim = await signItemClaim(resolved.changed, ingress.signer)
-  return { updates: { ...resolved.updates, data: { ...resolved.changed.data, claim } }, contentGuard: resolved.base }
+  return {
+    updates: { ...resolved.updates, data: { ...resolved.changed.data, claim } },
+    contentGuard: resolved.base,
+    changesContent,
+  }
 }
 
 /**
@@ -166,5 +174,27 @@ export function assertContentUnchanged(current: Item, contentGuard: string | nul
   if (contentGuard === null) return
   if (contentKey(current) !== contentGuard) {
     throw new Error(`The content of ${current.type} ${current.id} changed concurrently — retry the update`)
+  }
+}
+
+/**
+ * Commit guard for a plan made outside the write transaction (spec 08):
+ * inside the transaction, immediately before the first mutation, the content
+ * must still be the planned one and — for a content change — the item must
+ * not have been frozen in the meantime by a content-bound reference that
+ * arrived while signing (#497). Changes outside the content stay allowed.
+ * Covers what the local handle already sees; it does not serialise against
+ * devices that have not synced yet.
+ */
+export function assertAuthoredCommitAllowed(
+  current: Item,
+  plan: Pick<AuthoredUpdatePlan, "contentGuard" | "changesContent">,
+  relationItems: Iterable<Item>,
+): void {
+  assertContentUnchanged(current, plan.contentGuard)
+  if (plan.changesContent && isFrozen(current, relationItems)) {
+    throw new Error(
+      `This ${current.type} is frozen: another person has bound a reference to its content — create a new version instead`,
+    )
   }
 }

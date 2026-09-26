@@ -46,7 +46,7 @@ import {
   verifyItemClaim as verifyItemClaimSignature,
   withAuthoredCreateClaim,
   planAuthoredUpdate,
-  assertContentUnchanged,
+  assertAuthoredCommitAllowed,
   isFrozen,
   type AuthoredUpdatePlan,
   createObservable,
@@ -1326,13 +1326,11 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     id: string,
     updates: Partial<Item>,
   ): Promise<AuthoredUpdatePlan> {
-    const items = handle.getDoc().items ?? {}
-    const serialized = items[id]
-    if (!serialized) return { updates, contentGuard: null }
+    const doc = handle.getDoc()
+    const serialized = doc.items?.[id]
+    if (!serialized) return { updates, contentGuard: null, changesContent: false }
     const existing = deserializeItem(serialized)
-    const relations = Object.values(items)
-      .filter((candidate) => candidate.type === "relation")
-      .map((candidate) => deserializeItem(candidate))
+    const relations = this.relationItemsOf(doc)
     return planAuthoredUpdate(
       existing,
       updates,
@@ -1341,11 +1339,18 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     )
   }
 
+  /** The relation items of a space document — what the freeze reads. */
+  private relationItemsOf(doc: RlsSpaceDoc): Item[] {
+    return Object.values(doc.items ?? {})
+      .filter((candidate) => candidate.type === "relation")
+      .map((candidate) => deserializeItem(candidate))
+  }
+
   private applyItemUpdate(
     handle: SpaceHandle<RlsSpaceDoc>,
     id: string,
     updates: Partial<Item>,
-    contentGuard: string | null = null,
+    plan: Pick<AuthoredUpdatePlan, "contentGuard" | "changesContent"> = { contentGuard: null, changesContent: false },
   ): void {
     const actor = this.requireActivityActor()
     handle.transact((doc) => {
@@ -1357,7 +1362,9 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       // of an authorial item is what makes a bypass visible (spec 08).
       assertMayMutateAuthoredItem(existing, actor, "update")
       assertAuthoredTypeUnchanged(existing, updates)
-      assertContentUnchanged(deserializeItem(existing), contentGuard)
+      // Re-checked right before the first mutation: the content is still
+      // the planned one and no foreign vote froze it while we signed (#497).
+      assertAuthoredCommitAllowed(deserializeItem(existing), plan, this.relationItemsOf(doc))
 
       if (updates.type) existing.type = updates.type
       if (updates.data) {
@@ -1398,7 +1405,7 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
     const handle = await this.resolveHandleForItem(id)
     const plan = await this.planItemUpdate(handle, id, updates)
-    this.applyItemUpdate(handle, id, plan.updates, plan.contentGuard)
+    this.applyItemUpdate(handle, id, plan.updates, plan)
 
     // Reindex the affected group so CrossGroupIndex reflects local writes
     // (handle.onRemoteUpdate only fires for origin === 'remote')

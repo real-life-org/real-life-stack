@@ -3,6 +3,7 @@ import type { Item } from "../src/index"
 import { assertMayMutateAuthoredItem, isAuthoredSystemItem } from "../src/index"
 import { isAuthoredItemType, itemContentHash, verifyItemClaim, type ClaimSigner } from "../src/claims"
 import {
+  assertAuthoredCommitAllowed,
   assertContentUnchanged,
   authoredUpdateAuthoritative,
   isFrozen,
@@ -205,7 +206,7 @@ describe("planAuthoredUpdate — update path", () => {
   it("other types pass through unchanged", async () => {
     const post = { id: "p", type: "post", createdBy: "a", createdAt: "x", data: { content: "x" } } as Item
     const plan = await planAuthoredUpdate(post, { data: { content: "y" } }, { actorId: "b", mode: "signed", signer: null }, false)
-    expect(plan).toEqual({ updates: { data: { content: "y" } }, contentGuard: null })
+    expect(plan).toEqual({ updates: { data: { content: "y" } }, contentGuard: null, changesContent: false })
   })
 })
 
@@ -243,5 +244,25 @@ describe("authoritative, synchronous variants", () => {
     expect(authoredUpdateAuthoritative(comment("a"), { tags: ["x"] }, "b", true)).toEqual({ tags: ["x"] })
     const updated = authoredUpdateAuthoritative(comment("a"), { data: { content: "Neu", claim: "z" } }, "a", false)
     expect("claim" in (updated.data ?? {})).toBe(false)
+  })
+})
+
+describe("assertAuthoredCommitAllowed — freeze re-check at commit (#497)", () => {
+  it("refuses a planned content change when a foreign content-bound vote arrived meanwhile", async () => {
+    const { signer, did } = await testSigner()
+    const ingress: AuthoredIngress = { actorId: did, mode: "signed", signer }
+    const existing = await withAuthoredCreateClaim(comment(did), ingress)
+    const plan = await planAuthoredUpdate(existing, { data: { content: "Neu" } }, ingress, false)
+    expect(plan.changesContent).toBe(true)
+    expect(() => assertAuthoredCommitAllowed(existing, plan, [vote("did:key:zOther", "c1", "sha256:x")])).toThrow(/frozen/)
+  })
+
+  it("lets a change outside the content commit even after a freeze", async () => {
+    const { signer, did } = await testSigner()
+    const ingress: AuthoredIngress = { actorId: did, mode: "signed", signer }
+    const existing = await withAuthoredCreateClaim(comment(did), ingress)
+    const plan = await planAuthoredUpdate(existing, { tags: ["x"] }, ingress, false)
+    expect(plan.changesContent).toBe(false)
+    expect(() => assertAuthoredCommitAllowed(existing, plan, [vote("did:key:zOther", "c1", "sha256:x")])).not.toThrow()
   })
 })
