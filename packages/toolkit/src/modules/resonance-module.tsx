@@ -8,6 +8,7 @@ import { useItemFocus } from "../hooks/use-item-focus"
 import { useRelationRecords } from "../hooks/use-relation-records"
 import { useVerifiedRelationRecords } from "../hooks/use-votes"
 import { useCountingContentHashes } from "../hooks/use-item-standing"
+import { ResonancePopulationProvider } from "../hooks/use-resonance-population"
 import { useModuleHost } from "../components/host/module-host"
 import { ModuleToolbar } from "../components/layout/module-toolbar"
 import { ItemMetaRow } from "../components/preview/item-meta-row"
@@ -24,17 +25,27 @@ import {
   DropdownMenuTrigger,
 } from "../components/primitives/dropdown-menu"
 import { EmptyState } from "../components/primitives/empty-state"
-import { aggregateVoteStats, sortStatements, type ResonanceSortMode } from "../lib/resonance-sort"
+import { FilterChip, FilterMultiSelect, FilterSection, FilterToggle } from "../components/filter/filter-building-blocks"
+import {
+  ALL_PEOPLE,
+  aggregateVoteStats,
+  sortStatements,
+  type ResonancePopulation,
+  type ResonanceSortMode,
+} from "../lib/resonance-sort"
 import type { ModuleViewProps } from "../lib/module-register"
 
 const SORT_LABELS: Record<ResonanceSortMode, string> = {
   newest: "Neueste",
   votes: "Stimmen",
   approval: "Zustimmung",
+  concerns: "Bedenken",
+  rejection: "Ablehnung",
+  participation: "Beteiligung",
   activity: "Aktivität",
 }
 
-const SORT_MODES: readonly ResonanceSortMode[] = ["newest", "votes", "approval", "activity"]
+const SORT_MODES: readonly ResonanceSortMode[] = ["newest", "votes", "approval", "concerns", "rejection", "participation", "activity"]
 
 /**
  * Das Resonanz-Modul, vollstaendig aus dem Toolkit (Spec 01, Der Modul-Host;
@@ -55,23 +66,97 @@ export function ResonanceModule({ items: statements = [], itemsLoading: isLoadin
   // Spec 08 L1: Zaehlen nur Records, fuer die der Connector buergt — fail
   // closed, auch fuer die Sortierung.
   const verifiedVoteRecords = useVerifiedRelationRecords(voteRecords)
-  const { resolveAuthor, resolveItemGroupColor, activeItemId, filterActive, registerItemElement } = useModuleHost()
+  const { resolveAuthor, resolveItemGroupColor, activeItemId, filterActive, registerItemElement, members, isOverview } = useModuleHost()
   const { focusItem } = useItemFocus()
 
   const [sortMode, setSortMode] = useState<ResonanceSortMode>("newest")
+  // Auswertung (resonance.md): Personenmenge und Personen-Filter. Nur lokal —
+  // nichts davon wird geschrieben oder geteilt.
+  const [chosenPeople, setChosenPeople] = useState<string[]>([])
+  const [votersOnly, setVotersOnly] = useState(false)
+  const [greenBy, setGreenBy] = useState<string[]>([])
+
   // Resonanz-Vote-Regel 5: eine Stimme zaehlt nur fuer den aktuellen Wortlaut
   // eines belegten Statements.
   const contentHashes = useCountingContentHashes(statements)
-  const voteStats = useMemo(() => aggregateVoteStats(verifiedVoteRecords, contentHashes), [verifiedVoteRecords, contentHashes])
-  const sortedStatements = useMemo(
-    () => sortStatements(statements, voteStats, sortMode),
-    [statements, voteStats, sortMode],
+  // Ungefiltert: wer wie gestimmt hat — Grundlage fuer „nur wer abgestimmt
+  // hat" und „was traegt X gruen".
+  const allStats = useMemo(() => aggregateVoteStats(verifiedVoteRecords, contentHashes), [verifiedVoteRecords, contentHashes])
+
+  // „Was traegt X gruen": nur Aussagen, die alle gewaehlten Personen gruen tragen.
+  const shownStatements = useMemo(
+    () => greenBy.length === 0
+      ? statements
+      : statements.filter((item) => greenBy.every((id) => allStats.get(item.id)?.voters?.get(id) === "green")),
+    [statements, greenBy, allStats],
   )
+
+  // Personenmenge: Standard alle Mitglieder des Space, bearbeitbar ueber
+  // Einzelauswahl und „nur wer abgestimmt hat". In der Uebersicht gibt es
+  // keinen Space, dessen Mitglieder die Menge waeren (die Mitgliederliste ist
+  // dort die Vereinigung aller Spaces) — ohne eigene Auswahl also keine
+  // Einschraenkung und kein „ohne Stimme". Ebenso ohne Mitgliederliste.
+  const population = useMemo<ResonancePopulation>(() => {
+    const base = chosenPeople.length > 0
+      ? chosenPeople
+      : isOverview || members.length === 0 ? null : members.map((member) => member.id)
+    if (!votersOnly) return base === null ? ALL_PEOPLE : { people: new Set(base), size: base.length }
+    const voted = new Set<string>()
+    for (const item of shownStatements) for (const id of allStats.get(item.id)?.voters?.keys() ?? []) voted.add(id)
+    const people = base === null ? voted : new Set(base.filter((id) => voted.has(id)))
+    return { people, size: people.size }
+  }, [chosenPeople, isOverview, members, votersOnly, shownStatements, allStats])
+
+  const voteStats = useMemo(
+    () => aggregateVoteStats(verifiedVoteRecords, contentHashes, population.people),
+    [verifiedVoteRecords, contentHashes, population],
+  )
+  const sortedStatements = useMemo(
+    () => sortStatements(shownStatements, voteStats, sortMode, population),
+    [shownStatements, voteStats, sortMode, population],
+  )
+
+  const memberOptions = useMemo(
+    () => members.map((member) => ({ id: member.id, label: member.displayName ?? member.id })),
+    [members],
+  )
+  const nameOf = (id: string) => memberOptions.find((option) => option.id === id)?.label ?? id
+  const moduleFilterActive = chosenPeople.length > 0 || votersOnly || greenBy.length > 0
+  const chips = moduleFilterActive ? (
+    <>
+      {chosenPeople.length > 0 && (
+        <FilterChip
+          label={chosenPeople.length === 1 ? `Person: ${nameOf(chosenPeople[0]!)}` : `${chosenPeople.length} Personen`}
+          onRemove={() => setChosenPeople([])}
+        />
+      )}
+      {votersOnly && <FilterChip label="Nur wer abgestimmt hat" onRemove={() => setVotersOnly(false)} />}
+      {greenBy.length > 0 && (
+        <FilterChip label={`Trägt grün: ${greenBy.map(nameOf).join(", ")}`} onRemove={() => setGreenBy([])} />
+      )}
+    </>
+  ) : undefined
 
   return (
     <div className="space-y-4">
       {/* Die Sortierung steht rechts neben der Suche, die alle Module teilen. */}
       <ModuleToolbar
+        drawerExtra={
+          <>
+            {memberOptions.length > 0 && (
+              <FilterSection label="Personen">
+                <FilterMultiSelect options={memberOptions} value={chosenPeople} onChange={setChosenPeople} />
+                <FilterToggle label="Nur wer abgestimmt hat" value={votersOnly} onChange={setVotersOnly} />
+              </FilterSection>
+            )}
+            {memberOptions.length > 0 && (
+              <FilterSection label="Trägt grün">
+                <FilterMultiSelect options={memberOptions} value={greenBy} onChange={setGreenBy} />
+              </FilterSection>
+            )}
+          </>
+        }
+        chipsExtra={chips}
         trailingActions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -93,15 +178,16 @@ export function ResonanceModule({ items: statements = [], itemsLoading: isLoadin
         }
       />
 
+      <ResonancePopulationProvider value={population}>
       <div className="space-y-4">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <ItemPreviewSkeleton key={`skeleton-${i}`} />)
         ) : sortedStatements.length === 0 ? (
           <EmptyState
             icon={MessageSquareQuote}
-            title={filterActive ? "Keine Treffer" : "Noch keine Aussagen"}
+            title={filterActive || moduleFilterActive ? "Keine Treffer" : "Noch keine Aussagen"}
             description={
-              filterActive
+              filterActive || moduleFilterActive
                 ? "Passe die Filter an."
                 : "Bring die erste Aussage ein und finde heraus, was in der Gruppe Resonanz findet."
             }
@@ -123,6 +209,7 @@ export function ResonanceModule({ items: statements = [], itemsLoading: isLoadin
           ))
         )}
       </div>
+      </ResonancePopulationProvider>
     </div>
   )
 }

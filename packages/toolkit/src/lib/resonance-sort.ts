@@ -1,4 +1,4 @@
-import type { Item, RelationRecord } from "@real-life-stack/data-interface"
+import type { Item, RelationRecord, VoteValue } from "@real-life-stack/data-interface"
 import { votesFromRelationRecords } from "@real-life-stack/data-interface"
 
 /**
@@ -10,7 +10,7 @@ import { votesFromRelationRecords } from "@real-life-stack/data-interface"
  */
 
 /** Sort modes of the Resonance view (docs/spec/modules/resonance.md → Sortierungen). */
-export type ResonanceSortMode = "newest" | "votes" | "approval" | "activity"
+export type ResonanceSortMode = "newest" | "votes" | "approval" | "concerns" | "rejection" | "participation" | "activity"
 
 export interface StatementVoteStats {
   green: number
@@ -19,6 +19,26 @@ export interface StatementVoteStats {
   total: number
   /** ISO timestamp of the most recent vote, null when unvoted. */
   lastVoteAt: string | null
+  /** Who voted how (counted votes only) — for person-based filters such as
+      „was trägt X grün". Optional so hand-built stats stay valid. */
+  voters?: ReadonlyMap<string, VoteValue>
+}
+
+/**
+ * The person set an evaluation computes over (resonance.md → Auswertung,
+ * Personenmenge): `people` null = no restriction. `size` is the size of the
+ * set for „ohne Stimme" and Beteiligung; null when unknown.
+ */
+export interface ResonancePopulation {
+  people: ReadonlySet<string> | null
+  size: number | null
+}
+
+export const ALL_PEOPLE: ResonancePopulation = { people: null, size: null }
+
+/** „Ohne Stimme" = size of the person set minus those who voted; never red. */
+export function noVoteCount(stats: Pick<StatementVoteStats, "total">, population: ResonancePopulation): number | null {
+  return population.size === null ? null : Math.max(0, population.size - stats.total)
 }
 
 /**
@@ -34,14 +54,18 @@ export interface StatementVoteStats {
 export function aggregateVoteStats(
   records: RelationRecord[],
   contentHashes: ReadonlyMap<string, string>,
+  people: ReadonlySet<string> | null = null,
 ): Map<string, StatementVoteStats> {
-  const stats = new Map<string, StatementVoteStats>()
+  const stats = new Map<string, StatementVoteStats & { voters: Map<string, VoteValue> }>()
   for (const vote of votesFromRelationRecords(records)) {
     const current = contentHashes.get(vote.statementId)
     if (current === undefined || vote.contentHash !== current) continue
-    const entry = stats.get(vote.statementId) ?? { green: 0, yellow: 0, red: 0, total: 0, lastVoteAt: null }
+    // Personenmenge: only votes of the chosen people count.
+    if (people !== null && !people.has(vote.voterId)) continue
+    const entry = stats.get(vote.statementId) ?? { green: 0, yellow: 0, red: 0, total: 0, lastVoteAt: null, voters: new Map() }
     entry[vote.value] += 1
     entry.total += 1
+    entry.voters.set(vote.voterId, vote.value)
     if (entry.lastVoteAt === null || vote.createdAt > entry.lastVoteAt) entry.lastVoteAt = vote.createdAt
     stats.set(vote.statementId, entry)
   }
@@ -50,10 +74,11 @@ export function aggregateVoteStats(
 
 const EMPTY_STATS: StatementVoteStats = { green: 0, yellow: 0, red: 0, total: 0, lastVoteAt: null }
 
-/** Approval = share of green among all votes; unvoted counts as 0. */
-function approvalShare(s: StatementVoteStats): number {
-  return s.total === 0 ? 0 : s.green / s.total
+/** Share of a stance among the cast votes; unvoted counts as 0. */
+function share(s: StatementVoteStats, value: VoteValue): number {
+  return s.total === 0 ? 0 : s[value] / s.total
 }
+const approvalShare = (s: StatementVoteStats) => share(s, "green")
 
 /**
  * Sort statements per the spec's tiebreaker chains. Comparators return the
@@ -64,9 +89,13 @@ export function sortStatements(
   statements: Item[],
   stats: Map<string, StatementVoteStats>,
   mode: ResonanceSortMode,
+  population: ResonancePopulation = ALL_PEOPLE,
 ): Item[] {
   const of = (item: Item) => stats.get(item.id) ?? EMPTY_STATS
   const lastVote = (s: StatementVoteStats) => s.lastVoteAt ?? ""
+  // Beteiligung = Stimmende ÷ Größe der Personenmenge; unknown size → 0.
+  const participation = (s: StatementVoteStats) =>
+    population.size === null || population.size === 0 ? 0 : s.total / population.size
   const chains: Record<ResonanceSortMode, ((a: Item, b: Item) => number)[]> = {
     newest: [
       (a, b) => b.createdAt.localeCompare(a.createdAt),
@@ -83,6 +112,21 @@ export function sortStatements(
       (a, b) => approvalShare(of(b)) - approvalShare(of(a)),
       (a, b) => of(b).total - of(a).total,
       (a, b) => lastVote(of(b)).localeCompare(lastVote(of(a))),
+      (a, b) => b.createdAt.localeCompare(a.createdAt),
+    ],
+    concerns: [
+      (a, b) => share(of(b), "yellow") - share(of(a), "yellow"),
+      (a, b) => of(b).total - of(a).total,
+      (a, b) => b.createdAt.localeCompare(a.createdAt),
+    ],
+    rejection: [
+      (a, b) => share(of(b), "red") - share(of(a), "red"),
+      (a, b) => of(b).total - of(a).total,
+      (a, b) => b.createdAt.localeCompare(a.createdAt),
+    ],
+    participation: [
+      (a, b) => participation(of(b)) - participation(of(a)),
+      (a, b) => of(b).total - of(a).total,
       (a, b) => b.createdAt.localeCompare(a.createdAt),
     ],
     activity: [
