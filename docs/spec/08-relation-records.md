@@ -528,12 +528,46 @@ normalisiert zurückschreiben, denn jede Byte-Änderung ändert den Hash.
    ist ein solches Item unverifiziert.
 7. Leseregeln analog L1/L2: Ein Item mit `invalid`-Claim zählt in keiner
    Auswertung, Bezugnahmen darauf ebenso wenig. Anzeigeflächen DÜRFEN es mit
-   Kennzeichnung („verändert") zeigen. Einen Altbestand-Modus gibt es nicht:
-   Die Abwesenheit eines Claims beweist keine Herkunft und kann in einem
-   Multi-Writer-Store jederzeit hergestellt werden.
+   Kennzeichnung („verändert") zeigen. Die Abwesenheit eines Claims beweist
+   keine Herkunft und kann in einem Multi-Writer-Store jederzeit hergestellt
+   werden. Einen Altbestand-Modus gibt es deshalb nur in der engen Form
+   „Altbestand von Kommentaren und Reaktionen" unten.
 8. Kanonische **Testvektoren** liegen unter
    `schemas/claims/vectors/item-authorial-1.json` und sind für
    Implementierungen verbindlich.
+
+**Altbestand von Kommentaren und Reaktionen.** Kommentare und Reaktionen gab
+es schon, bevor sie signiert wurden. Damit sie sichtbar bleiben, gilt für sie
+eine enge Ausnahme. Ein Item ist **Altbestand**, wenn alle drei Bedingungen
+erfüllt sind:
+
+- sein Typ ist `comment` oder `reaction`,
+- `data.claim` fehlt (ein vorhandener, aber ungültiger Claim zählt nicht),
+- `createdAt`, gelesen als Zeitpunkt nach RFC 3339, liegt vor dem Stichtag
+  `2026-09-27T00:00:00.000Z`; ein nicht lesbarer Wert ist nie Altbestand. Das ist das
+  Ende des Tages, an dem die signierenden Connectoren veröffentlicht wurden
+  (26.09.2026), damit auch an diesem Tag noch von alten Clients geschriebene
+  Items dazugehören.
+
+Regeln:
+
+1. Altbestand wird angezeigt und zählt in Auswertungen wie ein Item mit
+   positivem Verdikt.
+2. Anzeigeflächen SOLLTEN ihn dezent als unsigniert kennzeichnen, etwa in der
+   Detailansicht, und nicht als Warnung.
+3. Die Ausnahme gilt nicht für Statements und nicht für Relation Records.
+   Dort gab es keinen Altbestand, der geschützt werden müsste.
+4. Nachsigniert wird nicht. Ein automatisches Nachsignieren durch die
+   Autorin würde auch untergeschobene Items beglaubigen, denn ohne Claim sind
+   `createdBy` und `createdAt` frei schreibbar.
+5. Altbestand ist unbelegt. Wer ein Item ohne Claim mit fremdem `createdBy`
+   einschreibt und zurückdatiert, erzeugt Altbestand. Wer einen signierten
+   Kommentar ändert, den Claim entfernt und zurückdatiert, ebenso. Die
+   Ausnahme verhindert das nicht, sie hält nur bestehende Inhalte sichtbar.
+   Deshalb ist die Kennzeichnung als unsigniert (Regel 2) wichtig.
+
+Die Gruppe `legacy` in `item-authorial-1.json` legt fest, wann ein Item
+Altbestand ist.
 
 **Schreibweg.** Den Claim verwaltet der Connector im allgemeinen Schreibweg,
 gesteuert allein durch den Katalog:

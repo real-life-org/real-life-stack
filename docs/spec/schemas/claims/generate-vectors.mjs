@@ -451,6 +451,23 @@ const itemClaimVectors = [
   })(),
 ]
 
+// --- Altbestand (legacy) of comments and reactions: is an item legacy? ---
+// comment/reaction, data.claim absent, createdAt before the cutoff.
+const LEGACY_CUTOFF = "2026-09-27T00:00:00.000Z"
+const legacyItem = (type, createdAt, data) => ({ id: `${type}-legacy`, type, createdBy: ALICE, createdAt, data })
+const legacyVectors = [
+  { name: "comment-before-cutoff", legacy: true, description: "Unsigned comment written before the cutoff: legacy, shown and counted.", item: legacyItem("comment", "2026-09-20T10:00:00.000Z", { content: "Alt" }) },
+  { name: "reaction-before-cutoff", legacy: true, description: "Unsigned reaction written before the cutoff: legacy.", item: legacyItem("reaction", "2026-08-01T10:00:00.000Z", { emoji: "👍" }) },
+  { name: "comment-on-release-day", legacy: true, description: "Written on the release day itself (26.09.2026, by a client not yet updated): still before the exclusive cutoff.", item: legacyItem("comment", "2026-09-26T23:59:59.999Z", { content: "Noch alt" }) },
+  { name: "comment-at-cutoff", legacy: false, description: "The cutoff is exclusive: an unsigned comment at exactly the cutoff is not legacy.", item: legacyItem("comment", LEGACY_CUTOFF, { content: "Neu" }) },
+  { name: "comment-after-cutoff", legacy: false, description: "Unsigned comment after the cutoff: not legacy (invalid in signed mode).", item: legacyItem("comment", "2026-10-01T10:00:00.000Z", { content: "Neu" }) },
+  { name: "comment-with-claim-before-cutoff", legacy: false, description: "A claim is present (here a broken one): never legacy — a present but invalid claim stays \"verändert\".", item: legacyItem("comment", "2026-09-20T10:00:00.000Z", { content: "Alt", claim: "broken.claim.value" }) },
+  { name: "statement-before-cutoff", legacy: false, description: "The exception covers only comment and reaction; statements never had legacy.", item: legacyItem("statement", "2026-09-20T10:00:00.000Z", { title: "Alt" }) },
+  { name: "relation-before-cutoff", legacy: false, description: "Relation records are not covered.", item: legacyItem("relation", "2026-09-20T10:00:00.000Z", { predicate: "votesOn", value: "green" }) },
+  { name: "comment-before-cutoff-without-millis", legacy: true, description: "createdAt is compared as an instant, not as a string: a valid RFC 3339 timestamp without fractional seconds qualifies.", item: legacyItem("comment", "2026-09-26T12:00:00Z", { content: "Alt" }) },
+  { name: "comment-unreadable-created-at", legacy: false, description: "An unreadable createdAt is never legacy.", item: legacyItem("comment", "irgendwann", { content: "?" }) },
+]
+
 const itemAuthorialOut = {
   description: "Canonical item-authorial vectors (rls-claim/1): content hash per catalog type and item claims. Binding for every implementation — see docs/spec/08-relation-records.md → Aussagen einer Person: item-authorial.",
   keys: {
@@ -463,6 +480,9 @@ const itemAuthorialOut = {
   jcsNote: out.jcsNote,
   contentHash: contentHashVectors,
   itemClaims: itemClaimVectors,
+  legacyCutoff: LEGACY_CUTOFF,
+  legacyRule: "An item is legacy iff its type is comment or reaction, data.claim is absent (a present but invalid claim does not qualify), and createdAt, read as an RFC 3339 instant, lies before legacyCutoff; an unreadable createdAt is never legacy. Legacy is shown and counts like a positive verdict; it is unproven.",
+  legacy: legacyVectors,
 }
 writeFileSync(join(here, "vectors", "item-authorial-1.json"), JSON.stringify(itemAuthorialOut, null, 2) + "\n")
 

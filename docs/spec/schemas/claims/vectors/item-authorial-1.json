@@ -1149,5 +1149,151 @@
       },
       "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiZGVzY3JpcHRpb24iOiJJbiBkZXIgRWlubGFkdW5nLCBiZXZvciBqZW1hbmQgc2VpbmVuIEFiZW5kIGRhZsO8ciBoZXJnaWJ0LiIsInRpdGxlIjoiV2VubiBpY2ggZWlubGFkZSwgZ2ViZSBpY2ggdm9yaGVyIEFnZW5kYSB1bmQgRm9ybWF0IHZvci4ifSwicmVsYXRpb25zIjp7fX0sImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTI6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTIiwiaWQiOiJzdGF0ZW1lbnQtZ3J1bmRzYXR6LWVpbmxhZGVuIiwicHJvZmlsZSI6Iml0ZW0tYXV0aG9yaWFsIiwidHlwZSI6InN0YXRlbWVudCIsInYiOiJybHMtY2xhaW0vMSJ9.KFxEdcGgJWPfAVgZ6Z3j8hHFS8rFw5F3ZNEWFtX_oSJ60IoGrR_RQr-qEQnPFtm3_6VL6iefJR75xKSEL80ODQ"
     }
+  ],
+  "legacyCutoff": "2026-09-27T00:00:00.000Z",
+  "legacyRule": "An item is legacy iff its type is comment or reaction, data.claim is absent (a present but invalid claim does not qualify), and createdAt, read as an RFC 3339 instant, lies before legacyCutoff; an unreadable createdAt is never legacy. Legacy is shown and counts like a positive verdict; it is unproven.",
+  "legacy": [
+    {
+      "name": "comment-before-cutoff",
+      "legacy": true,
+      "description": "Unsigned comment written before the cutoff: legacy, shown and counted.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-20T10:00:00.000Z",
+        "data": {
+          "content": "Alt"
+        }
+      }
+    },
+    {
+      "name": "reaction-before-cutoff",
+      "legacy": true,
+      "description": "Unsigned reaction written before the cutoff: legacy.",
+      "item": {
+        "id": "reaction-legacy",
+        "type": "reaction",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-08-01T10:00:00.000Z",
+        "data": {
+          "emoji": "👍"
+        }
+      }
+    },
+    {
+      "name": "comment-on-release-day",
+      "legacy": true,
+      "description": "Written on the release day itself (26.09.2026, by a client not yet updated): still before the exclusive cutoff.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-26T23:59:59.999Z",
+        "data": {
+          "content": "Noch alt"
+        }
+      }
+    },
+    {
+      "name": "comment-at-cutoff",
+      "legacy": false,
+      "description": "The cutoff is exclusive: an unsigned comment at exactly the cutoff is not legacy.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-27T00:00:00.000Z",
+        "data": {
+          "content": "Neu"
+        }
+      }
+    },
+    {
+      "name": "comment-after-cutoff",
+      "legacy": false,
+      "description": "Unsigned comment after the cutoff: not legacy (invalid in signed mode).",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-10-01T10:00:00.000Z",
+        "data": {
+          "content": "Neu"
+        }
+      }
+    },
+    {
+      "name": "comment-with-claim-before-cutoff",
+      "legacy": false,
+      "description": "A claim is present (here a broken one): never legacy — a present but invalid claim stays \"verändert\".",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-20T10:00:00.000Z",
+        "data": {
+          "content": "Alt",
+          "claim": "broken.claim.value"
+        }
+      }
+    },
+    {
+      "name": "statement-before-cutoff",
+      "legacy": false,
+      "description": "The exception covers only comment and reaction; statements never had legacy.",
+      "item": {
+        "id": "statement-legacy",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-20T10:00:00.000Z",
+        "data": {
+          "title": "Alt"
+        }
+      }
+    },
+    {
+      "name": "relation-before-cutoff",
+      "legacy": false,
+      "description": "Relation records are not covered.",
+      "item": {
+        "id": "relation-legacy",
+        "type": "relation",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-20T10:00:00.000Z",
+        "data": {
+          "predicate": "votesOn",
+          "value": "green"
+        }
+      }
+    },
+    {
+      "name": "comment-before-cutoff-without-millis",
+      "legacy": true,
+      "description": "createdAt is compared as an instant, not as a string: a valid RFC 3339 timestamp without fractional seconds qualifies.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-26T12:00:00Z",
+        "data": {
+          "content": "Alt"
+        }
+      }
+    },
+    {
+      "name": "comment-unreadable-created-at",
+      "legacy": false,
+      "description": "An unreadable createdAt is never legacy.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "irgendwann",
+        "data": {
+          "content": "?"
+        }
+      }
+    }
   ]
 }
