@@ -538,7 +538,7 @@ normalisiert zurückschreiben, denn jede Byte-Änderung ändert den Hash.
 
 **Altbestand von Kommentaren und Reaktionen.** Kommentare und Reaktionen gab
 es schon, bevor sie signiert wurden. Damit sie sichtbar bleiben, gilt für sie
-eine enge Ausnahme. Ein Item ist **Altbestand**, wenn alle drei Bedingungen
+eine enge Ausnahme. Ein Item ist **Altbestand**, wenn alle vier Bedingungen
 erfüllt sind:
 
 - sein Typ ist `comment` oder `reaction`,
@@ -548,6 +548,11 @@ erfüllt sind:
   Ende des Tages, an dem die signierenden Connectoren veröffentlicht wurden
   (26.09.2026), damit auch an diesem Tag noch von alten Clients geschriebene
   Items dazugehören.
+- es ist nicht älter als das Item, auf das es sich bezieht: Für jedes Ziel
+  seiner Inhaltsrelationen (`commentOn`, `reactsTo`) liegt sein `createdAt`
+  höchstens 5 Minuten vor dem `createdAt` des Ziels. Die Toleranz fängt
+  abweichende Geräteuhren ab. Fehlt ein Ziel, ist es nicht auffindbar oder
+  sein `createdAt` nicht lesbar, ist das Item kein Altbestand.
 
 Regeln:
 
@@ -562,9 +567,12 @@ Regeln:
    `createdBy` und `createdAt` frei schreibbar.
 5. Altbestand ist unbelegt. Wer ein Item ohne Claim mit fremdem `createdBy`
    einschreibt und zurückdatiert, erzeugt Altbestand. Wer einen signierten
-   Kommentar ändert, den Claim entfernt und zurückdatiert, ebenso. Die
-   Ausnahme verhindert das nicht, sie hält nur bestehende Inhalte sichtbar.
-   Deshalb ist die Kennzeichnung als unsigniert (Regel 2) wichtig.
+   Kommentar ändert, den Claim entfernt und zurückdatiert, ebenso. Die vierte
+   Bedingung schließt das für jedes Ziel aus, das nach dem Stichtag entstanden
+   ist, denn dann kann es keinen Altbestand mehr geben. An älteren Zielen
+   bleibt es möglich, und `createdAt` eines unsignierten Ziels ist selbst
+   schreibbar. Die Ausnahme hält bestehende Inhalte sichtbar, sie ist kein
+   Schutz. Deshalb ist die Kennzeichnung als unsigniert (Regel 2) wichtig.
 
 Die Gruppe `legacy` in `item-authorial-1.json` legt fest, wann ein Item
 Altbestand ist.

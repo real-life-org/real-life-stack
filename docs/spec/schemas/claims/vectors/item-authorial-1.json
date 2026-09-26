@@ -1151,12 +1151,13 @@
     }
   ],
   "legacyCutoff": "2026-09-27T00:00:00.000Z",
-  "legacyRule": "An item is legacy iff its type is comment or reaction, data.claim is absent (a present but invalid claim does not qualify), and createdAt, read as an RFC 3339 instant, lies before legacyCutoff; an unreadable createdAt is never legacy. Legacy is shown and counts like a positive verdict; it is unproven.",
+  "legacyClockToleranceMs": 300000,
+  "legacyRule": "An item is legacy iff (1) its type is comment or reaction, (2) data.claim is absent (a present but invalid claim does not qualify), (3) createdAt, read as an RFC 3339 instant, lies before legacyCutoff, and (4) it has at least one target in its content relations and, for every target, createdAt >= target.createdAt - legacyClockToleranceMs. Unreadable timestamps or a target missing from `targets` mean not legacy. Legacy is shown and counts like a positive verdict; it is unproven.",
   "legacy": [
     {
       "name": "comment-before-cutoff",
       "legacy": true,
-      "description": "Unsigned comment written before the cutoff: legacy, shown and counted.",
+      "description": "Unsigned comment written before the cutoff, after its target: legacy, shown and counted.",
       "item": {
         "id": "comment-legacy",
         "type": "comment",
@@ -1164,8 +1165,20 @@
         "createdAt": "2026-09-20T10:00:00.000Z",
         "data": {
           "content": "Alt"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
         }
-      }
+      ]
     },
     {
       "name": "reaction-before-cutoff",
@@ -1175,11 +1188,23 @@
         "id": "reaction-legacy",
         "type": "reaction",
         "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-08-01T10:00:00.000Z",
+        "createdAt": "2026-08-20T10:00:00.000Z",
         "data": {
           "emoji": "👍"
+        },
+        "relations": [
+          {
+            "predicate": "reactsTo",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
         }
-      }
+      ]
     },
     {
       "name": "comment-on-release-day",
@@ -1192,8 +1217,20 @@
         "createdAt": "2026-09-26T23:59:59.999Z",
         "data": {
           "content": "Noch alt"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
         }
-      }
+      ]
     },
     {
       "name": "comment-at-cutoff",
@@ -1206,8 +1243,20 @@
         "createdAt": "2026-09-27T00:00:00.000Z",
         "data": {
           "content": "Neu"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
         }
-      }
+      ]
     },
     {
       "name": "comment-after-cutoff",
@@ -1220,8 +1269,20 @@
         "createdAt": "2026-10-01T10:00:00.000Z",
         "data": {
           "content": "Neu"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
         }
-      }
+      ]
     },
     {
       "name": "comment-with-claim-before-cutoff",
@@ -1235,8 +1296,20 @@
         "data": {
           "content": "Alt",
           "claim": "broken.claim.value"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
         }
-      }
+      ]
     },
     {
       "name": "statement-before-cutoff",
@@ -1249,8 +1322,10 @@
         "createdAt": "2026-09-20T10:00:00.000Z",
         "data": {
           "title": "Alt"
-        }
-      }
+        },
+        "relations": []
+      },
+      "targets": []
     },
     {
       "name": "relation-before-cutoff",
@@ -1264,8 +1339,10 @@
         "data": {
           "predicate": "votesOn",
           "value": "green"
-        }
-      }
+        },
+        "relations": []
+      },
+      "targets": []
     },
     {
       "name": "comment-before-cutoff-without-millis",
@@ -1278,8 +1355,20 @@
         "createdAt": "2026-09-26T12:00:00Z",
         "data": {
           "content": "Alt"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
         }
-      }
+      ]
     },
     {
       "name": "comment-unreadable-created-at",
@@ -1292,8 +1381,187 @@
         "createdAt": "irgendwann",
         "data": {
           "content": "?"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
         }
-      }
+      ]
+    },
+    {
+      "name": "comment-backdated-onto-new-target",
+      "legacy": false,
+      "description": "The target was created after the cutoff, so no comment on it can be legacy: a backdated unsigned comment is not.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-20T10:00:00.000Z",
+        "data": {
+          "content": "Untergeschoben"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-new"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-new",
+          "createdAt": "2026-10-01T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "comment-older-than-target",
+      "legacy": false,
+      "description": "Dated well before its (old) target: impossible for a real comment, not legacy.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-08-01T10:00:00.000Z",
+        "data": {
+          "content": "Zu früh"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "comment-within-clock-tolerance",
+      "legacy": true,
+      "description": "Dated 4 minutes before its target — within the 5-minute tolerance for skewed device clocks.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-08-15T08:56:00.000Z",
+        "data": {
+          "content": "Uhr geht nach"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "comment-beyond-clock-tolerance",
+      "legacy": false,
+      "description": "Dated 6 minutes before its target — beyond the tolerance.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-08-15T08:54:00.000Z",
+        "data": {
+          "content": "Zu früh"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "2026-08-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "comment-without-target",
+      "legacy": false,
+      "description": "No content relation, so no target to compare with: not legacy.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-20T10:00:00.000Z",
+        "data": {
+          "content": "Ohne Ziel"
+        },
+        "relations": []
+      },
+      "targets": []
+    },
+    {
+      "name": "comment-target-not-found",
+      "legacy": false,
+      "description": "The target is not available (targets list empty): not legacy.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-20T10:00:00.000Z",
+        "data": {
+          "content": "Ziel fehlt"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": []
+    },
+    {
+      "name": "comment-target-unreadable-created-at",
+      "legacy": false,
+      "description": "The target's createdAt is unreadable: not legacy.",
+      "item": {
+        "id": "comment-legacy",
+        "type": "comment",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-20T10:00:00.000Z",
+        "data": {
+          "content": "?"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-old"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "id": "post-old",
+          "createdAt": "unbekannt"
+        }
+      ]
     }
   ]
 }
