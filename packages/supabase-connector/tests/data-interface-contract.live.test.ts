@@ -229,6 +229,115 @@ if (!url || !anonKey || !serviceKey) {
       })
     }
 
+    // Migration 0012: Statements sind Aussagen einer Person (Spec 08). Den
+    // Inhalt aendert nur die Autorin, und nie mehr, sobald eine fremde
+    // inhaltsgebundene Stimme darauf zeigt. Geprueft mit rohem DML echter
+    // Nutzer, wie oben.
+    it("a SECOND user may tag a foreign statement but neither change its content nor delete it", async () => {
+      const alice = await makeAuthoritative()
+      const mallory = await makeAuthoritative()
+      try {
+        const id = `statement-live-${Date.now()}`
+        const insert = await alice.client.from("items").insert({
+          id, type: "statement", created_by: alice.userId, data: { title: "ihre Aussage", claim: "x.y.z" },
+        })
+        expect(insert.error).toBeNull()
+        expect((await alice.connector.getItem(id))!.data, "authoritative Store schreibt keinen Claim").toEqual({ title: "ihre Aussage" })
+
+        expect((await mallory.client.from("items").update({ tags: ["wichtig"] }).eq("id", id)).error).toBeNull()
+        const hijack = await mallory.client.from("items").update({ data: { title: "gekapert" } }).eq("id", id)
+        expect(hijack.error).not.toBeNull()
+        expect(String(hijack.error!.message)).toMatch(/only the author/)
+        await mallory.client.from("items").delete().eq("id", id)
+
+        const after = await alice.connector.getItem(id)
+        expect(after, "Statement darf nicht geloescht worden sein").not.toBeNull()
+        expect(after!.data).toEqual({ title: "ihre Aussage" })
+        expect(after!.tags).toEqual(["wichtig"])
+        expect(await alice.connector.verifyItemClaim!(after!)).toBe("trusted")
+      } finally {
+        await alice.connector.dispose()
+        await mallory.connector.dispose()
+      }
+    })
+
+    it("the AUTHOR changes a statement until another person binds a vote to its content, then it is frozen", async () => {
+      const alice = await makeAuthoritative()
+      const bob = await makeAuthoritative()
+      try {
+        const id = `statement-freeze-${Date.now()}`
+        expect((await alice.client.from("items").insert({
+          id, type: "statement", created_by: alice.userId, data: { title: "erste Fassung" },
+        })).error).toBeNull()
+        expect((await alice.client.from("items").update({ data: { title: "zweite Fassung" } }).eq("id", id)).error).toBeNull()
+
+        const vote = await bob.client.from("items").insert({
+          id: `vote-freeze-${Date.now()}`,
+          type: "relation",
+          created_by: bob.userId,
+          data: { predicate: VOTE_PREDICATE, value: "green", contentHash: "sha256:00" },
+          relations: [
+            { predicate: "from", target: `global:${bob.userId}` },
+            { predicate: "to", target: `item:${id}` },
+          ],
+        })
+        expect(vote.error).toBeNull()
+
+        const late = await alice.client.from("items").update({ data: { title: "dritte Fassung" } }).eq("id", id)
+        expect(late.error).not.toBeNull()
+        expect(String(late.error!.message)).toMatch(/frozen/)
+        expect((await alice.client.from("items").update({ tags: ["x"] }).eq("id", id)).error).toBeNull()
+        expect((await alice.connector.getItem(id))!.data).toEqual({ title: "zweite Fassung" })
+
+        const removed = await alice.client.from("items").delete().eq("id", id)
+        expect(removed.error).toBeNull()
+        expect(await alice.connector.getItem(id)).toBeNull()
+      } finally {
+        await alice.connector.dispose()
+        await bob.connector.dispose()
+      }
+    })
+
+    // #501: `item:<id>` ist relativ zum Space. Eine Stimme in einem fremden
+    // Space darf ein Statement, das ihre Autorin nicht einmal sieht, nicht
+    // einfrieren; eine Stimme im selben Space weiterhin schon.
+    it("only a content-bound vote in the statement's OWN space freezes it", async () => {
+      const alice = await makeAuthoritative()
+      const bob = await makeAuthoritative()
+      try {
+        const stamp = Date.now()
+        const home = await alice.connector.createGroup(`Freeze Heim ${stamp}`)
+        const foreign = await bob.connector.createGroup(`Freeze Fremd ${stamp}`)
+        const id = `statement-scope-${stamp}`
+        expect((await alice.client.from("items").insert({
+          id, type: "statement", created_by: alice.userId, data: { title: "erste Fassung" }, group_id: home.id,
+        })).error).toBeNull()
+
+        const vote = (voter: { userId: string }, key: string, groupId: string) => ({
+          id: `vote-scope-${key}-${stamp}`,
+          type: "relation",
+          created_by: voter.userId,
+          data: { predicate: VOTE_PREDICATE, value: "green", contentHash: "sha256:00" },
+          relations: [
+            { predicate: "from", target: `global:${voter.userId}` },
+            { predicate: "to", target: `item:${id}` },
+          ],
+          group_id: groupId,
+        })
+        expect((await bob.client.from("items").insert(vote(bob, "fremd", foreign.id))).error).toBeNull()
+        expect((await alice.client.from("items").update({ data: { title: "zweite Fassung" } }).eq("id", id)).error).toBeNull()
+
+        await alice.connector.inviteMember(home.id, bob.userId)
+        expect((await bob.client.from("items").insert(vote(bob, "heim", home.id))).error).toBeNull()
+        const late = await alice.client.from("items").update({ data: { title: "dritte Fassung" } }).eq("id", id)
+        expect(late.error).not.toBeNull()
+        expect(String(late.error!.message)).toMatch(/frozen/)
+      } finally {
+        await alice.connector.dispose()
+        await bob.connector.dispose()
+      }
+    })
+
     it("authoritative connector vouches trusted for the facade-written record", async () => {
       const { connector, userId } = await makeAuthoritative()
       try {
