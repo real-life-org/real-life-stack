@@ -1,4 +1,4 @@
-import type { RelationRecord } from "./index.js"
+import type { Item, Relation, RelationRecord } from "./index.js"
 
 /**
  * SignedClaims — author binding for relation records (spec 08 → "Autorbindung",
@@ -15,6 +15,7 @@ import type { RelationRecord } from "./index.js"
 export const RLS_CLAIM_V1 = "rls-claim/1"
 export const CLAIM_JWS_TYP = "rls-claim+jws"
 export const RELATION_AUTHORIAL_PROFILE = "relation-authorial"
+export const ITEM_AUTHORIAL_PROFILE = "item-authorial"
 
 /**
  * The CLOSED v0.1 catalog of authorial predicates (spec 08): perspective
@@ -161,17 +162,56 @@ export async function signRelationClaim(record: RelationRecord, signer: ClaimSig
   if (!isAuthorialPredicate(record.predicate)) {
     throw new Error(`Predicate "${record.predicate}" is outside the authorial claim catalog (spec 08)`)
   }
-  const header = { alg: "EdDSA", kid: signer.kid, typ: CLAIM_JWS_TYP }
-  const payload = relationAuthorialPayload(record)
-  const signingInput = `${toBase64Url(encoder.encode(jcsCanonicalize(header)))}.${toBase64Url(encoder.encode(jcsCanonicalize(payload)))}`
-  const signature = await signer.signEd25519(encoder.encode(signingInput))
-  return `${signingInput}.${toBase64Url(signature)}`
+  return signPayload(relationAuthorialPayload(record), signer)
 }
 
 async function deriveCanonicalRecordId(record: RelationRecord): Promise<string> {
   const bytes = encoder.encode(jcsCanonicalize([record.createdBy, record.predicate, record.from, record.to]))
   const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes)
   return "rel-" + Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
+}
+
+interface ParsedClaim {
+  header: Record<string, unknown>
+  payload: Record<string, unknown>
+  signingInput: string
+  signature: Uint8Array
+}
+
+/** Parse a compact claim JWS and check the header contract (alg, typ, kid
+    present) and the payload version. Returns null when anything is off. */
+function parseClaim(claim: unknown): ParsedClaim | null {
+  if (typeof claim !== "string") return null
+  const parts = claim.split(".")
+  if (parts.length !== 3) return null
+  const [headerB64, payloadB64, signatureB64] = parts as [string, string, string]
+  const header = JSON.parse(new TextDecoder().decode(fromBase64Url(headerB64))) as Record<string, unknown>
+  if (header.alg !== "EdDSA" || header.typ !== CLAIM_JWS_TYP || typeof header.kid !== "string") return null
+  const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(payloadB64))) as Record<string, unknown>
+  if (payload.v !== RLS_CLAIM_V1) return null
+  return { header, payload, signingInput: `${headerB64}.${payloadB64}`, signature: fromBase64Url(signatureB64) }
+}
+
+/** Exact kid convention `<createdBy>#sig-0`, then the Ed25519 signature under
+    the key resolved from the kid (did:key — fully local). */
+async function verifyClaimSignature(parsed: ParsedClaim): Promise<boolean> {
+  if (parsed.header.kid !== `${parsed.payload.createdBy}#sig-0`) return false
+  const publicKeyBytes = ed25519PublicKeyFromDidKey(didFromKid(parsed.header.kid as string))
+  if (!publicKeyBytes) return false
+  const key = await globalThis.crypto.subtle.importKey("raw", publicKeyBytes as BufferSource, "Ed25519", false, ["verify"])
+  return globalThis.crypto.subtle.verify(
+    "Ed25519",
+    key,
+    parsed.signature as BufferSource,
+    encoder.encode(parsed.signingInput) as BufferSource,
+  )
+}
+
+async function signPayload(payload: Record<string, unknown>, signer: ClaimSigner): Promise<string> {
+  const header = { alg: "EdDSA", kid: signer.kid, typ: CLAIM_JWS_TYP }
+  const signingInput = `${toBase64Url(encoder.encode(jcsCanonicalize(header)))}.${toBase64Url(encoder.encode(jcsCanonicalize(payload)))}`
+  const signature = await signer.signEd25519(encoder.encode(signingInput))
+  return `${signingInput}.${toBase64Url(signature)}`
 }
 
 /**
@@ -184,43 +224,135 @@ async function deriveCanonicalRecordId(record: RelationRecord): Promise<string> 
  */
 export async function verifyRelationClaim(record: RelationRecord): Promise<"valid" | "invalid"> {
   try {
-    const claim = record.claim
-    if (typeof claim !== "string") return "invalid"
-    const parts = claim.split(".")
-    if (parts.length !== 3) return "invalid"
-    const [headerB64, payloadB64, signatureB64] = parts as [string, string, string]
-
-    const header = JSON.parse(new TextDecoder().decode(fromBase64Url(headerB64))) as Record<string, unknown>
-    if (header.alg !== "EdDSA" || header.typ !== CLAIM_JWS_TYP || typeof header.kid !== "string") return "invalid"
-
+    const parsed = parseClaim(record.claim)
+    if (!parsed) return "invalid"
     // relation-authorial exists ONLY for catalog predicates (spec 08) — a
     // formally correct claim on e.g. "blocks" is invalid.
     if (!isAuthorialPredicate(record.predicate)) return "invalid"
-
-    const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(payloadB64))) as Record<string, unknown>
-    if (payload.v !== RLS_CLAIM_V1 || payload.profile !== RELATION_AUTHORIAL_PROFILE) return "invalid"
-    // Exact kid convention: `<createdBy>#sig-0` — a matching DID with a
-    // different fragment is NOT the specified signer reference.
-    if (header.kid !== `${payload.createdBy}#sig-0`) return "invalid"
-
+    if (parsed.payload.profile !== RELATION_AUTHORIAL_PROFILE) return "invalid"
     // Structural payload ↔ record equality over the exact wire shape.
-    const expected = relationAuthorialPayload(record)
-    if (jcsCanonicalize(payload) !== jcsCanonicalize(expected)) return "invalid"
-
+    if (jcsCanonicalize(parsed.payload) !== jcsCanonicalize(relationAuthorialPayload(record))) return "invalid"
     // Canonical id rule (spec 08 rule 4): a record under a wrong key is
     // invalid even with an intact signature.
     if (record.id !== (await deriveCanonicalRecordId(record))) return "invalid"
+    return (await verifyClaimSignature(parsed)) ? "valid" : "invalid"
+  } catch {
+    return "invalid"
+  }
+}
 
-    const publicKeyBytes = ed25519PublicKeyFromDidKey(didFromKid(header.kid))
-    if (!publicKeyBytes) return "invalid"
-    const key = await globalThis.crypto.subtle.importKey("raw", publicKeyBytes as BufferSource, "Ed25519", false, ["verify"])
-    const valid = await globalThis.crypto.subtle.verify(
-      "Ed25519",
-      key,
-      fromBase64Url(signatureB64) as BufferSource,
-      encoder.encode(`${headerB64}.${payloadB64}`) as BufferSource,
-    )
-    return valid ? "valid" : "invalid"
+// ==================== item-authorial (spec 08 → Aussagen einer Person) ====================
+
+/** A catalog entry: which data fields and which embedded-relation
+    predicates form the content of a type. */
+export interface AuthorialItemType {
+  readonly data: readonly string[]
+  readonly relations: readonly string[]
+}
+
+/**
+ * The CLOSED v0.1 catalog of item types that are the statement of one
+ * person (spec 08). Never sourced from space data — no client may reclassify
+ * a type between authorial and collaborative. `post` is deliberately absent
+ * (collaborative, rls#263).
+ */
+export const AUTHORIAL_ITEM_TYPES: ReadonlyMap<string, AuthorialItemType> = new Map<string, AuthorialItemType>([
+  ["statement", Object.freeze({ data: Object.freeze(["title", "description", "variantOf"]), relations: Object.freeze([]) })],
+  ["comment", Object.freeze({ data: Object.freeze(["content", "replyTo", "replyToComment"]), relations: Object.freeze(["commentOn"]) })],
+  ["reaction", Object.freeze({ data: Object.freeze(["emoji"]), relations: Object.freeze(["reactsTo"]) })],
+])
+
+export function isAuthorialItemType(type: string): boolean {
+  return AUTHORIAL_ITEM_TYPES.has(type)
+}
+
+/** The content of an authorial item: its content fields (null when absent)
+    and, per content predicate, the sorted targets of its embedded relations. */
+export interface ItemContent {
+  data: Record<string, unknown>
+  relations: Record<string, string[]>
+}
+
+type ContentSource = { type: string; data?: Record<string, unknown>; relations?: readonly Relation[] }
+
+/**
+ * Content per spec 08. Everything else — connector-maintained counts
+ * (`reactions`, `myReaction`, `commentCount`), relations with other
+ * predicates, `meta`, `tags`, the contract field `data.claim` — is not part
+ * of it. Targets sort by UTF-16 code units, like JCS object keys. Returns
+ * null for types outside the catalog.
+ */
+export function itemContent(item: ContentSource): ItemContent | null {
+  const entry = AUTHORIAL_ITEM_TYPES.get(item.type)
+  if (!entry) return null
+  const data: Record<string, unknown> = {}
+  for (const field of entry.data) data[field] = item.data?.[field] ?? null
+  const relations: Record<string, string[]> = {}
+  for (const predicate of entry.relations) {
+    relations[predicate] = (item.relations ?? [])
+      .filter((relation) => relation.predicate === predicate)
+      .map((relation) => relation.target)
+      .sort()
+  }
+  return { data, relations }
+}
+
+/** `"sha256:" + lowercase hex(SHA-256(UTF-8(JCS(value))))` — no Unicode normalisation. */
+export async function contentHash(value: unknown): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", encoder.encode(jcsCanonicalize(value)))
+  return "sha256:" + Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
+}
+
+/** Content hash of an authorial item, or null for types outside the catalog. */
+export async function itemContentHash(item: ContentSource): Promise<string | null> {
+  const content = itemContent(item)
+  return content === null ? null : contentHash(content)
+}
+
+type ClaimableItem = Pick<Item, "id" | "type" | "createdBy" | "createdAt" | "data"> & { relations?: readonly Relation[] }
+
+/** The exact wire payload `rls-claim/1` / `item-authorial`: all seven
+    members ALWAYS present. Null for types outside the catalog. */
+export function itemAuthorialPayload(item: ClaimableItem): Record<string, unknown> | null {
+  const content = itemContent(item)
+  if (content === null) return null
+  return {
+    v: RLS_CLAIM_V1,
+    profile: ITEM_AUTHORIAL_PROFILE,
+    id: item.id,
+    type: item.type,
+    createdBy: item.createdBy,
+    createdAt: item.createdAt,
+    content,
+  }
+}
+
+/**
+ * Sign an authorial item's content. The signer MUST be the author
+ * (`kid` = `<createdBy>#sig-0`) and the type MUST be in the catalog.
+ */
+export async function signItemClaim(item: ClaimableItem, signer: ClaimSigner): Promise<string> {
+  if (signer.kid !== `${item.createdBy}#sig-0`) {
+    throw new Error(`Claim signer ${signer.kid} does not match item createdBy ${item.createdBy} (kid MUST be <createdBy>#sig-0)`)
+  }
+  const payload = itemAuthorialPayload(item)
+  if (payload === null) throw new Error(`Type "${item.type}" is outside the authorial item catalog (spec 08)`)
+  return signPayload(payload, signer)
+}
+
+/**
+ * Verify an authorial item's claim (`data.claim`) per spec 08: type in the
+ * catalog, claim well-formed, profile, kid↔createdBy, structural
+ * payload↔item equality (identity, type and content), and the signature.
+ */
+export async function verifyItemClaim(item: ClaimableItem): Promise<"valid" | "invalid"> {
+  try {
+    const expected = itemAuthorialPayload(item)
+    if (expected === null) return "invalid"
+    const parsed = parseClaim(item.data?.claim)
+    if (!parsed || parsed.payload.profile !== ITEM_AUTHORIAL_PROFILE) return "invalid"
+    if (jcsCanonicalize(parsed.payload) !== jcsCanonicalize(expected)) return "invalid"
+    return (await verifyClaimSignature(parsed)) ? "valid" : "invalid"
   } catch {
     return "invalid"
   }
