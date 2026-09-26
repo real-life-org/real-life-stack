@@ -633,7 +633,7 @@ Regeln:
 5. Menschen stehen in **einer Zeile je Personen-Kante**. Der Qualifier steht klein hinter dem Namen am Chip (etwa „Maria zugesagt" für `going`, „Timo lernt" für `learns`). Gespeichert wird die Id, das Wort kommt über die Intl-Schicht. Stammt die geltende Aussage nicht von der Person selbst, sagt der Chip, von wem: „Timo zugesagt · eingetragen von Anton" ([08 → Qualifier an Personen-Kanten](../08-relation-records.md#qualifier-an-personen-kanten)). Das Event führt Eingeladene (`invited`) und Zusagen (`attends`) in einer Zeile. Eine Person mit geltendem `declined` erscheint nicht in der Zeile und nicht in ihrer Zusammenfassung, nur in der vollständigen Liste („Alle").
 6. Position im Modul (Spalte, Stufe, Reihenfolge) steht nicht in der Meta-Box.
 7. Eine Selbstaktion ist eine Kante von mir zum Item. Sie steht als eigene Pill-Zeile direkt unter der Meta-Box: vor der Aktion neutral („Zusagen · Vielleicht · Absagen"), danach mit meinem Zustand („✓ Zugesagt" für `going`). Auch `declined` ist ein Zustand und bleibt als meiner sichtbar.
-8. Rückwärts-Listen deklariert der Typ des angezeigten Items (Register, `itemRole: "to"`, Slot `list`). Sie zeigen alle Einträge, ohne Kappung, als kompakte `ItemPreview`s (Kartenflächen-MUSS, siehe [`ItemPreview`](#itempreview)).
+8. Rückwärts-Listen deklariert der Typ des angezeigten Items (Register, `itemRole: "to"`, Slot `list`, oder eine benannte Abfrage in `lists`). Sie zeigen alle Einträge, jeden einmal, ohne Kappung, als kompakte `ItemPreview`s (Kartenflächen-MUSS, siehe [`ItemPreview`](#itempreview)). Die Liste `family` eines Statements zeigt je Fassung ihre Verteilung (Stimmleiste) und markiert die angezeigte Fassung ([resonance.md → Varianten](resonance.md#varianten)).
 9. Die Karte (`ItemPreview`) zeigt aus demselben Register: Titel, erste Meta-Zeile, Avatar-Stack, Tags gekappt.
 10. Ob `bar` und `comments` erscheinen, sagt das Register des Typs. Für `person` entfallen beide.
 
@@ -670,6 +670,7 @@ Jedes Feld und jede Kante hat eine Lese- und eine Schreibform auf **einem** Date
 | B12 | `contact` | Zeile mit Sprung „Anrufen" | Textfeld mit Sichtbarkeits-Hinweis |
 | B13 | `group` | Space-Badge im Kopf, nur außerhalb des Space | Space-Auswahl in der Fußzeile |
 | B14 | `tags` | TagChips | Chips „+ Tag" |
+| B15 | `item-ref` | Chip in Typfarbe wie C3 („Variante von …"); fehlendes Ziel als Text („nicht verfügbare Aussage") | nur soweit der Typ es erlaubt; `edit: "create"`: beim Anlegen gesetzt (etwa vorbefüllt durch eine Menüaktion), danach nicht mehr änderbar |
 
 **Kanten-Widgets:**
 
@@ -699,12 +700,15 @@ Der Modus ergibt sich aus Rechten und Instanz, nicht aus dem Typ. Er bestimmt �
 | Eigenes | ja | ja, mit meinem Zustand | ja | – |
 | Mitglied | nach `useItemPermissions` | ja, neutral bis zur eigenen Aktion | ja | Space-Badge außerhalb des Space |
 | Nur lesen | nein | nein | nein | Nur-lesen-Hinweis im Slot `note` |
+| Eingefroren | „Bearbeiten" für den Inhalt entfällt; eine Menüaktion mit `replacesEditWhenFrozen` steht an seiner Stelle | ja | ja | Hinweis im Slot `note` |
 
 Regeln:
 
 1. Selbstaktionen (C2, C4) sind auch ohne Bearbeitungsrecht am Item möglich, wenn Schreibrecht im Space besteht. Ohne Schreibrecht entfällt die Aktionszeile ganz.
 2. Im Modus „Nur lesen" sagt der Hinweis, warum das Item nicht bearbeitbar ist.
-3. Die Modi gespiegelter Items (Spiegel mit und ohne Schreibrecht, Herkunfts-Badge) sind nicht Teil dieses Entwurfs. Sie folgen mit [09](../09-mirror-bridge.md) und [12](../12-profile.md).
+3. „Eingefroren" gilt, solange der Inhalt eines Items nach [08 → Einfrieren](../08-relation-records.md#inhaltsgebundene-bezugnahme-und-einfrieren) nicht mehr geändert werden darf. Es kommt zu „Eigenes" oder „Mitglied" hinzu. Was außerhalb des Inhalts liegt (etwa Tags), bleibt nach den allgemeinen Rechten bearbeitbar.
+4. Menüaktionen des Typs (`menuActions`, [06 → Feld- und Kantenregister](../06-schema-composition.md#feld--und-kantenregister)) stehen im ⋮-Menü neben Bearbeiten, Teilen und Löschen und folgen denselben Sichtbarkeitsregeln wie [`ItemDetailActions`](#itemdetailactions).
+5. Die Modi gespiegelter Items (Spiegel mit und ohne Schreibrecht, Herkunfts-Badge) sind nicht Teil dieses Entwurfs. Sie folgen mit [09](../09-mirror-bridge.md) und [12](../12-profile.md).
 
 ### Edit-Regeln
 
