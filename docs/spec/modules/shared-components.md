@@ -630,9 +630,9 @@ Regeln:
 2. Ein leeres Feld erzeugt keine Zeile. Es gibt keine 0-Zähler und keinen Platzhaltertext.
 3. Die Meta-Box hat eine Zeile je Feld oder Kante, jede mit Icon. Die Zeilen stehen in dieser Reihenfolge: Menschen → Zeit → Ort → Item-Kanten → Werte. Innerhalb einer Gruppe gilt die Reihenfolge des Registers.
 4. Eine Item-Referenz erscheint als Chip in der Farbe ihres Typs. Ein Klick darauf öffnet das Ziel in derselben Panel-Instanz. Ein Wert erscheint als Text; führt er zu einer Sicht, gilt [01 → Ein Feld führt zu seiner Sicht](../01-app-composition.md#ein-feld-führt-zu-seiner-sicht).
-5. Menschen stehen in **einer Zeile je Personen-Kante**. Der Qualifier steht klein hinter dem Namen am Chip („Maria zugesagt", „Timo lernt"). Stammt die geltende Aussage nicht von der Person selbst, sagt der Chip, von wem: „Timo zugesagt · eingetragen von Anton" ([08 → Qualifier an Personen-Kanten](../08-relation-records.md#qualifier-an-personen-kanten)). Das Event führt Eingeladene (`invited`) und Zusagen (`attends`) in einer Zeile.
+5. Menschen stehen in **einer Zeile je Personen-Kante**. Der Qualifier steht klein hinter dem Namen am Chip (etwa „Maria zugesagt" für `going`, „Timo lernt" für `learns`). Gespeichert wird die Id, das Wort kommt über die Intl-Schicht. Stammt die geltende Aussage nicht von der Person selbst, sagt der Chip, von wem: „Timo zugesagt · eingetragen von Anton" ([08 → Qualifier an Personen-Kanten](../08-relation-records.md#qualifier-an-personen-kanten)). Das Event führt Eingeladene (`invited`) und Zusagen (`attends`) in einer Zeile. Eine Person mit geltendem `declined` erscheint nicht in der Zeile und nicht in ihrer Zusammenfassung, nur in der vollständigen Liste („Alle").
 6. Position im Modul (Spalte, Stufe, Reihenfolge) steht nicht in der Meta-Box.
-7. Eine Selbstaktion ist eine Kante von mir zum Item. Sie steht als eigene Pill-Zeile direkt unter der Meta-Box: vor der Aktion neutral („Zusagen · Vielleicht · Absagen"), danach mit meinem Zustand („✓ Zugesagt").
+7. Eine Selbstaktion ist eine Kante von mir zum Item. Sie steht als eigene Pill-Zeile direkt unter der Meta-Box: vor der Aktion neutral („Zusagen · Vielleicht · Absagen"), danach mit meinem Zustand („✓ Zugesagt" für `going`). Auch `declined` ist ein Zustand und bleibt als meiner sichtbar.
 8. Rückwärts-Listen deklariert der Typ des angezeigten Items (Register, `itemRole: "to"`, Slot `list`). Sie zeigen alle Einträge, ohne Kappung, als kompakte `ItemPreview`s (Kartenflächen-MUSS, siehe [`ItemPreview`](#itempreview)).
 9. Die Karte (`ItemPreview`) zeigt aus demselben Register: Titel, erste Meta-Zeile, Avatar-Stack, Tags gekappt.
 10. Ob `bar` und `comments` erscheinen, sagt das Register des Typs. Für `person` entfallen beide.
@@ -642,7 +642,7 @@ Regeln:
 | Zustand | Verhalten |
 |---|---|
 | Normal | wie oben |
-| Viele | Eine Menschen-Zeile fasst ab einer Schwelle je Qualifier zusammen: drei Avatare, „12 zugesagt", „Alle" |
+| Viele | Eine Menschen-Zeile fasst ab einer Schwelle je Qualifier zusammen: drei Avatare, „12 zugesagt" (`going`), „Alle" |
 | Laden | Skeleton in der Anatomie, kein Spinner |
 | Minimal | nur Felder mit Inhalt (Regeln 1 und 2) |
 | Fehler | Banner inline im Slot `note` mit „Erneut"; Eingaben bleiben erhalten |

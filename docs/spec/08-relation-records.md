@@ -252,7 +252,7 @@ Regeln:
 
 **Status:** Normativer Entwurf (S0, 26.09.2026).
 
-Ein Qualifier präzisiert eine Personen-Kante mit einem Wert aus einer festen Menge: `assignedTo` mit kann · lernt, die Teilnahme am Event mit zugesagt · vielleicht · eingeladen, `votesOn` mit green · yellow · red. Er ist kein zweites Prädikat.
+Ein Qualifier präzisiert eine Personen-Kante mit einem Wert aus einer festen Menge: `assignedTo` mit `can` · `learns` (App-Beispiel Karabirrdt), die Teilnahme am Event mit `going` · `maybe` · `declined`, `votesOn` mit `green` · `yellow` · `red`. Werte sind feste englische Ids; die Anzeigewörter (etwa „zugesagt", „lernt") kommen über die Intl-Schicht. Er ist kein zweites Prädikat.
 
 Regeln:
 
@@ -263,19 +263,19 @@ Regeln:
 5. Eine Kante ohne Qualifier ist gültig und wird ohne Qualifier gezeigt.
 6. Jedes Mitglied darf den Qualifier einer eingebetteten Kante setzen und ändern, auch für andere Personen. Es schreibt dafür das Trägeritem nach dessen Rechten.
 7. **Aussagen über andere sind erlaubt.** Ein Record DARF eine andere Person als `from` tragen als seinen Autor: `createdBy` ist der Sprecher, der ihn signiert, `from` die Person, über die er spricht. Weil die `id` `createdBy` enthält (Regel 4), ist die Aussage eines anderen ein eigener Record neben dem der Person. Ändern und löschen darf jeder nur seine eigenen Records (Fassaden-Regel 7, creator-owns).
-8. Leseflächen MÜSSEN eine Aussage über andere als solche zeigen: „Timo zugesagt · eingetragen von Anton". Sie DÜRFEN sie nicht als Selbstaussage der Person ausgeben.
+8. Leseflächen MÜSSEN eine Aussage über andere als solche zeigen: „Timo zugesagt · eingetragen von Anton" (Beispiel für `going`). Sie DÜRFEN sie nicht als Selbstaussage der Person ausgeben.
 9. **Zählregel.** Wie mehrere Records zur selben Person und demselben Item zusammenwirken, deklariert das Register je Kante (`EdgeEntry.count`):
-   - `one-per-person` („eine je Person, eigene gewinnt"): Je Person gilt ihre Selbstaussage (`createdBy` = Identität von `from`). Fehlt sie, gilt die jüngste Aussage eines anderen. Die Person überstimmt jede fremde Aussage durch eine eigene. Form für Zusagen, die in der Zukunft liegen.
+   - `one-per-person` („eine je Person, eigene gewinnt"): Je Person gilt ihre Selbstaussage (`createdBy` = Identität von `from`). Fehlt sie, gilt die jüngste Aussage eines anderen. Die Person überstimmt jede fremde Aussage durch eine eigene, auch durch eine ablehnende (`declined`). Löscht sie ihren eigenen Record, hat sie keine Aussage mehr, und es gilt wieder die jüngste fremde. Form für Zusagen, die in der Zukunft liegen.
    - `collect-accepted` („sammeln, Person nimmt an"): Die Aussagen addieren sich, keine überstimmt eine andere. Öffentlich angezeigt wird eine Aussage über eine Person erst, wenn diese sie angenommen hat ([05 → UI-Regeln](05-confirmations-and-trust.md#ui-regeln), Regel 5, `isAccepted`). Das ist die Form für spätere Teilnahme-Bestätigungen („war dabei, bestätigt von Maria und Jonas"); Bestätigungen selbst regelt 05, nicht dieser Abschnitt.
 10. Wer Personen-Kanten neu schreibt (Composer-Mapper), MUSS `meta.role` jeder Person erhalten, deren Kante bestehen bleibt ([shared-components.md → Personenfelder](modules/shared-components.md#personenfelder-people), Regel 6).
 
 ### Teilnahme am Event: `attends` und `invited`
 
 1. Eine Zusage ist ein RelationRecord `attends` von der Person (`from`) zum Event (`to`), Zählregel `one-per-person`.
-2. `fields.role` trägt den Qualifier: zugesagt oder vielleicht. `fields.tense` trägt die Zeitform wie in der Netzwerk-App ([netzwerk-app.md](netzwerk-app.md)): `coming`, `currently`, `has-been`.
-3. „Absagen" löscht den eigenen `attends`-Record.
+2. `fields.role` trägt den Qualifier: `going`, `maybe` oder `declined` (angezeigt etwa als „zugesagt", „vielleicht", „abgesagt"). `fields.tense` trägt die Zeitform wie in der Netzwerk-App ([netzwerk-app.md](netzwerk-app.md)): `coming`, `currently`, `has-been`.
+3. „Absagen" schreibt `role: "declined"` in den eigenen Record; der Record bleibt. `declined` ist eine eigene Aussage und stärker als keine: Unter `one-per-person` gewinnt sie dauerhaft über fremde Einträge zur selben Person. Den eigenen Record zu löschen heißt dagegen „keine Aussage mehr" (Regel 9).
 4. „Eingeladen" ist die eingebettete Kante `invited` am Event (Event → Person). Sie bleibt, wie sie ist; Mitglieder setzen sie nach Regel 6.
-5. Das Event zeigt `invited` und `attends` in **einer** Menschen-Zeile. Hat eine Person eine gültige `attends`-Aussage, zeigt die Zeile deren Qualifier statt „eingeladen".
+5. Das Event zeigt `invited` und `attends` in **einer** Menschen-Zeile. Hat eine Person eine gültige `attends`-Aussage, zeigt die Zeile deren Qualifier statt „eingeladen". Eine Person mit geltendem `declined` erscheint nicht in der Menschen-Zeile, nur in der vollständigen Liste („Alle").
 6. `attends` ist im Claim-Katalog `authorial` (siehe „Zwei Profile"): Der Sprecher signiert, nur er ändert.
 8. Wer Personen-Kanten neu schreibt (Composer-Mapper), MUSS `meta.role` jeder Person erhalten, deren Kante bestehen bleibt ([shared-components.md → Personenfelder](modules/shared-components.md#personenfelder-people), Regel 6).
 
