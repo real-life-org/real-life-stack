@@ -266,6 +266,16 @@ export function isAuthorialItemType(type: string): boolean {
   return AUTHORIAL_ITEM_TYPES.has(type)
 }
 
+/**
+ * Authored items: their content is someone's statement, so only the author
+ * may change it — the catalog types above plus relation records (whose
+ * authorial predicates carry `relation-authorial`). The single source for
+ * the authored-item guard; do not keep a parallel list.
+ */
+export function isAuthoredItemType(type: string): boolean {
+  return type === "relation" || isAuthorialItemType(type)
+}
+
 /** The content of an authorial item: its content fields (null when absent)
     and, per content predicate, the sorted targets of its embedded relations. */
 export interface ItemContent {

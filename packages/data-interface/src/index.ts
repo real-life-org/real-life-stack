@@ -16,9 +16,10 @@ export {
 } from "./relation-records.js"
 export * from "./item-types.js"
 export * from "./mirror.js"
-import { SYSTEM_ITEM_TYPES } from "./item-types.js"
+import { isAuthorialItemType, isAuthoredItemType } from "./claims.js"
 export * from "./votes.js"
 export * from "./claims.js"
+export * from "./authored.js"
 export * from "./vocab.js"
 export * from "./type-manifest.js"
 export * from "./module-hints.js"
@@ -424,6 +425,22 @@ export interface ClaimVerificationCapable {
 
 export function hasClaimVerification(c: DataInterface): c is DataInterface & ClaimVerificationCapable {
   return typeof (c as Partial<ClaimVerificationCapable>).verifyRecordClaim === "function"
+}
+
+/**
+ * Verdict for authorial items (spec 08 → Aussagen einer Person): `signed`
+ * connectors verify the `item-authorial` claim (valid/invalid),
+ * `authoritative` connectors answer "trusted" — only when every ingress
+ * binds createdBy AND restricts content changes to the author. Answers for
+ * catalog types; connectors without this capability yield no verdict, and
+ * such items count in no aggregate (fail closed).
+ */
+export interface ItemClaimVerificationCapable {
+  verifyItemClaim(item: Item): Promise<import("./claims.js").ClaimVerdict>
+}
+
+export function hasItemClaimVerification(c: DataInterface): c is DataInterface & ItemClaimVerificationCapable {
+  return typeof (c as Partial<ItemClaimVerificationCapable>).verifyItemClaim === "function"
 }
 
 export interface RelationRecordWriterCapable {
@@ -1066,9 +1083,13 @@ export function stripEditStamp<T extends Record<string, unknown>>(input: T): T {
 
 /**
  * Items that carry a visible statement BY someone: a comment puts words in
- * their mouth, a reaction or a vote (relation record) casts their ballot.
- * Only the author may change these — unlike ordinary content, which any
- * space member may edit.
+ * their mouth, a reaction or a vote (relation record) casts their ballot, a
+ * statement is their wording. Only the author may change these — unlike
+ * ordinary content, which any space member may edit.
+ *
+ * @deprecated Use {@link isAuthoredItemType} (claims.ts). Kept as an alias:
+ * the set derives from the spec 08 catalog, not from SYSTEM_ITEM_TYPES
+ * (which answers a different question — what aggregating views hide).
  *
  * IMPORTANT: enforcement is only as strong as the ingress. A server-backed
  * connector (Supabase RLS, GraphQL) can make this a real boundary. In WoT it
@@ -1078,20 +1099,27 @@ export function stripEditStamp<T extends Record<string, unknown>>(input: T): T {
  * presented to users as protection.
  */
 export function isAuthoredSystemItem(type: string): boolean {
-  return (SYSTEM_ITEM_TYPES as readonly string[]).includes(type)
+  return isAuthoredItemType(type)
 }
 
 /**
  * Guard for the generic update/delete path of a connector: reject a mutation
- * of someone else's authored system item. Mirrors
- * {@link isAuthoredSystemItem}'s caveat about WoT.
+ * of someone else's authored item. Mirrors {@link isAuthoredSystemItem}'s
+ * caveat about WoT.
+ *
+ * Deleting an authored item is the author's right alone. Updating is split:
+ * relation records stay author-only as a whole; for the catalog types of
+ * spec 08 only the CONTENT is the author's — that check needs the updates
+ * and lives in `planAuthoredUpdate` (authored.ts), which every connector's
+ * update path calls.
  */
 export function assertMayMutateAuthoredItem(
   item: Pick<Item, "type" | "createdBy">,
   actorId: string,
   action: "update" | "delete",
 ): void {
-  if (!isAuthoredSystemItem(item.type)) return
+  if (!isAuthoredItemType(item.type)) return
+  if (action === "update" && isAuthorialItemType(item.type)) return
   if (item.createdBy === actorId) return
   throw new Error(`Not authorized to ${action} another author's ${item.type}`)
 }
@@ -1116,7 +1144,7 @@ export function assertAuthoredTypeUnchanged(
   updates: Partial<Item>,
 ): void {
   if (updates.type === undefined || updates.type === existing.type) return
-  if (!isAuthoredSystemItem(existing.type) && !isAuthoredSystemItem(updates.type)) return
+  if (!isAuthoredItemType(existing.type) && !isAuthoredItemType(updates.type)) return
   throw new Error(
     `cannot change type between "${existing.type}" and "${updates.type}" — authorship would be misattributed`,
   )
