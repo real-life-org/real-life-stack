@@ -153,6 +153,8 @@ Das Manifest ist die **einzige Quelle für Typ-Identität**: die Typ-Guards und 
 | `badge` | Darstellung | Icon und Farbe des Typ-Badges; zugleich die Typfarbe der Item-Chips |
 | `fields` | Darstellung | Feldliste (`FieldEntry[]`), siehe „Feld- und Kantenregister" |
 | `edges` | Darstellung | Kantenliste (`EdgeEntry[]`), keyed by (`predicate`, `itemRole`), siehe „Feld- und Kantenregister"; Widgets sind UI und gehören darum nicht ins Manifest |
+| `lists` | Darstellung | Rückwärts-Listen über eine benannte Abfrage (`ListEntry[]`), keyed by `query` |
+| `menuActions` | Darstellung | zusätzliche Aktionen im ⋮-Menü (`MenuActionEntry[]`), keyed by `id` |
 | `composer` | Darstellung | was nur der Composer braucht und kein Feld ist: `submitLabel`, `groupRequired` |
 | `composerWidgets` | Darstellung | abgeleitet aus `fields` und `edges`; nur noch für Typen ohne Feldliste gesetzt |
 | `preview` | Darstellung | knappe Darstellung für Karten und Zeilen; abgeleitet aus `fields` und `edges`, eigener Slot nur als Ausnahme |
@@ -178,6 +180,7 @@ Das Manifest ist die **einzige Quelle für Typ-Identität**: die Typ-Guards und 
 type WidgetId =
   | "title" | "text" | "date" | "location" | "media" | "status" | "number"
   | "select" | "url" | "chips" | "avatar" | "contact" | "group" | "tags"   // B1–B14
+  | "item-ref"                                                             // B15
 
 interface FieldEntry {
   key: string                    // data-Schlüssel, z. B. "start", "hours"
@@ -187,7 +190,8 @@ interface FieldEntry {
   required?: boolean
   unit?: string                  // number (B7)
   options?: { id: string; label: string; tone?: string }[]   // status (B6), select (B8)
-  edit?: false                   // pos "system" und "module": nie editierbar
+  edit?: false | "create"        // false: nie editierbar; "create": nur beim Anlegen
+  ref?: { type: string; missing: string }   // item-ref (B15): Zieltyp, Intl-Schlüssel für ein fehlendes Ziel
 }
 
 interface EdgeEntry {
@@ -201,6 +205,17 @@ interface EdgeEntry {
   selfAction?: { label: string; mine: string; qualifiers?: string[] }   // C2
   list?: { filter?: "open" | "upcoming"; sort?: string }                // für itemRole "to"
   count?: "one-per-person" | "collect-accepted"                         // nur storage "record"
+}
+
+interface ListEntry {
+  query: string                  // Name einer Abfrage, z. B. "family"
+  label: string                  // Intl-Schlüssel
+}
+
+interface MenuActionEntry {
+  id: string                     // z. B. "create-variant"
+  label: string                  // Intl-Schlüssel: „Variante anlegen"
+  replacesEditWhenFrozen?: boolean
 }
 ```
 
@@ -216,9 +231,12 @@ Regeln:
 8. `count` deklariert für Record-Kanten, wie mehrere Aussagen über dieselbe Person zusammenwirken ([08 → Qualifier an Personen-Kanten](08-relation-records.md#qualifier-an-personen-kanten), Regel 9). Eine Record-Kante mit Qualifier MUSS `count` setzen.
 9. Eine Kante mit `selfAction` erscheint im Slot `actions` als Pill-Zeile. `qualifiers` nennt die Werte, die die Pills setzen; `mine` ist die Beschriftung meines Zustands.
 10. Rückwärts-Listen (`itemRole: "to"`, `pos: "list"`) deklariert der Typ, dessen Detail sie zeigt, mit Filter und Sortierung. Es werden alle Einträge gezeigt.
-11. Apps liefern Einträge, keine Mappings. Die Abbildung Composer ↔ Item (`composer-mapping.ts`) und die Detail-Leseansicht liegen im Toolkit und lesen nur das Register.
-12. `ContentTypeConfig` wird abgeleitet: `defaultWidgets` aus den Feldern und Kanten mit `pos` `head`, `meta`, `content`, `tags` oder `badge` und ohne `edit: false`, in der Reihenfolge der Meta-Box; `peopleRelations` aus den Kanten mit `widget: "people"` und `pos: "meta"`; `statusOptions` aus `options` des `status`-Feldes; `widgetLabels` aus `label`.
-13. **Übergang:** In S1 lesen die Flächen `detail` und `footer` noch für Typen ohne Feldliste. Mit S6 entfallen beide.
+11. **Feld mit Item-Verweis (B15 `item-ref`):** Ein Datenfeld, dessen Wert ein Item-Target ist (`item:<id>`), ist ein Feld und keine Kante, wenn es zum Inhalt des Items gehört (etwa zum signierten Wortlaut, 08). Lesend erscheint es wie C3 als Chip in der Farbe des Zieltyps in der Meta-Box. Ein nicht auflösbares Ziel erscheint als Text (`ref.missing`), nie als Fehler. Schreibbar ist es nur, soweit `edit` es erlaubt; `edit: "create"` heißt: nur beim Anlegen, danach unveränderlich.
+12. **Liste über benannte Abfrage:** Statt einer direkten eingehenden Kante DARF ein Typ eine Rückwärts-Liste über eine benannte Abfrage deklarieren (`lists`). Das Register nennt nur den Namen; was die Abfrage liefert, definiert die Spec des Typs oder Moduls. Die Liste zeigt alle Einträge, jeden einmal.
+13. **Menüaktionen des Typs:** Ein Typ DARF zusätzliche Aktionen im ⋮-Menü deklarieren (`menuActions`). Mit `replacesEditWhenFrozen` ersetzt die Aktion „Bearbeiten", solange das Item eingefroren ist (08, Einfrieren); sonst erscheint sie zusätzlich. Was die Aktion tut, definiert die Spec des Typs oder Moduls. Sichtbar ist sie nur, wenn Capability und Autorisierung sie erlauben (Typ-Register, Regeln, Regel 4).
+14. Apps liefern Einträge, keine Mappings. Die Abbildung Composer ↔ Item (`composer-mapping.ts`) und die Detail-Leseansicht liegen im Toolkit und lesen nur das Register.
+15. `ContentTypeConfig` wird abgeleitet: `defaultWidgets` aus den Feldern und Kanten mit `pos` `head`, `meta`, `content`, `tags` oder `badge` und ohne `edit: false`, in der Reihenfolge der Meta-Box; `peopleRelations` aus den Kanten mit `widget: "people"` und `pos: "meta"`; `statusOptions` aus `options` des `status`-Feldes; `widgetLabels` aus `label`.
+16. **Übergang:** In S1 lesen die Flächen `detail` und `footer` noch für Typen ohne Feldliste. Mit S6 entfallen beide. Bis dahin DARF ein Typ sie weiter setzen (etwa die Resonanz-Varianten, rls#505); die Stimmleiste zieht mit S2 von `footer` nach `actions`.
 
 **Register je Typ (nichtnormativ).** So sehen die Einträge der Toolkit-Typen und eines App-Typs aus. Schreibweise: Feld `key` Widget @`pos`; Kante `predicate` (→ `from`, ← `to`) Widget @`pos`.
 
@@ -231,7 +249,7 @@ Regeln:
 | `person` | displayName B1 @head · avatarUrl B11 @head · bio B2 · address/position B4 @meta · skills/offers/needs B10 @meta („Kann", „Bietet", „Sucht") · phone/email B12 @meta · did @system | keine Kommentare, keine Reaktionen | – | „Nächste Termine" (upcoming) · „Aufgaben" (←assignedTo, open) |
 | `project` | title · description · website/repo B9 @meta · address/position B4 @meta · tags | ←partOf C3 @list | – | „Offene Aufgaben" (←partOf task, open) · „Nächste Termine" (←partOf event, upcoming) |
 | `resource` | title · description · kind B8 @meta · availability B8 oder B2 @meta · tags | – | – | – |
-| `statement` | title B1 („Aussage") · description B2 („Begründung") · tags | ←votesOn person C4 @actions, Qualifier `value`: green · yellow · red | Dafür · Skeptisch · Dagegen | – |
+| `statement` | title B1 („Aussage") · description B2 („Begründung") · variantOf B15 @meta (Ziel `statement`, `edit: "create"`, „Variante von …", fehlend „nicht verfügbare Aussage") · tags | ←votesOn person C4 @actions, Qualifier `value`: `green` · `yellow` · `red` | votesOn: Dafür · Skeptisch · Dagegen | Liste `family` („Fassungen"); Menüaktion `create-variant` („Variante anlegen", `replacesEditWhenFrozen`) |
 | App: Karabirrdt-Karte (`task`) | title · description · status B6 @meta (Offen · Erledigt) · hours/euros B7 @meta („Aufwand") · stage @module · tags | →assignedTo person C1 @meta (`meta.role` `can` · `learns`) · ←blocks task C3 @meta („Braucht") · →partOf project C3 @meta („Führt zu") | assignedTo: Übernehmen (`can`) · Will lernen (`learns`) | – |
 | App: Karabirrdt-Ziel (`project`) | title · description („Traumsatz") · priority B8 @meta (Hoch · Mittel · Niedrig) · order @module | ←partOf C3 @list, je Stufe gruppiert | – | „Karten" (←partOf task, je Stufe) |
 
