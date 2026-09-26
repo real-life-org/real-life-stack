@@ -128,6 +128,7 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
         })}
         <span className="pl-1 text-xs text-muted-foreground tabular-nums">
           {summary.total === 1 ? "1 Stimme" : `${summary.total} Stimmen`}
+          {summary.noVote !== undefined && summary.noVote > 0 && ` · ${summary.noVote} ohne Stimme`}
         </span>
       </div>
 
