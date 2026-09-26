@@ -1,9 +1,9 @@
 {
-  "packages/data-interface": "0.3.1",
-  "packages/toolkit": "0.2.1",
-  "packages/mock-connector": "0.2.1",
-  "packages/local-connector": "0.2.1",
-  "packages/wot-connector": "0.2.1",
-  "packages/supabase-connector": "0.3.1",
-  "apps/reference": "0.4.1"
+  "packages/data-interface": "0.4.0",
+  "packages/toolkit": "0.3.0",
+  "packages/mock-connector": "0.2.2",
+  "packages/local-connector": "0.2.2",
+  "packages/wot-connector": "0.2.2",
+  "packages/supabase-connector": "0.3.2",
+  "apps/reference": "0.5.0"
 }

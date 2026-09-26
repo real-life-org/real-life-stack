@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.3.0](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.2.1...toolkit-v0.3.0) (2026-09-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* aggregateVoteStats(records, contentHashes) verlangt die Inhalts-Hashes der zählenden Statements.
+
+### Features
+
+* Stimmen an den Wortlaut binden, Beleg-Status aus dem Katalog ([#502](https://github.com/real-life-org/real-life-stack/issues/502)) ([16e6eb8](https://github.com/real-life-org/real-life-stack/commit/16e6eb8886467dd24d47b53c94ef9a884cdc78f2))
+* **toolkit:** Kommentare und Reaktionen nach Beleg-Status zählen und markieren ([#503](https://github.com/real-life-org/real-life-stack/issues/503)) ([997b1a6](https://github.com/real-life-org/real-life-stack/commit/997b1a61b6fe9d7c47f73adb41b13f43ea72e130))
+* **toolkit:** Varianten im Resonanzmodul, kein Bearbeiten bei eingefrorenem Wortlaut ([#505](https://github.com/real-life-org/real-life-stack/issues/505)) ([ffe4bde](https://github.com/real-life-org/real-life-stack/commit/ffe4bde2a54683c0c813310d20c9a7241540e7d5))
+
+
+### Bug Fixes
+
+* **site:** Proportionen der Landing auf dem Telefon ([#483](https://github.com/real-life-org/real-life-stack/issues/483)) ([653310a](https://github.com/real-life-org/real-life-stack/commit/653310a8ef39f017e7efc0dea6e3f5da060c38e7))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.4.0
+  * devDependencies
+    * @real-life-stack/mock-connector bumped to 0.2.2
+
 ## [0.2.1](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.2.0...toolkit-v0.2.1) (2026-09-24)
 
 
