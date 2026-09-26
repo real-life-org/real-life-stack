@@ -31,6 +31,9 @@ import {
   stripEditStamp,
   assertMayMutateAuthoredItem,
   assertAuthoredTypeUnchanged,
+  authoredUpdateAuthoritative,
+  isFrozen,
+  withoutAuthoredClaim,
   applyPagination,
   createDefaultRelationStore,
   createObservable,
@@ -111,12 +114,16 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
   /** SignedClaims verdict (spec 08): authoritative — trusted — unless the
       fixture mode disables the binding and with it the capability. */
   verifyRecordClaim?: (record: RelationRecord) => Promise<"trusted">
+  /** Verdict for authorial items (spec 08): authoritative — no claims,
+      content changes bound to the author — so trusted, absent in fixture mode. */
+  verifyItemClaim?: (item: Item) => Promise<"trusted">
   private allowFixtureAuthors = false
 
   constructor(seed?: MockConnectorSeed, options: MockConnectorOptions = {}) {
     this.allowFixtureAuthors = options.allowFixtureAuthors === true
     if (!this.allowFixtureAuthors) {
       this.verifyRecordClaim = async () => "trusted"
+      this.verifyItemClaim = async () => "trusted"
     }
     const data = seed ?? {
       items: demoItems,
@@ -371,6 +378,9 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     // Authoritative ingress binding (spec 08): createdBy comes from the
     // session, never the caller — except in the marked fixture mode.
     if (!this.allowFixtureAuthors) item = { ...item, createdBy: sessionUser.id }
+    // Authoritative store (spec 08): the connector owns data.claim of
+    // authorial items and writes none.
+    item = withoutAuthoredClaim(item)
     const scopeId = item.type === "feature" ? null : this.currentGroup?.id ?? null
     const scopeItems = this.getScopeItems(scopeId, true)
     if (item.id !== undefined) {
@@ -415,6 +425,9 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     updates = withEditStamp(updates, actor.id)
     const location = this.findVisibleItemLocation(id)
     if (!location) throw new Error(`Item not found: ${id}`)
+    // Content of an authorial item is the author's alone and frozen once
+    // someone else bound a reference to it (spec 08).
+    updates = authoredUpdateAuthoritative(location.item, updates, actor.id, isFrozen(location.item, location.items.values()))
     const updated = canonicalItem({ ...location.item, ...updates, id })
     if (location.item.type !== "feature" && updated.type === "feature") {
       this.assertNoItemOutsideScope(location.scopeId, id)

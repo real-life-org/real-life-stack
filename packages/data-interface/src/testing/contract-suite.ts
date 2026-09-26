@@ -24,6 +24,7 @@ import {
   hasItemGroups,
   hasRelationRecords,
   hasRelationRecordWriter,
+  hasItemClaimVerification,
   isWritable,
 } from "../index.js"
 
@@ -353,24 +354,83 @@ export function describeDataInterfaceContract(name: string, harness: ContractHar
         })
       })
 
-      it("refuses to change or remove ANOTHER author's comment/reaction", async () => {
+      it("refuses to change the content of, or remove, ANOTHER author's statement/comment/reaction", async () => {
         // Kein stiller Skip: ein Harness ohne Seeding muss den Grund nennen.
         if (harness.cannotSeedForeignItem) return
         expect(harness.seedForeignItem, "Harness braucht seedForeignItem oder cannotSeedForeignItem").toBeDefined()
         await withConnector(async (context) => {
           const { connector, currentUserId } = context
           if (!isWritable(connector)) return
-          for (const type of ["comment", "reaction"]) {
+          // Inhaltsfelder laut Katalog (Spec 08): nur deren Aenderung ist der
+          // Autorin vorbehalten. Felder ausserhalb des Inhalts duerfen andere
+          // schreiben, ein strengeres Backend darf das trotzdem sperren.
+          const cases: Array<[string, Record<string, unknown>, Record<string, unknown>]> = [
+            ["statement", { title: "ihre Aussage" }, { title: "gekapert" }],
+            ["comment", { content: "ihre Aussage" }, { content: "gekapert" }],
+            ["reaction", { emoji: "❤️" }, { emoji: "👎" }],
+          ]
+          for (const [type, data, hijacked] of cases) {
             const foreign = unique(`ct-foreign-${type}`)
             await harness.seedForeignItem!(context, {
-              id: foreign, type, createdBy: "did:key:someone-else", data: { text: "ihre Aussage" },
+              id: foreign, type, createdBy: "did:key:someone-else", data,
             })
             // The UI hides the buttons — but the UI is not the boundary. A
             // wire client must be refused at the ingress too.
-            await expect(connector.updateItem(foreign, { data: { text: "gekapert" } })).rejects.toThrow()
+            await expect(connector.updateItem(foreign, { data: hijacked })).rejects.toThrow()
             await expect(connector.deleteItem(foreign)).rejects.toThrow()
             expect(await connector.getItem(foreign)).not.toBeNull()
           }
+        })
+      })
+
+      it("owns data.claim of authorial items: a caller-supplied claim never survives (spec 08)", async () => {
+        await withConnector(async ({ connector, currentUserId }) => {
+          if (!isWritable(connector) || !hasItemClaimVerification(connector)) return
+          const created = await connector.createItem({
+            type: "comment",
+            createdBy: currentUserId,
+            data: { content: "meine Aussage", claim: "forged.claim.jws" },
+            relations: [{ predicate: "commentOn", target: `item:${unique("ct-target")}` }],
+          })
+          const persisted = (await connector.getItem(created.id))!
+          expect(persisted.data.claim).not.toBe("forged.claim.jws")
+          expect(await connector.verifyItemClaim(persisted)).not.toBe("invalid")
+        })
+      })
+
+      it("keeps the verdict positive when the author changes the content or anyone changes other fields", async () => {
+        await withConnector(async ({ connector, currentUserId }) => {
+          if (!isWritable(connector) || !hasItemClaimVerification(connector)) return
+          const created = await connector.createItem({ type: "statement", createdBy: currentUserId, data: { title: "vorher" } })
+          await connector.updateItem(created.id, { data: { title: "nachher" } })
+          await connector.updateItem(created.id, { tags: [unique("ct-tag")] })
+          const persisted = (await connector.getItem(created.id))!
+          expect(persisted.data.title).toBe("nachher")
+          expect(await connector.verifyItemClaim(persisted)).not.toBe("invalid")
+        })
+      })
+
+      it("refuses a content change of a frozen item, even by its author (spec 08 → Einfrieren)", async () => {
+        if (harness.cannotSeedForeignItem) return
+        expect(harness.seedForeignItem, "Harness braucht seedForeignItem oder cannotSeedForeignItem").toBeDefined()
+        await withConnector(async (context) => {
+          const { connector, currentUserId } = context
+          if (!isWritable(connector) || !hasItemClaimVerification(connector)) return
+          const statement = await connector.createItem({ type: "statement", createdBy: currentUserId, data: { title: "gesagt" } })
+          const voter = "did:key:someone-else"
+          await harness.seedForeignItem!(context, {
+            id: unique("ct-vote"),
+            type: "relation",
+            createdBy: voter,
+            data: { predicate: "votesOn", value: "green", contentHash: "sha256:0" },
+            relations: [
+              { predicate: "from", target: `global:${voter}` },
+              { predicate: "to", target: `item:${statement.id}` },
+            ],
+          })
+          await expect(connector.updateItem(statement.id, { data: { title: "anders" } })).rejects.toThrow(/frozen/)
+          await connector.updateItem(statement.id, { tags: [unique("ct-tag")] })
+          expect((await connector.getItem(statement.id))!.data.title).toBe("gesagt")
         })
       })
 

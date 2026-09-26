@@ -23,7 +23,7 @@ import type {
   RelationRecordUpdate,
   Source,
 } from "@real-life-stack/data-interface"
-import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, createObservable, createDefaultRelationStore, createRelationRecordWith, canonicalItem, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState } from "@real-life-stack/data-interface"
+import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, authoredUpdateAuthoritative, isFrozen, withoutAuthoredClaim, createObservable, createDefaultRelationStore, createRelationRecordWith, canonicalItem, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState } from "@real-life-stack/data-interface"
 import { get, set, del, createStore, update as updateStoredValue } from "idb-keyval"
 
 // --- Types ---
@@ -139,6 +139,14 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
    */
   verifyRecordClaim?: (record: RelationRecord) => Promise<"trusted">
 
+  /**
+   * Verdict for authorial items (spec 08 → Aussagen einer Person): the Local
+   * store is `authoritative` — every regular ingress binds createdBy and
+   * restricts content changes to the author (`authoredUpdateAuthoritative`),
+   * so it writes no claims and answers "trusted". Absent in FIXTURE mode.
+   */
+  verifyItemClaim?: (item: Item) => Promise<"trusted">
+
   constructor(seed?: {
     items: Item[]
     groups: Group[]
@@ -156,6 +164,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
     this.allowFixtureAuthors = options?.allowFixtureAuthors === true
     if (!this.allowFixtureAuthors) {
       this.verifyRecordClaim = async () => "trusted"
+      this.verifyItemClaim = async () => "trusted"
     }
     this.seedData = seed
       ? {
@@ -472,7 +481,9 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
     const actor = this.requireCurrentUser().id
     // Authoritative ingress binding (spec 08): createdBy comes from the
     // session, never the caller — except in the marked fixture mode.
-    const boundItem: CreateItemInput = this.allowFixtureAuthors ? item : { ...item, createdBy: actor }
+    // Authoritative store (spec 08): the connector owns data.claim of
+    // authorial items and writes none — a caller-supplied one is dropped.
+    const boundItem: CreateItemInput = withoutAuthoredClaim(this.allowFixtureAuthors ? item : { ...item, createdBy: actor })
     let result: Item | undefined
     let committedState: StoredState | undefined
     let created = false
@@ -554,7 +565,11 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
       // haben, eine RAM-Pruefung davor waere ein Rennen (rls#244-Muster).
       assertMayMutateAuthoredItem(current.items[idx], actor, "update")
       assertAuthoredTypeUnchanged(current.items[idx], updates)
-      result = { ...current.items[idx], ...updates, id }
+      // Content of an authorial item is the author's alone and frozen once
+      // someone else bound a reference to it (spec 08) — checked here,
+      // against the same atomically read state.
+      const allowed = authoredUpdateAuthoritative(current.items[idx], updates, actor, isFrozen(current.items[idx], current.items))
+      result = { ...current.items[idx], ...allowed, id }
       const items = [...current.items]
       items[idx] = result
       const ownerScope = Object.entries(current.groupItems).find(([, ids]) => ids.includes(id))?.[0] ?? null
