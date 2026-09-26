@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, startTransition } from "reac
 import type { Item, RelatedItemsOptions } from "@real-life-stack/data-interface"
 import { isWritable, hasRelations, isAuthenticatable, deriveContext } from "@real-life-stack/data-interface"
 import { useOptionalConnector, useConnector } from "./connector-context"
+import { standingMark, useCanVerifyItems, useItemStandings, type StandingMark } from "./use-item-standing"
 
 const NO_COMMENT_ITEMS: Item[] = []
 
@@ -11,14 +12,20 @@ export interface CommentWithAuthor {
   authorName: string
   authorAvatar?: string
   replyCount: number
+  /** Standing mark (spec 08 → Beleg erforderlich): `unsigned` or `altered`
+      are shown subtly marked; null is unmarked. */
+  mark?: StandingMark
 }
 
 /** Return value of useComments hook. */
 export interface UseCommentsResult {
   /** First-level comments sorted chronologically (oldest first). */
   data: CommentWithAuthor[]
-  /** All comments (first + second level) for threading. */
+  /** All shown comments (first + second level) for threading. Invalid
+      comments without a claim are left out (spec 08 → Beleg erforderlich). */
   allComments: Item[]
+  /** Standing mark per comment id, for surfaces building their own lists. */
+  marks: ReadonlyMap<string, StandingMark>
   /**
    * Resolved author info per user id, covering authors of ALL comments
    * (first + second level). Consumers building reply lists from
@@ -72,7 +79,7 @@ export function useComments(itemId: string): UseCommentsResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connector, supportsRelations, itemId, optionsKey])
 
-  const [allComments, setAllComments] = useState<Item[]>(observable?.current ?? [])
+  const [relatedItems, setAllComments] = useState<Item[]>(observable?.current ?? [])
   const update = useCallback((items: Item[]) => startTransition(() => setAllComments(items)), [])
 
   useEffect(() => {
@@ -83,6 +90,22 @@ export function useComments(itemId: string): UseCommentsResult {
     setAllComments(observable.current)
     return observable.subscribe(update)
   }, [observable, update])
+
+  // Standing per comment: marks for unsigned/altered, and invalid comments
+  // without a claim are not shown at all.
+  const standings = useItemStandings(relatedItems)
+  const verifiable = useCanVerifyItems()
+  const marks = useMemo(() => {
+    const result = new Map<string, StandingMark>()
+    for (const item of relatedItems) {
+      if (item.type === "comment") result.set(item.id, standingMark(item, standings.get(item.id), verifiable))
+    }
+    return result
+  }, [relatedItems, standings, verifiable])
+  const allComments = useMemo(
+    () => relatedItems.filter((item) => marks.get(item.id) !== "hidden"),
+    [relatedItems, marks],
+  )
 
   // Resolve authors and separate first/second level
   const comments: CommentWithAuthor[] = useMemo(() => {
@@ -106,10 +129,11 @@ export function useComments(itemId: string): UseCommentsResult {
         authorName: item.createdBy,
         authorAvatar: undefined as string | undefined,
         replyCount: replyCounts.get(item.id) ?? 0,
+        mark: marks.get(item.id) ?? null,
       }))
 
     return firstLevel
-  }, [allComments])
+  }, [allComments, marks])
 
   // Resolve author info asynchronously
   const [resolvedAuthors, setResolvedAuthors] = useState<Map<string, { name: string; avatar?: string }>>(new Map())
@@ -183,6 +207,7 @@ export function useComments(itemId: string): UseCommentsResult {
   return {
     data: commentsWithAuthors,
     allComments,
+    marks,
     authors: resolvedAuthors,
     isLoading: false,
     canComment,
@@ -270,5 +295,17 @@ export function useReplies(itemId: string, commentId: string): UseRepliesResult 
     return () => { cancelled = true }
   }, [connector, supportsRelations, itemId, commentId])
 
-  return { data: replies, isLoading }
+  // Same standing rule as useComments: mark unsigned/altered, hide invalid
+  // replies without a claim.
+  const replyItems = useMemo(() => replies.map((reply) => reply.item), [replies])
+  const standings = useItemStandings(replyItems)
+  const verifiable = useCanVerifyItems()
+  const shown = useMemo(
+    () => replies
+      .map((reply) => ({ ...reply, mark: standingMark(reply.item, standings.get(reply.item.id), verifiable) }))
+      .filter((reply) => reply.mark !== "hidden"),
+    [replies, standings, verifiable],
+  )
+
+  return { data: shown, isLoading }
 }

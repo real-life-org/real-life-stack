@@ -26,6 +26,10 @@ export interface CommentBubbleProps {
   quotedText?: string
   /** Slot for ReactionBar below the comment text. */
   reactionSlot?: React.ReactNode
+  /** Standing mark (spec 08 → Beleg erforderlich), shown subtly next to the
+      timestamp: `unsigned` — no signature; `altered` — the text does not
+      match its signature. */
+  mark?: "unsigned" | "altered" | "hidden" | null
   /** Additional CSS classes. */
   className?: string
 }
@@ -57,6 +61,7 @@ export function CommentBubble({
   quotedAuthor,
   quotedText,
   reactionSlot,
+  mark,
   className,
 }: CommentBubbleProps) {
   const avatar = (
@@ -86,6 +91,22 @@ export function CommentBubble({
             ? <RelativeTime date={timestamp} className="text-xs" />
             : <span className="text-xs text-muted-foreground">{timestamp}</span>
           }
+          {mark === "unsigned" && (
+            <span
+              className="text-xs text-muted-foreground/70"
+              title="Ohne Signatur: Dass der Kommentar von dieser Person stammt, lässt sich nicht nachweisen."
+            >
+              unsigniert
+            </span>
+          )}
+          {mark === "altered" && (
+            <span
+              className="text-xs text-muted-foreground"
+              title="Der Text passt nicht zur Signatur: Er wurde nach dem Schreiben verändert."
+            >
+              verändert
+            </span>
+          )}
         </div>
 
         {/* Quote reference (for replies to second-level comments) */}

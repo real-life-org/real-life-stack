@@ -7,9 +7,8 @@ import {
   itemContentHash,
   itemStanding,
   jcsCanonicalize,
-  standingCounts,
 } from "@real-life-stack/data-interface"
-import { useConnector } from "./connector-context"
+import { useOptionalConnector } from "./connector-context"
 
 /** Verdict key binds everything the item claim signs — a verdict must never
     carry over to changed content, author or claim. */
@@ -26,6 +25,42 @@ function verdictKey(item: Item): string {
 
 const EMPTY: ReadonlyMap<string, ClaimVerdict> = new Map()
 
+/** Standing plus `pending` — the verdict of an item that has a claim (or
+    whose type requires proof) is still being checked. Pending never counts
+    (fail closed) but is no reason to mark the item either. */
+export type ItemStandingState = ItemStanding | "pending"
+
+/** Whether an item in this state counts in aggregations (spec 08). */
+export function standingStateCounts(state: ItemStandingState | undefined): boolean {
+  return state === "attested" || state === "unsigned"
+}
+
+/**
+ * How a surface shows an item of a catalog type (spec 08 → Beleg
+ * erforderlich): `unsigned` — shown, subtly marked; `altered` — a claim is
+ * present but does not match, shown marked „verändert"; `hidden` — invalid
+ * without a claim (a type whose proof requirement is on); null — shown
+ * without a mark (attested, pending, or not a catalog type).
+ *
+ * `verifiable`: whether the connector can verify at all. Without a claim
+ * mode (fixture connectors, stories) nothing is signed, so a mark would say
+ * nothing — only the proof requirement still hides.
+ */
+export type StandingMark = "unsigned" | "altered" | "hidden" | null
+
+export function standingMark(item: Item, state: ItemStandingState | undefined, verifiable = true): StandingMark {
+  if (state === "unsigned") return verifiable ? "unsigned" : null
+  if (state !== "invalid") return null
+  if (item.data?.claim === undefined) return "hidden"
+  return verifiable ? "altered" : null
+}
+
+/** Whether the connector in context verifies item claims (spec 08). */
+export function useCanVerifyItems(): boolean {
+  const connector = useOptionalConnector()
+  return connector !== null && hasItemClaimVerification(connector)
+}
+
 /**
  * Is this statement, comment or reaction backed?
  *
@@ -36,24 +71,30 @@ const EMPTY: ReadonlyMap<string, ClaimVerdict> = new Map()
  * a type that requires proof is `invalid`. Items outside the catalog are
  * absent from the map.
  *
- * @answers `ReadonlyMap<itemId, ItemStanding>`
+ * While a verdict is outstanding the state is `pending`: not counted, not
+ * marked.
+ *
+ * @answers `ReadonlyMap<itemId, ItemStandingState>`
  * @without verdicts — only unsigned items of types without proof requirement stand
  * @group relations
  * @see spec docs/spec/08-relation-records.md
  */
-export function useItemStandings(items: readonly Item[]): ReadonlyMap<string, ItemStanding> {
-  const connector = useConnector()
+export function useItemStandings(items: readonly Item[]): ReadonlyMap<string, ItemStandingState> {
+  // Optional: surfaces like cards render without a provider (tests, SSR) —
+  // then nothing can be verified and only unsigned items stand.
+  const connector = useOptionalConnector()
   // Callers often pass a fresh array per render (a `[]` default, a filter):
   // everything below follows the CONTENT of the list, not its identity.
   const listKey = items.map(verdictKey).join("\u0001")
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const stableItems = useMemo(() => items, [listKey])
-  const canVerify = hasItemClaimVerification(connector)
+  const canVerify = connector !== null && hasItemClaimVerification(connector)
   // Verdicts are bound to the connector instance (verification epoch).
   const [state, setState] = useState<{ source: DataInterface | null; verdicts: ReadonlyMap<string, ClaimVerdict> }>({ source: null, verdicts: EMPTY })
 
   useEffect(() => {
-    if (!canVerify) return
+    if (!canVerify || connector === null) return
+    const verifier = connector
     const authorial = stableItems.filter((item) => isAuthorialItemType(item.type))
     if (authorial.length === 0) return
     let cancelled = false
@@ -62,23 +103,26 @@ export function useItemStandings(items: readonly Item[]): ReadonlyMap<string, It
       for (const item of authorial) {
         let verdict: ClaimVerdict
         try {
-          verdict = await connector.verifyItemClaim(item)
+          verdict = await verifier.verifyItemClaim(item)
         } catch {
           verdict = "invalid"
         }
         entries.push([verdictKey(item), verdict])
       }
-      if (!cancelled) startTransition(() => setState({ source: connector, verdicts: new Map(entries) }))
+      if (!cancelled) startTransition(() => setState({ source: verifier, verdicts: new Map(entries) }))
     })()
     return () => { cancelled = true }
   }, [connector, canVerify, stableItems])
 
   return useMemo(() => {
     const verdicts = canVerify && state.source === connector ? state.verdicts : EMPTY
-    const standings = new Map<string, ItemStanding>()
+    const standings = new Map<string, ItemStandingState>()
     for (const item of stableItems) {
-      const standing = itemStanding(item, verdicts.get(verdictKey(item)))
-      if (standing !== null) standings.set(item.id, standing)
+      const verdict = verdicts.get(verdictKey(item))
+      const standing = itemStanding(item, verdict)
+      if (standing === null) continue
+      // Without a verdict yet but able to verify: still checking.
+      standings.set(item.id, standing === "invalid" && verdict === undefined && canVerify ? "pending" : standing)
     }
     return standings
   }, [canVerify, connector, stableItems, state])
@@ -100,11 +144,11 @@ export function useItemStandings(items: readonly Item[]): ReadonlyMap<string, It
 export function useCountingContentHashes(items: readonly Item[]): ReadonlyMap<string, string> {
   const standings = useItemStandings(items)
   const countingKey = items
-    .filter((item) => standingCounts(standings.get(item.id) ?? null))
+    .filter((item) => standingStateCounts(standings.get(item.id)))
     .map(verdictKey)
     .join("\u0001")
   const counting = useMemo(
-    () => items.filter((item) => standingCounts(standings.get(item.id) ?? null)),
+    () => items.filter((item) => standingStateCounts(standings.get(item.id))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [countingKey],
   )
