@@ -1,6 +1,6 @@
 {
   "name": "@real-life-stack/toolkit",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "React UI toolkit: the app frame (AppFrame, RoutedAppFrame), the module host, seven modules (feed, list, kanban, calendar, map, graph, resonance), item preview and detail, composer, hooks. Styles from ./styles/globals.css; map engine from ./maplibre or ./leaflet; router glue from ./router.",
   "repository": {
     "type": "git",

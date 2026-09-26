@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.2](https://github.com/real-life-org/real-life-stack/compare/supabase-connector-v0.3.1...supabase-connector-v0.3.2) (2026-09-26)
+
+
+### Features
+
+* **supabase:** item-authorial – Inhalt nur durch die Autorin, Einfrieren, verifyItemClaim ([#500](https://github.com/real-life-org/real-life-stack/issues/500)) ([da13ef9](https://github.com/real-life-org/real-life-stack/commit/da13ef9b6fd7d28697dea082f39de6715652bce3))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.4.0
+
 ## [0.3.1](https://github.com/real-life-org/real-life-stack/compare/supabase-connector-v0.3.0...supabase-connector-v0.3.1) (2026-09-24)
 
 

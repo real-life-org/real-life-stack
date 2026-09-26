@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.2](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.2.1...wot-connector-v0.2.2) (2026-09-26)
+
+
+### Features
+
+* item-authorial im Schreibweg der Connectoren (WoT, Local, Mock) ([#496](https://github.com/real-life-org/real-life-stack/issues/496)) ([cb3a60b](https://github.com/real-life-org/real-life-stack/commit/cb3a60bbb65e79d2df53657503f36b393aacf37d))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.4.0
+    * @real-life-stack/toolkit bumped to 0.3.0
+
 ## [0.2.1](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.2.0...wot-connector-v0.2.1) (2026-09-24)
 
 
