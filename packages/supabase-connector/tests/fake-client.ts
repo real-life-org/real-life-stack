@@ -18,6 +18,37 @@ import type {
   SupabaseResult,
   TableLike,
 } from "../src/client-types.js"
+import {
+  isAuthorialItemType,
+  isAuthoredItemType,
+  isFrozen,
+  itemContent,
+  jcsCanonicalize,
+} from "@real-life-stack/data-interface"
+import { rowToItem } from "../src/row-mapping.js"
+
+/**
+ * Parity with supabase/migrations/0012 (trigger items_authorial_content):
+ * for catalog types the content changes only by the author and never once
+ * frozen. Returns the error message, or null when the update may pass.
+ */
+function authorialContentError(row: Row, next: Row, rows: Row[], sessionId: string | undefined): string | null {
+  const before = itemContent(rowToItem(row))
+  if (before === null) return null
+  if (jcsCanonicalize(itemContent(rowToItem(next))) === jcsCanonicalize(before)) return null
+  if (row.created_by !== sessionId) return `only the author may change the content of a ${String(row.type)}`
+  if (isFrozen(rowToItem(row), rows.map(rowToItem))) {
+    return `this ${String(row.type)} is frozen: another person has bound a reference to its content — create a new version instead`
+  }
+  return null
+}
+
+/** 0012: authoritative stores write no claim — dropped for catalog types. */
+function withoutClaimForCatalog(row: Row, patch: Row): Row {
+  if (!isAuthorialItemType(String(row.type)) || typeof patch.data !== "object" || patch.data === null) return patch
+  const { claim: _dropped, ...data } = patch.data as Record<string, unknown>
+  return { ...patch, data }
+}
 
 type Row = Record<string, unknown>
 
@@ -264,7 +295,13 @@ class FakeTable implements TableLike {
             return { data: null, error: { message: `${key} is immutable` } }
           }
         }
-        Object.assign(row, patch)
+        let effective = patch
+        if (name === "items" && !store.serviceRole) {
+          effective = withoutClaimForCatalog(row, patch)
+          const denied = authorialContentError(row, { ...row, ...effective }, rows, store.auth.session?.user.id)
+          if (denied) return { data: null, error: { message: denied, code: "42501" } }
+        }
+        Object.assign(row, effective)
         store.emit(name, { eventType: "UPDATE", new: structuredClone(row), old: structuredClone(row) })
       }
       return { data: matched.map((row) => structuredClone(row)), error: null }
@@ -297,12 +334,13 @@ class FakeTable implements TableLike {
     const name = this.name
     const performDelete = (conditions: Array<[string, unknown]>): Row[] => {
       let matched = rows.filter((row) => conditions.every(([column, v]) => row[column] === v))
-      // RLS parity: relation items are author-only deletable; group_members
+      // RLS parity: authored items (catalog types + relation, 0009/0012) are
+      // author-only deletable; group_members
       // deletes need self-leave or group creatorship; groups creator-only.
       if (!store.serviceRole) {
         const sessionId = store.auth.session?.user.id
         matched = matched.filter((row) => {
-          if (name === "items") return row.type !== "relation" || row.created_by === sessionId
+          if (name === "items") return !isAuthoredItemType(String(row.type)) || row.created_by === sessionId
           if (name === "groups") return row.created_by === sessionId
           if (name === "group_members") {
             if (row.user_id === sessionId) return true

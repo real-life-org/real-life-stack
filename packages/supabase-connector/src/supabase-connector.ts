@@ -27,6 +27,7 @@ import {
   createObservable,
   createRelationRecordWith,
   deriveContext,
+  withoutAuthoredClaim,
 } from "@real-life-stack/data-interface"
 import type {
   AuthSessionLike,
@@ -68,7 +69,8 @@ function throwOnError<T>(result: SupabaseResult<T>, action: string): T {
  * postgres_changes for WoT-grade reactivity. The authoritative claim mode's
  * security rests on the RLS policies in supabase/migrations/0001 — insert
  * WITH CHECK binds created_by to auth.uid(), the immutability trigger closes
- * the update path — NOT on this client code.
+ * the update path, 0012 keeps the content of authorial items (spec 08
+ * catalog) with their author — NOT on this client code.
  */
 export class SupabaseConnector implements DataInterface, ItemWriter {
   private readonly client: SupabaseClientLike
@@ -100,6 +102,14 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
    */
   verifyRecordClaim?: (record: RelationRecord) => Promise<ClaimVerdict>
 
+  /**
+   * Verdict for authorial items (spec 08 → Aussagen einer Person): the store
+   * binds createdBy on insert and restricts content changes to the author,
+   * refusing them once the item is frozen (supabase/migrations/0012). It
+   * writes no claims and answers "trusted". Absent on the fixture path.
+   */
+  verifyItemClaim?: (item: Item) => Promise<ClaimVerdict>
+
   /** Sichtbare Zustellung (EventListenerCapable): Kontaktanfragen und
       Gruppen-Einladungen poppen als Dialog auf statt still in Listen zu
       landen — dieselbe Mechanik wie beim WoT, gespeist aus Realtime. */
@@ -119,6 +129,7 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
     this.allowFixtureAuthors = options?.allowFixtureAuthors === true
     if (!this.allowFixtureAuthors) {
       this.verifyRecordClaim = async () => "trusted"
+      this.verifyItemClaim = async () => "trusted"
     }
   }
 
@@ -368,7 +379,8 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
     // items.id has NO db-side default (canonical relation-record ids are
     // caller-supplied) — generate here when the caller brings none.
     const id = item.id ?? crypto.randomUUID()
-    const row = itemToInsertRow({ ...item, id, createdBy }, groupId)
+    // Authoritative stores write no claim (spec 08); the server drops it too.
+    const row = itemToInsertRow(withoutAuthoredClaim({ ...item, id, createdBy }), groupId)
     const result = await this.client.from("items").insert(row).select().single()
     const created = rowToItem(throwOnError(result, "createItem"))
     this.scheduleItemsRefresh()
