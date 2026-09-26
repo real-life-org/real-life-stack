@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, startTransition } fr
 import type { Item } from "@real-life-stack/data-interface"
 import { isWritable, hasRelations, isAuthenticatable, deriveContext } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
+import { standingMark, standingStateCounts, useCanVerifyItems, useItemStandings } from "./use-item-standing"
 
 /** Aggregated reaction for a single emoji. */
 export interface AggregatedReaction {
@@ -56,7 +57,14 @@ export function useReactions(itemId: string): UseReactionsResult {
     () => (canRelate ? connector.observeRelatedItems(itemId, "reactsTo", { direction: "to" }) : null),
     [canRelate, connector, itemId],
   )
-  const [reactionItems, setReactionItems] = useState<Item[]>(relatedObservable?.current ?? [])
+  const [relatedReactions, setReactionItems] = useState<Item[]>(relatedObservable?.current ?? [])
+  // Only reactions that count (spec 08 → Beleg erforderlich: attested or
+  // unsigned) — invalid ones and those still being verified do not.
+  const standings = useItemStandings(relatedReactions)
+  const reactionItems = useMemo(
+    () => relatedReactions.filter((reaction) => standingStateCounts(standings.get(reaction.id))),
+    [relatedReactions, standings],
+  )
   useEffect(() => {
     if (!relatedObservable) return
     setReactionItems(relatedObservable.current)
@@ -187,6 +195,9 @@ export interface ReactionUser {
   displayName: string
   avatarUrl?: string
   emoji: string
+  /** The reaction carries no signature (spec 08 → Beleg erforderlich):
+      shown and counted, subtly marked. */
+  unsigned?: boolean
 }
 
 /** Return value of useReactionUsers hook. */
@@ -213,7 +224,7 @@ export function useReactionUsers(itemId: string, emojiFilter?: string): UseReact
   const connector = useConnector()
   const canRelate = hasRelations(connector)
   const canAuth = isAuthenticatable(connector)
-  const [users, setUsers] = useState<ReactionUser[]>([])
+  const [entries, setUsers] = useState<Array<{ user: ReactionUser; item: Item }>>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -240,7 +251,7 @@ export function useReactionUsers(itemId: string, emojiFilter?: string): UseReact
         )
 
         // Resolve user info
-        const resolvedUsers: ReactionUser[] = await Promise.all(
+        const resolvedUsers: Array<{ user: ReactionUser; item: Item }> = await Promise.all(
           sorted.map(async (r) => {
             let displayName = r.createdBy
             let avatarUrl: string | undefined
@@ -258,10 +269,13 @@ export function useReactionUsers(itemId: string, emojiFilter?: string): UseReact
             }
 
             return {
-              id: r.createdBy,
-              displayName,
-              avatarUrl,
-              emoji: (r.data as { emoji?: string }).emoji ?? "",
+              item: r,
+              user: {
+                id: r.createdBy,
+                displayName,
+                avatarUrl,
+                emoji: (r.data as { emoji?: string }).emoji ?? "",
+              },
             }
           })
         )
@@ -280,6 +294,19 @@ export function useReactionUsers(itemId: string, emojiFilter?: string): UseReact
     load()
     return () => { cancelled = true }
   }, [connector, canRelate, canAuth, itemId, emojiFilter])
+
+  // Same rule as useReactions: only counting reactions, unsigned ones marked.
+  const loadedItems = useMemo(() => entries.map((entry) => entry.item), [entries])
+  const standings = useItemStandings(loadedItems)
+  const verifiable = useCanVerifyItems()
+  const users = useMemo(
+    () => entries
+      .filter((entry) => standingStateCounts(standings.get(entry.item.id)))
+      .map((entry) => (standingMark(entry.item, standings.get(entry.item.id), verifiable) === "unsigned"
+        ? { ...entry.user, unsigned: true }
+        : entry.user)),
+    [entries, standings, verifiable],
+  )
 
   return { data: users, isLoading }
 }

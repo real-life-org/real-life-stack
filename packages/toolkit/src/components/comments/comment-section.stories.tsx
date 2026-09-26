@@ -141,6 +141,40 @@ export const SingleBubble: Story = {
   ),
 }
 
+/**
+ * Beleg-Status (Spec 08 → Beleg erforderlich): ein belegter Kommentar ohne
+ * Markierung, ein unsignierter (vor der Signatur entstanden) dezent markiert,
+ * einer, dessen Text nicht zur Signatur passt, als „verändert". Markiert wird
+ * nur auf Connectoren, die prüfen können.
+ */
+export const BubbleStanding: Story = {
+  name: "CommentBubble — Beleg-Status",
+  render: () => (
+    <div className="max-w-lg space-y-4 p-4">
+      <CommentBubble
+        authorName="Anna Schmidt"
+        authorAvatar="https://randomuser.me/api/portraits/women/44.jpg"
+        content="Signiert und unverändert."
+        timestamp={new Date(Date.now() - 3 * 3600000).toISOString()}
+      />
+      <CommentBubble
+        authorName="Thomas Müller"
+        authorAvatar="https://randomuser.me/api/portraits/men/32.jpg"
+        content="Vor der Signaturpflicht geschrieben."
+        timestamp={new Date(Date.now() - 2 * 3600000).toISOString()}
+        mark="unsigned"
+      />
+      <CommentBubble
+        authorName="Lena Weber"
+        authorAvatar="https://randomuser.me/api/portraits/women/68.jpg"
+        content="Nachträglich an der Signatur vorbei geändert."
+        timestamp={new Date(Date.now() - 3600000).toISOString()}
+        mark="altered"
+      />
+    </div>
+  ),
+}
+
 export const BubbleWithQuote: Story = {
   name: "CommentBubble — with Quote",
   render: () => (

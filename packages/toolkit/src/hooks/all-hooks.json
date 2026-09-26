@@ -492,7 +492,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-comment-count.ts",
-          "line": 27
+          "line": 31
         },
         {
           "name": "useComments",
@@ -507,7 +507,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-comments.ts",
-          "line": 62
+          "line": 69
         },
         {
           "name": "useReplies",
@@ -522,7 +522,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-comments.ts",
-          "line": 213
+          "line": 238
         },
         {
           "name": "useReactions",
@@ -537,7 +537,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-reactions.ts",
-          "line": 48
+          "line": 49
         },
         {
           "name": "useReactionUsers",
@@ -552,7 +552,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-reactions.ts",
-          "line": 212
+          "line": 223
         },
         {
           "name": "useRelationRecords",

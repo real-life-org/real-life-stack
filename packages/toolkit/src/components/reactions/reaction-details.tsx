@@ -129,8 +129,16 @@ export function ReactionDetails({
                     </AvatarFallback>
                   </Avatar>
                 </ProfileLink>
-                <span className="flex-1 text-sm text-foreground truncate">
+                <span className="flex-1 min-w-0 text-sm text-foreground truncate">
                   {user.displayName}
+                  {user.unsigned && (
+                    <span
+                      className="ml-2 text-xs text-muted-foreground/70"
+                      title="Ohne Signatur: Dass die Reaktion von dieser Person stammt, lässt sich nicht nachweisen."
+                    >
+                      unsigniert
+                    </span>
+                  )}
                 </span>
                 <span className="text-base leading-none">{user.emoji}</span>
               </li>

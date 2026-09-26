@@ -202,6 +202,7 @@ beforeAll(async () => {
   }))
   vi.doMock("../src/hooks/connector-context", () => ({
     useConnector: () => harness.connector,
+    useOptionalConnector: () => harness.connector,
   }))
   hooks = await import("../src/hooks/use-votes")
 })

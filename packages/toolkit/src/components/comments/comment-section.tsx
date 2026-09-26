@@ -38,7 +38,7 @@ export function CommentSection({
   onReplyChange,
   className,
 }: CommentSectionProps) {
-  const { data: comments, allComments, authors, canComment, createComment } = useComments(itemId)
+  const { data: comments, allComments, marks, authors, canComment, createComment } = useComments(itemId)
   const [replyTo, setReplyTo] = useState<CommentQuote | null>(null)
   const [replyToFirstLevel, setReplyToFirstLevel] = useState<string | null>(null)
 
@@ -78,6 +78,7 @@ export function CommentSection({
         authorName: author?.name ?? c.createdBy,
         authorAvatar: author?.avatar,
         replyCount: 0,
+        mark: marks.get(c.id) ?? null,
       })
       map.set(replyToId, list)
     }
@@ -85,7 +86,7 @@ export function CommentSection({
       list.sort((a, b) => new Date(a.item.createdAt).getTime() - new Date(b.item.createdAt).getTime())
     }
     return map
-  }, [allComments, authors])
+  }, [allComments, authors, marks])
 
   const handleReply = useCallback((comment: CommentWithAuthor) => {
     const data = comment.item.data as { content: string; replyTo?: string }

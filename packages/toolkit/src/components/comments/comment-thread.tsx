@@ -55,6 +55,7 @@ export function CommentThread({
         onReply={() => onReply?.(comment)}
         canReply={canReply}
         reactionSlot={renderReactions?.(comment.item.id)}
+        mark={comment.mark}
       />
 
       {/* Reply count toggle */}
@@ -103,6 +104,7 @@ export function CommentThread({
                   quotedAuthor={quotedReply?.authorName}
                   quotedText={quotedReply ? (quotedReply.item.data as { content: string }).content.slice(0, 80) : undefined}
                   reactionSlot={renderReactions?.(reply.item.id)}
+                  mark={reply.mark}
                 />
                 </div>
               )
