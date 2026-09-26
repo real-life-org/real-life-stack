@@ -458,11 +458,11 @@ damit kein Client einen Typ anders einstufen kann. Zum Inhalt gehören
 Relationen (`item.relations`), deren Ziel zur Aussage gehört, etwa worauf
 sich ein Kommentar bezieht.
 
-| Typ | Inhaltsfelder | Inhaltsrelationen |
-|---|---|---|
-| `statement` | `title`, `description`, `variantOf` ([modules/resonance.md](modules/resonance.md)) | — |
-| `comment` | `content`, `replyTo`, `replyToComment` | `commentOn` |
-| `reaction` | `emoji` | `reactsTo` |
+| Typ | Inhaltsfelder | Inhaltsrelationen | Beleg erforderlich |
+|---|---|---|---|
+| `statement` | `title`, `description`, `variantOf` ([modules/resonance.md](modules/resonance.md)) | — | ja |
+| `comment` | `content`, `replyTo`, `replyToComment` | `commentOn` | vorerst nein |
+| `reaction` | `emoji` | `reactsTo` | vorerst nein |
 
 `post` ist nicht im Katalog und bleibt gemeinsam bearbeitbar (rls#263). Wird
 die Einstufung später je Space oder Item konfigurierbar, MUSS sie so gebunden
@@ -530,52 +530,43 @@ normalisiert zurückschreiben, denn jede Byte-Änderung ändert den Hash.
    Auswertung, Bezugnahmen darauf ebenso wenig. Anzeigeflächen DÜRFEN es mit
    Kennzeichnung („verändert") zeigen. Die Abwesenheit eines Claims beweist
    keine Herkunft und kann in einem Multi-Writer-Store jederzeit hergestellt
-   werden. Einen Altbestand-Modus gibt es deshalb nur in der engen Form
-   „Altbestand von Kommentaren und Reaktionen" unten.
+   werden. Ob ein Item ohne Claim trotzdem angezeigt wird und zählt, regelt
+   allein die Spalte „Beleg erforderlich" (unten); eine Ausnahme nach Datum
+   oder Herkunft gibt es nicht.
 8. Kanonische **Testvektoren** liegen unter
    `schemas/claims/vectors/item-authorial-1.json` und sind für
    Implementierungen verbindlich.
 
-**Altbestand von Kommentaren und Reaktionen.** Kommentare und Reaktionen gab
-es schon, bevor sie signiert wurden. Damit sie sichtbar bleiben, gilt für sie
-eine enge Ausnahme. Ein Item ist **Altbestand**, wenn alle vier Bedingungen
-erfüllt sind:
+**Beleg erforderlich.** Die Spalte im Katalog legt fest, was mit einem Item
+ohne Claim geschieht. Für jedes Item eines Katalogtyps gilt, in dieser
+Reihenfolge:
 
-- sein Typ ist `comment` oder `reaction`,
-- `data.claim` fehlt (ein vorhandener, aber ungültiger Claim zählt nicht),
-- `createdAt`, gelesen als Zeitpunkt nach RFC 3339, liegt vor dem Stichtag
-  `2026-09-27T00:00:00.000Z`; ein nicht lesbarer Wert ist nie Altbestand. Das ist das
-  Ende des Tages, an dem die signierenden Connectoren veröffentlicht wurden
-  (26.09.2026), damit auch an diesem Tag noch von alten Clients geschriebene
-  Items dazugehören.
-- es ist nicht älter als das Item, auf das es sich bezieht: Für jedes Ziel
-  seiner Inhaltsrelationen (`commentOn`, `reactsTo`) liegt sein `createdAt`
-  höchstens 5 Minuten vor dem `createdAt` des Ziels. Die Toleranz fängt
-  abweichende Geräteuhren ab. Fehlt ein Ziel, ist es nicht auffindbar oder
-  sein `createdAt` nicht lesbar, ist das Item kein Altbestand.
+1. Verdikt `valid` oder `trusted`: Das Item ist **belegt**. Es wird angezeigt
+   und zählt in Auswertungen.
+2. Kein Claim (`data.claim` fehlt) und der Typ verlangt **keinen** Beleg: Das
+   Item ist **unsigniert**. Es wird angezeigt und zählt in Auswertungen.
+   Anzeigeflächen SOLLTEN es dezent als unsigniert kennzeichnen, nicht als
+   Warnung.
+3. Sonst ist es **ungültig** und zählt in keiner Auswertung. Trägt es einen
+   Claim, der nicht passt, DÜRFEN Anzeigeflächen es mit Kennzeichnung
+   („verändert") zeigen.
 
-Regeln:
+Für `comment` und `reaction` ist die Belegpflicht **vorerst aus**. Diese
+Typen gab es schon, bevor sie signiert wurden, und ihr Bestand soll sichtbar
+bleiben. Die Belegpflicht wird später eingeschaltet. Ab dann sind
+unsignierte Kommentare und Reaktionen ungültig. Das Einschalten ist eine
+Änderung dieses Katalogs mit einem Release, kein Laufzeitschalter und nichts,
+was ein Client oder Space-Daten ändern können.
 
-1. Altbestand wird angezeigt und zählt in Auswertungen wie ein Item mit
-   positivem Verdikt.
-2. Anzeigeflächen SOLLTEN ihn dezent als unsigniert kennzeichnen, etwa in der
-   Detailansicht, und nicht als Warnung.
-3. Die Ausnahme gilt nicht für Statements und nicht für Relation Records.
-   Dort gab es keinen Altbestand, der geschützt werden müsste.
-4. Nachsigniert wird nicht. Ein automatisches Nachsignieren durch die
-   Autorin würde auch untergeschobene Items beglaubigen, denn ohne Claim sind
-   `createdBy` und `createdAt` frei schreibbar.
-5. Altbestand ist unbelegt. Wer ein Item ohne Claim mit fremdem `createdBy`
-   einschreibt und zurückdatiert, erzeugt Altbestand. Wer einen signierten
-   Kommentar ändert, den Claim entfernt und zurückdatiert, ebenso. Die vierte
-   Bedingung schließt das für jedes Ziel aus, das nach dem Stichtag entstanden
-   ist, denn dann kann es keinen Altbestand mehr geben. An älteren Zielen
-   bleibt es möglich, und `createdAt` eines unsignierten Ziels ist selbst
-   schreibbar. Die Ausnahme hält bestehende Inhalte sichtbar, sie ist kein
-   Schutz. Deshalb ist die Kennzeichnung als unsigniert (Regel 2) wichtig.
+Solange die Belegpflicht aus ist, gilt für diese Typen: Ein unsigniertes Item
+ist unbelegt. `createdBy` und `createdAt` sind ohne Claim frei schreibbar, und
+wer bei einem signierten Kommentar den Claim entfernt, macht ihn zu einem
+unsignierten. Die Kennzeichnung als unsigniert macht das sichtbar. Ein
+automatisches Nachsignieren findet nicht statt, weil es untergeschobene
+Items beglaubigen würde.
 
-Die Gruppe `legacy` in `item-authorial-1.json` legt fest, wann ein Item
-Altbestand ist.
+Die Gruppe `standing` in `item-authorial-1.json` legt die drei Ergebnisse
+fest.
 
 **Schreibweg.** Den Claim verwaltet der Connector im allgemeinen Schreibweg,
 gesteuert allein durch den Katalog:

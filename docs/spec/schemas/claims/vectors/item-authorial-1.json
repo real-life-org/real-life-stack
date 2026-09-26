@@ -832,7 +832,7 @@
     {
       "name": "claim-missing-invalid",
       "expect": "invalid",
-      "description": "Signed mode: an item of a catalog type without claim is invalid. Absence of a claim proves no provenance (no legacy mode).",
+      "description": "Signed mode: without claim the verdict is invalid — absence of a claim proves no provenance. Whether the item is still shown and counted is decided by proofRequired (see the standing group).",
       "item": {
         "id": "statement-grundsatz-einladen",
         "type": "statement",
@@ -1150,418 +1150,207 @@
       "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiZGVzY3JpcHRpb24iOiJJbiBkZXIgRWlubGFkdW5nLCBiZXZvciBqZW1hbmQgc2VpbmVuIEFiZW5kIGRhZsO8ciBoZXJnaWJ0LiIsInRpdGxlIjoiV2VubiBpY2ggZWlubGFkZSwgZ2ViZSBpY2ggdm9yaGVyIEFnZW5kYSB1bmQgRm9ybWF0IHZvci4ifSwicmVsYXRpb25zIjp7fX0sImNyZWF0ZWRBdCI6IjIwMjYtMDktMjVUMTI6MDA6MDAuMDAwWiIsImNyZWF0ZWRCeSI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTIiwiaWQiOiJzdGF0ZW1lbnQtZ3J1bmRzYXR6LWVpbmxhZGVuIiwicHJvZmlsZSI6Iml0ZW0tYXV0aG9yaWFsIiwidHlwZSI6InN0YXRlbWVudCIsInYiOiJybHMtY2xhaW0vMSJ9.KFxEdcGgJWPfAVgZ6Z3j8hHFS8rFw5F3ZNEWFtX_oSJ60IoGrR_RQr-qEQnPFtm3_6VL6iefJR75xKSEL80ODQ"
     }
   ],
-  "legacyCutoff": "2026-09-27T00:00:00.000Z",
-  "legacyClockToleranceMs": 300000,
-  "legacyRule": "An item is legacy iff (1) its type is comment or reaction, (2) data.claim is absent (a present but invalid claim does not qualify), (3) createdAt, read as an RFC 3339 instant, lies before legacyCutoff, and (4) it has at least one target in its content relations and, for every target, createdAt >= target.createdAt - legacyClockToleranceMs. Unreadable timestamps or a target missing from `targets` mean not legacy. Legacy is shown and counts like a positive verdict; it is unproven.",
-  "legacy": [
+  "proofRequired": {
+    "statement": true,
+    "comment": false,
+    "reaction": false
+  },
+  "standingRule": "Signed mode. belegt: claim verifies (valid). unsigniert: data.claim absent AND the type does not require proof — shown, counts, subtly marked. ungueltig: otherwise — never counts; a present but non-matching claim may be shown as \"verändert\". (In authoritative mode the verdict is trusted, hence belegt.)",
+  "standing": [
     {
-      "name": "comment-before-cutoff",
-      "legacy": true,
-      "description": "Unsigned comment written before the cutoff, after its target: legacy, shown and counted.",
+      "name": "statement-signed-belegt",
+      "standing": "belegt",
+      "counts": true,
+      "description": "Valid claim: belegt, shown and counted.",
       "item": {
-        "id": "comment-legacy",
-        "type": "comment",
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
         "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-20T10:00:00.000Z",
+        "createdAt": "2026-09-25T12:00:00.000Z",
         "data": {
-          "content": "Alt"
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiZGVzY3JpcHRpb24iOiJJbiBkZXIgRWlubGFkdW5nLCBiZXZvciBqZW1hbmQgc2VpbmVuIEFiZW5kIGRhZsO8ciBoZXJnaWJ0LiIsInRpdGxlIjoiV2VubiBpY2ggZWlubGFkZSwgZ2ViZSBpY2ggdm9yaGVyIEFnZW5kYSB1bmQgRm9ybWF0IHZvci4iLCJ2YXJpYW50T2YiOm51bGx9LCJyZWxhdGlvbnMiOnt9fSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.CWyt3yFYQLuYrpWoQ3wllLXU2r9sU5CxLjaVv4sNO7OB00ktttUmOuOveGhiZEbgdEXg97XjlsJ1Xy_L9mBWDQ"
+    },
+    {
+      "name": "statement-unsigned-ungueltig",
+      "standing": "ungueltig",
+      "counts": false,
+      "description": "Statements require proof: without claim they are invalid and never count.",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format vor.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "jws": null
+    },
+    {
+      "name": "statement-altered-ungueltig",
+      "standing": "ungueltig",
+      "counts": false,
+      "description": "Claim present but not matching the stored content: invalid (\"verändert\").",
+      "item": {
+        "id": "statement-grundsatz-einladen",
+        "type": "statement",
+        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
+        "createdAt": "2026-09-25T12:00:00.000Z",
+        "data": {
+          "title": "Wenn ich einlade, gebe ich vorher Agenda und Format an.",
+          "description": "In der Einladung, bevor jemand seinen Abend dafür hergibt."
+        },
+        "tags": [
+          "modul:grundsaetze"
+        ]
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiZGVzY3JpcHRpb24iOiJJbiBkZXIgRWlubGFkdW5nLCBiZXZvciBqZW1hbmQgc2VpbmVuIEFiZW5kIGRhZsO8ciBoZXJnaWJ0LiIsInRpdGxlIjoiV2VubiBpY2ggZWlubGFkZSwgZ2ViZSBpY2ggdm9yaGVyIEFnZW5kYSB1bmQgRm9ybWF0IHZvci4iLCJ2YXJpYW50T2YiOm51bGx9LCJyZWxhdGlvbnMiOnt9fSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxMjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InN0YXRlbWVudC1ncnVuZHNhdHotZWlubGFkZW4iLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoic3RhdGVtZW50IiwidiI6InJscy1jbGFpbS8xIn0.CWyt3yFYQLuYrpWoQ3wllLXU2r9sU5CxLjaVv4sNO7OB00ktttUmOuOveGhiZEbgdEXg97XjlsJ1Xy_L9mBWDQ"
+    },
+    {
+      "name": "comment-signed-belegt",
+      "standing": "belegt",
+      "counts": true,
+      "description": "Signed comment: belegt.",
+      "item": {
+        "id": "comment-dabei",
+        "type": "comment",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T15:00:00.000Z",
+        "data": {
+          "content": "Gute Idee, ich bin dabei.",
+          "replyTo": "comment-1"
         },
         "relations": [
           {
             "predicate": "commentOn",
-            "target": "item:post-old"
+            "target": "item:post-a"
           }
         ]
       },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiY29udGVudCI6Ikd1dGUgSWRlZSwgaWNoIGJpbiBkYWJlaS4iLCJyZXBseVRvIjoiY29tbWVudC0xIiwicmVwbHlUb0NvbW1lbnQiOm51bGx9LCJyZWxhdGlvbnMiOnsiY29tbWVudE9uIjpbIml0ZW06cG9zdC1hIl19fSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxNTowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6ImNvbW1lbnQtZGFiZWkiLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoiY29tbWVudCIsInYiOiJybHMtY2xhaW0vMSJ9.TCknxpSwb-QVqCA488NMKZLvJH4wrGbgf9nstmqRXYRHnjKzVD2nv6V-zo62gReyXCIOkU0q2ddbXqUNVHqIAg"
     },
     {
-      "name": "reaction-before-cutoff",
-      "legacy": true,
-      "description": "Unsigned reaction written before the cutoff: legacy.",
+      "name": "comment-unsigned-unsigniert",
+      "standing": "unsigniert",
+      "counts": true,
+      "description": "Comments do not require proof yet: without claim the comment is shown, counts and is subtly marked unsigned.",
       "item": {
-        "id": "reaction-legacy",
+        "id": "comment-unsigned",
+        "type": "comment",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T15:00:00.000Z",
+        "data": {
+          "content": "Gute Idee, ich bin dabei.",
+          "replyTo": "comment-1"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-a"
+          }
+        ]
+      },
+      "jws": null
+    },
+    {
+      "name": "comment-altered-ungueltig",
+      "standing": "ungueltig",
+      "counts": false,
+      "description": "A present but invalid claim is never unsigned: the comment text was changed by someone else — invalid (\"verändert\").",
+      "item": {
+        "id": "comment-dabei",
+        "type": "comment",
+        "createdBy": "did:key:z6Mkg49NtQR2LyYRDCQFK4w1VVHqhypZSSRo7HsyuN7SV7v5",
+        "createdAt": "2026-09-25T15:00:00.000Z",
+        "data": {
+          "content": "Schlechte Idee.",
+          "replyTo": "comment-1"
+        },
+        "relations": [
+          {
+            "predicate": "commentOn",
+            "target": "item:post-a"
+          }
+        ]
+      },
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2c0OU50UVIyTHlZUkRDUUZLNHcxVlZIcWh5cFpTU1JvN0hzeXVON1NWN3Y1I3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiY29udGVudCI6Ikd1dGUgSWRlZSwgaWNoIGJpbiBkYWJlaS4iLCJyZXBseVRvIjoiY29tbWVudC0xIiwicmVwbHlUb0NvbW1lbnQiOm51bGx9LCJyZWxhdGlvbnMiOnsiY29tbWVudE9uIjpbIml0ZW06cG9zdC1hIl19fSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxNTowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rZzQ5TnRRUjJMeVlSRENRRks0dzFWVkhxaHlwWlNTUm83SHN5dU43U1Y3djUiLCJpZCI6ImNvbW1lbnQtZGFiZWkiLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoiY29tbWVudCIsInYiOiJybHMtY2xhaW0vMSJ9.TCknxpSwb-QVqCA488NMKZLvJH4wrGbgf9nstmqRXYRHnjKzVD2nv6V-zo62gReyXCIOkU0q2ddbXqUNVHqIAg"
+    },
+    {
+      "name": "reaction-signed-belegt",
+      "standing": "belegt",
+      "counts": true,
+      "description": "Signed reaction: belegt.",
+      "item": {
+        "id": "reaction-herz",
         "type": "reaction",
         "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-08-20T10:00:00.000Z",
+        "createdAt": "2026-09-25T16:00:00.000Z",
         "data": {
-          "emoji": "👍"
+          "emoji": "❤️"
         },
         "relations": [
           {
             "predicate": "reactsTo",
-            "target": "item:post-old"
+            "target": "item:post-a"
           }
         ]
       },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiZW1vamkiOiLinaTvuI8ifSwicmVsYXRpb25zIjp7InJlYWN0c1RvIjpbIml0ZW06cG9zdC1hIl19fSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxNjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InJlYWN0aW9uLWhlcnoiLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoicmVhY3Rpb24iLCJ2IjoicmxzLWNsYWltLzEifQ.RdgW8yLth9_9numugHCcWfuz7psfFnM5iOrvYA-C9mEoASJHZZ0GxMjABXphc9oPzGM3GHQ5iBD5ChnDNMZGDA"
     },
     {
-      "name": "comment-on-release-day",
-      "legacy": true,
-      "description": "Written on the release day itself (26.09.2026, by a client not yet updated): still before the exclusive cutoff.",
+      "name": "reaction-unsigned-unsigniert",
+      "standing": "unsigniert",
+      "counts": true,
+      "description": "Reactions do not require proof yet: without claim the reaction counts and is subtly marked unsigned.",
       "item": {
-        "id": "comment-legacy",
-        "type": "comment",
+        "id": "reaction-unsigned",
+        "type": "reaction",
         "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-26T23:59:59.999Z",
+        "createdAt": "2026-09-25T16:00:00.000Z",
         "data": {
-          "content": "Noch alt"
+          "emoji": "❤️"
         },
         "relations": [
           {
-            "predicate": "commentOn",
-            "target": "item:post-old"
+            "predicate": "reactsTo",
+            "target": "item:post-a"
           }
         ]
       },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
+      "jws": null
     },
     {
-      "name": "comment-at-cutoff",
-      "legacy": false,
-      "description": "The cutoff is exclusive: an unsigned comment at exactly the cutoff is not legacy.",
+      "name": "reaction-altered-ungueltig",
+      "standing": "ungueltig",
+      "counts": false,
+      "description": "The emoji differs from the signed one: invalid.",
       "item": {
-        "id": "comment-legacy",
-        "type": "comment",
+        "id": "reaction-herz",
+        "type": "reaction",
         "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-27T00:00:00.000Z",
+        "createdAt": "2026-09-25T16:00:00.000Z",
         "data": {
-          "content": "Neu"
+          "emoji": "👎"
         },
         "relations": [
           {
-            "predicate": "commentOn",
-            "target": "item:post-old"
+            "predicate": "reactsTo",
+            "target": "item:post-a"
           }
         ]
       },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "name": "comment-after-cutoff",
-      "legacy": false,
-      "description": "Unsigned comment after the cutoff: not legacy (invalid in signed mode).",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-10-01T10:00:00.000Z",
-        "data": {
-          "content": "Neu"
-        },
-        "relations": [
-          {
-            "predicate": "commentOn",
-            "target": "item:post-old"
-          }
-        ]
-      },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "name": "comment-with-claim-before-cutoff",
-      "legacy": false,
-      "description": "A claim is present (here a broken one): never legacy — a present but invalid claim stays \"verändert\".",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-20T10:00:00.000Z",
-        "data": {
-          "content": "Alt",
-          "claim": "broken.claim.value"
-        },
-        "relations": [
-          {
-            "predicate": "commentOn",
-            "target": "item:post-old"
-          }
-        ]
-      },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "name": "statement-before-cutoff",
-      "legacy": false,
-      "description": "The exception covers only comment and reaction; statements never had legacy.",
-      "item": {
-        "id": "statement-legacy",
-        "type": "statement",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-20T10:00:00.000Z",
-        "data": {
-          "title": "Alt"
-        },
-        "relations": []
-      },
-      "targets": []
-    },
-    {
-      "name": "relation-before-cutoff",
-      "legacy": false,
-      "description": "Relation records are not covered.",
-      "item": {
-        "id": "relation-legacy",
-        "type": "relation",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-20T10:00:00.000Z",
-        "data": {
-          "predicate": "votesOn",
-          "value": "green"
-        },
-        "relations": []
-      },
-      "targets": []
-    },
-    {
-      "name": "comment-before-cutoff-without-millis",
-      "legacy": true,
-      "description": "createdAt is compared as an instant, not as a string: a valid RFC 3339 timestamp without fractional seconds qualifies.",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-26T12:00:00Z",
-        "data": {
-          "content": "Alt"
-        },
-        "relations": [
-          {
-            "predicate": "commentOn",
-            "target": "item:post-old"
-          }
-        ]
-      },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "name": "comment-unreadable-created-at",
-      "legacy": false,
-      "description": "An unreadable createdAt is never legacy.",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "irgendwann",
-        "data": {
-          "content": "?"
-        },
-        "relations": [
-          {
-            "predicate": "commentOn",
-            "target": "item:post-old"
-          }
-        ]
-      },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "name": "comment-backdated-onto-new-target",
-      "legacy": false,
-      "description": "The target was created after the cutoff, so no comment on it can be legacy: a backdated unsigned comment is not.",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-20T10:00:00.000Z",
-        "data": {
-          "content": "Untergeschoben"
-        },
-        "relations": [
-          {
-            "predicate": "commentOn",
-            "target": "item:post-new"
-          }
-        ]
-      },
-      "targets": [
-        {
-          "id": "post-new",
-          "createdAt": "2026-10-01T09:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "name": "comment-older-than-target",
-      "legacy": false,
-      "description": "Dated well before its (old) target: impossible for a real comment, not legacy.",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-08-01T10:00:00.000Z",
-        "data": {
-          "content": "Zu früh"
-        },
-        "relations": [
-          {
-            "predicate": "commentOn",
-            "target": "item:post-old"
-          }
-        ]
-      },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "name": "comment-within-clock-tolerance",
-      "legacy": true,
-      "description": "Dated 4 minutes before its target — within the 5-minute tolerance for skewed device clocks.",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-08-15T08:56:00.000Z",
-        "data": {
-          "content": "Uhr geht nach"
-        },
-        "relations": [
-          {
-            "predicate": "commentOn",
-            "target": "item:post-old"
-          }
-        ]
-      },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "name": "comment-beyond-clock-tolerance",
-      "legacy": false,
-      "description": "Dated 6 minutes before its target — beyond the tolerance.",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-08-15T08:54:00.000Z",
-        "data": {
-          "content": "Zu früh"
-        },
-        "relations": [
-          {
-            "predicate": "commentOn",
-            "target": "item:post-old"
-          }
-        ]
-      },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "2026-08-15T09:00:00.000Z"
-        }
-      ]
-    },
-    {
-      "name": "comment-without-target",
-      "legacy": false,
-      "description": "No content relation, so no target to compare with: not legacy.",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-20T10:00:00.000Z",
-        "data": {
-          "content": "Ohne Ziel"
-        },
-        "relations": []
-      },
-      "targets": []
-    },
-    {
-      "name": "comment-target-not-found",
-      "legacy": false,
-      "description": "The target is not available (targets list empty): not legacy.",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-20T10:00:00.000Z",
-        "data": {
-          "content": "Ziel fehlt"
-        },
-        "relations": [
-          {
-            "predicate": "commentOn",
-            "target": "item:post-old"
-          }
-        ]
-      },
-      "targets": []
-    },
-    {
-      "name": "comment-target-unreadable-created-at",
-      "legacy": false,
-      "description": "The target's createdAt is unreadable: not legacy.",
-      "item": {
-        "id": "comment-legacy",
-        "type": "comment",
-        "createdBy": "did:key:z6MktULudTtAsAhRegYPiZ6631RV3viv12qd4GQF8z1xB22S",
-        "createdAt": "2026-09-20T10:00:00.000Z",
-        "data": {
-          "content": "?"
-        },
-        "relations": [
-          {
-            "predicate": "commentOn",
-            "target": "item:post-old"
-          }
-        ]
-      },
-      "targets": [
-        {
-          "id": "post-old",
-          "createdAt": "unbekannt"
-        }
-      ]
+      "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3RVTHVkVHRBc0FoUmVnWVBpWjY2MzFSVjN2aXYxMnFkNEdRRjh6MXhCMjJTI3NpZy0wIiwidHlwIjoicmxzLWNsYWltK2p3cyJ9.eyJjb250ZW50Ijp7ImRhdGEiOnsiZW1vamkiOiLinaTvuI8ifSwicmVsYXRpb25zIjp7InJlYWN0c1RvIjpbIml0ZW06cG9zdC1hIl19fSwiY3JlYXRlZEF0IjoiMjAyNi0wOS0yNVQxNjowMDowMC4wMDBaIiwiY3JlYXRlZEJ5IjoiZGlkOmtleTp6Nk1rdFVMdWRUdEFzQWhSZWdZUGlaNjYzMVJWM3ZpdjEycWQ0R1FGOHoxeEIyMlMiLCJpZCI6InJlYWN0aW9uLWhlcnoiLCJwcm9maWxlIjoiaXRlbS1hdXRob3JpYWwiLCJ0eXBlIjoicmVhY3Rpb24iLCJ2IjoicmxzLWNsYWltLzEifQ.RdgW8yLth9_9numugHCcWfuz7psfFnM5iOrvYA-C9mEoASJHZZ0GxMjABXphc9oPzGM3GHQ5iBD5ChnDNMZGDA"
     }
   ]
 }

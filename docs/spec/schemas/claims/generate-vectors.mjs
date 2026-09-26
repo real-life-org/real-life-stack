@@ -416,7 +416,7 @@ const itemClaimVectors = [
     reactionPayload,
     reactionSigned.jws,
   ),
-  claimVector("claim-missing-invalid", "invalid", "Signed mode: an item of a catalog type without claim is invalid. Absence of a claim proves no provenance (no legacy mode).", statementItem, null, null),
+  claimVector("claim-missing-invalid", "invalid", "Signed mode: without claim the verdict is invalid — absence of a claim proves no provenance. Whether the item is still shown and counted is decided by proofRequired (see the standing group).", statementItem, null, null),
   claimVector("foreign-author-without-claim-invalid", "invalid", "An attacker writes a claimless statement naming alice as author. Invalid, so neither it nor any reference to it counts.", foreignAuthorItem, null, null),
   claimVector("foreign-signer-invalid", "invalid", "kid names the author but the signature was produced by mallory's key — signature verification MUST fail.", statementItem, statementPayload, signClaim(statementPayload, alice, {}, mallory).jws),
   claimVector(
@@ -451,40 +451,23 @@ const itemClaimVectors = [
   })(),
 ]
 
-// --- Altbestand (legacy) of comments and reactions: is an item legacy? ---
-// comment/reaction, data.claim absent, createdAt before the cutoff, and not
-// older than any target of its content relations (5 minutes clock tolerance).
-const LEGACY_CUTOFF = "2026-09-27T00:00:00.000Z"
-const LEGACY_CLOCK_TOLERANCE_MS = 5 * 60 * 1000
-const OLD_POST = { id: "post-old", createdAt: "2026-08-15T09:00:00.000Z" }
-const NEW_POST = { id: "post-new", createdAt: "2026-10-01T09:00:00.000Z" }
-const legacyItem = (type, createdAt, data, target = OLD_POST) => ({
-  id: `${type}-legacy`,
-  type,
-  createdBy: ALICE,
-  createdAt,
-  data,
-  relations: target ? [{ predicate: type === "reaction" ? "reactsTo" : "commentOn", target: `item:${target.id}` }] : [],
-})
-const legacyVector = (name, legacy, description, item, targets = [OLD_POST]) => ({ name, legacy, description, item, targets })
-const legacyVectors = [
-  legacyVector("comment-before-cutoff", true, "Unsigned comment written before the cutoff, after its target: legacy, shown and counted.", legacyItem("comment", "2026-09-20T10:00:00.000Z", { content: "Alt" })),
-  legacyVector("reaction-before-cutoff", true, "Unsigned reaction written before the cutoff: legacy.", legacyItem("reaction", "2026-08-20T10:00:00.000Z", { emoji: "👍" })),
-  legacyVector("comment-on-release-day", true, "Written on the release day itself (26.09.2026, by a client not yet updated): still before the exclusive cutoff.", legacyItem("comment", "2026-09-26T23:59:59.999Z", { content: "Noch alt" })),
-  legacyVector("comment-at-cutoff", false, "The cutoff is exclusive: an unsigned comment at exactly the cutoff is not legacy.", legacyItem("comment", LEGACY_CUTOFF, { content: "Neu" })),
-  legacyVector("comment-after-cutoff", false, "Unsigned comment after the cutoff: not legacy (invalid in signed mode).", legacyItem("comment", "2026-10-01T10:00:00.000Z", { content: "Neu" })),
-  legacyVector("comment-with-claim-before-cutoff", false, "A claim is present (here a broken one): never legacy — a present but invalid claim stays \"verändert\".", legacyItem("comment", "2026-09-20T10:00:00.000Z", { content: "Alt", claim: "broken.claim.value" })),
-  legacyVector("statement-before-cutoff", false, "The exception covers only comment and reaction; statements never had legacy.", { id: "statement-legacy", type: "statement", createdBy: ALICE, createdAt: "2026-09-20T10:00:00.000Z", data: { title: "Alt" }, relations: [] }, []),
-  legacyVector("relation-before-cutoff", false, "Relation records are not covered.", { id: "relation-legacy", type: "relation", createdBy: ALICE, createdAt: "2026-09-20T10:00:00.000Z", data: { predicate: "votesOn", value: "green" }, relations: [] }, []),
-  legacyVector("comment-before-cutoff-without-millis", true, "createdAt is compared as an instant, not as a string: a valid RFC 3339 timestamp without fractional seconds qualifies.", legacyItem("comment", "2026-09-26T12:00:00Z", { content: "Alt" })),
-  legacyVector("comment-unreadable-created-at", false, "An unreadable createdAt is never legacy.", legacyItem("comment", "irgendwann", { content: "?" })),
-  legacyVector("comment-backdated-onto-new-target", false, "The target was created after the cutoff, so no comment on it can be legacy: a backdated unsigned comment is not.", legacyItem("comment", "2026-09-20T10:00:00.000Z", { content: "Untergeschoben" }, NEW_POST), [NEW_POST]),
-  legacyVector("comment-older-than-target", false, "Dated well before its (old) target: impossible for a real comment, not legacy.", legacyItem("comment", "2026-08-01T10:00:00.000Z", { content: "Zu früh" })),
-  legacyVector("comment-within-clock-tolerance", true, "Dated 4 minutes before its target — within the 5-minute tolerance for skewed device clocks.", legacyItem("comment", "2026-08-15T08:56:00.000Z", { content: "Uhr geht nach" })),
-  legacyVector("comment-beyond-clock-tolerance", false, "Dated 6 minutes before its target — beyond the tolerance.", legacyItem("comment", "2026-08-15T08:54:00.000Z", { content: "Zu früh" })),
-  legacyVector("comment-without-target", false, "No content relation, so no target to compare with: not legacy.", legacyItem("comment", "2026-09-20T10:00:00.000Z", { content: "Ohne Ziel" }, null), []),
-  legacyVector("comment-target-not-found", false, "The target is not available (targets list empty): not legacy.", legacyItem("comment", "2026-09-20T10:00:00.000Z", { content: "Ziel fehlt" }), []),
-  legacyVector("comment-target-unreadable-created-at", false, "The target's createdAt is unreadable: not legacy.", legacyItem("comment", "2026-09-20T10:00:00.000Z", { content: "?" }), [{ id: "post-old", createdAt: "unbekannt" }]),
+// --- Standing: belegt / unsigniert / ungültig (spec 08 → Beleg erforderlich) ---
+// Kept outside `catalog` so the catalog shape the existing tests compare
+// against stays unchanged.
+const PROOF_REQUIRED = { statement: true, comment: false, reaction: false }
+const unsignedComment = { ...commentItem, id: "comment-unsigned" }
+const unsignedReaction = { ...reactionItem, id: "reaction-unsigned" }
+const standing = (name, standingValue, counts, description, item, jws) => ({ name, standing: standingValue, counts, description, item, jws })
+const standingVectors = [
+  standing("statement-signed-belegt", "belegt", true, "Valid claim: belegt, shown and counted.", statementItem, statementSigned.jws),
+  standing("statement-unsigned-ungueltig", "ungueltig", false, "Statements require proof: without claim they are invalid and never count.", statementItem, null),
+  standing("statement-altered-ungueltig", "ungueltig", false, "Claim present but not matching the stored content: invalid (\"verändert\").", editedItem, statementSigned.jws),
+  standing("comment-signed-belegt", "belegt", true, "Signed comment: belegt.", commentItem, commentSigned.jws),
+  standing("comment-unsigned-unsigniert", "unsigniert", true, "Comments do not require proof yet: without claim the comment is shown, counts and is subtly marked unsigned.", unsignedComment, null),
+  standing("comment-altered-ungueltig", "ungueltig", false, "A present but invalid claim is never unsigned: the comment text was changed by someone else — invalid (\"verändert\").", { ...commentItem, data: { ...commentItem.data, content: "Schlechte Idee." } }, commentSigned.jws),
+  standing("reaction-signed-belegt", "belegt", true, "Signed reaction: belegt.", reactionItem, reactionSigned.jws),
+  standing("reaction-unsigned-unsigniert", "unsigniert", true, "Reactions do not require proof yet: without claim the reaction counts and is subtly marked unsigned.", unsignedReaction, null),
+  standing("reaction-altered-ungueltig", "ungueltig", false, "The emoji differs from the signed one: invalid.", { ...reactionItem, data: { emoji: "👎" } }, reactionSigned.jws),
 ]
 
 const itemAuthorialOut = {
@@ -499,10 +482,9 @@ const itemAuthorialOut = {
   jcsNote: out.jcsNote,
   contentHash: contentHashVectors,
   itemClaims: itemClaimVectors,
-  legacyCutoff: LEGACY_CUTOFF,
-  legacyClockToleranceMs: LEGACY_CLOCK_TOLERANCE_MS,
-  legacyRule: "An item is legacy iff (1) its type is comment or reaction, (2) data.claim is absent (a present but invalid claim does not qualify), (3) createdAt, read as an RFC 3339 instant, lies before legacyCutoff, and (4) it has at least one target in its content relations and, for every target, createdAt >= target.createdAt - legacyClockToleranceMs. Unreadable timestamps or a target missing from `targets` mean not legacy. Legacy is shown and counts like a positive verdict; it is unproven.",
-  legacy: legacyVectors,
+  proofRequired: PROOF_REQUIRED,
+  standingRule: "Signed mode. belegt: claim verifies (valid). unsigniert: data.claim absent AND the type does not require proof — shown, counts, subtly marked. ungueltig: otherwise — never counts; a present but non-matching claim may be shown as \"verändert\". (In authoritative mode the verdict is trusted, hence belegt.)",
+  standing: standingVectors,
 }
 writeFileSync(join(here, "vectors", "item-authorial-1.json"), JSON.stringify(itemAuthorialOut, null, 2) + "\n")
 
