@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { GitBranch } from "lucide-react"
 import type { Item } from "@real-life-stack/data-interface"
-import { isWritable } from "@real-life-stack/data-interface"
+import { hasItemGroups, isWritable } from "@real-life-stack/data-interface"
 import { cn } from "@/lib/utils"
 import { useConnector } from "@/hooks/connector-context"
 import { useItems } from "@/hooks/use-items"
@@ -78,7 +78,11 @@ export function StatementDetail({ item }: { item: Item }) {
   const frozen = useIsFrozen(item)
   const { data: currentUser } = useOptionalCurrentUser()
   const { members } = useStatementFamily(item)
-  const canCreateVariant = isWritable(connector) && create !== null
+  // A variant belongs to the space of its origin: `variantOf` is a
+  // space-local reference (Varianten rule 2). Unknown space → not offered,
+  // never a silent fallback to „Privat".
+  const originGroup = hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
+  const canCreateVariant = isWritable(connector) && create !== null && originGroup !== null
   const isAuthor = currentUser?.id === item.createdBy
 
   return (
@@ -126,7 +130,7 @@ export function StatementDetail({ item }: { item: Item }) {
             title: typeof item.data.title === "string" ? item.data.title : "",
             text: typeof item.data.description === "string" ? item.data.description : "",
             variantOf: variantOfValue(item),
-          })}
+          }, { fixedGroup: originGroup! })}
         >
           <GitBranch className="size-3.5" aria-hidden />
           Variante anlegen

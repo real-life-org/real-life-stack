@@ -112,7 +112,7 @@ describe("StatementDetail (panel)", () => {
       title: "Wir treffen uns montags",
       text: "Im Garten",
       variantOf: "item:s-a",
-    })
+    }, { fixedGroup: "g" })
   })
 
   it("tells the author why the wording is frozen once someone else voted on it", async () => {
@@ -164,5 +164,41 @@ describe("creating a variant through the composer mapping", () => {
       { mode: "edit", existingItem: variantB },
     )
     expect((edited as { data: Record<string, unknown> }).data.variantOf).toBe("item:s-a")
+  })
+})
+
+describe("a variant lands in the space of its origin (Varianten rule 2, #507)", () => {
+  it("the overview composer, pinned to the origin space, offers no other space and submits it", async () => {
+    const { ContentComposer } = await import("../src/components/composer/content-composer")
+    const { withFixedGroup, withGroupOptions } = await import("../src/components/composer/composer-mapping")
+    // The host's overview config: default „Privat", shared groups selectable.
+    const overview = withGroupOptions(pickContentTypes("statement"), [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], undefined, "private")
+    const pinned = withFixedGroup(overview, "g")
+    const submitted: Array<Record<string, unknown>> = []
+    await render(createElement(ContentComposer, {
+      contentTypes: pinned,
+      initialContentType: "statement",
+      initialData: { title: "Wir treffen uns dienstags", variantOf: "item:s-a", group: "g" },
+      onSubmit: (data: { data: Record<string, unknown> }) => { submitted.push(data.data) },
+    } as never))
+    const text = host.textContent ?? ""
+    expect(text).toContain("Garten")
+    expect(text).not.toContain("Privat")
+    expect(text).not.toContain("Hof")
+    const submit = [...host.querySelectorAll("button")].find((el) => el.textContent?.includes("Einbringen"))
+    await act(async () => { submit!.click() })
+    expect(submitted[0]).toMatchObject({ group: "g", variantOf: "item:s-a" })
+  })
+
+  it("keeps the fixed group's name when the user may see it, and names it otherwise", async () => {
+    const { withFixedGroup, withGroupOptions } = await import("../src/components/composer/composer-mapping")
+    const overview = withGroupOptions(pickContentTypes("statement"), [{ id: "g", name: "Garten" }], undefined, "private")
+    expect(withFixedGroup(overview, "g")[0]!.groupOptions).toEqual([{ id: "g", name: "Garten" }])
+    expect(withFixedGroup(overview, "x")[0]!.groupOptions).toEqual([{ id: "x", name: "Space der Vorlage" }])
+  })
+
+  it("is not offered when the origin's space cannot be determined", async () => {
+    const text = await render(createElement(StatementDetail, { item: { ...origin, id: "not-in-store" } }))
+    expect(text).not.toContain("Variante anlegen")
   })
 })

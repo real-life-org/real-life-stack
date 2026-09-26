@@ -11,6 +11,7 @@ import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import { ComposerFullscreenShell } from "../composer/composer-fullscreen-shell"
 import type { ContentComposerHandle, ContentComposerProps, ContentTypeConfig, WidgetData } from "../composer/content-composer"
 import { ItemComposer } from "../composer/item-composer"
+import { withFixedGroup } from "../composer/composer-mapping"
 import { useLocationPick } from "../map/location-pick"
 import { useModulePanel } from "../module-panel/module-panel"
 
@@ -35,11 +36,18 @@ export interface CreateConfig {
   shell: "sheet" | "fullscreen"
 }
 
+/** Constraints on a create form beyond its prefilled data. */
+export interface CreateOptions {
+  /** The new item must land in this space: the group widget offers nothing
+      else (e.g. a variant, whose `variantOf` is a space-local reference). */
+  fixedGroup?: string
+}
+
 export interface CreateHostValue {
   /** Whether a create form is currently open. */
   isComposing: boolean
   /** Open the create form for `type` (default: the module's first type), optionally prefilled. */
-  startCreate: (type?: string, initialData?: Partial<WidgetData>) => void
+  startCreate: (type?: string, initialData?: Partial<WidgetData>, options?: CreateOptions) => void
   /** Patch the open create form's data (e.g. a different clicked date) without remounting. */
   patchCreate: (patch: Partial<WidgetData>) => void
 }
@@ -53,6 +61,7 @@ interface CreateOutletValue {
   activeConfig: CreateConfig | null
   sheetComposing: boolean
   pendingInitialData: () => Partial<WidgetData> | undefined
+  pendingOptions: () => CreateOptions | undefined
   onDone: (item: Item) => void
   cancel: () => void
   composerApiRef: MutableRefObject<ContentComposerHandle | null>
@@ -139,6 +148,7 @@ export function CreateHostProvider({ children }: { children: ReactNode }) {
   const activeConfig = registeredActiveConfig ?? (isComposing ? composeConfigRef.current : null)
 
   const pendingInitialDataRef = useRef<Partial<WidgetData> | undefined>(undefined)
+  const pendingOptionsRef = useRef<CreateOptions | undefined>(undefined)
   const [composerKey, setComposerKey] = useState(0)
   const composerApiRef = useRef<ContentComposerHandle | null>(null)
 
@@ -146,14 +156,15 @@ export function CreateHostProvider({ children }: { children: ReactNode }) {
   const stopCreate = useCallback(() => stopCompose(), [stopCompose])
 
   const startCreate = useCallback(
-    (type?: string, initialData?: Partial<WidgetData>) => {
+    (type?: string, initialData?: Partial<WidgetData>, options?: CreateOptions) => {
       const modul = moduleRef.current
       if (!modul) return
       const cfg = store.getConfigFor(modul)
       const resolvedType = type ?? cfg?.contentTypes[0]?.id ?? ""
       composeOriginRef.current = modul
       composeConfigRef.current = cfg
-      pendingInitialDataRef.current = initialData
+      pendingOptionsRef.current = options
+      pendingInitialDataRef.current = options?.fixedGroup ? { ...initialData, group: options.fixedGroup } : initialData
       setComposerKey((k) => k + 1)
       startCompose(resolvedType)
     },
@@ -167,6 +178,7 @@ export function CreateHostProvider({ children }: { children: ReactNode }) {
       store, composeType, composerKey, activeConfig,
       sheetComposing: isComposing && activeConfig?.shell === "sheet",
       pendingInitialData: () => pendingInitialDataRef.current,
+      pendingOptions: () => pendingOptionsRef.current,
       onDone, cancel: stopCreate, composerApiRef,
     }),
     [store, composeType, composerKey, activeConfig, isComposing, onDone, stopCreate],
@@ -213,12 +225,13 @@ function CreateComposerOutlet({ className }: { className?: string }) {
   const ctx = useContext(CreateOutletContext)
   const config = ctx?.activeConfig
   if (!ctx || !config) return null
+  const fixedGroup = ctx.pendingOptions()?.fixedGroup
   return (
     <ItemComposer
       key={ctx.composerKey}
       apiRef={ctx.composerApiRef}
       className={className}
-      contentTypes={config.contentTypes}
+      contentTypes={fixedGroup ? withFixedGroup(config.contentTypes, fixedGroup) : config.contentTypes}
       initialContentType={ctx.composeType ?? undefined}
       initialData={ctx.pendingInitialData()}
       mapper={config.mapper}
