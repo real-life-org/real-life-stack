@@ -157,4 +157,19 @@ describe("WotConnector — authorial items (spec 08, signed)", () => {
     await aliceSide.updateItem(created.id, { tags: ["später"] })
     expect((await aliceSide.getItem(created.id))!.tags).toEqual(["später"])
   })
+
+  it("overview mode: the private space handle stays open until the signed item is written", async () => {
+    const handle = space()
+    const aliceSide = connectorFor(alice, handle) as any
+    aliceSide.currentGroupId = null
+    aliceSide.privateSpaceId = "private"
+    aliceSide.queuePrivateSpaceReconcile = vi.fn(async () => {})
+
+    const created = await aliceSide.createItem({ type: "comment", createdBy: alice.did, data: { content: "privat" } })
+
+    expect(handle.value.items[created.id]).toBeDefined()
+    expect(handle.transact).toHaveBeenCalled()
+    expect(handle.close).toHaveBeenCalled()
+    expect(handle.transact.mock.invocationCallOrder[0]).toBeLessThan(handle.close.mock.invocationCallOrder[0])
+  })
 })

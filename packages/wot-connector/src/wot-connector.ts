@@ -1238,7 +1238,9 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
       }
       const privateHandle = await this.replication.openSpace<RlsSpaceDoc>(this.privateSpaceId)
       try {
-        return this.createItemOnHandle(privateHandle, item, this.privateSpaceId)
+        // `return await`: createItemOnHandle is async (signing happens before
+        // the write), so the handle must stay open until it has written.
+        return await this.createItemOnHandle(privateHandle, item, this.privateSpaceId)
       } finally {
         privateHandle.close()
       }
