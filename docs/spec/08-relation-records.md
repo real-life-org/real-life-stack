@@ -248,6 +248,23 @@ Regeln:
    zieht (im CRDT-Space kann jedes Mitglied technisch schreiben), ist die
    Vertraulichkeits-Grenze die Space-Wahl — s. Trust-Bindung Regel 6.
 
+## Qualifier an Personen-Kanten
+
+**Status:** Normativer Entwurf (S0, 26.09.2026).
+
+Ein Qualifier präzisiert eine Personen-Kante mit einem Wert aus einer festen Menge: `assignedTo` mit kann · lernt, die Teilnahme am Event mit zugesagt · vielleicht · eingeladen, `votesOn` mit green · yellow · red. Er ist kein zweites Prädikat.
+
+Regeln:
+
+1. Der Qualifier lebt an der Kante. Aus einem Qualifier wird kein eigenes Prädikat (nicht `assignedTo` und `wantsToLearn` für dieselbe Zuweisung).
+2. **Eingebettete Kante:** Der Qualifier liegt als `meta.role` an der Relation (`{ predicate: "assignedTo", target: "global:…", meta: { role: "…" } }`). `meta` ersetzt das Ziel nicht (04, Regel 3).
+3. **Eigener Datensatz:** Bei Selbstaktionen, die RelationRecords sind (Zusage, Stimme), liegt der Qualifier als Feld in `data` des Records, also in `fields` der Projektion. Den Schlüssel nennt das Register (`EdgeEntry.qualifier.key`); bei `votesOn` ist es `value` ([modules/resonance.md](modules/resonance.md)).
+4. Die erlaubten Werte deklariert das Darstellungs-Register je Kante (`EdgeEntry.qualifier.values`, [06 → Feld- und Kantenregister](06-schema-composition.md#feld--und-kantenregister)). Gespeichert wird die `id` des Werts, nie seine Beschriftung.
+5. Eine Kante ohne Qualifier ist gültig und wird ohne Qualifier gezeigt.
+6. Jedes Mitglied darf den Qualifier einer eingebetteten Kante setzen und ändern, auch für andere Personen. Es schreibt dafür das Trägeritem nach dessen Rechten.
+7. Bei Records gelten Fassaden-Regel 7 (creator-owns) und das Claim-Profil des Prädikats unverändert: Den Qualifier eines Records ändert sein Autor. Ob und wie ein Mitglied einen Qualifier für eine andere Person als Record setzt (etwa „eingeladen"), ist offen.
+8. Wer Personen-Kanten neu schreibt (Composer-Mapper), MUSS `meta.role` jeder Person erhalten, deren Kante bestehen bleibt ([shared-components.md → Personenfelder](modules/shared-components.md#personenfelder-people), Regel 6).
+
 ## Trust-Bindung
 
 `knows(verified)` trägt keine eigene Kryptografie. Der Nachweis lebt bei den
