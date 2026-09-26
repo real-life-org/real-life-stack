@@ -53,6 +53,7 @@ import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { ItemAssignees } from "./item-assignees"
 import { ItemMetaRow } from "./item-meta-row"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
+import { StatementDetail, StatementVariantLine } from "../resonance/statement-variants"
 import { VoteBar } from "../resonance/vote-bar"
 import { MessageSquareQuote } from "lucide-react"
 
@@ -243,13 +244,24 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     badge: { icon: MessageSquareQuote, className: "bg-sky-50 text-sky-700 border-sky-200" },
     composerWidgets: ["title", "text", "tags"],
     composer: { widgetLabels: { title: "Aussage", text: "Kontext" }, submitLabel: "Einbringen" },
+    // Ausführlich im Panel: Fassungen der Aussage und „Variante anlegen"
+    // (resonance.md → Varianten); `preview` bleibt frei, damit die Karten
+    // ihr Badge behalten.
+    detail: StatementDetail,
     footer: StatementVotesFooter,
   },
 ]
 
-/** `itemRole: "to"`: votes are INCOMING records; the bar queries records pointing at this item. */
+/** `itemRole: "to"`: votes are INCOMING records; the bar queries records pointing at this item.
+    Below it, wherever the statement shows: of which statement it is a
+    variant and how many variants exist (resonance.md → Varianten, rule 5). */
 function StatementVotesFooter({ item }: ItemSlotProps) {
-  return <VoteBar statementId={item.id} className="w-full" />
+  return (
+    <div className="flex w-full flex-col gap-1.5">
+      <VoteBar statementId={item.id} className="w-full" />
+      <StatementVariantLine item={item} />
+    </div>
+  )
 }
 
 /** Toolkit default: core manifest only. Apps composing more layers hand the
