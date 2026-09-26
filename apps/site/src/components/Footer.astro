@@ -3,13 +3,14 @@ import Default from '@astrojs/starlight/components/Footer.astro'
 import info from '../../public/build-info.json'
 const de = (Astro.currentLocale ?? 'de') === 'de'
 const prefix = de ? '' : `/${Astro.currentLocale}`
+const family = de ? 'Dieser Stack ist Teil des Real Life Projekts' : 'This stack is part of the Real Life project'
 ---
 <Default><slot /></Default>
-<aside class="rl-family" aria-label={de ? 'Teil von Real Life' : 'Part of Real Life'}>
-  <strong>{de ? 'Teil von Real Life' : 'Part of Real Life'}</strong>
+<aside class="rl-family" aria-label={family}>
+  <strong>{family}</strong>
   <nav>
-    <a href="https://real-life.org/">{de ? 'Das Ganze' : 'The whole picture'}</a>
-    <a href="https://reallife.network/">reallife.network</a>
+    <a href="https://real-life.org/">{de ? 'Gesamtbild' : 'Big picture'}</a>
+    <a href="https://reallife.network/">Real Life Network</a>
     <a href="https://rltp.real-life.org/">Trust Protocol</a>
     <a href="https://github.com/real-life-org/real-life-stack">GitHub</a>
     <a href={`${prefix}/datenschutz/`}>{de ? 'Datenschutz' : 'Privacy'}</a>
