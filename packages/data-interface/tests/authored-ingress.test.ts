@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest"
 import type { Item } from "../src/index"
-import { assertMayMutateAuthoredItem, isAuthoredSystemItem } from "../src/index"
+import { assertMayMutateAuthoredItem, isAuthoredSystemItem, relationRecordFromItem } from "../src/index"
 import { isAuthoredItemType, itemContentHash, verifyItemClaim, type ClaimSigner } from "../src/claims"
 import {
   assertAuthoredCommitAllowed,
   assertContentUnchanged,
   authoredUpdateAuthoritative,
   isFrozen,
+  isFrozenByRecords,
   withoutAuthoredClaim,
   planAuthoredUpdate,
   withAuthoredCreateClaim,
@@ -100,6 +101,13 @@ describe("isFrozen — foreign content-bound reference (spec 08)", () => {
   })
   it("is not frozen by a reference to another item", () => {
     expect(isFrozen(comment("a"), [vote("b", "other", "sha256:x")])).toBe(false)
+  })
+  it("gives the same answers over the relation-record projection (isFrozenByRecords)", () => {
+    const records = (items: Item[]) => items.map((item) => relationRecordFromItem(item)!)
+    expect(isFrozenByRecords(comment("a"), records([vote("b", "c1", "sha256:x")]))).toBe(true)
+    expect(isFrozenByRecords(comment("a"), records([vote("a", "c1", "sha256:x")]))).toBe(false)
+    expect(isFrozenByRecords(comment("a"), records([vote("b", "c1")]))).toBe(false)
+    expect(isFrozenByRecords(comment("a"), records([vote("b", "other", "sha256:x")]))).toBe(false)
   })
 })
 

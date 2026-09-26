@@ -187,6 +187,25 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
  * widget in edit mode when ≥2 options exist. The chosen group is persisted as the
  * item's group association by `useItemEditor` (not as item data).
  */
+/**
+ * Pin the create form to ONE space: the group widget offers only `groupId`
+ * and starts on it, so the author cannot move the new item elsewhere. For
+ * items whose data refers to another item by its space-local id — a
+ * statement variant's `variantOf` must point into its own space
+ * (resonance.md, Varianten rule 2).
+ */
+export function withFixedGroup(types: ContentTypeConfig[], groupId: string): ContentTypeConfig[] {
+  return types.map((t) => {
+    const option = t.groupOptions?.find((o) => o.id === groupId) ?? { id: groupId, name: "Space der Vorlage" }
+    return {
+      ...t,
+      groupOptions: [option],
+      defaultGroup: groupId,
+      ...(t.defaultWidgets.includes("group") ? {} : { defaultWidgets: [...t.defaultWidgets, "group"] }),
+    }
+  })
+}
+
 export function withGroupOptions(
   types: ContentTypeConfig[],
   // May be undefined while the groups query is still loading — guarded below.

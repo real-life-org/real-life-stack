@@ -1,4 +1,4 @@
-import type { Item } from "./index.js"
+import type { Item, RelationRecord } from "./index.js"
 import {
   isAuthorialItemType,
   itemContent,
@@ -31,10 +31,20 @@ export interface AuthoredIngress {
  * Callers pass the relation items they can see for the item's space.
  */
 export function isFrozen(target: Pick<Item, "id" | "createdBy">, items: Iterable<Item>): boolean {
+  const records: RelationRecord[] = []
   for (const item of items) {
     if (item.type !== "relation") continue
     const record = relationRecordFromItem(item)
-    if (!record || record.to !== `item:${target.id}`) continue
+    if (record) records.push(record)
+  }
+  return isFrozenByRecords(target, records)
+}
+
+/** {@link isFrozen} over relation records, for surfaces that observe the
+    record projection (e.g. to hide „Bearbeiten" on a frozen item). */
+export function isFrozenByRecords(target: Pick<Item, "id" | "createdBy">, records: Iterable<RelationRecord>): boolean {
+  for (const record of records) {
+    if (record.to !== `item:${target.id}`) continue
     if (typeof record.fields?.contentHash !== "string") continue
     if (record.createdBy !== target.createdBy) return true
   }

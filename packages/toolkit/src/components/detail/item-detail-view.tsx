@@ -12,6 +12,7 @@ import {
 } from "../composer/content-composer"
 import { ItemComposer } from "../composer/item-composer"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
+import { useIsFrozen } from "../../hooks/use-item-frozen"
 import { useItem } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
 import { hasItemGroups, normalizeItemType } from "@real-life-stack/data-interface"
@@ -76,6 +77,10 @@ export function ItemDetailView({
 }: ItemDetailViewProps) {
   const { data: item } = useItem(itemId)
   const connector = useConnector()
+  // Spec 08 → Einfrieren: once another person bound a reference to the
+  // content, its wording can no longer be edited — the edit entry disappears
+  // (resonance.md, Wortlaut rule 3; the type offers a new version instead).
+  const frozen = useIsFrozen(item)
   // Uncontrolled by default; controlled when a `mode` prop is supplied (URL-driven).
   const [internalMode, setInternalMode] = useState<"read" | "edit">("read")
   const mode = modeProp ?? internalMode
@@ -102,7 +107,7 @@ export function ItemDetailView({
   // type switcher / form).
   const vorlage = editTemplateFor(item, contentTypes)
   const composerTypes = vorlage ? contentTypes.filter((t) => t.id === vorlage) : []
-  const canEdit = composerTypes.length > 0
+  const canEdit = composerTypes.length > 0 && !frozen
 
   // Pre-fill the group widget with the item's ACTUAL group/space (not just the
   // config's defaultGroup = current space) so editing in the aggregate view

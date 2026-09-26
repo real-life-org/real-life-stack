@@ -356,6 +356,9 @@ wann angelegt wurde, ist aber nicht die Quelle für Wortlaute.
 - Relation-Store-Fassade: `packages/data-interface/src/relation-records.ts` + Spec 08
 - Optimistik/Write-Chain-Vorlage: `packages/toolkit/src/hooks/use-reactions.ts`
 - Karten/Adornments: `packages/toolkit/src/components/preview/item-preview.tsx`
+- Varianten (Familie, Zyklen, fehlende Ziele): `packages/toolkit/src/lib/resonance-variants.ts`,
+  Darstellung `packages/toolkit/src/components/resonance/statement-variants.tsx`
+- Einfrieren in der Oberfläche: `packages/toolkit/src/hooks/use-item-frozen.ts`
 - View-Blaupause: `apps/reference/src/views/feed-view.tsx`,
   `collection-view.tsx`
 - Prototyp: `web-of-trust-prototyp/narrative-app` (Schema
@@ -379,8 +382,7 @@ Verbindlich für Implementierungen, erzeugt von
 
 ## Offene Punkte
 
-- Item-Claims sind im Code noch nicht umgesetzt (auch `item-provenance`
-  nicht). `item-authorial` ist der erste Claim über einen
-  Item-Inhalt und braucht die Signier- und Prüfwege in den Connectoren.
+- `item-provenance` ist im Code noch nicht umgesetzt. `item-authorial`
+  (Signieren, Prüfen, Einfrieren, Zählung) ist es in allen Connectoren.
 - JSON-Schemas für `resonance-import/1` und `resonance-export/1` als
   eigene Dateien.
