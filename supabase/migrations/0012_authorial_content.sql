@@ -16,8 +16,8 @@
 --    allgemeinen Item-Regeln schreibbar. Die strengere Zeilensperre fuer
 --    comment/reaction aus 0009 bleibt bestehen.
 -- 2. Einfrieren: Existiert eine inhaltsgebundene Bezugnahme einer anderen
---    Person (Relation Record mit `contentHash` auf das Item), ist der Inhalt
---    auch fuer die Autorin gesperrt.
+--    Person (Relation Record mit `contentHash` auf das Item) im selben Scope
+--    (group_id, null-sicher), ist der Inhalt auch fuer die Autorin gesperrt.
 -- 3. Loeschen darf nur die Autorin (wie bei relation, comment, reaction).
 -- 4. authoritative-Stores schreiben keinen Claim: `data.claim` wird bei
 --    Katalogtypen verworfen.
@@ -123,11 +123,14 @@ begin
     raise exception 'only the author may change the content of a %', old.type
       using errcode = '42501';
   end if;
-  -- Sieht alle Bezugnahmen, auch ausserhalb der eigenen Sichtbarkeit
-  -- (security definer), damit das Einfrieren nicht von RLS abhaengt.
+  -- Nur Bezugnahmen im Scope des Items: `item:<id>` ist relativ zum Space
+  -- (Spec 08). Sonst koennte eine Relation in einem fremden Space ein Item
+  -- einfrieren, das ihre Autorin nicht einmal sieht (#501). security definer,
+  -- damit das Einfrieren nicht von der Sichtbarkeit der Aenderin abhaengt.
   if exists (
     select 1 from public.items as r
     where r.type = 'relation'
+      and r.group_id is not distinct from old.group_id
       and r.created_by is distinct from old.created_by
       and r.relations @> jsonb_build_array(jsonb_build_object('predicate', 'to', 'target', 'item:' || old.id))
       and jsonb_typeof(r.data -> 'contentHash') = 'string'

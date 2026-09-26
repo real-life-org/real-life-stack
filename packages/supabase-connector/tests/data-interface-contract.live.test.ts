@@ -298,6 +298,46 @@ if (!url || !anonKey || !serviceKey) {
       }
     })
 
+    // #501: `item:<id>` ist relativ zum Space. Eine Stimme in einem fremden
+    // Space darf ein Statement, das ihre Autorin nicht einmal sieht, nicht
+    // einfrieren; eine Stimme im selben Space weiterhin schon.
+    it("only a content-bound vote in the statement's OWN space freezes it", async () => {
+      const alice = await makeAuthoritative()
+      const bob = await makeAuthoritative()
+      try {
+        const stamp = Date.now()
+        const home = await alice.connector.createGroup(`Freeze Heim ${stamp}`)
+        const foreign = await bob.connector.createGroup(`Freeze Fremd ${stamp}`)
+        const id = `statement-scope-${stamp}`
+        expect((await alice.client.from("items").insert({
+          id, type: "statement", created_by: alice.userId, data: { title: "erste Fassung" }, group_id: home.id,
+        })).error).toBeNull()
+
+        const vote = (voter: { userId: string }, key: string, groupId: string) => ({
+          id: `vote-scope-${key}-${stamp}`,
+          type: "relation",
+          created_by: voter.userId,
+          data: { predicate: VOTE_PREDICATE, value: "green", contentHash: "sha256:00" },
+          relations: [
+            { predicate: "from", target: `global:${voter.userId}` },
+            { predicate: "to", target: `item:${id}` },
+          ],
+          group_id: groupId,
+        })
+        expect((await bob.client.from("items").insert(vote(bob, "fremd", foreign.id))).error).toBeNull()
+        expect((await alice.client.from("items").update({ data: { title: "zweite Fassung" } }).eq("id", id)).error).toBeNull()
+
+        await alice.connector.inviteMember(home.id, bob.userId)
+        expect((await bob.client.from("items").insert(vote(bob, "heim", home.id))).error).toBeNull()
+        const late = await alice.client.from("items").update({ data: { title: "dritte Fassung" } }).eq("id", id)
+        expect(late.error).not.toBeNull()
+        expect(String(late.error!.message)).toMatch(/frozen/)
+      } finally {
+        await alice.connector.dispose()
+        await bob.connector.dispose()
+      }
+    })
+
     it("authoritative connector vouches trusted for the facade-written record", async () => {
       const { connector, userId } = await makeAuthoritative()
       try {

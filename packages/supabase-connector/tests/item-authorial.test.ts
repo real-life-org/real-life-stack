@@ -104,6 +104,29 @@ describe("SupabaseConnector — item-authorial (spec 08, migration 0012)", () =>
     expect(tagged.data.title).toBe("Zweite Fassung")
   })
 
+  it("only a reference in the statement's own space freezes it (#501)", async () => {
+    const { client, connector, userId } = await makeConnector({ allowFixtureAuthors: true })
+    const home = await connector.createGroup("Alices Space")
+    const elsewhere = await connector.createGroup("Bobs Space")
+    connector.setCurrentGroup(home.id)
+    client.serviceRole = false
+    const statement = await connector.createItem({ type: "statement", createdBy: userId, data: { title: "Erste Fassung" } })
+
+    client.serviceRole = true
+    connector.setCurrentGroup(elsewhere.id)
+    await connector.createItem(contentBoundVote("user-bob", statement.id))
+    client.serviceRole = false
+    const revised = await connector.updateItem(statement.id, { data: { title: "Zweite Fassung" } })
+    expect(revised.data.title).toBe("Zweite Fassung")
+
+    client.serviceRole = true
+    connector.setCurrentGroup(home.id)
+    await connector.createItem(contentBoundVote("user-carol", statement.id))
+    client.serviceRole = false
+    await expect(connector.updateItem(statement.id, { data: { title: "Dritte Fassung" } }))
+      .rejects.toThrow(/frozen/)
+  })
+
   it("the author may delete their own statement", async () => {
     const { connector } = await makeConnector()
     const statement = await connector.createItem({ type: "statement", data: { title: "T" } })

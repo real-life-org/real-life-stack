@@ -37,7 +37,9 @@ function authorialContentError(row: Row, next: Row, rows: Row[], sessionId: stri
   if (before === null) return null
   if (jcsCanonicalize(itemContent(rowToItem(next))) === jcsCanonicalize(before)) return null
   if (row.created_by !== sessionId) return `only the author may change the content of a ${String(row.type)}`
-  if (isFrozen(rowToItem(row), rows.map(rowToItem))) {
+  // Only references in the item's own scope (#501): `item:<id>` is space-relative.
+  const sameScope = rows.filter((other) => (other.group_id ?? null) === (row.group_id ?? null))
+  if (isFrozen(rowToItem(row), sameScope.map(rowToItem))) {
     return `this ${String(row.type)} is frozen: another person has bound a reference to its content — create a new version instead`
   }
   return null
