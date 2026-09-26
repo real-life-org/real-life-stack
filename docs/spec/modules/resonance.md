@@ -42,7 +42,7 @@ dem Inhalt, nicht aus Feature-Varianten des Moduls.
 | `data.title` | die Aussage — ein Satz; Pflicht |
 | `data.description` | optionaler Kontext |
 | `data.variantOf` | optional: `item:<statementId>` der Aussage, von der dieses Statement eine Variante ist (siehe „Varianten") |
-| `data.claim` | im Modus `signed`: SignedClaim der Autorin über den Wortlaut (Profil `statement-authorial`, [08-relation-records.md](../08-relation-records.md#statement-authorial)); Vertragsfeld, nie Teil des Wortlauts |
+| `data.claim` | im Modus `signed`: SignedClaim der Autorin über den Wortlaut (Profil `item-authorial`, [08-relation-records.md](../08-relation-records.md#aussagen-einer-person-item-authorial)); verwaltet der Connector, Vertragsfeld, nie Teil des Wortlauts |
 | `tags` | Top-level am Item, Kategorisierung — siehe [07-tags.md](../07-tags.md); ein Tag ordnet die Aussage einem Modul zu |
 | `createdBy` | Autorin der Aussage |
 
@@ -58,39 +58,31 @@ dem Typ zuweist.
 
 ### Wortlaut und Einfrieren
 
-Der **Wortlaut** eines Statements ist das Objekt
-
-```json
-{ "title": "…", "description": "…" | null, "variantOf": "item:…" | null }
-```
-
-mit `null` für fehlende Felder. Sein **Inhalts-Hash** ist
-`"sha256:" + hex(SHA-256(UTF-8(JCS(Wortlaut))))` (JCS nach RFC 8785,
-Hex in Kleinbuchstaben). Tags gehören nicht zum Wortlaut.
-
-Regeln:
+Ein Statement ist eine Aussage einer Person im Sinn von Spec 08
+([item-authorial](../08-relation-records.md#aussagen-einer-person-item-authorial)).
+Sein **Wortlaut** ist sein Inhalt nach dem dortigen Katalog: die
+Inhaltsfelder `title`, `description` und `variantOf`, Inhaltsrelationen hat
+ein Statement keine. Der **Inhalts-Hash** ist dort definiert. Tags gehören nicht zum Wortlaut. Signatur, Schreibweg,
+Einfrieren und die Regel gegen Normalisierung gelten wie in Spec 08; hier
+steht nur, was das Modul ergänzt.
 
 1. Ein Statement zählt nur, wenn seine Bindung an Autorin und Wortlaut
    geprüft ist. Was das je Claim-Modus heißt, regelt die Tabelle unten.
-2. Den Wortlaut DARF nur die Autorin ändern, und nur solange zu dem
-   Statement keine Stimme einer anderen Person existiert. Im Modus `signed`
-   MUSS jede Änderung neu signiert werden. Die eigene Stimme der Autorin zählt nach einer
+2. Weil `votesOn` inhaltsgebunden ist, friert ein Statement mit der ersten
+   Stimme einer anderen Person ein (Spec 08, Einfrieren). Bis dahin darf
+   die Autorin den Wortlaut ändern. Ihre eigene Stimme zählt nach einer
    Änderung erst wieder, wenn sie neu abstimmt (Vote-Regel 5).
-3. Sobald eine Stimme einer anderen Person existiert, ist das Statement
-   **eingefroren**: Die UI
-   MUSS „Bearbeiten" für den Wortlaut ausblenden und stattdessen
-   „Variante anlegen" anbieten. Tags bleiben nach den allgemeinen
-   Item-Berechtigungen bearbeitbar.
-4. Editoren DÜRFEN NICHT den gespeicherten Wortlaut beim Öffnen normalisiert
-   zurückschreiben: Jede Byte-Änderung ändert den Inhalts-Hash.
-5. Es gibt keinen Altbestand-Modus. Ein Statement ohne positives Verdikt
+3. Ist ein Statement eingefroren, MUSS die UI „Bearbeiten" für den Wortlaut
+   ausblenden und stattdessen „Variante anlegen" anbieten. Tags bleiben
+   nach den allgemeinen Item-Berechtigungen bearbeitbar.
+4. Es gibt keinen Altbestand-Modus. Ein Statement ohne positives Verdikt
    zählt nicht, gleich woher es kommt.
 
 Claim-Modi (Spec 08) und was jeweils zählt:
 
 | Claim-Modus | Statement | Stimme | Zählt |
 |---|---|---|---|
-| `signed` | MUSS einen gültigen `statement-authorial`-Claim tragen; fehlt er oder ist er ungültig, ist das Statement `invalid` | MUSS einen gültigen `relation-authorial`-Claim mit `fields.contentHash` tragen | bei Verdikt `valid` für Statement und Stimme |
+| `signed` | MUSS einen gültigen `item-authorial`-Claim tragen; fehlt er oder ist er ungültig, ist das Statement `invalid` | MUSS einen gültigen `relation-authorial`-Claim mit `fields.contentHash` tragen | bei Verdikt `valid` für Statement und Stimme |
 | `authoritative` | trägt keinen Claim; der Store MUSS die Autorbindung erzwingen und Änderungen am Wortlaut auf die Autorin beschränken | trägt keinen Claim, MUSS aber `fields.contentHash` tragen | bei Verdikt `trusted` |
 | kein Claim-Modus | unverifiziert | unverifiziert | nie (Spec 08, L1) |
 
@@ -138,7 +130,8 @@ Regeln (MUSS):
    für alle Mitglieder lesbar, und die VoteBar zeigt die Voter-Namen je
    Stufe im Tooltip. Anonymität wird nicht versprochen, weil sie technisch
    nicht existiert.
-5. **Eine Stimme gilt einem Wortlaut.** Eine Stimme zählt nur, wenn ihr
+5. **Eine Stimme gilt einem Wortlaut.** `votesOn` ist eine
+   inhaltsgebundene Bezugnahme (Spec 08). Eine Stimme zählt nur, wenn ihr
    `fields.contentHash` gleich dem Inhalts-Hash des aktuell gespeicherten
    Wortlauts ist. Im Modus `signed` ist `fields` im
    `relation-authorial`-Claim signiert, die Stimmende bezeugt damit genau
@@ -195,7 +188,7 @@ neues Statement mit `data.variantOf` auf die Aussage, von der es abweicht.
 | Aktion | Voraussetzung | Effekt |
 |---|---|---|
 | Statement einbringen | `ItemWriter` | `createItem(type: "statement")` |
-| Statement bearbeiten | `ItemWriter` + Autorschaft + keine Stimme einer anderen Person | `updateItem` mit neuem `statement-authorial`-Claim |
+| Statement bearbeiten | `ItemWriter` + Autorschaft + keine Stimme einer anderen Person | `updateItem`; der Connector signiert den neuen Wortlaut (`item-authorial`) |
 | Variante anlegen | `ItemWriter` | `createItem(type: "statement")` mit `data.variantOf` |
 | Tags ändern | `ItemWriter` + Berechtigung | `updateItem` auf `tags`; berührt den Wortlaut nicht |
 | Stimme abgeben | `RelationRecordCapable` + `RelationRecordWriterCapable` + `Authenticatable` | `createRelationRecord` (kanonische ID, `createdBy` aus der Identität, `fields.contentHash` des angezeigten Wortlauts); der Record entsteht im Owner-Space des Statements |
@@ -267,7 +260,7 @@ Statements werden als JSON-Datei importiert:
    Ist ein Eintrag ungültig, wird nichts geschrieben, und die UI nennt die
    fehlerhaften Einträge.
 2. Jedes Statement wird im normalen Schreibweg angelegt: `createdBy` ist
-   die importierende Person, der `statement-authorial`-Claim wird wie beim
+   die importierende Person, der `item-authorial`-Claim wird wie beim
    Anlegen von Hand erzeugt. Import ist kein Sonderweg (Spec 08,
    Fixture-/ETL-Regel).
 3. **Idempotent über den Inhalt:** Ein Eintrag wird übersprungen, wenn im
@@ -370,24 +363,24 @@ wann angelegt wurde, ist aber nicht die Quelle für Wortlaute.
 
 ## Testvektoren
 
-[`schemas/claims/vectors/resonance-1.json`](../schemas/claims/vectors/resonance-1.json)
-ist für Implementierungen verbindlich (erzeugt von
-`schemas/claims/generate-vectors.mjs`). Er enthält drei Gruppen:
+Verbindlich für Implementierungen, erzeugt von
+`schemas/claims/generate-vectors.mjs`:
 
-- `contentHash`: Wortlaut → JCS → Inhalts-Hash, einschließlich eines
-  Paares aus NFC und NFD, das zeigt, dass nicht normalisiert wird.
-- `statementClaims`: gültige und ungültige `statement-authorial`-Claims,
-  darunter fehlender Claim, claimloses Statement mit fremder Autorschaft,
-  fremder Signer, `kid` ungleich Autorin, falscher Typ, fehlendes
-  Content-Member und Snapshot ohne lokale Historie.
-- `counting`: ob eine Stimme zählt, je Claim-Modus. Darunter Stimme ohne
+- [`schemas/claims/vectors/item-authorial-1.json`](../schemas/claims/vectors/item-authorial-1.json)
+  (Spec 08): Inhalts-Hash je Katalogtyp, einschließlich eines Paares aus
+  NFC und NFD, und gültige wie ungültige `item-authorial`-Claims für
+  Statement, Kommentar und Reaktion, einschließlich umgehängter,
+  entfernter und zusätzlicher Ziele.
+- [`schemas/claims/vectors/resonance-1.json`](../schemas/claims/vectors/resonance-1.json):
+  ob eine Stimme zählt, je Claim-Modus. Darunter Stimme ohne
   `contentHash`, Stimme für eine andere Fassung, geänderter Wortlaut nach
-  der Stimme und normales Anlegen und Abstimmen im Modus `authoritative`.
+  der Stimme, Statement ohne Claim und normales Anlegen und Abstimmen im
+  Modus `authoritative`.
 
 ## Offene Punkte
 
 - Item-Claims sind im Code noch nicht umgesetzt (auch `item-provenance`
-  nicht). `statement-authorial` ist der erste Claim über einen
+  nicht). `item-authorial` ist der erste Claim über einen
   Item-Inhalt und braucht die Signier- und Prüfwege in den Connectoren.
 - JSON-Schemas für `resonance-import/1` und `resonance-export/1` als
   eigene Dateien.
