@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 import { createObservable, type ClaimVerdict, type Item } from "@real-life-stack/data-interface"
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { useCommentCount } from "../src/hooks/use-comment-count"
+import { useReactions, type UseReactionsResult } from "../src/hooks/use-reactions"
 import { standingMark } from "../src/hooks/use-item-standing"
 import { ReactionBar } from "../src/components/reactions/reaction-bar"
 import { CommentSection } from "../src/components/comments/comment-section"
@@ -43,6 +44,7 @@ function fakeConnector(items: Item[], verify: "claims" | "never" | "none" = "cla
     getCurrentUser: async () => ({ id: "me", displayName: "Ich" }),
     observeCurrentUser: () => createObservable({ id: "me", displayName: "Ich" }),
     getAuthState: () => createObservable({ status: "authenticated" as const }),
+    authenticate: async () => ({ id: "me", displayName: "Ich" }),
     getItems: async () => [], observeItems: () => createObservable<Item[]>([]),
     getItem: async () => null, observeItem: () => createObservable<Item | null>(null),
     getUser: async (id: string) => ({ id, displayName: `Name ${id}` }),
@@ -113,6 +115,59 @@ describe("reactions by standing", () => {
     expect(view.host.textContent).toContain("👍1")
     expect(view.host.textContent).not.toContain("🎉")
     await view.unmount()
+  })
+})
+
+describe("own optimistic reaction and the verdict of what was written (#504)", () => {
+  /** Writes publish the new reaction (with a claim) into the observed set;
+      the verdict for it arrives after `delay` ms. */
+  function writingConnector(outcome: "valid" | "invalid" | "throw", delay = 20) {
+    const related = createObservable<Item[]>([])
+    const fake = fakeConnector([], "none")
+    Object.assign(fake, {
+      observeRelatedItems: () => related,
+      getRelatedItems: async () => related.current,
+      createItem: async (input: { data: Record<string, unknown> }) => {
+        const item = reaction(`r-${related.current.length}`, String(input.data.emoji), "me", "sig")
+        related.set([...related.current, item])
+        return item
+      },
+      verifyItemClaim: () => new Promise<ClaimVerdict>((resolve, reject) => setTimeout(() => {
+        if (outcome === "throw") reject(new Error("verifier down"))
+        else resolve(outcome)
+      }, delay)),
+    })
+    return fake
+  }
+
+  async function reactAndSettle(outcome: "valid" | "invalid" | "throw") {
+    let hook: UseReactionsResult | null = null
+    const Probe = () => {
+      hook = useReactions(TARGET)
+      return null
+    }
+    const view = await mount(writingConnector(outcome), createElement(Probe))
+    await act(async () => { await hook!.react("👍") })
+    // While the verdict is outstanding the own reaction shows (no flicker).
+    const during = hook!.data.find((r) => r.emoji === "👍")?.count ?? 0
+    for (let round = 0; round < 8; round++) {
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+    }
+    const after = hook!.data.find((r) => r.emoji === "👍")?.count ?? 0
+    await view.unmount()
+    return { during, after }
+  }
+
+  it("stays counted while verifying and after a delayed valid verdict", async () => {
+    expect(await reactAndSettle("valid")).toEqual({ during: 1, after: 1 })
+  })
+
+  it("is withdrawn once the written reaction is rejected (invalid)", async () => {
+    expect(await reactAndSettle("invalid")).toEqual({ during: 1, after: 0 })
+  })
+
+  it("is withdrawn when verification throws", async () => {
+    expect(await reactAndSettle("throw")).toEqual({ during: 1, after: 0 })
   })
 })
 

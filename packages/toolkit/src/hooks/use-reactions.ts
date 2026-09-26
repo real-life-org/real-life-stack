@@ -86,7 +86,9 @@ export function useReactions(itemId: string): UseReactionsResult {
 
   // Optimistic overlay for the current user's own reaction: applied on click,
   // dropped as soon as the related-items observable reflects the write.
-  const [pending, setPending] = useState<{ emoji: string | null } | null>(null)
+  // `writtenId`: the reaction item the write produced — the overlay is bound
+  // to exactly that item, so a final negative verdict on it withdraws it.
+  const [pending, setPending] = useState<{ emoji: string | null; writtenId?: string } | null>(null)
 
   const myReactionItem = useMemo(
     () => (currentUserId ? reactionItems.find((r) => r.createdBy === currentUserId) : undefined),
@@ -95,10 +97,15 @@ export function useReactions(itemId: string): UseReactionsResult {
   const persistedMyReaction = typeof myReactionItem?.data.emoji === "string" ? myReactionItem.data.emoji : undefined
   const myReaction = pending ? pending.emoji ?? undefined : persistedMyReaction
 
+  // The written reaction's verdict is FINAL and negative (spec 08: invalid
+  // never counts). While it is still being verified the overlay stays — no
+  // flicker; once rejected it is withdrawn.
+  const writtenRejected = pending?.writtenId !== undefined && standings.get(pending.writtenId) === "invalid"
+
   useEffect(() => {
     if (!pending) return
-    if ((pending.emoji ?? undefined) === persistedMyReaction) setPending(null)
-  }, [pending, persistedMyReaction])
+    if ((pending.emoji ?? undefined) === persistedMyReaction || writtenRejected) setPending(null)
+  }, [pending, persistedMyReaction, writtenRejected])
 
   const reactions: AggregatedReaction[] = useMemo(() => {
     const byEmoji = new Map<string, string[]>()
@@ -162,13 +169,16 @@ export function useReactions(itemId: string): UseReactionsResult {
 
       if (!isSameEmoji) {
         const data = { emoji }
-        await writableConnector.createItem({
+        const written = await writableConnector.createItem({
           type: "reaction",
           createdBy: userId ?? "anonymous",
           "@context": deriveContext("reaction", data),
           data,
           relations: [{ predicate: "reactsTo", target: `item:${itemId}` }],
         })
+        if (latestRef.current === requestId) {
+          setPending((current) => (current && current.emoji === emoji ? { ...current, writtenId: written.id } : current))
+        }
       }
     } catch {
       if (latestRef.current === requestId) setPending(null)
