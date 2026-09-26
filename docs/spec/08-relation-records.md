@@ -258,11 +258,25 @@ Regeln:
 
 1. Der Qualifier lebt an der Kante. Aus einem Qualifier wird kein eigenes Prädikat (nicht `assignedTo` und `wantsToLearn` für dieselbe Zuweisung).
 2. **Eingebettete Kante:** Der Qualifier liegt als `meta.role` an der Relation (`{ predicate: "assignedTo", target: "global:…", meta: { role: "…" } }`). `meta` ersetzt das Ziel nicht (04, Regel 3).
-3. **Eigener Datensatz:** Bei Selbstaktionen, die RelationRecords sind (Zusage, Stimme), liegt der Qualifier als Feld in `data` des Records, also in `fields` der Projektion. Den Schlüssel nennt das Register (`EdgeEntry.qualifier.key`); bei `votesOn` ist es `value` ([modules/resonance.md](modules/resonance.md)).
+3. **Eigener Datensatz:** Bei Kanten, die RelationRecords sind (Zusage, Stimme), liegt der Qualifier als Feld in `data` des Records, also in `fields` der Projektion. Den Schlüssel nennt das Register (`EdgeEntry.qualifier.key`). Er heißt `role`, passend zu `meta.role`; `votesOn` behält seinen Bestandsschlüssel `value` ([modules/resonance.md](modules/resonance.md)).
 4. Die erlaubten Werte deklariert das Darstellungs-Register je Kante (`EdgeEntry.qualifier.values`, [06 → Feld- und Kantenregister](06-schema-composition.md#feld--und-kantenregister)). Gespeichert wird die `id` des Werts, nie seine Beschriftung.
 5. Eine Kante ohne Qualifier ist gültig und wird ohne Qualifier gezeigt.
 6. Jedes Mitglied darf den Qualifier einer eingebetteten Kante setzen und ändern, auch für andere Personen. Es schreibt dafür das Trägeritem nach dessen Rechten.
-7. Bei Records gelten Fassaden-Regel 7 (creator-owns) und das Claim-Profil des Prädikats unverändert: Den Qualifier eines Records ändert sein Autor. Ob und wie ein Mitglied einen Qualifier für eine andere Person als Record setzt (etwa „eingeladen"), ist offen.
+7. **Aussagen über andere sind erlaubt.** Ein Record DARF eine andere Person als `from` tragen als seinen Autor: `createdBy` ist der Sprecher, der ihn signiert, `from` die Person, über die er spricht. Weil die `id` `createdBy` enthält (Regel 4), ist die Aussage eines anderen ein eigener Record neben dem der Person. Ändern und löschen darf jeder nur seine eigenen Records (Fassaden-Regel 7, creator-owns).
+8. Leseflächen MÜSSEN eine Aussage über andere als solche zeigen: „Timo zugesagt · eingetragen von Anton". Sie DÜRFEN sie nicht als Selbstaussage der Person ausgeben.
+9. **Zählregel.** Wie mehrere Records zur selben Person und demselben Item zusammenwirken, deklariert das Register je Kante (`EdgeEntry.count`):
+   - `one-per-person` („eine je Person, eigene gewinnt"): Je Person gilt ihre Selbstaussage (`createdBy` = Identität von `from`). Fehlt sie, gilt die jüngste Aussage eines anderen. Die Person überstimmt jede fremde Aussage durch eine eigene. Form für Zusagen, die in der Zukunft liegen.
+   - `collect-accepted` („sammeln, Person nimmt an"): Die Aussagen addieren sich, keine überstimmt eine andere. Öffentlich angezeigt wird eine Aussage über eine Person erst, wenn diese sie angenommen hat ([05 → UI-Regeln](05-confirmations-and-trust.md#ui-regeln), Regel 5, `isAccepted`). Das ist die Form für spätere Teilnahme-Bestätigungen („war dabei, bestätigt von Maria und Jonas"); Bestätigungen selbst regelt 05, nicht dieser Abschnitt.
+10. Wer Personen-Kanten neu schreibt (Composer-Mapper), MUSS `meta.role` jeder Person erhalten, deren Kante bestehen bleibt ([shared-components.md → Personenfelder](modules/shared-components.md#personenfelder-people), Regel 6).
+
+### Teilnahme am Event: `attends` und `invited`
+
+1. Eine Zusage ist ein RelationRecord `attends` von der Person (`from`) zum Event (`to`), Zählregel `one-per-person`.
+2. `fields.role` trägt den Qualifier: zugesagt oder vielleicht. `fields.tense` trägt die Zeitform wie in der Netzwerk-App ([netzwerk-app.md](netzwerk-app.md)): `coming`, `currently`, `has-been`.
+3. „Absagen" löscht den eigenen `attends`-Record.
+4. „Eingeladen" ist die eingebettete Kante `invited` am Event (Event → Person). Sie bleibt, wie sie ist; Mitglieder setzen sie nach Regel 6.
+5. Das Event zeigt `invited` und `attends` in **einer** Menschen-Zeile. Hat eine Person eine gültige `attends`-Aussage, zeigt die Zeile deren Qualifier statt „eingeladen".
+6. `attends` ist im Claim-Katalog `authorial` (siehe „Zwei Profile"): Der Sprecher signiert, nur er ändert.
 8. Wer Personen-Kanten neu schreibt (Composer-Mapper), MUSS `meta.role` jeder Person erhalten, deren Kante bestehen bleibt ([shared-components.md → Personenfelder](modules/shared-components.md#personenfelder-people), Regel 6).
 
 ## Trust-Bindung
@@ -430,7 +444,7 @@ Typ-Register, 06).
 
 | Profil | Payload | Mutation | Katalog v0.1 |
 |---|---|---|---|
-| `authorial` | `relation-authorial` (Identität **+ Inhalt** inkl. `fields` und `confirmationRef`) | nur der Autor; jedes `updateRelationRecord` (auch `confirmationRef`-Änderung) MUSS re-signieren | `votesOn`, `knows`, `connectedWith`, `takesPlaceAt` |
+| `authorial` | `relation-authorial` (Identität **+ Inhalt** inkl. `fields` und `confirmationRef`) | nur der Autor; jedes `updateRelationRecord` (auch `confirmationRef`-Änderung) MUSS re-signieren | `votesOn`, `knows`, `connectedWith`, `takesPlaceAt`, `attends` |
 | `structural` | kein Record-Claim; als eigenständiges Relation-Item trägt der Record den **Item-Herkunfts-Claim** (unten) | kollaborativ | — (heute keine Record-Prädikate; eingebettete `assignedTo`/`invited`/`blocks`/`childOf` deckt der Herkunfts-Claim des Trägeritems) |
 | `item-authorial` | Item-Claim über Identität **+ Inhalt** einer Aussage einer Person (unten) | nur die Autorin; jede Änderung des Inhalts MUSS neu signieren | Items der Typen `statement`, `comment`, `reaction` |
 

@@ -200,6 +200,7 @@ interface EdgeEntry {
   qualifier?: { key: string; values: { id: string; label: string; tone?: string }[] }
   selfAction?: { label: string; mine: string; qualifiers?: string[] }   // C2
   list?: { filter?: "open" | "upcoming"; sort?: string }                // für itemRole "to"
+  count?: "one-per-person" | "collect-accepted"                         // nur storage "record"
 }
 ```
 
@@ -212,17 +213,19 @@ Regeln:
 5. Die Body-Feld-Regel ist ein Feldeintrag, kein `if`: `post` führt `content` als `text @content`, die anderen Typen `description`.
 6. `storage` hält fest, wo die Kante liegt. Der Wert MUSS den Regeln aus [04](04-items-relations-groups-spaces.md) und [08, Regel 9](08-relation-records.md#relationrecord-als-item) folgen; das Register wählt den Mechanismus nicht frei. Lese- und Schreibform lesen und schreiben dort.
 7. Ein Qualifier liegt bei `storage: "embedded"` als `meta.role` an der Relation, bei `storage: "record"` als Feld `qualifier.key` am Record. `qualifier.values` ist die Menge der erlaubten Werte ([08 → Qualifier an Personen-Kanten](08-relation-records.md#qualifier-an-personen-kanten)).
-8. Eine Kante mit `selfAction` erscheint im Slot `actions` als Pill-Zeile. `qualifiers` nennt die Werte, die die Pills setzen; `mine` ist die Beschriftung meines Zustands.
-9. Rückwärts-Listen (`itemRole: "to"`, `pos: "list"`) deklariert der Typ, dessen Detail sie zeigt, mit Filter und Sortierung. Es werden alle Einträge gezeigt.
-10. Apps liefern Einträge, keine Mappings. Die Abbildung Composer ↔ Item (`composer-mapping.ts`) und die Detail-Leseansicht liegen im Toolkit und lesen nur das Register.
-11. `ContentTypeConfig` wird abgeleitet: `defaultWidgets` aus den Feldern und Kanten mit `pos` `head`, `meta`, `content`, `tags` oder `badge` und ohne `edit: false`, in der Reihenfolge der Meta-Box; `peopleRelations` aus den Kanten mit `widget: "people"` und `pos: "meta"`; `statusOptions` aus `options` des `status`-Feldes; `widgetLabels` aus `label`.
+8. `count` deklariert für Record-Kanten, wie mehrere Aussagen über dieselbe Person zusammenwirken ([08 → Qualifier an Personen-Kanten](08-relation-records.md#qualifier-an-personen-kanten), Regel 9). Eine Record-Kante mit Qualifier MUSS `count` setzen.
+9. Eine Kante mit `selfAction` erscheint im Slot `actions` als Pill-Zeile. `qualifiers` nennt die Werte, die die Pills setzen; `mine` ist die Beschriftung meines Zustands.
+10. Rückwärts-Listen (`itemRole: "to"`, `pos: "list"`) deklariert der Typ, dessen Detail sie zeigt, mit Filter und Sortierung. Es werden alle Einträge gezeigt.
+11. Apps liefern Einträge, keine Mappings. Die Abbildung Composer ↔ Item (`composer-mapping.ts`) und die Detail-Leseansicht liegen im Toolkit und lesen nur das Register.
+12. `ContentTypeConfig` wird abgeleitet: `defaultWidgets` aus den Feldern und Kanten mit `pos` `head`, `meta`, `content`, `tags` oder `badge` und ohne `edit: false`, in der Reihenfolge der Meta-Box; `peopleRelations` aus den Kanten mit `widget: "people"` und `pos: "meta"`; `statusOptions` aus `options` des `status`-Feldes; `widgetLabels` aus `label`.
+13. **Übergang:** In S1 lesen die Flächen `detail` und `footer` noch für Typen ohne Feldliste. Mit S6 entfallen beide.
 
 **Register je Typ (nichtnormativ).** So sehen die Einträge der Toolkit-Typen und eines App-Typs aus. Schreibweise: Feld `key` Widget @`pos`; Kante `predicate` (→ `from`, ← `to`) Widget @`pos`.
 
 | Typ | Felder | Kanten | Selbstaktion | Rückwärts-Listen |
 |---|---|---|---|---|
 | `post` | content B2 @content · media B5 @content · tags B14 | reactsTo/commentOn C7 @bar | – | – |
-| `event` | title B1 · description B2 · start/end/rrule B3 @meta · meetingLink B9 @meta · group B13 @badge · tags B14 | →locatedAt place C3 @meta · Personen-Kante C1 @meta (zugesagt · vielleicht · eingeladen; Prädikat offen, siehe Hinweis) | Zusagen · Vielleicht · Absagen | – |
+| `event` | title B1 · description B2 · start/end/rrule B3 @meta · meetingLink B9 @meta · group B13 @badge · tags B14 | →locatedAt place C3 @meta · →invited person C1 @meta (eingeladen, eingebettet) und ←attends person C1 @meta (Record, `role` zugesagt · vielleicht, `tense`, `count: one-per-person`) in einer Zeile | attends: Zusagen · Vielleicht · Absagen | – |
 | `place` | title · description · address/position B4 @meta · tags | ←locatedAt C3 @list | – | „Findet hier statt" (Events, upcoming) |
 | `task` | title · description · status B6 @meta · dueAt B3 @meta · tags · order @module | →assignedTo person C1 @meta · →partOf project C3 @meta („Teil von") · →blocks task C3 @meta („Ermöglicht") · ←blocks task C3 @meta („Braucht") | assignedTo: Übernehmen | – |
 | `person` | displayName B1 @head · avatarUrl B11 @head · bio B2 · address/position B4 @meta · skills/offers/needs B10 @meta („Kann", „Bietet", „Sucht") · phone/email B12 @meta · did @system | keine Kommentare, keine Reaktionen | – | „Nächste Termine" (upcoming) · „Aufgaben" (←assignedTo, open) |
@@ -232,7 +235,7 @@ Regeln:
 | App: Karabirrdt-Karte (`task`) | title · description · status B6 @meta (Offen · Erledigt) · hours/euros B7 @meta („Aufwand") · stage @module · tags | →assignedTo person C1 @meta (kann · lernt) · ←blocks task C3 @meta („Braucht") · →partOf project C3 @meta („Führt zu") | Übernehmen · Will lernen | – |
 | App: Karabirrdt-Ziel (`project`) | title · description („Traumsatz") · priority B8 @meta (Hoch · Mittel · Niedrig) · order @module | ←partOf C3 @list, je Stufe gruppiert | – | „Karten" (←partOf task, je Stufe) |
 
-Hinweise zur Tabelle: Die Kanban-Aufgabe hat nur „Übernehmen"; kann/lernt bleibt eine Funktion der Karabirrdt-App. `project` hat keine Selbstaktion „Beitreten". Mitgliedschaft (`memberOf`, C5), Verifizieren (C6) und Herkunft (C8) folgen später. Welche Kante die Teilnahme am Event trägt (`attends` oder das bestehende `invited`), ist offen. Neue Prädikate (`partOf`, `locatedAt` am Event, `attends`) kommen erst mit ihrer Relation-Typ-Definition ins Manifest (Verhältnis zu Relations, Regel 3).
+Hinweise zur Tabelle: Die Kanban-Aufgabe hat nur „Übernehmen"; kann/lernt bleibt eine Funktion der Karabirrdt-App. `project` hat keine Selbstaktion „Beitreten". Mitgliedschaft (`memberOf`, C5), Verifizieren (C6) und Herkunft (C8) folgen später. Die Teilnahme am Event regelt [08 → Teilnahme am Event](08-relation-records.md#teilnahme-am-event-attends-und-invited). Typ-Ids und Code-Namen bleiben Englisch; deutsche Beschriftungen kommen über die Intl-Schicht. Neue Prädikate (`partOf`, `locatedAt` am Event, `attends`) kommen erst mit ihrer Relation-Typ-Definition ins Manifest (Verhältnis zu Relations, Regel 3).
 
 #### Erweiterung und Merge
 
