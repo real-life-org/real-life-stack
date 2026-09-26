@@ -12,12 +12,14 @@ function vote(statementId: string, voter: string, value: string, createdAt: stri
     predicate: "votesOn",
     from: `global:${voter}`,
     to: `item:${statementId}`,
-    fields: { value },
+    fields: { value, contentHash: `hash-${statementId}` },
     createdBy: voter,
     createdAt,
     ...overrides,
   }
 }
+
+const HASHES: ReadonlyMap<string, string> = new Map([["a", "hash-a"], ["b", "hash-b"]])
 
 describe("aggregateVoteStats", () => {
   it("groups validated vote records by statement and tracks the latest vote time", () => {
@@ -25,7 +27,7 @@ describe("aggregateVoteStats", () => {
       vote("a", "u1", "green", "2026-08-01T10:00:00.000Z"),
       vote("a", "u2", "red", "2026-08-01T12:00:00.000Z"),
       vote("b", "u1", "yellow", "2026-08-01T11:00:00.000Z"),
-    ])
+    ], HASHES)
     expect(stats.get("a")).toEqual({ green: 1, yellow: 0, red: 1, total: 2, lastVoteAt: "2026-08-01T12:00:00.000Z" })
     expect(stats.get("b")).toEqual({ green: 0, yellow: 1, red: 0, total: 1, lastVoteAt: "2026-08-01T11:00:00.000Z" })
   })
@@ -39,9 +41,23 @@ describe("aggregateVoteStats", () => {
       // Duplicate tuple under two ids — counts once.
       vote("b", "u1", "green", "2026-08-01T10:00:00.000Z", { id: "rel-z" }),
       vote("b", "u1", "green", "2026-08-01T10:00:00.000Z", { id: "rel-a" }),
-    ])
+    ], HASHES)
     expect(stats.get("a")).toBeUndefined()
     expect(stats.get("b")?.total).toBe(1)
+  })
+
+  it("counts a vote only for the current wording of a counting statement (resonance vote rule 5)", () => {
+    const stats = aggregateVoteStats([
+      vote("a", "u1", "green", "2026-08-01T10:00:00.000Z"),
+      // Cast on an earlier wording.
+      vote("a", "u2", "red", "2026-08-01T10:00:00.000Z", { fields: { value: "red", contentHash: "hash-old" } }),
+      // No hash at all.
+      vote("a", "u3", "red", "2026-08-01T10:00:00.000Z", { fields: { value: "red" } }),
+      // Statement without a positive verdict: absent from the map.
+      vote("c", "u1", "green", "2026-08-01T10:00:00.000Z"),
+    ], HASHES)
+    expect(stats.get("a")).toEqual({ green: 1, yellow: 0, red: 0, total: 1, lastVoteAt: "2026-08-01T10:00:00.000Z" })
+    expect(stats.get("c")).toBeUndefined()
   })
 })
 

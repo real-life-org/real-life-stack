@@ -248,6 +248,10 @@ export async function verifyRelationClaim(record: RelationRecord): Promise<"vali
 export interface AuthorialItemType {
   readonly data: readonly string[]
   readonly relations: readonly string[]
+  /** „Beleg erforderlich" (spec 08): whether an item of this type without a
+      claim is invalid. False keeps unsigned items shown and counted, subtly
+      marked; switching it on is a catalog change with a release. */
+  readonly proofRequired: boolean
 }
 
 /**
@@ -257,13 +261,40 @@ export interface AuthorialItemType {
  * (collaborative, rls#263).
  */
 export const AUTHORIAL_ITEM_TYPES: ReadonlyMap<string, AuthorialItemType> = new Map<string, AuthorialItemType>([
-  ["statement", Object.freeze({ data: Object.freeze(["title", "description", "variantOf"]), relations: Object.freeze([]) })],
-  ["comment", Object.freeze({ data: Object.freeze(["content", "replyTo", "replyToComment"]), relations: Object.freeze(["commentOn"]) })],
-  ["reaction", Object.freeze({ data: Object.freeze(["emoji"]), relations: Object.freeze(["reactsTo"]) })],
+  ["statement", Object.freeze({ data: Object.freeze(["title", "description", "variantOf"]), relations: Object.freeze([]), proofRequired: true })],
+  ["comment", Object.freeze({ data: Object.freeze(["content", "replyTo", "replyToComment"]), relations: Object.freeze(["commentOn"]), proofRequired: false })],
+  ["reaction", Object.freeze({ data: Object.freeze(["emoji"]), relations: Object.freeze(["reactsTo"]), proofRequired: false })],
 ])
 
 export function isAuthorialItemType(type: string): boolean {
   return AUTHORIAL_ITEM_TYPES.has(type)
+}
+
+/**
+ * Standing of an item of a catalog type (spec 08 → Beleg erforderlich), in
+ * this order: `attested` (belegt) — the verdict is `valid` or `trusted`;
+ * `unsigned` (unsigniert) — no `data.claim` and the type requires no proof,
+ * shown and counted but subtly marked; `invalid` (ungültig) — everything
+ * else, never counted (a present but non-matching claim may be shown as
+ * „verändert"). `verdict` is undefined while pending or when the connector
+ * cannot verify — both fail closed. Null for types outside the catalog.
+ */
+export type ItemStanding = "attested" | "unsigned" | "invalid"
+
+export function itemStanding(
+  item: { type: string; data?: Record<string, unknown> },
+  verdict: ClaimVerdict | undefined,
+): ItemStanding | null {
+  const entry = AUTHORIAL_ITEM_TYPES.get(item.type)
+  if (!entry) return null
+  if (verdict === "valid" || verdict === "trusted") return "attested"
+  if (item.data?.claim === undefined && !entry.proofRequired) return "unsigned"
+  return "invalid"
+}
+
+/** Whether an item of this standing counts in aggregations (spec 08). */
+export function standingCounts(standing: ItemStanding | null): boolean {
+  return standing === "attested" || standing === "unsigned"
 }
 
 /**

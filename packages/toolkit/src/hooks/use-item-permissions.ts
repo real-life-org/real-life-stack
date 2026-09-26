@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import type { DataInterface, Item } from "@real-life-stack/data-interface"
-import { SYSTEM_ITEM_TYPES, hasAuthorization, isWritable } from "@real-life-stack/data-interface"
+import { hasAuthorization, isAuthoredItemType, isWritable } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 import { useOptionalCurrentUser } from "./use-auth"
 
@@ -23,16 +23,17 @@ const NONE: ItemPermissions = { canEdit: false, canDelete: false }
  * the button, promising a protection that did not exist while withholding an
  * edit that was already permitted.
  *
- * The exception are the three SYSTEM types, which carry a visible statement
- * BY someone: editing a foreign comment puts words in their mouth, editing a
- * reaction or a vote (a relation record) casts a ballot for them.
+ * The exception are authored items (`isAuthoredItemType`: the item-authorial
+ * catalog of spec 08 — statement, comment, reaction — plus relation records),
+ * which carry a visible statement BY someone: editing a foreign statement or
+ * comment puts words in their mouth, editing a reaction or a vote casts a
+ * ballot for them.
  *
  * This hook is UX, never a boundary — it only decides whether a button is
- * shown. The rule is enforced at the write ingress
- * (`assertMayMutateAuthoredItem`) and, where a server exists, by the backend:
- * Supabase RLS (migration 0009) and the GraphQL store reject it outright. In
- * WoT it cannot be enforced at all — every member holds the space key — so
- * there it stays a convention among honest clients.
+ * shown. The rule is enforced at the write ingress (`planAuthoredUpdate`,
+ * `assertMayMutateAuthoredItem`), in WoT additionally by the item claim (a
+ * foreign content change invalidates it), and by the backend where one
+ * exists: Supabase (migrations 0009 and 0012) and the GraphQL store.
  */
 export function resolveItemPermissions(
   connector: DataInterface,
@@ -48,7 +49,7 @@ export function resolveItemPermissions(
   }
   if (!currentUserId) return NONE
   const mine = item.createdBy === currentUserId
-  const speaksForSomeone = (SYSTEM_ITEM_TYPES as readonly string[]).includes(item.type)
+  const speaksForSomeone = isAuthoredItemType(item.type)
   const allowed = mine || !speaksForSomeone
   return { canEdit: allowed, canDelete: allowed }
 }

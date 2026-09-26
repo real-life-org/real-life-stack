@@ -121,11 +121,12 @@ export function voteRecordInput(
   voterId: string,
   statementId: string,
   value: VoteValue,
+  contentHash?: string,
 ): RelationRecordInput {
   return {
     predicate: VOTE_PREDICATE,
     from: `global:${voterId}`,
     to: `item:${statementId}`,
-    fields: { value },
+    fields: contentHash === undefined ? { value } : { value, contentHash },
   }
 }

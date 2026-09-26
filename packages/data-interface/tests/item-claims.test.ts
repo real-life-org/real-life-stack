@@ -7,8 +7,10 @@ import {
   isAuthorialItemType,
   itemContent,
   itemContentHash,
+  itemStanding,
   jcsCanonicalize,
   signItemClaim,
+  standingCounts,
   verifyItemClaim,
   type ClaimSigner,
 } from "../src/claims"
@@ -31,6 +33,8 @@ const VECTORS = JSON.parse(
   catalog: Record<string, { data: string[]; relations: string[] }>
   contentHash: Array<{ name: string; type: string; data: Record<string, unknown>; relations?: Relation[]; content: unknown; jcs: string; contentHash: string }>
   itemClaims: Array<{ name: string; expect: "valid" | "invalid"; item: VectorItem; jws: string | null }>
+  proofRequired: Record<string, boolean>
+  standing: Array<{ name: string; standing: "belegt" | "unsigniert" | "ungueltig"; counts: boolean; item: VectorItem; jws: string | null }>
 }
 
 const asItem = (item: VectorItem, claim: string | null = null): Item => ({
@@ -52,6 +56,32 @@ describe("item-authorial — catalog (spec 08, closed)", () => {
     expect(isAuthorialItemType("reaction")).toBe(true)
     expect(isAuthorialItemType("post")).toBe(false)
     expect(isAuthorialItemType("task")).toBe(false)
+  })
+})
+
+describe("item-authorial — Beleg erforderlich (canonical standing vectors)", () => {
+  const STANDING = { belegt: "attested", unsigniert: "unsigned", ungueltig: "invalid" } as const
+
+  it("proofRequired matches the vectors", () => {
+    const proofRequired = Object.fromEntries([...AUTHORIAL_ITEM_TYPES].map(([type, entry]) => [type, entry.proofRequired]))
+    expect(proofRequired).toEqual(VECTORS.proofRequired)
+  })
+
+  for (const vector of VECTORS.standing) {
+    it(`${vector.name}`, async () => {
+      const item = asItem(vector.item, vector.jws)
+      const standing = itemStanding(item, await verifyItemClaim(item))
+      expect(standing).toBe(STANDING[vector.standing])
+      expect(standingCounts(standing)).toBe(vector.counts)
+    })
+  }
+
+  it("a pending or unverifiable verdict fails closed except for unsigned items", () => {
+    expect(itemStanding({ type: "statement", data: { title: "T" } }, undefined)).toBe("invalid")
+    expect(itemStanding({ type: "comment", data: { content: "c", claim: "x.y.z" } }, undefined)).toBe("invalid")
+    expect(itemStanding({ type: "comment", data: { content: "c" } }, undefined)).toBe("unsigned")
+    expect(itemStanding({ type: "statement", data: { title: "T" } }, "trusted")).toBe("attested")
+    expect(itemStanding({ type: "post", data: {} }, "valid")).toBeNull()
   })
 })
 

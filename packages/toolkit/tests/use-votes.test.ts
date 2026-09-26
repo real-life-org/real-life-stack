@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
-import type { DataInterface, Observable, RelationRecord, RelationRecordInput } from "@real-life-stack/data-interface"
+import type { DataInterface, Item, Observable, RelationRecord, RelationRecordInput } from "@real-life-stack/data-interface"
+import { itemContentHash } from "@real-life-stack/data-interface"
 
 interface HookSlot {
   cleanup?: () => void
@@ -34,12 +35,15 @@ function renderHookSettled<T>(render: () => T): T {
   return renderHook(render)
 }
 
-/** Render, flush async verdict effects, render again — the fail-closed
-    aggregation only counts after verification settles. */
+/** Render, flush async effects, render again — the fail-closed aggregation
+    only counts after verification settles. Several rounds: record and item
+    verdicts settle first, the statement's content hash after them. */
 async function renderHookVerified<T>(render: () => T): Promise<T> {
   renderHook(render)
-  renderHook(render)
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  for (let round = 0; round < 4; round++) {
+    renderHook(render)
+    await new Promise((resolve) => setTimeout(resolve, 5))
+  }
   return renderHook(render)
 }
 
@@ -50,6 +54,15 @@ function staticObservable<T>(value: T): Observable<T> {
 const ME = "did:key:me"
 const OTHER = "did:key:other"
 const STATEMENT = "statement-1"
+const STATEMENT_ITEM: Item = {
+  id: STATEMENT,
+  type: "statement",
+  createdBy: OTHER,
+  createdAt: "2026-08-01T00:00:00.000Z",
+  data: { title: "Wir treffen uns montags." },
+}
+/** Content hash of STATEMENT_ITEM's wording — set in beforeAll. */
+let HASH = ""
 
 function voteRecord(id: string, voter: string, value: string, overrides: Partial<RelationRecord> = {}): RelationRecord {
   return {
@@ -57,7 +70,7 @@ function voteRecord(id: string, voter: string, value: string, overrides: Partial
     predicate: "votesOn",
     from: `global:${voter}`,
     to: `item:${STATEMENT}`,
-    fields: { value },
+    fields: { value, contentHash: HASH },
     createdBy: voter,
     createdAt: "2026-08-04T00:00:00.000Z",
     ...overrides,
@@ -74,7 +87,7 @@ interface FakeWrites {
  * Stateful record fake: writes mutate the record set, so a second serialized
  * vote() call reads the effect of the first — the double-click contract.
  */
-function connector(initialRecords: RelationRecord[], opts?: { userId?: string | null; authenticatable?: boolean; verdicts?: false | ((record: RelationRecord) => "valid" | "invalid" | "trusted") }) {
+function connector(initialRecords: RelationRecord[], opts?: { userId?: string | null; authenticatable?: boolean; verdicts?: false | ((record: RelationRecord) => "valid" | "invalid" | "trusted"); statementVerdict?: "valid" | "invalid" | "trusted" }) {
   const writes: FakeWrites = { created: [], updated: [], deleted: [] }
   const records = [...initialRecords]
   const userId = opts?.userId === undefined ? ME : opts.userId
@@ -88,7 +101,7 @@ function connector(initialRecords: RelationRecord[], opts?: { userId?: string | 
     getItems: async () => [],
     getItem: async () => null,
     observe: () => staticObservable([]),
-    observeItem: () => staticObservable(null),
+    observeItem: (id: string) => staticObservable(id === STATEMENT ? STATEMENT_ITEM : null),
     // RelationRecordCapable
     getRelationRecords: vi.fn(async (filter?: { predicate?: string; to?: string }) => matches(filter)),
     observeRelationRecords: vi.fn((filter?: { predicate?: string; to?: string }) => staticObservable(matches(filter))),
@@ -106,6 +119,7 @@ function connector(initialRecords: RelationRecord[], opts?: { userId?: string | 
         predicate: input.predicate,
         from: input.from,
         to: input.to,
+        fields: { ...input.fields },
       })
       records.push(record)
       return record
@@ -126,6 +140,8 @@ function connector(initialRecords: RelationRecord[], opts?: { userId?: string | 
     // Default: authoritative-style trusted verdict, overridable per record.
     const verdictFor = typeof opts?.verdicts === "function" ? opts.verdicts : () => "trusted" as const
     fake.verifyRecordClaim = vi.fn(async (record: RelationRecord) => verdictFor(record))
+    // The statement stands (authoritative-style): its wording decides.
+    fake.verifyItemClaim = vi.fn(async () => (opts?.statementVerdict ?? "trusted"))
   }
   if (opts?.authenticatable !== false) {
     Object.assign(fake, {
@@ -144,6 +160,7 @@ function connector(initialRecords: RelationRecord[], opts?: { userId?: string | 
 let hooks: typeof import("../src/hooks/use-votes")
 
 beforeAll(async () => {
+  HASH = (await itemContentHash(STATEMENT_ITEM))!
   vi.doMock("react", () => ({
     startTransition: (callback: () => void) => callback(),
     useMemo: <T>(factory: () => T, deps: readonly unknown[]) => {
@@ -202,7 +219,7 @@ describe("useVotes — write contract (auth-bound record facade)", () => {
       predicate: "votesOn",
       from: `global:${ME}`,
       to: `item:${STATEMENT}`,
-      fields: { value: "green" },
+      fields: { value: "green", contentHash: HASH },
     }])
     expect("createdBy" in (writes.created[0] as object)).toBe(false)
     expect(writes.updated).toHaveLength(0)
@@ -216,7 +233,7 @@ describe("useVotes — write contract (auth-bound record facade)", () => {
     const result = renderHookSettled(() => hooks.useVotes(STATEMENT))
     await result.vote("red")
 
-    expect(writes.updated).toEqual([{ id: "rel-mine", updates: { fields: { value: "red" } } }])
+    expect(writes.updated).toEqual([{ id: "rel-mine", updates: { fields: { value: "red", contentHash: HASH } } }])
     expect(writes.created).toHaveLength(0)
     expect(writes.deleted).toHaveLength(0)
   })
@@ -256,7 +273,7 @@ describe("useVotes — write contract (auth-bound record facade)", () => {
     const result = renderHookSettled(() => hooks.useVotes(STATEMENT))
     await result.vote("green")
 
-    expect(writes.updated).toEqual([{ id: "rel-mine", updates: { fields: { value: "green" } } }])
+    expect(writes.updated).toEqual([{ id: "rel-mine", updates: { fields: { value: "green", contentHash: HASH } } }])
     expect(writes.deleted).toHaveLength(0)
   })
 
@@ -267,7 +284,7 @@ describe("useVotes — write contract (auth-bound record facade)", () => {
     const result = renderHookSettled(() => hooks.useVotes(STATEMENT))
     await result.vote("yellow")
 
-    expect(writes.updated).toEqual([{ id: "rel-mine", updates: { fields: { value: "yellow" } } }])
+    expect(writes.updated).toEqual([{ id: "rel-mine", updates: { fields: { value: "yellow", contentHash: HASH } } }])
     expect(writes.deleted).toHaveLength(0)
   })
 
@@ -351,6 +368,56 @@ describe("useVotes — claim verdicts (fail closed, spec 08 L1-L3)", () => {
   })
 })
 
+describe("useVotes — a vote counts for one wording (resonance.md, vote rule 5)", () => {
+  it("counts only votes on the current wording; the own earlier vote shows as myVoteOtherVersion", async () => {
+    harness.connector = connector([
+      voteRecord("rel-1", "did:key:third", "green"),
+      voteRecord("rel-2", "did:key:fourth", "red", { fields: { value: "red", contentHash: "sha256:earlier" } }),
+      voteRecord("rel-3", "did:key:fifth", "red", { fields: { value: "red" } }),
+      voteRecord("rel-4", ME, "yellow", { fields: { value: "yellow", contentHash: "sha256:earlier" } }),
+    ]).connector
+    const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
+    expect(result.data).toEqual({ green: 1, yellow: 0, red: 0, total: 1, myVoteOtherVersion: "yellow" })
+  })
+
+  it("re-voting the same stance on a NEW wording renews the hash instead of withdrawing", async () => {
+    const mine = voteRecord("rel-mine", ME, "yellow", { fields: { value: "yellow", contentHash: "sha256:earlier" } })
+    const { connector: c, writes } = connector([mine])
+    harness.connector = c
+    const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
+    await result.vote("yellow")
+    expect(writes.updated).toEqual([{ id: "rel-mine", updates: { fields: { value: "yellow", contentHash: HASH } } }])
+    expect(writes.deleted).toHaveLength(0)
+  })
+
+  it("repairs an idempotent create that returns the own record with a stale hash", async () => {
+    const stale = voteRecord("rel-mine", ME, "green", { fields: { value: "green", contentHash: "sha256:earlier" } })
+    const { connector: c, writes } = connector([stale])
+    // Fresh read misses it (e.g. not yet synced), the create hits it.
+    ;(c as unknown as { getRelationRecords: ReturnType<typeof vi.fn> }).getRelationRecords.mockImplementation(async () => [])
+    harness.connector = c
+    const result = renderHookSettled(() => hooks.useVotes(STATEMENT))
+    await result.vote("green")
+    expect(writes.updated).toEqual([{ id: "rel-mine", updates: { fields: { value: "green", contentHash: HASH } } }])
+  })
+
+  it("an own vote WITHOUT a hash does not count but is shown to its voter", async () => {
+    harness.connector = connector([voteRecord("rel-4", ME, "green", { fields: { value: "green" } })]).connector
+    const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
+    expect(result.data).toEqual({ green: 0, yellow: 0, red: 0, total: 0, myVoteOtherVersion: "green" })
+  })
+
+  it("no vote counts on a statement without a positive verdict", async () => {
+    harness.connector = connector([
+      voteRecord("rel-1", OTHER, "green"),
+      voteRecord("rel-2", ME, "red"),
+    ], { statementVerdict: "invalid" }).connector
+    const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
+    // Nothing counts, and the own vote is not an "earlier version" either.
+    expect(result.data).toEqual({ green: 0, yellow: 0, red: 0, total: 0 })
+  })
+})
+
 describe("useVotes — verdict binds CONTENT, not just the record id (#235 review)", () => {
   it("a content change under the same id does NOT reuse the old valid verdict", async () => {
     const record = voteRecord("rel-1", OTHER, "green")
@@ -377,7 +444,7 @@ describe("useVotes — verdict binds CONTENT, not just the record id (#235 revie
 
     // A manipulated peer write: SAME id, changed content, emitted as a new
     // array — exactly what the real observable does.
-    current = [{ ...record, fields: { value: "red" } }]
+    current = [{ ...record, fields: { value: "red", contentHash: HASH } }]
     for (const listener of listeners) listener(current)
 
     // FAIL CLOSED immediately: the stale id-keyed verdict must not carry
