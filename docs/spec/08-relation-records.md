@@ -458,11 +458,11 @@ damit kein Client einen Typ anders einstufen kann. Zum Inhalt gehören
 Relationen (`item.relations`), deren Ziel zur Aussage gehört, etwa worauf
 sich ein Kommentar bezieht.
 
-| Typ | Inhaltsfelder | Inhaltsrelationen |
-|---|---|---|
-| `statement` | `title`, `description`, `variantOf` ([modules/resonance.md](modules/resonance.md)) | — |
-| `comment` | `content`, `replyTo`, `replyToComment` | `commentOn` |
-| `reaction` | `emoji` | `reactsTo` |
+| Typ | Inhaltsfelder | Inhaltsrelationen | Beleg erforderlich |
+|---|---|---|---|
+| `statement` | `title`, `description`, `variantOf` ([modules/resonance.md](modules/resonance.md)) | — | ja |
+| `comment` | `content`, `replyTo`, `replyToComment` | `commentOn` | vorerst nein |
+| `reaction` | `emoji` | `reactsTo` | vorerst nein |
 
 `post` ist nicht im Katalog und bleibt gemeinsam bearbeitbar (rls#263). Wird
 die Einstufung später je Space oder Item konfigurierbar, MUSS sie so gebunden
@@ -528,12 +528,45 @@ normalisiert zurückschreiben, denn jede Byte-Änderung ändert den Hash.
    ist ein solches Item unverifiziert.
 7. Leseregeln analog L1/L2: Ein Item mit `invalid`-Claim zählt in keiner
    Auswertung, Bezugnahmen darauf ebenso wenig. Anzeigeflächen DÜRFEN es mit
-   Kennzeichnung („verändert") zeigen. Einen Altbestand-Modus gibt es nicht:
-   Die Abwesenheit eines Claims beweist keine Herkunft und kann in einem
-   Multi-Writer-Store jederzeit hergestellt werden.
+   Kennzeichnung („verändert") zeigen. Die Abwesenheit eines Claims beweist
+   keine Herkunft und kann in einem Multi-Writer-Store jederzeit hergestellt
+   werden. Ob ein Item ohne Claim trotzdem angezeigt wird und zählt, regelt
+   allein die Spalte „Beleg erforderlich" (unten); eine Ausnahme nach Datum
+   oder Herkunft gibt es nicht.
 8. Kanonische **Testvektoren** liegen unter
    `schemas/claims/vectors/item-authorial-1.json` und sind für
    Implementierungen verbindlich.
+
+**Beleg erforderlich.** Die Spalte im Katalog legt fest, was mit einem Item
+ohne Claim geschieht. Für jedes Item eines Katalogtyps gilt, in dieser
+Reihenfolge:
+
+1. Verdikt `valid` oder `trusted`: Das Item ist **belegt**. Es wird angezeigt
+   und zählt in Auswertungen.
+2. Kein Claim (`data.claim` fehlt) und der Typ verlangt **keinen** Beleg: Das
+   Item ist **unsigniert**. Es wird angezeigt und zählt in Auswertungen.
+   Anzeigeflächen SOLLTEN es dezent als unsigniert kennzeichnen, nicht als
+   Warnung.
+3. Sonst ist es **ungültig** und zählt in keiner Auswertung. Trägt es einen
+   Claim, der nicht passt, DÜRFEN Anzeigeflächen es mit Kennzeichnung
+   („verändert") zeigen.
+
+Für `comment` und `reaction` ist die Belegpflicht **vorerst aus**. Diese
+Typen gab es schon, bevor sie signiert wurden, und ihr Bestand soll sichtbar
+bleiben. Die Belegpflicht wird später eingeschaltet. Ab dann sind
+unsignierte Kommentare und Reaktionen ungültig. Das Einschalten ist eine
+Änderung dieses Katalogs mit einem Release, kein Laufzeitschalter und nichts,
+was ein Client oder Space-Daten ändern können.
+
+Solange die Belegpflicht aus ist, gilt für diese Typen: Ein unsigniertes Item
+ist unbelegt. `createdBy` und `createdAt` sind ohne Claim frei schreibbar, und
+wer bei einem signierten Kommentar den Claim entfernt, macht ihn zu einem
+unsignierten. Die Kennzeichnung als unsigniert macht das sichtbar. Ein
+automatisches Nachsignieren findet nicht statt, weil es untergeschobene
+Items beglaubigen würde.
+
+Die Gruppe `standing` in `item-authorial-1.json` legt die drei Ergebnisse
+fest.
 
 **Schreibweg.** Den Claim verwaltet der Connector im allgemeinen Schreibweg,
 gesteuert allein durch den Katalog:

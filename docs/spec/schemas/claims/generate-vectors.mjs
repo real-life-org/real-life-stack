@@ -416,7 +416,7 @@ const itemClaimVectors = [
     reactionPayload,
     reactionSigned.jws,
   ),
-  claimVector("claim-missing-invalid", "invalid", "Signed mode: an item of a catalog type without claim is invalid. Absence of a claim proves no provenance (no legacy mode).", statementItem, null, null),
+  claimVector("claim-missing-invalid", "invalid", "Signed mode: without claim the verdict is invalid — absence of a claim proves no provenance. Whether the item is still shown and counted is decided by proofRequired (see the standing group).", statementItem, null, null),
   claimVector("foreign-author-without-claim-invalid", "invalid", "An attacker writes a claimless statement naming alice as author. Invalid, so neither it nor any reference to it counts.", foreignAuthorItem, null, null),
   claimVector("foreign-signer-invalid", "invalid", "kid names the author but the signature was produced by mallory's key — signature verification MUST fail.", statementItem, statementPayload, signClaim(statementPayload, alice, {}, mallory).jws),
   claimVector(
@@ -451,6 +451,25 @@ const itemClaimVectors = [
   })(),
 ]
 
+// --- Standing: belegt / unsigniert / ungültig (spec 08 → Beleg erforderlich) ---
+// Kept outside `catalog` so the catalog shape the existing tests compare
+// against stays unchanged.
+const PROOF_REQUIRED = { statement: true, comment: false, reaction: false }
+const unsignedComment = { ...commentItem, id: "comment-unsigned" }
+const unsignedReaction = { ...reactionItem, id: "reaction-unsigned" }
+const standing = (name, standingValue, counts, description, item, jws) => ({ name, standing: standingValue, counts, description, item, jws })
+const standingVectors = [
+  standing("statement-signed-belegt", "belegt", true, "Valid claim: belegt, shown and counted.", statementItem, statementSigned.jws),
+  standing("statement-unsigned-ungueltig", "ungueltig", false, "Statements require proof: without claim they are invalid and never count.", statementItem, null),
+  standing("statement-altered-ungueltig", "ungueltig", false, "Claim present but not matching the stored content: invalid (\"verändert\").", editedItem, statementSigned.jws),
+  standing("comment-signed-belegt", "belegt", true, "Signed comment: belegt.", commentItem, commentSigned.jws),
+  standing("comment-unsigned-unsigniert", "unsigniert", true, "Comments do not require proof yet: without claim the comment is shown, counts and is subtly marked unsigned.", unsignedComment, null),
+  standing("comment-altered-ungueltig", "ungueltig", false, "A present but invalid claim is never unsigned: the comment text was changed by someone else — invalid (\"verändert\").", { ...commentItem, data: { ...commentItem.data, content: "Schlechte Idee." } }, commentSigned.jws),
+  standing("reaction-signed-belegt", "belegt", true, "Signed reaction: belegt.", reactionItem, reactionSigned.jws),
+  standing("reaction-unsigned-unsigniert", "unsigniert", true, "Reactions do not require proof yet: without claim the reaction counts and is subtly marked unsigned.", unsignedReaction, null),
+  standing("reaction-altered-ungueltig", "ungueltig", false, "The emoji differs from the signed one: invalid.", { ...reactionItem, data: { emoji: "👎" } }, reactionSigned.jws),
+]
+
 const itemAuthorialOut = {
   description: "Canonical item-authorial vectors (rls-claim/1): content hash per catalog type and item claims. Binding for every implementation — see docs/spec/08-relation-records.md → Aussagen einer Person: item-authorial.",
   keys: {
@@ -463,6 +482,9 @@ const itemAuthorialOut = {
   jcsNote: out.jcsNote,
   contentHash: contentHashVectors,
   itemClaims: itemClaimVectors,
+  proofRequired: PROOF_REQUIRED,
+  standingRule: "Signed mode. belegt: claim verifies (valid). unsigniert: data.claim absent AND the type does not require proof — shown, counts, subtly marked. ungueltig: otherwise — never counts; a present but non-matching claim may be shown as \"verändert\". (In authoritative mode the verdict is trusted, hence belegt.)",
+  standing: standingVectors,
 }
 writeFileSync(join(here, "vectors", "item-authorial-1.json"), JSON.stringify(itemAuthorialOut, null, 2) + "\n")
 
