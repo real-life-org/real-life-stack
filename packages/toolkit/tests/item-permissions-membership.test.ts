@@ -16,7 +16,7 @@ describe("resolveItemPermissions — Mitglieder duerfen Inhalte bearbeiten (rls#
     // Bisher galt creator-owns. Das war weder das technische Modell (jedes
     // Mitglied haelt den Space-Schluessel bzw. die Supabase-Policy erlaubt es
     // laengst) noch praktisch.
-    for (const type of ["post", "event", "task", "place", "statement"]) {
+    for (const type of ["post", "event", "task", "place"]) {
       expect(resolveItemPermissions(writable, item(type, OTHER), ME)).toEqual({
         canEdit: true,
         canDelete: true,
@@ -24,11 +24,12 @@ describe("resolveItemPermissions — Mitglieder duerfen Inhalte bearbeiten (rls#
     }
   })
 
-  it("laesst Kommentare, Reaktionen und Relations beim Urheber", () => {
+  it("laesst Statements, Kommentare, Reaktionen und Relations beim Urheber", () => {
     // Diese drei tragen sichtbar eine fremde Aussage: einen fremden Kommentar
     // zu aendern hiesse, jemandem Worte in den Mund zu legen; eine Reaktion
-    // oder Stimme zu aendern hiesse, fuer jemanden abzustimmen.
-    for (const type of ["comment", "reaction", "relation"]) {
+    // oder Stimme zu aendern hiesse, fuer jemanden abzustimmen. Statements
+    // gehoeren seit dem item-authorial-Katalog (Spec 08) dazu.
+    for (const type of ["statement", "comment", "reaction", "relation"]) {
       expect(resolveItemPermissions(writable, item(type, OTHER), ME)).toEqual({
         canEdit: false,
         canDelete: false,

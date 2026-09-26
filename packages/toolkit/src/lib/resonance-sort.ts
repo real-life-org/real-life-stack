@@ -26,10 +26,19 @@ export interface StatementVoteStats {
  * (`votesFromRelationRecords`): only author-bound canonical records count,
  * at most one per (statement, voter) — the same contract the per-statement
  * aggregation in useVotes applies, so list order and card counts agree.
+ * A vote counts only for the current wording (resonance.md, vote rule 5):
+ * `contentHashes` maps each COUNTING statement to its content hash
+ * (`useCountingContentHashes`); votes for other versions, votes without a
+ * hash and votes on statements absent from the map never count.
  */
-export function aggregateVoteStats(records: RelationRecord[]): Map<string, StatementVoteStats> {
+export function aggregateVoteStats(
+  records: RelationRecord[],
+  contentHashes: ReadonlyMap<string, string>,
+): Map<string, StatementVoteStats> {
   const stats = new Map<string, StatementVoteStats>()
   for (const vote of votesFromRelationRecords(records)) {
+    const current = contentHashes.get(vote.statementId)
+    if (current === undefined || vote.contentHash !== current) continue
     const entry = stats.get(vote.statementId) ?? { green: 0, yellow: 0, red: 0, total: 0, lastVoteAt: null }
     entry[vote.value] += 1
     entry.total += 1

@@ -582,7 +582,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-votes.ts",
-          "line": 47
+          "line": 49
         },
         {
           "name": "useVotes",
@@ -597,7 +597,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-votes.ts",
-          "line": 128
+          "line": 170
         },
         {
           "name": "useVoteUsers",
@@ -612,7 +612,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-votes.ts",
-          "line": 276
+          "line": 334
         }
       ]
     },
@@ -663,7 +663,7 @@
             "docs/spec/03-capabilities.md"
           ],
           "source": "packages/toolkit/src/hooks/use-item-permissions.ts",
-          "line": 91
+          "line": 92
         }
       ]
     },

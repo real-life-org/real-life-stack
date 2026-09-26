@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react"
-import type { ClaimVerdict, DataInterface, RelationRecord, VoteRecord, VoteValue } from "@real-life-stack/data-interface"
+import type { ClaimVerdict, DataInterface, Item, RelationRecord, VoteRecord, VoteValue } from "@real-life-stack/data-interface"
 import {
   VOTE_PREDICATE,
+  partitionVotesByContent,
   hasClaimVerification,
   hasRelationRecords,
   hasRelationRecordWriter,
@@ -12,6 +13,7 @@ import {
   votesFromRelationRecords,
 } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
+import { useCountingContentHashes } from "./use-item-standing"
 
 /**
  * Claim-verdict filter (spec 08 L1–L3): returns only records the connector
@@ -87,6 +89,38 @@ export function useVerifiedRelationRecords(records: RelationRecord[]): RelationR
   }, [canVerify, connector, records, state])
 }
 
+/** The statement item, reactive — its wording decides which votes count. */
+function useStatement(statementId: string): Item | null {
+  const connector = useConnector()
+  const observable = useMemo(() => connector.observeItem(statementId), [connector, statementId])
+  const [statement, setStatement] = useState<Item | null>(observable.current)
+  useEffect(() => {
+    setStatement(observable.current)
+    return observable.subscribe((next) => startTransition(() => setStatement(next)))
+  }, [observable])
+  return statement
+}
+
+/**
+ * Vote rule 5 (resonance.md): of the verified votes, only those cast on the
+ * CURRENT wording of a statement with a positive verdict count. The others
+ * are votes for another version — shown to their voter, never counted.
+ */
+function useVotesForWording(statementId: string, verifiedRecords: RelationRecord[]) {
+  const statement = useStatement(statementId)
+  const statements = useMemo(() => (statement ? [statement] : []), [statement])
+  const contentHash = useCountingContentHashes(statements).get(statementId) ?? null
+  const partition = useMemo(() => {
+    const all = votesFromRelationRecords(verifiedRecords)
+    const { counted } = partitionVotesByContent(all, contentHash)
+    const countedIds = new Set(counted.map((vote) => vote.recordId))
+    // Everything verified that does not count for this wording: votes for an
+    // earlier version and votes without a hash. Shown to their voter only.
+    return { counted, notCounted: all.filter((vote) => !countedIds.has(vote.recordId)) }
+  }, [verifiedRecords, contentHash])
+  return { statement, contentHash, ...partition }
+}
+
 /** Aggregated vote distribution for a statement. */
 export interface VoteSummary {
   green: number
@@ -95,6 +129,10 @@ export interface VoteSummary {
   total: number
   /** The current user's stance, if any. */
   myVote?: VoteValue
+  /** The current user's stance on an EARLIER wording (or a vote without a
+      content hash): it does not count until they vote again (resonance.md,
+      vote rule 5). */
+  myVoteOtherVersion?: VoteValue
 }
 
 /** Return value of useVotes hook. */
@@ -117,7 +155,11 @@ export interface UseVotesResult {
  * identity, the canonical hash id binds (voter, statement) — one record per
  * tuple, structurally. The read side accepts only validated records
  * (`votesFromRelationRecords`): endpoint bound to the author, at most one
- * counted vote per (statement, voter). See docs/spec/modules/resonance.md.
+ * counted vote per (statement, voter). A vote counts only for the current
+ * wording of a statement with a positive verdict: it carries the wording's
+ * content hash (`fields.contentHash`), and votes for an earlier wording show
+ * up as `myVoteOtherVersion` for their voter. See
+ * docs/spec/modules/resonance.md (vote rule 5).
  *
  * @answers `{data, isLoading, vote, canVote}`
  * @without empty — without signature verification no vote counts
@@ -152,14 +194,18 @@ export function useVotes(statementId: string): UseVotesResult {
   // Votes are identity-bound and transparent — never written as "anonymous".
   // Without Authenticatable there is no identity, hence no voting.
   const canWrite = hasRelationRecordWriter(connector)
-  const canVote = canWrite && canRead && isAuthenticatable(connector) && currentUserId !== undefined
-
   const verifiedRecords = useVerifiedRelationRecords(records)
-  const votes = useMemo(() => votesFromRelationRecords(verifiedRecords), [verifiedRecords])
+  const { contentHash, counted: votes, notCounted } = useVotesForWording(statementId, verifiedRecords)
+  // Voting needs a COUNTING wording: the verified content hash of a statement
+  // with a positive verdict — never a hash computed from unverified content.
+  const canVote = canWrite && canRead && isAuthenticatable(connector) && currentUserId !== undefined && contentHash !== null
 
   // Optimistic overlay for the own vote: applied on click, dropped as soon as
-  // the records observable reflects the write.
-  const [pending, setPending] = useState<{ value: VoteValue | null } | null>(null)
+  // the records observable reflects the write. Bound to the wording it was
+  // cast on: once that wording no longer counts (changed content, lost
+  // verdict), the overlay is void and never counts.
+  const [rawPending, setPending] = useState<{ value: VoteValue | null; contentHash: string } | null>(null)
+  const pending = rawPending !== null && rawPending.contentHash === contentHash ? rawPending : null
 
   const persistedMyVote = useMemo(
     () => (currentUserId ? votes.find((vote) => vote.voterId === currentUserId)?.value : undefined),
@@ -168,9 +214,9 @@ export function useVotes(statementId: string): UseVotesResult {
   const myVote = pending ? pending.value ?? undefined : persistedMyVote
 
   useEffect(() => {
-    if (!pending) return
-    if ((pending.value ?? undefined) === persistedMyVote) setPending(null)
-  }, [pending, persistedMyVote])
+    if (!rawPending) return
+    if (!pending || (pending.value ?? undefined) === persistedMyVote) setPending(null)
+  }, [rawPending, pending, persistedMyVote])
 
   const summary: VoteSummary = useMemo(() => {
     const result: VoteSummary = { green: 0, yellow: 0, red: 0, total: 0 }
@@ -184,8 +230,14 @@ export function useVotes(statementId: string): UseVotesResult {
       result.total += 1
     }
     if (myVote) result.myVote = myVote
+    // Only against a counting wording: on a statement without a positive
+    // verdict nothing counts, and "earlier version" would be wrong.
+    const mineElsewhere = currentUserId && !myVote && contentHash !== null
+      ? notCounted.find((vote) => vote.voterId === currentUserId)?.value
+      : undefined
+    if (mineElsewhere) result.myVoteOtherVersion = mineElsewhere
     return result
-  }, [votes, pending, currentUserId, myVote])
+  }, [votes, notCounted, contentHash, pending, currentUserId, myVote])
 
   // Latest-wins + write chain, mirroring use-reactions.
   const latestRef = useRef(0)
@@ -195,11 +247,15 @@ export function useVotes(statementId: string): UseVotesResult {
     if (!hasRelationRecordWriter(connector) || !hasRelationRecords(connector)) return
     if (!isAuthenticatable(connector)) return
 
+    // The vote binds the wording on display (resonance.md → Aktionen) — the
+    // verified, counting one. Without it there is nothing to vote on.
+    if (contentHash === null) return
+
     const requestId = ++latestRef.current
     // Optimistic feedback from the rendered state; the WRITE decision below
     // uses freshly read records, so serialized double-clicks resolve against
     // the true current stance, not a stale render.
-    setPending({ value: myVote === value ? null : value })
+    setPending({ value: myVote === value ? null : value, contentHash })
 
     try {
       const userId = currentUserId ?? (await connector.getCurrentUser())?.id
@@ -216,28 +272,30 @@ export function useVotes(statementId: string): UseVotesResult {
         .find((vote) => vote.voterId === userId)
 
       if (existingMine) {
-        if (existingMine.value === value) {
-          // Same stance again — withdraw the own vote.
-          if (latestRef.current === requestId) setPending({ value: null })
+        if (existingMine.value === value && existingMine.contentHash === contentHash) {
+          // Same stance on the same wording again — withdraw the own vote.
+          if (latestRef.current === requestId) setPending({ value: null, contentHash })
           await connector.deleteRelationRecord(existingMine.recordId)
         } else {
-          // Stance change: update the OWN record — the canonical id stays stable.
-          await connector.updateRelationRecord(existingMine.recordId, { fields: { value } })
+          // Stance change, or a vote for an earlier wording renewed: update
+          // the OWN record — the canonical id stays stable.
+          await connector.updateRelationRecord(existingMine.recordId, { fields: { value, contentHash } })
         }
         return
       }
-      const created = await connector.createRelationRecord(voteRecordInput(userId, statementId, value))
+      const created = await connector.createRelationRecord(voteRecordInput(userId, statementId, value, contentHash))
       // Idempotent create returns a PRE-EXISTING canonical record UNCHANGED —
-      // including one with an invalid or missing fields.value that the
-      // validated read path rightly ignores (#211). Detect the mismatch and
-      // repair the OWN record, otherwise the optimistic vote never converges.
-      if (created.fields?.value !== value) {
-        await connector.updateRelationRecord(created.id, { fields: { value } })
+      // including one with an invalid or missing fields.value (or a stale
+      // hash) that the validated read path rightly ignores (#211). Detect the
+      // mismatch and repair the OWN record, otherwise the optimistic vote
+      // never converges.
+      if (created.fields?.value !== value || created.fields?.contentHash !== contentHash) {
+        await connector.updateRelationRecord(created.id, { fields: { value, contentHash } })
       }
     } catch {
       if (latestRef.current === requestId) setPending(null)
     }
-  }, [connector, statementId, myVote, currentUserId])
+  }, [connector, statementId, contentHash, myVote, currentUserId])
 
   const vote = useCallback((value: VoteValue) => {
     const next = chainRef.current.then(() => performVote(value))
@@ -290,10 +348,10 @@ export function useVoteUsers(statementId: string, enabled = true): UseVoteUsersR
   }, [recordsObservable])
 
   const verifiedRecords = useVerifiedRelationRecords(records)
+  const { counted } = useVotesForWording(statementId, verifiedRecords)
   const votes = useMemo(
-    () => votesFromRelationRecords(verifiedRecords)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [verifiedRecords],
+    () => [...counted].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [counted],
   )
 
   const [users, setUsers] = useState<VoteUser[]>([])

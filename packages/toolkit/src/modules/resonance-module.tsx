@@ -7,6 +7,7 @@ import { VOTE_PREDICATE } from "@real-life-stack/data-interface"
 import { useItemFocus } from "../hooks/use-item-focus"
 import { useRelationRecords } from "../hooks/use-relation-records"
 import { useVerifiedRelationRecords } from "../hooks/use-votes"
+import { useCountingContentHashes } from "../hooks/use-item-standing"
 import { useModuleHost } from "../components/host/module-host"
 import { ModuleToolbar } from "../components/layout/module-toolbar"
 import { ItemMetaRow } from "../components/preview/item-meta-row"
@@ -58,7 +59,10 @@ export function ResonanceModule({ items: statements = [], itemsLoading: isLoadin
   const { focusItem } = useItemFocus()
 
   const [sortMode, setSortMode] = useState<ResonanceSortMode>("newest")
-  const voteStats = useMemo(() => aggregateVoteStats(verifiedVoteRecords), [verifiedVoteRecords])
+  // Resonanz-Vote-Regel 5: eine Stimme zaehlt nur fuer den aktuellen Wortlaut
+  // eines belegten Statements.
+  const contentHashes = useCountingContentHashes(statements)
+  const voteStats = useMemo(() => aggregateVoteStats(verifiedVoteRecords, contentHashes), [verifiedVoteRecords, contentHashes])
   const sortedStatements = useMemo(
     () => sortStatements(statements, voteStats, sortMode),
     [statements, voteStats, sortMode],

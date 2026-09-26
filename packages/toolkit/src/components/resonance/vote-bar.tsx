@@ -130,6 +130,14 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
           {summary.total === 1 ? "1 Stimme" : `${summary.total} Stimmen`}
         </span>
       </div>
+
+      {summary.myVoteOtherVersion && (
+        // Vote rule 5 (resonance.md): the voter must see that their vote
+        // was cast on an earlier wording and no longer counts.
+        <p className="text-xs text-muted-foreground">
+          Deine Stimme ({VOTE_LABELS[summary.myVoteOtherVersion]}) galt einer früheren Fassung und zählt nicht mehr. Stimme neu ab, damit sie zählt.
+        </p>
+      )}
     </div>
   )
 }
