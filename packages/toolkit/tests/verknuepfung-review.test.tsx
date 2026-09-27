@@ -85,11 +85,13 @@ describe("#529: die Suche folgt dem Space im Formularkopf", () => {
     expect(await type("")).toEqual(["Im Hof"])
   })
 
-  it("ist der Formular-Space nicht der geöffnete, sagt das Feld es, statt still leer zu bleiben", async () => {
+  // S3b A: Mit GroupScopeCapable sucht das Feld im Formular-Space, auch wenn
+  // ein anderer geöffnet ist. Den Hinweis ohne die Zusage prüft
+  // space-des-formulars.test.tsx.
+  it("ist der Formular-Space nicht der geöffnete, sucht das Feld trotzdem dort (02 → group)", async () => {
     await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {}, spaceId: "h" }), [IN_G, IN_H, POST_G], GROUPS, "g")
-    const field = host.querySelector("[data-item-relation-field]")
-    expect(field?.querySelector("input")).toBeNull()
-    expect(field?.querySelector("[data-other-space]")?.textContent).toContain("Hof")
+    expect(host.querySelector("[data-other-space]")).toBeNull()
+    expect(await type("")).toEqual(["Im Hof"])
   })
 
   it("im geöffneten Space findet sie dessen Aufgaben", async () => {

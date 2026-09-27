@@ -1,6 +1,6 @@
 import { useCallback } from "react"
-import type { CreateItemInput, DataInterface, Item } from "@real-life-stack/data-interface"
-import { isWritable } from "@real-life-stack/data-interface"
+import type { CreateItemInput, CreateItemOptions, DataInterface, Item } from "@real-life-stack/data-interface"
+import { hasGroupScope, isWritable } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
 /**
@@ -19,9 +19,14 @@ function writable(connector: DataInterface) {
 }
 
 /**
- * Create a new item.
+ * Create a new item — optionally directly in a given space (`{ group }`).
  *
- * @answers `(input) => Promise<Item>`
+ * Mit `group` nur an einen Connector mit `hasGroupScope()` (Spec 02 →
+ * Anlegen in einem bestimmten Space, Regel 5): Ein anderer übergeht das
+ * zweite Argument und legte im falschen Space an. Der Hook wirft dann,
+ * statt es still zu tun.
+ *
+ * @answers `(input, options?) => Promise<Item>`
  * @without throws on call
  * @group write
  * @see story rls-foundations-hooks--write
@@ -29,7 +34,12 @@ function writable(connector: DataInterface) {
  */
 export function useCreateItem() {
   const connector = useConnector()
-  return useCallback((item: CreateItemInput) => writable(connector).createItem(item), [connector])
+  return useCallback((item: CreateItemInput, options?: CreateItemOptions) => {
+    const writer = writable(connector)
+    if (options?.group === undefined) return writer.createItem(item)
+    if (!hasGroupScope(writer)) throw new Error("Connector cannot create items in a given space (GroupScopeCapable)")
+    return writer.createItem(item, { group: options.group })
+  }, [connector])
 }
 
 /**

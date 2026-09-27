@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 import type { DataInterface, Item, Relation } from "@real-life-stack/data-interface"
-import { deriveContext, hasItemGroups } from "@real-life-stack/data-interface"
+import { deriveContext, hasGroups, hasGroupScope, hasItemGroups } from "@real-life-stack/data-interface"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useConnector } from "./connector-context"
 import type { ContentComposerSubmitData } from "../components/composer/content-composer"
@@ -167,12 +167,33 @@ export function buildUpdatePayload(
   }
 }
 
+/** Der Space des Formulars aus der Einreichung; leer = keiner. */
+function formGroupOf(submission: ContentComposerSubmitData): string | undefined {
+  const group = submission.data.group
+  return typeof group === "string" && group !== "" ? group : undefined
+}
+
 /**
- * Apply the composer's `group` selection as the item's group/space association.
- * The group is NOT item data — it's a connector association (`moveItemToGroup`),
- * so mappers omit `data.group` and we persist it here, for every module that
- * surfaces the group widget. No-ops when the connector has no groups, the
- * value is blank, or it already matches.
+ * Anlegen in einem Schritt (shared-components → Space des Formulars, Regel
+ * 6): mit `hasGroupScope()` direkt im Formular-Space
+ * (`createItem(item, { group })`), nie anlegen und danach verschieben. Ohne
+ * die Zusage legt der Connector im geöffneten Space an; zeigt das Formular
+ * einen anderen, scheitert das Speichern, statt das Item still woanders
+ * abzulegen (Regel 7).
+ */
+function createOptionsFor(connector: DataInterface, group: string | undefined): { group: string } | undefined {
+  if (group === undefined) return undefined
+  if (hasGroupScope(connector)) return { group }
+  const open = hasGroups(connector) ? (connector.getCurrentGroup()?.id ?? null) : null
+  if (open !== group) throw new Error("Dieser Speicher kann nur im geöffneten Space anlegen")
+  return undefined
+}
+
+/**
+ * Beim Bearbeiten: Wechselt der Space im Formular, verschiebt das Item
+ * (`moveItemToGroup`, Regel 6). Die Zuordnung ist keine Item-Eigenschaft;
+ * Mapper lassen `data.group` weg. No-op ohne Gruppen, ohne Wert oder wenn er
+ * schon stimmt.
  */
 async function applyItemGroup(
   connector: DataInterface,
@@ -245,9 +266,8 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
       try {
         if (activeMode === "create") {
           const payload = buildCreatePayload(mapped, currentUserId)
-          const created = await createItem(payload)
+          const created = await createItem(payload, createOptionsFor(connector, formGroupOf(submission)))
           submitOptions?.onPersisted?.(created)
-          await applyItemGroup(connector, created.id, submission.data.group)
           await applyStatements(connector, created, mapped.statements)
           await onCreated?.(created)
           return created

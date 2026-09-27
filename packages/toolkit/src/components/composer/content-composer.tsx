@@ -37,6 +37,8 @@ export type { PersonOption } from "./widgets/people-widget"
 import { peopleQualifierKey, peopleStatementKey, resolvePeopleFields, type PeopleRelationConfig } from "./people-relations"
 export type { PeopleRelationConfig } from "./people-relations"
 import { TagsWidget } from "./widgets/tags-widget"
+import { useFormSpaceSources } from "./use-form-space-sources"
+import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
 import { StatusWidget } from "./widgets/status-widget"
 import { FixedItemRefField, ItemRelationWidget, type RequestItemPick } from "./widgets/item-relation-widget"
 import { itemRelationDataKey, itemRelationDataKeys, type ItemRefFieldConfig, type ItemRelationFieldConfig } from "./item-relations"
@@ -513,6 +515,8 @@ interface ComposerHeadProps {
     options: readonly GroupOption[]
     required: boolean
     fixedReason?: string
+    /** Das Formular hat Beziehungen: Der Space steht fest, mit diesem Grund (Space des Formulars, Regel 5). */
+    lockedReason?: string
     onChange: (id: string) => void
   }
 }
@@ -629,9 +633,11 @@ function SpaceLogo({ option, size = "sm" }: { option?: GroupOption; size?: "sm" 
   )
 }
 
-function SpacePill({ value, options, required, fixedReason, onChange }: NonNullable<ComposerHeadProps["space"]>) {
+function SpacePill({ value, options, required, fixedReason: fixedBy, lockedReason, onChange }: NonNullable<ComposerHeadProps["space"]>) {
   const selected = options.find((o) => o.id === value)
-  const choosable = options.length > 1
+  // Mit Beziehungen fest wie der feste Space einer Variante (Regel 5).
+  const choosable = options.length > 1 && !(lockedReason && selected)
+  const fixedReason = (selected && lockedReason) || fixedBy
   const missing = required && !value
   const [query, setQuery] = React.useState("")
   const searchRef = React.useRef<HTMLInputElement>(null)
@@ -901,6 +907,15 @@ export function ContentComposer({
   React.useEffect(() => {
     if (onlySpace && !data.group) setData((d) => (d.group ? d : { ...d, group: onlySpace }))
   }, [onlySpace, data.group])
+  // Der Formular-Space (shared-components → Space des Formulars): EINE
+  // Quelle, `data.group`. Suche, Vorschläge, Prüfung und Speichern lesen ihn
+  // von hier, nie den geöffneten Space der App.
+  const formSpace = typeof data.group === "string" && data.group !== "" ? data.group : undefined
+  const spaceSources = useFormSpaceSources(formSpace)
+  const effectivePeopleOptions = spaceSources?.people ?? peopleOptions
+  const effectivePeopleQuick = spaceSources?.people ? spaceSources.people.slice(0, 10) : peopleQuickSuggestions
+  const effectiveTagSuggestions = spaceSources?.tags ?? tagSuggestions
+  const effectiveTagQuick = spaceSources?.tags ? spaceSources.tags.slice(0, 10) : tagQuickSuggestions
   // „+ Beschreibung" aufgeklappt? Nur UI-Zustand; mit Inhalt ist sie immer offen.
   const [textOpen, setTextOpen] = React.useState(false)
   const [isPreviewing, setIsPreviewing] = React.useState(false)
@@ -1084,8 +1099,18 @@ export function ContentComposer({
     }
   }
 
+  // Beziehungen im Formular (Regel 5): eine gewählte Item-Kante oder ein
+  // bearbeitbarer Item-Verweis hält den Space fest.
+  const formHasItemBinding = relationKeys.some((key) => {
+    const value = (data as Record<string, unknown>)[key]
+    return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value !== ""
+  })
+  // Pflicht nur beim Anlegen (Regel 8): ohne Space kein Speichern.
+  const spaceRequired = !isEditMode && !!hasGroupOptions && (currentConfig.groupRequired ?? true)
+  const spaceMissing = spaceRequired && !data.group
+
   // Submit
-  const canSubmit = !!(data.title?.trim() || data.text?.trim() || (data.media && data.media.length > 0))
+  const canSubmit = !spaceMissing && !!(data.title?.trim() || data.text?.trim() || (data.media && data.media.length > 0))
 
   const [submitting, setSubmitting] = React.useState(false)
   // Fehler beim Speichern: Banner unter dem Kopf; `reason` ist der Grund des
@@ -1130,8 +1155,9 @@ export function ContentComposer({
             ? {
                 value: data.group || "",
                 options: currentConfig.groupOptions!,
-                required: currentConfig.groupRequired ?? true,
+                required: spaceRequired,
                 fixedReason: currentConfig.groupFixedReason,
+                ...(formHasItemBinding ? { lockedReason: ITEM_BINDINGS_REASON } : {}),
                 onChange: (v) => updateData("group", v),
               }
             : undefined
@@ -1297,9 +1323,9 @@ export function ContentComposer({
                           // die Einzahl-Kurzform schon eingesetzt; deklarierte
                           // `peopleRelations`-Labels gewinnen.
                           label={field.label}
-                          options={peopleOptions}
+                          options={effectivePeopleOptions}
                           suggestions={peopleSuggestions}
-                          quickSuggestions={peopleQuickSuggestions}
+                          quickSuggestions={effectivePeopleQuick}
                           placeholder={field.placeholder}
                           {...(field.record && field.predicate && peopleStates?.[field.predicate]
                             ? {
@@ -1370,8 +1396,9 @@ export function ContentComposer({
                       value={data.tags || []}
                       onChange={(v) => updateData("tags", v)}
                       label={widgetLabel}
-                      suggestions={tagSuggestions}
-                      quickSuggestions={tagQuickSuggestions}
+                      suggestions={effectiveTagSuggestions}
+                      quickSuggestions={effectiveTagQuick}
+                      {...(spaceSources?.tagsUnavailable ? { hint: "Keine Vorschläge: Dieser Speicher liest nur Tags des geöffneten Space" } : {})}
                     />
                   )}
                 </div>

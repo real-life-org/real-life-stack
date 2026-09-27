@@ -14,6 +14,8 @@ import {
 } from "../composer/content-composer"
 import { ItemComposer } from "../composer/item-composer"
 import { withEditGroup } from "../composer/composer-mapping"
+import { useItemHasBindings } from "../composer/use-item-bindings"
+import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import { useIsFrozen } from "../../hooks/use-item-frozen"
 import { useItem } from "../../hooks/use-items"
@@ -88,6 +90,10 @@ export function ItemDetailView({
   // (ItemDetailActions) — nur mit Recht, immer hinter der Bestätigung.
   const perms = useItemPermissions(item)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // Der Space des Items (Vorauswahl beim Bearbeiten, Space des Formulars
+  // Regel 1) und ob es Beziehungen hat, die es dort halten (Regel 5).
+  const itemGroup = item && hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
+  const hasBindings = useItemHasBindings(item ?? null, itemGroup)
   // Uncontrolled by default; controlled when a `mode` prop is supplied (URL-driven).
   const [internalMode, setInternalMode] = useState<"read" | "edit">("read")
   const mode = modeProp ?? internalMode
@@ -116,14 +122,19 @@ export function ItemDetailView({
   // Der Space ist beim Bearbeiten nur wählbar, wenn der Connector Items
   // verschieben kann (moveItemToGroup); sonst steht er nicht zur Wahl.
   // Ohne Verschieben steht der bekannte Space fest im Kopf (Edit-Regeln 3).
+  // Hat das Item Beziehungen — oder ist das noch nicht bekannt —, steht er
+  // ebenfalls fest, mit Grund (Space des Formulars, Regel 5).
   const canMove = hasItemGroups(connector)
-  const composerTypes = withEditGroup(vorlage ? contentTypes.filter((t) => t.id === vorlage) : [], canMove)
+  const composerTypes = withEditGroup(
+    (vorlage ? contentTypes.filter((t) => t.id === vorlage) : []).map((t) => (itemGroup ? { ...t, defaultGroup: itemGroup } : t)),
+    canMove,
+    hasBindings === false ? undefined : ITEM_BINDINGS_REASON,
+  )
   const canEdit = composerTypes.length > 0 && !frozen
 
   // Pre-fill the group widget with the item's ACTUAL group/space (not just the
   // config's defaultGroup = current space) so editing in the aggregate view
   // shows where the item really lives. Persisted back via useItemEditor.
-  const itemGroup = hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
   const initialData = {
     ...editInitialData(item),
     ...(itemGroup ? { group: itemGroup } : {}),

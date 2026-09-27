@@ -3,7 +3,7 @@
 import { useRef, useState } from "react"
 import { Download, MoreHorizontal, Upload } from "lucide-react"
 import type { Item, RelationRecord } from "@real-life-stack/data-interface"
-import { deriveContext, hasItemGroups, isWritable } from "@real-life-stack/data-interface"
+import { deriveContext, hasGroupScope, hasItemGroups, isWritable } from "@real-life-stack/data-interface"
 import { useConnector } from "@/hooks/connector-context"
 import { buildExport, importItemData, planImport, type ImportPlan } from "@/lib/resonance-transfer"
 import type { ResonancePopulation } from "@/lib/resonance-sort"
@@ -91,6 +91,9 @@ export function ResonanceTransferMenu({
   // observed snapshot may still be empty while the first load runs, and the
   // import would then create duplicates (#521).
   const loadStatementsOf = async (spaceId: string | null) => {
+    // Mit GroupScopeCapable genau dieser Space (02 → Lesen in einem
+    // bestimmten Space); sonst die sichtbaren, nach Space gefiltert.
+    if (spaceId !== null && hasGroupScope(connector)) return connector.getItems({ ...STATEMENTS, group: spaceId })
     const all = await connector.getItems(STATEMENTS)
     return spaceId !== null && hasItemGroups(connector)
       ? all.filter((item) => connector.getItemGroupId(item.id) === spaceId)
@@ -126,15 +129,22 @@ export function ResonanceTransferMenu({
       }
       for (const entry of plan.create) {
         const data = importItemData(entry)
-        const created = await connector.createItem({
+        const input = {
           type: "statement",
           createdBy: userId!,
           "@context": deriveContext("statement", data),
           data,
           ...(entry.tags && entry.tags.length > 0 ? { tags: entry.tags } : {}),
-        })
-        // The space is a connector association, not item data (as in the
-        // composer): place the statement where the import was aimed.
+        }
+        // Anlegen direkt im Ziel-Space, in einem Schritt (02 → Anlegen in
+        // einem bestimmten Space), wo der Connector es zusagt.
+        if (review.target !== null && hasGroupScope(connector)) {
+          await connector.createItem(input, { group: review.target })
+          continue
+        }
+        const created = await connector.createItem(input)
+        // Ohne die Zusage: Die Zuordnung ist keine Item-Eigenschaft; das
+        // Item wird dorthin verschoben, wohin der Import zielt.
         if (review.target !== null && hasItemGroups(connector) && connector.getItemGroupId(created.id) !== review.target) {
           await connector.moveItemToGroup(created.id, review.target)
         }

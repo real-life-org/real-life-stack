@@ -4,9 +4,10 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore,
   type MutableRefObject, type ReactNode,
 } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import { hasGroups, hasItemGroups, type DataInterface, type Item } from "@real-life-stack/data-interface"
 
 import { useItemFocus } from "../../hooks/use-item-focus"
+import { useOptionalConnector } from "../../hooks/connector-context"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import { ComposerFullscreenShell } from "../composer/composer-fullscreen-shell"
 import type { ContentComposerHandle, ContentComposerProps, ContentTypeConfig, WidgetData } from "../composer/content-composer"
@@ -55,6 +56,20 @@ export interface CreateHostValue {
 }
 
 const CreateHostContext = createContext<CreateHostValue | null>(null)
+
+/**
+ * Zeigt der geöffnete Space das eben angelegte Item? Nicht, wenn es im
+ * Formular-Space eines anderen Space angelegt wurde (shared-components →
+ * Space des Formulars, Regel 6): Dann schließt das Formular, statt ein
+ * Detail zu öffnen, das in diesem Space nie lädt. Übersicht und Aggregat
+ * zeigen alle Spaces.
+ */
+export function createdItemIsVisible(connector: DataInterface | null, item: Pick<Item, "id">): boolean {
+  if (!connector || !hasGroups(connector) || !hasItemGroups(connector)) return true
+  const open = connector.getCurrentGroup()
+  if (!open || open.data?.scope === "aggregate") return true
+  return connector.getItemGroupId(item.id) === open.id
+}
 
 interface CreateOutletValue {
   store: ConfigStore
@@ -173,7 +188,11 @@ export function CreateHostProvider({ children }: { children: ReactNode }) {
     [startCompose, store],
   )
 
-  const onDone = useCallback((item: Item) => focusCreated(item.id), [focusCreated])
+  const connector = useOptionalConnector()
+  const onDone = useCallback(
+    (item: Item) => (createdItemIsVisible(connector, item) ? focusCreated(item.id) : stopCompose()),
+    [connector, focusCreated, stopCompose],
+  )
 
   const outletValue = useMemo<CreateOutletValue>(
     () => ({

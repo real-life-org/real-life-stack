@@ -1,0 +1,335 @@
+// @vitest-environment jsdom
+import { act, createElement, type ReactNode } from "react"
+import { createRoot, type Root } from "react-dom/client"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { composeTypeManifest, TOOLKIT_TYPE_LAYER, type DataInterface, type Item } from "@real-life-stack/data-interface"
+import { MockConnector } from "@real-life-stack/mock-connector"
+
+import { ConnectorProvider } from "../src/hooks/connector-context"
+import { ItemComposer } from "../src/components/composer/item-composer"
+import { ItemRelationWidget } from "../src/components/composer/widgets/item-relation-widget"
+import { contentTypeFromRegister, mapComposerSubmission } from "../src/components/composer/content-types"
+import { withCreateGroup, withEditGroup, withGroupOptions, GROUP_FIXED_NO_SCOPE } from "../src/components/composer/composer-mapping"
+import { itemHasBindings, ITEM_BINDINGS_REASON } from "../src/lib/item-bindings"
+import { ItemDetailView } from "../src/components/detail/item-detail-view"
+import { setTypeManifest } from "../src/components/preview/type-presentation"
+
+/**
+ * S3b PR A: Space des Formulars (shared-components → Space des Formulars,
+ * Regeln 1–8) auf dem Vertrag GroupScopeCapable (02, 03).
+ */
+
+;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+setTypeManifest(composeTypeManifest([TOOLKIT_TYPE_LAYER]))
+vi.stubGlobal("matchMedia", (query: string) => ({
+  matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {},
+  addListener: () => {}, removeListener: () => {}, onchange: null, dispatchEvent: () => false,
+}))
+
+const ME = "u-me"
+const HOFI = "u-hofi"
+const item = (id: string, type: string, data: Record<string, unknown>, relations: Item["relations"] = [], tags?: string[]): Item => ({
+  id, type, createdBy: ME, createdAt: "2026-09-20T10:00:00.000Z", data, relations, ...(tags ? { tags } : {}),
+})
+const IN_G = item("t-g", "task", { title: "Im Garten", status: "open" }, [], ["beet"])
+const IN_H = item("t-h", "task", { title: "Im Hof", status: "open" }, [], ["pflaster"])
+
+let host: HTMLDivElement
+let root: Root
+let connector: MockConnector
+
+async function settle() {
+  for (let round = 0; round < 6; round++) {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    })
+  }
+}
+
+function makeConnector(items: Item[] = [IN_G, IN_H], groupItems: Record<string, string[]> = { g: ["t-g"], h: ["t-h"] }) {
+  return new MockConnector(
+    {
+      items,
+      groups: [{ id: "g", name: "Garten", data: {} }, { id: "h", name: "Hof", data: {} }],
+      users: [{ id: ME, displayName: "Ich" }, { id: HOFI, displayName: "Hofi" }],
+      groupMembers: { g: [ME], h: [ME, HOFI] },
+      groupItems,
+    } as never,
+    { allowFixtureAuthors: true },
+  )
+}
+
+/** Derselbe Connector ohne die Zusage GroupScopeCapable — ein Fremd-Connector, der `group` übergeht. */
+function withoutScope(c: MockConnector): DataInterface {
+  return new Proxy(c, {
+    get(target, key, receiver) {
+      if (key === "groupScope") return undefined
+      const value = Reflect.get(target, key, receiver)
+      return typeof value === "function" ? value.bind(target) : value
+    },
+    has(target, key) {
+      return key === "groupScope" ? false : Reflect.has(target, key)
+    },
+  }) as unknown as DataInterface
+}
+
+async function render(node: ReactNode, c: DataInterface = connector) {
+  await act(async () => {
+    root.render(createElement(ConnectorProvider, { connector: c as never }, node))
+  })
+  await settle()
+}
+
+async function type(text: string, field = "[data-item-relation-field] input") {
+  const input = host.querySelector<HTMLInputElement>(field)!
+  await act(async () => {
+    input.focus()
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, text)
+    input.dispatchEvent(new Event("input", { bubbles: true }))
+  })
+  await settle()
+  return [...host.querySelectorAll('[role="option"]')].map((o) => o.textContent?.trim())
+}
+
+beforeEach(async () => {
+  host = document.createElement("div")
+  document.body.appendChild(host)
+  root = createRoot(host)
+  connector = makeConnector()
+  await connector.init()
+})
+afterEach(async () => {
+  await act(async () => root.unmount())
+  host.remove()
+})
+
+describe("#529: Suche im Formular-Space ohne App-Wechsel (Regel 3, 02 → group)", () => {
+  it("sucht im Formular-Space, während ein anderer geöffnet ist, und wechselt ihn nicht", async () => {
+    connector.setCurrentGroup("g")
+    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {}, spaceId: "h" }))
+    expect(host.querySelector("[data-other-space]")).toBeNull()
+    expect(await type("")).toEqual(["Im Hof"])
+    expect(connector.getCurrentGroup()?.id).toBe("g")
+  })
+
+  it("der Modul-Pick prüft gegen den Formular-Space, nicht den geöffneten", async () => {
+    connector.setCurrentGroup("g")
+    let onPick: ((id: string) => { ok: boolean }) | undefined
+    await render(createElement(ItemRelationWidget, {
+      label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {}, spaceId: "h",
+      requestItemPick: (_r, cb) => { onPick = cb },
+    }))
+    await act(async () => [...host.querySelectorAll("button")].find((b) => b.textContent?.includes("Im Modul wählen"))!.click())
+    let hof: { ok: boolean } | undefined
+    let garten: { ok: boolean } | undefined
+    await act(async () => { hof = onPick!("t-h") })
+    await act(async () => { garten = onPick!("t-g") })
+    expect(hof?.ok).toBe(true)
+    expect(garten?.ok).toBe(false)
+  })
+
+  it("ohne GroupScopeCapable sagt das Feld, dass es dort nicht suchen kann (Regel 7)", async () => {
+    connector.setCurrentGroup("g")
+    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {}, spaceId: "h" }), withoutScope(connector))
+    const field = host.querySelector("[data-item-relation-field]")
+    expect(field?.querySelector("input")).toBeNull()
+    expect(field?.querySelector("[data-other-space]")?.textContent).toContain("Hof")
+  })
+})
+
+describe("Anlegen in einem Schritt (Regel 6, 02 → Anlegen in einem bestimmten Space)", () => {
+  const types = () => withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], "g")
+
+  async function createIn(space: string, c: DataInterface) {
+    const onDone = vi.fn()
+    await render(createElement(ItemComposer, {
+      contentTypes: types(), initialContentType: "task", mapper: mapComposerSubmission,
+      initialData: { group: space }, onDone, onCancel: () => {},
+    }), c)
+    const title = host.querySelector<HTMLInputElement>('input[type="text"], input:not([type])')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(title, "Neu")
+      title.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Erstellen")!.click())
+    await settle()
+    return onDone
+  }
+
+  it("legt mit createItem(item, { group }) im Formular-Space an, nie über moveItemToGroup", async () => {
+    connector.setCurrentGroup("g")
+    const create = vi.spyOn(connector, "createItem")
+    const move = vi.spyOn(connector, "moveItemToGroup")
+    const onDone = await createIn("h", connector)
+    expect(onDone).toHaveBeenCalledTimes(1)
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ type: "task" }), { group: "h" })
+    expect(move).not.toHaveBeenCalled()
+    const saved = onDone.mock.calls[0]![0] as Item
+    expect(connector.getItemGroupId(saved.id)).toBe("h")
+    expect(connector.getCurrentGroup()?.id).toBe("g")
+  })
+
+  it("ohne GroupScopeCapable legt es in einem fremden Space nicht an und täuscht nichts vor", async () => {
+    connector.setCurrentGroup("g")
+    const move = vi.spyOn(connector, "moveItemToGroup")
+    const onDone = await createIn("h", withoutScope(connector))
+    expect(onDone).not.toHaveBeenCalled()
+    expect(move).not.toHaveBeenCalled()
+    expect(host.querySelector('[data-slot="save-error"]')).not.toBeNull()
+    expect((await connector.getItems({ type: "task", group: "h" })).map(({ id }) => id)).toEqual(["t-h"])
+    expect((await connector.getItems({ type: "task", group: "g" })).map(({ id }) => id)).toEqual(["t-g"])
+  })
+
+  it("withCreateGroup: ohne Zusage nur der Space, in dem der Connector ohne group anlegt", () => {
+    const offered = types()
+    expect(withCreateGroup(offered, true, "g")).toBe(offered)
+    const fixed = withCreateGroup(offered, false, "g")
+    expect(fixed[0]!.groupOptions?.map((o) => o.id)).toEqual(["g"])
+    expect(fixed[0]!.groupFixedReason).toBe(GROUP_FIXED_NO_SCOPE)
+    // Übersicht ohne Zusage: welcher Space, bestimmt der Connector — keine Auswahl.
+    expect(withCreateGroup(offered, false, undefined)[0]!.groupOptions).toBeUndefined()
+  })
+})
+
+describe("Pflicht nur beim Anlegen (Regel 8)", () => {
+  const options = [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }]
+  it("beim Erstellen ohne Space: markiert und Speichern gesperrt", async () => {
+    await render(createElement(ItemComposer, {
+      contentTypes: [{ ...contentTypeFromRegister("task"), groupOptions: options }], initialContentType: "task",
+      mapper: mapComposerSubmission, initialData: { title: "T" }, onDone: () => {}, onCancel: () => {},
+    }))
+    expect(host.querySelector('button[aria-label^="Space wählen"]')?.getAttribute("aria-invalid")).toBe("true")
+    expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Erstellen")?.disabled).toBe(true)
+  })
+
+  it("beim Bearbeiten ohne bekannten Space: nicht markiert, speicherbar", async () => {
+    const existing = item("t-x", "task", { title: "X", status: "open" })
+    await render(createElement(ItemComposer, {
+      contentTypes: [{ ...contentTypeFromRegister("task"), groupOptions: options }], initialContentType: "task", existingItem: existing,
+      mapper: mapComposerSubmission, initialData: { title: "X" }, onDone: () => {}, onCancel: () => {},
+    }))
+    expect(host.querySelector('button[aria-label^="Space wählen"]')?.getAttribute("aria-invalid")).toBeNull()
+    expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Speichern")?.disabled).toBe(false)
+  })
+})
+
+describe("Ein Item mit Beziehungen bleibt in seinem Space (Regel 5)", () => {
+  const T = item("t", "task", { title: "T" })
+  it("itemHasBindings: Item-Kanten und feste Verweise in beiden Richtungen, Records und Kommentare", () => {
+    expect(itemHasBindings(T, [T])).toBe(false)
+    // Personen-Kanten und Tags zählen nicht.
+    expect(itemHasBindings({ ...T, relations: [{ predicate: "assignedTo", target: `global:${ME}` }], tags: ["x"] }, [])).toBe(false)
+    // ausgehend eingebettet, auch space-qualifiziert
+    expect(itemHasBindings({ ...T, relations: [{ predicate: "blocks", target: "item:u" }] }, [])).toBe(true)
+    expect(itemHasBindings({ ...T, relations: [{ predicate: "partOf", target: "space:g/item:p" }] }, [])).toBe(true)
+    // eingehend eingebettet
+    expect(itemHasBindings(T, [T, item("u", "task", {}, [{ predicate: "blocks", target: "item:t" }])])).toBe(true)
+    // Record (Stimme, Zusage) — auch der eigene
+    const vote = item("r", "relation", { predicate: "votesOn" }, [{ predicate: "from", target: `global:${ME}` }, { predicate: "to", target: "item:t" }])
+    expect(itemHasBindings(T, [T, vote])).toBe(true)
+    // Kommentar und Reaktion
+    expect(itemHasBindings(T, [item("c", "comment", {}, [{ predicate: "commentOn", target: "item:t" }])])).toBe(true)
+    expect(itemHasBindings(T, [item("x", "reaction", {}, [{ predicate: "reactsTo", target: "item:t" }])])).toBe(true)
+    // fester Item-Verweis (variantOf) in beiden Richtungen
+    const S = item("s", "statement", { title: "S" })
+    expect(itemHasBindings({ ...S, data: { title: "V", variantOf: "item:o" } }, [])).toBe(true)
+    expect(itemHasBindings(S, [S, item("v", "statement", { title: "V", variantOf: "item:s" })])).toBe(true)
+    // Ein anderes Item ohne Bezug zählt nicht.
+    expect(itemHasBindings(T, [T, item("u", "task", {}, [{ predicate: "blocks", target: "item:w" }])])).toBe(false)
+  })
+
+  it("withEditGroup: mit Beziehungen fest auf dem Space des Items, mit Grund", () => {
+    const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], undefined)
+    const typesOn = types.map((t) => ({ ...t, defaultGroup: "h" }))
+    expect(withEditGroup(typesOn, true)).toBe(typesOn)
+    const locked = withEditGroup(typesOn, true, ITEM_BINDINGS_REASON)
+    expect(locked[0]!.groupOptions?.map((o) => o.id)).toEqual(["h"])
+    expect(locked[0]!.groupFixedReason).toBe(ITEM_BINDINGS_REASON)
+  })
+
+  it("im Bearbeiten: eine eingehende Kante macht die Space-Auswahl fest, ohne Speichern zu sperren", async () => {
+    const blocker = item("t-b", "task", { title: "Blocker" }, [{ predicate: "blocks", target: "item:t-h" }])
+    connector = makeConnector([IN_G, IN_H, blocker], { g: ["t-g"], h: ["t-h", "t-b"] })
+    await connector.init()
+    connector.setCurrentGroup("h")
+    const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], "h")
+    await render(createElement(ItemDetailView, {
+      itemId: "t-h", mode: "edit", renderRead: () => null, contentTypes: types, mapper: mapComposerSubmission,
+      editInitialData: (i: Item) => ({ title: String(i.data.title) }), onClose: () => {},
+    }))
+    expect(host.querySelector('button[aria-label^="Space wählen"]')).toBeNull()
+    const fixed = host.querySelector('[data-slot="composer-space"]')
+    expect(fixed?.textContent).toContain("Hof")
+    expect(fixed?.textContent).toContain(ITEM_BINDINGS_REASON)
+    expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Speichern")?.disabled).toBe(false)
+  })
+
+  it("im Bearbeiten ohne Beziehungen bleibt der Space wählbar", async () => {
+    connector.setCurrentGroup("h")
+    const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], "h")
+    await render(createElement(ItemDetailView, {
+      itemId: "t-h", mode: "edit", renderRead: () => null, contentTypes: types, mapper: mapComposerSubmission,
+      editInitialData: (i: Item) => ({ title: String(i.data.title) }), onClose: () => {},
+    }))
+    expect(host.querySelector('button[aria-label^="Space wählen"]')).not.toBeNull()
+  })
+
+  it("beim Anlegen: fest, sobald eine Item-Kante gewählt ist; wieder wählbar, wenn sie entfernt ist", async () => {
+    connector.setCurrentGroup("g")
+    const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], "g")
+    await render(createElement(ItemComposer, {
+      contentTypes: types, initialContentType: "task", mapper: mapComposerSubmission,
+      initialData: { title: "T", group: "g" }, onDone: () => {}, onCancel: () => {},
+    }))
+    expect(host.querySelector('button[aria-label^="Space wählen"]')).not.toBeNull()
+    const options = await type("", '[data-item-relation-field="blocks"] input')
+    expect(options).toEqual(["Im Garten"])
+    await act(async () => host.querySelector<HTMLInputElement>('[data-item-relation-field="blocks"] input')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })))
+    await settle()
+    expect(host.querySelector('button[aria-label^="Space wählen"]')).toBeNull()
+    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain(ITEM_BINDINGS_REASON)
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Im Garten entfernen"]')!.click())
+    await settle()
+    expect(host.querySelector('button[aria-label^="Space wählen"]')).not.toBeNull()
+  })
+})
+
+describe("Vorschläge folgen dem Formular-Space (Regel 3)", () => {
+  it("Personen: Mitglieder des Formular-Space, nicht des geöffneten", async () => {
+    connector.setCurrentGroup("g")
+    const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], "g")
+    await render(createElement(ItemComposer, {
+      contentTypes: types, initialContentType: "task", mapper: mapComposerSubmission,
+      initialData: { title: "T", group: "h" }, onDone: () => {}, onCancel: () => {},
+      // Der Host liefert die Mitglieder des GEÖFFNETEN Space (g: nur ich).
+      composerProps: { peopleOptions: [{ id: ME, name: "Ich" }], peopleQuickSuggestions: [{ id: ME, name: "Ich" }] },
+    }))
+    expect(host.textContent).toContain("Hofi")
+  })
+
+  it("Tags: Vokabular des Formular-Space", async () => {
+    connector.setCurrentGroup("g")
+    const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], "g")
+    await render(createElement(ItemComposer, {
+      contentTypes: types, initialContentType: "task", mapper: mapComposerSubmission,
+      initialData: { title: "T", group: "h", tags: [] }, onDone: () => {}, onCancel: () => {},
+      composerProps: { tagSuggestions: ["beet"], tagQuickSuggestions: ["beet"] },
+    }))
+    expect(host.textContent).toContain("pflaster")
+    expect(host.textContent).not.toContain("beet")
+  })
+})
+
+describe("Nach dem Anlegen in einem anderen Space (Regel 6)", () => {
+  it("öffnet das Detail nur, wenn der geöffnete Space das Item zeigt", async () => {
+    const { createdItemIsVisible } = await import("../src/components/host/create-host")
+    connector.setCurrentGroup("g")
+    const inH = await connector.createItem({ type: "task", createdBy: ME, data: {} }, { group: "h" })
+    const inG = await connector.createItem({ type: "task", createdBy: ME, data: {} })
+    expect(createdItemIsVisible(connector, inG)).toBe(true)
+    expect(createdItemIsVisible(connector, inH)).toBe(false)
+    connector.setCurrentGroup(null)
+    expect(createdItemIsVisible(connector, inH)).toBe(true)
+    expect(createdItemIsVisible(null, inH)).toBe(true)
+  })
+})

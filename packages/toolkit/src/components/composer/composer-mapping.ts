@@ -240,12 +240,36 @@ export function withFixedGroup(types: ContentTypeConfig[], groupId: string, reas
  */
 export const GROUP_FIXED_NO_MOVE = "Dieser Speicher kann Einträge nicht in einen anderen Space verschieben"
 
-export function withEditGroup(types: ContentTypeConfig[], canMove: boolean): ContentTypeConfig[] {
-  if (canMove) return types
+/**
+ * `lockedReason`: Das Item hat Beziehungen (shared-components → Space des
+ * Formulars, Regel 5) — der Space steht dann fest, auch wenn der Connector
+ * verschieben könnte, mit diesem Grund im Tooltip.
+ */
+export function withEditGroup(types: ContentTypeConfig[], canMove: boolean, lockedReason?: string): ContentTypeConfig[] {
+  if (canMove && !lockedReason) return types
   return types.flatMap((t) => {
     const known = t.defaultGroup && t.groupOptions?.some((o) => o.id === t.defaultGroup) ? t.defaultGroup : undefined
-    if (known) return withFixedGroup([t], known, GROUP_FIXED_NO_MOVE)
+    if (known) return withFixedGroup([t], known, canMove ? lockedReason : GROUP_FIXED_NO_MOVE)
     return [{ ...t, groupOptions: undefined, defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") }]
+  })
+}
+
+/**
+ * Der Space im Kopf des Erstellen-Formulars (shared-components → Space des
+ * Formulars, Regel 6): Mit `hasGroupScope()` legt der Connector in jedem
+ * angebotenen Space in einem Schritt an. Ohne die Zusage bietet das Formular
+ * nur den Space an, in dem der Connector ohne `group` anlegt — den
+ * geöffneten; in der Übersicht bestimmt der Connector ihn, das Formular
+ * zeigt dann keine Auswahl.
+ */
+export const GROUP_FIXED_NO_SCOPE = "Dieser Speicher legt nur im geöffneten Space an"
+
+export function withCreateGroup(types: ContentTypeConfig[], canScope: boolean, openSpace: string | undefined): ContentTypeConfig[] {
+  if (canScope) return types
+  return types.map((t) => {
+    if (!t.groupOptions) return t
+    if (openSpace && t.groupOptions.some((o) => o.id === openSpace)) return withFixedGroup([t], openSpace, GROUP_FIXED_NO_SCOPE)[0]!
+    return { ...t, groupOptions: undefined, defaultGroup: undefined, defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") }
   })
 }
 

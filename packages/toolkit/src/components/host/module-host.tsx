@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   filterForHint,
   isAggregateVisibleItemType,
+  hasGroupScope,
   isWritable,
   type Group,
   type Item,
@@ -24,6 +25,7 @@ import { useGroupVocabulary } from "../../hooks/use-group-vocabulary"
 import type { ModuleEntry } from "../../lib/module-register"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { contentTypesFromRegister, mapComposerSubmission, withGroupOptions } from "../composer/content-types"
+import { withCreateGroup } from "../composer/composer-mapping"
 import { useOptionalSharedFilter } from "../filter/filter-store"
 import { useOptionalModulePanel } from "../module-panel/module-panel"
 import { CreateFab } from "../create-fab/create-fab"
@@ -276,16 +278,19 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
   )
 
   const createShell = entry.options?.createShell ?? "sheet"
+  const connector = useConnector()
+  const canScope = hasGroupScope(connector)
   const createConfig = useMemo<CreateConfig>(
     () => ({
       // ALLE Typen; die Gruppenauswahl steht auf dem aktuellen Space, im
-      // Aggregat auf dem persoenlichen.
-      contentTypes: withGroupOptions(contentTypesFromRegister(), [...groups], currentSpace, personalGroupId),
+      // Aggregat auf dem persoenlichen. Ohne GroupScopeCapable nur der Space,
+      // in dem der Connector ohne `group` anlegt (Space des Formulars, Regel 6).
+      contentTypes: withCreateGroup(withGroupOptions(contentTypesFromRegister(), [...groups], currentSpace, personalGroupId), canScope, currentSpace),
       mapper: mapComposerSubmission,
       composerProps,
       shell: createShell,
     }),
-    [groups, currentSpace, personalGroupId, composerProps, createShell],
+    [groups, currentSpace, personalGroupId, composerProps, createShell, canScope],
   )
   useRegisterCreate(entry.id, createConfig)
 
@@ -308,7 +313,6 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
   // solange ein Ort auf der Karte gewaehlt wird, ohne Schreibrecht, und
   // solange ein vom Modul gemeldeter eigener Einstieg im Bild ist.
   const create = useOptionalCreate()
-  const connector = useConnector()
   const { isPicking } = useLocationPick()
   const [anchor, setAnchor] = useState<Element | null>(null)
   const anchorRef = useMemo(() => ({ current: anchor }), [anchor])

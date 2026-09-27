@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useId, useMemo, useRef, useState, startTransition } from "react"
-import { hasGroups, hasItemGroups, type DataInterface, type Item } from "@real-life-stack/data-interface"
+import { hasGroups, hasGroupScope, hasItemGroups, type DataInterface, type Item } from "@real-life-stack/data-interface"
 import { Lock, MousePointerClick } from "lucide-react"
 
 import { useOptionalConnector } from "../../../hooks/connector-context"
@@ -34,29 +34,55 @@ export type RequestItemPick = (request: { predicate: string; targetType?: string
  * Die Items der Gegenstelle, ohne Provider leer. Nur der Space des Formulars:
  * Ein `item:`-Target ist space-lokal (04), ein Item aus einem anderen Space
  * wäre dort ein anderes oder keins.
+ *
+ * #529: Mit `hasGroupScope()` liest das Feld den Formular-Space direkt
+ * (`ItemFilter.group`, 02) — in jedem Space, ohne ihn zu öffnen. Ohne die
+ * Zusage liest der Connector im geöffneten Space (Übersicht: alle); ist das
+ * ein anderer als der im Formularkopf, sagt das Feld es, statt still leer
+ * zu bleiben (Space des Formulars, Regel 7).
  */
 function useCandidates(targetType: string | undefined, spaceId: string | undefined): { items: Item[]; all: readonly Item[]; needsSpace: boolean; otherSpace: boolean; spaceOf?: (id: string) => string | null } {
   const connector = useOptionalConnector()
+  const scoped = !!connector && !!spaceId && hasGroupScope(connector)
   const filterKey = JSON.stringify(targetFilter(targetType))
-  // #529: Items liest der Connector im geöffneten Space (Übersicht: alle).
-  // Ist das ein anderer als der im Formularkopf, gibt es keine Kandidaten —
-  // das Feld sagt es, statt still leer zu bleiben (DataInterface hat keinen
-  // Lesezugriff auf einen anderen Space; offen, siehe PR #528).
+  const scopedKey = scoped ? JSON.stringify({ ...targetFilter(targetType), group: spaceId }) : null
   const openSpace = connector && hasGroups(connector) ? (connector.getCurrentGroup()?.id ?? null) : null
+  // Die sichtbaren Items: für gewählte Ziele, die schon anderswohin zeigen
+  // (`space:{id}/item:`), und ohne die Zusage für die Suche.
   const observable = useMemo(
     () => (connector ? connector.observe(JSON.parse(filterKey)) : null),
     [connector, filterKey],
   )
+  const scopedObservable = useMemo(
+    () => (connector && scopedKey ? connector.observe(JSON.parse(scopedKey)) : null),
+    [connector, scopedKey],
+  )
+  const [inScope, setInScope] = useState<readonly Item[]>(scopedObservable?.current ?? [])
+  useEffect(() => {
+    if (!scopedObservable) {
+      setInScope([])
+      return
+    }
+    setInScope(scopedObservable.current)
+    return scopedObservable.subscribe((next) => startTransition(() => setInScope(next)))
+  }, [scopedObservable])
   const [items, setItems] = useState<readonly Item[]>(observable?.current ?? [])
   useEffect(() => {
     if (!observable) return
     setItems(observable.current)
     return observable.subscribe((next) => startTransition(() => setItems(next)))
   }, [observable])
-  return useMemo(
-    () => ({ ...inSpace(connector, items, spaceId), all: items, otherSpace: !!spaceId && openSpace !== null && openSpace !== spaceId }),
-    [connector, items, spaceId, openSpace],
-  )
+  return useMemo(() => {
+    if (scoped) {
+      // Alles, was der Connector mit `group` liefert, liegt in diesem Space —
+      // auch wenn `getItemGroupId` eine Id in mehreren Spaces nicht auflöst.
+      const ids = new Set(inScope.map((item) => item.id))
+      const others = items.filter((item) => !ids.has(item.id))
+      const spaceOf = (id: string) => (ids.has(id) ? spaceId ?? null : connector && hasItemGroups(connector) ? connector.getItemGroupId(id) : null)
+      return { items: [...inScope], all: [...inScope, ...others], needsSpace: false, otherSpace: false, spaceOf }
+    }
+    return { ...inSpace(connector, items, spaceId), all: items, otherSpace: !!spaceId && openSpace !== null && openSpace !== spaceId }
+  }, [connector, items, inScope, spaceId, openSpace, scoped])
 }
 
 /**
@@ -182,7 +208,7 @@ export function ItemRelationWidget({
             <span data-needs-space className="text-sm text-muted-foreground">Erst einen Space wählen</span>
           )}
           {!full && otherSpace && (
-            <span data-other-space className="text-sm text-muted-foreground">Suche nur im geöffneten Space – zum Verknüpfen in „{spaceName}“ dorthin wechseln</span>
+            <span data-other-space className="text-sm text-muted-foreground">Dieser Speicher sucht nur im geöffneten Space – zum Verknüpfen in „{spaceName}“ dorthin wechseln</span>
           )}
           {!full && !needsSpace && !otherSpace && (
             <input

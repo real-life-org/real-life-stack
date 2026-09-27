@@ -11,6 +11,8 @@ interface TagsWidgetProps {
   suggestions?: string[] | ((query: string) => Promise<string[]>)
   /** Quick-select suggestions shown as clickable chips below the input */
   quickSuggestions?: string[]
+  /** Warum es keine Vorschläge gibt (shared-components → Space des Formulars, Regel 7). */
+  hint?: string
 }
 
 export function TagsWidget({
@@ -19,6 +21,7 @@ export function TagsWidget({
   label,
   suggestions,
   quickSuggestions,
+  hint,
 }: TagsWidgetProps) {
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<string[]>([])
@@ -140,6 +143,7 @@ export function TagsWidget({
           ))}
         </div>
       )}
+      {hint && <p data-suggestions-hint className="mt-1.5 text-xs text-muted-foreground">{hint}</p>}
       {quickSuggestions && quickSuggestions.filter((s) => !value.includes(s)).length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
           {quickSuggestions

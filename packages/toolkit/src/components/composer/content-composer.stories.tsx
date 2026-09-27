@@ -314,3 +314,28 @@ export const SaveError: Story = {
     },
   },
 }
+
+/**
+ * The space in the form head is fixed as soon as the item has relationships
+ * (shared-components → „Space des Formulars", rule 5): here an item edge
+ * („Ermöglicht") is chosen, so the space pill turns into a muted fixed
+ * display with the reason as tooltip. Remove the chip and the space is
+ * choosable again. Saving is not blocked.
+ */
+export const SpaceFixedByRelations: Story = {
+  name: "Space fixed by relationships",
+  args: {
+    contentTypes: [
+      {
+        ...taskType,
+        defaultWidgets: [...taskType.defaultWidgets, "item-relation"],
+        itemRelations: [{ predicate: "blocks", label: "Ermöglicht", placeholder: "@ Aufgabe suchen…", targetType: "task" }],
+        defaultGroup: "g1",
+      },
+    ],
+    mode: "task",
+    initialData: { group: "g1", title: "Beete umgraben", "relation:blocks": ["item:t-kompost"] },
+    showPreview: false,
+    onSubmit: action("onSubmit"),
+  },
+}

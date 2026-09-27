@@ -114,13 +114,13 @@
             "docs/spec/02-data-interface.md"
           ],
           "source": "packages/toolkit/src/hooks/use-item-editor.ts",
-          "line": 197
+          "line": 218
         },
         {
           "name": "useCreateItem",
           "signature": "",
-          "question": "Create a new item.",
-          "answers": "`(input) => Promise<Item>`",
+          "question": "Create a new item — optionally directly in a given space (`{ group }`).",
+          "answers": "`(input, options?) => Promise<Item>`",
           "without": "throws on call",
           "stories": [
             "rls-foundations-hooks--write"
@@ -129,7 +129,7 @@
             "docs/spec/02-data-interface.md"
           ],
           "source": "packages/toolkit/src/hooks/use-mutations.ts",
-          "line": 30
+          "line": 35
         },
         {
           "name": "useUpdateItem",
@@ -144,7 +144,7 @@
             "docs/spec/02-data-interface.md"
           ],
           "source": "packages/toolkit/src/hooks/use-mutations.ts",
-          "line": 44
+          "line": 54
         },
         {
           "name": "useDeleteItem",
@@ -159,7 +159,7 @@
             "docs/spec/02-data-interface.md"
           ],
           "source": "packages/toolkit/src/hooks/use-mutations.ts",
-          "line": 61
+          "line": 71
         },
         {
           "name": "useUnsavedChanges",
@@ -699,7 +699,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/components/host/create-host.tsx",
-          "line": 278
+          "line": 297
         },
         {
           "name": "useOptionalCreate",
@@ -714,7 +714,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/components/host/create-host.tsx",
-          "line": 295
+          "line": 314
         },
         {
           "name": "useModuleHost",
@@ -729,7 +729,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/components/host/module-host.tsx",
-          "line": 113
+          "line": 115
         },
         {
           "name": "useModulePanel",
