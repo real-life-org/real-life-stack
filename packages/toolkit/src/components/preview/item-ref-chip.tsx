@@ -5,7 +5,7 @@ import { X } from "lucide-react"
 
 import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import { cn } from "../../lib/utils"
-import { doneValue } from "./field-register"
+import { statusRole } from "./field-register"
 import { GENERIC_BADGE, resolveTypePresentation } from "./type-presentation"
 
 /**
@@ -16,7 +16,7 @@ import { GENERIC_BADGE, resolveTypePresentation } from "./type-presentation"
  * Panel-Instanz), Widget-Paare C3 (erledigte Ziele durchgestrichen) und B15.
  *
  * Farbe und Icon kommen aus dem Typ-Badge des ZIELS; ob es erledigt ist, sagt
- * der Erledigt-Wert seines Status-Felds (06, Regel 18) — keine Verzweigung
+ * die Rolle `done` seines Status-Werts (06, Regel 18) — keine Verzweigung
  * über den Typ.
  */
 
@@ -26,13 +26,12 @@ const titleOf = (item: Item): string => {
   return typeof title === "string" && title.trim() !== "" ? title : "Ohne Titel"
 }
 
-/** Ist das Item erledigt? Der Erledigt-Wert seines Status-Felds aus dem Register. */
+/** Ist das Item erledigt? Sein Status-Wert trägt im Register die Rolle `done` (06, Regel 18). */
 export function isItemDone(item: Item): boolean {
   const presentation = resolveTypePresentation(item.type)
   for (const field of presentation.fields ?? []) {
     if (field.widget !== "status") continue
-    const done = doneValue(field)
-    if (done !== undefined && (item.data as Record<string, unknown> | undefined)?.[field.key] === done) return true
+    if (statusRole(field, (item.data as Record<string, unknown> | undefined)?.[field.key]) === "done") return true
   }
   return false
 }

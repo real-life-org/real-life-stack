@@ -17,7 +17,8 @@ import {
 /**
  * S3, Teil A: Folgeaktionen der Aufgabe (Entscheidung 27; shared-components,
  * C2), nach Antons Entscheidung: Nicht übernommen „Übernehmen"; übernommen
- * „✓ Übernommen · Erledigt"; erledigt „✓ Übernommen · ✓ Erledigt".
+ * „✓ Übernommen · Erledigt"; erledigt „✓ Übernommen · ✓ Erledigt". Seit S3b
+ * mit Rollen der Status-Optionen und „Mitmachen" (aufgabe-zustandsmodell.test.tsx).
  * „✓ Übernommen" ist ein Umschalter (Abgeben), „✓ Erledigt" ein Zustand —
  * zurück geht es nur über Bearbeiten oder das Kanban.
  */
@@ -104,9 +105,13 @@ const pressed = (label: string) => pill(label)?.getAttribute("aria-pressed")
 const doneState = () => host.querySelector("[data-self-state]")
 
 describe("Folgeaktionen der Aufgabe als Umschalter (Entscheidung 27, Anton)", () => {
-  it("nicht übernommen: nur „Übernehmen“", async () => {
-    await render(task([{ predicate: "assignedTo", target: `global:${TIMO}` }]))
+  it("nicht übernommen: nur „Übernehmen“; stehen andere an der Kante, „Mitmachen“", async () => {
+    await render(task([]))
     expect(pills()).toEqual(["Übernehmen"])
+    await act(async () => root.unmount())
+    root = createRoot(host)
+    await render(task([{ predicate: "assignedTo", target: `global:${TIMO}` }]))
+    expect(pills()).toEqual(["Mitmachen"])
   })
 
   it("übernommen: „✓ Übernommen · Erledigt“; Erledigt schreibt den Erledigt-Wert, dann „✓ Übernommen · ✓ Erledigt“", async () => {
@@ -141,11 +146,11 @@ describe("Folgeaktionen der Aufgabe als Umschalter (Entscheidung 27, Anton)", ()
       { predicate: "assignedTo", target: `global:${TIMO}`, meta: { note: "bleibt" } },
       { predicate: "assignedTo", target: `global:${ME}` },
     ]))
-    await click(pill("Übernommen"))
+    await click(pill("Dabei"))
     expect((await connector.getItem("t1"))?.relations).toEqual([
       { predicate: "assignedTo", target: `global:${TIMO}`, meta: { note: "bleibt" } },
     ])
-    expect(pills()).toEqual(["Übernehmen"])
+    expect(pills()).toEqual(["Mitmachen"])
   })
 
   it("eine erledigte Aufgabe abgeben: die Zuweisung geht, der Status bleibt erledigt", async () => {
@@ -159,7 +164,7 @@ describe("Folgeaktionen der Aufgabe als Umschalter (Entscheidung 27, Anton)", ()
 
   it("wer nicht übernommen hat, sieht kein „Erledigt“ — auch nicht bei einer erledigten Aufgabe", async () => {
     await render(task([{ predicate: "assignedTo", target: `global:${TIMO}` }], "done"))
-    expect(pills()).toEqual(["Übernehmen"])
+    expect(pills()).toEqual(["Mitmachen"])
   })
 
   it("Doppelklick auf „✓ Übernommen“ gibt ab und übernimmt nicht wieder", async () => {
@@ -186,11 +191,11 @@ describe("Folgeaktionen der Aufgabe als Umschalter (Entscheidung 27, Anton)", ()
   })
 })
 
-describe("Register: Erledigt-Wert und Folgeaktion", () => {
-  it("die Aufgabe markiert „done“ als Erledigt-Wert und deklariert den Umschalter an assignedTo", () => {
+describe("Register: Rolle done und Folgeaktion", () => {
+  it("die Aufgabe gibt „done“ die Rolle done und deklariert den Umschalter an assignedTo", () => {
     const t = resolveTypePresentation("task")
     const status = t.fields?.find((f) => f.key === "status")
-    expect(status?.options?.filter((o) => o.done).map((o) => o.id)).toEqual(["done"])
+    expect(status?.options?.filter((o) => o.role === "done").map((o) => o.id)).toEqual(["done"])
     const assigned = t.edges?.find((e) => e.predicate === "assignedTo")
     expect(assigned?.selfAction?.followUps).toEqual({
       field: "status",
@@ -209,7 +214,7 @@ describe("Register: Erledigt-Wert und Folgeaktion", () => {
     selfAction: { label: "Übernehmen", mine: "Übernommen", followUps: followUps as never },
   })
 
-  it("lehnt Folgeaktionen ohne Status-Feld mit genau einem Erledigt-Wert ab", () => {
+  it("lehnt Folgeaktionen ohne Status-Feld mit Rollen open und done ab", () => {
     setTypeManifest(manifest)
     expect(() =>
       registerTypePresentation("app", [{
@@ -217,24 +222,24 @@ describe("Register: Erledigt-Wert und Folgeaktion", () => {
         fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A" }] }],
         edges: [edge()],
       }]),
-    ).toThrow(/Erledigt-Wert/)
+    ).toThrow(/Rolle open und einer der Rolle done/)
   })
 
-  it("lehnt mehr als einen Erledigt-Wert ab", () => {
+  it("mehrere Optionen dürfen dieselbe Rolle tragen (Regel 18)", () => {
     setTypeManifest(manifest)
-    expect(() =>
-      registerTypePresentation("app", [{
-        id: "chore", label: "Dienst",
-        fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A", done: true }, { id: "b", label: "B", done: true }] }],
-      }]),
-    ).toThrow(/mehr als einen Erledigt-Wert/)
+    registerTypePresentation("app", [{
+      id: "chore", label: "Dienst",
+      fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "o", label: "O", role: "open" }, { id: "a", label: "A", role: "done" }, { id: "b", label: "B", role: "done" }] }],
+      edges: [edge()],
+    }])
+    expect(resolveTypePresentation("chore").actions).toBeDefined()
   })
 
   it("mit Qualifier: mein Wert ist ein Umschalter, daneben „Fertig“", async () => {
     setTypeManifest(manifest)
     registerTypePresentation("app", [{
       id: "chore", label: "Dienst",
-      fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A" }, { id: "z", label: "Z", done: true }] }],
+      fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A", role: "open" }, { id: "z", label: "Z", role: "done" }] }],
       edges: [{
         ...edge(),
         qualifier: { key: "role", values: [{ id: "can", label: "kann" }, { id: "learns", label: "lernt" }] },
@@ -259,7 +264,7 @@ describe("Register: Erledigt-Wert und Folgeaktion", () => {
     setTypeManifest(manifest)
     registerTypePresentation("app", [{
       id: "chore", label: "Dienst",
-      fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A" }, { id: "z", label: "Z", done: true }] }],
+      fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A", role: "open" }, { id: "z", label: "Z", role: "done" }] }],
       edges: [edge()],
     }])
     expect(resolveTypePresentation("chore").actions).toBeDefined()
@@ -270,7 +275,7 @@ describe("Codex Runde 5: Record-Kante mit Folgeaktionen", () => {
   it("ein ungültiger eigener Record zählt nicht als „ich stehe an der Kante“", async () => {
     const { useFollowUps } = await import("../src/components/preview/use-people-line")
     const edge = { predicate: "attends", itemRole: "to" as const, storage: "record" as const, widget: "people" as const, pos: "meta" as const, label: "x" }
-    const statusField = { key: "status", widget: "status" as const, pos: "meta" as const, options: [{ id: "open", label: "o" }, { id: "done", label: "d", done: true }] }
+    const statusField = { key: "status", widget: "status" as const, pos: "meta" as const, options: [{ id: "open", label: "o", role: "open" as const }, { id: "done", label: "d", role: "done" as const }] }
     const t = task([], "open")
     const record: Item = { id: "rel-1", type: "relation", createdBy: ME, createdAt: "2026-09-27T10:00:00.000Z", data: { predicate: "attends", role: "going" }, relations: [{ predicate: "from", target: `global:${ME}` }, { predicate: "to", target: "item:t1" }] }
     let run: ((id: "complete") => Promise<void>) | undefined
@@ -301,7 +306,7 @@ describe("Codex Runde 8: Qualifier-Wechsel vor dem nächsten Render", () => {
     setTypeManifest(manifest)
     registerTypePresentation("app", [{
       id: "chore", label: "Dienst",
-      fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A" }, { id: "z", label: "Z", done: true }] }],
+      fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A", role: "open" }, { id: "z", label: "Z", role: "done" }] }],
       edges: [{
         predicate: "assignedTo", itemRole: "from", storage: "embedded", widget: "people", pos: "meta", label: "Wer",
         qualifier: { key: "role", values: [{ id: "can", label: "kann" }, { id: "learns", label: "lernt" }] },

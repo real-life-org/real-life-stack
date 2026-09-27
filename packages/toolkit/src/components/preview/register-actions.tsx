@@ -1,11 +1,12 @@
 "use client"
 
+import { useMemo } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 import { Check } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 import { VoteActions } from "../resonance/vote-actions"
-import { doneValue, type EdgeEntry, type FieldEntry } from "./field-register"
+import { statusRole, type EdgeEntry, type FieldEntry } from "./field-register"
 import { useFollowUps, useSelfAction } from "./use-people-line"
 
 /**
@@ -62,15 +63,19 @@ const capitalize = (word: string) => word.charAt(0).toLocaleUpperCase("de") + wo
 /**
  * Pill-Zeile einer Selbstaktion (C2): vor der Aktion neutral (die erste Pill
  * hervorgehoben), danach mein Zustand („✓ Zugesagt"). Auch `declined` ist ein
- * Zustand und bleibt als meiner sichtbar (Detail-Anatomie, Regel 7). Jede
- * Pill ist ein Umschalter; der zweite Klick auf meinen Zustand nimmt ihn
- * zurück — idempotent, ein Doppelklick übernimmt nicht wieder.
+ * Zustand und bleibt als meiner sichtbar (Detail-Anatomie, Regel 7). Die Pill
+ * meines Zustands ist ein Umschalter; der zweite Klick nimmt ihn zurück —
+ * idempotent, ein Doppelklick übernimmt nicht wieder.
  *
- * Deklariert die Kante eine Folgeaktion (`selfAction.followUps`, Entscheidung
- * 27), steht nach meinem Zustand „Erledigt" — nur für mich, wenn ich die
- * Selbstaussage habe, und nur mit Schreibrecht am Item: „✓ Übernommen ·
- * Erledigt", erledigt „✓ Übernommen · ✓ Erledigt". „✓ Erledigt" ist ein
- * Zustand, kein Umschalter. Abgeben lässt den Status, wie er ist.
+ * Mitmachen (`selfAction.join`, Spec 06 Regel 9): Stehen andere an der Kante
+ * und ich nicht, heißt die Pill „Mitmachen"; stehe ich mit anderen dort,
+ * „✓ Dabei" (Rücknahme „Nicht mehr mitmachen"); allein „✓ Übernommen".
+ *
+ * Deklariert die Kante eine Folgeaktion (`selfAction.followUps`), steht nach
+ * meinem Zustand „Erledigt" — nur, wenn ich an der Kante stehe, mit
+ * Schreibrecht am Item und einem Status der Rolle `open` oder `active`. Hat er
+ * die Rolle `done`, steht „✓ Erledigt" als Zustand da, kein Knopf. Dazukommen
+ * und Abgeben ändern den Status nach Regel 19 (useSelfAction).
  */
 export function SelfActionPills({
   item,
@@ -83,9 +88,10 @@ export function SelfActionPills({
   fields?: readonly FieldEntry[]
   defaultStatus?: string
 }) {
-  const { available, mine, act, withdraw, busy, error } = useSelfAction(item, edge)
   const followUps = edge.selfAction?.followUps
-  const statusField = followUps ? fields?.find((f) => f.key === followUps.field) : undefined
+  const statusField = followUps ? fields?.find((f) => f.key === followUps.field && f.widget === "status") : undefined
+  const transitions = useMemo(() => (statusField ? { field: statusField, defaultStatus } : undefined), [statusField, defaultStatus])
+  const { available, mine, others, act, withdraw, busy, error } = useSelfAction(item, edge, transitions)
   const follow = useFollowUps(item, statusField, defaultStatus, edge)
   if (!available || !edge.selfAction) return null
   const values = edge.selfAction.qualifiers?.length
@@ -94,9 +100,10 @@ export function SelfActionPills({
         .filter((v): v is NonNullable<typeof v> => !!v)
     : null
   const neutral = mine === undefined
-  const withFollowUp = !!followUps && !neutral && follow.available
-  const doneId = doneValue(statusField)
-  const isDone = withFollowUp && doneId !== undefined && item.data?.[followUps!.field] === doneId
+  const withFollowUp = !!followUps && !!statusField && !neutral && follow.available
+  const role = withFollowUp ? statusRole(statusField, item.data?.[followUps!.field], defaultStatus) : undefined
+  const join = others ? edge.selfAction.join : undefined
+  const release = join ? join.release : followUps?.release
 
   const pills = values
     ? values.map((value, index) => ({
@@ -112,7 +119,7 @@ export function SelfActionPills({
           value: undefined,
           on: mine !== undefined,
           primary: neutral,
-          label: mine !== undefined ? edge.selfAction.mine : edge.selfAction.label,
+          label: mine !== undefined ? (join?.mine ?? edge.selfAction.mine) : (join?.label ?? edge.selfAction.label),
         },
       ]
 
@@ -130,7 +137,7 @@ export function SelfActionPills({
           type="button"
           aria-pressed={pill.on}
           // Mein Zustand nimmt beim zweiten Klick zurück; der Name sagt es.
-          aria-label={pill.on && followUps ? `${pill.label} – ${followUps.release}` : undefined}
+          aria-label={pill.on && release ? `${pill.label} – ${release}` : undefined}
           disabled={pill.on && busy}
           // Ohne Qualifier ist der zweite Klick die Rücknahme — idempotent
           // (withdraw), ein Doppelklick übernimmt nicht wieder. Mit Qualifier
@@ -143,7 +150,7 @@ export function SelfActionPills({
           {pill.label}
         </button>
       ))}
-      {withFollowUp && isDone && (
+      {role === "done" && (
         // „✓ Erledigt" ist ein Zustand, nicht zurücknehmbar (Anton): zurück
         // geht es über Bearbeiten (Status im Formular) oder das Kanban.
         <span data-self-state role="status" className={cn(PILL, PILL_ON)}>
@@ -151,12 +158,12 @@ export function SelfActionPills({
           {followUps!.complete.label}
         </span>
       )}
-      {withFollowUp && !isDone && (
+      {(role === "open" || role === "active") && (
         <button
           type="button"
           disabled={follow.busy || busy}
           data-follow-up="complete"
-          // Frisch geprüft beim Auslösen (#531): nur, wenn ich noch an der Kante stehe und der Status offen ist.
+          // Frisch geprüft beim Auslösen (#531): nur, wenn ich noch an der Kante stehe und der Status open oder active ist.
           onClick={() => void follow.run("complete")}
           className={cn(PILL, PILL_IDLE, "disabled:opacity-60")}
         >

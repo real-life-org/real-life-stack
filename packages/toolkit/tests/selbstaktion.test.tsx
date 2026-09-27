@@ -162,10 +162,11 @@ describe("Selbstaktion (C2)", () => {
     expect(pill("Zusagen")?.getAttribute("aria-pressed")).toBe("false")
   })
 
-  it("Aufgabe: „Übernehmen“ trägt mich in assignedTo ein und erhält meta bestehender Kanten", async () => {
+  it("Aufgabe: „Mitmachen“ trägt mich in assignedTo ein und erhält meta bestehender Kanten", async () => {
     const Actions = resolveTypePresentation("task").actions!
     await render(() => createElement(Actions, { item: TASK }))
-    await click(pill("Übernehmen"))
+    // Timo steht schon an der Kante: „Mitmachen" statt „Übernehmen" (Spec 06, Regel 9).
+    await click(pill("Mitmachen"))
     const saved = await connector.getItem("t1")
     expect(saved?.relations).toEqual([
       { predicate: "assignedTo", target: `global:${TIMO}`, meta: { note: "bleibt" } },

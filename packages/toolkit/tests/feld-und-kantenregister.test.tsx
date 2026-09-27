@@ -203,7 +203,15 @@ describe("ContentTypeConfig aus dem Register (Spec 06, Regel 16)", () => {
     expect(task.defaultWidgets).toEqual(["title", "text", "people", "date", "item-relation", "status", "tags"])
     expect(task.statusOptions?.map((o) => o.id)).toEqual(["open", "in-progress", "done"])
     expect(task.widgetLabels).toMatchObject({ text: "Beschreibung", date: "Fällig" })
-    expect(task.peopleRelations).toEqual([{ predicate: "assignedTo", label: "Zugewiesen", placeholder: "Zuweisen…" }])
+    expect(task.peopleRelations).toEqual([
+      {
+        predicate: "assignedTo",
+        label: "Zugewiesen",
+        placeholder: "Zuweisen…",
+        // role can | learns im Kern, fehlend = can (Spec 06, Regel 20).
+        qualifier: { key: "role", values: [{ id: "can", label: "kann" }, { id: "learns", label: "lernt" }], default: "can" },
+      },
+    ])
     expect(task.defaultStatus).toBe("open")
     expect(task.groupRequired).toBe(true)
   })

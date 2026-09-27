@@ -33,6 +33,9 @@ export type WidgetId =
   | "tags"
   | "item-ref"
 
+/** Rolle einer Status-Option (Spec 06, Regel 18). */
+export type StatusRole = "open" | "active" | "done"
+
 export interface FieldOption {
   id: string
   label: string
@@ -44,29 +47,45 @@ export interface FieldOption {
    */
   action?: string
   /**
-   * Nur Optionen eines `status`-Felds: Dieser Wert heißt „erledigt". Höchstens
-   * eine Option je Feld. die Folgeaktion „Erledigt" und die
-   * Leseform erledigter Ziele (C3, durchgestrichen) lesen ihn; die Spalten
-   * eines Kanban sind je App verschieden und sagen es nicht.
+   * Nur Optionen eines `status`-Felds: die Rolle der Option (Spec 06, Regel
+   * 18) — `open` (offen), `active` (in Arbeit), `done` (erledigt). Mehrere
+   * Optionen dürfen dieselbe Rolle tragen; eine Option ohne Rolle (etwa
+   * `archived`) ist Ausgangspunkt keines Übergangs. Folgeaktionen, Übergänge
+   * (Regel 19) und die Leseform erledigter Ziele (C3) lesen die Rolle, nie
+   * die Id. Ersetzt die Markierung `done: true` aus S3.
    */
-  done?: boolean
+  role?: StatusRole
 }
 
 /**
- * Die Folgeaktion einer Selbstaktion (C2, Entscheidung 27, Anton): „Erledigt"
- * am Status-Feld schreibt die Option mit `done: true`; danach steht
- * „✓ Erledigt" als Zustand da, nicht zurücknehmbar — zurück geht es über
- * Bearbeiten oder das Modul. Abgeben ist der zweite Klick auf meinen Zustand
- * („✓ Übernommen"). Zuweisung und Status sind getrennt: Wer eine erledigte
- * Aufgabe abgibt, lässt sie erledigt.
+ * Die Folgeaktion einer Selbstaktion (C2; Spec 06, Regeln 9 und 19):
+ * „Erledigt" am Status-Feld schreibt die erste Option der Rolle `done`; hat
+ * der Status die Rolle `done`, steht „✓ Erledigt" als Zustand da, nicht
+ * zurücknehmbar — zurück geht es über Bearbeiten oder das Modul. Abgeben ist
+ * der zweite Klick auf meinen Zustand. Dazukommen und Abgeben ändern den
+ * Status nach Regel 19.
  */
 export interface SelfActionFollowUps {
-  /** `key` eines `status`-Felds desselben Typs, das eine Option mit `done: true` führt. */
+  /** `key` eines `status`-Felds desselben Typs mit Optionen der Rollen `open` und `done`. */
   field: string
   /** Beschriftung der Aktion und des Zustands („Erledigt"). */
   complete: { label: string }
   /** Rücknahme meines Zustands für Screenreader („Übernahme zurückgeben"). */
   release: string
+}
+
+/**
+ * Selbstaktion einer Kante (C2; Spec 06, Regel 9). `join`: Beschriftungen,
+ * wenn andere an der Kante stehen — „Mitmachen" statt `label`, „Dabei" statt
+ * `mine`, „Nicht mehr mitmachen" als Rücknahme. Maßgeblich ist der Stand der
+ * Kante, nicht, wer zuerst da war.
+ */
+export interface SelfActionEntry {
+  label: string
+  mine: string
+  qualifiers?: readonly string[]
+  join?: { label: string; mine: string; release: string }
+  followUps?: SelfActionFollowUps
 }
 
 export interface FieldEntry {
@@ -105,13 +124,13 @@ export interface EdgeEntry {
   widget: EdgeWidgetId
   pos: "meta" | "actions" | "list" | "badge"
   label: string
-  qualifier?: { key: string; values: readonly FieldOption[] }
   /**
-   * Selbstaktion (C2). `followUps`: was nach der Selbstaktion in derselben
-   * Zeile steht („✓ Übernommen · Erledigt"), nur für die Person
-   * mit der Selbstaussage (Entscheidung 27).
+   * `default`: der Wert, als der ein fehlender Qualifier gilt („can" an
+   * `assignedTo`); die Leseform zeigt ihn dann nicht (Regel 7).
    */
-  selfAction?: { label: string; mine: string; qualifiers?: readonly string[]; followUps?: SelfActionFollowUps }
+  qualifier?: { key: string; values: readonly FieldOption[]; default?: string }
+  /** Selbstaktion (C2), siehe {@link SelfActionEntry}. */
+  selfAction?: SelfActionEntry
   /** Nur für `itemRole: "to"` (Rückwärts-Liste). */
   list?: { filter?: "open" | "upcoming"; sort?: string }
   /** Nur `storage: "record"` (Regel 8). */
@@ -128,8 +147,9 @@ export interface EdgeEntry {
 }
 
 /**
- * Folgeaktionen einer Selbstaktion (Entscheidung 27) brauchen ein Status-Feld
- * desselben Typs mit genau einem Erledigt-Wert. Geprüft nach dem Vereinigen, weil Feld und Kante aus
+ * Folgeaktionen einer Selbstaktion brauchen ein Status-Feld desselben Typs
+ * mit mindestens einer Option der Rolle `open` und einer der Rolle `done`
+ * (Spec 06, Regel 9). Geprüft nach dem Vereinigen, weil Feld und Kante aus
  * verschiedenen Beiträgen kommen dürfen.
  */
 export function assertFollowUps(typeId: string, fields: readonly FieldEntry[] = [], edges: readonly EdgeEntry[] = []): void {
@@ -138,18 +158,27 @@ export function assertFollowUps(typeId: string, fields: readonly FieldEntry[] = 
     if (!followUps) continue
     const where = `Folgeaktionen an (${edge.predicate}, ${edge.itemRole}) an "${typeId}"`
     const field = fields.find((f) => f.key === followUps.field && f.widget === "status")
-    const done = field?.options?.filter((o) => o.done) ?? []
-    if (!field || done.length !== 1) {
-      throw new Error(`Typ-Register: ${where} nennen "${followUps.field}", aber kein status-Feld mit genau einem Erledigt-Wert (Spec 06, Feld- und Kantenregister).`)
+    if (!field || !firstOptionWithRole(field, "open") || !firstOptionWithRole(field, "done")) {
+      throw new Error(`Typ-Register: ${where} nennen "${followUps.field}", aber kein status-Feld mit einer Option der Rolle open und einer der Rolle done (Spec 06, Feld- und Kantenregister, Regel 9).`)
     }
   }
 }
 
-/** Der Erledigt-Wert eines Status-Felds, oder undefined. */
-export function doneValue(field: FieldEntry | undefined): string | undefined {
-  return field?.options?.find((o) => o.done)?.id
+/** Die erste Option einer Rolle in Register-Reihenfolge (Regel 18), oder undefined. */
+export function firstOptionWithRole(field: FieldEntry | undefined, role: StatusRole): string | undefined {
+  return field?.options?.find((o) => o.role === role)?.id
 }
 
+/**
+ * Die Rolle eines Status-Werts (Regel 18). Ohne Wert gilt `fallback` (der
+ * Standard-Status des Typs); ein unbekannter Wert und eine Option ohne Rolle
+ * haben keine.
+ */
+export function statusRole(field: FieldEntry | undefined, value: unknown, fallback?: string): StatusRole | undefined {
+  const id = typeof value === "string" && value !== "" ? value : fallback
+  if (id === undefined) return undefined
+  return field?.options?.find((o) => o.id === id)?.role
+}
 
 /**
  * `joins` muss eine Personen-Kante der zusammengesetzten Kantenliste nennen
@@ -163,6 +192,16 @@ export function assertJoins(typeId: string, edges: readonly EdgeEntry[] = []): v
     if (edge.widget !== "people" || !target) {
       throw new Error(`Typ-Register: Kante (${edge.predicate}, ${edge.itemRole}) an "${typeId}" nennt in joins "${edge.joins}", aber keine Personen-Kante der Meta-Box ohne eigenes joins (Spec 06, Feld- und Kantenregister).`)
     }
+  }
+}
+
+/** Regel 9 und 20: Die Pills einer Selbstaktion setzen nur Werte, die der Qualifier der Kante deklariert. */
+export function assertSelfActionValues(edge: EdgeEntry, selfAction: SelfActionEntry, onFail: (message: string) => never): void {
+  if (!selfAction.qualifiers?.length) return
+  const allowed = new Set((edge.qualifier?.values ?? []).map((v) => v.id))
+  const unknown = selfAction.qualifiers.filter((q) => !allowed.has(q))
+  if (unknown.length > 0) {
+    onFail(`Selbstaktion an (${edge.predicate}, ${edge.itemRole}) setzt ${unknown.join(", ")}, das der Qualifier nicht deklariert`)
   }
 }
 
@@ -211,9 +250,10 @@ export function assertRegisterLists(
     // Regel 11: item-ref trägt ref, und nur item-ref.
     if (field.widget === "item-ref" && !field.ref) fail(layer, typeId, `Feld "${field.key}" (item-ref) braucht ref`)
     if (field.widget !== "item-ref" && field.ref) fail(layer, typeId, `Feld "${field.key}" trägt ref, ist aber kein item-ref`)
-    const doneOptions = (field.options ?? []).filter((o) => o.done)
-    if (doneOptions.length > 0 && field.widget !== "status") fail(layer, typeId, `Feld "${field.key}" markiert einen Erledigt-Wert, ist aber kein status`)
-    if (doneOptions.length > 1) fail(layer, typeId, `Feld "${field.key}" markiert mehr als einen Erledigt-Wert`)
+    // Regel 18: Rollen nur an Optionen eines status-Felds.
+    if (field.widget !== "status" && (field.options ?? []).some((o) => o.role)) {
+      fail(layer, typeId, `Feld "${field.key}" gibt Optionen eine Rolle, ist aber kein status`)
+    }
   }
 
   const declared = new Set((manifest.get(typeId)?.relations ?? []).map(relationAffordanceKey))
@@ -233,14 +273,11 @@ export function assertRegisterLists(
     if (edge.storage === "record" && edge.qualifier && !edge.count) {
       fail(layer, typeId, `Record-Kante (${edge.predicate}, ${edge.itemRole}) mit Qualifier braucht count`)
     }
-    // Regel 9: Die Pills einer Selbstaktion setzen deklarierte Qualifier-Werte.
-    if (edge.selfAction?.qualifiers?.length) {
-      const allowed = new Set((edge.qualifier?.values ?? []).map((v) => v.id))
-      const unknown = edge.selfAction.qualifiers.filter((q) => !allowed.has(q))
-      if (unknown.length > 0) {
-        fail(layer, typeId, `Selbstaktion an (${edge.predicate}, ${edge.itemRole}) setzt ${unknown.join(", ")}, das der Qualifier nicht deklariert`)
-      }
+    // Regel 7: Der Standardwert ist ein deklarierter Wert.
+    if (edge.qualifier?.default !== undefined && !edge.qualifier.values.some((v) => v.id === edge.qualifier!.default)) {
+      fail(layer, typeId, `Qualifier an (${edge.predicate}, ${edge.itemRole}) nennt default "${edge.qualifier.default}", das er nicht deklariert`)
     }
+    if (edge.selfAction) assertSelfActionValues(edge, edge.selfAction, (message) => fail(layer, typeId, message))
     // `collect-accepted` braucht die Annahmeprüfung aus 05 (isAccepted) und
     // mehrere Aussagen je Person; die Menschen-Zeile kann das noch nicht.
     // Nicht anders auswerten, sondern ablehnen.

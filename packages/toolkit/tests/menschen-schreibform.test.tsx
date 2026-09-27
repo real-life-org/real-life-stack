@@ -173,3 +173,101 @@ describe("Nachzügler S1: Space im Bearbeiten-Kopf ohne Verschieben (Edit-Regeln
     expect(unknown.groupOptions).toBeUndefined()
   })
 })
+
+describe("Qualifier mit default (Spec 06, Regel 7; S3b: assignedTo fehlend = can)", () => {
+  const WITH_DEFAULT = { ...QUALIFIER, default: "can" }
+  const CONFIG_DEFAULT = { peopleRelations: [{ predicate: "assignedTo", label: "Wer", qualifier: WITH_DEFAULT }] }
+
+  it("die Aufgabe gibt role mit default can an ihr Personenfeld", () => {
+    expect(contentTypeFromRegister("task").peopleRelations?.[0]?.qualifier).toEqual({
+      key: "role",
+      values: [{ id: "can", label: "kann" }, { id: "learns", label: "lernt" }],
+      default: "can",
+    })
+  })
+
+  it("fehlt ein Wert in der eingereichten Menge, gilt default: role entfällt, übriges meta bleibt", () => {
+    const existing = [{ predicate: "assignedTo", target: "global:timo", meta: { role: "learns", note: "bleibt" } }]
+    const data = { people: ["timo"], [peopleQualifierKey("people")]: {} }
+    expect(peopleRelationsFromWidgetData(CONFIG_DEFAULT, data, existing)).toEqual([
+      { predicate: "assignedTo", target: "global:timo", meta: { note: "bleibt" } },
+    ])
+  })
+
+  it("ohne eingereichte Qualifier-Menge bleiben die Werte stehen", () => {
+    const existing = [{ predicate: "assignedTo", target: "global:timo", meta: { role: "learns" } }]
+    expect(peopleRelationsFromWidgetData(CONFIG_DEFAULT, { people: ["timo"] }, existing)).toEqual(existing)
+  })
+
+  it("ein unbekannter Wert bleibt unverändert (Edit-Regeln 6)", () => {
+    const existing = [{ predicate: "assignedTo", target: "global:timo", meta: { role: "foo" } }]
+    const data = { people: ["timo"], [peopleQualifierKey("people")]: { timo: "foo" } }
+    expect(peopleRelationsFromWidgetData(CONFIG_DEFAULT, data, existing)).toEqual(existing)
+  })
+
+  async function widget(qualifiers: Record<string, string>, extra: Record<string, unknown> = {}) {
+    const onQualifiersChange = vi.fn()
+    const onChange = vi.fn()
+    const container = document.createElement("div")
+    const root = createRoot(container)
+    await act(async () => {
+      root.render(
+        createElement(PeopleWidget, {
+          value: ["timo"],
+          onChange,
+          label: "Wer",
+          options: [{ id: "timo", name: "Timo" }, { id: "lena", name: "Lena" }],
+          qualifier: WITH_DEFAULT,
+          qualifiers,
+          onQualifiersChange,
+          ...extra,
+        }),
+      )
+    })
+    return { container, root, onQualifiersChange, onChange }
+  }
+
+  it("ohne Wert zeigt der Chip den default; Antippen geht zum nächsten Wert", async () => {
+    const { container, root, onQualifiersChange } = await widget({})
+    const toggle = container.querySelector("[data-qualifier-toggle]") as HTMLButtonElement
+    expect(toggle.textContent).toBe("kann")
+    await act(async () => toggle.click())
+    expect(onQualifiersChange).toHaveBeenCalledWith({ timo: "learns" })
+    await act(async () => root.unmount())
+  })
+
+  it("zurück auf den default schreibt keinen Wert (fehlend = default)", async () => {
+    const { container, root, onQualifiersChange } = await widget({ timo: "learns" })
+    await act(async () => (container.querySelector("[data-qualifier-toggle]") as HTMLButtonElement).click())
+    expect(onQualifiersChange).toHaveBeenCalledWith({})
+    await act(async () => root.unmount())
+  })
+})
+
+describe("Qualifier mit default: Hinzufügen", () => {
+  it("setzt beim Hinzufügen keinen Wert, wenn es einen default gibt", async () => {
+    const onQualifiersChange = vi.fn()
+    const onChange = vi.fn()
+    const container = document.createElement("div")
+    const root = createRoot(container)
+    await act(async () => {
+      root.render(
+        createElement(PeopleWidget, {
+          value: [],
+          onChange,
+          label: "Wer",
+          options: [],
+          quickSuggestions: [{ id: "lena", name: "Lena" }],
+          qualifier: { ...QUALIFIER, default: "can" },
+          qualifiers: {},
+          onQualifiersChange,
+        }),
+      )
+    })
+    const quick = [...container.querySelectorAll("button")].find((b) => b.textContent === "Lena") as HTMLButtonElement
+    await act(async () => quick.click())
+    expect(onChange).toHaveBeenCalledWith(["lena"])
+    expect(onQualifiersChange).not.toHaveBeenCalled()
+    await act(async () => root.unmount())
+  })
+})

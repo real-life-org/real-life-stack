@@ -57,10 +57,11 @@ describe("Register: Kerntypen in S2", () => {
     expect(attendsEdge.qualifier?.values.map((v) => v.action)).toEqual(["Zusagen", "Vielleicht", "Absagen"])
   })
 
-  it("task führt „Übernehmen“ als Selbstaktion an assignedTo, ohne can/learns (Entscheidung 17)", () => {
+  it("task führt „Übernehmen“ als Selbstaktion an assignedTo; role can | learns gehört zum Kern, die Pills nicht (Spec 06, Regel 20)", () => {
     const assigned = resolveTypePresentation("task").edges?.find((e) => e.predicate === "assignedTo")
     expect(assigned?.selfAction).toMatchObject({ label: "Übernehmen", mine: "Übernommen" })
-    expect(assigned?.qualifier).toBeUndefined()
+    expect(assigned?.selfAction?.qualifiers).toBeUndefined()
+    expect(assigned?.qualifier?.default).toBe("can")
   })
 
   it("prüft beim Registrieren: selfAction.qualifiers nennt nur deklarierte Werte", () => {

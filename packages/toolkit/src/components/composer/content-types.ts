@@ -86,7 +86,15 @@ function ausFeldliste(
       return {
         predicate: e.predicate,
         label: joined ? joined.label : e.label,
-        ...(e.qualifier ? { qualifier: { key: e.qualifier.key, values: e.qualifier.values.map((v) => ({ id: v.id, label: v.label })) } } : {}),
+        ...(e.qualifier
+          ? {
+              qualifier: {
+                key: e.qualifier.key,
+                values: e.qualifier.values.map((v) => ({ id: v.id, label: v.label })),
+                ...(e.qualifier.default !== undefined ? { default: e.qualifier.default } : {}),
+              },
+            }
+          : {}),
         ...(e.add ? { placeholder: e.add } : {}),
         ...(joined && joined.qualifier
           ? {

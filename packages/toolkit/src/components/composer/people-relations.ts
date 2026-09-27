@@ -16,6 +16,8 @@ import type { Relation } from "@real-life-stack/data-interface"
 export interface PeopleQualifier {
   key: string
   values: readonly { id: string; label: string }[]
+  /** Der Wert, als der ein fehlender gilt (Spec 06, Regel 7): wird nie ausdrücklich geschrieben. */
+  default?: string
 }
 
 /** Ein deklariertes Personenfeld eines Typs. */
@@ -176,19 +178,20 @@ export function peopleRelationsFromWidgetData(
   data: Record<string, unknown>,
   existingRelations: readonly Relation[] | undefined,
 ): Relation[] | undefined {
-  const managed: { predicate: string; ids: string[]; qualifier?: PeopleQualifier; values: Record<string, unknown> }[] = []
+  const managed: { predicate: string; ids: string[]; qualifier?: PeopleQualifier; values: Record<string, unknown>; submitted: boolean }[] = []
   for (const field of resolvePeopleFields(config)) {
     if (!field.predicate) continue
     const ids = asIdList(data[field.dataKey])
     if (!ids) continue
-    const values = asRecord(data[peopleQualifierKey(field.dataKey)])
-    managed.push({ predicate: field.predicate, ids, qualifier: field.qualifier, values })
+    const submitted = data[peopleQualifierKey(field.dataKey)]
+    const values = asRecord(submitted)
+    managed.push({ predicate: field.predicate, ids, qualifier: field.qualifier, values, submitted: submitted !== undefined })
   }
   if (managed.length === 0) return undefined
 
   const touched = new Set(managed.map((m) => m.predicate))
   const others = (existingRelations ?? []).filter((r) => !touched.has(r.predicate))
-  const assigned = managed.flatMap(({ predicate, ids, qualifier, values }) =>
+  const assigned = managed.flatMap(({ predicate, ids, qualifier, values, submitted }) =>
     ids.map((id): Relation => {
       const target = `${USER_TARGET_PREFIX}${id}`
       // 08, Qualifier an Kanten, Regel 11: Eine Kante, die bestehen bleibt,
@@ -198,6 +201,10 @@ export function peopleRelationsFromWidgetData(
       if (qualifier) {
         const value = values[id]
         if (typeof value === "string" && qualifier.values.some((v) => v.id === value)) meta[qualifier.key] = value
+        // Mit default heißt „kein Wert in der eingereichten Menge": default —
+        // die Kante trägt dann keinen (fehlend = default, Spec 06 Regel 7). Ein
+        // unbekannter Wert steht in der Menge und bleibt so unverändert.
+        else if (value === undefined && submitted && qualifier.default !== undefined) delete meta[qualifier.key]
       }
       return Object.keys(meta).length > 0 ? { predicate, target, meta } : { predicate, target }
     }),

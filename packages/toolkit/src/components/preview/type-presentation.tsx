@@ -55,6 +55,8 @@ import {
   assertFollowUps,
   assertJoins,
   assertRegisterLists,
+  assertSelfActionValues,
+  edgeKey,
   hasRegisterLists,
   readableFields,
   uniteRegisterLists,
@@ -63,7 +65,9 @@ import {
   type ListEntry,
   type MenuActionEntry,
   type RegisterLists,
+  type SelfActionEntry,
 } from "./field-register"
+import type { RelationRole } from "@real-life-stack/data-interface"
 import { RegisterMeta, RegisterPeopleStack } from "./register-meta"
 import { RegisterActions, actionEdges } from "./register-actions"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
@@ -149,11 +153,26 @@ export interface TypeComposerPresentation {
   groupRequired?: boolean
 }
 
+/**
+ * Ersetzt die Selbstaktion einer Kante des Toolkit-Registers (Spec 06,
+ * Regel 20: Daten und Bedeutung gemeinsam, Bedienung je App). Prädikat,
+ * Speicherort und Qualifier bleiben die des Toolkits; die neue Selbstaktion
+ * schreibt nur Werte, die der Qualifier deklariert. Die einzige Ausnahme
+ * von „kein Override" (Erweiterung und Merge, Punkt 3).
+ */
+export interface SelfActionOverride {
+  predicate: string
+  itemRole: RelationRole
+  selfAction: SelfActionEntry
+}
+
 /** Additively fills fields an existing presentation left unset
  *  (spec: Erweiterungsfragment, Darstellungsseite). */
 export interface TypePresentationFragment extends RegisterLists {
   /** Must address an id already presented by an earlier layer. */
   id: string
+  /** Eigene Bedienung einer Toolkit-Kante (Regel 20), je Kante höchstens einmal über alle Schichten. */
+  selfActions?: readonly SelfActionOverride[]
   badge?: TypeBadgeStyle
   composerWidgets?: readonly string[]
   /** United by key; an existing key is a conflict. */
@@ -329,18 +348,19 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
         // Statuswerte = die Spalten des Kanban (kanban-board.tsx, defaultColumns).
         // Hier ausgeschrieben statt importiert: Das Darstellungs-Register darf
         // kein Modul einziehen. Aendert sich eine Spalte, aendern sich beide.
+        // Die Rollen (Spec 06, Regel 18; task/v1): Übergänge, Folgeaktion und
+        // durchgestrichene Ziele lesen sie, nie die Id. `archived` (task/v1)
+        // steht nicht im Formular und hätte keine Rolle.
         options: [
-          { id: "open", label: "To Do" },
-          { id: "in-progress", label: "In Arbeit" },
-          // Der Erledigt-Wert: Folgeaktionen und durchgestrichene Ziele lesen ihn.
-          { id: "done", label: "Erledigt", done: true },
+          { id: "open", label: "To Do", role: "open" },
+          { id: "in-progress", label: "In Arbeit", role: "active" },
+          { id: "done", label: "Erledigt", role: "done" },
         ],
       },
       TAGS,
       // Position im Modul: nie im Formular, nie in der Meta-Box (Regel 4).
       { key: "order", widget: "number", pos: "module", edit: false },
     ],
-    // Selbstaktion nur „Übernehmen"; kann/lernt bleibt Karabirrdt (Entscheidung 17).
     edges: [
       {
         predicate: "assignedTo",
@@ -350,10 +370,25 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
         pos: "meta",
         label: "Zugewiesen",
         add: "Zuweisen…",
-        // Folgeaktion „Erledigt" nur für die Person, die übernommen hat; „✓ Erledigt" ist ein Zustand (Entscheidung 27).
+        // Daten und Bedeutung gemeinsam, Bedienung je App (Spec 06, Regel
+        // 20): `role` mit can | learns gehört zum Kern, fehlend = can. Das
+        // Kanban schreibt die Kante ohne role; eine App (Karabirrdt) ersetzt
+        // die Selbstaktion durch „Kann ich · Will lernen" (`action`).
+        qualifier: {
+          key: "role",
+          values: [
+            { id: "can", label: "kann", action: "Kann ich" },
+            { id: "learns", label: "lernt", action: "Will lernen" },
+          ],
+          default: "can",
+        },
+        // „Übernehmen", mit anderen an der Kante „Mitmachen"; danach
+        // „✓ Übernommen" (allein) oder „✓ Dabei" (mit anderen) · „Erledigt".
+        // Übergänge des Status nach Regel 19.
         selfAction: {
           label: "Übernehmen",
           mine: "Übernommen",
+          join: { label: "Mitmachen", mine: "Dabei", release: "Nicht mehr mitmachen" },
           followUps: {
             field: "status",
             complete: { label: "Erledigt" },
@@ -592,6 +627,8 @@ function composePresentation(): Map<string, TypePresentationEntry> {
       composed.set(def.id, { ...def, relationWidgets: { ...(def.relationWidgets ?? {}) } })
     }
   }
+  // Welche Selbstaktionen schon ersetzt sind, je Typ und Kante (Regel 20: einmal).
+  const overridden = new Map<string, string>()
   // Pass 2: extensions — additive only (spec: Erweiterungsfragment). Sorted
   // by layer name: the lists are ordered, and the composed view must not
   // depend on registration order (Spec 06, Erweiterung und Merge).
@@ -623,6 +660,7 @@ function composePresentation(): Map<string, TypePresentationEntry> {
         widgets[key] = widget
       }
       Object.assign(base, uniteRegisterLists(base, frag, frag.id, name))
+      if (frag.selfActions?.length) overrideSelfActions(base, frag.selfActions, name, overridden)
     }
   }
   // Was aus der Feldliste abgeleitet wird, darf nicht zusätzlich von Hand
@@ -634,6 +672,35 @@ function composePresentation(): Map<string, TypePresentationEntry> {
   }
   composedCache = composed
   return composed
+}
+
+/**
+ * Regel 20: Eine App ersetzt die Selbstaktion einer Kante, die das
+ * Toolkit-Register (Schicht `core`) mit Selbstaktion führt. Nur die
+ * Selbstaktion wechselt; ihre Pills schreiben nur deklarierte Werte. Je
+ * Kante eine Ersetzung über alle Schichten — zwei wären ein Konflikt.
+ */
+function overrideSelfActions(
+  base: TypePresentationEntry,
+  overrides: readonly SelfActionOverride[],
+  layerName: string,
+  overridden: Map<string, string>,
+): void {
+  const fail = (message: string): never => {
+    throw new Error(`Typ-Register [${layerName}]: ${message} an "${base.id}" (Spec 06, Feld- und Kantenregister, Regel 20).`)
+  }
+  const core = layers.get("core")?.definitions?.find((d) => d.id === base.id)
+  for (const override of overrides) {
+    const key = edgeKey(override)
+    const toolkitEdge = core?.edges?.find((e) => edgeKey(e) === key)
+    if (!toolkitEdge?.selfAction) fail(`Selbstaktion an (${override.predicate}, ${override.itemRole}) ersetzt keine Kante mit Selbstaktion im Toolkit-Register`)
+    const slot = `${base.id}|${key}`
+    const owner = overridden.get(slot)
+    if (owner) fail(`Selbstaktion an (${override.predicate}, ${override.itemRole}) ist bereits von Schicht "${owner}" ersetzt`)
+    overridden.set(slot, layerName)
+    assertSelfActionValues(toolkitEdge!, override.selfAction, fail)
+    base.edges = (base.edges ?? []).map((edge) => (edgeKey(edge) === key ? { ...edge, selfAction: override.selfAction } : edge))
+  }
 }
 
 function assertNoParallelComposerSource(entry: TypePresentationEntry): void {

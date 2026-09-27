@@ -24,7 +24,7 @@ interface PeopleWidgetProps {
    * Edit-Regeln 6): Der Chip zeigt ihn klein hinter dem Namen, Antippen
    * wechselt zum nächsten Wert. Eine neue Person bekommt den ersten Wert.
    */
-  qualifier?: { key: string; values: readonly { id: string; label: string }[] }
+  qualifier?: { key: string; values: readonly { id: string; label: string }[]; default?: string }
   /** Qualifier je Person-Id. */
   qualifiers?: Record<string, string>
   onQualifiersChange?: (next: Record<string, string>) => void
@@ -138,7 +138,8 @@ export function PeopleWidget({
     const trimmed = id.trim()
     if (trimmed && !value.includes(trimmed)) {
       onChange([...value, trimmed])
-      const first = qualifier?.values[0]
+      // Mit default bleibt der Wert offen (fehlend = default, Spec 06 Regel 7).
+      const first = qualifier && qualifier.default === undefined ? qualifier.values[0] : undefined
       if (first && onQualifiersChange) onQualifiersChange({ ...(qualifiers ?? {}), [trimmed]: first.id })
     }
     setQuery("")
@@ -190,14 +191,17 @@ export function PeopleWidget({
     ? [...value, ...Object.keys(record.live).filter((id) => !value.includes(id) && (record.changes[id] !== null || !!record.live[id].fallback || !!record.live[id].locked))]
     : value
 
-  const qualifierOf = (id: string) => qualifier?.values.find((v) => v.id === qualifiers?.[id])
+  // Ohne Wert gilt der default (Spec 06, Regel 7).
+  const qualifierOf = (id: string) => qualifier?.values.find((v) => v.id === (qualifiers?.[id] ?? qualifier.default))
 
-  // Im Kreis der erlaubten Werte; ohne Wert zum ersten.
+  // Im Kreis der erlaubten Werte; ohne Wert (und ohne default) zum ersten.
+  // Der default wird nie ausdrücklich geschrieben: zurück auf ihn heißt kein Wert.
   const cycleQualifier = (id: string) => {
     if (!qualifier || !onQualifiersChange || qualifier.values.length === 0) return
-    const index = qualifier.values.findIndex((v) => v.id === qualifiers?.[id])
-    const next = qualifier.values[(index + 1) % qualifier.values.length]
-    onQualifiersChange({ ...(qualifiers ?? {}), [id]: next.id })
+    const index = qualifier.values.findIndex((v) => v.id === (qualifiers?.[id] ?? qualifier.default))
+    const next = qualifier.values[(index + 1) % qualifier.values.length]!
+    const { [id]: _previous, ...rest } = qualifiers ?? {}
+    onQualifiersChange(next.id === qualifier.default ? rest : { ...rest, [id]: next.id })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
