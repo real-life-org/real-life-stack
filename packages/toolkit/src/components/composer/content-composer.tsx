@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronDown, Globe, Home, Loader2, Lock, Trash2, X } from "lucide-react"
+import { Check, ChevronDown, Globe, Home, Loader2, Lock, Trash2, X } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/primitives/tooltip"
 import { ItemTypeBadge } from "../preview/item-type-badge"
@@ -11,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/primitives/dropdown-menu"
 import { useIsCompact } from "@/hooks/use-mobile"
@@ -114,6 +115,8 @@ export interface GroupOption {
   color?: string
   /** The personal space („Privat") — shown with the home icon, like the switcher. */
   personal?: boolean
+  /** Number of members, shown muted in the space menu. */
+  memberCount?: number
 }
 
 export interface ContentTypeConfig {
@@ -397,14 +400,15 @@ export function widgetRenderOrder(defaultWidgets: readonly string[]): WidgetType
 
 // ── Form head ────────────────────────────────────────────────────────────
 
-/**
- * The native select lies invisibly over the badge or pill that shows the
- * choice: the look is the design's, the picker is the platform's (keyboard,
- * screen reader, phone wheel).
- */
-const OVERLAY_SELECT = "absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
-/** The invisible select hides its own focus ring; the visible wrapper shows it instead. */
-const FOCUS_RING = "has-[select:focus-visible]:ring-2 has-[select:focus-visible]:ring-ring/50"
+/** Sichtbarer Fokus und der offene Zustand (Ring in Primärfarbe, 3 px, ~18 %) an Badge und Pille. */
+const HEAD_TRIGGER =
+  "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50 data-[state=open]:ring-[3px] data-[state=open]:ring-primary/20"
+
+/** Das Menü unter Badge und Pille: weiß, Radius 12 px, weicher Schatten, 6 px Innenabstand. */
+const HEAD_MENU = "rounded-xl border-border/60 p-1.5 shadow-lg"
+
+/** Eine Menüzeile; die aktuelle hervorgehoben, halbfett, Häkchen rechts in Primärfarbe. */
+const HEAD_ITEM = "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm data-[current=true]:bg-accent data-[current=true]:font-semibold"
 
 interface ComposerHeadProps {
   types: readonly ContentTypeConfig[]
@@ -423,8 +427,9 @@ interface ComposerHeadProps {
 /**
  * Kopf des Formulars (shared-components, Edit-Regeln 3; Design Anton
  * 27.09.2026): links in einer Zeile der Typ als Typ-Badge und der Space als
- * Pille. Wählbar mit Chevron, fest ohne Chevron und ohne Schloss; ein fester
- * Space ist gedämpft und nennt im Tooltip den Grund.
+ * Pille. Wählbar öffnen beide ein Menü (DropdownMenu: Enter/Leertaste,
+ * Pfeiltasten, Escape); fest ohne Chevron und ohne Schloss, ein fester Space
+ * gedämpft mit dem Grund im Tooltip.
  */
 function ComposerHead({ types, selectedType, onSelectType, space }: ComposerHeadProps) {
   const current = types.find((t) => t.id === selectedType) ?? types[0]
@@ -432,16 +437,29 @@ function ComposerHead({ types, selectedType, onSelectType, space }: ComposerHead
     // Eine Zeile; rechts bleibt Platz für die Knöpfe eines Panels darüber (✕).
     <div className="flex min-w-0 items-center gap-2 pr-8">
       {current && (
-        <span data-slot="composer-type" className={cn("relative inline-flex shrink-0 rounded-full", FOCUS_RING)}>
-          <TypeBadge config={current} trailing={onSelectType ? <ChevronDown className="h-3 w-3 opacity-80" aria-hidden /> : undefined} />
-          {onSelectType && (
-            <select aria-label="Typ" value={selectedType} onChange={(e) => onSelectType(e.target.value)} className={OVERLAY_SELECT}>
-              {types.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+        <span data-slot="composer-type" className="inline-flex shrink-0">
+          {onSelectType ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger aria-label="Typ wählen" data-value={current.id} className={HEAD_TRIGGER}>
+                <TypeBadge config={current} trailing={<ChevronDown className="h-3 w-3 opacity-80" aria-hidden />} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={6} className={cn(HEAD_MENU, "w-[220px]")}>
+                {types.map((t) => (
+                  <DropdownMenuItem
+                    key={t.id}
+                    data-current={t.id === current.id}
+                    onSelect={() => onSelectType(t.id)}
+                    className={HEAD_ITEM}
+                  >
+                    <TypeIcon config={t} />
+                    <span className="flex-1">{t.label}</span>
+                    {t.id === current.id && <Check className="h-4 w-4 text-primary" aria-hidden />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <TypeBadge config={current} />
           )}
         </span>
       )}
@@ -450,12 +468,18 @@ function ComposerHead({ types, selectedType, onSelectType, space }: ComposerHead
   )
 }
 
+/** Badge-Stil (Icon, Label, Farbe) eines Typs aus dem Register; unbekannte Typen neutral mit eigenem Label. */
+function typeBadgeStyle(config: ContentTypeConfig) {
+  const resolved = resolveTypePresentation(config.id)
+  const badge = resolved.generic || !resolved.badge ? GENERIC_BADGE : resolved.badge
+  return { icon: config.icon ?? badge.icon, className: badge.className, generic: resolved.generic }
+}
+
 /** The type as ItemTypeBadge (register colour), sized for the form head. */
 function TypeBadge({ config, trailing }: { config: ContentTypeConfig; trailing?: React.ReactNode }) {
-  const resolved = resolveTypePresentation(config.id)
-  // A composer type the register does not present keeps its own label and icon.
-  const override = resolved.generic
-    ? { [config.id]: { icon: config.icon ?? GENERIC_BADGE.icon, label: config.label, className: GENERIC_BADGE.className } }
+  const style = typeBadgeStyle(config)
+  const override = style.generic
+    ? { [config.id]: { icon: style.icon, label: config.label, className: style.className } }
     : undefined
   return (
     <ItemTypeBadge
@@ -468,24 +492,39 @@ function TypeBadge({ config, trailing }: { config: ContentTypeConfig; trailing?:
   )
 }
 
+/** Rundes Typ-Icon im Menü: 22 px, Typ-Pastell, Rand im Typton — dieselben Farben wie das Badge. */
+function TypeIcon({ config }: { config: ContentTypeConfig }) {
+  const style = typeBadgeStyle(config)
+  const Icon = style.icon
+  return (
+    <span data-slot="type-icon" className={cn("flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border", style.className)}>
+      <Icon className="h-3 w-3" />
+    </span>
+  )
+}
+
 function spaceInitials(name: string): string {
   return name.split(/\s+/).filter(Boolean).map((w) => w[0]!).join("").toUpperCase().slice(0, 1) || "?"
 }
 
-/** Logo tile of a space: image, else the initial on the space colour; the personal space shows the home icon. */
-function SpaceLogo({ option }: { option?: GroupOption }) {
+/**
+ * Logo-Kachel eines Space wie im Space-Wechsler: Bild, sonst die Initiale auf
+ * der Space-Farbe; der persönliche Space zeigt das Haus.
+ */
+function SpaceLogo({ option, size = "sm" }: { option?: GroupOption; size?: "sm" | "md" }) {
+  const box = size === "md" ? "h-[22px] w-[22px] rounded-[6px]" : "h-[18px] w-[18px] rounded-[5px]"
   if (option?.personal) {
     return (
-      <span data-slot="space-logo" className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] bg-primary/10 text-primary">
+      <span data-slot="space-logo" className={cn("flex shrink-0 items-center justify-center bg-primary/10 text-primary", box)}>
         <Home className="h-3 w-3" aria-hidden />
       </span>
     )
   }
   return (
-    <Avatar data-slot="space-logo" className="h-[18px] w-[18px] shrink-0 rounded-[5px]">
-      {option?.image && <AvatarImage src={option.image} alt="" className="rounded-[5px] object-cover" />}
+    <Avatar data-slot="space-logo" className={cn("shrink-0", box)}>
+      {option?.image && <AvatarImage src={option.image} alt="" className={cn("object-cover", box)} />}
       <AvatarFallback
-        className={cn("rounded-[5px] text-[10px] font-semibold", option?.color ? "text-background" : "bg-muted text-muted-foreground")}
+        className={cn(box, "text-[10px] font-semibold", option?.color ? "text-background" : "bg-muted text-muted-foreground")}
         style={option?.color ? { backgroundColor: option.color } : undefined}
       >
         {option ? spaceInitials(option.name) : "?"}
@@ -498,6 +537,7 @@ function SpacePill({ value, options, required, fixedReason, onChange }: NonNulla
   const selected = options.find((o) => o.id === value)
   const choosable = options.length > 1
   const missing = required && !value
+  const [query, setQuery] = React.useState("")
   if (!choosable) {
     const only = selected ?? options[0]
     const fixed = (
@@ -521,33 +561,66 @@ function SpacePill({ value, options, required, fixedReason, onChange }: NonNulla
       </Tooltip>
     )
   }
+  const q = query.trim().toLowerCase()
+  const shown = q ? options.filter((o) => o.name.toLowerCase().includes(q)) : options
+  const personal = shown.filter((o) => o.personal)
+  const groups = shown.filter((o) => !o.personal)
+  const row = (o: GroupOption) => (
+    <DropdownMenuItem key={o.id} data-current={o.id === value} onSelect={() => onChange(o.id)} className={HEAD_ITEM}>
+      <SpaceLogo option={o} size="md" />
+      <span data-slot="space-name" className="min-w-0 flex-1 truncate">{o.name}</span>
+      {o.memberCount !== undefined && <span className="text-xs font-normal text-muted-foreground">{o.memberCount}</span>}
+      {o.id === value && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden />}
+    </DropdownMenuItem>
+  )
   return (
-    <span
-      data-slot="composer-space"
-      className={cn(
-        "relative inline-flex h-7 min-w-0 items-center gap-1.5 rounded-full border bg-background pl-1 pr-2.5 text-xs text-foreground",
-        FOCUS_RING,
-        missing && "border-destructive text-destructive",
-      )}
-    >
-      {selected && <SpaceLogo option={selected} />}
-      <span className={cn("truncate", !selected && "pl-1.5")}>{selected?.name ?? `Space wählen${required ? " *" : ""}`}</span>
-      <ChevronDown className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
-      <select
-        aria-label="Space"
-        aria-invalid={missing || undefined}
-        aria-required={required || undefined}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={OVERLAY_SELECT}
-      >
-        {!value && <option value="">Space wählen{required ? " *" : ""}</option>}
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name}
-          </option>
-        ))}
-      </select>
+    <span data-slot="composer-space" className="inline-flex min-w-0">
+      <DropdownMenu onOpenChange={(open) => { if (!open) setQuery("") }}>
+        <DropdownMenuTrigger
+          aria-label="Space wählen"
+          aria-invalid={missing || undefined}
+          aria-required={required || undefined}
+          data-value={value}
+          className={cn(
+            HEAD_TRIGGER,
+            "inline-flex h-7 min-w-0 items-center gap-1.5 border bg-background pl-1 pr-2.5 text-xs text-foreground",
+            !selected && "pl-2.5",
+            missing && "border-destructive text-destructive",
+          )}
+        >
+          {selected && <SpaceLogo option={selected} />}
+          <span className="truncate">{selected?.name ?? `Space wählen${required ? " *" : ""}`}</span>
+          <ChevronDown className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={6} className={cn(HEAD_MENU, "w-[250px]")}>
+          <input
+            type="search"
+            placeholder="Space suchen…"
+            aria-label="Space suchen"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            // Tippen gehört dem Feld, nicht der Typeahead-Suche des Menüs;
+            // Pfeiltasten und Escape bleiben beim Menü.
+            onKeyDown={(e) => {
+              if (!["ArrowDown", "ArrowUp", "Escape", "Tab"].includes(e.key)) e.stopPropagation()
+            }}
+            className="mb-1 h-8 w-full rounded-lg border bg-background px-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+          />
+          {personal.length > 0 && (
+            <>
+              <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Persönlich</DropdownMenuLabel>
+              {personal.map(row)}
+            </>
+          )}
+          {groups.length > 0 && (
+            <>
+              <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gruppen</DropdownMenuLabel>
+              {groups.map(row)}
+            </>
+          )}
+          {shown.length === 0 && <p className="px-2 py-1.5 text-sm text-muted-foreground">Kein Space gefunden</p>}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </span>
   )
 }

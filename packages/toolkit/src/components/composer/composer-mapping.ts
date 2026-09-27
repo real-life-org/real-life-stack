@@ -212,7 +212,7 @@ export function withGroupOptions(
   // May be undefined while the groups query is still loading — guarded below.
   // `data` carries the space's logo and colour (`image`, `primaryColor`) for
   // the space pill in the form head, as the space switcher shows them.
-  groups: readonly { id: string; name: string; data?: Record<string, unknown> }[] | undefined,
+  groups: readonly { id: string; name: string; members?: readonly string[]; data?: Record<string, unknown> }[] | undefined,
   currentGroupId?: string,
   personalGroupId?: string | null,
 ): ContentTypeConfig[] {
@@ -227,6 +227,7 @@ export function withGroupOptions(
       name: g.name,
       ...(typeof g.data?.image === "string" ? { image: g.data.image } : {}),
       ...(typeof g.data?.primaryColor === "string" ? { color: g.data.primaryColor } : {}),
+      ...(Array.isArray(g.members) ? { memberCount: g.members.length } : {}),
     })),
   )
   if (options.length < 2) return types

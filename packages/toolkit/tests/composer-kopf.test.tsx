@@ -49,8 +49,23 @@ const withGroups = (types: ContentTypeConfig[], defaultGroup?: string): ContentT
     defaultWidgets: [...t.defaultWidgets, "group"],
   }))
 
-const typeSelect = () => host.querySelector<HTMLSelectElement>('select[aria-label="Typ"]')
-const spaceSelect = () => host.querySelector<HTMLSelectElement>('select[aria-label="Space"]')
+// Typ und Space sind Menü-Knöpfe (Design Anton, 27.09.): der gewählte Wert
+// steht in `data-value`, die Optionen im geöffneten Menü (Portal im body).
+const typeSelect = () => host.querySelector<HTMLButtonElement>('button[aria-label="Typ wählen"]')
+const spaceSelect = () => host.querySelector<HTMLButtonElement>('button[aria-label="Space wählen"]')
+const valueOf = (el: HTMLElement | null) => el?.getAttribute("data-value") ?? ""
+async function openMenu(trigger: HTMLElement) {
+  await act(async () => {
+    trigger.focus()
+    trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+  })
+}
+const menuItems = () => [...document.body.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]')]
+async function choose(label: string) {
+  const item = menuItems().find((el) => el.textContent?.includes(label))
+  expect(item, `Menüeintrag ${label}`).toBeDefined()
+  await act(async () => item!.click())
+}
 const pos = (el: Element | null) => {
   expect(el).not.toBeNull()
   return [...host.querySelectorAll("*")].indexOf(el!)
@@ -61,13 +76,10 @@ describe("Kopf des Formulars: Typ und Space", () => {
   it("Erstellen: Typ als Auswahlfeld statt Pillen, Wechsel über das Feld", async () => {
     await render({ contentTypes: pickContentTypes("post", "event", "task") })
     const select = typeSelect()!
-    expect([...select.options].map((o) => o.value)).toEqual(["post", "event", "task"])
-    expect(byText("Event")).toBeNull() // keine Pille mehr
-    await act(async () => {
-      select.value = "task"
-      select.dispatchEvent(new Event("change", { bubbles: true }))
-    })
-    expect(typeSelect()!.value).toBe("task")
+    await openMenu(select)
+    expect(menuItems().map((el) => el.textContent?.trim())).toEqual(["Post", "Event", "Task"])
+    await choose("Task")
+    expect(valueOf(typeSelect())).toBe("task")
     expect(host.textContent).toContain("Zugewiesen")
   })
 
@@ -80,14 +92,15 @@ describe("Kopf des Formulars: Typ und Space", () => {
   it("Space als Auswahlfeld im Kopf, vor dem Titel; Pflichtmarkierung ohne Space", async () => {
     await render({ contentTypes: withGroups(pickContentTypes("task")), mode: "task" })
     const select = spaceSelect()!
-    expect([...select.options].filter((o) => o.value).map((o) => o.textContent)).toEqual(["Garten", "Hof"])
+    await openMenu(select)
+    expect(menuItems().map((el) => el.querySelector('[data-slot="space-name"]')?.textContent)).toEqual(["Garten", "Hof"])
     expect(select.getAttribute("aria-invalid")).toBe("true")
     expect(pos(select)).toBeLessThan(pos(host.querySelector('input[placeholder="Titel"], input')))
   })
 
   it("mit gesetztem Space keine Pflichtmarkierung", async () => {
     await render({ contentTypes: withGroups(pickContentTypes("task"), "a"), mode: "task" })
-    expect(spaceSelect()!.value).toBe("a")
+    expect(valueOf(spaceSelect())).toBe("a")
     expect(spaceSelect()!.getAttribute("aria-invalid")).not.toBe("true")
   })
 
@@ -164,7 +177,7 @@ describe("Kopf wie im Design (Anton, 27.09.): Typ als Badge, Space als Pille", (
     const slot = typeSlot()!
     expect(slot.textContent).toContain("Event")
     expect(slot.querySelector("svg.lucide-chevron-down")).not.toBeNull()
-    expect(slot.querySelector('select[aria-label="Typ"]')).not.toBeNull()
+    expect(slot.querySelector('button[aria-label="Typ wählen"]')).not.toBeNull()
     // Das Badge aus dem Register: Typfarbe des Events
     expect(slot.innerHTML).toContain("bg-blue-50")
   })
@@ -184,8 +197,8 @@ describe("Kopf wie im Design (Anton, 27.09.): Typ als Badge, Space als Pille", (
     expect(slot.textContent).toContain("Garten")
     expect(slot.querySelector('[data-slot="space-logo"]')?.textContent).toBe("G")
     expect(slot.querySelector("svg.lucide-chevron-down")).not.toBeNull()
-    expect(slot.className).toContain("rounded-full")
-    expect(slot.className).toContain("border")
+    expect(spaceSelect()!.className).toContain("rounded-full")
+    expect(spaceSelect()!.className).toMatch(/(^|\s)border(\s|$)/)
   })
 
   it("Space fest (Variante): gedämpft, ohne Rand, ohne Chevron, ohne Schloss, mit Grund", async () => {
@@ -223,7 +236,7 @@ describe("Vorauswahl des Space beim Anlegen (wie vor der Umstellung: withGroupOp
 
   it("außerhalb eines Space ist „Privat“ vorausgewählt, mit Haus-Logo, ohne Pflichtmarkierung", async () => {
     await render({ contentTypes: withGroupOptions(pickContentTypes("task"), groups, undefined, "p"), mode: "task" })
-    expect(spaceSelect()!.value).toBe("p")
+    expect(valueOf(spaceSelect())).toBe("p")
     expect(spaceSelect()!.getAttribute("aria-invalid")).toBeNull()
     const slot = host.querySelector('[data-slot="composer-space"]')!
     expect(slot.textContent).toContain("Privat")
@@ -232,16 +245,62 @@ describe("Vorauswahl des Space beim Anlegen (wie vor der Umstellung: withGroupOp
 
   it("im Space ist dieser Space vorausgewählt", async () => {
     await render({ contentTypes: withGroupOptions(pickContentTypes("task"), groups, "b", "p"), mode: "task" })
-    expect(spaceSelect()!.value).toBe("b")
+    expect(valueOf(spaceSelect())).toBe("b")
   })
 })
 
 describe("Codex Runde 6: Fokus im Kopf sichtbar", () => {
-  it("Badge und Space-Pille zeigen den Fokus ihres unsichtbaren Auswahlfelds", async () => {
+  it("Typ-Badge und Space-Pille zeigen einen Fokusring", async () => {
     const types = withGroupOptions(pickContentTypes("post", "task"), [{ id: "a", name: "Garten" }, { id: "b", name: "Hof" }], "a")
     await render({ contentTypes: types })
-    for (const slot of ["composer-type", "composer-space"]) {
-      expect(host.querySelector(`[data-slot="${slot}"]`)!.className).toContain("has-[select:focus-visible]:ring-2")
-    }
+    for (const trigger of [typeSelect()!, spaceSelect()!]) expect(trigger.className).toContain("focus-visible:ring")
+  })
+})
+
+describe("Auswahl-Menüs im Kopf (Design Anton, 27.09.)", () => {
+  const groups = [
+    { id: "a", name: "Garten", members: ["u1", "u2", "u3"], data: { primaryColor: "#16a34a" } },
+    { id: "b", name: "Hof", members: ["u1"] },
+  ]
+
+  it("Typ-Menü: je Typ Icon in Typfarbe und Label, der aktuelle mit Häkchen", async () => {
+    await render({ contentTypes: pickContentTypes("post", "event", "task"), initialContentType: "event" })
+    await openMenu(typeSelect()!)
+    const aktuell = menuItems().find((el) => el.textContent?.includes("Event"))!
+    expect(aktuell.getAttribute("data-current")).toBe("true")
+    expect(aktuell.querySelector("svg.lucide-check")).not.toBeNull()
+    expect(aktuell.querySelector('[data-slot="type-icon"]')!.className).toContain("bg-blue-50")
+    expect(menuItems().filter((el) => el.querySelector("svg.lucide-check"))).toHaveLength(1)
+  })
+
+  it("Space-Menü: Suchfeld, Gruppen „Persönlich“ und „Gruppen“, Mitgliederzahl, Häkchen", async () => {
+    await render({ contentTypes: withGroupOptions(pickContentTypes("task"), groups as never, "a", "p"), mode: "task" })
+    await openMenu(spaceSelect()!)
+    expect(document.body.querySelector('input[placeholder="Space suchen…"]')).not.toBeNull()
+    const text = document.body.textContent ?? ""
+    expect(text.indexOf("Persönlich")).toBeLessThan(text.indexOf("Gruppen"))
+    const garten = menuItems().find((el) => el.textContent?.includes("Garten"))!
+    expect(garten.textContent).toContain("3")
+    expect(garten.getAttribute("data-current")).toBe("true")
+    expect(garten.querySelector("svg.lucide-check")).not.toBeNull()
+  })
+
+  it("die Suche filtert die Spaces", async () => {
+    await render({ contentTypes: withGroupOptions(pickContentTypes("task"), groups as never, "a", "p"), mode: "task" })
+    await openMenu(spaceSelect()!)
+    const suche = document.body.querySelector<HTMLInputElement>('input[placeholder="Space suchen…"]')!
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!
+      setter.call(suche, "ho")
+      suche.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+    expect(menuItems().map((el) => el.querySelector('[data-slot="space-name"]')?.textContent)).toEqual(["Hof"])
+  })
+
+  it("Auswahl im Space-Menü setzt den Space", async () => {
+    await render({ contentTypes: withGroupOptions(pickContentTypes("task"), groups as never, "a", "p"), mode: "task" })
+    await openMenu(spaceSelect()!)
+    await choose("Hof")
+    expect(valueOf(spaceSelect())).toBe("b")
   })
 })
