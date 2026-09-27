@@ -41,6 +41,8 @@ export interface CreateOptions {
   /** The new item must land in this space: the group widget offers nothing
       else (e.g. a variant, whose `variantOf` is a space-local reference). */
   fixedGroup?: string
+  /** Why the space is fixed — shown as the tooltip of the fixed space in the form head. */
+  fixedGroupReason?: string
 }
 
 export interface CreateHostValue {
@@ -226,12 +228,13 @@ function CreateComposerOutlet({ className }: { className?: string }) {
   const config = ctx?.activeConfig
   if (!ctx || !config) return null
   const fixedGroup = ctx.pendingOptions()?.fixedGroup
+  const fixedGroupReason = ctx.pendingOptions()?.fixedGroupReason
   return (
     <ItemComposer
       key={ctx.composerKey}
       apiRef={ctx.composerApiRef}
       className={className}
-      contentTypes={fixedGroup ? withFixedGroup(config.contentTypes, fixedGroup) : config.contentTypes}
+      contentTypes={fixedGroup ? withFixedGroup(config.contentTypes, fixedGroup, fixedGroupReason) : config.contentTypes}
       initialContentType={ctx.composeType ?? undefined}
       initialData={ctx.pendingInitialData()}
       mapper={config.mapper}

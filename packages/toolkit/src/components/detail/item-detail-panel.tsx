@@ -25,6 +25,12 @@ export interface ItemDetailPanelProps {
   itemId: string
   /** Top slot: view card, edit form, … rendered inside the scroll area. */
   children: ReactNode
+  /**
+   * Bearbeiten: Die Diskussion tritt beiseite (shared-components, Edit-Regeln
+   * 1 und 3) — keine Kommentarliste, keine Kommentar-Eingabe. Die Fußzeile
+   * des Formulars (Löschen · Abbrechen · Speichern) klebt dann am Ende.
+   */
+  editing?: boolean
   /** Optional reactions renderer for individual comments. */
   renderCommentReactions?: (commentId: string) => ReactNode
   /** Cursor gleich ins Kommentarfeld — wer hierher kam, um zu schreiben. */
@@ -46,6 +52,7 @@ export function ItemDetailPanel({
   renderCommentReactions,
   focusComposer = false,
   onComposerFocused,
+  editing = false,
   className,
 }: ItemDetailPanelProps) {
   // Reply wiring: CommentSection owns the comment tree and hands us its
@@ -80,28 +87,32 @@ export function ItemDetailPanel({
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className={cn("flex-1 overflow-y-auto min-h-0", editing && "flex flex-col")}>
         {children}
 
         {/* Keine Ueberschrift ueber der Diskussion: Blasen unter einem Item
             sind als Kommentare erkennbar, und ohne Kommentare stuende dort
             eine Ueberschrift ohne Inhalt. Der Trenner gehoert zur
             Aktionszeile darueber, nicht hierher. */}
-        <CommentSection
-          itemId={itemId}
-          renderReactions={renderCommentReactions}
-          hideInput
-          onReplyChange={handleReplyChange}
-        />
+        {!editing && (
+          <CommentSection
+            itemId={itemId}
+            renderReactions={renderCommentReactions}
+            hideInput
+            onReplyChange={handleReplyChange}
+          />
+        )}
       </div>
 
-      <CommentInput
-        onSubmit={submit ?? (async () => {})}
-        replyTo={replyTo}
-        onCancelReply={cancel ?? undefined}
-        autoFocus={focusComposer}
-        onAutoFocused={onComposerFocused}
-      />
+      {!editing && (
+        <CommentInput
+          onSubmit={submit ?? (async () => {})}
+          replyTo={replyTo}
+          onCancelReply={cancel ?? undefined}
+          autoFocus={focusComposer}
+          onAutoFocused={onComposerFocused}
+        />
+      )}
     </div>
   )
 }

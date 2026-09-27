@@ -248,6 +248,62 @@ Regeln:
    zieht (im CRDT-Space kann jedes Mitglied technisch schreiben), ist die
    Vertraulichkeits-Grenze die Space-Wahl — s. Trust-Bindung Regel 6.
 
+## Qualifier an Kanten
+
+**Status:** Normativer Entwurf (S0, 26.09.2026).
+
+Ein Qualifier präzisiert eine Kante mit einem Wert aus einer festen Menge. Er ist kein zweites Prädikat. Jede Kante DARF Qualifier tragen: Person → Item und Item → Item, eingebettet oder als Record.
+
+Einordnung der bestehenden Fälle:
+
+| Kante | Ablage | Qualifier | Werte |
+|---|---|---|---|
+| `votesOn` (Person → Statement) | Record | `fields.value` | `green` · `yellow` · `red` ([modules/resonance.md](modules/resonance.md)) |
+| `attends` (Person → Event) | Record | `fields.role`, dazu `fields.tense` | `going` · `maybe` · `declined`; `coming` · `currently` · `has-been` |
+| `assignedTo` (Item → Person, App-Beispiel Karabirrdt) | eingebettet | `meta.role` | `can` · `learns` |
+
+Nichtnormative Beispiele für Item → Item, hier nicht eingeführt: `blocks` mit „zwingend" oder „hilfreich", `partOf` mit einer Rolle im Projekt.
+
+Werte sind feste englische Ids. Die Anzeigewörter (etwa „zugesagt", „lernt") kommen über die Intl-Schicht.
+
+Regeln:
+
+1. Der Qualifier lebt an der Kante. Aus einem Qualifier wird kein eigenes Prädikat (nicht `assignedTo` und `wantsToLearn` für dieselbe Zuweisung).
+2. **Eingebettete Kante:** Der Qualifier liegt in `meta` der Relation, als `meta.role` oder unter einem anderen benannten Schlüssel (`{ predicate: "assignedTo", target: "global:…", meta: { role: "…" } }`). `meta` ersetzt das Ziel nicht (04, Regel 3).
+3. **Eigener Datensatz:** Bei Records liegt der Qualifier als Feld in `data` des Records, also in `fields` der Projektion. Neue Qualifier heißen `role`, passend zu `meta.role`. `votesOn` behält seinen Schlüssel `value`: Die Stimme ist nach dieser Einordnung ein Qualifier, ihre Regeln stehen weiter eigenständig in [modules/resonance.md](modules/resonance.md).
+4. Schlüssel und erlaubte Werte deklariert das Darstellungs-Register je Kante (`EdgeEntry.qualifier`, [06 → Feld- und Kantenregister](06-schema-composition.md#feld--und-kantenregister)). Gespeichert wird die `id` des Werts, nie seine Beschriftung.
+5. Eine Kante ohne Qualifier ist gültig und wird ohne Qualifier gezeigt.
+6. Leseflächen zeigen den Qualifier klein hinter dem Chip, gleich ob das Ziel eine Person oder ein Item ist.
+7. Jedes Mitglied darf den Qualifier einer eingebetteten Kante setzen und ändern, auch für andere. Es schreibt dafür das Trägeritem nach dessen Rechten.
+8. **Aussagen über andere sind erlaubt.** Ein Record DARF einen anderen Gegenstand als `from` tragen als seinen Autor: `createdBy` ist der Sprecher, der ihn signiert, `from` der Gegenstand, über den er spricht. Weil die `id` `createdBy` enthält (Regel 4 in „RelationRecord als Item"), ist die Aussage eines anderen ein eigener Record neben dem des Gegenstands. Ändern und löschen darf jeder nur seine eigenen Records (Fassaden-Regel 7, creator-owns). Ein Prädikat DARF Aussagen über andere ausschließen; `votesOn` tut das (`from` MUSS `global:<createdBy>` sein, [modules/resonance.md](modules/resonance.md)).
+9. Leseflächen MÜSSEN eine Aussage über andere als solche zeigen: „Timo zugesagt · eingetragen von Anton" (Beispiel für `going`). Sie DÜRFEN sie nicht als Selbstaussage ausgeben.
+10. **Zählregel.** Wie mehrere Records zum selben Gegenstand und demselben Ziel zusammenwirken, deklariert das Register je Record-Kante (`EdgeEntry.count`):
+    - `one-per-subject` („eine je Gegenstand, eigene gewinnt"): Je Sprecher und Gegenstand gibt es eine Aussage. Ist der Gegenstand eine Person, gilt ihre Selbstaussage (`createdBy` = Identität von `from`); fehlt sie, oder ist der Gegenstand keine Person, gilt die jüngste Aussage. Die Person überstimmt jede fremde Aussage durch eine eigene, auch durch eine ablehnende (`declined`). Löscht sie ihren eigenen Record, hat sie keine Aussage mehr, und es gilt wieder die jüngste fremde. Form für Zusagen, die in der Zukunft liegen. Die Auswahl regelt „Gewinner unter `one-per-subject`" unten.
+    - `collect-accepted` („sammeln, Person nimmt an"): Die Aussagen addieren sich, keine überstimmt eine andere. Öffentlich angezeigt wird eine Aussage über eine Person erst, wenn diese sie angenommen hat ([05 → UI-Regeln](05-confirmations-and-trust.md#ui-regeln), Regel 5, `isAccepted`). Die Regel ist nur für Personen als Gegenstand definiert. Sie ist die Form für spätere Teilnahme-Bestätigungen („war dabei, bestätigt von Maria und Jonas"); Bestätigungen selbst regelt 05, nicht dieser Abschnitt.
+11. Wer Kanten neu schreibt (Composer-Mapper), MUSS `meta` jeder Kante erhalten, die bestehen bleibt ([shared-components.md → Personenfelder](modules/shared-components.md#personenfelder-people), Regel 6).
+
+### Gewinner unter `one-per-subject`
+
+Für einen Gegenstand und ein Ziel bestimmen alle Clients denselben Record:
+
+1. Es nehmen nur Records teil, die nach dieser Spec gelten: nach Leseregel L1 gezählt (`valid` oder `trusted`), nicht `invalid` (L2), mit genau einem `from` und `to` (Regel 8 in „RelationRecord als Item").
+2. Je Sprecher und Gegenstand gibt es höchstens einen Record, weil die `id` aus (`createdBy`, `predicate`, `from`, `to`) folgt (Regel 4 in „RelationRecord als Item"). Das gilt auch für `attends`: `to` ist das Event, `from` die Person, `createdBy` der Sprecher.
+3. Ist der Gegenstand eine Person, gewinnt ihre Selbstaussage (`createdBy` = Identität von `from`) immer, unabhängig von jedem Zeitpunkt.
+4. Sonst gewinnt die Aussage mit dem jüngsten Zeitpunkt. Der Zeitpunkt ist `createdAt` aus dem Payload des verifizierten Claims (`relation-authorial` bindet `createdAt`; ein Feld für den Änderungszeitpunkt hat das Payload nicht). Ohne Claim (Modus `authoritative`) gilt `updatedAt` des Relation-Items, fehlt es, `createdAt`.
+5. Bei gleichem Zeitpunkt gewinnt der Record mit der lexikographisch größten `id` (Vergleich nach UTF-16-Codeeinheiten wie in JCS). Das Ergebnis MUSS auf allen Clients gleich sein und DARF nicht von Lade- oder Sync-Reihenfolge abhängen.
+6. Grenze: Zeitstempel sind Angaben des Sprechers und beweisen keine Reihenfolge. Die Regel sichert gleiche Ergebnisse auf allen Clients, nicht die Wahrheit über die Reihenfolge. Weil das Claim-Payload nur `createdAt` bindet, verschiebt eine spätere Änderung der `role` durch den Sprecher den Zeitpunkt seiner Aussage im Modus `signed` nicht.
+
+Testvektor (nichtnormativ): Anton und Jonas sagen über Timo aus, Timo selbst nicht. Anton: `role: "going"`, `id: "rel-3f…"`; Jonas: `role: "declined"`, `id: "rel-a1…"`; beide mit `createdAt: "2026-09-27T10:00:00.000Z"`. Gewinner ist Jonas' Record (`"rel-a1…" > "rel-3f…"`), die Zeile zeigt Timo nicht (`declined`, siehe „Teilnahme am Event"). Sagt Timo danach selbst `maybe`, gewinnt seine Aussage, gleich wann sie entstand.
+
+### Teilnahme am Event: `attends` und `invited`
+
+1. Eine Zusage ist ein RelationRecord `attends` von der Person (`from`) zum Event (`to`), Zählregel `one-per-subject`.
+2. `fields.role` trägt den Qualifier: `going`, `maybe` oder `declined` (angezeigt etwa als „zugesagt", „vielleicht", „abgesagt"). `fields.tense` trägt die Zeitform wie in der Netzwerk-App ([netzwerk-app.md](netzwerk-app.md)): `coming`, `currently`, `has-been`.
+3. „Absagen" schreibt `role: "declined"` in den eigenen Record; der Record bleibt. `declined` ist eine eigene Aussage und stärker als keine: Unter `one-per-subject` gewinnt sie dauerhaft über fremde Einträge zur selben Person. Den eigenen Record zu löschen heißt dagegen „keine Aussage mehr" (Regel 10).
+4. „Eingeladen" ist die eingebettete Kante `invited` am Event (Event → Person). Sie bleibt, wie sie ist; Mitglieder setzen sie nach Regel 7.
+5. Das Event zeigt `invited` und `attends` in **einer** Menschen-Zeile. Hat eine Person eine gültige `attends`-Aussage, zeigt die Zeile deren Qualifier statt „eingeladen". Eine Person mit geltendem `declined` erscheint nicht in der Menschen-Zeile, nur in der vollständigen Liste („Alle").
+6. `attends` ist im Claim-Katalog `authorial` (siehe „Zwei Profile"): Der Sprecher signiert, nur er ändert.
+
 ## Trust-Bindung
 
 `knows(verified)` trägt keine eigene Kryptografie. Der Nachweis lebt bei den
@@ -413,7 +469,7 @@ Typ-Register, 06).
 
 | Profil | Payload | Mutation | Katalog v0.1 |
 |---|---|---|---|
-| `authorial` | `relation-authorial` (Identität **+ Inhalt** inkl. `fields` und `confirmationRef`) | nur der Autor; jedes `updateRelationRecord` (auch `confirmationRef`-Änderung) MUSS re-signieren | `votesOn`, `knows`, `connectedWith`, `takesPlaceAt` |
+| `authorial` | `relation-authorial` (Identität **+ Inhalt** inkl. `fields` und `confirmationRef`) | nur der Autor; jedes `updateRelationRecord` (auch `confirmationRef`-Änderung) MUSS re-signieren | `votesOn`, `knows`, `connectedWith`, `takesPlaceAt`, `attends` |
 | `structural` | kein Record-Claim; als eigenständiges Relation-Item trägt der Record den **Item-Herkunfts-Claim** (unten) | kollaborativ | — (heute keine Record-Prädikate; eingebettete `assignedTo`/`invited`/`blocks`/`childOf` deckt der Herkunfts-Claim des Trägeritems) |
 | `item-authorial` | Item-Claim über Identität **+ Inhalt** einer Aussage einer Person (unten) | nur die Autorin; jede Änderung des Inhalts MUSS neu signieren | Items der Typen `statement`, `comment`, `reaction` |
 

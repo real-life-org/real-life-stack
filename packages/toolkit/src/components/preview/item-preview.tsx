@@ -8,6 +8,7 @@ import { ProfileLink } from "../profile/profile-link"
 import { TagFilterChip } from "../tag/tag-filter-chip"
 import { MarkdownText } from "./markdown-text"
 import { editedLabel } from "@/lib/item-text"
+import { useFittingTags } from "./use-fitting-tags"
 import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
 import { useUserNameResolver } from "../../hooks/use-user-names"
@@ -272,10 +273,12 @@ export const ItemPreview = memo(function ItemPreview({
       }
     : undefined
 
-  // Wieviele Tags die Zeile traegt, ohne den Urheber zu verdraengen. Fest
-  // statt gemessen: Eine Messung waere erst nach dem ersten Bild da und
-  // liesse die Karte sichtbar springen. In der dichten Ansicht bleibt einer.
-  const sichtbareTags = tags.slice(0, isCompact ? 1 : MAX_SICHTBARE_TAGS)
+  // Wieviele Tags die Zeile traegt, ohne den Urheber zu verdraengen: so
+  // viele, wie hineinpassen (Anton, 27.09.2026). Gemessen an einer
+  // unsichtbaren Zeile vor dem ersten Bild, darum springt die Karte nicht;
+  // ohne Layout (Server, Tests) gilt die alte feste Zahl.
+  const tagFit = useFittingTags(tags, isCompact ? 1 : MAX_SICHTBARE_TAGS, 12)
+  const sichtbareTags = tags.slice(0, tagFit.visible)
   const verborgeneTags = tags.length - sichtbareTags.length
 
   // Alter Prop-Name gilt weiter: das Toolkit ist veroeffentlicht.
@@ -343,12 +346,34 @@ export const ItemPreview = memo(function ItemPreview({
           bleibt: Wer etwas geschrieben hat, ist die verlaesslichere Auskunft
           als der fuenfte Tag. Umbrechen darf hier nichts — sonst waechst die
           Karte je nach Anzahl der Tags unterschiedlich hoch. */}
-      {(sichtbareTags.length > 0 || author !== null) && (
-        <div className="flex items-center gap-x-3 overflow-hidden">
-          {sichtbareTags.length > 0 && (
+      {(tags.length > 0 || author !== null) && (
+        <div ref={tagFit.rowRef} data-measure="tag-row" className="relative flex items-center gap-x-3 overflow-hidden">
+          {tagFit.measuring && tags.length > 0 && (
+            // Messzeile: alle Chips und ein „+N"-Muster, unsichtbar und ohne
+            // Platz im Fluss. Aus ihr liest useFittingTags die Breiten.
+            <div
+              ref={tagFit.measureRef}
+              aria-hidden
+              className="pointer-events-none invisible absolute left-0 top-0 flex items-center gap-1.5 whitespace-nowrap"
+            >
+              {tags.map((tag) => (
+                <span key={tag} data-measure="tag-chip" className="shrink-0">
+                  <TagFilterChip tag={tag} />
+                </span>
+              ))}
+              <span data-measure="tag-plus" className="shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
+                +{tags.length}
+              </span>
+            </div>
+          )}
+          {/* Auch ohne einen einzigen passenden Chip: dann steht allein „+N"
+              mit allen Tags im Titel, nie gar nichts (#513). */}
+          {tags.length > 0 && (
             <div className="flex min-w-0 shrink items-center gap-1.5 overflow-hidden">
               {sichtbareTags.map((tag) => (
-                <TagFilterChip key={tag} tag={tag} />
+                <span key={tag} data-visible-tag className="shrink-0">
+                  <TagFilterChip tag={tag} />
+                </span>
               ))}
               {verborgeneTags > 0 && (
                 <span
@@ -372,7 +397,7 @@ export const ItemPreview = memo(function ItemPreview({
                ganz aus der Zeile, und Datum und Bearbeitungshinweis
                verschwaenden im `overflow-hidden` darum herum. Derselbe Fehler
                stand schon einmal in ItemDetailBody (#307). */
-            <div className="ml-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            <div ref={tagFit.fixedRef} data-measure="tag-author" className="ml-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               <ProfileLink userId={authorId} label={`Profil von ${authorName} öffnen`}>
                 {/* In der dichten Ansicht traegt das Bild den Namen: In einer
                     Kanban-Spalte ist fuer beides kein Platz. */}

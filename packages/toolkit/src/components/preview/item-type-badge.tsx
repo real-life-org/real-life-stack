@@ -1,6 +1,6 @@
 "use client"
 
-import type { ComponentType } from "react"
+import type { ComponentType, ReactNode } from "react"
 import { cn } from "../../lib/utils"
 import { GENERIC_BADGE, resolveTypePresentation } from "./type-presentation"
 
@@ -25,6 +25,8 @@ export interface ItemTypeBadgeProps {
   config?: Record<string, ItemTypeBadgeConfig>
   /** Show a neutral badge with the raw type when no registry entry exists. */
   fallback?: boolean
+  /** After the label, in the badge's colour — e.g. the chevron of the type choice in the form head. */
+  trailing?: ReactNode
   className?: string
 }
 
@@ -34,7 +36,7 @@ export interface ItemTypeBadgeConfig {
   className: string
 }
 
-export function ItemTypeBadge({ type, config, fallback = false, className }: ItemTypeBadgeProps) {
+export function ItemTypeBadge({ type, config, fallback = false, trailing, className }: ItemTypeBadgeProps) {
   // Label, icon and styling come from the type register (spec 06) — the
   // previous DEFAULT_CONFIG here was one of the four parallel type lists.
   // The `config` prop remains as a caller override for special surfaces.
@@ -66,6 +68,7 @@ export function ItemTypeBadge({ type, config, fallback = false, className }: Ite
     >
       <Icon className="h-3 w-3" />
       {cfg.label}
+      {trailing}
     </span>
   )
 }

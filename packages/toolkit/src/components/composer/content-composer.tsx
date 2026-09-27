@@ -1,12 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { ChevronDown, Globe, Loader2, Lock, Trash2, X } from "lucide-react"
+import { Check, ChevronDown, Globe, Home, Loader2, Lock, Trash2, X } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/primitives/tooltip"
+import { ItemTypeBadge } from "../preview/item-type-badge"
+import { GENERIC_BADGE, resolveTypePresentation } from "../preview/type-presentation"
 import { Button } from "@/components/primitives/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/primitives/dropdown-menu"
 import { useIsCompact } from "@/hooks/use-mobile"
@@ -14,7 +19,7 @@ import { cn } from "@/lib/utils"
 import { latLngFromPoint, pointFromLatLng, type GeoJSONPoint } from "@/lib/geo"
 import { WidgetWrapper } from "./widgets/widget-wrapper"
 import { TitleWidget } from "./widgets/title-widget"
-import { TextWidget } from "./widgets/text-widget"
+import { TextWidget, WIDGET_ICONS, WIDGET_LABELS } from "./widgets/text-widget"
 import { DateWidget } from "./widgets/date-widget"
 import {
   dateWidgetPatch,
@@ -33,7 +38,6 @@ import { resolvePeopleFields, type PeopleRelationConfig } from "./people-relatio
 export type { PeopleRelationConfig } from "./people-relations"
 import { TagsWidget } from "./widgets/tags-widget"
 import { StatusWidget } from "./widgets/status-widget"
-import { GroupWidget } from "./widgets/group-widget"
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -105,6 +109,14 @@ export interface StatusOption {
 export interface GroupOption {
   id: string
   name: string
+  /** Space logo (`data.image`), as the space switcher shows it. */
+  image?: string
+  /** Space colour (`data.primaryColor`): the logo tile's surface. */
+  color?: string
+  /** The personal space („Privat") — shown with the home icon, like the switcher. */
+  personal?: boolean
+  /** Number of members, shown muted in the space menu. */
+  memberCount?: number
 }
 
 export interface ContentTypeConfig {
@@ -120,6 +132,8 @@ export interface ContentTypeConfig {
   groupOptions?: GroupOption[]
   defaultGroup?: string
   groupRequired?: boolean
+  /** Why the space cannot be changed (one fixed option) — tooltip in the form head. */
+  groupFixedReason?: string
   /** Where this type keeps its free text. Default: `content` for `post`, else `description`. */
   textField?: "content" | "description"
   /**
@@ -200,12 +214,25 @@ export interface ContentComposerProps {
   /** Quick-select people suggestions shown as clickable chips below the people input */
   peopleQuickSuggestions?: PersonOption[]
   widgets?: CustomWidgetDefinition[]
+  /**
+   * @deprecated Default `false` since S1 (Anton, 27.09.2026): the stack has no
+   * public items, and the public/private split on the submit button promised
+   * something no connector does — `isPublic` is read by no mapper. Kept for
+   * callers that set it explicitly.
+   */
   showVisibility?: boolean
   defaultPublic?: boolean
   showPreview?: boolean
   renderPreview?: (data: WidgetData, contentType: string) => React.ReactNode
   /** When true, every data change immediately calls onSubmit and the footer is hidden */
   liveUpdate?: boolean
+  /**
+   * Pin the action footer (Löschen · Abbrechen · Speichern) to the bottom of
+   * the surrounding scroll area — the edit form inside the detail card
+   * (shared-components, Edit-Regeln 4). The composer then fills the card's
+   * height so the footer sits at the card end even for a short form.
+   */
+  stickyFooter?: boolean
   /** Fires on every data/type change (and on mount) — for a live preview of the
    *  in-progress item without persisting it. */
   onChange?: (submission: ContentComposerSubmitData) => void
@@ -218,7 +245,13 @@ export interface ContentComposerProps {
 
 // ── Constants ────────────────────────────────────────────────────────────
 
-/** Fixed rendering order for widgets */
+/**
+ * Order of the widgets a type does NOT list in `defaultWidgets` (the ones a
+ * user can switch on). The type's own widgets render in ITS order — the order
+ * of the meta box, derived from the field and edge register (Spec 06, Regel
+ * 16; shared-components, Edit-Regeln 2). Until S1 this list fixed the order
+ * for every type, with `group` and `status` first.
+ */
 const WIDGET_ORDER: WidgetType[] = [
   "group",
   "status",
@@ -328,6 +361,347 @@ function dirtySignature(data: WidgetData, peopleKeys: readonly string[]): string
   return JSON.stringify(out)
 }
 
+/**
+ * Position of each built-in widget in the FORM (shared-components,
+ * Edit-Regeln 2): title → description → meta fields (people → time → place →
+ * values) → tags; the space (`group`) sits in the form head. Used to place widgets a user switches on at THEIR slot
+ * instead of at the end (Edit-Regeln 2).
+ */
+const ANATOMY_RANK: Record<WidgetType, number> = {
+  title: 0,
+  text: 1,
+  media: 2,
+  people: 3,
+  date: 4,
+  location: 5,
+  status: 6,
+  tags: 7,
+  group: 8,
+}
+
+/**
+ * The built-in widgets in render order: those the type lists in
+ * `defaultWidgets` keep that order; every other built-in is inserted before
+ * the first listed widget that comes after it in the anatomy. Ids the
+ * composer has no built-in for (custom widgets, or register widgets that
+ * arrive with later steps) are skipped here.
+ */
+export function widgetRenderOrder(defaultWidgets: readonly string[]): WidgetType[] {
+  const builtIn = new Set<string>(WIDGET_ORDER)
+  const order = defaultWidgets.filter((w, i): w is WidgetType => builtIn.has(w) && defaultWidgets.indexOf(w) === i)
+  const extras = WIDGET_ORDER.filter((w) => !order.includes(w)).sort((a, b) => ANATOMY_RANK[a] - ANATOMY_RANK[b])
+  for (const w of extras) {
+    const before = order.findIndex((o) => ANATOMY_RANK[o] > ANATOMY_RANK[w])
+    if (before === -1) order.push(w)
+    else order.splice(before, 0, w)
+  }
+  return order
+}
+
+// ── Form head ────────────────────────────────────────────────────────────
+
+/** Sichtbarer Fokus und der offene Zustand (Ring in Primärfarbe, 3 px, ~18 %) an Badge und Pille. */
+const HEAD_TRIGGER =
+  "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50 data-[state=open]:ring-[3px] data-[state=open]:ring-primary/20"
+
+/** Das Menü unter Badge und Pille: weiß, Radius 12 px, weicher Schatten, 6 px Innenabstand. */
+const HEAD_MENU = "rounded-xl border-border/60 p-1.5 shadow-lg"
+
+/** Eine Menüzeile; die aktuelle hervorgehoben, halbfett, Häkchen rechts in Primärfarbe. */
+const HEAD_ITEM = "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm data-[current=true]:bg-accent data-[current=true]:font-semibold"
+
+interface ComposerHeadProps {
+  types: readonly ContentTypeConfig[]
+  selectedType: string
+  /** Set when the type may be chosen (create with several types); otherwise the type is shown fixed. */
+  onSelectType?: (id: string) => void
+  space?: {
+    value: string
+    options: readonly GroupOption[]
+    required: boolean
+    fixedReason?: string
+    onChange: (id: string) => void
+  }
+}
+
+/**
+ * Kopf des Formulars (shared-components, Edit-Regeln 3; Design Anton
+ * 27.09.2026): links in einer Zeile der Typ als Typ-Badge und der Space als
+ * Pille. Wählbar öffnen beide ein Menü (DropdownMenu: Enter/Leertaste,
+ * Pfeiltasten, Escape); fest ohne Chevron und ohne Schloss, ein fester Space
+ * gedämpft mit dem Grund im Tooltip.
+ */
+function ComposerHead({ types, selectedType, onSelectType, space }: ComposerHeadProps) {
+  const current = types.find((t) => t.id === selectedType) ?? types[0]
+  return (
+    // Eine Zeile; rechts bleibt Platz für die Knöpfe eines Panels darüber (✕).
+    <div className="flex min-w-0 items-center gap-2 pr-8">
+      {current && (
+        <span data-slot="composer-type" className="inline-flex shrink-0">
+          {onSelectType ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger aria-label={`Typ wählen, aktuell ${current.label}`} data-value={current.id} className={HEAD_TRIGGER}>
+                <TypeBadge config={current} trailing={<ChevronDown className="h-3 w-3 opacity-80" aria-hidden />} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={6} className={cn(HEAD_MENU, "w-[220px]")}>
+                {types.map((t) => (
+                  <DropdownMenuItem
+                    key={t.id}
+                    // Auswahlzustand für Screenreader, nicht nur als Häkchen.
+                    role="menuitemradio"
+                    aria-checked={t.id === current.id}
+                    data-current={t.id === current.id}
+                    onSelect={() => onSelectType(t.id)}
+                    className={HEAD_ITEM}
+                  >
+                    <TypeIcon config={t} />
+                    <span className="flex-1">{t.label}</span>
+                    {t.id === current.id && <Check className="h-4 w-4 text-primary" aria-hidden />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <TypeBadge config={current} />
+          )}
+        </span>
+      )}
+      {space && <SpacePill {...space} />}
+    </div>
+  )
+}
+
+/** Badge-Stil (Icon, Label, Farbe) eines Typs aus dem Register; unbekannte Typen neutral mit eigenem Label. */
+function typeBadgeStyle(config: ContentTypeConfig) {
+  const resolved = resolveTypePresentation(config.id)
+  const badge = resolved.generic || !resolved.badge ? GENERIC_BADGE : resolved.badge
+  return { icon: config.icon ?? badge.icon, className: badge.className, generic: resolved.generic }
+}
+
+/** The type as ItemTypeBadge (register colour), sized for the form head. */
+function TypeBadge({ config, trailing }: { config: ContentTypeConfig; trailing?: React.ReactNode }) {
+  const style = typeBadgeStyle(config)
+  const override = style.generic
+    ? { [config.id]: { icon: style.icon, label: config.label, className: style.className } }
+    : undefined
+  return (
+    <ItemTypeBadge
+      type={config.id}
+      config={override}
+      fallback
+      trailing={trailing}
+      className="h-6 px-2.5 text-[11.5px] font-semibold"
+    />
+  )
+}
+
+/** Rundes Typ-Icon im Menü: 22 px, Typ-Pastell, Rand im Typton — dieselben Farben wie das Badge. */
+function TypeIcon({ config }: { config: ContentTypeConfig }) {
+  const style = typeBadgeStyle(config)
+  const Icon = style.icon
+  return (
+    <span data-slot="type-icon" className={cn("flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border", style.className)}>
+      <Icon className="h-3 w-3" />
+    </span>
+  )
+}
+
+function spaceInitials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).map((w) => w[0]!).join("").toUpperCase().slice(0, 1) || "?"
+}
+
+/**
+ * Logo-Kachel eines Space wie im Space-Wechsler: Bild, sonst die Initiale auf
+ * der Space-Farbe; der persönliche Space zeigt das Haus.
+ */
+function SpaceLogo({ option, size = "sm" }: { option?: GroupOption; size?: "sm" | "md" }) {
+  const box = size === "md" ? "h-[22px] w-[22px] rounded-[6px]" : "h-[18px] w-[18px] rounded-[5px]"
+  if (option?.personal) {
+    return (
+      <span data-slot="space-logo" className={cn("flex shrink-0 items-center justify-center bg-primary/10 text-primary", box)}>
+        <Home className="h-3 w-3" aria-hidden />
+      </span>
+    )
+  }
+  return (
+    <Avatar data-slot="space-logo" className={cn("shrink-0", box)}>
+      {option?.image && <AvatarImage src={option.image} alt="" className={cn("object-cover", box)} />}
+      <AvatarFallback
+        className={cn(box, "text-[10px] font-semibold", option?.color ? "text-background" : "bg-muted text-muted-foreground")}
+        style={option?.color ? { backgroundColor: option.color } : undefined}
+      >
+        {option ? spaceInitials(option.name) : "?"}
+      </AvatarFallback>
+    </Avatar>
+  )
+}
+
+function SpacePill({ value, options, required, fixedReason, onChange }: NonNullable<ComposerHeadProps["space"]>) {
+  const selected = options.find((o) => o.id === value)
+  const choosable = options.length > 1
+  const missing = required && !value
+  const [query, setQuery] = React.useState("")
+  const searchRef = React.useRef<HTMLInputElement>(null)
+  if (!choosable) {
+    const only = selected ?? options[0]
+    const fixed = (
+      <span
+        data-slot="composer-space"
+        // Mit Grund fokussierbar: Der Tooltip öffnet auch per Tastatur, und
+        // der Grund steht für Screenreader im Text.
+        tabIndex={fixedReason ? 0 : undefined}
+        className="inline-flex h-7 min-w-0 items-center gap-1.5 rounded-full text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        <SpaceLogo option={only} />
+        <span className="truncate">{only?.name}</span>
+        {fixedReason && <span className="sr-only">{`: ${fixedReason}`}</span>}
+      </span>
+    )
+    if (!fixedReason) return fixed
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{fixed}</TooltipTrigger>
+        <TooltipContent side="bottom">{fixedReason}</TooltipContent>
+      </Tooltip>
+    )
+  }
+  const q = query.trim().toLowerCase()
+  const shown = q ? options.filter((o) => o.name.toLowerCase().includes(q)) : options
+  const personal = shown.filter((o) => o.personal)
+  const groups = shown.filter((o) => !o.personal)
+  const row = (o: GroupOption) => (
+    <DropdownMenuItem
+      key={o.id}
+      role="menuitemradio"
+      aria-checked={o.id === value}
+      data-current={o.id === value}
+      onSelect={() => onChange(o.id)}
+      className={HEAD_ITEM}
+    >
+      <SpaceLogo option={o} size="md" />
+      <span data-slot="space-name" className="min-w-0 flex-1 truncate">{o.name}</span>
+      {o.memberCount !== undefined && <span className="text-xs font-normal text-muted-foreground">{o.memberCount}</span>}
+      {o.id === value && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden />}
+    </DropdownMenuItem>
+  )
+  return (
+    <span data-slot="composer-space" className="inline-flex min-w-0">
+      <DropdownMenu
+        onOpenChange={(open) => {
+          if (!open) {
+            setQuery("")
+            return
+          }
+          // Das Suchfeld bekommt beim Öffnen den Fokus, nachdem Radix ihn
+          // auf Menü oder ersten Eintrag gesetzt hat: tippen filtert sofort.
+          setTimeout(() => searchRef.current?.focus(), 0)
+        }}
+      >
+        <DropdownMenuTrigger
+          aria-label={selected ? `Space wählen, aktuell ${selected.name}` : "Space wählen"}
+          aria-invalid={missing || undefined}
+          aria-required={required || undefined}
+          data-value={value}
+          className={cn(
+            HEAD_TRIGGER,
+            "inline-flex h-7 min-w-0 items-center gap-1.5 border bg-background pl-1 pr-2.5 text-xs text-foreground",
+            !selected && "pl-2.5",
+            missing && "border-destructive text-destructive",
+          )}
+        >
+          {selected && <SpaceLogo option={selected} />}
+          <span className="truncate">{selected?.name ?? `Space wählen${required ? " *" : ""}`}</span>
+          <ChevronDown className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          sideOffset={6}
+          className={cn(HEAD_MENU, "w-[250px]")}
+        >
+          <input
+            ref={searchRef}
+            type="search"
+            placeholder="Space suchen…"
+            aria-label="Space suchen"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            // Tippen gehört dem Feld, nicht der Typeahead-Suche des Menüs;
+            // Pfeiltasten und Escape bleiben beim Menü.
+            onKeyDown={(e) => {
+              // Pfeil runter führt in die Treffer; Escape bleibt beim Menü.
+              if (e.key === "ArrowDown") {
+                e.preventDefault()
+                e.stopPropagation()
+                e.currentTarget.closest('[role="menu"]')?.querySelector<HTMLElement>('[role="menuitemradio"]')?.focus()
+                return
+              }
+              if (e.key !== "Escape") e.stopPropagation()
+            }}
+            className="mb-1 h-8 w-full rounded-lg border bg-background px-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+          />
+          {personal.length > 0 && (
+            <>
+              <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Persönlich</DropdownMenuLabel>
+              {personal.map(row)}
+            </>
+          )}
+          {groups.length > 0 && (
+            <>
+              <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gruppen</DropdownMenuLabel>
+              {groups.map(row)}
+            </>
+          )}
+          {shown.length === 0 && <p className="px-2 py-1.5 text-sm text-muted-foreground">Kein Space gefunden</p>}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </span>
+  )
+}
+
+/** Die leere Beschreibung, eingeklappt: „+ Beschreibung" und daneben die Schalter der übrigen Felder. */
+function CollapsedText({
+  label,
+  onOpen,
+  availableWidgets,
+  onToggleWidget,
+}: {
+  label: string
+  onOpen: () => void
+  availableWidgets: readonly WidgetType[]
+  onToggleWidget: (w: WidgetType) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="inline-flex items-center gap-1 rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        + {label}
+      </button>
+      <span className="ml-auto flex items-center gap-0.5">
+        {availableWidgets.map((w) => {
+          const Icon = WIDGET_ICONS[w]
+          if (!Icon) return null
+          return (
+            <Button
+              key={w}
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              title={WIDGET_LABELS[w]}
+              onClick={() => onToggleWidget(w)}
+              className="h-7 w-7 text-muted-foreground"
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </Button>
+          )
+        })}
+      </span>
+    </div>
+  )
+}
+
 // ── Component ────────────────────────────────────────────────────────────
 
 export function ContentComposer({
@@ -339,6 +713,7 @@ export function ContentComposer({
   onSubmit,
   onCancel,
   onDelete,
+  stickyFooter = false,
   editMode: editModeProp,
   requestMapPick,
   geocode,
@@ -349,7 +724,7 @@ export function ContentComposer({
   tagQuickSuggestions,
   peopleQuickSuggestions,
   widgets: customWidgets,
-  showVisibility = true,
+  showVisibility = false,
   defaultPublic = true,
   showPreview = true,
   renderPreview,
@@ -415,6 +790,14 @@ export function ContentComposer({
     }
   }, [apiRef])
   const [isPublic, setIsPublic] = React.useState(defaultPublic)
+  // Genau ein möglicher Space: Er steht fest im Kopf und MUSS dann auch
+  // gesetzt sein — eine Anzeige, die beim Speichern nicht gilt, täuscht.
+  const onlySpace = currentConfig?.groupOptions?.length === 1 ? currentConfig.groupOptions[0]!.id : undefined
+  React.useEffect(() => {
+    if (onlySpace && !data.group) setData((d) => (d.group ? d : { ...d, group: onlySpace }))
+  }, [onlySpace, data.group])
+  // „+ Beschreibung" aufgeklappt? Nur UI-Zustand; mit Inhalt ist sie immer offen.
+  const [textOpen, setTextOpen] = React.useState(false)
   const [isPreviewing, setIsPreviewing] = React.useState(false)
   // Aborts the previous reverse-geocode when the user re-picks on the map.
   const reverseAbortRef = React.useRef<AbortController | null>(null)
@@ -519,14 +902,22 @@ export function ContentComposer({
     activeWidgets.add("group")
   }
 
-  // Widgets available to toggle on (not active, not title/text, not status/group without config)
-  const toggleableWidgets = WIDGET_ORDER.filter(
+  // Render order: the type's widgets in its own order, the rest at their
+  // place in the form. The space is rendered in the form head, not here.
+  const renderOrder = widgetRenderOrder(currentConfig.defaultWidgets).filter((w) => w !== "group")
+
+  // Die Beschreibung ist eingeklappt, wenn sie leer ist — aber nur, wo es
+  // einen Titel gibt; beim Beitrag IST der Text der Inhalt (Edit-Regeln 2).
+  const textCollapsed = !textOpen && !data.text?.trim() && activeWidgets.has("title")
+
+  // Widgets available to toggle on (not active, not title/text, not status
+  // without config; the space lives in the form head, never as a toggle)
+  const toggleableWidgets = renderOrder.filter(
     (w) =>
       !activeWidgets.has(w) &&
       w !== "title" &&
       w !== "text" &&
-      !(w === "status" && !hasStatusOptions) &&
-      !(w === "group" && !hasGroupOptions),
+      !(w === "status" && !hasStatusOptions),
   ) as WidgetType[]
 
   // Get widget label
@@ -615,30 +1006,25 @@ export function ContentComposer({
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
-      {/* Content type selector (multi-type mode only) */}
-      {!isSingleTypeMode && contentTypes.length > 1 && (
-        <div className="flex gap-1 overflow-x-auto">
-          {contentTypes.map((type) => {
-            const Icon = type.icon
-            return (
-              <button
-                key={type.id}
-                type="button"
-                onClick={() => setSelectedType(type.id)}
-                className={cn(
-                  "flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
-                  selectedType === type.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80",
-                )}
-              >
-                {Icon && <Icon className="h-4 w-4" />}
-                {type.label}
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {/* Kopf des Formulars: Typ und Space, kompakt als Auswahlfelder
+          (shared-components, Edit-Regeln 2). Der Space steht oben, weil er
+          Sichtbarkeit, Personen- und Tag-Vorschläge bestimmt. */}
+      <ComposerHead
+        types={contentTypes}
+        selectedType={selectedType}
+        onSelectType={!isSingleTypeMode && contentTypes.length > 1 ? setSelectedType : undefined}
+        space={
+          hasGroupOptions
+            ? {
+                value: data.group || "",
+                options: currentConfig.groupOptions!,
+                required: currentConfig.groupRequired ?? true,
+                fixedReason: currentConfig.groupFixedReason,
+                onChange: (v) => updateData("group", v),
+              }
+            : undefined
+        }
+      />
 
       {/* Preview or Edit mode */}
       {isPreviewing ? (
@@ -657,8 +1043,8 @@ export function ContentComposer({
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          {/* Render widgets in fixed order */}
-          {WIDGET_ORDER.map((widgetId) => {
+          {/* Render widgets in the type's order (register), then the rest */}
+          {renderOrder.map((widgetId) => {
             const isActive = activeWidgets.has(widgetId)
             const isDefault = defaultWidgets.has(widgetId)
             const widgetLabel = getWidgetLabel(widgetId)
@@ -677,18 +1063,7 @@ export function ContentComposer({
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
-                  {/* Widget content */}
-                  {widgetId === "group" &&
-                    currentConfig.groupOptions &&
-                    currentConfig.groupOptions.length > 0 && (
-                      <GroupWidget
-                        value={data.group || ""}
-                        onChange={(v) => updateData("group", v)}
-                        label={widgetLabel}
-                        options={currentConfig.groupOptions}
-                        required={currentConfig.groupRequired ?? true}
-                      />
-                    )}
+                  {/* Widget content. Der Space (`group`) steht im Kopf. */}
                   {widgetId === "title" && (
                     <TitleWidget
                       value={data.title || ""}
@@ -697,7 +1072,15 @@ export function ContentComposer({
                       autoFocus={!data.title && !imDrawer}
                     />
                   )}
-                  {widgetId === "text" && (
+                  {widgetId === "text" && textCollapsed && (
+                    <CollapsedText
+                      label={widgetLabel}
+                      onOpen={() => setTextOpen(true)}
+                      availableWidgets={toggleableWidgets}
+                      onToggleWidget={toggleWidget}
+                    />
+                  )}
+                  {widgetId === "text" && !textCollapsed && (
                     <TextWidget
                       value={data.text || ""}
                       onChange={(v) => updateData("text", v)}
@@ -865,7 +1248,13 @@ export function ContentComposer({
         </p>
       )}
       {/* Footer: actions (hidden in liveUpdate mode) */}
-      {!liveUpdate && <div className="flex items-center justify-between pt-1">
+      {!liveUpdate && <div
+        data-slot="edit-footer"
+        className={cn(
+          "flex items-center justify-between pt-1",
+          stickyFooter && "sticky bottom-0 z-10 -mx-4 mt-auto border-t bg-card px-4 py-3",
+        )}
+      >
         <div className="flex items-center gap-2">
           {/* Delete button (edit mode only) */}
           {isEditMode && onDelete && (
@@ -874,16 +1263,18 @@ export function ContentComposer({
               variant="ghost"
               size="sm"
               onClick={onDelete}
-              className="gap-1.5 text-xs text-destructive hover:text-destructive"
+              // Schmal gehalten: Auf dem Telefon (390 px) passen Löschen,
+              // Abbrechen und der Speichern-Split sonst nicht in eine Zeile.
+              className="gap-1.5 px-2 has-[>svg]:px-1.5 text-xs text-destructive hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Loeschen
+              Löschen
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {onCancel && (
-            <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+            <Button type="button" variant="ghost" size="sm" className="px-2" onClick={onCancel}>
               Abbrechen
             </Button>
           )}
@@ -907,7 +1298,7 @@ export function ContentComposer({
                 onClick={handleSubmit}
                 disabled={!canSubmit || submitting}
                 aria-busy={submitting}
-                className="gap-1.5 rounded-r-none"
+                className="gap-1.5 rounded-r-none has-[>svg]:px-2"
               >
                 {submitting ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />

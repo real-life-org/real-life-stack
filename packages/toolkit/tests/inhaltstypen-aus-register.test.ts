@@ -23,7 +23,8 @@ describe("Inhaltstypen aus dem Register", () => {
   it("trägt die früheren APP_EXTRAS als Darstellung des Typs", () => {
     const task = resolveContentType("task")!
     expect(task.submitLabel).toBeUndefined()
-    expect(task.widgetLabels).toEqual({ text: "Beschreibung", people: "Zugewiesen" })
+    expect(task.widgetLabels).toEqual({ text: "Beschreibung", date: "Fällig" })
+    expect(task.peopleRelations).toEqual([{ predicate: "assignedTo", label: "Zugewiesen" }])
     expect(task.defaultStatus).toBe("open")
     expect(task.groupRequired).toBe(true)
     expect(resolveContentType("post")?.submitLabel).toBe("Posten")
@@ -34,9 +35,10 @@ describe("Inhaltstypen aus dem Register", () => {
     expect(resolveContentType("task")?.statusOptions).toEqual(defaultColumns.map((c) => ({ id: c.id, label: c.label })))
   })
 
-  it("leitet peopleRelation aus der Manifest-Kante ab, deren Widget people ist", () => {
-    expect(resolveContentType("task")?.peopleRelation).toEqual({ predicate: "assignedTo" })
-    expect(resolveContentType("event")?.peopleRelation).toEqual({ predicate: "invited" })
+  it("leitet die Personenfelder aus den Personen-Kanten der Feld- und Kantenliste ab", () => {
+    expect(resolveContentType("task")?.peopleRelations?.map((p) => p.predicate)).toEqual(["assignedTo"])
+    expect(resolveContentType("event")?.peopleRelations?.map((p) => p.predicate)).toEqual(["invited"])
+    expect(resolveContentType("post")?.peopleRelations).toBeUndefined()
     expect(resolveContentType("post")?.peopleRelation).toBeUndefined()
   })
 

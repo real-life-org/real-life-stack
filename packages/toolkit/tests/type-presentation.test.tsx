@@ -1,11 +1,9 @@
 // @vitest-environment jsdom
-import { act, createElement } from "react"
-import { createRoot } from "react-dom/client"
+import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { afterEach, describe, expect, it } from "vitest"
-import { createObservable, type Item, type User } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life-stack/data-interface"
 
-import { ConnectorProvider } from "../src/hooks/connector-context"
 import { ItemTypeBadge } from "../src/components/preview/item-type-badge"
 import { getItemPreviewAdornments } from "../src/components/preview/item-type-meta"
 import {
@@ -95,11 +93,11 @@ describe("type presentation registry", () => {
 
   it("rejects a fragment setting a scalar the base already sets", () => {
     const Footer = () => null
-    // task already ships a footer (assignees) — a fragment may not shadow it.
-    expect(() => registerTypePresentation("app", { extensions: [{ id: "task", footer: Footer }] }))
+    // statement ships a footer (votes, transition rule 17) — a fragment may not shadow it.
+    expect(() => registerTypePresentation("app", { extensions: [{ id: "statement", footer: Footer }] }))
       .toThrow(/Basis bereits setzt/)
     // The failed registration leaves no partial layer behind.
-    expect(resolveTypePresentation("task").footer).not.toBe(Footer)
+    expect(resolveTypePresentation("statement").footer).not.toBe(Footer)
   })
 
   it("revalidates EXTENSION relationWidgets on manifest rebind (#228)", () => {
@@ -177,40 +175,10 @@ describe("type presentation registry", () => {
     expect(markup).toContain("Ada Lovelace")
   })
 
-  it("renders the task footer with resolved assignees on any surface", async () => {
-    // Minimal fake: exactly the two observables the footer's hooks consume.
-    const users: User[] = [{ id: "u1", displayName: "Ich" }, { id: "u2", displayName: "Kollegin" }]
-    // The hooks route through useGroupConnector(), whose hasGroups() guard
-    // wants the full group-manager surface — stubbed inertly.
-    const connector = {
-      observeMembers: () => createObservable(users),
-      observeCurrentUser: () => createObservable<User | null>(users[0]),
-      getAuthState: () => createObservable({ status: "authenticated", user: users[0] }),
-      authenticate: async () => {},
-      getCurrentUser: async () => users[0],
-      getGroups: async () => [], observeGroups: () => createObservable([]),
-      getMembers: async () => users, getCurrentGroup: () => null,
-      observeCurrentGroup: () => createObservable(null), setCurrentGroup: () => {},
-      createGroup: async () => { throw new Error("unused") },
-      updateGroup: async () => { throw new Error("unused") },
-      deleteGroup: async () => {}, inviteMember: async () => {}, removeMember: async () => {},
-    }
-
-    const task = item("task", { title: "T", status: "open" }, [
-      { predicate: "assignedTo", target: "global:u2" },
-    ])
-    const container = document.createElement("div")
-    const root = createRoot(container)
-    await act(async () => {
-      root.render(
-        createElement(ConnectorProvider, {
-          connector: connector as never,
-          children: renderTypeFooter(task),
-        }),
-      )
-    })
-    expect(container.textContent).toContain("Kollegin")
-    await act(async () => root.unmount())
+  // Bis S1 zeigte eine Typ-Fußzeile die Zugewiesenen einer Aufgabe. Sie sind
+  // jetzt eine Kante in der Meta-Box (feld-und-kantenregister.test.tsx).
+  it("gives the task no footer — assignees live in the meta box since S1", () => {
+    expect(renderTypeFooter(item("task", { title: "T" }, [{ predicate: "assignedTo", target: "global:u2" }]))).toBeNull()
   })
 
   it("returns no footer for types without one", () => {

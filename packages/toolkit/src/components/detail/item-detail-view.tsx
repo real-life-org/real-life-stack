@@ -5,6 +5,8 @@ import type { Item } from "@real-life-stack/data-interface"
 import { ItemDetailPanel } from "./item-detail-panel"
 import { ItemDetailActions } from "./item-detail-actions"
 import { ItemDetailSkeleton } from "./item-detail-skeleton"
+import { DeleteConfirmDialog } from "./delete-confirm-dialog"
+import { useItemPermissions } from "../../hooks/use-item-permissions"
 import {
   type ContentComposerProps,
   type ContentTypeConfig,
@@ -15,7 +17,7 @@ import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import { useIsFrozen } from "../../hooks/use-item-frozen"
 import { useItem } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
-import { hasItemGroups, normalizeItemType } from "@real-life-stack/data-interface"
+import { hasItemGroups, isWritable, normalizeItemType } from "@real-life-stack/data-interface"
 
 export interface ItemDetailViewProps {
   /** The item to show. The view subscribes via `useItem`, so it always renders
@@ -81,6 +83,10 @@ export function ItemDetailView({
   // content, its wording can no longer be edited — the edit entry disappears
   // (resonance.md, Wortlaut rule 3; the type offers a new version instead).
   const frozen = useIsFrozen(item)
+  // Löschen in der Fußzeile des Formulars: dieselbe Regel wie im ⋮-Menü
+  // (ItemDetailActions) — nur mit Recht, immer hinter der Bestätigung.
+  const perms = useItemPermissions(item)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   // Uncontrolled by default; controlled when a `mode` prop is supplied (URL-driven).
   const [internalMode, setInternalMode] = useState<"read" | "edit">("read")
   const mode = modeProp ?? internalMode
@@ -106,7 +112,12 @@ export function ItemDetailView({
   // template, editing is simply not offered (a fallback would show a wrong
   // type switcher / form).
   const vorlage = editTemplateFor(item, contentTypes)
-  const composerTypes = vorlage ? contentTypes.filter((t) => t.id === vorlage) : []
+  // Der Space ist beim Bearbeiten nur wählbar, wenn der Connector Items
+  // verschieben kann (moveItemToGroup); sonst steht er nicht zur Wahl.
+  const canMove = hasItemGroups(connector)
+  const composerTypes = (vorlage ? contentTypes.filter((t) => t.id === vorlage) : []).map((t) =>
+    canMove ? t : { ...t, groupOptions: undefined, defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") },
+  )
   const canEdit = composerTypes.length > 0 && !frozen
 
   // Pre-fill the group widget with the item's ACTUAL group/space (not just the
@@ -132,6 +143,7 @@ export function ItemDetailView({
   return (
     <ItemDetailPanel
       itemId={item.id}
+      editing={mode === "edit"}
       renderCommentReactions={renderCommentReactions}
       focusComposer={focusComposer}
       onComposerFocused={onComposerFocused}
@@ -139,18 +151,38 @@ export function ItemDetailView({
       {mode === "read" ? (
         renderRead(item, actions)
       ) : (
-        <ItemComposer
-          key={item.id}
-          className="p-4"
-          existingItem={item}
-          contentTypes={composerTypes}
-          initialContentType={vorlage}
-          initialData={initialData}
-          mapper={mapper}
-          composerProps={composerProps}
-          onDone={() => changeMode("read")}
-          onCancel={() => changeMode("read")}
-        />
+        <>
+          <ItemComposer
+            key={item.id}
+            // Das Formular füllt die Karte, damit die Fußzeile an ihrem Ende
+            // klebt; unten kein Innenabstand, den trägt die Fußzeile selbst.
+            className="min-h-full px-4 pt-4"
+            existingItem={item}
+            contentTypes={composerTypes}
+            initialContentType={vorlage}
+            initialData={initialData}
+            mapper={mapper}
+            composerProps={{
+              ...composerProps,
+              stickyFooter: true,
+              ...(perms.canDelete ? { onDelete: () => setConfirmDelete(true) } : {}),
+            }}
+            onDone={() => changeMode("read")}
+            onCancel={() => changeMode("read")}
+          />
+          {perms.canDelete && (
+            <DeleteConfirmDialog
+              open={confirmDelete}
+              onOpenChange={setConfirmDelete}
+              title={title}
+              onConfirm={async () => {
+                if (!isWritable(connector)) return
+                await connector.deleteItem(item.id)
+                onClose()
+              }}
+            />
+          )}
+        </>
       )}
     </ItemDetailPanel>
   )
