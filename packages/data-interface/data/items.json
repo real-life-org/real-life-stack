@@ -2,6 +2,24 @@
   {
     "@context": [
       "https://real-life-stack.org/vocab/base/v1",
+      "https://real-life-stack.org/vocab/project/v1"
+    ],
+    "id": "project-1",
+    "type": "project",
+    "createdAt": "2026-03-01T00:00:00.000Z",
+    "createdBy": "user-1",
+    "data": {
+      "title": "Toolkit 0.4",
+      "description": "Item-Detail und Composer aus dem Register",
+      "repo": "https://github.com/real-life-org/real-life-stack"
+    },
+    "tags": [
+      "toolkit"
+    ]
+  },
+  {
+    "@context": [
+      "https://real-life-stack.org/vocab/base/v1",
       "https://real-life-stack.org/vocab/task/v1"
     ],
     "id": "task-1",
@@ -22,6 +40,10 @@
       {
         "predicate": "assignedTo",
         "target": "global:user-3"
+      },
+      {
+        "predicate": "partOf",
+        "target": "item:project-1"
       }
     ]
   },
@@ -48,6 +70,18 @@
       {
         "predicate": "assignedTo",
         "target": "global:user-1"
+      },
+      {
+        "predicate": "partOf",
+        "target": "item:project-1"
+      },
+      {
+        "predicate": "blocks",
+        "target": "item:task-1"
+      },
+      {
+        "predicate": "blocks",
+        "target": "item:task-3"
       }
     ]
   },
@@ -74,6 +108,14 @@
       {
         "predicate": "assignedTo",
         "target": "global:user-3"
+      },
+      {
+        "predicate": "partOf",
+        "target": "item:project-1"
+      },
+      {
+        "predicate": "blocks",
+        "target": "item:task-4"
       }
     ]
   },
@@ -100,6 +142,10 @@
       {
         "predicate": "assignedTo",
         "target": "global:user-4"
+      },
+      {
+        "predicate": "partOf",
+        "target": "item:project-1"
       }
     ]
   },
@@ -256,6 +302,10 @@
       {
         "predicate": "assignedTo",
         "target": "global:user-5"
+      },
+      {
+        "predicate": "blocks",
+        "target": "item:task-11"
       }
     ]
   },
@@ -307,6 +357,10 @@
       {
         "predicate": "assignedTo",
         "target": "global:user-3"
+      },
+      {
+        "predicate": "blocks",
+        "target": "item:task-10"
       }
     ]
   },

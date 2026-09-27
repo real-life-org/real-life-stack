@@ -1,5 +1,5 @@
 {
-  "group-1": ["task-1", "task-2", "task-3", "task-4", "event-1", "event-2", "post-1", "post-2",
+  "group-1": ["project-1", "task-1", "task-2", "task-3", "task-4", "event-1", "event-2", "post-1", "post-2",
     "rel-32b6abbaf9960a85546c452879775e9bd1041cf5cea11f7b76eb0746880b2a0d", "rel-871da2c24b0a703ed8dbdca7b82f013fffa297bcbc3901d75d9a5c802662c5af", "rel-209701a7f1e1d4aeda8dfa490ce0e94d3c59dcce079becd0ae342b83113b285c"],
   "group-2": ["task-5", "task-6", "task-7", "event-3", "post-3"],
   "group-3": ["task-8", "task-9", "event-5", "post-4"],
