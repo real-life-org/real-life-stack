@@ -201,8 +201,10 @@ interface EdgeEntry {
   widget: "people" | "item-relation" | "membership" | "vote" | "origin" | "confirmations" | "activity"
   pos: "meta" | "actions" | "list" | "badge"
   label: string                  // Intl-Schlüssel: „Braucht", „Teil von", „Findet hier statt"
-  qualifier?: { key: string; values: { id: string; label: string; tone?: string }[] }
+  qualifier?: { key: string; values: { id: string; label: string; tone?: string; action?: string }[] }
+                                 // action: Beschriftung der Pill, die den Wert setzt („Zusagen" für going)
   selfAction?: { label: string; mine: string; qualifiers?: string[] }   // C2
+  add?: string                   // Intl-Schlüssel des Hinzufügen-Felds im Formular (C1): „Einladen…", „Zuweisen…"
   list?: { filter?: "open" | "upcoming"; sort?: string }                // für itemRole "to"
   count?: "one-per-subject" | "collect-accepted"                        // nur storage "record"
 }
@@ -247,7 +249,7 @@ Regeln:
 | `post` | content B2 @content · media B5 @content · tags B14 | reactsTo/commentOn C7 @bar | – | – |
 | `event` | title B1 · description B2 · start/end/rrule B3 @meta · meetingLink B9 @meta · group B13 @badge · tags B14 | →locatedAt place C3 @meta · →invited person C1 @meta (eingebettet, angezeigt „eingeladen") und ←attends person C1 @meta (Record, `role` `going` · `maybe` · `declined`, `tense`, `count: one-per-subject`) in einer Zeile | attends: `going` · `maybe` · `declined` (Zusagen · Vielleicht · Absagen) | – |
 | `place` | title · description · address/position B4 @meta · tags | ←locatedAt C3 @list | – | „Findet hier statt" (Events, upcoming) |
-| `task` | title · description · status B6 @meta · dueAt B3 @meta · tags · order @module | →assignedTo person C1 @meta · →partOf project C3 @meta („Teil von") · →blocks task C3 @meta („Ermöglicht") · ←blocks task C3 @meta („Braucht") | assignedTo: Übernehmen | – |
+| `task` | title · description · status B6 @meta · start B3 @meta („Fällig") · tags · order @module | →assignedTo person C1 @meta · →partOf project C3 @meta („Teil von") · →blocks task C3 @meta („Ermöglicht") · ←blocks task C3 @meta („Braucht") | assignedTo: Übernehmen | – |
 | `person` | displayName B1 @head · avatarUrl B11 @head · bio B2 · address/position B4 @meta · skills/offers/needs B10 @meta („Kann", „Bietet", „Sucht") · phone/email B12 @meta · did @system | keine Kommentare, keine Reaktionen | – | „Nächste Termine" (upcoming) · „Aufgaben" (←assignedTo, open) |
 | `project` | title · description · website/repo B9 @meta · address/position B4 @meta · tags | ←partOf C3 @list | – | „Offene Aufgaben" (←partOf task, open) · „Nächste Termine" (←partOf event, upcoming) |
 | `resource` | title · description · kind B8 @meta · availability B8 oder B2 @meta · tags | – | – | – |
@@ -255,7 +257,7 @@ Regeln:
 | App: Karabirrdt-Karte (`task`) | title · description · status B6 @meta (Offen · Erledigt) · hours/euros B7 @meta („Aufwand") · stage @module · tags | →assignedTo person C1 @meta (`meta.role` `can` · `learns`) · ←blocks task C3 @meta („Braucht") · →partOf project C3 @meta („Führt zu") | assignedTo: Übernehmen (`can`) · Will lernen (`learns`) | – |
 | App: Karabirrdt-Ziel (`project`) | title · description („Traumsatz") · priority B8 @meta (Hoch · Mittel · Niedrig) · order @module | ←partOf C3 @list, je Stufe gruppiert | – | „Karten" (←partOf task, je Stufe) |
 
-Hinweise zur Tabelle: Die Kanban-Aufgabe hat nur „Übernehmen"; `can`/`learns` bleibt eine Funktion der Karabirrdt-App. Qualifier-Werte sind englische Ids; deutsche Wörter in Klammern sind Anzeigebeispiele. `project` hat keine Selbstaktion „Beitreten". Mitgliedschaft (`memberOf`, C5), Verifizieren (C6) und Herkunft (C8) folgen später. Die Teilnahme am Event regelt [08 → Teilnahme am Event](08-relation-records.md#teilnahme-am-event-attends-und-invited). Typ-Ids und Code-Namen bleiben Englisch; deutsche Beschriftungen kommen über die Intl-Schicht. Neue Prädikate (`partOf`, `locatedAt` am Event, `attends`) kommen erst mit ihrer Relation-Typ-Definition ins Manifest (Verhältnis zu Relations, Regel 3).
+Hinweise zur Tabelle: Die Kanban-Aufgabe hat nur „Übernehmen"; `can`/`learns` bleibt eine Funktion der Karabirrdt-App. Qualifier-Werte sind englische Ids; deutsche Wörter in Klammern sind Anzeigebeispiele. `project` hat keine Selbstaktion „Beitreten". Mitgliedschaft (`memberOf`, C5), Verifizieren (C6) und Herkunft (C8) folgen später. Die Teilnahme am Event regelt [08 → Teilnahme am Event](08-relation-records.md#teilnahme-am-event-attends-und-invited). Typ-Ids und Code-Namen bleiben Englisch; deutsche Beschriftungen kommen über die Intl-Schicht. Neue Prädikate (`partOf`, `locatedAt` am Event) kommen erst mit ihrer Relation-Typ-Definition ins Manifest (Verhältnis zu Relations, Regel 3). `attends` steht seit S2 im Manifest des Events (`{ attends, to, person }`), gerichtet, mit Claim-Profil `authorial` ([08 → Zwei Profile](08-relation-records.md#zwei-profile)). Die Frist einer Aufgabe liegt in `start`, wie das Datums-Widget sie schreibt ([Die Rolle von `type`](#die-rolle-von-type)).
 
 #### Erweiterung und Merge
 

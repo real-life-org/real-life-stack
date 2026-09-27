@@ -140,6 +140,9 @@ interface RelationRecord {
   claim?: string
   createdBy: string
   createdAt: string
+  /** updatedAt des Relation-Items, wo der Connector es setzt — nur Lesen,
+      nie im Claim-Payload; Zeitpunkt ohne Claim unter one-per-subject */
+  updatedAt?: string
 }
 
 interface RelationRecordInput {
