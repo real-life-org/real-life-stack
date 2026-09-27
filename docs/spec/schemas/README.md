@@ -29,6 +29,16 @@ schemas/
     └── resource/v1/
 ```
 
+File formats that are not item vocabularies live next to them:
+
+```text
+schemas/formats/
+├── resonance-import/v1/   # schema.json + examples/valid, examples/invalid
+└── resonance-export/v1/
+```
+
+Their `$id` is `https://real-life-stack.org/formats/{name}/v{version}/schema.json`, and the `format` field of a file names the version (`resonance-import/1`). Tests in `packages/toolkit/tests/resonance-transfer-schemas.test.ts` check the examples and that the implementation agrees with the schemas.
+
 ## Conventions
 
 ### JSON-LD context (`context.jsonld`)

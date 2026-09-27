@@ -254,7 +254,10 @@ Statements werden als JSON-Datei importiert:
 }
 ```
 
-`title` ist Pflicht, alle anderen Felder sind optional.
+`title` ist Pflicht, alle anderen Felder sind optional. Das Format
+beschreibt das Schema
+[`schemas/formats/resonance-import/v1/schema.json`](../schemas/formats/resonance-import/v1/schema.json).
+Ob ein `variantOf`-Ziel eine Aussage im Space ist, prüft der Import selbst.
 
 1. Die Datei MUSS vor dem ersten Schreiben vollständig validiert werden.
    Ist ein Eintrag ungültig, wird nichts geschrieben, und die UI nennt die
@@ -294,6 +297,11 @@ Personenmenge und den gewählten Filtern:
   ]
 }
 ```
+
+Das Format beschreibt das Schema
+[`schemas/formats/resonance-export/v1/schema.json`](../schemas/formats/resonance-export/v1/schema.json).
+Aus der Übersicht ist `space` null. Ist die Personenmenge nicht
+eingeschränkt, sind `filter.people` und `summary.noVote` null.
 
 1. Exportiert werden nur Stimmen, die zählen.
 2. Die Claims SOLLTEN mitexportiert werden. Dann lässt sich jede Aussage
@@ -384,5 +392,3 @@ Verbindlich für Implementierungen, erzeugt von
 
 - `item-provenance` ist im Code noch nicht umgesetzt. `item-authorial`
   (Signieren, Prüfen, Einfrieren, Zählung) ist es in allen Connectoren.
-- JSON-Schemas für `resonance-import/1` und `resonance-export/1` als
-  eigene Dateien.

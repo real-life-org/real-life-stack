@@ -1,0 +1,18 @@
+{
+  "format": "resonance-export/1",
+  "exportedAt": "2026-09-27T18:00:00.000Z",
+  "space": null,
+  "filter": { "people": null, "tags": [] },
+  "statements": [
+    {
+      "id": "s-3",
+      "title": "Wir pflanzen im Herbst drei Apfelbäume.",
+      "tags": [],
+      "createdBy": "user-1",
+      "createdAt": "2026-09-27T10:00:00.000Z",
+      "contentHash": null,
+      "votes": [],
+      "summary": { "green": 0, "yellow": 0, "red": 0, "noVote": null }
+    }
+  ]
+}

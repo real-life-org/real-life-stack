@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://real-life-stack.org/formats/resonance-export/v1/schema.json",
+  "title": "resonance-export/1",
+  "description": "The evaluation of the Resonance module as shown: the chosen person set and filters, per statement only the votes that count (docs/spec/modules/resonance.md → Export).",
+  "type": "object",
+  "required": ["format", "exportedAt", "space", "filter", "statements"],
+  "properties": {
+    "format": { "const": "resonance-export/1" },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "space": {
+      "description": "The space id, or null for an export from the overview (all spaces).",
+      "type": ["string", "null"]
+    },
+    "filter": {
+      "type": "object",
+      "required": ["people", "tags"],
+      "properties": {
+        "people": {
+          "description": "The chosen person set, or null when it is not restricted (overview without a choice).",
+          "type": ["array", "null"],
+          "items": { "type": "string" }
+        },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "statements": { "type": "array", "items": { "$ref": "#/$defs/statement" } }
+  },
+  "$defs": {
+    "contentHash": { "type": "string", "pattern": "^sha256:" },
+    "voteValue": { "enum": ["green", "yellow", "red"] },
+    "statement": {
+      "type": "object",
+      "required": ["id", "title", "tags", "createdBy", "createdAt", "contentHash", "votes", "summary"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "variantOf": { "type": "string", "pattern": "^item:." },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "contentHash": {
+          "description": "Hash of the current wording (Spec 08), or null when none can be computed.",
+          "oneOf": [{ "$ref": "#/$defs/contentHash" }, { "type": "null" }]
+        },
+        "claim": { "description": "The author's item-authorial claim, when the store writes one.", "type": "string" },
+        "votes": { "type": "array", "items": { "$ref": "#/$defs/vote" } },
+        "summary": {
+          "type": "object",
+          "required": ["green", "yellow", "red", "noVote"],
+          "properties": {
+            "green": { "type": "integer", "minimum": 0 },
+            "yellow": { "type": "integer", "minimum": 0 },
+            "red": { "type": "integer", "minimum": 0 },
+            "noVote": {
+              "description": "People of the person set without a vote, or null when the set has no size (not restricted).",
+              "type": ["integer", "null"],
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "vote": {
+      "type": "object",
+      "required": ["voter", "value", "contentHash", "createdAt"],
+      "properties": {
+        "voter": { "type": "string" },
+        "value": { "$ref": "#/$defs/voteValue" },
+        "contentHash": { "$ref": "#/$defs/contentHash" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "claim": { "description": "The vote's claim, when the store writes one.", "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://real-life-stack.org/formats/resonance-import/v1/schema.json",
+  "title": "resonance-import/1",
+  "description": "Statements to import into one space (docs/spec/modules/resonance.md → Import). The whole file is validated before the first write. Not expressible here and checked by the importer: a variantOf target must be a statement in the target space (Varianten rule 2).",
+  "type": "object",
+  "required": ["format", "statements"],
+  "properties": {
+    "format": { "const": "resonance-import/1" },
+    "statements": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/statement" }
+    }
+  },
+  "$defs": {
+    "statement": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": {
+          "description": "The wording. Must contain at least one non-whitespace character.",
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "description": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "variantOf": {
+          "description": "The statement this one is a variant of, as item:<id>.",
+          "type": "string",
+          "pattern": "^item:."
+        }
+      }
+    }
+  }
+}

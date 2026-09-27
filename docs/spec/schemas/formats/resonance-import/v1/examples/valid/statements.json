@@ -1,0 +1,7 @@
+{
+  "format": "resonance-import/1",
+  "statements": [
+    { "title": "Wir öffnen den Garten einmal im Monat für die Nachbarschaft.", "description": "Ein fester Sonntag, offene Tür, Kaffee.", "tags": ["garten", "nachbarschaft"] },
+    { "title": "Wir öffnen den Garten jeden Sonntag.", "variantOf": "item:s-1" }
+  ]
+}
