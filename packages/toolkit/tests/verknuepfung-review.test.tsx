@@ -233,3 +233,37 @@ describe("Codex Runde 5", () => {
     expect(pill("Wieder öffnen")).toBeTruthy()
   })
 })
+
+describe("Codex Runde 6", () => {
+  function Live({ id }: { id: string }): ReactNode {
+    const { data } = useItem(id)
+    if (!data) return null
+    const Actions = resolveTypePresentation("task").actions!
+    return createElement(Actions, { item: data })
+  }
+  const pill = (label: string) => [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === label)
+
+  it("#531: „Abgeben“ prüft gegen den Stand, aus dem es schreibt (auch beim zweiten Lesen)", async () => {
+    const t = item("t1", "task", { title: "T", status: "open" }, [{ predicate: "assignedTo", target: `global:${ME}` }])
+    await render(createElement(Live, { id: "t1" }), [t], { g: ["t1"] }, "g")
+    const original = connector.getItem.bind(connector)
+    let reads = 0
+    vi.spyOn(connector, "getItem").mockImplementation(async (id: string) => {
+      reads += 1
+      if (reads === 1) await connector.updateItem("t1", { data: { title: "T", status: "done" } })
+      return original(id)
+    })
+    await act(async () => pill("Abgeben")!.click())
+    await settle()
+    expect((await original("t1"))?.relations).toEqual([{ predicate: "assignedTo", target: `global:${ME}` }])
+  })
+
+  it("ein Lesefehler beim Abgeben wird sichtbar, ohne unbehandelte Ablehnung", async () => {
+    const t = item("t1", "task", { title: "T", status: "open" }, [{ predicate: "assignedTo", target: `global:${ME}` }])
+    await render(createElement(Live, { id: "t1" }), [t], { g: ["t1"] }, "g")
+    vi.spyOn(connector, "getItem").mockRejectedValueOnce(new Error("Lesen fehlgeschlagen"))
+    await act(async () => pill("Abgeben")!.click())
+    await settle()
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain("Lesen fehlgeschlagen")
+  })
+})

@@ -112,6 +112,10 @@ export function SelfActionPills({
         },
       ]
 
+  // „Abgeben" nur, solange das Item offen ist — geprüft im Schreibpfad gegen
+  // denselben Stand, aus dem die Relationen entstehen (#531).
+  const doneId = doneValue(statusField)
+  const stillOpen = (current: Item) => !followUps || doneId === undefined || (current.data as Record<string, unknown> | undefined)?.[followUps.field] !== doneId
   const followActions = withFollowUps
     ? followUps!.actions.filter((a) => FOLLOW_UP_WHEN[a.id] === (isDone ? "done" : "open"))
     : []
@@ -151,7 +155,7 @@ export function SelfActionPills({
           type="button"
           disabled={follow.busy || busy}
           data-follow-up={action.id}
-          onClick={() => void (action.id === "release" ? follow.stillApplies("release").then((ok) => (ok ? withdraw() : undefined)) : follow.run(action.id))}
+          onClick={() => void (action.id === "release" ? withdraw(stillOpen) : follow.run(action.id))}
           className={cn(PILL, PILL_IDLE, "disabled:opacity-60")}
         >
           {action.label}
