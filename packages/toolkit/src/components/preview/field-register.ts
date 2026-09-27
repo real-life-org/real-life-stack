@@ -198,6 +198,12 @@ export function assertJoins(typeId: string, edges: readonly EdgeEntry[] = []): v
 /** Regel 9 und 20: Die Pills einer Selbstaktion setzen nur Werte, die der Qualifier der Kante deklariert. */
 export function assertSelfActionValues(edge: EdgeEntry, selfAction: SelfActionEntry, onFail: (message: string) => never): void {
   if (!selfAction.qualifiers?.length) return
+  // Regel 9 benennt mit `join` die EINE Pill („Mitmachen" statt `label`).
+  // Welche von mehreren Qualifier-Pills so hieße, sagt die Spec nicht —
+  // ablehnen statt still ignorieren (Codex R1/3, offen an Anton).
+  if (selfAction.join) {
+    onFail(`Selbstaktion an (${edge.predicate}, ${edge.itemRole}) setzt join zusammen mit Qualifier-Pills; das ist nicht festgelegt`)
+  }
   const allowed = new Set((edge.qualifier?.values ?? []).map((v) => v.id))
   const unknown = selfAction.qualifiers.filter((q) => !allowed.has(q))
   if (unknown.length > 0) {

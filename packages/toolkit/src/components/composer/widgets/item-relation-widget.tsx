@@ -362,7 +362,9 @@ export function IncomingRelationField({
     : []
   const live = sources.map((c) => `item:${c.id}`)
   const value = [...live.filter((t) => !removed.includes(t)), ...added.filter((t) => !live.includes(t))]
-  const lockedTargets = sources.filter((c) => !canEdit(c)).map((c) => `item:${c.id}`)
+  // Außerhalb des geöffneten Space ist keine Quelle schreibbar (Codex R1/4);
+  // eigene, noch nicht gespeicherte Ergänzungen bleiben entfernbar.
+  const lockedTargets = sources.filter((c) => unavailable || !canEdit(c)).map((c) => `item:${c.id}`)
   return (
     <ItemRelationWidget
       label={label}

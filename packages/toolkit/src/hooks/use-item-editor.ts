@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 import type { DataInterface, Item, Relation } from "@real-life-stack/data-interface"
-import { deriveContext, hasItemGroups, isWritable, parseLocalItemTarget } from "@real-life-stack/data-interface"
+import { deriveContext, hasGroups, hasItemGroups, isWritable, parseLocalItemTarget, parseQualifiedItemTarget } from "@real-life-stack/data-interface"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useConnector } from "./connector-context"
 import type { ContentComposerSubmitData } from "../components/composer/content-composer"
@@ -282,7 +282,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
           const created = await createItem(payload, createOptionsFor(connector, formGroupOf(submission)))
           submitOptions?.onPersisted?.(created)
           await applyStatements(connector, created, mapped.statements)
-          await applyIncoming(connector, created, mapped.incoming, currentUserId)
+          await applyIncoming(connector, created, mapped.incoming, currentUserId, formGroupOf(submission))
           await onCreated?.(created)
           return created
         }
@@ -299,7 +299,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
         submitOptions?.onPersisted?.(updated)
         await applyItemGroup(connector, updated.id, submission.data.group)
         await applyStatements(connector, updated, mapped.statements)
-        await applyIncoming(connector, updated, mapped.incoming, currentUserId)
+        await applyIncoming(connector, updated, mapped.incoming, currentUserId, formGroupOf(submission))
         if (currentItem && currentItem.id === existingItem!.id) {
           setCurrentItem(updated)
         }
@@ -368,10 +368,20 @@ async function applyIncoming(
   item: Item,
   changes: readonly IncomingEdgeChange[] | undefined,
   currentUserId: string | undefined,
+  formGroup: string | undefined,
 ): Promise<void> {
-  for (const change of changes ?? []) {
-    for (const id of change.add) await writeIncoming(connector, item, change.predicate, id, true, currentUserId)
-    for (const id of change.remove) await writeIncoming(connector, item, change.predicate, id, false, currentUserId)
+  if (!changes?.length) return
+  // Die Quellen liegen im Formular-Space; `getItem`/`updateItem` erreichen
+  // nur den geöffneten. Weichen beide ab, träfe eine gleiche Id in einem
+  // anderen Space das falsche Item (Codex R1/1) — dann nichts schreiben.
+  const openSpace = hasGroups(connector) ? (connector.getCurrentGroup()?.id ?? null) : null
+  if (hasItemGroups(connector) && formGroup && openSpace !== formGroup) {
+    throw new Error("„Braucht“ lässt sich nur im geöffneten Space speichern – zum Verknüpfen dorthin wechseln")
+  }
+  const space = formGroup ?? (hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null)
+  for (const change of changes) {
+    for (const id of change.add) await writeIncoming(connector, item, change.predicate, id, true, currentUserId, space)
+    for (const id of change.remove) await writeIncoming(connector, item, change.predicate, id, false, currentUserId, space)
   }
 }
 
@@ -382,17 +392,26 @@ async function writeIncoming(
   sourceId: string,
   add: boolean,
   currentUserId: string | undefined,
+  space: string | null,
 ): Promise<void> {
   if (!isWritable(connector)) throw new Error("Dieser Speicher ist nur lesbar")
   const source = await connector.getItem(sourceId)
-  if (!source) throw new Error("Eine verknüpfte Aufgabe ist hier nicht erreichbar – die Verknüpfung wurde nicht gespeichert")
+  if (!source || (space && hasItemGroups(connector) && connector.getItemGroupId(sourceId) !== space)) {
+    throw new Error("Eine verknüpfte Aufgabe ist hier nicht erreichbar – die Verknüpfung wurde nicht gespeichert")
+  }
   const title = typeof source.data?.title === "string" && source.data.title.trim() !== "" ? source.data.title : "Ohne Titel"
   if (!resolveItemPermissions(connector, source, currentUserId).canEdit) {
     throw new Error(`Keine Schreibrechte an „${title}“ – die Verknüpfung wurde dort nicht gespeichert`)
   }
   const relations = source.relations ?? []
-  // Das Target ist space-lokal (04): Quelle und Item liegen im selben Space.
-  const pointsHere = (r: Relation) => r.predicate === predicate && parseLocalItemTarget(r.target) === item.id
+  // Wie die Leseform (04, Target-Konventionen): `item:<id>` ist space-lokal,
+  // `space:{id}/item:<id>` zeigt auf genau diesen Space.
+  const pointsHere = (r: Relation) => {
+    if (r.predicate !== predicate) return false
+    if (parseLocalItemTarget(r.target) === item.id) return true
+    const qualified = parseQualifiedItemTarget(r.target)
+    return !!qualified && qualified.itemId === item.id && (space === null || qualified.homeSpaceId === space)
+  }
   if (add) {
     if (relations.some(pointsHere)) return
     await connector.updateItem(sourceId, { relations: [...relations, { predicate, target: `item:${item.id}` }] })

@@ -419,3 +419,19 @@ describe("assignedTo.role can | learns im Kern (Regel 20)", () => {
     ).toThrow(/bereits/)
   })
 })
+
+describe("Codex Runde 1, Befund 3: join mit Qualifier-Pills", () => {
+  it("wird beim Registrieren abgelehnt, statt still ignoriert (Regel 9 nennt die eine Pill)", () => {
+    expect(() =>
+      registerTypePresentation("app", {
+        extensions: [{
+          id: "task",
+          selfActions: [{
+            predicate: "assignedTo", itemRole: "from",
+            selfAction: { label: "Kann ich", mine: "Dabei", qualifiers: ["can", "learns"], join: { label: "Mitmachen", mine: "Dabei", release: "Raus" } },
+          }],
+        }],
+      }),
+    ).toThrow(/join/)
+  })
+})

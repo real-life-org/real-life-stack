@@ -224,3 +224,53 @@ describe("Speichern schreibt die Kante am anderen Item", () => {
     expect((await connector.getItem("t-timo2"))?.relations ?? []).toEqual([])
   })
 })
+
+describe("Codex Runde 1", () => {
+  let submit: ReturnType<typeof useItemEditor>["submit"] | undefined
+  function Probe(): ReactNode {
+    submit = useItemEditor({ currentUserId: ME, mapSubmission: mapComposerSubmission }).submit
+    return null
+  }
+
+  it("Befund 1: Formular-Space ≠ geöffneter Space — nichts an einer Quelle schreiben, Grund nennen", async () => {
+    await setup(undefined, "h")
+    await render(createElement(Probe))
+    let reason: Error | undefined
+    const created = await act(async () =>
+      submit!(
+        { contentType: "task", isPublic: false, data: { title: "Neu", group: "g", [itemRelationDataKey("blocks", true)]: ["item:t-beet"] } } as never,
+        { onError: (e) => (reason = e) },
+      ),
+    )
+    expect(created).toBeNull()
+    expect(reason?.message).toContain("geöffneten Space")
+    connector.setCurrentGroup("g")
+    expect((await connector.getItem("t-beet"))?.relations ?? []).toEqual([])
+  })
+
+  it("Befund 2: eine space-qualifizierte Kante lässt sich entfernen", async () => {
+    const quali = item("t-quali", { title: "Qualifiziert", status: "open" }, [{ predicate: "blocks", target: "space:g/item:t-kompost" }])
+    await setup([KOMPOST, quali])
+    await render(createElement(Probe))
+    const saved = await act(async () =>
+      submit!(
+        { contentType: "task", isPublic: false, data: { ...itemToComposerData(KOMPOST), group: "g", [incomingRemovedKey("blocks")]: ["item:t-quali"] } } as never,
+        { existingItem: KOMPOST },
+      ),
+    )
+    expect(saved).toBeTruthy()
+    expect((await connector.getItem("t-quali"))?.relations ?? []).toEqual([])
+  })
+
+  it("Befund 4: außerhalb des geöffneten Space sind bestehende Quellen fest (ohne ✕)", async () => {
+    await setup(undefined, "h")
+    await render(
+      createElement(IncomingRelationField, {
+        label: "Braucht", predicate: "blocks", targetType: "task", itemId: "t-kompost", spaceId: "g",
+        added: [], removed: [], onChange: () => {},
+      }),
+    )
+    expect(host.querySelector("[data-incoming-unavailable]")).toBeTruthy()
+    expect(host.querySelectorAll('[data-relation-chip] button[aria-label$="entfernen"]').length).toBe(0)
+  })
+})
