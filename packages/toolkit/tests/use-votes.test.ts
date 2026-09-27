@@ -10,6 +10,7 @@ interface HookSlot {
 
 const harness = {
   connector: null as unknown as DataInterface,
+  population: undefined as unknown,
   hookIndex: 0,
   slots: [] as HookSlot[],
 }
@@ -19,6 +20,7 @@ function sameDeps(left: readonly unknown[] | undefined, right: readonly unknown[
 }
 
 function resetHarness(): void {
+  harness.population = undefined
   for (const slot of harness.slots) slot?.cleanup?.()
   harness.hookIndex = 0
   harness.slots = []
@@ -170,6 +172,10 @@ beforeAll(async () => {
   HASH = (await itemContentHash(STATEMENT_ITEM))!
   vi.doMock("react", () => ({
     startTransition: (callback: () => void) => callback(),
+    // Contexts resolve to their default (no provider in this harness), unless
+    // a test sets `harness.population`.
+    createContext: <T>(value: T) => ({ defaultValue: value, Provider: () => null }),
+    useContext: <T>(context: { defaultValue: T }) => (harness.population ?? context.defaultValue) as T,
     useMemo: <T>(factory: () => T, deps: readonly unknown[]) => {
       const index = harness.hookIndex++
       const previous = harness.slots[index]
@@ -465,6 +471,20 @@ describe("useVotes — a vote counts for one wording (resonance.md, vote rule 5)
     const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
     // Nothing counts, and the own vote is not an "earlier version" either.
     expect(result.data).toEqual({ green: 0, yellow: 0, red: 0, total: 0 })
+  })
+})
+
+describe("useVotes — person set of the evaluation (resonance.md → Auswertung)", () => {
+  it('counts only the chosen people and reports „ohne Stimme"; the own stance stays', async () => {
+    harness.connector = connector([
+      voteRecord("rel-1", OTHER, "green"),
+      voteRecord("rel-2", "did:key:third", "red"),
+      voteRecord("rel-3", ME, "yellow"),
+    ]).connector
+    harness.population = { people: new Set([OTHER, "did:key:third", "did:key:fourth"]), size: 3 }
+    const result = await renderHookVerified(() => hooks.useVotes(STATEMENT))
+    // ME is outside the set: not counted, but still sees and can change the own vote.
+    expect(result.data).toEqual({ green: 1, yellow: 0, red: 1, total: 2, myVote: "yellow", noVote: 1 })
   })
 })
 

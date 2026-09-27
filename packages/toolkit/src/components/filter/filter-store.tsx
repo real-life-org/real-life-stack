@@ -21,6 +21,9 @@ import { emptyFilterBarValue, type FilterBarValue } from "./types"
  *
  * Modul-Extras (`chipsExtra`/`drawerExtra` — „Nur meine", Ort, Zuweisung)
  * bleiben BEIM MODUL (Spec, Regel 2). Sie bedeuten je Modul etwas anderes.
+ * Sie leben aber so lange wie der geteilte Filter: je Modul ein eigener
+ * Bereich in diesem Besitzer (`moduleFilters`, gelesen ueber
+ * `useModuleFilter`). Kein anderes Modul liest ihn.
  */
 export interface SharedFilterValue {
   value: FilterBarValue
@@ -29,6 +32,9 @@ export interface SharedFilterValue {
   setSearchText(next: string): void
   /** Filter und Suchtext gemeinsam zuruecksetzen. */
   clear(): void
+  /** Modul-eigene Filterwerte, je `<modul>:<schluessel>` (Spec, Regel 2). */
+  moduleFilters: Readonly<Record<string, unknown>>
+  setModuleFilter(key: string, value: unknown): void
 }
 
 const FilterContext = createContext<SharedFilterValue | null>(null)
@@ -42,13 +48,19 @@ export function FilterProvider({ children }: { children: ReactNode }) {
 function useFilterValue(): SharedFilterValue {
   const [value, setValue] = useState<FilterBarValue>(emptyFilterBarValue)
   const [searchText, setSearchText] = useState("")
+  const [moduleFilters, setModuleFilters] = useState<Readonly<Record<string, unknown>>>({})
   const clear = useCallback(() => {
     setValue(emptyFilterBarValue)
     setSearchText("")
   }, [])
+  const setModuleFilter = useCallback((key: string, next: unknown) => {
+    // Presence, not the value, marks a set filter: `undefined` is a value a
+    // module may set on purpose (#517).
+    setModuleFilters((current) => (key in current && Object.is(current[key], next) ? current : { ...current, [key]: next }))
+  }, [])
   return useMemo(
-    () => ({ value, setValue, searchText, setSearchText, clear }),
-    [value, searchText, clear],
+    () => ({ value, setValue, searchText, setSearchText, clear, moduleFilters, setModuleFilter }),
+    [value, searchText, clear, moduleFilters, setModuleFilter],
   )
 }
 

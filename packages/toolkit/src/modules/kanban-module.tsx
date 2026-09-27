@@ -6,6 +6,7 @@ import { hasItemGroups, type Item } from "@real-life-stack/data-interface"
 
 import { useConnector } from "../hooks/connector-context"
 import { useItemFocus } from "../hooks/use-item-focus"
+import { useModuleFilter } from "../hooks/use-module-filter"
 import { useUpdateItem } from "../hooks/use-mutations"
 import { FilterMultiSelect, FilterSection, FilterToggle } from "../components/filter/filter-building-blocks"
 import { useModuleHost } from "../components/host/module-host"
@@ -52,6 +53,8 @@ export async function handleKanbanDrag(
  * Mitglieder, Gruppen, Farben, Aggregat-Fall und aktives Item kommen vom
  * Host; Detail, Erstellen (Vorschlag „Aufgabe") und Plusknopf stellt er.
  */
+const NO_ONE: string[] = []
+
 export function KanbanModule({ items: tasks = [], itemsLoading: tasksLoading = false }: ModuleViewProps) {
   const connector = useConnector()
   const { members, groups, isOverview: isAggregate, currentUser, resolveItemGroupColor, activeItemId } = useModuleHost()
@@ -65,8 +68,10 @@ export function KanbanModule({ items: tasks = [], itemsLoading: tasksLoading = f
   // Tags, Typen und Suchtext hat der Host angewendet; „Nur meine" und die
   // Zuweisung bedeuten nur hier etwas und bleiben darum lokal (Spec
   // shared-components → Filter-State, Regel 2).
-  const [myItemsOnly, setMyItemsOnly] = useState(false)
-  const [assignedTo, setAssignedTo] = useState<string[]>([])
+  // Modul-eigene Filter, die den Modulwechsel ueberdauern (Spec
+  // shared-components, Modul-uebergreifender Filter-State, Regel 2).
+  const [myItemsOnly, setMyItemsOnly] = useModuleFilter("myItemsOnly", false)
+  const [assignedTo, setAssignedTo] = useModuleFilter<string[]>("assignedTo", NO_ONE)
   const modulePanel = useModulePanel()
   // A card click points the focus at the task; the host opens its detail.
   const { focusItem } = useItemFocus()

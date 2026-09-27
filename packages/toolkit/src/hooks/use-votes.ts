@@ -14,6 +14,7 @@ import {
 } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 import { useCountingContentHashes } from "./use-item-standing"
+import { useResonancePopulation } from "./use-resonance-population"
 
 /**
  * Claim-verdict filter (spec 08 L1–L3): returns only records the connector
@@ -133,6 +134,9 @@ export interface VoteSummary {
       content hash): it does not count until they vote again (resonance.md,
       vote rule 5). */
   myVoteOtherVersion?: VoteValue
+  /** „Ohne Stimme": members of the chosen person set who did not vote
+      (resonance.md → Auswertung); absent when the set's size is unknown. */
+  noVote?: number
 }
 
 /** Return value of useVotes hook. */
@@ -218,14 +222,22 @@ export function useVotes(statementId: string): UseVotesResult {
     if (!pending || (pending.value ?? undefined) === persistedMyVote) setPending(null)
   }, [rawPending, pending, persistedMyVote])
 
+  // Personenmenge (Auswertung): the numbers count only the chosen people;
+  // the own stance (myVote) stays independent of it.
+  const population = useResonancePopulation()
+  const inPopulation = useCallback(
+    (voterId: string | undefined) => population.people === null || (voterId !== undefined && population.people.has(voterId)),
+    [population],
+  )
   const summary: VoteSummary = useMemo(() => {
     const result: VoteSummary = { green: 0, yellow: 0, red: 0, total: 0 }
     for (const vote of votes) {
       if (pending && currentUserId && vote.voterId === currentUserId) continue
+      if (!inPopulation(vote.voterId)) continue
       result[vote.value] += 1
       result.total += 1
     }
-    if (pending?.value) {
+    if (pending?.value && inPopulation(currentUserId)) {
       result[pending.value] += 1
       result.total += 1
     }
@@ -236,8 +248,9 @@ export function useVotes(statementId: string): UseVotesResult {
       ? notCounted.find((vote) => vote.voterId === currentUserId)?.value
       : undefined
     if (mineElsewhere) result.myVoteOtherVersion = mineElsewhere
+    if (population.size !== null) result.noVote = Math.max(0, population.size - result.total)
     return result
-  }, [votes, notCounted, contentHash, pending, currentUserId, myVote])
+  }, [votes, notCounted, contentHash, pending, currentUserId, myVote, inPopulation, population])
 
   // Latest-wins + write chain, mirroring use-reactions.
   const latestRef = useRef(0)
@@ -349,9 +362,12 @@ export function useVoteUsers(statementId: string, enabled = true): UseVoteUsersR
 
   const verifiedRecords = useVerifiedRelationRecords(records)
   const { counted } = useVotesForWording(statementId, verifiedRecords)
+  const population = useResonancePopulation()
   const votes = useMemo(
-    () => [...counted].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [counted],
+    () => counted
+      .filter((vote) => population.people === null || population.people.has(vote.voterId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [counted, population],
   )
 
   const [users, setUsers] = useState<VoteUser[]>([])

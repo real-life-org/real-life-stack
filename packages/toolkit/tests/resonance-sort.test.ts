@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Item, RelationRecord } from "@real-life-stack/data-interface"
-import { aggregateVoteStats, sortStatements, type StatementVoteStats } from "../src/lib/resonance-sort"
+import { aggregateVoteStats, noVoteCount, sortStatements, type StatementVoteStats } from "../src/lib/resonance-sort"
 
 function statement(id: string, createdAt: string): Item {
   return { id, type: "statement", createdAt, createdBy: "did:key:author", data: { title: id } }
@@ -28,8 +28,9 @@ describe("aggregateVoteStats", () => {
       vote("a", "u2", "red", "2026-08-01T12:00:00.000Z"),
       vote("b", "u1", "yellow", "2026-08-01T11:00:00.000Z"),
     ], HASHES)
-    expect(stats.get("a")).toEqual({ green: 1, yellow: 0, red: 1, total: 2, lastVoteAt: "2026-08-01T12:00:00.000Z" })
-    expect(stats.get("b")).toEqual({ green: 0, yellow: 1, red: 0, total: 1, lastVoteAt: "2026-08-01T11:00:00.000Z" })
+    expect(stats.get("a")).toMatchObject({ green: 1, yellow: 0, red: 1, total: 2, lastVoteAt: "2026-08-01T12:00:00.000Z" })
+    expect(stats.get("b")).toMatchObject({ green: 0, yellow: 1, red: 0, total: 1, lastVoteAt: "2026-08-01T11:00:00.000Z" })
+    expect([...stats.get("a")!.voters!]).toEqual([["u1", "green"], ["u2", "red"]])
   })
 
   it("shares the record validation: forged, malformed and duplicate records don't skew the sort", () => {
@@ -56,8 +57,26 @@ describe("aggregateVoteStats", () => {
       // Statement without a positive verdict: absent from the map.
       vote("c", "u1", "green", "2026-08-01T10:00:00.000Z"),
     ], HASHES)
-    expect(stats.get("a")).toEqual({ green: 1, yellow: 0, red: 0, total: 1, lastVoteAt: "2026-08-01T10:00:00.000Z" })
+    expect(stats.get("a")).toMatchObject({ green: 1, yellow: 0, red: 0, total: 1, lastVoteAt: "2026-08-01T10:00:00.000Z" })
     expect(stats.get("c")).toBeUndefined()
+  })
+})
+
+describe("Personenmenge (resonance.md → Auswertung)", () => {
+  it("counts only votes of the chosen people", () => {
+    const stats = aggregateVoteStats([
+      vote("a", "u1", "green", "2026-08-01T10:00:00.000Z"),
+      vote("a", "u2", "red", "2026-08-01T11:00:00.000Z"),
+      vote("a", "u3", "yellow", "2026-08-01T12:00:00.000Z"),
+    ], HASHES, new Set(["u1", "u3"]))
+    expect(stats.get("a")).toMatchObject({ green: 1, yellow: 1, red: 0, total: 2 })
+    expect([...stats.get("a")!.voters!.keys()]).toEqual(["u1", "u3"])
+  })
+
+  it('„ohne Stimme" is the set size minus voters, never red; unknown size → null', () => {
+    expect(noVoteCount({ total: 2 }, { people: new Set(["u1", "u2", "u3", "u4"]), size: 4 })).toBe(2)
+    expect(noVoteCount({ total: 5 }, { people: new Set(["u1"]), size: 1 })).toBe(0)
+    expect(noVoteCount({ total: 2 }, { people: null, size: null })).toBeNull()
   })
 })
 
@@ -95,6 +114,27 @@ describe("sortStatements", () => {
       ["b", { green: 2, yellow: 0, red: 0, total: 2, lastVoteAt: "2026-08-01T09:00:00.000Z" }],
     ])
     expect(sortStatements([a, b], tied, "votes").map((s) => s.id)).toEqual(["b", "a"])
+  })
+
+  it("concerns / rejection: sort by yellow / red share desc, then vote count", () => {
+    const a = statement("a", "2026-08-01T00:00:00.000Z")
+    const b = statement("b", "2026-08-02T00:00:00.000Z")
+    const c = statement("c", "2026-08-03T00:00:00.000Z")
+    const shares = new Map<string, StatementVoteStats>([
+      ["a", { green: 0, yellow: 2, red: 2, total: 4, lastVoteAt: null }],
+      ["b", { green: 1, yellow: 1, red: 0, total: 2, lastVoteAt: null }],
+      ["c", { green: 0, yellow: 0, red: 1, total: 1, lastVoteAt: null }],
+    ])
+    // yellow: a 0.5, b 0.5 (a has more votes), c 0
+    expect(sortStatements([c, b, a], shares, "concerns").map((s) => s.id)).toEqual(["a", "b", "c"])
+    // red: c 1.0, a 0.5, b 0
+    expect(sortStatements([a, b, c], shares, "rejection").map((s) => s.id)).toEqual(["c", "a", "b"])
+  })
+
+  it("participation: voters ÷ size of the person set desc", () => {
+    const population = { people: new Set(["u1", "u2", "u3", "u4"]), size: 4 }
+    // s1: 3/4, s2: 2/4, s3: 0/4
+    expect(sortStatements([s3, s2, s1], stats, "participation", population).map((s) => s.id)).toEqual(["s1", "s2", "s3"])
   })
 
   it("does not mutate the input array", () => {

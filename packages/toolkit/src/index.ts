@@ -110,3 +110,4 @@ export { aggregateVoteStats, sortStatements, type ResonanceSortMode, type Statem
 
 // Der Modul-Host: Detail und Erstellen ueber alle Module (Spec 01)
 export * from "./components/host"
+export { useModuleFilter } from "./hooks/use-module-filter"
