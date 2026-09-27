@@ -130,3 +130,26 @@ describe("Reihenfolge: Titel → Beschreibung → Meta-Felder → Tags", () => {
     expect(host.textContent).not.toContain("+ Beschreibung")
   })
 })
+
+describe("Codex Runde 4: der Space im Kopf", () => {
+  it("genau ein möglicher Space ohne Vorgabe wird gesetzt und gespeichert", async () => {
+    const [task] = pickContentTypes("task")
+    let submitted: Record<string, unknown> | undefined
+    await render({
+      contentTypes: [{ ...task!, groupOptions: [GROUPS[0]!], defaultWidgets: [...task!.defaultWidgets, "group"] }],
+      mode: "task",
+      initialData: { title: "T" },
+      onSubmit: ({ data }) => { submitted = data },
+    })
+    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain("Garten")
+    const speichern = [...host.querySelectorAll("button")].find((b) => b.textContent?.includes("Erstellen"))!
+    await act(async () => speichern.click())
+    expect(submitted?.group).toBe("a")
+  })
+
+  it("Gruppenoptionen ohne group in defaultWidgets: der Space steht trotzdem im Kopf", async () => {
+    const [task] = pickContentTypes("task")
+    await render({ contentTypes: [{ ...task!, groupOptions: GROUPS }], mode: "task" })
+    expect(spaceSelect()).not.toBeNull()
+  })
+})

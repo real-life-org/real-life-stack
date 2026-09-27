@@ -585,6 +585,12 @@ export function ContentComposer({
     }
   }, [apiRef])
   const [isPublic, setIsPublic] = React.useState(defaultPublic)
+  // Genau ein möglicher Space: Er steht fest im Kopf und MUSS dann auch
+  // gesetzt sein — eine Anzeige, die beim Speichern nicht gilt, täuscht.
+  const onlySpace = currentConfig?.groupOptions?.length === 1 ? currentConfig.groupOptions[0]!.id : undefined
+  React.useEffect(() => {
+    if (onlySpace && !data.group) setData((d) => (d.group ? d : { ...d, group: onlySpace }))
+  }, [onlySpace, data.group])
   // „+ Beschreibung" aufgeklappt? Nur UI-Zustand; mit Inhalt ist sie immer offen.
   const [textOpen, setTextOpen] = React.useState(false)
   const [isPreviewing, setIsPreviewing] = React.useState(false)
@@ -803,7 +809,7 @@ export function ContentComposer({
         selectedType={selectedType}
         onSelectType={!isSingleTypeMode && contentTypes.length > 1 ? setSelectedType : undefined}
         space={
-          hasGroupOptions && activeWidgets.has("group")
+          hasGroupOptions
             ? {
                 value: data.group || "",
                 options: currentConfig.groupOptions!,
