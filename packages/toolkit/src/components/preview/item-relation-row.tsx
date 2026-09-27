@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 
 import { useItem } from "../../hooks/use-items"
+import { cn } from "../../lib/utils"
 import type { FieldEntry } from "./field-register"
 import { ItemRefChip, MissingRefText } from "./item-ref-chip"
 import { targetItemId, type EdgeTarget } from "./use-item-edges"
@@ -22,10 +23,12 @@ export function ItemRelationChips({ targets }: { targets: readonly EdgeTarget[] 
   const keys = targets.map((t) => t.item.id)
   // Ohne Messung (Server, jsdom) drei, dann „+N".
   const { visible, measuring, rowRef, measureRef } = useFittingTags(keys, 3, 0)
-  const shown = all ? targets.length : Math.min(visible, targets.length)
+  // Mindestens ein Chip: Er kürzt seinen Titel, statt ganz hinter „+N" zu verschwinden.
+  const shown = all ? targets.length : Math.min(Math.max(visible, 1), targets.length)
   const hidden = targets.length - shown
   return (
-    <div ref={rowRef} className="relative flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+    // Gekappt in einer Zeile (der erste Chip kürzt seinen Titel); aufgeklappt umbrechend.
+    <div ref={rowRef} className={cn("relative flex min-w-0 flex-1 items-center gap-1.5", all ? "flex-wrap" : "flex-nowrap")}>
       {targets.slice(0, shown).map((t) => (
         <ItemRefChip key={t.item.id} item={t.item} qualifier={t.qualifier} />
       ))}
@@ -38,7 +41,7 @@ export function ItemRelationChips({ targets }: { targets: readonly EdgeTarget[] 
             event.stopPropagation()
             setAll(true)
           }}
-          className="rounded-full border bg-background px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="shrink-0 rounded-full border bg-background px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           +{hidden}
         </button>

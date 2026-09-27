@@ -169,7 +169,7 @@ function ReverseRow({ entry, current, decoration }: { entry: Item; current: bool
       </span>
       <span className={cn("min-w-0 flex-1 truncate text-left text-sm font-medium", done && "line-through opacity-60")}>{titleOf(entry)}</span>
       {decoration?.mark && <span className="shrink-0 text-xs text-muted-foreground">{decoration.mark}</span>}
-      {decoration?.trailing && <span className="w-16 shrink-0">{decoration.trailing}</span>}
+      {decoration?.trailing && <span className="w-16 shrink-0 empty:hidden">{decoration.trailing}</span>}
     </>
   )
   const classes = cn(

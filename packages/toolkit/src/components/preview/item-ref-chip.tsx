@@ -37,7 +37,7 @@ export function isItemDone(item: Item): boolean {
   return false
 }
 
-const CHIP = "inline-flex max-w-[16rem] min-w-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+const CHIP = "inline-flex max-w-[16rem] min-w-0 shrink items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
 
 export interface ItemRefChipProps {
   item: Item
@@ -66,7 +66,7 @@ export function ItemRefChip({ item, qualifier, onRemove, inert, className }: Ite
   )
   const open = !inert && focus ? () => focus.focusItem(item.id) : null
   return (
-    <span data-item-ref={inert ? undefined : item.id} className={cn("inline-flex min-w-0 items-center gap-1", className)}>
+    <span data-item-ref={inert ? undefined : item.id} className={cn("inline-flex min-w-0 max-w-full items-center gap-1", className)}>
       {open ? (
         <button
           type="button"
