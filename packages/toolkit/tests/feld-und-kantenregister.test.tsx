@@ -172,15 +172,15 @@ describe("Meta-Box-Reihenfolge (shared-components, Detail-Anatomie, Regel 3)", (
 describe("ContentTypeConfig aus dem Register (Spec 06, Regel 16)", () => {
   setTypeManifest(composeTypeManifest([TOOLKIT_TYPE_LAYER]))
 
-  it("event: defaultWidgets in der Reihenfolge Kopf → Meta-Box → Inhalt → Tags → Badge", () => {
+  it("event: defaultWidgets in der Reihenfolge des Formulars — Titel → Inhalt → Meta-Box → Tags → Badge", () => {
     const event = contentTypeFromRegister("event")
-    expect(event.defaultWidgets).toEqual(["title", "people", "date", "location", "text", "tags", "group"])
+    expect(event.defaultWidgets).toEqual(["title", "text", "people", "date", "location", "tags", "group"])
     expect(event.peopleRelations).toEqual([{ predicate: "invited", label: "Eingeladen" }])
   })
 
   it("task: Status-Optionen und Beschriftungen aus den Feldeinträgen", () => {
     const task = contentTypeFromRegister("task")
-    expect(task.defaultWidgets).toEqual(["title", "people", "date", "status", "text", "tags"])
+    expect(task.defaultWidgets).toEqual(["title", "text", "people", "date", "status", "tags"])
     expect(task.statusOptions?.map((o) => o.id)).toEqual(["open", "in-progress", "done"])
     expect(task.widgetLabels).toMatchObject({ text: "Beschreibung", date: "Fällig" })
     expect(task.peopleRelations).toEqual([{ predicate: "assignedTo", label: "Zugewiesen" }])
@@ -383,7 +383,7 @@ describe("Codex Runde 1: keine Verluste gegenüber vorher", () => {
 })
 
 describe("Codex Runde 2: zugeschaltete Widgets stehen an ihrer Stelle in der Anatomie", () => {
-  it("Datum und Ort eines Beitrags kommen vor Tags und Gruppe, der Inhalt bleibt davor", () => {
+  it("Datum und Ort eines Beitrags kommen nach dem Inhalt und vor Tags und Gruppe", () => {
     const order = widgetRenderOrder(["text", "media", "tags", "group"])
     const at = (w: string) => order.indexOf(w)
     expect(at("date")).toBeLessThan(at("tags"))
@@ -394,8 +394,8 @@ describe("Codex Runde 2: zugeschaltete Widgets stehen an ihrer Stelle in der Ana
   })
 
   it("die Reihenfolge eines Typs mit allen Widgets bleibt, wie das Register sie ableitet", () => {
-    expect(widgetRenderOrder(["title", "people", "date", "location", "text", "tags", "group"])).toEqual([
-      "title", "people", "date", "location", "status", "text", "media", "tags", "group",
+    expect(widgetRenderOrder(["title", "text", "people", "date", "location", "tags", "group"])).toEqual([
+      "title", "text", "media", "people", "date", "location", "status", "tags", "group",
     ])
   })
 })

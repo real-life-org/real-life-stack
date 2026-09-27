@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronDown, Globe, Loader2, Lock, Trash2, X } from "lucide-react"
+import { ChevronDown, FolderOpen, Globe, Loader2, Lock, Trash2, X } from "lucide-react"
 import { Button } from "@/components/primitives/button"
 import {
   DropdownMenu,
@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils"
 import { latLngFromPoint, pointFromLatLng, type GeoJSONPoint } from "@/lib/geo"
 import { WidgetWrapper } from "./widgets/widget-wrapper"
 import { TitleWidget } from "./widgets/title-widget"
-import { TextWidget } from "./widgets/text-widget"
+import { TextWidget, WIDGET_ICONS, WIDGET_LABELS } from "./widgets/text-widget"
 import { DateWidget } from "./widgets/date-widget"
 import {
   dateWidgetPatch,
@@ -33,7 +33,6 @@ import { resolvePeopleFields, type PeopleRelationConfig } from "./people-relatio
 export type { PeopleRelationConfig } from "./people-relations"
 import { TagsWidget } from "./widgets/tags-widget"
 import { StatusWidget } from "./widgets/status-widget"
-import { GroupWidget } from "./widgets/group-widget"
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -209,7 +208,7 @@ export interface ContentComposerProps {
   /**
    * Pin the action footer (Löschen · Abbrechen · Speichern) to the bottom of
    * the surrounding scroll area — the edit form inside the detail card
-   * (shared-components, Edit-Regeln 3). The composer then fills the card's
+   * (shared-components, Edit-Regeln 4). The composer then fills the card's
    * height so the footer sits at the card end even for a short form.
    */
   stickyFooter?: boolean
@@ -342,19 +341,19 @@ function dirtySignature(data: WidgetData, peopleKeys: readonly string[]): string
 }
 
 /**
- * Position of each built-in widget in the detail anatomy (shared-components,
- * Detail-Anatomie): head → meta (people → time → place → values) → content →
- * tags → badge. Used to place widgets a user switches on at THEIR slot
+ * Position of each built-in widget in the FORM (shared-components,
+ * Edit-Regeln 2): title → description → meta fields (people → time → place →
+ * values) → tags; the space (`group`) sits in the form head. Used to place widgets a user switches on at THEIR slot
  * instead of at the end (Edit-Regeln 2).
  */
 const ANATOMY_RANK: Record<WidgetType, number> = {
   title: 0,
-  people: 1,
-  date: 2,
-  location: 3,
-  status: 4,
-  text: 5,
-  media: 6,
+  text: 1,
+  media: 2,
+  people: 3,
+  date: 4,
+  location: 5,
+  status: 6,
   tags: 7,
   group: 8,
 }
@@ -376,6 +375,126 @@ export function widgetRenderOrder(defaultWidgets: readonly string[]): WidgetType
     else order.splice(before, 0, w)
   }
   return order
+}
+
+// ── Form head ────────────────────────────────────────────────────────────
+
+const HEAD_SELECT =
+  "h-8 min-w-0 max-w-full truncate rounded-md border border-input bg-background pl-2 pr-7 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+
+interface ComposerHeadProps {
+  types: readonly ContentTypeConfig[]
+  selectedType: string
+  /** Set when the type may be chosen (create with several types); otherwise the type is shown fixed. */
+  onSelectType?: (id: string) => void
+  space?: { value: string; options: readonly GroupOption[]; required: boolean; onChange: (id: string) => void }
+}
+
+/**
+ * Kopf des Formulars: Typ und Space als kompakte Auswahlfelder. Ein fester
+ * Typ (Bearbeiten, ein einziger Typ) und ein einziger möglicher Space stehen
+ * als Anzeige. Fehlt ein Pflicht-Space (Übersicht), ist das Feld markiert.
+ */
+function ComposerHead({ types, selectedType, onSelectType, space }: ComposerHeadProps) {
+  const current = types.find((t) => t.id === selectedType) ?? types[0]
+  const Icon = current?.icon
+  const missing = !!space && space.required && !space.value
+  return (
+    // Eine Zeile; rechts bleibt Platz für die Knöpfe eines Panels darüber (✕).
+    <div className="flex min-w-0 items-center gap-2 pr-8">
+      {onSelectType ? (
+        <select
+          aria-label="Typ"
+          value={selectedType}
+          onChange={(e) => onSelectType(e.target.value)}
+          className={cn(HEAD_SELECT, "shrink-0")}
+        >
+          {types.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        current && (
+          <span data-slot="composer-type" className="inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground">
+            {Icon && <Icon className="h-3.5 w-3.5" />}
+            {current.label}
+          </span>
+        )
+      )}
+      {space &&
+        (space.options.length > 1 ? (
+          <span className="flex min-w-0 flex-1 items-center gap-1">
+            <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            <select
+              aria-label="Space"
+              aria-invalid={missing || undefined}
+              aria-required={space.required || undefined}
+              value={space.value}
+              onChange={(e) => space.onChange(e.target.value)}
+              className={cn(HEAD_SELECT, "w-full sm:w-auto", missing && "border-destructive text-destructive")}
+            >
+              {!space.value && <option value="">Space wählen{space.required ? " *" : ""}</option>}
+              {space.options.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </span>
+        ) : (
+          <span data-slot="composer-space" className="inline-flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground">
+            <FolderOpen className="h-3.5 w-3.5" aria-hidden />
+            {space.options[0]?.name}
+          </span>
+        ))}
+    </div>
+  )
+}
+
+/** Die leere Beschreibung, eingeklappt: „+ Beschreibung" und daneben die Schalter der übrigen Felder. */
+function CollapsedText({
+  label,
+  onOpen,
+  availableWidgets,
+  onToggleWidget,
+}: {
+  label: string
+  onOpen: () => void
+  availableWidgets: readonly WidgetType[]
+  onToggleWidget: (w: WidgetType) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="inline-flex items-center gap-1 rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        + {label}
+      </button>
+      <span className="ml-auto flex items-center gap-0.5">
+        {availableWidgets.map((w) => {
+          const Icon = WIDGET_ICONS[w]
+          if (!Icon) return null
+          return (
+            <Button
+              key={w}
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              title={WIDGET_LABELS[w]}
+              onClick={() => onToggleWidget(w)}
+              className="h-7 w-7 text-muted-foreground"
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </Button>
+          )
+        })}
+      </span>
+    </div>
+  )
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -466,6 +585,8 @@ export function ContentComposer({
     }
   }, [apiRef])
   const [isPublic, setIsPublic] = React.useState(defaultPublic)
+  // „+ Beschreibung" aufgeklappt? Nur UI-Zustand; mit Inhalt ist sie immer offen.
+  const [textOpen, setTextOpen] = React.useState(false)
   const [isPreviewing, setIsPreviewing] = React.useState(false)
   // Aborts the previous reverse-geocode when the user re-picks on the map.
   const reverseAbortRef = React.useRef<AbortController | null>(null)
@@ -570,17 +691,22 @@ export function ContentComposer({
     activeWidgets.add("group")
   }
 
-  // Render order: the type's widgets in its own order, then the rest.
-  const renderOrder = widgetRenderOrder(currentConfig.defaultWidgets)
+  // Render order: the type's widgets in its own order, the rest at their
+  // place in the form. The space is rendered in the form head, not here.
+  const renderOrder = widgetRenderOrder(currentConfig.defaultWidgets).filter((w) => w !== "group")
 
-  // Widgets available to toggle on (not active, not title/text, not status/group without config)
+  // Die Beschreibung ist eingeklappt, wenn sie leer ist — aber nur, wo es
+  // einen Titel gibt; beim Beitrag IST der Text der Inhalt (Edit-Regeln 2).
+  const textCollapsed = !textOpen && !data.text?.trim() && activeWidgets.has("title")
+
+  // Widgets available to toggle on (not active, not title/text, not status
+  // without config; the space lives in the form head, never as a toggle)
   const toggleableWidgets = renderOrder.filter(
     (w) =>
       !activeWidgets.has(w) &&
       w !== "title" &&
       w !== "text" &&
-      !(w === "status" && !hasStatusOptions) &&
-      !(w === "group" && !hasGroupOptions),
+      !(w === "status" && !hasStatusOptions),
   ) as WidgetType[]
 
   // Get widget label
@@ -669,30 +795,24 @@ export function ContentComposer({
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
-      {/* Content type selector (multi-type mode only) */}
-      {!isSingleTypeMode && contentTypes.length > 1 && (
-        <div className="flex gap-1 overflow-x-auto">
-          {contentTypes.map((type) => {
-            const Icon = type.icon
-            return (
-              <button
-                key={type.id}
-                type="button"
-                onClick={() => setSelectedType(type.id)}
-                className={cn(
-                  "flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
-                  selectedType === type.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80",
-                )}
-              >
-                {Icon && <Icon className="h-4 w-4" />}
-                {type.label}
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {/* Kopf des Formulars: Typ und Space, kompakt als Auswahlfelder
+          (shared-components, Edit-Regeln 2). Der Space steht oben, weil er
+          Sichtbarkeit, Personen- und Tag-Vorschläge bestimmt. */}
+      <ComposerHead
+        types={contentTypes}
+        selectedType={selectedType}
+        onSelectType={!isSingleTypeMode && contentTypes.length > 1 ? setSelectedType : undefined}
+        space={
+          hasGroupOptions && activeWidgets.has("group")
+            ? {
+                value: data.group || "",
+                options: currentConfig.groupOptions!,
+                required: currentConfig.groupRequired ?? true,
+                onChange: (v) => updateData("group", v),
+              }
+            : undefined
+        }
+      />
 
       {/* Preview or Edit mode */}
       {isPreviewing ? (
@@ -731,18 +851,7 @@ export function ContentComposer({
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
-                  {/* Widget content */}
-                  {widgetId === "group" &&
-                    currentConfig.groupOptions &&
-                    currentConfig.groupOptions.length > 0 && (
-                      <GroupWidget
-                        value={data.group || ""}
-                        onChange={(v) => updateData("group", v)}
-                        label={widgetLabel}
-                        options={currentConfig.groupOptions}
-                        required={currentConfig.groupRequired ?? true}
-                      />
-                    )}
+                  {/* Widget content. Der Space (`group`) steht im Kopf. */}
                   {widgetId === "title" && (
                     <TitleWidget
                       value={data.title || ""}
@@ -751,7 +860,15 @@ export function ContentComposer({
                       autoFocus={!data.title && !imDrawer}
                     />
                   )}
-                  {widgetId === "text" && (
+                  {widgetId === "text" && textCollapsed && (
+                    <CollapsedText
+                      label={widgetLabel}
+                      onOpen={() => setTextOpen(true)}
+                      availableWidgets={toggleableWidgets}
+                      onToggleWidget={toggleWidget}
+                    />
+                  )}
+                  {widgetId === "text" && !textCollapsed && (
                     <TextWidget
                       value={data.text || ""}
                       onChange={(v) => updateData("text", v)}

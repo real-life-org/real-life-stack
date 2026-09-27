@@ -256,8 +256,14 @@ export function readableFields(fields: readonly FieldEntry[] = []): FieldEntry[]
 // ---------------------------------------------------------------------------
 // Composer (Spec 06, Regel 16)
 
-/** Slots, deren Felder im Formular stehen — in der Reihenfolge der Anatomie. */
-const FORM_POSITIONS = ["head", "meta", "content", "tags", "badge"] as const
+/**
+ * Slots, deren Felder im Formular stehen, in der Reihenfolge des FORMULARS
+ * (shared-components, Edit-Regeln 2; Anton 27.09.2026): Titel → Beschreibung
+ * → Meta-Felder → Tags. Das Badge (Space) steht im Kopf des Formulars. Lesen
+ * bleibt Titel → Meta-Box → Beschreibung: Titel und Text schreibt man in
+ * einem Zug, beim Lesen stehen die Fakten zuerst.
+ */
+const FORM_POSITIONS = ["head", "content", "meta", "tags", "badge"] as const
 
 /**
  * Kanten-Widgets mit Schreibform im Formular (shared-components, Widget-Paare):
@@ -267,7 +273,7 @@ const FORM_POSITIONS = ["head", "meta", "content", "tags", "badge"] as const
 const FORM_EDGE_WIDGETS: ReadonlySet<EdgeWidgetId> = new Set(["people", "item-relation"])
 
 /**
- * `defaultWidgets` aus Feldern und Kanten: `pos` head, meta, content, tags,
+ * `defaultWidgets` aus Feldern und Kanten: `pos` head, content, meta, tags,
  * badge, ohne `edit: false`; `meta` in der Reihenfolge der Meta-Box, die
  * anderen Slots in Register-Reihenfolge. Ein Widget steht einmal, auch wenn
  * mehrere Einträge es nutzen (mehrere Personen-Kanten → ein `people`).

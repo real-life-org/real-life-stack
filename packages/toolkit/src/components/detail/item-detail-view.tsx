@@ -112,7 +112,12 @@ export function ItemDetailView({
   // template, editing is simply not offered (a fallback would show a wrong
   // type switcher / form).
   const vorlage = editTemplateFor(item, contentTypes)
-  const composerTypes = vorlage ? contentTypes.filter((t) => t.id === vorlage) : []
+  // Der Space ist beim Bearbeiten nur wählbar, wenn der Connector Items
+  // verschieben kann (moveItemToGroup); sonst steht er nicht zur Wahl.
+  const canMove = hasItemGroups(connector)
+  const composerTypes = (vorlage ? contentTypes.filter((t) => t.id === vorlage) : []).map((t) =>
+    canMove ? t : { ...t, groupOptions: undefined, defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") },
+  )
   const canEdit = composerTypes.length > 0 && !frozen
 
   // Pre-fill the group widget with the item's ACTUAL group/space (not just the

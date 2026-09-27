@@ -213,7 +213,7 @@ export const GENERIC_BADGE: TypeBadgeStyle = {
 // Definition. Felder, deren Widget es noch nicht gibt (`meetingLink` als url,
 // `variantOf` als item-ref), folgen mit S3/S4.
 const TITLE: FieldEntry = { key: "title", widget: "title", pos: "head" }
-const DESCRIPTION: FieldEntry = { key: "description", widget: "text", pos: "content" }
+const DESCRIPTION: FieldEntry = { key: "description", widget: "text", pos: "content", label: "Beschreibung" }
 const TAGS: FieldEntry = { key: "tags", widget: "tags", pos: "tags" }
 const GROUP: FieldEntry = { key: "group", widget: "group", pos: "badge" }
 // Der Ort: Das Location-Widget schreibt address, position und locationName
@@ -255,7 +255,7 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     badge: { icon: CheckSquare, className: "bg-amber-50 text-amber-700 border-amber-200" },
     fields: [
       TITLE,
-      { ...DESCRIPTION, label: "Beschreibung" },
+      DESCRIPTION,
       // Die Frist schreibt das Datums-Widget nach `start` (Spec 06, Die Rolle
       // von type: „Ein Task mit Deadline und ein Event tragen beide start").
       { key: "start", widget: "date", pos: "meta", label: "Fällig" },

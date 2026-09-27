@@ -17,7 +17,7 @@ const { ItemDetailView } = await import("../src/components/detail/item-detail-vi
 const { itemToComposerData, mapComposerSubmission, pickContentTypes } = await import("../src/components/composer/content-types")
 
 /**
- * shared-components → Edit-Regeln 1 und 3: Bearbeiten tauscht die Slots
+ * shared-components → Edit-Regeln 1 und 4: Bearbeiten tauscht die Slots
  * `meta` bis `comments` gegen die Schreibformen. Kommentarliste und
  * Kommentar-Eingabe verschwinden; unten klebt die Fußzeile Löschen ·
  * Abbrechen · Speichern.
