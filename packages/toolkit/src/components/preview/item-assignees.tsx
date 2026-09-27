@@ -31,6 +31,12 @@ import { cn, getReadableTextColor, getUserColor } from "../../lib/utils"
  * - Hover-tooltip with the full comma-separated list
  */
 
+/**
+ * Der helle Ring um jeden Avatar trennt die ueberlappenden Kreise; ohne ihn
+ * verschwimmen zwei gleichfarbige zu einer Flaeche.
+ */
+const TRENNRING = "0 0 0 1.5px var(--background)"
+
 /** Wieviele Gesichter ein Stapel traegt, bevor er unleserlich wird. */
 const MAX_SICHTBARE_AVATARE = 5
 
@@ -92,28 +98,52 @@ export function ItemAssignees({ users, size = "sm", className }: ItemAssigneesPr
               const name = user.displayName ?? user.id
               const farbe = getUserColor(user.id)
               const umrandet = user.variant === "outline"
+              const ring = 1.5
+              const abstand = winzig ? 1 : 1.5
               return (
                 <ProfileLink key={user.id} userId={user.id} label={`Profil von ${name} öffnen`}>
                   <Avatar
-                    className={cn(
-                      // Der helle Ring trennt die ueberlappenden Kreise; ohne
-                      // ihn verschwimmen zwei gleichfarbige zu einer Flaeche.
-                      "ring-[1.5px] ring-background",
-                      winzig ? "h-3.5 w-3.5" : "h-5 w-5",
-                    )}
+                    data-variant={umrandet ? "outline" : "solid"}
+                    className={winzig ? "h-3.5 w-3.5" : "h-5 w-5"}
+                    style={
+                      umrandet
+                        ? {
+                            // Die Form haengt am Avatar selbst, nicht am
+                            // Fallback: Sobald das Foto geladen ist, entfernt
+                            // Radix den Fallback, und mit ihm verschwand die
+                            // Unterscheidung (Loop-Review rls#360). Ring in der
+                            // Personenfarbe, darin ein Innenabstand im
+                            // Hintergrund-Token, darin Foto oder Initialen.
+                            // Der Ring liegt innen, sonst waechst der Kreis
+                            // gegenueber dem gefuellten.
+                            backgroundColor: "var(--background)",
+                            padding: `${ring + abstand}px`,
+                            boxShadow: `inset 0 0 0 ${ring}px ${farbe}, ${TRENNRING}`,
+                          }
+                        : { boxShadow: TRENNRING }
+                    }
                   >
-                    <AvatarImage src={user.avatarUrl} alt={name} />
+                    <AvatarImage
+                      src={user.avatarUrl}
+                      alt={name}
+                      // Umrandet tritt das Foto zurueck: kleiner und blasser.
+                      // So traegt die Helligkeit die Unterscheidung mit, nicht
+                      // die Farbe allein.
+                      className={umrandet ? "rounded-full opacity-50" : undefined}
+                    />
                     <AvatarFallback
                       className={cn("font-bold", winzig ? "text-[6.5px]" : "text-[8px]")}
                       style={
                         umrandet
                           ? {
-                              // Umrandet: heller Grund, Rand und Schrift in der
-                              // Personenfarbe. Der Rand liegt innen, sonst
-                              // waechst der Kreis gegenueber dem gefuellten.
-                              backgroundColor: "var(--background)",
+                              // Die Initialen nutzen die volle Flaeche bis an
+                              // den Ring; nur das Foto rueckt nach innen. Sonst
+                              // stuenden zwei Buchstaben in 14 px auf dem Ring.
+                              backgroundColor: "transparent",
                               color: farbe,
-                              boxShadow: `inset 0 0 0 1.5px ${farbe}`,
+                              margin: `-${ring + abstand}px`,
+                              width: `calc(100% + ${2 * (ring + abstand)}px)`,
+                              height: `calc(100% + ${2 * (ring + abstand)}px)`,
                             }
                           : { backgroundColor: farbe, color: getReadableTextColor(farbe) }
                       }
