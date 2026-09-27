@@ -75,7 +75,12 @@ function ausFeldliste(
   // Relationen; Record-Kanten (attends) schreibt die Selbstaktion (S2).
   const peopleRelations = edges
     .filter((e) => e.widget === "people" && e.pos === "meta" && e.storage === "embedded" && e.itemRole === "from")
-    .map((e) => ({ predicate: e.predicate, label: e.label }))
+    .map((e) => ({
+      predicate: e.predicate,
+      label: e.label,
+      ...(e.qualifier ? { qualifier: { key: e.qualifier.key, values: e.qualifier.values.map((v) => ({ id: v.id, label: v.label })) } } : {}),
+      ...(e.add ? { placeholder: e.add } : {}),
+    }))
   const status = fields.find((x) => x.widget === "status" && x.options && x.options.length > 0)
   const body = fields.find((x) => x.widget === "text" && x.pos === "content")
   return {

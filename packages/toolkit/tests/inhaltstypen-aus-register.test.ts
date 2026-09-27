@@ -24,7 +24,7 @@ describe("Inhaltstypen aus dem Register", () => {
     const task = resolveContentType("task")!
     expect(task.submitLabel).toBeUndefined()
     expect(task.widgetLabels).toEqual({ text: "Beschreibung", date: "Fällig" })
-    expect(task.peopleRelations).toEqual([{ predicate: "assignedTo", label: "Zugewiesen" }])
+    expect(task.peopleRelations).toEqual([{ predicate: "assignedTo", label: "Zugewiesen", placeholder: "Zuweisen…" }])
     expect(task.defaultStatus).toBe("open")
     expect(task.groupRequired).toBe(true)
     expect(resolveContentType("post")?.submitLabel).toBe("Posten")

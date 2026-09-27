@@ -34,7 +34,7 @@ import type { Geocoder, ReverseGeocoder } from "@/lib/geocode"
 import { MediaWidget } from "./widgets/media-widget"
 import { PeopleWidget, type PersonOption } from "./widgets/people-widget"
 export type { PersonOption } from "./widgets/people-widget"
-import { resolvePeopleFields, type PeopleRelationConfig } from "./people-relations"
+import { peopleQualifierKey, resolvePeopleFields, type PeopleRelationConfig } from "./people-relations"
 export type { PeopleRelationConfig } from "./people-relations"
 import { TagsWidget } from "./widgets/tags-widget"
 import { StatusWidget } from "./widgets/status-widget"
@@ -351,11 +351,13 @@ const DIRTY_FIELDS: readonly string[] = [
  */
 function dirtySignature(data: WidgetData, peopleKeys: readonly string[]): string {
   const out: Record<string, unknown> = {}
-  const fields = [...new Set([...DIRTY_FIELDS, ...peopleKeys])]
+  // Qualifier je Person zählen mit: Antippen am Chip ist eine Änderung.
+  const fields = [...new Set([...DIRTY_FIELDS, ...peopleKeys.flatMap((key) => [key, peopleQualifierKey(key)])])]
   for (const field of fields) {
     const value = (data as Record<string, unknown>)[field]
     if (value === "" || value === null || value === undefined) continue
     if (Array.isArray(value) && value.length === 0) continue
+    if (typeof value === "object" && !Array.isArray(value) && Object.keys(value as object).length === 0) continue
     out[field] = value
   }
   return JSON.stringify(out)
@@ -1186,6 +1188,14 @@ export function ContentComposer({
                           options={peopleOptions}
                           suggestions={peopleSuggestions}
                           quickSuggestions={peopleQuickSuggestions}
+                          placeholder={field.placeholder}
+                          {...(field.qualifier
+                            ? {
+                                qualifier: field.qualifier,
+                                qualifiers: (data[peopleQualifierKey(field.dataKey)] as Record<string, string> | undefined) ?? {},
+                                onQualifiersChange: (next: Record<string, string>) => updateData(peopleQualifierKey(field.dataKey), next),
+                              }
+                            : {})}
                         />
                       ))}
                     </div>

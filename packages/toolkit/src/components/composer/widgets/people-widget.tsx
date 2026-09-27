@@ -19,6 +19,17 @@ interface PeopleWidgetProps {
   suggestions?: string[] | ((query: string) => Promise<string[]>)
   /** Quick-select suggestions shown as clickable chips below the input */
   quickSuggestions?: PersonOption[]
+  /**
+   * Qualifier der Kante (08, Qualifier an Kanten; shared-components,
+   * Edit-Regeln 6): Der Chip zeigt ihn klein hinter dem Namen, Antippen
+   * wechselt zum nächsten Wert. Eine neue Person bekommt den ersten Wert.
+   */
+  qualifier?: { key: string; values: readonly { id: string; label: string }[] }
+  /** Qualifier je Person-Id. */
+  qualifiers?: Record<string, string>
+  onQualifiersChange?: (next: Record<string, string>) => void
+  /** Beschriftung des leeren Eingabefelds („Einladen…", „Zuweisen…"). */
+  placeholder?: string
 }
 
 export function PeopleWidget({
@@ -28,6 +39,10 @@ export function PeopleWidget({
   options,
   suggestions,
   quickSuggestions,
+  qualifier,
+  qualifiers,
+  onQualifiersChange,
+  placeholder,
 }: PeopleWidgetProps) {
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<PersonOption[]>([])
@@ -106,6 +121,8 @@ export function PeopleWidget({
     const trimmed = id.trim()
     if (trimmed && !value.includes(trimmed)) {
       onChange([...value, trimmed])
+      const first = qualifier?.values[0]
+      if (first && onQualifiersChange) onQualifiersChange({ ...(qualifiers ?? {}), [trimmed]: first.id })
     }
     setQuery("")
     setShowSuggestions(false)
@@ -113,6 +130,20 @@ export function PeopleWidget({
 
   const removePerson = (id: string) => {
     onChange(value.filter((p) => p !== id))
+    if (qualifier && onQualifiersChange && qualifiers && id in qualifiers) {
+      const { [id]: _removed, ...rest } = qualifiers
+      onQualifiersChange(rest)
+    }
+  }
+
+  const qualifierOf = (id: string) => qualifier?.values.find((v) => v.id === qualifiers?.[id])
+
+  // Im Kreis der erlaubten Werte; ohne Wert zum ersten.
+  const cycleQualifier = (id: string) => {
+    if (!qualifier || !onQualifiersChange || qualifier.values.length === 0) return
+    const index = qualifier.values.findIndex((v) => v.id === qualifiers?.[id])
+    const next = qualifier.values[(index + 1) % qualifier.values.length]
+    onQualifiersChange({ ...(qualifiers ?? {}), [id]: next.id })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -137,6 +168,17 @@ export function PeopleWidget({
             className="inline-flex items-center gap-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 px-2 py-0.5 text-xs font-medium"
           >
             {resolveLabel(personId)}
+            {qualifier && (
+              <button
+                type="button"
+                data-qualifier-toggle
+                onClick={() => cycleQualifier(personId)}
+                aria-label={`${resolveLabel(personId)}: ${qualifierOf(personId)?.label ?? "ohne Angabe"} — wechseln`}
+                className="rounded-sm px-0.5 font-normal opacity-80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                {qualifierOf(personId)?.label ?? "…"}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => removePerson(personId)}
@@ -154,7 +196,7 @@ export function PeopleWidget({
           }}
           onFocus={() => setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
-          placeholder={value.length === 0 ? "Hinzufuegen..." : ""}
+          placeholder={value.length === 0 ? (placeholder ?? "Hinzufuegen...") : ""}
           className="min-w-[60px] flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
         />
       </div>

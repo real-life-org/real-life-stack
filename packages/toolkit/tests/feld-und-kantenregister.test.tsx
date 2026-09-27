@@ -194,7 +194,7 @@ describe("ContentTypeConfig aus dem Register (Spec 06, Regel 16)", () => {
   it("event: defaultWidgets in der Reihenfolge des Formulars — Titel → Inhalt → Meta-Box → Tags → Badge", () => {
     const event = contentTypeFromRegister("event")
     expect(event.defaultWidgets).toEqual(["title", "text", "people", "date", "location", "tags", "group"])
-    expect(event.peopleRelations).toEqual([{ predicate: "invited", label: "Eingeladen" }])
+    expect(event.peopleRelations).toEqual([{ predicate: "invited", label: "Eingeladen", placeholder: "Einladen…" }])
   })
 
   it("task: Status-Optionen und Beschriftungen aus den Feldeinträgen", () => {
@@ -202,7 +202,7 @@ describe("ContentTypeConfig aus dem Register (Spec 06, Regel 16)", () => {
     expect(task.defaultWidgets).toEqual(["title", "text", "people", "date", "status", "tags"])
     expect(task.statusOptions?.map((o) => o.id)).toEqual(["open", "in-progress", "done"])
     expect(task.widgetLabels).toMatchObject({ text: "Beschreibung", date: "Fällig" })
-    expect(task.peopleRelations).toEqual([{ predicate: "assignedTo", label: "Zugewiesen" }])
+    expect(task.peopleRelations).toEqual([{ predicate: "assignedTo", label: "Zugewiesen", placeholder: "Zuweisen…" }])
     expect(task.defaultStatus).toBe("open")
     expect(task.groupRequired).toBe(true)
   })

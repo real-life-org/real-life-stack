@@ -4,6 +4,7 @@ import type { ContentTypeConfig, GroupOption, WidgetData } from "./content-compo
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import {
   peopleDataKeys,
+  peopleQualifierKey,
   peopleRelationsFromWidgetData,
   peopleRelationsToWidgetData,
 } from "./people-relations"
@@ -93,7 +94,9 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
 
     // Which keys carry people is said by the type (an entry may set its own
     // dataKey) — they become relations, not item.data.
-    const peopleKeys = new Set(typeConfig ? peopleDataKeys(typeConfig) : ["people"])
+    const peopleKeys = new Set(
+      (typeConfig ? peopleDataKeys(typeConfig) : ["people"]).flatMap((key) => [key, peopleQualifierKey(key)]),
+    )
 
     // Base on the existing data so unmanaged fields survive an edit; empty on create.
     const itemData: Record<string, unknown> = { ...(existingItem?.data ?? {}) }
