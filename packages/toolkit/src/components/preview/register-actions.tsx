@@ -80,7 +80,7 @@ export function SelfActionPills({
   fields?: readonly FieldEntry[]
   defaultStatus?: string
 }) {
-  const { available, mine, act, error } = useSelfAction(item, edge)
+  const { available, mine, act, withdraw, busy, error } = useSelfAction(item, edge)
   const followUps = edge.selfAction?.followUps
   const statusField = followUps ? fields?.find((f) => f.key === followUps.field) : undefined
   const follow = useFollowUps(item, statusField, defaultStatus)
@@ -112,7 +112,6 @@ export function SelfActionPills({
         },
       ]
 
-  const release = () => act(typeof mine === "string" ? mine : undefined)
   const followActions = withFollowUps
     ? followUps!.actions.filter((a) => FOLLOW_UP_WHEN[a.id] === (isDone ? "done" : "open"))
     : []
@@ -129,7 +128,7 @@ export function SelfActionPills({
         <StatePill label={followUps!.done} />
       ) : (
         pills.map((pill) =>
-          withFollowUps && pill.on && !values ? (
+          withFollowUps && pill.on ? (
             // Mein Zustand als Anzeige: Die Folgeaktionen sagen, was geht.
             <StatePill key={pill.key} label={pill.label} />
           ) : (
@@ -150,9 +149,9 @@ export function SelfActionPills({
         <button
           key={action.id}
           type="button"
-          disabled={follow.busy}
+          disabled={follow.busy || busy}
           data-follow-up={action.id}
-          onClick={() => void (action.id === "release" ? release() : follow.run(action.id))}
+          onClick={() => void (action.id === "release" ? withdraw() : follow.run(action.id))}
           className={cn(PILL, PILL_IDLE, "disabled:opacity-60")}
         >
           {action.label}

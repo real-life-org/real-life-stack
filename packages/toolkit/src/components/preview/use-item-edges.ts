@@ -11,6 +11,7 @@
 import { useMemo } from "react"
 import {
   getTypeManifest,
+  hasItemGroups,
   hasItemType,
   itemTypes,
   parseLocalItemTarget,
@@ -20,6 +21,7 @@ import {
 } from "@real-life-stack/data-interface"
 
 import { useItemsUnion } from "../../hooks/use-items"
+import { useConnector } from "../../hooks/connector-context"
 import type { EdgeEntry } from "./field-register"
 
 /** Was am anderen Ende einer Kante steht, aus dem Manifest (06, Regel 1). */
@@ -38,6 +40,24 @@ export function otherKindOf(itemType: string | readonly string[], edge: Pick<Edg
  */
 export function targetFilter(otherKind: string | undefined): ItemFilter {
   return otherKind && otherKind !== "item" && getTypeManifest().has(otherKind) ? { type: otherKind } : {}
+}
+
+/** Space eines Items, wie der Connector ihn kennt (`null`: keiner). Ohne Gruppen-Capability fehlt die Funktion. */
+export type SpaceOf = (itemId: string) => string | null
+
+/**
+ * Zeigt `target` — gesetzt von einem Träger im Space `carrierSpace` — auf
+ * `candidate`? Target-Konventionen aus 04: `item:<id>` ist space-lokal, also
+ * nur ein Item im Space des Trägers; `space:{id}/item:<id>` nur das Item in
+ * genau diesem Space. Ohne Gruppen-Capability gibt es nur einen Bereich.
+ */
+export function targetPointsTo(target: string, candidate: Item, carrierSpace: string | null, spaceOf?: SpaceOf): boolean {
+  const local = parseLocalItemTarget(target)
+  if (local !== null) return local === candidate.id && (!spaceOf || spaceOf(candidate.id) === carrierSpace)
+  const qualified = parseQualifiedItemTarget(target)
+  if (!qualified || qualified.itemId !== candidate.id) return false
+  // Ohne Space-Auskunft lässt sich ein Space-qualifiziertes Ziel nicht prüfen.
+  return !!spaceOf && spaceOf(candidate.id) === qualified.homeSpaceId
 }
 
 /** Die Item-Id eines Targets (`item:` oder `space:{id}/item:`), sonst null. */
@@ -86,16 +106,18 @@ export function useItemEdges(item: Item, edges: readonly EdgeEntry[] | undefined
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kinds.join(" ")])
   const { data: candidates } = useItemsUnion(filters)
+  const connector = useConnector()
   return useMemo(() => {
+    const spaceOf: SpaceOf | undefined = hasItemGroups(connector) ? (id) => connector.getItemGroupId(id) : undefined
     const out = new Map<EdgeEntry, EdgeTarget[]>()
-    itemEdges.forEach((edge, i) => out.set(edge, edgeTargets(item, edge, candidates, kinds[i])))
+    itemEdges.forEach((edge, i) => out.set(edge, edgeTargets(item, edge, candidates, kinds[i], spaceOf)))
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item, itemEdges, candidates, kinds.join(" ")])
+  }, [connector, item, itemEdges, candidates, kinds.join(" ")])
 }
 
 /** Rein: die Ziele einer Kante über eine gegebene Kandidatenmenge (siehe {@link useItemEdges}). */
-export function edgeTargets(item: Item, edge: EdgeEntry, candidates: readonly Item[], otherKind?: string): EdgeTarget[] {
+export function edgeTargets(item: Item, edge: EdgeEntry, candidates: readonly Item[], otherKind?: string, spaceOf?: SpaceOf): EdgeTarget[] {
   if (edge.storage !== "embedded") return []
   // Die Gegenstelle ist, was das Manifest sagt (06, Regel 1): ein Item
   // anderen Typs ist kein Ziel dieser Kante.
@@ -111,11 +133,10 @@ export function edgeTargets(item: Item, edge: EdgeEntry, candidates: readonly It
   const seen = new Set<string>()
   const out: EdgeTarget[] = []
   if (edge.itemRole === "from") {
-    const byId = new Map(candidates.map((c) => [c.id, c]))
+    const carrierSpace = spaceOf ? spaceOf(item.id) : null
     for (const relation of item.relations ?? []) {
       if (relation.predicate !== edge.predicate) continue
-      const id = targetItemId(relation.target)
-      const target = id ? byId.get(id) : undefined
+      const target = candidates.find((c) => targetPointsTo(relation.target, c, carrierSpace, spaceOf))
       if (!target || !fits(target) || target.id === item.id || seen.has(target.id)) continue
       seen.add(target.id)
       const qualifier = qualifierOf(relation.meta as Record<string, unknown> | undefined)
@@ -127,7 +148,7 @@ export function edgeTargets(item: Item, edge: EdgeEntry, candidates: readonly It
     for (const candidate of candidates) {
       if (!fits(candidate) || candidate.id === item.id || seen.has(candidate.id)) continue
       const relation = (candidate.relations ?? []).find(
-        (r) => r.predicate === edge.predicate && targetItemId(r.target) === item.id,
+        (r) => r.predicate === edge.predicate && targetPointsTo(r.target, item, spaceOf ? spaceOf(candidate.id) : null, spaceOf),
       )
       if (!relation) continue
       seen.add(candidate.id)

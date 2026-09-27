@@ -141,6 +141,18 @@ describe("Folgeaktionen der Aufgabe (Entscheidung 27)", () => {
     expect(pill("Wieder öffnen")).toBeUndefined()
   })
 
+  it("Codex R1/3: Doppelklick auf „Abgeben“ gibt ab und übernimmt nicht wieder", async () => {
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}` }]))
+    const abgeben = pill("Abgeben") as HTMLButtonElement
+    await act(async () => {
+      abgeben.click()
+      abgeben.click()
+    })
+    await settle()
+    expect((await connector.getItem("t1"))?.relations ?? []).toEqual([])
+    expect(pills()).toEqual(["Übernehmen"])
+  })
+
   it("ohne Schreibrecht am Item keine Zeile (Modi, Regel 1)", async () => {
     await render(task([{ predicate: "assignedTo", target: `global:${ME}` }]), { can: false })
     expect(pills()).toEqual([])
@@ -198,6 +210,32 @@ describe("Register: Erledigt-Wert und Folgeaktionen", () => {
         fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A", done: true }, { id: "b", label: "B", done: true }] }],
       }]),
     ).toThrow(/mehr als einen Erledigt-Wert/)
+  })
+
+  it("Codex R1/5: mit Qualifier ist mein Zustand bei Folgeaktionen eine Anzeige", async () => {
+    setTypeManifest(manifest)
+    registerTypePresentation("app", [{
+      id: "chore", label: "Dienst",
+      fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A" }, { id: "z", label: "Z", done: true }] }],
+      edges: [{
+        ...edge({ field: "status", done: "Fertig", actions: [{ id: "complete", label: "Fertig" }, { id: "release", label: "Abgeben" }] }),
+        qualifier: { key: "role", values: [{ id: "can", label: "kann" }, { id: "learns", label: "lernt" }] },
+        selfAction: { label: "Übernehmen", mine: "Übernommen", qualifiers: ["can", "learns"], followUps: { field: "status", done: "Fertig", actions: [{ id: "complete", label: "Fertig" }, { id: "release", label: "Abgeben" }] } },
+      }],
+    }])
+    const chore: Item = { id: "c1", type: "chore", createdBy: TIMO, createdAt: "2026-09-20T10:00:00.000Z", data: { title: "C", status: "a" }, relations: [{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: "can" } }] }
+    connector = new MockConnector({ items: [chore], groups: [{ id: "g", name: "G", data: {} }], users: [{ id: ME, displayName: "Ich" }, { id: TIMO, displayName: "Timo" }], groupMembers: { g: [ME, TIMO] }, groupItems: { g: ["c1"] } } as never)
+    await connector.init()
+    connector.setCurrentGroup("g")
+    const Actions = resolveTypePresentation("chore").actions!
+    await act(async () => {
+      root.render(createElement(ConnectorProvider, { connector: connector as never }, createElement(Actions, { item: chore })))
+    })
+    await settle()
+    expect(host.querySelector("[data-self-state]")?.textContent).toContain("Kann")
+    expect(pill("Kann")).toBeUndefined()
+    expect(pill("Lernt")).toBeTruthy()
+    expect(pill("Abgeben")).toBeTruthy()
   })
 
   it("nimmt einen gültigen Eintrag an", () => {

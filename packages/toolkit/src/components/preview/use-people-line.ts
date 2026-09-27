@@ -175,6 +175,10 @@ export interface SelfActionState {
   mine: string | true | undefined
   /** Setzt meinen Zustand; derselbe Wert noch einmal nimmt die Aussage zurück. */
   act: (value?: string) => Promise<void>
+  /** Nimmt meine Aussage zurück — idempotent, nie ein Umschalter („Abgeben"). */
+  withdraw: () => Promise<void>
+  /** Ein Schreibvorgang läuft. */
+  busy: boolean
   /** Der letzte Schreibversuch scheiterte (Ablehnung des Connectors). */
   error: string | null
 }
@@ -249,15 +253,19 @@ export function useSelfAction(item: Item, edge: EdgeEntry): SelfActionState {
   const [error, setError] = useState<string | null>(null)
 
   const chain = useRef<Promise<void>>(Promise.resolve())
+  const [busy, setBusy] = useState(false)
   const act = useCallback(
-    (value?: string) => {
+    (value?: string, mode: "toggle" | "withdraw" = "toggle") => {
       queued.current += 1
+      setBusy(true)
       const run = async () => {
         try {
           if (!available || !meId) return
           const current = intent.current && intent.current.context === context ? intent.current.value : mineRef.current
           const wanted = value ?? true
-          const next = current === wanted ? undefined : wanted
+          const next = mode === "withdraw" ? undefined : current === wanted ? undefined : wanted
+          // Zurücknehmen ohne eigene Aussage: nichts zu tun (Doppelklick auf „Abgeben").
+          if (mode === "withdraw" && current === undefined) return
           intent.current = { value: next, context }
           setPending({ value: next, context })
           setError(null)
@@ -275,6 +283,7 @@ export function useSelfAction(item: Item, edge: EdgeEntry): SelfActionState {
         } finally {
           queued.current -= 1
           if (queued.current === 0) {
+            setBusy(false)
             intent.current = null
             setPending((p) => (p ? { ...p, settledAt: sourceRef.current } : p))
           }
@@ -287,7 +296,8 @@ export function useSelfAction(item: Item, edge: EdgeEntry): SelfActionState {
     [available, connector, context, edge, isRecord, item, meId],
   )
 
-  return { available, mine, act, error }
+  const withdraw = useCallback(() => act(undefined, "withdraw"), [act])
+  return { available, mine, act: (value?: string) => act(value), withdraw, busy, error }
 }
 
 /** Die eingebettete Kante: ich stehe daran (mit Wert) oder nicht (`undefined`). */

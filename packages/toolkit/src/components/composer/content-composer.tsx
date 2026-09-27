@@ -819,8 +819,11 @@ export function ContentComposer({
   // Welche Datenschlüssel Personen tragen, sagt die Konfiguration.
   const peopleFields = resolvePeopleFields(currentConfig ?? {})
   const peopleKeys = peopleFields.map((field) => field.dataKey)
-  // Item-Kanten (C3) je Kante ein Datenschlüssel.
-  const relationKeys = itemRelationDataKeys(currentConfig?.itemRelations)
+  // Item-Kanten (C3) je Kante ein Datenschlüssel; bearbeitbare Item-Verweise (B15) dazu.
+  const relationKeys = [
+    ...itemRelationDataKeys(currentConfig?.itemRelations),
+    ...(currentConfig?.itemRefs ?? []).filter((r) => !r.fixed).map((r) => r.key),
+  ]
 
   const [data, setData] = React.useState<WidgetData>(() => ({
     ...DEFAULT_DATA,
@@ -870,6 +873,23 @@ export function ContentComposer({
   React.useEffect(() => {
     if (onlySpace && !data.group) setData((d) => (d.group ? d : { ...d, group: onlySpace }))
   }, [onlySpace, data.group])
+  // Item-Verweise sind space-lokal (`item:<id>`, Spec 04): Wechselt der Space
+  // im Kopf, zeigten gewählte Ziele ins Leere oder auf ein anderes Item. Sie
+  // werden darum geleert — nur beim Wechsel, nicht beim ersten Setzen.
+  const groupRef = React.useRef(data.group)
+  React.useEffect(() => {
+    const previous = groupRef.current
+    groupRef.current = data.group
+    if (!previous || previous === data.group) return
+    const keys = relationKeysRef.current
+    if (keys.length === 0) return
+    setData((d) => {
+      const next = { ...d }
+      const refKeys = new Set((currentConfig?.itemRefs ?? []).map((r) => r.key))
+      for (const key of keys) next[key] = refKeys.has(key) ? "" : []
+      return next
+    })
+  }, [data.group])
   // „+ Beschreibung" aufgeklappt? Nur UI-Zustand; mit Inhalt ist sie immer offen.
   const [textOpen, setTextOpen] = React.useState(false)
   const [isPreviewing, setIsPreviewing] = React.useState(false)

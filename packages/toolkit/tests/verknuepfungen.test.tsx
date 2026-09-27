@@ -166,7 +166,24 @@ describe("edgeTargets (rein)", () => {
       { predicate: "blocks", target: "item:t-s" },
       { predicate: "blocks", target: "space:g/item:t-beet" },
     ])
-    expect(edgeTargets(selbst, blocksFrom, [selbst, BEETPLAN], "task").map((t) => t.item.id)).toEqual(["t-beet"])
+    const spaceOf = () => "g"
+    expect(edgeTargets(selbst, blocksFrom, [selbst, BEETPLAN], "task", spaceOf).map((t) => t.item.id)).toEqual(["t-beet"])
+  })
+
+  it("Codex R1/1: Targets sind space-lokal — kein Treffer über Space-Grenzen (04)", () => {
+    const spaces: Record<string, string> = { "t-s": "g", "t-beet": "g", "t-fremd": "h" }
+    const spaceOf = (id: string) => spaces[id] ?? null
+    const fremd = item("t-fremd", "task", { title: "Fremd" })
+    const selbst = item("t-s", "task", { title: "S" }, [
+      { predicate: "blocks", target: "space:other/item:t-beet" },
+      { predicate: "blocks", target: "item:t-fremd" },
+    ])
+    expect(edgeTargets(selbst, blocksFrom, [BEETPLAN, fremd], "task", spaceOf)).toEqual([])
+    // Eingehend: ein Item in einem anderen Space mit item:t-s meint ein anderes t-s.
+    const drüben = item("t-fremd", "task", { title: "Fremd" }, [{ predicate: "blocks", target: "item:t-s" }])
+    expect(edgeTargets(selbst, blocksTo, [drüben], "task", spaceOf)).toEqual([])
+    const qualifiziert = item("t-fremd", "task", { title: "Fremd" }, [{ predicate: "blocks", target: "space:g/item:t-s" }])
+    expect(edgeTargets(selbst, blocksTo, [qualifiziert], "task", spaceOf).map((t) => t.item.id)).toEqual(["t-fremd"])
   })
 })
 
@@ -314,5 +331,50 @@ describe("B15 item-ref und Rückwärts-Listen aus dem Register", () => {
     await act(async () => host.querySelector<HTMLButtonElement>('[data-list-row="t1"]')!.click())
     await settle()
     expect(focused).toBe("t1")
+  })
+})
+
+describe("Codex Runde 1", () => {
+  it("Befund 2: ohne Space im Formular keine Suche über alle Spaces", async () => {
+    const { ItemRelationWidget } = await import("../src/components/composer/widgets/item-relation-widget")
+    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {} }))
+    expect(host.querySelector("[data-needs-space]")?.textContent).toContain("Space")
+    expect(host.querySelector('[data-item-relation-field="blocks"] input')).toBeNull()
+  })
+
+  it("Befund 2: ein Space-Wechsel im Formular leert die gewählten Ziele", async () => {
+    const { ContentComposer } = await import("../src/components/composer/content-composer")
+    const { contentTypeFromRegister } = await import("../src/components/composer/content-types")
+    const config = { ...contentTypeFromRegister("task"), groupOptions: [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], defaultGroup: "g" }
+    const seen: Array<Record<string, unknown>> = []
+    let api: { patchData: (p: Record<string, unknown>) => void } | null = null
+    const apiRef = { get current() { return api }, set current(v) { api = v } }
+    await render(createElement(ContentComposer, {
+      contentTypes: [config], initialContentType: "task", apiRef,
+      initialData: { title: "T", group: "g", "relation:blocks": ["item:t-beet"] },
+      onChange: (d: { data: Record<string, unknown> }) => seen.push(d.data), onSubmit: () => {},
+    } as never))
+    expect(seen.at(-1)?.["relation:blocks"]).toEqual(["item:t-beet"])
+    await act(async () => api!.patchData({ group: "h" }))
+    await settle()
+    expect(seen.at(-1)?.["relation:blocks"]).toEqual([])
+  })
+
+  it("Befund 4: einen bearbeitbaren Item-Verweis zu entfernen macht das Formular ungespeichert", async () => {
+    const { ContentComposer } = await import("../src/components/composer/content-composer")
+    const config = {
+      id: "note", label: "Notiz", defaultWidgets: ["title", "item-ref"],
+      itemRefs: [{ key: "basedOn", label: "Beruht auf", targetType: "task", missing: "weg", fixed: false }],
+      groupOptions: [{ id: "g", name: "Garten" }], defaultGroup: "g",
+    }
+    const dirty: boolean[] = []
+    await render(createElement(ContentComposer, {
+      contentTypes: [config], initialContentType: "note",
+      initialData: { title: "N", group: "g", basedOn: "item:t-beet" },
+      onDirtyChange: (d: boolean) => dirty.push(d), onSubmit: () => {},
+    } as never))
+    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Beetplan für den Herbst entfernen"]')!.click())
+    await settle()
+    expect(dirty.at(-1)).toBe(true)
   })
 })

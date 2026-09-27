@@ -7,7 +7,7 @@ import { Lock, MousePointerClick } from "lucide-react"
 import { useOptionalConnector } from "../../../hooks/connector-context"
 import { cn } from "../../../lib/utils"
 import { ItemRefChip, MissingRefText } from "../../preview/item-ref-chip"
-import { targetFilter, targetItemId } from "../../preview/use-item-edges"
+import { targetFilter, targetItemId, targetPointsTo } from "../../preview/use-item-edges"
 import { itemTitle } from "../item-relations"
 
 /**
@@ -27,7 +27,7 @@ export type RequestItemPick = (request: { predicate: string; targetType?: string
  * Ein `item:`-Target ist space-lokal (04), ein Item aus einem anderen Space
  * wäre dort ein anderes oder keins.
  */
-function useCandidates(targetType: string | undefined, spaceId: string | undefined): Item[] {
+function useCandidates(targetType: string | undefined, spaceId: string | undefined): { items: Item[]; needsSpace: boolean; spaceOf?: (id: string) => string | null } {
   const connector = useOptionalConnector()
   const filterKey = JSON.stringify(targetFilter(targetType))
   const observable = useMemo(
@@ -43,9 +43,15 @@ function useCandidates(targetType: string | undefined, spaceId: string | undefin
   return useMemo(() => inSpace(connector, items, spaceId), [connector, items, spaceId])
 }
 
-function inSpace(connector: DataInterface | null, items: readonly Item[], spaceId: string | undefined): Item[] {
-  if (!connector || !spaceId || !hasItemGroups(connector)) return [...items]
-  return items.filter((item) => connector.getItemGroupId(item.id) === spaceId)
+/**
+ * Mit Spaces nur die Items des Formular-Space; ohne gewählten Space keine —
+ * ein `item:`-Target aus der Übersicht wäre in einem anderen Space falsch.
+ */
+function inSpace(connector: DataInterface | null, items: readonly Item[], spaceId: string | undefined) {
+  if (!connector || !hasItemGroups(connector)) return { items: [...items], needsSpace: false }
+  const spaceOf = (id: string) => connector.getItemGroupId(id)
+  if (!spaceId) return { items: [], needsSpace: true, spaceOf }
+  return { items: items.filter((item) => spaceOf(item.id) === spaceId), needsSpace: false, spaceOf }
 }
 
 export interface ItemRelationWidgetProps {
@@ -77,17 +83,17 @@ export function ItemRelationWidget({
   single,
   requestItemPick,
 }: ItemRelationWidgetProps) {
-  const candidates = useCandidates(targetType, spaceId)
-  const byId = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates])
+  const { items: candidates, needsSpace, spaceOf } = useCandidates(targetType, spaceId)
+  const resolve = (target: string) => candidates.find((c) => targetPointsTo(target, c, spaceId ?? null, spaceOf))
   const [query, setQuery] = useState("")
   const [open, setOpen] = useState(false)
   const listId = useId()
 
-  const chosen = new Set(value.map((t) => targetItemId(t)).filter((id): id is string => !!id))
+  const isChosen = (c: Item) => value.some((t) => targetPointsTo(t, c, spaceId ?? null, spaceOf))
   const needle = query.replace(/^@/, "").trim().toLocaleLowerCase("de")
   const suggestions = open
     ? candidates
-        .filter((c) => c.id !== excludeId && !chosen.has(c.id))
+        .filter((c) => c.id !== excludeId && !isChosen(c))
         .filter((c) => needle === "" || itemTitle(c).toLocaleLowerCase("de").includes(needle))
         .slice(0, 6)
     : []
@@ -108,7 +114,7 @@ export function ItemRelationWidget({
         <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border bg-background px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring/40">
           {value.map((target) => {
             const id = targetItemId(target)
-            const item = id ? byId.get(id) : undefined
+            const item = resolve(target)
             return (
               <span key={target} data-relation-chip={id ?? target} className="inline-flex">
                 {item ? (
@@ -124,7 +130,10 @@ export function ItemRelationWidget({
               </span>
             )
           })}
-          {!full && (
+          {!full && needsSpace && (
+            <span data-needs-space className="text-sm text-muted-foreground">Erst einen Space wählen</span>
+          )}
+          {!full && !needsSpace && (
             <input
               type="text"
               role="combobox"
@@ -153,7 +162,7 @@ export function ItemRelationWidget({
               className="min-w-[8rem] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           )}
-          {requestItemPick && !full && (
+          {requestItemPick && !full && !needsSpace && (
             <button
               type="button"
               onClick={() => requestItemPick({ predicate, targetType }, add)}

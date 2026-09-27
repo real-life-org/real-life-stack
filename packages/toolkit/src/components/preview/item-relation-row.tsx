@@ -7,7 +7,9 @@ import { useItem } from "../../hooks/use-items"
 import { cn } from "../../lib/utils"
 import type { FieldEntry } from "./field-register"
 import { ItemRefChip, MissingRefText } from "./item-ref-chip"
-import { targetItemId, type EdgeTarget } from "./use-item-edges"
+import { hasItemGroups } from "@real-life-stack/data-interface"
+import { useConnector } from "../../hooks/connector-context"
+import { targetItemId, targetPointsTo, type EdgeTarget } from "./use-item-edges"
 import { useFittingTags } from "./use-fitting-tags"
 
 /**
@@ -85,12 +87,16 @@ export function itemRefId(item: Item, field: FieldEntry): string | null {
 export function ItemRefValue({ item, field }: { item: Item; field: FieldEntry }) {
   const id = itemRefId(item, field)
   if (!id) return null
-  return <ResolvedRef id={id} missing={field.ref?.missing ?? "nicht verfügbar"} />
+  const value = (item.data as Record<string, unknown>)[field.key] as string
+  return <ResolvedRef carrier={item} value={value} id={id} missing={field.ref?.missing ?? "nicht verfügbar"} />
 }
 
-function ResolvedRef({ id, missing }: { id: string; missing: string }) {
+function ResolvedRef({ carrier, value, id, missing }: { carrier: Item; value: string; id: string; missing: string }) {
+  const connector = useConnector()
   const { data: target, isLoading } = useItem(id)
-  if (target) return <ItemRefChip item={target} />
-  if (isLoading) return null
+  // Space-lokal (04): Das Ziel muss dort liegen, wohin das Target zeigt.
+  const spaceOf = hasItemGroups(connector) ? (x: string) => connector.getItemGroupId(x) : undefined
+  if (target && targetPointsTo(value, target, spaceOf ? spaceOf(carrier.id) : null, spaceOf)) return <ItemRefChip item={target} />
+  if (!target && isLoading) return null
   return <MissingRefText text={missing} />
 }
