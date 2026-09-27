@@ -614,7 +614,7 @@ Jedes Item öffnet in derselben Anatomie. Sie besteht aus neun Slots in fester R
 
 | # | Slot | Lesen | Bearbeiten |
 |---|---|---|---|
-| 1 | `head` | Typ-Badge, Space-Badge (nur außerhalb des eigenen Space), ⋮ und ✕, Titel; bei `person` Avatar, Name und Untertitel | Badge „Bearbeiten" und ✕ bleiben; Titelfeld (bei `person` Avatar-Feld und Name) |
+| 1 | `head` | Typ-Badge, Space-Badge (nur außerhalb des eigenen Space), ⋮ und ✕, Titel; bei `person` Avatar, Name und Untertitel | Typ fest, Space wählbar (wenn der Connector verschieben kann, sonst fest) und ✕, siehe [Edit-Regeln](#edit-regeln), Regel 3; Titelfeld (bei `person` Avatar-Feld und Name) |
 | 2 | `meta` | Meta-Box: eine Zeile je Feld oder Kante | Schreibformen derselben Felder in derselben Reihenfolge |
 | 3 | `actions` | Selbstaktion als Pill-Zeile (C2) | entfällt |
 | 4 | `content` | Beschreibung (Markdown), Medien | Text-Widget, Medien-Widget |
