@@ -146,6 +146,25 @@ describe("Registrieren: Prüfungen nach Spec 06", () => {
   })
 })
 
+describe("Codex Runde 9: Zusammensetzung unabhängig von der Registrierungsreihenfolge", () => {
+  const zusammensetzen = (reihenfolge: string[]) => {
+    resetTypePresentationForTests()
+    registriere([f("title", "title", "head")])
+    const fragmente: Record<string, FieldEntry> = {
+      "space-a": f("start", "date", "meta"),
+      "space-b": f("address", "location", "meta"),
+    }
+    for (const name of reihenfolge) registerTypePresentation(name, { extensions: [{ id: "sighting", fields: [fragmente[name]!] }] })
+    return {
+      felder: resolveTypePresentation("sighting").fields?.map((x) => x.key),
+      composer: contentTypeFromRegister("sighting").defaultWidgets,
+    }
+  }
+  it("gleiche Schichten, gleiches Ergebnis", () => {
+    expect(zusammensetzen(["space-a", "space-b"])).toEqual(zusammensetzen(["space-b", "space-a"]))
+  })
+})
+
 describe("Meta-Box-Reihenfolge (shared-components, Detail-Anatomie, Regel 3)", () => {
   it("ordnet Menschen → Zeit → Ort → Item-Kanten → Werte, innerhalb einer Gruppe nach Register", () => {
     const fields: FieldEntry[] = [
