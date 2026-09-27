@@ -922,6 +922,15 @@ export function ContentComposer({
   const effectivePeopleQuick = spaceSources?.people ? spaceSources.people.slice(0, 10) : peopleQuickSuggestions
   const effectiveTagSuggestions = spaceSources?.tags ?? tagSuggestions
   const effectiveTagQuick = spaceSources?.tags ? spaceSources.tags.slice(0, 10) : tagQuickSuggestions
+  // Space-Pflicht beim Anlegen (Space des Formulars, Regel 8), EIN Tor für
+  // jeden Weg, der `onSubmit` erreicht: Speichern, „Erneut“ und liveUpdate
+  // (#538). Beim Bearbeiten ist der Space nie Pflicht.
+  const spaceRequired = !isEditMode && (currentConfig?.groupOptions?.length ?? 0) > 0 && (currentConfig?.groupRequired ?? true)
+  const isSpaceMissing = (d: WidgetData) => spaceRequired && !d.group
+  const submitGuarded = (submission: ContentComposerSubmitData): void | Promise<void> => {
+    if (isSpaceMissing(submission.data)) return
+    return onSubmit(submission)
+  }
   // „+ Beschreibung" aufgeklappt? Nur UI-Zustand; mit Inhalt ist sie immer offen.
   const [textOpen, setTextOpen] = React.useState(false)
   const [isPreviewing, setIsPreviewing] = React.useState(false)
@@ -980,11 +989,11 @@ export function ContentComposer({
         prev.media !== data.media
       if (isTextOnly && !hasNonTextChange) {
         const timer = setTimeout(() => {
-          void Promise.resolve(onSubmit({ contentType: selectedType, isPublic, data })).catch(() => {})
+          void Promise.resolve(submitGuarded({ contentType: selectedType, isPublic, data })).catch(() => {})
         }, 300)
         return () => clearTimeout(timer)
       }
-      void Promise.resolve(onSubmit({ contentType: selectedType, isPublic, data })).catch(() => {})
+      void Promise.resolve(submitGuarded({ contentType: selectedType, isPublic, data })).catch(() => {})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, liveUpdate])
@@ -1112,11 +1121,11 @@ export function ContentComposer({
     return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value !== ""
   })
   // Pflicht nur beim Anlegen (Regel 8): ohne Space kein Speichern.
-  const spaceRequired = !isEditMode && !!hasGroupOptions && (currentConfig.groupRequired ?? true)
-  const spaceMissing = spaceRequired && !data.group
+  const spaceMissing = isSpaceMissing(data)
 
   // Submit
-  const canSubmit = !spaceMissing && !!(data.title?.trim() || data.text?.trim() || (data.media && data.media.length > 0))
+  const hasContent = !!(data.title?.trim() || data.text?.trim() || (data.media && data.media.length > 0))
+  const canSubmit = !spaceMissing && hasContent
 
   const [submitting, setSubmitting] = React.useState(false)
   // Fehler beim Speichern: Banner unter dem Kopf; `reason` ist der Grund des
@@ -1128,7 +1137,7 @@ export function ContentComposer({
     setSubmitting(true)
     setSubmitError(null)
     try {
-      await onSubmit({ contentType: selectedType, isPublic, data })
+      await submitGuarded({ contentType: selectedType, isPublic, data })
     } catch (err) {
       // Grund des Connectors: `reason` oder `cause` am Fehler (ohne es2022-Typen).
       const carrier = (err ?? {}) as { reason?: unknown; cause?: unknown }
@@ -1171,6 +1180,12 @@ export function ContentComposer({
       />
 
       {submitError && <SaveErrorBanner reason={submitError.reason} onRetry={() => void handleSubmit()} busy={submitting} />}
+      {/* Ohne Space wird nichts angelegt — auch nicht per liveUpdate (#538). Sichtbar, sobald es etwas zu speichern gäbe. */}
+      {spaceMissing && hasContent && (
+        <p data-space-required role="status" className="text-xs text-destructive">
+          Erst einen Space wählen – vorher wird nichts gespeichert.
+        </p>
+      )}
 
       {/* Preview or Edit mode */}
       {isPreviewing ? (

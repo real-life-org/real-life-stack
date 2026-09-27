@@ -467,3 +467,59 @@ describe("Codex R1/6: Pflicht auch bei nur einem möglichen Space", () => {
     expect(withGroupOptions(types, [], undefined, null)).toBe(types)
   })
 })
+
+describe("#538: Space-Pflicht auf jedem Anlege-Pfad, auch liveUpdate", () => {
+  async function typeTitle(text: string) {
+    const title = host.querySelector<HTMLInputElement>('input[type="text"], input:not([type])')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(title, text)
+      title.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
+    await settle()
+  }
+
+  it("liveUpdate ohne gewählten Space bei mehreren möglichen: kein createItem, sichtbarer Hinweis", async () => {
+    connector.setCurrentGroup("g")
+    const create = vi.spyOn(connector, "createItem")
+    const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], undefined, null)
+    expect(types[0]!.defaultGroup).toBeUndefined()
+    await render(createElement(ItemComposer, {
+      contentTypes: types, initialContentType: "task", mapper: mapComposerSubmission,
+      onDone: () => {}, onCancel: () => {}, composerProps: { liveUpdate: true },
+    }))
+    await typeTitle("Ohne Space")
+    expect(create).not.toHaveBeenCalled()
+    expect(host.querySelector('button[aria-label^="Space wählen"]')?.getAttribute("aria-invalid")).toBe("true")
+    expect(host.querySelector("[data-space-required]")?.textContent).toContain("Space")
+  })
+
+  it("liveUpdate mit genau einem möglichen Space: die Vorauswahl greift, angelegt wird dort", async () => {
+    connector.setCurrentGroup(null)
+    const create = vi.spyOn(connector, "createItem")
+    const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "h", name: "Hof" }], undefined, null)
+    await render(createElement(ItemComposer, {
+      contentTypes: types, initialContentType: "task", mapper: mapComposerSubmission,
+      onDone: () => {}, onCancel: () => {}, composerProps: { liveUpdate: true },
+    }))
+    await typeTitle("Mit Space")
+    expect(create).toHaveBeenCalled()
+    for (const call of create.mock.calls) expect(call[1]).toEqual({ group: "h" })
+    expect(host.querySelector("[data-space-required]")).toBeNull()
+  })
+
+  it("Bearbeiten ohne bekannten Space bleibt mit liveUpdate speicherbar (Regel 8)", async () => {
+    const loose = item("t-z", "task", { title: "Z", status: "open" })
+    connector = makeConnector([IN_G, IN_H, loose], { g: ["t-g"], h: ["t-h"] })
+    await connector.init()
+    connector.setCurrentGroup(null)
+    const update = vi.spyOn(connector, "updateItem")
+    await render(createElement(ItemComposer, {
+      contentTypes: [{ ...contentTypeFromRegister("task"), groupOptions: [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }] }],
+      initialContentType: "task", existingItem: loose, mapper: mapComposerSubmission,
+      initialData: { title: "Z", status: "open" }, onDone: () => {}, onCancel: () => {}, composerProps: { liveUpdate: true },
+    }))
+    await typeTitle("Z2")
+    expect(update).toHaveBeenCalled()
+  })
+})
