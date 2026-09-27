@@ -684,7 +684,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/components/filter/filter-store.tsx",
-          "line": 72
+          "line": 82
         },
         {
           "name": "useCreate",
@@ -775,6 +775,19 @@
           ],
           "source": "packages/toolkit/src/hooks/use-item-focus.tsx",
           "line": 96
+        },
+        {
+          "name": "useModuleFilter",
+          "signature": "key, initial",
+          "question": "A module's own filter value that survives the module switch.",
+          "answers": "`[value, setValue]`",
+          "without": "value — local state",
+          "stories": [],
+          "specs": [
+            "docs/spec/modules/shared-components.md"
+          ],
+          "source": "packages/toolkit/src/hooks/use-module-filter.ts",
+          "line": 22
         }
       ]
     },
