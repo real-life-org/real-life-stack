@@ -101,7 +101,13 @@ export function ItemAssignees({ users, size = "sm", className }: ItemAssigneesPr
               const ring = 1.5
               const abstand = winzig ? 1 : 1.5
               return (
-                <ProfileLink key={user.id} userId={user.id} label={`Profil von ${name} öffnen`}>
+                <ProfileLink
+                  key={user.id}
+                  userId={user.id}
+                  // Der Qualifier gehoert zur Person: Wer per Tastatur auf den
+                  // Avatar faellt, hoert „Lena Berg (lernt)", auch ohne Tooltip.
+                  label={`Profil von ${name}${user.qualifier ? ` (${user.qualifier})` : ""} öffnen`}
+                >
                   <Avatar
                     data-variant={umrandet ? "outline" : "solid"}
                     className={winzig ? "h-3.5 w-3.5" : "h-5 w-5"}
@@ -157,7 +163,16 @@ export function ItemAssignees({ users, size = "sm", className }: ItemAssigneesPr
           </div>
           {/* In der Matrix-Zelle traegt das Bild den Namen — die Zeile
               darunter gaebe es nicht her. */}
-          {!winzig && <span className="text-[10px] text-muted-foreground">{summary}</span>}
+          {!winzig && (
+            <span aria-hidden className="text-[10px] text-muted-foreground">
+              {summary}
+            </span>
+          )}
+          {/* Der Tooltip erscheint nur beim Ueberfahren; die vollstaendige
+              Liste (auch Person sechs und folgende, mit Qualifier) steht
+              darum als Text im Baum. Das sichtbare Resuemee ist dafuer
+              ausgeblendet, sonst hoerte man die ersten Namen doppelt. */}
+          <span className="sr-only">{fullList}</span>
         </div>
       </TooltipTrigger>
       <TooltipContent side="bottom">{fullList}</TooltipContent>

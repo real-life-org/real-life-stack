@@ -149,8 +149,10 @@ describe("ItemPreview: comfortable und compact bleiben", () => {
 describe("ItemAssignees: Groesse xs", () => {
   it("zeigt nur die Bilder, keinen Namen", () => {
     const html = renderToStaticMarkup(<ItemAssignees users={[lena, anton]} size="xs" />)
-    expect(html).not.toContain("Lena Berg,")
-    expect(html).not.toContain("+ 1 weitere")
+    // Sichtbar steht kein Name; die Liste gibt es nur als Screenreader-Text.
+    const doc = new DOMParser().parseFromString(html, "text/html")
+    doc.querySelectorAll(".sr-only").forEach((e) => e.remove())
+    expect(doc.body.textContent).not.toContain("Lena Berg")
     expect(html).toContain("h-3.5 w-3.5")
   })
 

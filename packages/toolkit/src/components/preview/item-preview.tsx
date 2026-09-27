@@ -383,7 +383,10 @@ export const ItemPreview = memo(function ItemPreview({
         "flex flex-col border bg-card transition-all",
         // Die Kachel traegt den kleineren Radius: 8 px runden an einer
         // 112-px-Flaeche sichtbar mehr ab als an einer Feed-Karte.
-        isDense ? "gap-1 rounded-md p-[7px]" : "rounded-lg",
+        // Die Kachel bringt ihre Masse selbst mit (Design 1a): 112 px breit,
+        // mindestens 61 px hoch; drei Titelzeilen lassen sie auf 75 px
+        // wachsen. Ein Raster darf die Breite per `className` ueberschreiben.
+        isDense ? "w-[112px] min-h-[61px] gap-1 rounded-md p-[7px]" : "rounded-lg",
         isDense ? "" : isCompact ? "gap-1.5 p-3" : "gap-2 p-4",
         interactive &&
           "cursor-pointer hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
