@@ -56,9 +56,13 @@ import { MessageSquare } from "lucide-react"
  * 10×10, font-base title, p-4 spacing, description shown). `compact`
  * is tuned for kanban boards and dense list views: no description in
  * the body, smaller padding/font/avatar so multiple cards fit a
- * column without bleeding off-screen.
+ * column without bleeding off-screen. `row` is ONE line: header
+ * adornment (badge), title (truncated), footer adornment on the right —
+ * the rows of reverse lists in the detail (shared-components,
+ * Detail-Anatomie Regel 8). It drops description, meta, tags, author and
+ * the comment hint, like the `dense` tile of draft rls#360.
  */
-export type ItemPreviewDensity = "comfortable" | "compact"
+export type ItemPreviewDensity = "comfortable" | "compact" | "row"
 export type ItemPreviewSurface = "card" | "panel"
 
 /** Neutral toolkit default; apps may supply an origin-group colour instead. */
@@ -122,6 +126,14 @@ export interface ItemPreviewProps {
    * Space. Zwei Aussagen, nicht drei.
    */
   active?: boolean
+  /**
+   * Die Sache ist erledigt: Haekchen vor dem Titel (fuer Screenreader
+   * „Erledigt: "), die ganze Karte gedimmt. Was „erledigt" heisst, entscheidet
+   * die Flaeche (etwa die Rolle `done` des Status, Spec 06 Regel 18) — das
+   * Toolkit zeigt es nur an. Uebernommen aus Draft rls#360; gilt fuer alle
+   * Dichten.
+   */
+  completed?: boolean
   /** Farbe des Rands der aktiven Karte (`#rrggbb`), meist die Space-Farbe. */
   activeColor?: string
   /** @deprecated Frueherer Name von {@link activeColor}. */
@@ -188,6 +200,15 @@ function KommentarHinweis({
   )
 }
 
+/** Der Text einer Zeile: Titel, Name oder der Anfang des Inhalts; sonst „Ohne Titel". */
+function rowTitle(data: Record<string, unknown>): string {
+  for (const key of ["title", "displayName", "content", "description"]) {
+    const value = data[key]
+    if (typeof value === "string" && value.trim() !== "") return value.trim().split("\n")[0]!
+  }
+  return "Ohne Titel"
+}
+
 function getInitials(name: string): string {
   if (!name) return "?"
   return name
@@ -221,6 +242,7 @@ export const ItemPreview = memo(function ItemPreview({
   density = "comfortable",
   surface = "card",
   active = false,
+  completed = false,
   activeColor,
   activeGlowColor,
   className,
@@ -228,8 +250,9 @@ export const ItemPreview = memo(function ItemPreview({
 }: ItemPreviewProps) {
   const data = item.data as Record<string, unknown>
   const title = typeof data.title === "string" ? data.title : undefined
+  const isRow = density === "row"
   const description =
-    density === "compact"
+    density === "compact" || isRow
       ? ""
       : (typeof data.content === "string" && data.content) ||
         (typeof data.description === "string" && data.description) ||
@@ -247,7 +270,7 @@ export const ItemPreview = memo(function ItemPreview({
   // zu schreiben (Spec 03). Sonst bliebe „Kommentieren" ein Versprechen ohne
   // Deckung. Vorhandene Kommentare zeigt die Karte weiter, auch nur lesend.
   const darfKommentieren = useCanComment()
-  const showCommentHint = !isPanel && (commentCount > 0 || (zumKommentieren !== null && darfKommentieren))
+  const showCommentHint = !isPanel && !isRow && (commentCount > 0 || (zumKommentieren !== null && darfKommentieren))
 
   const authorName = author?.displayName ?? item.createdBy
   const authorAvatar = author?.avatarUrl
@@ -255,7 +278,7 @@ export const ItemPreview = memo(function ItemPreview({
   // Who edited it, resolved like any other user id; falls back to the raw id.
   const resolveName = useUserNameResolver()
   const editedTitle = editedLabel(item, resolveName)
-  const isCompact = density === "compact"
+  const isCompact = density === "compact" || isRow
 
   // Keyboard activation: when the card is interactive, treat Enter and
   // Space like a button. We don't render a real <button> because the
@@ -288,10 +311,52 @@ export const ItemPreview = memo(function ItemPreview({
   // Deckkraft traegt er sichtbar dicker auf, obwohl er gleich breit ist.
   const aktivRand = /^#[0-9a-f]{6}$/i.test(aktivFarbe) ? `${aktivFarbe}4d` : aktivFarbe
 
+  // Erledigtes traegt das Haekchen im Titel (rls#360): Es verschwindet nicht,
+  // es tritt zurueck.
+  const erledigt = completed && (
+    <>
+      <span aria-hidden>✓ </span>
+      <span className="sr-only">Erledigt: </span>
+    </>
+  )
+
+  if (isRow) {
+    // Eine Zeile: Badge, Titel, rechts der Zusatz. Die angezeigte Zeile ist
+    // markiert (aria-current), ohne den Schatten der schwebenden Karte.
+    return (
+      <article
+        data-preview-density={density}
+        data-active-preview={active ? "true" : undefined}
+        data-completed={completed ? "true" : undefined}
+        aria-current={active ? "true" : undefined}
+        className={cn(
+          "flex min-w-0 flex-row items-center gap-2 rounded-md border px-2 py-1.5 transition-colors",
+          active ? "border-primary/40 bg-primary/5" : "border-border bg-card",
+          interactive &&
+            "cursor-pointer hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          className,
+        )}
+        style={{ ...(completed ? { opacity: 0.55 } : {}), ...style }}
+        onClick={onClick}
+        role={interactive ? "button" : undefined}
+        tabIndex={interactive ? 0 : undefined}
+        onKeyDown={handleKeyDown}
+      >
+        {headerAdornment && <span className="flex shrink-0 items-center gap-1.5">{headerAdornment}</span>}
+        <span data-row-title className="min-w-0 flex-1 truncate text-left text-sm font-medium text-foreground">
+          {erledigt}
+          {rowTitle(data)}
+        </span>
+        {footerAdornment && <span className="flex shrink-0 items-center gap-2">{footerAdornment}</span>}
+      </article>
+    )
+  }
+
   return (
     <article
       data-preview-density={density}
       data-active-preview={active ? "true" : undefined}
+      data-completed={completed ? "true" : undefined}
       className={cn(
         "flex flex-col rounded-lg border bg-card transition-all",
         isCompact ? "gap-1.5 p-3" : "gap-2 p-4",
@@ -302,7 +367,7 @@ export const ItemPreview = memo(function ItemPreview({
         active && "shadow-xl",
         className,
       )}
-      style={{ ...(active ? { borderColor: aktivRand } : {}), ...style }}
+      style={{ ...(active ? { borderColor: aktivRand } : {}), ...(completed ? { opacity: 0.55 } : {}), ...style }}
       onClick={onClick}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}
@@ -317,6 +382,7 @@ export const ItemPreview = memo(function ItemPreview({
           <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-1">
             {title && (
               <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground">
+                {erledigt}
                 {title}
               </h3>
             )}

@@ -108,7 +108,7 @@ describe("StatementDetail (panel)", () => {
     expect(text).toContain("Wir treffen uns dienstags")
     expect(text).toContain("Wir treffen uns alle zwei Wochen")
     expect(text).toContain("diese")
-    expect(host.querySelector('[data-list-row="s-b"]')?.getAttribute("aria-current")).toBe("true")
+    expect(host.querySelector('[data-list-row="s-b"] article')?.getAttribute("aria-current")).toBe("true")
     expect(host.querySelector('[data-list-row="s-a"]')?.textContent).toContain("Ausgang")
     expect(host.querySelector('[data-list-row="s-c"]')?.textContent).toContain("Variante")
     expect(text).not.toContain("Verwaist")

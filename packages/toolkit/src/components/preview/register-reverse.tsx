@@ -8,6 +8,7 @@ import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import { cn } from "../../lib/utils"
 import type { EdgeEntry, ListEntry } from "./field-register"
 import { isItemDone } from "./item-ref-chip"
+import { ItemPreview } from "./item-preview"
 import { resolveListQuery, type ListRowDecoration } from "./list-queries"
 import { GENERIC_BADGE, resolveTypePresentation } from "./type-presentation"
 import { isItemEdge, useItemEdges } from "./use-item-edges"
@@ -139,7 +140,8 @@ function ReverseList({
       {noteRow}
       <ul className="flex flex-col gap-1.5">
         {entries.map((entry) => (
-          <li key={entry.id}>
+          // Der Klick gehört der Zeile, nicht der Karte darum herum.
+          <li key={entry.id} data-list-row={entry.id} onClick={(event) => event.stopPropagation()}>
             <ReverseRow entry={entry} current={entry.id === item.id} decoration={decorate?.(entry)} />
           </li>
         ))}
@@ -162,46 +164,40 @@ function ListActionLink({ action }: { action: { id: string; label: string; run: 
   )
 }
 
-const titleOf = (item: Item): string => {
-  const data = (item.data ?? {}) as Record<string, unknown>
-  const title = data.title ?? data.displayName ?? data.content
-  return typeof title === "string" && title.trim() !== "" ? title : "Ohne Titel"
-}
-
 /**
- * Eine Zeile der Liste: die kompakte Vorschau eines Items — Badge in der
- * Typfarbe, Titel, Markierung, rechts ein kleiner Zusatz. Klick öffnet den
- * Eintrag in derselben Panel-Instanz; die angezeigte Zeile ist markiert.
+ * Eine Zeile der Liste: die einzeilige Form von `ItemPreview` (Kartenflächen-
+ * MUSS, Detail-Anatomie Regel 8) — Badge in der Typfarbe, Titel, rechts
+ * Markierung und kleiner Zusatz; erledigt mit Häkchen und gedimmt
+ * (`completed`, Rolle `done`). Klick öffnet den Eintrag in derselben
+ * Panel-Instanz; die angezeigte Zeile ist markiert (`active`).
  */
 function ReverseRow({ entry, current, decoration }: { entry: Item; current: boolean; decoration?: ListRowDecoration }) {
   const focus = useOptionalItemFocus()
   const presentation = resolveTypePresentation(entry.type)
   const badge = presentation.badge ?? GENERIC_BADGE
   const Icon = badge.icon
-  const done = isItemDone(entry)
-  const open = !current && focus ? () => focus.focusItem(entry.id) : null
-  const body = (
+  const open = !current && focus ? () => focus.focusItem(entry.id) : undefined
+  const trailing = (decoration?.mark || decoration?.trailing) && (
     <>
-      <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] font-medium", badge.className)}>
-        <Icon className="h-3 w-3" aria-hidden />
-        {decoration?.badge ?? presentation.label}
-      </span>
-      <span className={cn("min-w-0 flex-1 truncate text-left text-sm font-medium", done && "line-through opacity-60")}>{titleOf(entry)}</span>
       {decoration?.mark && <span className="shrink-0 text-xs text-muted-foreground">{decoration.mark}</span>}
       {decoration?.trailing && <span className="w-16 shrink-0 empty:hidden">{decoration.trailing}</span>}
     </>
   )
-  const classes = cn(
-    "flex w-full min-w-0 items-center gap-2 rounded-md border px-2 py-1.5",
-    current ? "border-primary/40 bg-primary/5" : "border-border",
-  )
-  return open ? (
-    <button type="button" data-list-row={entry.id} onClick={(e) => { e.stopPropagation(); open() }} className={cn(classes, "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40")}>
-      {body}
-    </button>
-  ) : (
-    <div data-list-row={entry.id} aria-current={current ? "true" : undefined} className={classes}>
-      {body}
-    </div>
+  return (
+    <ItemPreview
+      item={entry}
+      density="row"
+      author={null}
+      active={current}
+      completed={isItemDone(entry)}
+      onClick={open}
+      headerAdornment={
+        <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] font-medium", badge.className)}>
+          <Icon className="h-3 w-3" aria-hidden />
+          {decoration?.badge ?? presentation.label}
+        </span>
+      }
+      footerAdornment={trailing || undefined}
+    />
   )
 }
