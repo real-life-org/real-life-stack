@@ -559,3 +559,36 @@ describe("Anton zu #542: erledigt zeigt nur Zustände, keine Aktionen", () => {
     expect(buttons()).toHaveLength(0)
   })
 })
+
+describe("Codex Runde 4: mein Zustand, auch wenn die Pills meinen Wert nicht anbieten", () => {
+  const states = () => [...host.querySelectorAll("[data-self-action] [data-self-state]")].map((el) => el.textContent?.trim())
+  const onlyCan = () =>
+    registerTypePresentation("beispiel", {
+      extensions: [{
+        id: "task",
+        qualifierValues: EXAMPLE_LEARNING_LAYER.qualifierValues,
+        selfActions: [{ predicate: "assignedTo", itemRole: "from", selfAction: { label: "Kann ich", mine: "Dabei", qualifiers: ["can"], followUps: { field: "status", complete: { label: "Erledigt" }, release: "Raus" } } }],
+      }],
+    })
+
+  it("erledigt: „✓ Lernt · ✓ Erledigt“", async () => {
+    onlyCan()
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: "learns" } }], "done"))
+    expect(states()).toEqual(["Lernt", "Erledigt"])
+  })
+
+  it("offen: mein Wert steht als gedrückter Umschalter vor den Pills; Klick gibt ab", async () => {
+    onlyCan()
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: "learns" } }], "in-progress"))
+    expect(pill("Lernt")?.getAttribute("aria-pressed")).toBe("true")
+    expect(pill("Kann ich")?.getAttribute("aria-pressed")).toBe("false")
+    await click(pill("Lernt"))
+    expect((await saved())?.relations ?? []).toEqual([])
+  })
+
+  it("ein Wert, den keine Schicht kennt, zeigt den allgemeinen Zustand „Dabei“", async () => {
+    onlyCan()
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: "foo" } }], "done"))
+    expect(states()).toEqual(["Dabei", "Erledigt"])
+  })
+})

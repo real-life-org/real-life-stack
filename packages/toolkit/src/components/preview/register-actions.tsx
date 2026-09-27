@@ -101,13 +101,20 @@ export function SelfActionPills({
         .filter((v): v is NonNullable<typeof v> => !!v)
     : null
   const neutral = mine === undefined
+  // Mein Zustand, beschriftet aus ALLEN Werten der Kante (nicht nur den
+  // angebotenen Pills, Codex R4): ein bekannter Wert mit seiner Anzeige, ein
+  // unbekannter oder keiner mit der allgemeinen Beschriftung („Dabei").
+  const generalMine = others && edge.selfAction.join ? edge.selfAction.join.mine : edge.selfAction.mine
+  const myValue = typeof mine === "string" ? edge.qualifier?.values.find((v) => v.id === mine) : undefined
+  const myStateLabel = myValue ? capitalize(myValue.label) : generalMine
+  // Mit Pills: steht mein Wert unter keiner Pill, trägt eine eigene Zustands-Pill ihn (Umschalter zum Abgeben).
+  const offMenu = !!values && !neutral && !values.some((v) => v.id === mine)
   // Erledigt zeigt die Zeile nur Zustände, keine Aktionen (Anton zu #542):
   // kein Übernehmen, kein Mitmachen, kein Abgeben. Wieder öffnen nur über
   // Bearbeiten oder das Modul; danach gelten die normalen Aktionen. Gilt für
   // jede Selbstaktion mit Folgeaktion, auch eine App-Ersetzung (Regel 20).
   if (followUps && statusField && statusRole(statusField, item.data?.[followUps.field], defaultStatus) === "done") {
-    const mineValue = values && typeof mine === "string" ? values.find((v) => v.id === mine) : undefined
-    const mineLabel = neutral ? null : mineValue ? capitalize(mineValue.label) : values ? null : others && edge.selfAction.join ? edge.selfAction.join.mine : edge.selfAction.mine
+    const mineLabel = neutral ? null : myStateLabel
     return (
       <div role="group" aria-label={edge.selfAction.label} data-self-action={edge.predicate} className="flex flex-wrap items-center gap-1.5">
         {mineLabel && (
@@ -129,13 +136,16 @@ export function SelfActionPills({
   const release = join ? join.release : followUps?.release
 
   const pills = values
-    ? values.map((value, index) => ({
+    ? [
+        ...(offMenu ? [{ key: "mine", value: undefined as string | undefined, on: true, primary: false, label: myStateLabel }] : []),
+        ...values.map((value, index) => ({
         key: value.id,
         value: value.id as string | undefined,
         on: mine === value.id,
         primary: neutral && index === 0,
         label: mine === value.id ? capitalize(value.label) : (value.action ?? capitalize(value.label)),
-      }))
+      })),
+      ]
     : [
         {
           key: "self",
