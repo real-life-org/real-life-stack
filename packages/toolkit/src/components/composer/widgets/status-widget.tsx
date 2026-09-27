@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@/lib/utils"
+import { OptionField } from "./value-widgets"
 
 interface StatusOption {
   id: string
@@ -15,32 +15,11 @@ interface StatusWidgetProps {
   options: StatusOption[]
 }
 
-export function StatusWidget({
-  value,
-  onChange,
-  label,
-  options,
-}: StatusWidgetProps) {
-  return (
-    <div>
-      <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
-      <div className="flex flex-wrap items-center gap-2">
-      {options.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          onClick={() => onChange(option.id)}
-          className={cn(
-            "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
-            value === option.id
-              ? option.className || "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-muted/80",
-          )}
-        >
-          {option.label}
-        </button>
-      ))}
-      </div>
-    </div>
-  )
+/**
+ * Status (B6, Schreiben): Segment bis vier Optionen, sonst Liste
+ * (shared-components → Widget-Paare). Ein Status hat immer einen Wert; die
+ * gewählte Option lässt sich nicht abwählen.
+ */
+export function StatusWidget({ value, onChange, label, options }: StatusWidgetProps) {
+  return <OptionField label={label} options={options} value={value} onChange={onChange} />
 }

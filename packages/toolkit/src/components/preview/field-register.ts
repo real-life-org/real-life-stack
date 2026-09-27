@@ -99,6 +99,12 @@ export interface FieldEntry {
   required?: boolean
   /** Einheit (number, B7). */
   unit?: string
+  /**
+   * Grenzen (number, B7). Nicht in der FieldEntry-Liste von Spec 06; der
+   * S4-Brief verlangt „Min/Max aus dem Register" — im PR als Frage an Anton.
+   */
+  min?: number
+  max?: number
   /** Werte (status B6, select B8). */
   options?: readonly FieldOption[]
   /** `false`: nie im Formular; `"fixed"`: sichtbar, nicht bearbeitbar. */
@@ -256,6 +262,18 @@ export function assertRegisterLists(
     // Regel 11: item-ref trägt ref, und nur item-ref.
     if (field.widget === "item-ref" && !field.ref) fail(layer, typeId, `Feld "${field.key}" (item-ref) braucht ref`)
     if (field.widget !== "item-ref" && field.ref) fail(layer, typeId, `Feld "${field.key}" trägt ref, ist aber kein item-ref`)
+    // Optionen gibt es an status (B6) und select (B8); select braucht welche.
+    if (field.options && field.widget !== "status" && field.widget !== "select") {
+      fail(layer, typeId, `Feld "${field.key}" trägt Optionen, ist aber weder status noch select`)
+    }
+    if (field.widget === "select" && !(field.options?.length)) fail(layer, typeId, `Feld "${field.key}" (select) braucht Optionen`)
+    // Einheit und Grenzen gibt es nur an number (B7).
+    if (field.widget !== "number" && (field.unit !== undefined || field.min !== undefined || field.max !== undefined)) {
+      fail(layer, typeId, `Feld "${field.key}" trägt unit, min oder max, ist aber kein number`)
+    }
+    if (field.min !== undefined && field.max !== undefined && field.min > field.max) {
+      fail(layer, typeId, `Feld "${field.key}" hat min über max`)
+    }
     // Regel 18: Rollen nur an Optionen eines status-Felds.
     if (field.widget !== "status" && (field.options ?? []).some((o) => o.role)) {
       fail(layer, typeId, `Feld "${field.key}" gibt Optionen eine Rolle, ist aber kein status`)
@@ -376,6 +394,26 @@ export function metaRowOrder(fields: readonly FieldEntry[] = [], edges: readonly
     .map((row, index) => ({ row, index, group: metaGroup(row) }))
     .sort((a, b) => a.group - b.group || a.index - b.index)
     .map(({ row }) => row)
+}
+
+/**
+ * Zahlenfelder (B7) mit derselben Beschriftung, die in der Meta-Box
+ * aufeinander folgen, bilden EINE Zeile („Aufwand 12 h · 300 €") und im
+ * Formular eine Gruppe mit einem Zahlenfeld je Wert (shared-components,
+ * Widget-Paare B7). Liefert je Zeile die Felder; andere Zeilen einzeln.
+ */
+export function groupNumberFields<T extends { widget: string; label?: string }>(entries: readonly T[]): T[][] {
+  const groups: T[][] = []
+  for (const entry of entries) {
+    const last = groups.at(-1)
+    const prev = last?.at(-1)
+    if (entry.widget === "number" && prev?.widget === "number" && entry.label !== undefined && prev.label === entry.label) {
+      last!.push(entry)
+    } else {
+      groups.push([entry])
+    }
+  }
+  return groups
 }
 
 /**

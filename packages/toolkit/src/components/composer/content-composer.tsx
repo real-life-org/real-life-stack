@@ -40,6 +40,10 @@ import { TagsWidget } from "./widgets/tags-widget"
 import { useFormSpaceSources } from "./use-form-space-sources"
 import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
 import { StatusWidget } from "./widgets/status-widget"
+import { ChipsField, ContactField, NumberGroupField, OptionField, UrlField } from "./widgets/value-widgets"
+import { VALUE_WIDGETS, valueFieldError, type ValueFieldConfig } from "./value-fields"
+import { groupNumberFields } from "../preview/field-register"
+import { chipValues } from "../../lib/field-values"
 import { FixedItemRefField, IncomingRelationField, ItemRelationWidget, type RequestItemPick } from "./widgets/item-relation-widget"
 import { incomingRemovedKey, itemRelationChoiceKeys, itemRelationDataKey, itemRelationDataKeys, type ItemRefFieldConfig, type ItemRelationFieldConfig } from "./item-relations"
 
@@ -59,6 +63,12 @@ export type WidgetType =
   | "item-relation"
   /** Felder mit Item-Verweis (B15) aus dem Register — nie zum Zuschalten. */
   | "item-ref"
+  /** Wert-Widgets (B7–B10, B12) aus dem Register — nie zum Zuschalten. */
+  | "number"
+  | "select"
+  | "url"
+  | "chips"
+  | "contact"
 
 export interface MediaFile {
   id: string
@@ -171,6 +181,8 @@ export interface ContentTypeConfig {
   itemRelations?: readonly ItemRelationFieldConfig[]
   /** Felder mit Item-Verweis (B15); abgeleitet aus dem Register. */
   itemRefs?: readonly ItemRefFieldConfig[]
+  /** Wert-Felder (number, select, url, chips, contact); abgeleitet aus dem Register. */
+  valueFields?: readonly ValueFieldConfig[]
 }
 
 export interface WidgetComponentProps<T = unknown> {
@@ -333,6 +345,11 @@ const WIDGET_ORDER: WidgetType[] = [
 const DEFAULT_WIDGET_LABELS: Record<WidgetType, string> = {
   "item-relation": "Verknüpfungen",
   "item-ref": "Verweis",
+  number: "Zahl",
+  select: "Auswahl",
+  url: "Link",
+  chips: "Liste",
+  contact: "Kontakt",
   group: "Gruppe",
   title: "Titel",
   text: "Text",
@@ -473,12 +490,17 @@ const ANATOMY_RANK: Record<WidgetType, number> = {
   "item-relation": 5.5,
   "item-ref": 5.6,
   status: 6,
+  select: 6.1,
+  number: 6.2,
+  url: 6.3,
+  chips: 6.4,
+  contact: 6.5,
   tags: 7,
   group: 8,
 }
 
 /** Widgets, die nur das Register setzt: Sie stehen, wo der Typ sie führt, und sind nie zuschaltbar. */
-const REGISTER_ONLY_WIDGETS: ReadonlySet<string> = new Set(["item-relation", "item-ref"])
+const REGISTER_ONLY_WIDGETS: ReadonlySet<string> = new Set(["item-relation", "item-ref", ...VALUE_WIDGETS])
 
 /**
  * The built-in widgets in render order: those the type lists in
@@ -864,6 +886,8 @@ export function ContentComposer({
   const relationKeys = [
     ...itemRelationDataKeys(currentConfig?.itemRelations),
     ...(currentConfig?.itemRefs ?? []).filter((r) => !r.fixed).map((r) => r.key),
+    // Wert-Felder (S4a) zählen für Ungespeichert und liveUpdate mit.
+    ...(currentConfig?.valueFields ?? []).map((v) => v.key),
   ]
 
   const [data, setData] = React.useState<WidgetData>(() => ({
@@ -934,8 +958,13 @@ export function ContentComposer({
   const spaceUnavailable = !isEditMode && !!currentConfig?.groupUnavailableReason
   const spaceRequired = spaceUnavailable || (!isEditMode && (currentConfig?.groupOptions?.length ?? 0) > 0 && (currentConfig?.groupRequired ?? true))
   const isSpaceMissing = (d: WidgetData) => spaceUnavailable || (spaceRequired && !d.group)
+  // Ein ungültiger Wert (Adresse ohne http/https, Zahl außerhalb der Grenzen,
+  // kein Telefon/E-Mail) wird nie gespeichert — auch nicht per liveUpdate.
+  const valueErrorsOf = (d: WidgetData): Record<string, string | null> =>
+    Object.fromEntries((currentConfig?.valueFields ?? []).map((v) => [v.key, valueFieldError(v, (d as Record<string, unknown>)[v.key])]))
+  const hasInvalidValues = (d: WidgetData) => Object.values(valueErrorsOf(d)).some(Boolean)
   const submitGuarded = (submission: ContentComposerSubmitData): void | Promise<void> => {
-    if (isSpaceMissing(submission.data)) return
+    if (isSpaceMissing(submission.data) || hasInvalidValues(submission.data)) return
     return onSubmit(submission)
   }
   // Ein verzögerter liveUpdate prüft beim Auslösen gegen den AKTUELLEN Stand
@@ -1066,7 +1095,7 @@ export function ContentComposer({
       w !== "title" &&
       w !== "text" &&
       !(w === "status" && !hasStatusOptions),
-  ) as Exclude<WidgetType, "item-relation" | "item-ref">[]
+  ) as Exclude<WidgetType, "item-relation" | "item-ref" | "number" | "select" | "url" | "chips" | "contact">[]
 
   // Get widget label
   const getWidgetLabel = (widgetId: string): string => {
@@ -1142,7 +1171,21 @@ export function ContentComposer({
 
   // Submit
   const hasContent = !!(data.title?.trim() || data.text?.trim() || (data.media && data.media.length > 0))
-  const canSubmit = !spaceMissing && hasContent
+  const valueErrors = valueErrorsOf(data)
+  const canSubmit = !spaceMissing && hasContent && !Object.values(valueErrors).some(Boolean)
+  // Wer den Kontakt sieht (B12): die Mitglieder des Formular-Space.
+  const formSpaceOption = currentConfig.groupOptions?.find((o) => o.id === data.group)
+  const contactVisibility = formSpaceOption
+    ? formSpaceOption.personal
+      ? "Nur für dich sichtbar (Privat)"
+      : `Sichtbar für alle in ${formSpaceOption.name}`
+    : undefined
+  const valueFieldsOf = (widget: string) => (currentConfig.valueFields ?? []).filter((v) => v.widget === widget)
+  const chipSuggestions = (field: ValueFieldConfig): string[] => {
+    const own = field.suggestions ?? []
+    const fromSpace = (spaceSources?.items ?? []).flatMap((i) => chipValues((i.data as Record<string, unknown> | undefined)?.[field.key]))
+    return [...new Set([...own, ...fromSpace])]
+  }
 
   const [submitting, setSubmitting] = React.useState(false)
   // Fehler beim Speichern: Banner unter dem Kopf; `reason` ist der Grund des
@@ -1446,6 +1489,79 @@ export function ContentComposer({
                           />
                         )
                       })}
+                    </div>
+                  )}
+                  {widgetId === "select" && (
+                    <div className="flex flex-col gap-4">
+                      {valueFieldsOf("select").map((field) => (
+                        <OptionField
+                          key={field.key}
+                          label={field.label}
+                          options={field.options ?? []}
+                          value={typeof data[field.key] === "string" ? (data[field.key] as string) : ""}
+                          onChange={(v) => updateData(field.key, v)}
+                          allowClear
+                          disabled={field.fixed}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {widgetId === "number" && (
+                    <div className="flex flex-col gap-4">
+                      {groupNumberFields(valueFieldsOf("number")).map((group) => (
+                        <NumberGroupField
+                          key={group[0]!.key}
+                          label={group[0]!.label}
+                          fields={group}
+                          values={data as Record<string, unknown>}
+                          errors={valueErrors}
+                          onChange={(key, v) => updateData(key, v)}
+                          disabled={group.every((f) => f.fixed)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {widgetId === "url" && (
+                    <div className="flex flex-col gap-4">
+                      {valueFieldsOf("url").map((field) => (
+                        <UrlField
+                          key={field.key}
+                          label={field.label}
+                          value={typeof data[field.key] === "string" ? (data[field.key] as string) : ""}
+                          onChange={(v) => updateData(field.key, v)}
+                          error={valueErrors[field.key] ?? null}
+                          disabled={field.fixed}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {widgetId === "chips" && (
+                    <div className="flex flex-col gap-4">
+                      {valueFieldsOf("chips").map((field) => (
+                        <ChipsField
+                          key={field.key}
+                          label={field.label}
+                          value={chipValues(data[field.key])}
+                          onChange={(v) => updateData(field.key, v)}
+                          suggestions={chipSuggestions(field)}
+                          disabled={field.fixed}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {widgetId === "contact" && (
+                    <div className="flex flex-col gap-4">
+                      {valueFieldsOf("contact").map((field) => (
+                        <ContactField
+                          key={field.key}
+                          label={field.label}
+                          value={typeof data[field.key] === "string" ? (data[field.key] as string) : ""}
+                          onChange={(v) => updateData(field.key, v)}
+                          error={valueErrors[field.key] ?? null}
+                          visibility={contactVisibility}
+                          disabled={field.fixed}
+                        />
+                      ))}
                     </div>
                   )}
                   {widgetId === "tags" && (

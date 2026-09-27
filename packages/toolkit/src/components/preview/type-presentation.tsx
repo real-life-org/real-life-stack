@@ -239,7 +239,15 @@ export interface ResolvedTypePresentation extends RegisterLists {
  */
 const REGISTER_DETAIL: ComponentType<ItemSlotProps> = function RegisterDetail({ item }) {
   const presentation = resolveTypePresentation(item.type)
-  return <RegisterMeta item={item} fields={readableFields(presentation.fields)} edges={presentation.edges} lists={presentation.lists} />
+  return (
+    <RegisterMeta
+      item={item}
+      fields={readableFields(presentation.fields)}
+      edges={presentation.edges}
+      lists={presentation.lists}
+      typeTone={presentation.badge?.className}
+    />
+  )
 }
 
 /** Slot `reverse` aus dem Register: Rückwärts-Listen (Detail-Anatomie, Regel 8). */
@@ -281,8 +289,8 @@ export const GENERIC_BADGE: TypeBadgeStyle = {
 // Feld- und Kantenlisten der Toolkit-Typen (Spec 06, Register je Typ). Nur
 // Kanten, die das Manifest deklariert (Regel 1): `partOf` und `blocks` seit S3
 // mit ihrer Relation-Typ-Definition (TOOLKIT_RELATION_PREDICATES); `locatedAt`
-// am Event folgt mit S4 (Kollision 7 aus #506). Felder, deren Widget es noch
-// nicht gibt (`meetingLink` als url), folgen mit S4.
+// am Event folgt mit S4b (Kollision 7 aus #506). `meetingLink` ist seit S4a
+// ein url-Feld (B9).
 const TITLE: FieldEntry = { key: "title", widget: "title", pos: "head" }
 const DESCRIPTION: FieldEntry = { key: "description", widget: "text", pos: "content", label: "Beschreibung" }
 const TAGS: FieldEntry = { key: "tags", widget: "tags", pos: "tags" }
@@ -308,7 +316,7 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     label: "Event",
     composer: { submitLabel: "Erstellen" },
     badge: { icon: Calendar, className: "bg-blue-50 text-blue-700 border-blue-200" },
-    fields: [TITLE, DESCRIPTION, { key: "start", widget: "date", pos: "meta" }, ADDRESS, GROUP, TAGS],
+    fields: [TITLE, DESCRIPTION, { key: "start", widget: "date", pos: "meta" }, ADDRESS, { key: "meetingLink", widget: "url", pos: "meta", label: "Link" }, GROUP, TAGS],
     // Eingeladene und Zusagen in EINER Menschen-Zeile (08 → Teilnahme am
     // Event, Regel 5): `invited` bleibt eingebettet, die Zusage ist ein
     // eigener Record von der Person zum Event (Entscheidung 22/23).

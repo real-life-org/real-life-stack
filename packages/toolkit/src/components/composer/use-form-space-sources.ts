@@ -15,6 +15,8 @@ export interface FormSpaceSources {
   tags?: string[]
   /** Der Connector kann die Tags dieses Space nicht lesen (Regel 7). */
   tagsUnavailable?: boolean
+  /** Die Items des Formular-Space (nur mit `ItemFilter.group`): Vorschläge der Chips-Felder (B10). */
+  items?: readonly Item[]
 }
 
 const NONE: readonly never[] = []
@@ -65,7 +67,7 @@ export function useFormSpaceSources(formSpace: string | undefined): FormSpaceSou
   return useMemo(() => {
     if (!space) return null
     const people = members.map((m) => ({ id: m.id, name: m.displayName ?? m.id }))
-    if (scoped) return { people, tags: [...groupVocabulary(items).tags] }
+    if (scoped) return { people, tags: [...groupVocabulary(items).tags], items }
     if (openSpace === space) return { people }
     return { people, tags: [], tagsUnavailable: true }
   }, [space, scoped, members, items, openSpace])

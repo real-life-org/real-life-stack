@@ -11,6 +11,7 @@ import {
   peopleRelationsToWidgetData,
 } from "./people-relations"
 import { toStoredDateTime } from "./date-widget-state"
+import { valueFieldFromData, valueFieldToData } from "./value-fields"
 import { incomingChangesFromWidgetData, itemRelationDataKeys, itemRelationsFromWidgetData, itemRelationsToWidgetData } from "./item-relations"
 
 /**
@@ -116,6 +117,21 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
       }
     }
 
+    // Wert-Felder (S4a) nach ihrem Datenvertrag: Zahlen als Zahl, Adressen
+    // mit Schema, Chips bereinigt. Leer entfernt den Wert, ein ungültiger
+    // Wert (die Form sperrt Speichern, das hier ist die zweite Linie) lässt
+    // den gespeicherten stehen; ein festes Feld (`edit: "fixed"`) ändert sich nie.
+    for (const field of typeConfig?.valueFields ?? []) {
+      if (!(field.key in rest)) continue
+      const stored = existingItem ? (existingItem.data as Record<string, unknown> | undefined)?.[field.key] : undefined
+      const next = field.fixed ? null : valueFieldToData(field, rest[field.key])
+      if (next === undefined) delete itemData[field.key]
+      else if (next === null) {
+        if (stored !== undefined) itemData[field.key] = stored
+        else delete itemData[field.key]
+      } else itemData[field.key] = next
+    }
+
     // Timed start/end are stored with the author's offset (spec 06); a value
     // prefilled from a calendar click may still be a zone-less local string.
     for (const key of ["start", "end"] as const) {
@@ -186,6 +202,12 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
     // Felder mit Item-Verweis (B15): der Wert für die (feste) Anzeige.
     const refs: Record<string, string> = {}
     for (const ref of typeConfig?.itemRefs ?? []) if (typeof d[ref.key] === "string") refs[ref.key] = d[ref.key] as string
+    // Wert-Felder (S4a): der Formularwert je Feld (Zahlen als Text zum Tippen).
+    const values: Record<string, unknown> = {}
+    for (const field of typeConfig?.valueFields ?? []) {
+      const v = valueFieldFromData(field, d[field.key])
+      if (v !== undefined) values[field.key] = v
+    }
     return {
       ...(typeof d.title === "string" ? { title: d.title } : {}),
       ...(typeof text === "string" ? { text } : {}),
@@ -202,6 +224,7 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
       ...people,
       ...itemRelations,
       ...refs,
+      ...values,
       tags: item.tags ?? [],
     }
   }
