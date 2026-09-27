@@ -124,7 +124,9 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
     for (const field of typeConfig?.valueFields ?? []) {
       if (!(field.key in rest)) continue
       const stored = existingItem ? (existingItem.data as Record<string, unknown> | undefined)?.[field.key] : undefined
-      const next = field.fixed ? null : valueFieldToData(field, rest[field.key])
+      // Fest (06, Regel 14): beim Bearbeiten bleibt der gespeicherte Wert, beim
+      // Anlegen gilt der Wert, den der Kontext vorgibt.
+      const next = field.fixed && existingItem ? null : valueFieldToData(field, rest[field.key])
       if (next === undefined) delete itemData[field.key]
       else if (next === null) {
         if (stored !== undefined) itemData[field.key] = stored

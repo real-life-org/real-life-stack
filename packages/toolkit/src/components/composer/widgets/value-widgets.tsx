@@ -78,7 +78,8 @@ export function OptionField({ label, options, value, onChange, allowClear, disab
           onChange={(e) => onChange(e.target.value)}
           className="h-9 w-full rounded-md border border-input bg-card px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50 dark:bg-input/30"
         >
-          <option value="">Keine Angabe</option>
+          {/* Leer wählbar nur, wo das Feld leer sein darf; ohne Wert steht ein Platzhalter. */}
+          {allowClear ? <option value="">Keine Angabe</option> : !value && <option value="" disabled>Bitte wählen</option>}
           {/* Ein Wert, den das Register nicht kennt, bleibt wählbar stehen. */}
           {value && !options.some((o) => o.id === value) && <option value={value}>{value}</option>}
           {options.map((o) => (
@@ -146,6 +147,8 @@ export interface NumberInputSpec {
   unit?: string
   min?: number
   max?: number
+  /** `edit: "fixed"`: dieses Feld sichtbar, nicht bearbeitbar. */
+  fixed?: boolean
 }
 
 export interface NumberGroupFieldProps {
@@ -158,8 +161,9 @@ export interface NumberGroupFieldProps {
 }
 
 /** Ein Zahlenfeld je Wert, nebeneinander, die Einheit im Feld (Widget-Paare B7). */
-export function NumberGroupField({ label, fields, values, errors, onChange, disabled }: NumberGroupFieldProps) {
+export function NumberGroupField({ label, fields, values, errors, onChange, disabled: allDisabled }: NumberGroupFieldProps) {
   const id = React.useId()
+  const disabled = allDisabled || fields.some((f) => f.fixed)
   return (
     <div data-value-field="number">
       <FieldLabel>
@@ -182,7 +186,7 @@ export function NumberGroupField({ label, fields, values, errors, onChange, disa
                   aria-label={field.unit ? `${label} (${field.unit})` : label}
                   aria-invalid={!!error}
                   aria-describedby={error ? errorId : undefined}
-                  disabled={disabled}
+                  disabled={allDisabled || field.fixed}
                   value={typeof raw === "string" || typeof raw === "number" ? String(raw) : ""}
                   onChange={(e) => onChange(field.key, e.target.value)}
                   className={cn("tabular-nums", field.unit && "pr-8")}
@@ -291,6 +295,13 @@ const SUGGESTIONS_SHOWN = 8
 export function ChipsField({ label, value, onChange, suggestions = [], disabled }: ChipsFieldProps) {
   const [adding, setAdding] = React.useState(false)
   const [draft, setDraft] = React.useState("")
+  // Nach Bestätigen oder Abbrechen kehrt der Fokus zu „+ eigenes" zurück.
+  const addButton = React.useRef<HTMLButtonElement>(null)
+  const wasAdding = React.useRef(false)
+  React.useEffect(() => {
+    if (wasAdding.current && !adding) addButton.current?.focus()
+    wasAdding.current = adding
+  }, [adding])
   const add = (text: string) => {
     const t = text.trim()
     if (t && !value.includes(t)) onChange([...value, t])
@@ -358,6 +369,7 @@ export function ChipsField({ label, value, onChange, suggestions = [], disabled 
             />
           ) : (
             <button
+              ref={addButton}
               type="button"
               onClick={() => setAdding(true)}
               className="rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground hover:border-solid hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"

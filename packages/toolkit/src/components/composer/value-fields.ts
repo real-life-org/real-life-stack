@@ -56,7 +56,6 @@ export function valueFieldsFromRegister(fields: readonly FieldEntry[]): ValueFie
 
 /** Der Fehler eines Werts im Formular, oder `null`. Leer ist nie ein Fehler. */
 export function valueFieldError(field: ValueFieldConfig, value: unknown): string | null {
-  if (field.fixed) return null
   switch (field.widget) {
     case "number":
       return numberError(value, field)

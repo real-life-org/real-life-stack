@@ -57,7 +57,10 @@ export function urlError(input: string): string | null {
 
 export type ContactKind = "phone" | "email"
 
-const EMAIL = /^[^\s@?&/:#<>"]+@[^\s@?&/:#<>"]+\.[^\s@?&/:#<>".]+$/
+// Eine schlichte Einzeladresse: kein `%` (keine URI-Escapes, RFC 6068 §2),
+// keine Steuerzeichen, keine Trenner, die ein mailto-URI anders läse.
+// eslint-disable-next-line no-control-regex
+const EMAIL = /^[^\s\x00-\x1f\x7f@?&/:#<>"%,;]+@[^\s\x00-\x1f\x7f@?&/:#<>"%,;]+\.[^\s\x00-\x1f\x7f@?&/:#<>"%,;.]+$/
 const PHONE = /^\+?[\d\s()./-]+$/
 
 /** Telefon oder E-Mail, am Wert erkannt; `null`, wenn keins von beiden. */

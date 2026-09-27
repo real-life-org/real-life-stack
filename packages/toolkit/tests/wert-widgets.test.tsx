@@ -531,3 +531,100 @@ describe("Abbildung: ein Datenvertrag für Lesen und Schreiben", () => {
     expect(payload?.data).toEqual({ title: "Karte", other: 1 })
   })
 })
+
+// ---------------------------------------------------------------------------
+// Codex Runde 1
+
+describe("Codex R1", () => {
+  it("1: ein fest vorgegebener Wert wird beim Anlegen gespeichert, beim Bearbeiten nie geändert", () => {
+    const typ = karte([{ key: "hours", widget: "number", label: "Aufwand", unit: "h", fixed: true }])
+    const { mapSubmission } = createComposerMapping([typ])
+    const neu = mapSubmission({ contentType: "card", isPublic: true, data: { title: "N", hours: "12" } }, { mode: "create", existingItem: null })
+    expect(neu?.data).toEqual({ title: "N", hours: 12 })
+    const alt = { id: "c", type: "card", createdAt: "x", createdBy: "u", data: { title: "N", hours: 3 } } as Item
+    const edit = mapSubmission({ contentType: "card", isPublic: true, data: { title: "N", hours: "99" } }, { mode: "edit", existingItem: alt })
+    expect(edit?.data).toEqual({ title: "N", hours: 3 })
+  })
+
+  it("2: nach einem Typwechsel speichert das Formular keine Wert-Felder des anderen Typs", async () => {
+    const mitLink = karte([{ key: "website", widget: "url", label: "Website" }])
+    const ohne: ContentTypeConfig = { id: "note", label: "Notiz", defaultWidgets: ["title"] }
+    const submits: ContentComposerSubmitData[] = []
+    const r = await rendere(
+      createElement(ContentComposer, {
+        contentTypes: [mitLink, ohne],
+        initialContentType: "card",
+        initialData: { title: "T", website: "javascript:alert(1)" },
+        showPreview: false,
+        onSubmit: (s: ContentComposerSubmitData) => {
+          submits.push(s)
+        },
+      }),
+    )
+    // Typ wechseln über den Kopf (wie erstellen-typwechsel-und-erneut.test.tsx).
+    const trigger = r.container.querySelector<HTMLElement>('button[aria-label^="Typ wählen"]')!
+    await act(async () => {
+      trigger.focus()
+      trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+    })
+    const notiz = [...document.body.querySelectorAll<HTMLElement>('[role="menuitemradio"]')].find((el) => el.textContent?.includes("Notiz"))!
+    await act(async () => notiz.click())
+    const speichern = [...r.container.querySelectorAll("button")].find((b) => b.textContent === "Erstellen")!
+    await act(async () => speichern.click())
+    expect(submits.at(-1)?.contentType).toBe("note")
+    expect(submits.at(-1)?.data).not.toHaveProperty("website")
+    await r.unmount()
+  })
+
+  it("3: mailto nur für eine schlichte Adresse, ohne Prozent-Escapes und Steuerzeichen", async () => {
+    const { contactHref } = await import("../src/lib/field-values")
+    expect(contactHref("a%0d%0aBcc%3aevil@example.org")).toBeNull()
+    expect(contactHref("a\u0000b@example.org")).toBeNull()
+    expect(contactHref("lena.k+garten@example.org")).toBe("mailto:lena.k+garten@example.org")
+  })
+
+  it("4: in einer gemischten Zahlengruppe ist nur das feste Feld gesperrt", async () => {
+    const { container, unmount } = await formular(
+      karte([
+        { key: "hours", widget: "number", label: "Aufwand", unit: "h", fixed: true },
+        { key: "euros", widget: "number", label: "Aufwand", unit: "€" },
+      ]),
+      { hours: "3" },
+    )
+    expect(container.querySelector<HTMLInputElement>('input[aria-label="Aufwand (h)"]')!.disabled).toBe(true)
+    expect(container.querySelector<HTMLInputElement>('input[aria-label="Aufwand (€)"]')!.disabled).toBe(false)
+    await unmount()
+  })
+
+  it("5: Wert-Felder stehen im Formular in Register-Reihenfolge, nur benachbarte Zahlen bilden eine Gruppe", async () => {
+    const { container, unmount } = await formular(
+      karte([
+        { key: "hours", widget: "number", label: "Aufwand", unit: "h" },
+        { key: "website", widget: "url", label: "Website" },
+        { key: "euros", widget: "number", label: "Aufwand", unit: "€" },
+      ]),
+    )
+    const order = [...container.querySelectorAll("[data-value-field]")].map((e) => e.getAttribute("data-value-field"))
+    expect(order).toEqual(["number", "url", "number"])
+    await unmount()
+  })
+
+  it("6: ein Pflichtwert (Status) bietet auch als Liste keine leere Wahl an", async () => {
+    const { StatusWidget } = await import("../src/components/composer/widgets/status-widget")
+    const opts = ["a", "b", "c", "d", "e"].map((id) => ({ id, label: id }))
+    const r = await rendere(createElement(StatusWidget, { value: "a", onChange: () => {}, label: "Status", options: opts }))
+    expect([...r.container.querySelector("select")!.options].map((o) => o.value)).toEqual(["a", "b", "c", "d", "e"])
+    await r.unmount()
+  })
+
+  it("7: nach „+ eigenes“ kehrt der Fokus zum Knopf zurück (Enter und Escape)", async () => {
+    const { container, unmount } = await formular(karte([{ key: "skills", widget: "chips", label: "Kann" }]))
+    const feld = container.querySelector('[data-value-field="chips"]')!
+    const knopf = () => [...feld.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === "+ eigenes")!
+    await act(async () => knopf().click())
+    const input = feld.querySelector<HTMLInputElement>("input")!
+    await act(async () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })))
+    expect(document.activeElement).toBe(knopf())
+    await unmount()
+  })
+})

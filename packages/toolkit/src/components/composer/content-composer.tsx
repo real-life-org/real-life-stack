@@ -963,9 +963,18 @@ export function ContentComposer({
   const valueErrorsOf = (d: WidgetData): Record<string, string | null> =>
     Object.fromEntries((currentConfig?.valueFields ?? []).map((v) => [v.key, valueFieldError(v, (d as Record<string, unknown>)[v.key])]))
   const hasInvalidValues = (d: WidgetData) => Object.values(valueErrorsOf(d)).some(Boolean)
+  // Wert-Felder eines anderen angebotenen Typs (nach einem Typwechsel) gehen
+  // nicht mit: Sie wären weder geprüft noch nach ihrem Vertrag abgebildet.
+  const ownValueKeys = new Set((currentConfig?.valueFields ?? []).map((v) => v.key))
+  const foreignValueKeys = [
+    ...new Set(contentTypes.flatMap((t) => (t.valueFields ?? []).map((v) => v.key)).filter((k) => !ownValueKeys.has(k))),
+  ]
   const submitGuarded = (submission: ContentComposerSubmitData): void | Promise<void> => {
     if (isSpaceMissing(submission.data) || hasInvalidValues(submission.data)) return
-    return onSubmit(submission)
+    if (foreignValueKeys.length === 0) return onSubmit(submission)
+    const data = { ...submission.data }
+    for (const key of foreignValueKeys) delete data[key]
+    return onSubmit({ ...submission, data })
   }
   // Ein verzögerter liveUpdate prüft beim Auslösen gegen den AKTUELLEN Stand
   // (Konfiguration, Typ, Daten), nicht gegen den beim Planen (Codex zu #538).
@@ -1180,7 +1189,10 @@ export function ContentComposer({
       ? "Nur für dich sichtbar (Privat)"
       : `Sichtbar für alle in ${formSpaceOption.name}`
     : undefined
-  const valueFieldsOf = (widget: string) => (currentConfig.valueFields ?? []).filter((v) => v.widget === widget)
+  // Wert-Felder stehen im Formular in Register-Reihenfolge an der Stelle des
+  // ersten Wert-Widgets; nur benachbarte Zahlen mit gleicher Beschriftung
+  // teilen eine Gruppe (B7).
+  const firstValueWidget = renderOrder.find((w) => VALUE_WIDGETS.has(w))
   const chipSuggestions = (field: ValueFieldConfig): string[] => {
     const own = field.suggestions ?? []
     const fromSpace = (spaceSources?.items ?? []).flatMap((i) => chipValues((i.data as Record<string, unknown> | undefined)?.[field.key]))
@@ -1491,77 +1503,71 @@ export function ContentComposer({
                       })}
                     </div>
                   )}
-                  {widgetId === "select" && (
+                  {widgetId === firstValueWidget && (
                     <div className="flex flex-col gap-4">
-                      {valueFieldsOf("select").map((field) => (
-                        <OptionField
-                          key={field.key}
-                          label={field.label}
-                          options={field.options ?? []}
-                          value={typeof data[field.key] === "string" ? (data[field.key] as string) : ""}
-                          onChange={(v) => updateData(field.key, v)}
-                          allowClear
-                          disabled={field.fixed}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {widgetId === "number" && (
-                    <div className="flex flex-col gap-4">
-                      {groupNumberFields(valueFieldsOf("number")).map((group) => (
-                        <NumberGroupField
-                          key={group[0]!.key}
-                          label={group[0]!.label}
-                          fields={group}
-                          values={data as Record<string, unknown>}
-                          errors={valueErrors}
-                          onChange={(key, v) => updateData(key, v)}
-                          disabled={group.every((f) => f.fixed)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {widgetId === "url" && (
-                    <div className="flex flex-col gap-4">
-                      {valueFieldsOf("url").map((field) => (
-                        <UrlField
-                          key={field.key}
-                          label={field.label}
-                          value={typeof data[field.key] === "string" ? (data[field.key] as string) : ""}
-                          onChange={(v) => updateData(field.key, v)}
-                          error={valueErrors[field.key] ?? null}
-                          disabled={field.fixed}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {widgetId === "chips" && (
-                    <div className="flex flex-col gap-4">
-                      {valueFieldsOf("chips").map((field) => (
-                        <ChipsField
-                          key={field.key}
-                          label={field.label}
-                          value={chipValues(data[field.key])}
-                          onChange={(v) => updateData(field.key, v)}
-                          suggestions={chipSuggestions(field)}
-                          disabled={field.fixed}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {widgetId === "contact" && (
-                    <div className="flex flex-col gap-4">
-                      {valueFieldsOf("contact").map((field) => (
-                        <ContactField
-                          key={field.key}
-                          label={field.label}
-                          value={typeof data[field.key] === "string" ? (data[field.key] as string) : ""}
-                          onChange={(v) => updateData(field.key, v)}
-                          error={valueErrors[field.key] ?? null}
-                          visibility={contactVisibility}
-                          disabled={field.fixed}
-                        />
-                      ))}
+                      {groupNumberFields(currentConfig.valueFields ?? []).map((group) => {
+                        const field = group[0]!
+                        const text = typeof data[field.key] === "string" ? (data[field.key] as string) : ""
+                        switch (field.widget) {
+                          case "number":
+                            return (
+                              <NumberGroupField
+                                key={field.key}
+                                label={field.label}
+                                fields={group}
+                                values={data as Record<string, unknown>}
+                                errors={valueErrors}
+                                onChange={(key, v) => updateData(key, v)}
+                              />
+                            )
+                          case "select":
+                            return (
+                              <OptionField
+                                key={field.key}
+                                label={field.label}
+                                options={field.options ?? []}
+                                value={text}
+                                onChange={(v) => updateData(field.key, v)}
+                                allowClear
+                                disabled={field.fixed}
+                              />
+                            )
+                          case "url":
+                            return (
+                              <UrlField
+                                key={field.key}
+                                label={field.label}
+                                value={text}
+                                onChange={(v) => updateData(field.key, v)}
+                                error={valueErrors[field.key] ?? null}
+                                disabled={field.fixed}
+                              />
+                            )
+                          case "chips":
+                            return (
+                              <ChipsField
+                                key={field.key}
+                                label={field.label}
+                                value={chipValues(data[field.key])}
+                                onChange={(v) => updateData(field.key, v)}
+                                suggestions={chipSuggestions(field)}
+                                disabled={field.fixed}
+                              />
+                            )
+                          case "contact":
+                            return (
+                              <ContactField
+                                key={field.key}
+                                label={field.label}
+                                value={text}
+                                onChange={(v) => updateData(field.key, v)}
+                                error={valueErrors[field.key] ?? null}
+                                visibility={contactVisibility}
+                                disabled={field.fixed}
+                              />
+                            )
+                        }
+                      })}
                     </div>
                   )}
                   {widgetId === "tags" && (
