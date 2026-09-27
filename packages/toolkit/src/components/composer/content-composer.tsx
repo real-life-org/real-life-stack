@@ -40,8 +40,8 @@ import { TagsWidget } from "./widgets/tags-widget"
 import { useFormSpaceSources } from "./use-form-space-sources"
 import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
 import { StatusWidget } from "./widgets/status-widget"
-import { FixedItemRefField, ItemRelationWidget, type RequestItemPick } from "./widgets/item-relation-widget"
-import { itemRelationDataKey, itemRelationDataKeys, type ItemRefFieldConfig, type ItemRelationFieldConfig } from "./item-relations"
+import { FixedItemRefField, IncomingRelationField, ItemRelationWidget, type RequestItemPick } from "./widgets/item-relation-widget"
+import { incomingRemovedKey, itemRelationChoiceKeys, itemRelationDataKey, itemRelationDataKeys, type ItemRefFieldConfig, type ItemRelationFieldConfig } from "./item-relations"
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -1126,9 +1126,14 @@ export function ContentComposer({
     }
   }
 
-  // Beziehungen im Formular (Regel 5): eine gewählte Item-Kante oder ein
-  // bearbeitbarer Item-Verweis hält den Space fest.
-  const formHasItemBinding = relationKeys.some((key) => {
+  // Beziehungen im Formular (Regel 5): eine gewählte Item-Kante (auch
+  // „Braucht") oder ein bearbeitbarer Item-Verweis hält den Space fest; eine
+  // entfernte eingehende Quelle nicht.
+  const choiceKeys = [
+    ...itemRelationChoiceKeys(currentConfig?.itemRelations),
+    ...(currentConfig?.itemRefs ?? []).filter((r) => !r.fixed).map((r) => r.key),
+  ]
+  const formHasItemBinding = choiceKeys.some((key) => {
     const value = (data as Record<string, unknown>)[key]
     return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value !== ""
   })
@@ -1384,7 +1389,25 @@ export function ContentComposer({
                   )}
                   {widgetId === "item-relation" && (
                     <div className="flex flex-col gap-4">
-                      {(currentConfig.itemRelations ?? []).map((field) => (
+                      {(currentConfig.itemRelations ?? []).map((field) =>
+                        field.incoming ? (
+                          // „Braucht": die Kante liegt am anderen Item (S3b).
+                          <IncomingRelationField
+                            key={`in:${field.predicate}`}
+                            label={field.label}
+                            predicate={field.predicate}
+                            targetType={field.targetType}
+                            placeholder={field.placeholder}
+                            itemId={itemId}
+                            spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined}
+                            added={(data[itemRelationDataKey(field.predicate, true)] as string[] | undefined) ?? []}
+                            removed={(data[incomingRemovedKey(field.predicate)] as string[] | undefined) ?? []}
+                            onChange={(added, removed) =>
+                              updateMany({ [itemRelationDataKey(field.predicate, true)]: added, [incomingRemovedKey(field.predicate)]: removed } as Partial<WidgetData>)
+                            }
+                            requestItemPick={requestItemPick}
+                          />
+                        ) : (
                         <ItemRelationWidget
                           key={field.predicate}
                           label={field.label}
@@ -1397,7 +1420,8 @@ export function ContentComposer({
                           spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined}
                           requestItemPick={requestItemPick}
                         />
-                      ))}
+                        ),
+                      )}
                     </div>
                   )}
                   {widgetId === "item-ref" && (

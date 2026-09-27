@@ -398,9 +398,9 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
       },
       // Item-Kanten (C3). `blocks` heißt von beiden Enden gleich: „Braucht"
       // (eingehend) und „Ermöglicht" (ausgehend) (Entscheidung 19). Beide
-      // eingebettet am blockierenden Item; geschrieben wird im Formular die
-      // ausgehende Kante, die das Item selbst trägt.
-      { predicate: "blocks", itemRole: "to", storage: "embedded", widget: "item-relation", pos: "meta", label: "Braucht" },
+      // eingebettet am blockierenden Item. „Braucht" schreibt das Formular
+      // am anderen Item, nur mit Schreibrecht dort (S3b).
+      { predicate: "blocks", itemRole: "to", storage: "embedded", widget: "item-relation", pos: "meta", label: "Braucht", add: "@ Aufgabe suchen…" },
       { predicate: "blocks", itemRole: "from", storage: "embedded", widget: "item-relation", pos: "meta", label: "Ermöglicht", add: "@ Aufgabe suchen…" },
       { predicate: "partOf", itemRole: "from", storage: "embedded", widget: "item-relation", pos: "meta", label: "Teil von", add: "@ Projekt suchen…" },
     ],

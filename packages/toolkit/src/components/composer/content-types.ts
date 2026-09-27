@@ -108,8 +108,9 @@ function ausFeldliste(
           : {}),
       }
     })
-  // Item-Kanten (C3): je ausgehende eingebettete Kante ein Feld, die
+  // Item-Kanten (C3): je eingebettete Kante der Meta-Box ein Feld, die
   // Gegenstelle aus dem Manifest (06, Verhältnis zu Relations, Regel 2).
+  // Eingehend („Braucht") schreibt das Formular am anderen Item.
   const itemRelations = edges.filter(isFormItemEdge).map((e) => {
     const targetType = otherKindOf(typeId, e)
     return {
@@ -117,6 +118,7 @@ function ausFeldliste(
       label: e.label,
       ...(e.add ? { placeholder: e.add } : {}),
       ...(targetType && targetType !== "item" ? { targetType } : {}),
+      ...(e.itemRole === "to" ? { incoming: true as const } : {}),
     }
   })
   // Felder mit Item-Verweis (B15), die im Formular stehen.

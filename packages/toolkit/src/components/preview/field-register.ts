@@ -409,13 +409,13 @@ const FORM_POSITIONS = ["head", "content", "meta", "tags", "badge"] as const
 const FORM_EDGE_WIDGETS: ReadonlySet<EdgeWidgetId> = new Set(["people", "item-relation"])
 
 /**
- * Item-Kanten mit Schreibform im Formular: die eingebetteten ausgehenden, die
- * das Item selbst trägt. Eine eingehende Kante („Braucht") liegt am anderen
- * Item; sie zu schreiben hieße fremde Items umschreiben — im Formular dieses
- * Items steht sie nicht (offen, siehe PR S3).
+ * Item-Kanten mit Schreibform im Formular: die eingebetteten der Meta-Box,
+ * ausgehend (das Item trägt sie) und eingehend („Braucht": die Kante liegt am
+ * anderen Item; das Formular schreibt sie dort, nur mit Schreibrecht an diesem
+ * Item — S3b).
  */
 export function isFormItemEdge(edge: EdgeEntry): boolean {
-  return edge.widget === "item-relation" && edge.storage === "embedded" && edge.itemRole === "from" && edge.pos === "meta"
+  return edge.widget === "item-relation" && edge.storage === "embedded" && (edge.itemRole === "from" || edge.itemRole === "to") && edge.pos === "meta"
 }
 
 /**

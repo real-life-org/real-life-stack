@@ -1,10 +1,12 @@
 import { useCallback, useState } from "react"
 import type { DataInterface, Item, Relation } from "@real-life-stack/data-interface"
-import { deriveContext, hasItemGroups } from "@real-life-stack/data-interface"
+import { deriveContext, hasItemGroups, isWritable, parseLocalItemTarget } from "@real-life-stack/data-interface"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useConnector } from "./connector-context"
 import type { ContentComposerSubmitData } from "../components/composer/content-composer"
 import { writeOwnStatement, type OwnStatement } from "../lib/own-statement"
+import { resolveItemPermissions } from "./use-item-permissions"
+import type { IncomingEdgeChange } from "../components/composer/item-relations"
 import { createOptionsForSpace } from "../lib/create-in-space"
 
 /**
@@ -30,6 +32,12 @@ export interface ItemEditorPayload {
    * Teil des Items.
    */
   statements?: readonly OwnStatement[]
+  /**
+   * Eingehende Item-Kanten („Braucht"), die nach dem Speichern an den
+   * ANDEREN Items geschrieben werden — nur mit Schreibrecht dort. Nie Teil
+   * des Items.
+   */
+  incoming?: readonly IncomingEdgeChange[]
 }
 
 /**
@@ -274,6 +282,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
           const created = await createItem(payload, createOptionsFor(connector, formGroupOf(submission)))
           submitOptions?.onPersisted?.(created)
           await applyStatements(connector, created, mapped.statements)
+          await applyIncoming(connector, created, mapped.incoming, currentUserId)
           await onCreated?.(created)
           return created
         }
@@ -290,6 +299,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
         submitOptions?.onPersisted?.(updated)
         await applyItemGroup(connector, updated.id, submission.data.group)
         await applyStatements(connector, updated, mapped.statements)
+        await applyIncoming(connector, updated, mapped.incoming, currentUserId)
         if (currentItem && currentItem.id === existingItem!.id) {
           setCurrentItem(updated)
         }
@@ -344,4 +354,51 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
 /** Nach dem Speichern: die eigenen Aussagen, der Reihe nach (Fehler brechen ab und zeigen sich im Formular). */
 async function applyStatements(connector: DataInterface, item: Item, statements: readonly OwnStatement[] | undefined): Promise<void> {
   for (const statement of statements ?? []) await writeOwnStatement(connector, item, statement)
+}
+
+/**
+ * Nach dem Speichern: eingehende Item-Kanten („Braucht") an den anderen Items,
+ * der Reihe nach. Jede Quelle wird frisch gelesen; ohne Schreibrecht dort
+ * bricht das Speichern mit Grund ab, statt etwas vorzutäuschen. Idempotent:
+ * Eine Kante, die schon da ist (oder schon fehlt), wird nicht noch einmal
+ * geschrieben — „Erneut" setzt so ohne Doppel fort (#523).
+ */
+async function applyIncoming(
+  connector: DataInterface,
+  item: Item,
+  changes: readonly IncomingEdgeChange[] | undefined,
+  currentUserId: string | undefined,
+): Promise<void> {
+  for (const change of changes ?? []) {
+    for (const id of change.add) await writeIncoming(connector, item, change.predicate, id, true, currentUserId)
+    for (const id of change.remove) await writeIncoming(connector, item, change.predicate, id, false, currentUserId)
+  }
+}
+
+async function writeIncoming(
+  connector: DataInterface,
+  item: Item,
+  predicate: string,
+  sourceId: string,
+  add: boolean,
+  currentUserId: string | undefined,
+): Promise<void> {
+  if (!isWritable(connector)) throw new Error("Dieser Speicher ist nur lesbar")
+  const source = await connector.getItem(sourceId)
+  if (!source) throw new Error("Eine verknüpfte Aufgabe ist hier nicht erreichbar – die Verknüpfung wurde nicht gespeichert")
+  const title = typeof source.data?.title === "string" && source.data.title.trim() !== "" ? source.data.title : "Ohne Titel"
+  if (!resolveItemPermissions(connector, source, currentUserId).canEdit) {
+    throw new Error(`Keine Schreibrechte an „${title}“ – die Verknüpfung wurde dort nicht gespeichert`)
+  }
+  const relations = source.relations ?? []
+  // Das Target ist space-lokal (04): Quelle und Item liegen im selben Space.
+  const pointsHere = (r: Relation) => r.predicate === predicate && parseLocalItemTarget(r.target) === item.id
+  if (add) {
+    if (relations.some(pointsHere)) return
+    await connector.updateItem(sourceId, { relations: [...relations, { predicate, target: `item:${item.id}` }] })
+    return
+  }
+  const kept = relations.filter((r) => !pointsHere(r))
+  if (kept.length === relations.length) return
+  await connector.updateItem(sourceId, { relations: kept })
 }

@@ -188,10 +188,11 @@ describe("edgeTargets (rein)", () => {
 })
 
 describe("C3 schreiben: Formular der Aufgabe", () => {
-  it("Register → Formular: Ermöglicht und Teil von als Felder, Braucht nicht (liegt am anderen Item)", async () => {
+  it("Register → Formular: Braucht (eingehend, S3b), Ermöglicht und Teil von als Felder", async () => {
     const { contentTypeFromRegister } = await import("../src/components/composer/content-types")
     const config = contentTypeFromRegister("task")
     expect(config.itemRelations).toEqual([
+      { predicate: "blocks", label: "Braucht", placeholder: "@ Aufgabe suchen…", targetType: "task", incoming: true },
       { predicate: "blocks", label: "Ermöglicht", placeholder: "@ Aufgabe suchen…", targetType: "task" },
       { predicate: "partOf", label: "Teil von", placeholder: "@ Projekt suchen…", targetType: "project" },
     ])

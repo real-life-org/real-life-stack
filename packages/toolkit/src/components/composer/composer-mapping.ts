@@ -11,7 +11,7 @@ import {
   peopleRelationsToWidgetData,
 } from "./people-relations"
 import { toStoredDateTime } from "./date-widget-state"
-import { itemRelationDataKeys, itemRelationsFromWidgetData, itemRelationsToWidgetData } from "./item-relations"
+import { incomingChangesFromWidgetData, itemRelationDataKeys, itemRelationsFromWidgetData, itemRelationsToWidgetData } from "./item-relations"
 
 /**
  * Composer ↔ item: the one mapping every module and every app shares.
@@ -158,6 +158,9 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
     // Zustände an Record-Kanten (Event: Zusagen) schreibt der Editor nach
     // dem Speichern als eigene Aussagen.
     const statements = typeConfig ? peopleStatementsFromWidgetData(typeConfig, submission.data) : []
+    // Eingehende Item-Kanten („Braucht") schreibt der Editor nach dem
+    // Speichern an den anderen Items (S3b).
+    const incoming = incomingChangesFromWidgetData(typeConfig?.itemRelations, submission.data)
 
     return {
       type,
@@ -165,6 +168,7 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
       ...(tags ? { tags } : {}),
       ...(relations ? { relations } : {}),
       ...(statements.length > 0 ? { statements } : {}),
+      ...(incoming.length > 0 ? { incoming } : {}),
     }
   }
 
