@@ -5,6 +5,7 @@ import { ArrowUpDown, MessageSquareQuote } from "lucide-react"
 import { VOTE_PREDICATE } from "@real-life-stack/data-interface"
 
 import { useItemFocus } from "../hooks/use-item-focus"
+import { useModuleFilter } from "../hooks/use-module-filter"
 import { useRelationRecords } from "../hooks/use-relation-records"
 import { useVerifiedRelationRecords } from "../hooks/use-votes"
 import { useCountingContentHashes } from "../hooks/use-item-standing"
@@ -45,6 +46,8 @@ const SORT_LABELS: Record<ResonanceSortMode, string> = {
   activity: "Aktivität",
 }
 
+const NO_ONE: string[] = []
+
 const SORT_MODES: readonly ResonanceSortMode[] = ["newest", "votes", "approval", "concerns", "rejection", "participation", "activity"]
 
 /**
@@ -71,10 +74,11 @@ export function ResonanceModule({ items: statements = [], itemsLoading: isLoadin
 
   const [sortMode, setSortMode] = useState<ResonanceSortMode>("newest")
   // Auswertung (resonance.md): Personenmenge und Personen-Filter. Nur lokal —
-  // nichts davon wird geschrieben oder geteilt.
-  const [chosenPeople, setChosenPeople] = useState<string[]>([])
-  const [votersOnly, setVotersOnly] = useState(false)
-  const [greenBy, setGreenBy] = useState<string[]>([])
+  // nichts davon wird geschrieben oder geteilt —, aber sie ueberdauern den
+  // Modulwechsel wie Tags und Suche (useModuleFilter, shared-components Regel 2).
+  const [chosenPeople, setChosenPeople] = useModuleFilter<string[]>("people", NO_ONE)
+  const [votersOnly, setVotersOnly] = useModuleFilter("votersOnly", false)
+  const [greenBy, setGreenBy] = useModuleFilter<string[]>("greenBy", NO_ONE)
 
   // Resonanz-Vote-Regel 5: eine Stimme zaehlt nur fuer den aktuellen Wortlaut
   // eines belegten Statements.
