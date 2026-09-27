@@ -101,7 +101,7 @@ interface ContentTypeConfig {
 3. Welche Schlüssel Personen tragen, sagt die **Konfiguration**, nicht der Name: Composer (Sichtbarkeit, Ungespeichert-Schutz, `liveUpdate`) und Mapper erkennen sie über die aufgelöste Feldliste. Das `people:`-Präfix ist nur die Ableitungsregel für den Standardschlüssel, kein Erkennungsmerkmal — ein eigener `dataKey` nimmt an allem gleichberechtigt teil.
 4. Alle Felder teilen sich `peopleOptions`, `peopleSuggestions` und `peopleQuickSuggestions` sowie den einen `people`-Eintrag in `defaultWidgets` — der Typ schaltet die Personenfelder gemeinsam ein.
 5. Beim Speichern schreibt der Mapper je Feld die Relationen seines Prädikats (`global:<userId>`); Relationen anderer Prädikate — auch die eines nicht eingereichten Personenfeldes — bleiben unverändert. Die Vorbefüllung liest je Prädikat zurück.
-6. Deklariert die Kante einen Qualifier ([08 → Qualifier an Personen-Kanten](../08-relation-records.md#qualifier-an-personen-kanten)), liest und schreibt das Feld ihn als `meta.role` je Relation. Der Mapper MUSS den Qualifier einer Person erhalten, die im Feld bleibt; er DARF `meta` beim Ersetzen der Relationen nicht verwerfen.
+6. Deklariert die Kante einen Qualifier ([08 → Qualifier an Kanten](../08-relation-records.md#qualifier-an-kanten)), liest und schreibt das Feld ihn als `meta.role` je Relation. Der Mapper MUSS den Qualifier einer Person erhalten, die im Feld bleibt; er DARF `meta` beim Ersetzen der Relationen nicht verwerfen.
 
 **Code:** `packages/toolkit/src/components/composer/people-relations.ts` (`resolvePeopleFields`, `peopleDataKeys`, `peopleRelationsFromWidgetData`, `peopleRelationsToWidgetData`).
 
@@ -630,11 +630,11 @@ Regeln:
 2. Ein leeres Feld erzeugt keine Zeile. Es gibt keine 0-Zähler und keinen Platzhaltertext.
 3. Die Meta-Box hat eine Zeile je Feld oder Kante, jede mit Icon. Die Zeilen stehen in dieser Reihenfolge: Menschen → Zeit → Ort → Item-Kanten → Werte. Innerhalb einer Gruppe gilt die Reihenfolge des Registers.
 4. Eine Item-Referenz erscheint als Chip in der Farbe ihres Typs. Ein Klick darauf öffnet das Ziel in derselben Panel-Instanz. Ein Wert erscheint als Text; führt er zu einer Sicht, gilt [01 → Ein Feld führt zu seiner Sicht](../01-app-composition.md#ein-feld-führt-zu-seiner-sicht).
-5. Menschen stehen in **einer Zeile je Personen-Kante**. Der Qualifier steht klein hinter dem Namen am Chip (etwa „Maria zugesagt" für `going`, „Timo lernt" für `learns`). Gespeichert wird die Id, das Wort kommt über die Intl-Schicht. Stammt die geltende Aussage nicht von der Person selbst, sagt der Chip, von wem: „Timo zugesagt · eingetragen von Anton" ([08 → Qualifier an Personen-Kanten](../08-relation-records.md#qualifier-an-personen-kanten)). Das Event führt Eingeladene (`invited`) und Zusagen (`attends`) in einer Zeile. Eine Person mit geltendem `declined` erscheint nicht in der Zeile und nicht in ihrer Zusammenfassung, nur in der vollständigen Liste („Alle").
+5. Menschen stehen in **einer Zeile je Personen-Kante**. Der Qualifier steht klein hinter dem Namen am Chip (etwa „Maria zugesagt" für `going`, „Timo lernt" für `learns`). Gespeichert wird die Id, das Wort kommt über die Intl-Schicht. Stammt die geltende Aussage nicht von der Person selbst, sagt der Chip, von wem: „Timo zugesagt · eingetragen von Anton" ([08 → Qualifier an Kanten](../08-relation-records.md#qualifier-an-kanten)). Ein Qualifier an einer Item-Kante (C3) steht ebenso klein hinter dem Chip. Das Event führt Eingeladene (`invited`) und Zusagen (`attends`) in einer Zeile. Eine Person mit geltendem `declined` erscheint nicht in der Zeile und nicht in ihrer Zusammenfassung, nur in der vollständigen Liste („Alle").
 6. Position im Modul (Spalte, Stufe, Reihenfolge) steht nicht in der Meta-Box.
 7. Eine Selbstaktion ist eine Kante von mir zum Item. Sie steht als eigene Pill-Zeile direkt unter der Meta-Box: vor der Aktion neutral („Zusagen · Vielleicht · Absagen"), danach mit meinem Zustand („✓ Zugesagt" für `going`). Auch `declined` ist ein Zustand und bleibt als meiner sichtbar.
-8. Rückwärts-Listen deklariert der Typ des angezeigten Items (Register, `itemRole: "to"`, Slot `list`, oder eine benannte Abfrage in `lists`). Sie zeigen alle Einträge, jeden einmal, ohne Kappung, als kompakte `ItemPreview`s (Kartenflächen-MUSS, siehe [`ItemPreview`](#itempreview)). Die Liste `family` eines Statements zeigt je Fassung ihre Verteilung (Stimmleiste) und markiert die angezeigte Fassung ([resonance.md → Varianten](resonance.md#varianten)).
-9. Die Karte (`ItemPreview`) zeigt aus demselben Register: Titel, erste Meta-Zeile, Avatar-Stack, Tags gekappt.
+8. Rückwärts-Listen deklariert der Typ des angezeigten Items (Register, `itemRole: "to"`, Slot `list`, oder eine benannte Abfrage in `lists`). Sie zeigen alle Einträge, jeden einmal, ohne Kappung, als kompakte `ItemPreview`s (Kartenflächen-MUSS, siehe [`ItemPreview`](#itempreview)). Trägt eine Liste eine Aktion, steht sie im Listenkopf; hat die Liste keinen Eintrag außer dem Item selbst, steht die Aktion allein an ihrer Stelle. Die Liste `family` eines Statements heißt „Fassungen N"; je Zeile stehen ein Badge („Ausgang" oder „Variante"), der Titel, „diese" bei der angezeigten Fassung und eine kleine Stimmleiste. Ihre Aktion ist „+ Variante" ([resonance.md → Varianten](resonance.md#varianten)).
+9. Die Karte (`ItemPreview`) zeigt aus demselben Register: Titel, erste Meta-Zeile, Avatar-Stack, Tags gekappt. Ein Feld mit Item-Verweis (B15) steht auf der Karte als Chip („Variante von …"). Im Detail entfällt seine Meta-Zeile, wenn eine Liste des Typs es abdeckt (`covers`); beim Statement zeigt die Liste `family` die Herkunft.
 10. Ob `bar` und `comments` erscheinen, sagt das Register des Typs. Für `person` entfallen beide.
 
 **Zustände.** Jeder Zustand trägt dieselbe Anatomie:
@@ -670,7 +670,7 @@ Jedes Feld und jede Kante hat eine Lese- und eine Schreibform auf **einem** Date
 | B12 | `contact` | Zeile mit Sprung „Anrufen" | Textfeld mit Sichtbarkeits-Hinweis |
 | B13 | `group` | Space-Badge im Kopf, nur außerhalb des Space | Space-Auswahl in der Fußzeile |
 | B14 | `tags` | TagChips | Chips „+ Tag" |
-| B15 | `item-ref` | Chip in Typfarbe wie C3 („Variante von …"); fehlendes Ziel als Text („nicht verfügbare Aussage") | nur soweit der Typ es erlaubt; `edit: "create"`: beim Anlegen gesetzt (etwa vorbefüllt durch eine Menüaktion), danach nicht mehr änderbar |
+| B15 | `item-ref` | Chip in Typfarbe wie C3 („Variante von …") auf der Karte; im Detail nur ohne abdeckende Liste; fehlendes Ziel als Text („nicht verfügbare Aussage") | nur soweit der Typ es erlaubt; bei `edit: "fixed"` feste Anzeige (siehe unten) |
 
 **Kanten-Widgets:**
 
@@ -700,15 +700,16 @@ Der Modus ergibt sich aus Rechten und Instanz, nicht aus dem Typ. Er bestimmt �
 | Eigenes | ja | ja, mit meinem Zustand | ja | – |
 | Mitglied | nach `useItemPermissions` | ja, neutral bis zur eigenen Aktion | ja | Space-Badge außerhalb des Space |
 | Nur lesen | nein | nein | nein | Nur-lesen-Hinweis im Slot `note` |
-| Eingefroren | „Bearbeiten" für den Inhalt entfällt; eine Menüaktion mit `replacesEditWhenFrozen` steht an seiner Stelle | ja | ja | Hinweis im Slot `note` |
+| Eingefroren | „Bearbeiten" für den Inhalt entfällt; das Menü bleibt, „Löschen" erscheint, wenn der Schreibweg es erlaubt | ja | ja | Hinweis an der Stelle der Liste mit Aktion |
 
 Regeln:
 
 1. Selbstaktionen (C2, C4) sind auch ohne Bearbeitungsrecht am Item möglich, wenn Schreibrecht im Space besteht. Ohne Schreibrecht entfällt die Aktionszeile ganz.
 2. Im Modus „Nur lesen" sagt der Hinweis, warum das Item nicht bearbeitbar ist.
-3. „Eingefroren" gilt, solange der Inhalt eines Items nach [08 → Einfrieren](../08-relation-records.md#inhaltsgebundene-bezugnahme-und-einfrieren) nicht mehr geändert werden darf. Es kommt zu „Eigenes" oder „Mitglied" hinzu. Was außerhalb des Inhalts liegt (etwa Tags), bleibt nach den allgemeinen Rechten bearbeitbar.
-4. Menüaktionen des Typs (`menuActions`, [06 → Feld- und Kantenregister](../06-schema-composition.md#feld--und-kantenregister)) stehen im ⋮-Menü neben Bearbeiten, Teilen und Löschen und folgen denselben Sichtbarkeitsregeln wie [`ItemDetailActions`](#itemdetailactions).
-5. Die Modi gespiegelter Items (Spiegel mit und ohne Schreibrecht, Herkunfts-Badge) sind nicht Teil dieses Entwurfs. Sie folgen mit [09](../09-mirror-bridge.md) und [12](../12-profile.md).
+3. „Eingefroren" gilt, solange der Inhalt eines Items nach [08 → Einfrieren](../08-relation-records.md#inhaltsgebundene-bezugnahme-und-einfrieren) nicht mehr geändert werden darf. Es kommt zu „Eigenes" oder „Mitglied" hinzu. Es entfällt nur „Bearbeiten" für den Inhalt. Alles andere bietet die UI an, wenn der Schreibweg es technisch erlaubt: Löschen, und was außerhalb des Inhalts liegt (etwa Tags).
+4. Der Hinweis „Wortlaut eingefroren" steht an der Stelle der Liste, deren Aktion eine neue Fassung anlegt, zusammen mit dieser Aktion (Statement: „+ Variante" an `family`). Hat der Typ keine solche Liste, steht er im Slot `note`.
+5. Menüaktionen des Typs (`menuActions`, [06 → Feld- und Kantenregister](../06-schema-composition.md#feld--und-kantenregister)) stehen im ⋮-Menü neben Bearbeiten, Teilen und Löschen und folgen denselben Sichtbarkeitsregeln wie [`ItemDetailActions`](#itemdetailactions).
+6. Die Modi gespiegelter Items (Spiegel mit und ohne Schreibrecht, Herkunfts-Badge) sind nicht Teil dieses Entwurfs. Sie folgen mit [09](../09-mirror-bridge.md) und [12](../12-profile.md).
 
 ### Edit-Regeln
 
@@ -719,6 +720,7 @@ Regeln:
 5. Ein Qualifier-Chip wechselt beim Antippen zum nächsten Wert, den das Register für die Kante deklariert.
 6. Eine Item-Relation (C3) wird über eine `@`-Suche über die Items des Space gesetzt. Der zweite Weg ist der Modul-Pick (Brett-Klick, Marker-Klick); ihn liefert das Modul.
 7. Es gibt keinen zweiten Editor neben dem Item-Edit.
+8. Ein Feld mit `edit: "fixed"` erscheint fest: sichtbar, nicht bearbeitbar, mit einem Symbol dafür. Beispiele: „Variante von" (Chip) und „Space" im Formular einer Variante.
 
 ## Hooks
 

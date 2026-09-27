@@ -190,7 +190,7 @@ interface FieldEntry {
   required?: boolean
   unit?: string                  // number (B7)
   options?: { id: string; label: string; tone?: string }[]   // status (B6), select (B8)
-  edit?: false | "create"        // false: nie editierbar; "create": nur beim Anlegen
+  edit?: false | "fixed"         // false: nie im Formular; "fixed": sichtbar, nicht bearbeitbar
   ref?: { type: string; missing: string }   // item-ref (B15): Zieltyp, Intl-Schlüssel für ein fehlendes Ziel
 }
 
@@ -204,18 +204,19 @@ interface EdgeEntry {
   qualifier?: { key: string; values: { id: string; label: string; tone?: string }[] }
   selfAction?: { label: string; mine: string; qualifiers?: string[] }   // C2
   list?: { filter?: "open" | "upcoming"; sort?: string }                // für itemRole "to"
-  count?: "one-per-person" | "collect-accepted"                         // nur storage "record"
+  count?: "one-per-subject" | "collect-accepted"                        // nur storage "record"
 }
 
 interface ListEntry {
   query: string                  // Name einer Abfrage, z. B. "family"
-  label: string                  // Intl-Schlüssel
+  label: string                  // Intl-Schlüssel: „Fassungen"
+  action?: { id: string; label: string }   // im Listenkopf, z. B. "create-variant"
+  covers?: string[]              // Feld-Keys, deren Herkunft die Liste zeigt, z. B. ["variantOf"]
 }
 
 interface MenuActionEntry {
-  id: string                     // z. B. "create-variant"
-  label: string                  // Intl-Schlüssel: „Variante anlegen"
-  replacesEditWhenFrozen?: boolean
+  id: string
+  label: string                  // Intl-Schlüssel
 }
 ```
 
@@ -227,29 +228,30 @@ Regeln:
 4. `pos: "module"` (z. B. `order`, `stage`) und `pos: "system"` (z. B. `did`, `id`, `createdBy`) erscheinen nie im Formular. `system` erscheint als Fußnote im Kopf.
 5. Die Body-Feld-Regel ist ein Feldeintrag, kein `if`: `post` führt `content` als `text @content`, die anderen Typen `description`.
 6. `storage` hält fest, wo die Kante liegt. Der Wert MUSS den Regeln aus [04](04-items-relations-groups-spaces.md) und [08, Regel 9](08-relation-records.md#relationrecord-als-item) folgen; das Register wählt den Mechanismus nicht frei. Lese- und Schreibform lesen und schreiben dort.
-7. Ein Qualifier liegt bei `storage: "embedded"` als `meta.role` an der Relation, bei `storage: "record"` als Feld `qualifier.key` am Record. `qualifier.values` ist die Menge der erlaubten Werte ([08 → Qualifier an Personen-Kanten](08-relation-records.md#qualifier-an-personen-kanten)).
-8. `count` deklariert für Record-Kanten, wie mehrere Aussagen über dieselbe Person zusammenwirken ([08 → Qualifier an Personen-Kanten](08-relation-records.md#qualifier-an-personen-kanten), Regel 9). Eine Record-Kante mit Qualifier MUSS `count` setzen. Welcher Record unter `one-per-person` gilt, bestimmt 08 deterministisch ([Gewinner unter `one-per-person`](08-relation-records.md#gewinner-unter-one-per-person)).
+7. Jede Kante DARF einen Qualifier deklarieren, gleich ob ihr Ziel eine Person oder ein Item ist. Er liegt bei `storage: "embedded"` in `meta` der Relation (`meta.role` oder `meta[qualifier.key]`), bei `storage: "record"` als Feld `qualifier.key` am Record. `qualifier.values` ist die Menge der erlaubten Werte ([08 → Qualifier an Kanten](08-relation-records.md#qualifier-an-kanten)).
+8. `count` deklariert für Record-Kanten, wie mehrere Aussagen über denselben Gegenstand zusammenwirken ([08 → Qualifier an Kanten](08-relation-records.md#qualifier-an-kanten), Regel 10). Eine Record-Kante mit Qualifier MUSS `count` setzen. Welcher Record unter `one-per-subject` gilt, bestimmt 08 deterministisch ([Gewinner unter `one-per-subject`](08-relation-records.md#gewinner-unter-one-per-subject)).
 9. Eine Kante mit `selfAction` erscheint im Slot `actions` als Pill-Zeile. `qualifiers` nennt die Werte, die die Pills setzen; `mine` ist die Beschriftung meines Zustands.
 10. Rückwärts-Listen (`itemRole: "to"`, `pos: "list"`) deklariert der Typ, dessen Detail sie zeigt, mit Filter und Sortierung. Es werden alle Einträge gezeigt.
-11. **Feld mit Item-Verweis (B15 `item-ref`):** Ein Datenfeld, dessen Wert ein Item-Target ist (`item:<id>`), ist ein Feld und keine Kante, wenn es zum Inhalt des Items gehört (etwa zum signierten Wortlaut, 08). Lesend erscheint es wie C3 als Chip in der Farbe des Zieltyps in der Meta-Box. Ein nicht auflösbares Ziel erscheint als Text (`ref.missing`), nie als Fehler. Schreibbar ist es nur, soweit `edit` es erlaubt; `edit: "create"` heißt: nur beim Anlegen, danach unveränderlich.
-12. **Liste über benannte Abfrage:** Statt einer direkten eingehenden Kante DARF ein Typ eine Rückwärts-Liste über eine benannte Abfrage deklarieren (`lists`). Das Register nennt nur den Namen; was die Abfrage liefert, definiert die Spec des Typs oder Moduls. Die Liste zeigt alle Einträge, jeden einmal.
-13. **Menüaktionen des Typs:** Ein Typ DARF zusätzliche Aktionen im ⋮-Menü deklarieren (`menuActions`). Mit `replacesEditWhenFrozen` ersetzt die Aktion „Bearbeiten", solange das Item eingefroren ist (08, Einfrieren); sonst erscheint sie zusätzlich. Was die Aktion tut, definiert die Spec des Typs oder Moduls. Sichtbar ist sie nur, wenn Capability und Autorisierung sie erlauben (Typ-Register, Regeln, Regel 4).
-14. Apps liefern Einträge, keine Mappings. Die Abbildung Composer ↔ Item (`composer-mapping.ts`) und die Detail-Leseansicht liegen im Toolkit und lesen nur das Register.
-15. `ContentTypeConfig` wird abgeleitet: `defaultWidgets` aus den Feldern und Kanten mit `pos` `head`, `meta`, `content`, `tags` oder `badge` und ohne `edit: false`, in der Reihenfolge der Meta-Box; `peopleRelations` aus den Kanten mit `widget: "people"` und `pos: "meta"`; `statusOptions` aus `options` des `status`-Feldes; `widgetLabels` aus `label`.
-16. **Übergang:** In S1 lesen die Flächen `detail` und `footer` noch für Typen ohne Feldliste. Mit S6 entfallen beide. Bis dahin DARF ein Typ sie weiter setzen (etwa die Resonanz-Varianten, rls#505); die Stimmleiste zieht mit S2 von `footer` nach `actions`.
+11. **Feld mit Item-Verweis (B15 `item-ref`):** Ein Datenfeld, dessen Wert ein Item-Target ist (`item:<id>`), ist ein Feld und keine Kante, wenn es zum Inhalt des Items gehört (etwa zum signierten Wortlaut, 08). Lesend erscheint es wie C3 als Chip in der Farbe des Zieltyps: auf der Karte immer, im Detail als Meta-Zeile nur, wenn keine Liste des Typs es in `covers` führt. Ein nicht auflösbares Ziel erscheint als Text (`ref.missing`), nie als Fehler. Schreibbar ist es nur, soweit `edit` es erlaubt.
+12. **Liste über benannte Abfrage:** Statt einer direkten eingehenden Kante DARF ein Typ eine Rückwärts-Liste über eine benannte Abfrage deklarieren (`lists`). Das Register nennt nur den Namen; was die Abfrage liefert, definiert die Spec des Typs oder Moduls. Die Liste zeigt alle Einträge, jeden einmal. Eine Liste DARF eine Aktion tragen (`action`), die in ihrem Kopf steht; hat die Liste keinen Eintrag außer dem Item selbst, steht die Aktion allein an ihrer Stelle. Was die Aktion tut, definiert die Spec des Typs oder Moduls. Sichtbar ist sie nur, wenn Capability und Autorisierung sie erlauben (Typ-Register, Regeln, Regel 4).
+13. **Menüaktionen des Typs:** Ein Typ DARF zusätzliche Aktionen im ⋮-Menü deklarieren (`menuActions`). Was die Aktion tut, definiert die Spec des Typs oder Moduls. Sichtbar ist sie nur, wenn Capability und Autorisierung sie erlauben (Typ-Register, Regeln, Regel 4). Aktionen, die zu einer Liste gehören (etwa eine neue Fassung anlegen), stehen an der Liste (Regel 12), nicht im Menü.
+14. **Feste Anzeige im Formular (`edit: "fixed"`):** Ein unveränderliches oder vom Kontext gesetztes Feld erscheint im Formular sichtbar, nicht bearbeitbar und mit einem Symbol dafür. Das gilt nach dem Anlegen für ein unveränderliches Feld und beim Anlegen für einen Wert, den der Kontext vorgibt (etwa eine Listenaktion). Ein Kontext DARF weitere Felder beim Anlegen fest vorgeben, wenn die Spec des Typs es verlangt (etwa den Space einer Variante, [modules/resonance.md → Varianten](modules/resonance.md#varianten), Regel 2).
+15. Apps liefern Einträge, keine Mappings. Die Abbildung Composer ↔ Item (`composer-mapping.ts`) und die Detail-Leseansicht liegen im Toolkit und lesen nur das Register.
+16. `ContentTypeConfig` wird abgeleitet: `defaultWidgets` aus den Feldern und Kanten mit `pos` `head`, `meta`, `content`, `tags` oder `badge` und ohne `edit: false`, in der Reihenfolge der Meta-Box; `peopleRelations` aus den Kanten mit `widget: "people"` und `pos: "meta"`; `statusOptions` aus `options` des `status`-Feldes; `widgetLabels` aus `label`.
+17. **Übergang:** In S1 lesen die Flächen `detail` und `footer` noch für Typen ohne Feldliste. Mit S6 entfallen beide. Bis dahin DARF ein Typ sie weiter setzen (etwa die Resonanz-Varianten, rls#505); die Stimmleiste zieht mit S2 von `footer` nach `actions`.
 
 **Register je Typ (nichtnormativ).** So sehen die Einträge der Toolkit-Typen und eines App-Typs aus. Schreibweise: Feld `key` Widget @`pos`; Kante `predicate` (→ `from`, ← `to`) Widget @`pos`.
 
 | Typ | Felder | Kanten | Selbstaktion | Rückwärts-Listen |
 |---|---|---|---|---|
 | `post` | content B2 @content · media B5 @content · tags B14 | reactsTo/commentOn C7 @bar | – | – |
-| `event` | title B1 · description B2 · start/end/rrule B3 @meta · meetingLink B9 @meta · group B13 @badge · tags B14 | →locatedAt place C3 @meta · →invited person C1 @meta (eingebettet, angezeigt „eingeladen") und ←attends person C1 @meta (Record, `role` `going` · `maybe` · `declined`, `tense`, `count: one-per-person`) in einer Zeile | attends: `going` · `maybe` · `declined` (Zusagen · Vielleicht · Absagen) | – |
+| `event` | title B1 · description B2 · start/end/rrule B3 @meta · meetingLink B9 @meta · group B13 @badge · tags B14 | →locatedAt place C3 @meta · →invited person C1 @meta (eingebettet, angezeigt „eingeladen") und ←attends person C1 @meta (Record, `role` `going` · `maybe` · `declined`, `tense`, `count: one-per-subject`) in einer Zeile | attends: `going` · `maybe` · `declined` (Zusagen · Vielleicht · Absagen) | – |
 | `place` | title · description · address/position B4 @meta · tags | ←locatedAt C3 @list | – | „Findet hier statt" (Events, upcoming) |
 | `task` | title · description · status B6 @meta · dueAt B3 @meta · tags · order @module | →assignedTo person C1 @meta · →partOf project C3 @meta („Teil von") · →blocks task C3 @meta („Ermöglicht") · ←blocks task C3 @meta („Braucht") | assignedTo: Übernehmen | – |
 | `person` | displayName B1 @head · avatarUrl B11 @head · bio B2 · address/position B4 @meta · skills/offers/needs B10 @meta („Kann", „Bietet", „Sucht") · phone/email B12 @meta · did @system | keine Kommentare, keine Reaktionen | – | „Nächste Termine" (upcoming) · „Aufgaben" (←assignedTo, open) |
 | `project` | title · description · website/repo B9 @meta · address/position B4 @meta · tags | ←partOf C3 @list | – | „Offene Aufgaben" (←partOf task, open) · „Nächste Termine" (←partOf event, upcoming) |
 | `resource` | title · description · kind B8 @meta · availability B8 oder B2 @meta · tags | – | – | – |
-| `statement` | title B1 („Aussage") · description B2 („Begründung") · variantOf B15 @meta (Ziel `statement`, `edit: "create"`, „Variante von …", fehlend „nicht verfügbare Aussage") · tags | ←votesOn person C4 @actions, Qualifier `value`: `green` · `yellow` · `red` | votesOn: Dafür · Skeptisch · Dagegen | Liste `family` („Fassungen"); Menüaktion `create-variant` („Variante anlegen", `replacesEditWhenFrozen`) |
+| `statement` | title B1 („Aussage") · description B2 („Begründung") · variantOf B15 @meta (Ziel `statement`, `edit: "fixed"`, „Variante von …", fehlend „nicht verfügbare Aussage"; Chip auf der Karte, im Detail durch `family` abgedeckt) · group B13 (bei Varianten `fixed`) · tags | ←votesOn person C4 @actions, Qualifier `value`: `green` · `yellow` · `red` | votesOn: Dafür · Skeptisch · Dagegen | Liste `family` („Fassungen", `covers: ["variantOf"]`, Aktion `create-variant` „+ Variante") |
 | App: Karabirrdt-Karte (`task`) | title · description · status B6 @meta (Offen · Erledigt) · hours/euros B7 @meta („Aufwand") · stage @module · tags | →assignedTo person C1 @meta (`meta.role` `can` · `learns`) · ←blocks task C3 @meta („Braucht") · →partOf project C3 @meta („Führt zu") | assignedTo: Übernehmen (`can`) · Will lernen (`learns`) | – |
 | App: Karabirrdt-Ziel (`project`) | title · description („Traumsatz") · priority B8 @meta (Hoch · Mittel · Niedrig) · order @module | ←partOf C3 @list, je Stufe gruppiert | – | „Karten" (←partOf task, je Stufe) |
 
