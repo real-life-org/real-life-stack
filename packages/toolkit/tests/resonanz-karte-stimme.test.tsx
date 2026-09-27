@@ -1,32 +1,30 @@
 // @vitest-environment jsdom
 import { act, createElement } from "react"
-import { createRoot } from "react-dom/client"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { createRoot, type Root } from "react-dom/client"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
 import { MockConnector } from "@real-life-stack/mock-connector"
+
 import { ConnectorProvider } from "../src/hooks/connector-context"
+import { FilterProvider } from "../src/components/filter/filter-store"
 import { MemoryFocusProvider } from "../src/hooks/use-item-focus"
+import { CreateHostProvider } from "../src/components/host/create-host"
+import { DetailHostProvider } from "../src/components/host/detail-host"
+import { ModuleHost } from "../src/components/host/module-host"
+import { getModule } from "../src/lib/module-register"
 
 /**
  * #520 (Loop-Review zu #518): Die Stimme zog im DETAIL nach `actions`; die
  * Karten im Resonanzmodul behalten ihre Stimmleiste (06, Regel 17 —
- * Karten nehmen renderTypeCardFooter).
+ * Karten nehmen renderTypeCardFooter). Das echte Modul im echten Modul-Host,
+ * wie in modul-host.test.tsx.
  */
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
-
-vi.mock("../src/components/host/module-host", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/components/host/module-host")>()),
-  useModuleHost: () => ({
-    resolveAuthor: () => undefined,
-    resolveItemGroupColor: () => "#000",
-    activeItemId: undefined,
-    filterActive: false,
-    registerItemElement: () => {},
-  }),
+vi.stubGlobal("matchMedia", (query: string) => ({
+  matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {},
+  addListener: () => {}, removeListener: () => {}, onchange: null, dispatchEvent: () => false,
 }))
-
-const { ResonanceModule } = await import("../src/modules/resonance-module")
 
 const STATEMENT: Item = {
   id: "s1",
@@ -36,10 +34,16 @@ const STATEMENT: Item = {
   data: { title: "Wir öffnen den Garten" },
 }
 
-let root: ReturnType<typeof createRoot> | null = null
+let host: HTMLDivElement
+let root: Root
+beforeEach(() => {
+  host = document.createElement("div")
+  document.body.appendChild(host)
+  root = createRoot(host)
+})
 afterEach(async () => {
-  if (root) await act(async () => root!.unmount())
-  root = null
+  await act(async () => root.unmount())
+  host.remove()
 })
 
 describe("Resonanzmodul: Karten behalten die Stimmleiste (#520)", () => {
@@ -53,16 +57,20 @@ describe("Resonanzmodul: Karten behalten die Stimmleiste (#520)", () => {
     } as never)
     await connector.init()
     connector.setCurrentGroup("g")
-    const host = document.createElement("div")
-    root = createRoot(host)
+    const entry = getModule("resonance")!
     await act(async () => {
-      root!.render(
+      root.render(
         createElement(ConnectorProvider, { connector: connector as never },
-          createElement(MemoryFocusProvider, null, createElement(ResonanceModule, { items: [STATEMENT], itemsLoading: false } as never))),
+          createElement(FilterProvider, null,
+            createElement(MemoryFocusProvider, { module: entry.id },
+              createElement(DetailHostProvider, null,
+                createElement(CreateHostProvider, null,
+                  createElement(ModuleHost, { entry, groupId: "g", active: true })))))),
       )
     })
-    for (let i = 0; i < 5; i++) await act(async () => { await new Promise((r) => setTimeout(r, 10)) })
-    // VoteBar: Knopf je Stufe mit aria-label „Zustimmung…"
+    for (let i = 0; i < 8; i++) await act(async () => { await new Promise((r) => setTimeout(r, 10)) })
+    expect(host.textContent).toContain("Wir öffnen den Garten")
+    // VoteBar: je Stufe ein Knopf, der erste „Zustimmung…"
     expect(host.querySelectorAll('[aria-label^="Zustimmung"]').length).toBe(1)
   })
 })
