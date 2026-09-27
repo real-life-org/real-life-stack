@@ -45,7 +45,7 @@ export interface FieldOption {
   action?: string
   /**
    * Nur Optionen eines `status`-Felds: Dieser Wert heißt „erledigt". Höchstens
-   * eine Option je Feld. der Umschalter „Erledigt" (an und zurück) und die
+   * eine Option je Feld. die Folgeaktion „Erledigt" und die
    * Leseform erledigter Ziele (C3, durchgestrichen) lesen ihn; die Spalten
    * eines Kanban sind je App verschieden und sagen es nicht.
    */
@@ -53,18 +53,18 @@ export interface FieldOption {
 }
 
 /**
- * Die Folgeaktion einer Selbstaktion (C2, Entscheidung 27, Anton): ein
- * Umschalter „Erledigt" am Status-Feld, wie die Zusagen am Event. An schreibt
- * die Option mit `done: true`, ein zweiter Klick den Standard-Status
- * (`composer.defaultStatus`, sonst die erste offene Option). Abgeben ist der
- * zweite Klick auf meinen Zustand („✓ Übernommen"). Zuweisung und Status sind
- * getrennt: Wer eine erledigte Aufgabe abgibt, lässt sie erledigt.
+ * Die Folgeaktion einer Selbstaktion (C2, Entscheidung 27, Anton): „Erledigt"
+ * am Status-Feld schreibt die Option mit `done: true`; danach steht
+ * „✓ Erledigt" als Zustand da, nicht zurücknehmbar — zurück geht es über
+ * Bearbeiten oder das Modul. Abgeben ist der zweite Klick auf meinen Zustand
+ * („✓ Übernommen"). Zuweisung und Status sind getrennt: Wer eine erledigte
+ * Aufgabe abgibt, lässt sie erledigt.
  */
 export interface SelfActionFollowUps {
   /** `key` eines `status`-Felds desselben Typs, das eine Option mit `done: true` führt. */
   field: string
-  /** Der Umschalter: Beschriftung („Erledigt") und seine Rücknahme für Screenreader („Als offen markieren"). */
-  complete: { label: string; undo: string }
+  /** Beschriftung der Aktion und des Zustands („Erledigt"). */
+  complete: { label: string }
   /** Rücknahme meines Zustands für Screenreader („Übernahme zurückgeben"). */
   release: string
 }
@@ -129,11 +129,10 @@ export interface EdgeEntry {
 
 /**
  * Folgeaktionen einer Selbstaktion (Entscheidung 27) brauchen ein Status-Feld
- * desselben Typs mit genau einem Erledigt-Wert; die Rücknahme braucht dazu
- * einen offenen Wert. Geprüft nach dem Vereinigen, weil Feld und Kante aus
+ * desselben Typs mit genau einem Erledigt-Wert. Geprüft nach dem Vereinigen, weil Feld und Kante aus
  * verschiedenen Beiträgen kommen dürfen.
  */
-export function assertFollowUps(typeId: string, fields: readonly FieldEntry[] = [], edges: readonly EdgeEntry[] = [], defaultStatus?: string): void {
+export function assertFollowUps(typeId: string, fields: readonly FieldEntry[] = [], edges: readonly EdgeEntry[] = []): void {
   for (const edge of edges) {
     const followUps = edge.selfAction?.followUps
     if (!followUps) continue
@@ -143,9 +142,6 @@ export function assertFollowUps(typeId: string, fields: readonly FieldEntry[] = 
     if (!field || done.length !== 1) {
       throw new Error(`Typ-Register: ${where} nennen "${followUps.field}", aber kein status-Feld mit genau einem Erledigt-Wert (Spec 06, Feld- und Kantenregister).`)
     }
-    if (!reopenValue(field, defaultStatus)) {
-      throw new Error(`Typ-Register: ${where}: Die Rücknahme von „${followUps.complete.label}" braucht einen offenen Wert (Spec 06).`)
-    }
   }
 }
 
@@ -154,12 +150,6 @@ export function doneValue(field: FieldEntry | undefined): string | undefined {
   return field?.options?.find((o) => o.done)?.id
 }
 
-/** Der Wert beim Zurücknehmen von „Erledigt": der Standard-Status, sonst die erste offene Option. */
-export function reopenValue(field: FieldEntry | undefined, defaultStatus?: string): string | undefined {
-  const options = field?.options ?? []
-  if (defaultStatus && options.some((o) => o.id === defaultStatus && !o.done)) return defaultStatus
-  return options.find((o) => !o.done)?.id
-}
 
 /**
  * `joins` muss eine Personen-Kante der zusammengesetzten Kantenliste nennen

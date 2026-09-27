@@ -168,22 +168,6 @@ describe("#531: Folgeaktionen prüfen beim Auslösen den geltenden Zustand", () 
     expect(pill("Übernehmen")).toBeTruthy()
   })
 
-  it("„✓ Erledigt“ (zurück auf offen) schreibt nicht, wenn die Aufgabe inzwischen wieder offen ist", async () => {
-    const t = item("t1", "task", { title: "T", status: "done" }, [{ predicate: "assignedTo", target: `global:${ME}` }])
-    await render(createElement(Live, { id: "t1" }), [t], { g: ["t1"] }, "g")
-    const reopen = pill("Erledigt")!
-    expect(reopen.getAttribute("aria-pressed")).toBe("true")
-    const original = connector.getItem.bind(connector)
-    const update = vi.spyOn(connector, "updateItem")
-    vi.spyOn(connector, "getItem").mockImplementationOnce(async (id: string) => {
-      await connector.updateItem("t1", { data: { title: "T", status: "in-progress" } })
-      return original(id)
-    })
-    await act(async () => reopen.click())
-    await settle()
-    expect(update).toHaveBeenCalledTimes(1) // nur der fremde Edit
-    expect((await connector.getItem("t1"))?.data.status).toBe("in-progress")
-  })
 })
 
 describe("Codex Runde 5", () => {

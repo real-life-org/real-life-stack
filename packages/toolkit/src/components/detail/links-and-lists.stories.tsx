@@ -11,11 +11,11 @@ import { StoryWorld } from "../../story-support/story-world"
  * shared-components → „Item-Detail aus dem Register", C2, C3, B15, slot
  * `reverse`; spec 06 → „Feld- und Kantenregister", rules 9, 11, 12, 18).
  *
- * - **Follow-up action (task):** toggles like the RSVP pills. After
- *   „Übernehmen" the row reads „✓ Übernommen · Erledigt", once done
- *   „✓ Übernommen · ✓ Erledigt". Clicking „✓ Übernommen" gives the task back
- *   (the status stays), clicking „✓ Erledigt" sets it open again. Only the
- *   person who took the task sees „Erledigt".
+ * - **Follow-up action (task):** after „Übernehmen" the row reads
+ *   „✓ Übernommen · Erledigt", once done „✓ Übernommen · ✓ Erledigt".
+ *   „✓ Übernommen" toggles (gives the task back, the status stays);
+ *   „✓ Erledigt" is a state, not a button — reopening goes through editing
+ *   or the Kanban. Only the person who took the task sees „Erledigt".
  * - **Item links (C3):** one row per predicate with its label from the
  *   register — „Braucht" (incoming `blocks`), „Ermöglicht" (outgoing),
  *   „Teil von" (project). Chips in the target's type colour, a done target
@@ -94,7 +94,7 @@ export const TaskLinks: Story = {
   render: () => <Frame start={KOMPOST.id} seed={TASKS} />,
 }
 
-/** Taken by you and done: „✓ Übernommen · ✓ Erledigt". */
+/** Taken by you and done: „✓ Übernommen · ✓ Erledigt" — „✓ Erledigt" is a state, not a button. */
 export const TaskDone: Story = {
   render: () => (
     <Frame

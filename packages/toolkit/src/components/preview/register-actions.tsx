@@ -29,7 +29,7 @@ export function RegisterActions({
   edges?: readonly EdgeEntry[]
   /** Die Felder des Typs: Folgeaktionen lesen daraus ihr Status-Feld. */
   fields?: readonly FieldEntry[]
-  /** Standard-Status beim Zurücknehmen von „Erledigt" (`composer.defaultStatus`). */
+  /** Standard-Status des Typs (`composer.defaultStatus`). */
   defaultStatus?: string
 }) {
   const rows = actionEdges(edges)
@@ -67,10 +67,10 @@ const capitalize = (word: string) => word.charAt(0).toLocaleUpperCase("de") + wo
  * zurück — idempotent, ein Doppelklick übernimmt nicht wieder.
  *
  * Deklariert die Kante eine Folgeaktion (`selfAction.followUps`, Entscheidung
- * 27), steht nach meinem Zustand der Umschalter „Erledigt" — nur für mich,
- * wenn ich die Selbstaussage habe, und nur mit Schreibrecht am Item:
- * „✓ Übernommen · Erledigt", erledigt „✓ Übernommen · ✓ Erledigt". Abgeben
- * lässt den Status, wie er ist.
+ * 27), steht nach meinem Zustand „Erledigt" — nur für mich, wenn ich die
+ * Selbstaussage habe, und nur mit Schreibrecht am Item: „✓ Übernommen ·
+ * Erledigt", erledigt „✓ Übernommen · ✓ Erledigt". „✓ Erledigt" ist ein
+ * Zustand, kein Umschalter. Abgeben lässt den Status, wie er ist.
  */
 export function SelfActionPills({
   item,
@@ -143,18 +143,23 @@ export function SelfActionPills({
           {pill.label}
         </button>
       ))}
-      {withFollowUp && (
+      {withFollowUp && isDone && (
+        // „✓ Erledigt" ist ein Zustand, nicht zurücknehmbar (Anton): zurück
+        // geht es über Bearbeiten (Status im Formular) oder das Kanban.
+        <span data-self-state role="status" className={cn(PILL, PILL_ON)}>
+          <Check className="h-3.5 w-3.5" aria-hidden />
+          {followUps!.complete.label}
+        </span>
+      )}
+      {withFollowUp && !isDone && (
         <button
           type="button"
-          aria-pressed={isDone}
-          aria-label={isDone ? `${followUps!.complete.label} – ${followUps!.complete.undo}` : undefined}
           disabled={follow.busy || busy}
           data-follow-up="complete"
-          // Frisch geprüft beim Auslösen (#531): nur, wenn ich noch an der Kante stehe und der Status passt.
-          onClick={() => void follow.run(isDone ? "reopen" : "complete")}
-          className={cn(PILL, isDone ? PILL_ON : PILL_IDLE, "disabled:opacity-60")}
+          // Frisch geprüft beim Auslösen (#531): nur, wenn ich noch an der Kante stehe und der Status offen ist.
+          onClick={() => void follow.run("complete")}
+          className={cn(PILL, PILL_IDLE, "disabled:opacity-60")}
         >
-          {isDone && <Check className="h-3.5 w-3.5" aria-hidden />}
           {followUps!.complete.label}
         </button>
       )}
