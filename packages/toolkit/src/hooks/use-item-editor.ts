@@ -81,7 +81,7 @@ export interface UseItemEditorResult {
    */
   submit(
     submission: ContentComposerSubmitData,
-    options?: { existingItem?: Item },
+    options?: { existingItem?: Item; /** Receives the caught error (the reason) before `submit` resolves `null`. */ onError?: (error: Error) => void },
   ): Promise<Item | null>
 
   /**
@@ -211,7 +211,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
   const submit = useCallback(
     async (
       submission: ContentComposerSubmitData,
-      submitOptions?: { existingItem?: Item },
+      submitOptions?: { existingItem?: Item; onError?: (error: Error) => void },
     ): Promise<Item | null> => {
       const existingItem = submitOptions?.existingItem ?? currentItem
       const activeMode: "create" | "edit" = existingItem ? "edit" : "create"
@@ -245,6 +245,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
       } catch (err) {
         const wrapped = err instanceof Error ? err : new Error(String(err))
         setError(wrapped)
+        submitOptions?.onError?.(wrapped)
         return null
       } finally {
         setIsSubmitting(false)

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronDown, Globe, Home, Loader2, Lock, Trash2, X } from "lucide-react"
+import { Check, ChevronDown, CircleAlert, Globe, Home, Loader2, Lock, Trash2, X } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/primitives/tooltip"
 import { ItemTypeBadge } from "../preview/item-type-badge"
@@ -166,6 +166,36 @@ export interface CustomWidgetDefinition {
   label: string
   icon: React.ComponentType<{ className?: string }>
   component: React.ComponentType<WidgetComponentProps<unknown>>
+}
+
+/**
+ * Fehler beim Speichern (shared-components, Detail-Anatomie Slot `note` im
+ * Bearbeiten: „Fehler-Banner inline"; Zustand „Fehler": Banner mit „Erneut",
+ * Eingaben bleiben erhalten). Steht unter dem Kopf des Formulars; Farben nur
+ * über das Token `destructive`.
+ */
+function SaveErrorBanner({ reason, onRetry, busy }: { reason?: string; onRetry: () => void; busy: boolean }) {
+  return (
+    <div
+      data-slot="save-error"
+      role="alert"
+      className="flex items-start gap-2.5 rounded-lg border border-destructive/25 bg-destructive/[0.06] px-3 py-2.5 text-sm"
+    >
+      <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-foreground">Konnte nicht gespeichert werden. Deine Eingaben bleiben erhalten.</span>
+        {reason && <span className="text-xs text-muted-foreground">{reason}</span>}
+      </div>
+      <button
+        type="button"
+        onClick={onRetry}
+        disabled={busy}
+        className="shrink-0 rounded-md px-2 py-0.5 text-sm font-semibold text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 disabled:opacity-50"
+      >
+        Erneut
+      </button>
+    </div>
+  )
 }
 
 export interface ContentComposerSubmitData {
@@ -989,7 +1019,9 @@ export function ContentComposer({
   const canSubmit = !!(data.title?.trim() || data.text?.trim() || (data.media && data.media.length > 0))
 
   const [submitting, setSubmitting] = React.useState(false)
-  const [submitError, setSubmitError] = React.useState<string | null>(null)
+  // Fehler beim Speichern: Banner unter dem Kopf; `reason` ist der Grund des
+  // Connectors, wenn er einen liefert (Error.cause).
+  const [submitError, setSubmitError] = React.useState<{ reason?: string } | null>(null)
 
   const handleSubmit = async () => {
     if (!canSubmit || submitting) return
@@ -998,7 +1030,9 @@ export function ContentComposer({
     try {
       await onSubmit({ contentType: selectedType, isPublic, data })
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Speichern fehlgeschlagen.")
+      const cause = err instanceof Error ? err.cause : undefined
+      const reason = cause instanceof Error ? cause.message : typeof cause === "string" ? cause : undefined
+      setSubmitError(reason ? { reason } : {})
     } finally {
       setSubmitting(false)
     }
@@ -1032,6 +1066,8 @@ export function ContentComposer({
             : undefined
         }
       />
+
+      {submitError && <SaveErrorBanner reason={submitError.reason} onRetry={() => void handleSubmit()} busy={submitting} />}
 
       {/* Preview or Edit mode */}
       {isPreviewing ? (
@@ -1257,11 +1293,6 @@ export function ContentComposer({
         </div>
       )}
 
-      {submitError && (
-        <p className="pt-1 text-xs text-destructive" role="alert">
-          {submitError}
-        </p>
-      )}
       {/* Footer: actions (hidden in liveUpdate mode) */}
       {!liveUpdate && <div
         data-slot="edit-footer"

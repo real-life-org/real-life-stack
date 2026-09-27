@@ -299,3 +299,18 @@ export const TwoPeopleFields: Story = {
     peopleQuickSuggestions: peopleOptions,
   },
 }
+
+/**
+ * Saving failed: a banner under the form head („Konnte nicht gespeichert
+ * werden. Deine Eingaben bleiben erhalten.") with the connector's reason and
+ * „Erneut". The form stays open, the input stays. Click „Speichern" to see it.
+ */
+export const SaveError: Story = {
+  name: "Save error",
+  args: {
+    ...EditMode.args,
+    onSubmit: async () => {
+      throw new Error("Speichern fehlgeschlagen.", { cause: new Error("Item not found: task-7") })
+    },
+  },
+}

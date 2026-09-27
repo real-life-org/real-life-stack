@@ -108,7 +108,9 @@ export function ItemComposer({
       onChange={publishDraft}
       onDirtyChange={setUnsavedDirty}
       onSubmit={async (data) => {
-        const saved = await editor.submit(data, existingItem ? { existingItem } : undefined)
+        let failure: Error | undefined
+        const onError = (error: Error) => { failure = error }
+        const saved = await editor.submit(data, existingItem ? { existingItem, onError } : { onError })
         if (saved) {
           // Clear synchronously BEFORE onDone navigates, so the nav guard doesn't
           // block the very navigation the save triggers.
@@ -118,7 +120,9 @@ export function ItemComposer({
         // submit() swallows connector errors into editor.error and returns null;
         // surface it so the composer shows its inline error instead of looking
         // like a silent success.
-        else throw new Error("Speichern fehlgeschlagen. Bitte erneut versuchen.")
+        // Der Grund des Connectors reist als `cause` mit; das Formular zeigt
+        // ihn klein im Fehler-Banner.
+        else throw new Error("Speichern fehlgeschlagen. Bitte erneut versuchen.", failure ? { cause: failure } : undefined)
       }}
       onCancel={onCancel}
     />
