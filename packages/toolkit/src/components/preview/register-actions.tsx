@@ -132,8 +132,11 @@ export function SelfActionPills({
           // Mein Zustand nimmt beim zweiten Klick zurück; der Name sagt es.
           aria-label={pill.on && followUps ? `${pill.label} – ${followUps.release}` : undefined}
           disabled={pill.on && busy}
-          // Zurücknehmen ist idempotent (withdraw), kein Umschalter über den alten Render.
-          onClick={() => void (pill.on ? withdraw() : act(pill.value))}
+          // Ohne Qualifier ist der zweite Klick die Rücknahme — idempotent
+          // (withdraw), ein Doppelklick übernimmt nicht wieder. Mit Qualifier
+          // entscheidet die Schreibkette gegen die laufende Absicht: Ein
+          // schneller Wechsel „vielleicht → zugesagt" darf nicht löschen.
+          onClick={() => void (pill.on && pill.value === undefined ? withdraw() : act(pill.value))}
           className={cn(PILL, pill.on ? PILL_ON : pill.primary ? PILL_PRIMARY : PILL_IDLE)}
         >
           {pill.on && <Check className="h-3.5 w-3.5" aria-hidden />}

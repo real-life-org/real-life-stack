@@ -294,3 +294,39 @@ describe("Codex Runde 5: Record-Kante mit Folgeaktionen", () => {
     expect((await connector.getItem("t1"))?.data.status).toBe("done")
   })
 })
+
+describe("Codex Runde 8: Qualifier-Wechsel vor dem nächsten Render", () => {
+  it("can → learns → can in einem Zug lässt mich mit „can“ an der Kante", async () => {
+    const manifest = composeTypeManifest([
+      TOOLKIT_TYPE_LAYER,
+      { name: "app", definitions: [{ id: "chore", vocabularies: [], relations: [{ predicate: "assignedTo", itemRole: "from", otherKind: "person" }] }] },
+    ])
+    setTypeManifest(manifest)
+    registerTypePresentation("app", [{
+      id: "chore", label: "Dienst",
+      fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A" }, { id: "z", label: "Z", done: true }] }],
+      edges: [{
+        predicate: "assignedTo", itemRole: "from", storage: "embedded", widget: "people", pos: "meta", label: "Wer",
+        qualifier: { key: "role", values: [{ id: "can", label: "kann" }, { id: "learns", label: "lernt" }] },
+        selfAction: { label: "Übernehmen", mine: "Übernommen", qualifiers: ["can", "learns"], followUps: { field: "status", complete: { label: "Fertig", undo: "Offen" }, release: "Zurück" } },
+      }],
+    }])
+    const chore: Item = { id: "c1", type: "chore", createdBy: TIMO, createdAt: "2026-09-20T10:00:00.000Z", data: { title: "C", status: "a" }, relations: [{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: "can" } }] }
+    connector = new MockConnector({ items: [chore], groups: [{ id: "g", name: "G", data: {} }], users: [{ id: ME, displayName: "Ich" }, { id: TIMO, displayName: "Timo" }], groupMembers: { g: [ME, TIMO] }, groupItems: { g: ["c1"] } } as never)
+    await connector.init()
+    connector.setCurrentGroup("g")
+    const Actions = resolveTypePresentation("chore").actions!
+    await act(async () => {
+      root.render(createElement(ConnectorProvider, { connector: connector as never }, createElement(Actions, { item: chore })))
+    })
+    await settle()
+    const lernt = pill("Lernt") as HTMLButtonElement
+    const kann = pill("Kann") as HTMLButtonElement
+    await act(async () => {
+      lernt.click()
+      kann.click()
+    })
+    await settle()
+    expect((await connector.getItem("c1"))?.relations).toEqual([{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: "can" } }])
+  })
+})
