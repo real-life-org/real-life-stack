@@ -433,16 +433,22 @@ describe("Codex R1/6: Pflicht auch bei nur einem möglichen Space", () => {
   })
 
   it("beim Bearbeiten setzt auch ein einziger möglicher Space nichts (Regel 1: der Space des Items)", async () => {
+    const loose = item("t-y", "task", { title: "Y", status: "open" })
+    connector = makeConnector([IN_G, IN_H, loose], { g: ["t-g"], h: ["t-h"] })
+    await connector.init()
+    connector.setCurrentGroup(null)
     const move = vi.spyOn(connector, "moveItemToGroup")
-    const seen: Array<Record<string, unknown>> = []
+    const onDone = vi.fn()
     await render(createElement(ItemComposer, {
       contentTypes: [{ ...contentTypeFromRegister("task"), groupOptions: [{ id: "g", name: "Garten" }] }],
-      initialContentType: "task", existingItem: item("t-y", "task", { title: "Y" }),
-      mapper: mapComposerSubmission, initialData: { title: "Y" }, onDone: () => {}, onCancel: () => {},
-      composerProps: { onChange: (d: { data: Record<string, unknown> }) => seen.push(d.data) } as never,
+      initialContentType: "task", existingItem: loose,
+      mapper: mapComposerSubmission, initialData: { title: "Y", status: "open" }, onDone, onCancel: () => {},
     }))
-    expect(seen.at(-1)?.group ?? "").toBe("")
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Speichern")!.click())
+    await settle()
+    expect(onDone).toHaveBeenCalledTimes(1)
     expect(move).not.toHaveBeenCalled()
+    expect(connector.getItemGroupId("t-y")).toBeNull()
   })
 
   it("Bearbeiten ohne bekannten Space bei Beziehungen: „Space unbekannt“, nie eine erfundene Gruppe (R2/3)", async () => {
