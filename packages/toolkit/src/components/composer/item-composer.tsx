@@ -128,9 +128,9 @@ export function ItemComposer({
         // submit() swallows connector errors into editor.error and returns null;
         // surface it so the composer shows its inline error instead of looking
         // like a silent success.
-        // Der Grund des Connectors reist als `cause` mit; das Formular zeigt
+        // Der Grund des Connectors reist als `reason` mit; das Formular zeigt
         // ihn klein im Fehler-Banner.
-        else throw new Error("Speichern fehlgeschlagen. Bitte erneut versuchen.", failure ? { cause: failure } : undefined)
+        else throw Object.assign(new Error("Speichern fehlgeschlagen. Bitte erneut versuchen."), failure ? { reason: failure } : {})
       }}
       onCancel={onCancel}
     />

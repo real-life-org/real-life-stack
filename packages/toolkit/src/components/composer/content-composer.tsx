@@ -1037,7 +1037,9 @@ export function ContentComposer({
     try {
       await onSubmit({ contentType: selectedType, isPublic, data })
     } catch (err) {
-      const cause = err instanceof Error ? err.cause : undefined
+      // Grund des Connectors: `reason` oder `cause` am Fehler (ohne es2022-Typen).
+      const carrier = (err ?? {}) as { reason?: unknown; cause?: unknown }
+      const cause = carrier.reason ?? carrier.cause
       const reason = cause instanceof Error ? cause.message : typeof cause === "string" ? cause : undefined
       setSubmitError(reason ? { reason } : {})
     } finally {
