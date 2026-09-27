@@ -45,7 +45,8 @@ describe("Inhaltstypen aus dem Register", () => {
   it("nimmt Widgets und Beschriftung aus dem Darstellungs-Register", () => {
     const statement = resolveContentType("statement")!
     expect(statement.label).toBe("Aussage")
-    expect(statement.defaultWidgets).toEqual(["title", "text", "tags"])
+    // variantOf (B15, fest) steht als Meta-Feld im Formular, sichtbar nur mit Wert (S3).
+    expect(statement.defaultWidgets).toEqual(["title", "text", "item-ref", "tags"])
   })
 
   it("antwortet auf einen unbekannten Typ mit undefined statt zu werfen", () => {

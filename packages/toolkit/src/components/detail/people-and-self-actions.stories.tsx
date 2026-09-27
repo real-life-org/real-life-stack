@@ -108,7 +108,7 @@ export const Many: Story = {
   ),
 }
 
-/** Task: „Übernehmen" puts you into the assignment; again removes you. */
+/** Task: „Übernehmen" puts you into the assignment; then „✓ Übernommen · Erledigt · Abgeben" (see Links and lists). */
 export const Task: Story = {
   render: () => <Frame item={STORY_TASK} seed={[]} />,
 }

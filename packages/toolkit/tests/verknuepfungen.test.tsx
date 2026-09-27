@@ -248,3 +248,71 @@ describe("C3 schreiben: Formular der Aufgabe", () => {
     expect(value).toEqual(["item:t-karre"])
   })
 })
+
+describe("B15 item-ref und Rückwärts-Listen aus dem Register", () => {
+  it("Detail: eine abgedeckte item-ref-Zeile entfällt (covers), eine nicht abgedeckte erscheint als Chip oder Text", async () => {
+    const { RegisterMeta } = await import("../src/components/preview/register-meta")
+    const field = { key: "basedOn", widget: "item-ref" as const, pos: "meta" as const, label: "Beruht auf", ref: { type: "task", missing: "nicht verfügbare Aufgabe" } }
+    const a = item("n1", "note", { title: "Notiz", basedOn: "item:t-beet" })
+    const b = item("n2", "note", { title: "Notiz", basedOn: "item:weg" })
+    await render(createElement("div", null,
+      createElement(RegisterMeta, { item: a, fields: [field] }),
+      createElement(RegisterMeta, { item: b, fields: [field] }),
+      createElement("div", { id: "covered" }, createElement(RegisterMeta, { item: a, fields: [field], lists: [{ query: "x", label: "X", covers: ["basedOn"] }] })),
+    ), [BEETPLAN, a, b])
+    const rows = [...host.querySelectorAll('[data-meta-row="basedOn"]')]
+    expect(rows).toHaveLength(2)
+    expect(rows[0]!.textContent).toContain("Beruht auf")
+    expect(rows[0]!.querySelector('[data-item-ref="t-beet"]')).toBeTruthy()
+    expect(rows[1]!.textContent).toContain("nicht verfügbare Aufgabe")
+    expect(host.querySelector("#covered")?.innerHTML).toBe("")
+  })
+
+  it("Aussage: variantOf ist ein festes item-ref, die Liste family deckt es ab", () => {
+    const st = resolveTypePresentation("statement")
+    expect(st.fields?.find((f) => f.key === "variantOf")).toMatchObject({ widget: "item-ref", edit: "fixed", ref: { type: "statement" } })
+    expect(st.lists).toEqual([{ query: "family", label: "Fassungen", action: { id: "create-variant", label: "+ Variante" }, covers: ["variantOf"] }])
+    expect(st.reverse?.name).toBe("RegisterReverseSlot")
+  })
+
+  it("Formular einer Variante: „Variante von“ steht fest, mit Schloss, nicht bearbeitbar", async () => {
+    const { ContentComposer } = await import("../src/components/composer/content-composer")
+    const { pickContentTypes } = await import("../src/components/composer/content-types")
+    const ORIGIN = item("s-a", "statement", { title: "Wir öffnen den Garten" })
+    await render(createElement(ContentComposer, {
+      contentTypes: pickContentTypes("statement"),
+      initialContentType: "statement",
+      initialData: { title: "Wir öffnen den Garten sonntags", variantOf: "item:s-a" },
+      onSubmit: () => {},
+    } as never), [ORIGIN])
+    const fixed = host.querySelector("[data-fixed-ref]")
+    expect(fixed?.textContent).toContain("Variante von")
+    expect(fixed?.textContent).toContain("Wir öffnen den Garten")
+    expect(fixed?.querySelector('[aria-label="nicht änderbar"]')).toBeTruthy()
+    expect(fixed?.querySelector("input")).toBeNull()
+  })
+
+  it("ohne Wert kein festes Feld (neue Aussage)", async () => {
+    const { ContentComposer } = await import("../src/components/composer/content-composer")
+    const { pickContentTypes } = await import("../src/components/composer/content-types")
+    await render(createElement(ContentComposer, { contentTypes: pickContentTypes("statement"), initialContentType: "statement", onSubmit: () => {} } as never), [])
+    expect(host.querySelector("[data-fixed-ref]")).toBeNull()
+  })
+
+  it("Rückwärts-Liste über eine eingehende Kante (pos list): alle offenen Einträge als kompakte Zeilen, Klick öffnet", async () => {
+    const { RegisterReverse } = await import("../src/components/preview/register-reverse")
+    const beet = item("beet", "place", { title: "Beet 3" })
+    const t1 = item("t1", "task", { title: "Umgraben", status: "open" }, [{ predicate: "partOf", target: "item:beet" }])
+    const t2 = item("t2", "task", { title: "Säen", status: "done" }, [{ predicate: "partOf", target: "item:beet" }])
+    const t3 = item("t3", "task", { title: "Anderswo", status: "open" }, [{ predicate: "partOf", target: "item:p1" }])
+    const edges = [{ predicate: "partOf", itemRole: "to" as const, storage: "embedded" as const, widget: "item-relation" as const, pos: "list" as const, label: "Offene Aufgaben", list: { filter: "open" as const } }]
+    // Die Gegenstelle aus dem Manifest: place kennt (partOf, to) nicht → jedes Item.
+    await render(createElement(RegisterReverse, { item: beet, edges }), [beet, t1, t2, t3])
+    const list = host.querySelector('[data-reverse-list="partOf:to"]')
+    expect(list?.textContent).toContain("Offene Aufgaben")
+    expect([...host.querySelectorAll("[data-list-row]")].map((r) => r.getAttribute("data-list-row"))).toEqual(["t1"])
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-list-row="t1"]')!.click())
+    await settle()
+    expect(focused).toBe("t1")
+  })
+})

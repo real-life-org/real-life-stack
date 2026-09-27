@@ -69,7 +69,7 @@ export interface ItemDetailBodyProps {
    * mit; die Stimme (C4) steht hier mit Pills und Balken.
    */
   selfActions?: ReactNode
-  /** Slot `reverse`: Rückwärts-Listen als kompakte ItemPreviews. Gefuellt ab S3. */
+  /** Slot `reverse`: Rückwärts-Listen aus dem Register (benannte Abfragen und eingehende Kanten, S3). */
   reverse?: ReactNode
   /**
    * Slot `bar`: Reaktionen und Kommentieren, ueber dem Divider. Die

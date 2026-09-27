@@ -14,7 +14,11 @@ vi.mock("../src/components/host/create-host", async (importOriginal) => ({
   useOptionalCreate: () => ({ isComposing: false, startCreate, patchCreate: () => {} }),
 }))
 
-const { StatementDetail, StatementVariantLine } = await import("../src/components/resonance/statement-variants")
+const { StatementVariantLine } = await import("../src/components/resonance/statement-variants")
+const { resolveTypePresentation, renderTypeCardFooter } = await import("../src/components/preview/type-presentation")
+// Die Fassungen stehen seit S3 als Rückwärts-Liste `family` aus dem Register
+// im Slot `reverse` (Spec 06, Regel 12); das Verhalten ist dasselbe.
+const StatementDetail = resolveTypePresentation("statement").reverse!
 const { ItemDetailView } = await import("../src/components/detail/item-detail-view")
 const { itemToComposerData, mapComposerSubmission, pickContentTypes } = await import("../src/components/composer/content-types")
 
@@ -77,18 +81,22 @@ afterEach(async () => {
   host.remove()
 })
 
-describe("StatementVariantLine (card)", () => {
-  it("names the statement a variant belongs to", async () => {
-    const text = await render(createElement(StatementVariantLine, { item: variantB }))
-    expect(text).toContain("Variante von „Wir treffen uns montags“")
+describe("card: variantOf as chip (B15), variant count", () => {
+  it("names the statement a variant belongs to, as a chip in the statement's colour", async () => {
+    const text = await render(createElement("div", null, renderTypeCardFooter(variantB)))
+    expect(text).toContain("Variante von")
+    const chip = host.querySelector('[data-card-ref="variantOf"] [data-item-ref="s-a"]')
+    expect(chip?.textContent).toContain("Wir treffen uns montags")
   })
 
   it("counts the variants of an origin", async () => {
     expect(await render(createElement(StatementVariantLine, { item: origin }))).toContain("2 Varianten")
   })
 
-  it("tolerates a missing target", async () => {
-    expect(await render(createElement(StatementVariantLine, { item: orphan }))).toContain("Variante einer nicht verfügbaren Aussage")
+  it("tolerates a missing target: text, never an error", async () => {
+    const text = await render(createElement("div", null, renderTypeCardFooter(orphan)))
+    expect(text).toContain("Variante von")
+    expect(text).toContain("nicht verfügbare Aussage")
   })
 })
 
@@ -99,13 +107,17 @@ describe("StatementDetail (panel)", () => {
     expect(text).toContain("Wir treffen uns montags")
     expect(text).toContain("Wir treffen uns dienstags")
     expect(text).toContain("Wir treffen uns alle zwei Wochen")
-    expect(text).toContain("diese Fassung")
+    expect(text).toContain("diese")
+    expect(host.querySelector('[data-list-row="s-b"]')?.getAttribute("aria-current")).toBe("true")
+    expect(host.querySelector('[data-list-row="s-a"]')?.textContent).toContain("Ausgang")
+    expect(host.querySelector('[data-list-row="s-c"]')?.textContent).toContain("Variante")
     expect(text).not.toContain("Verwaist")
   })
 
-  it("„Variante anlegen“ opens the composer prefilled with the wording and variantOf", async () => {
+  it("„+ Variante“ in the list head opens the composer prefilled with the wording and variantOf", async () => {
     await render(createElement(StatementDetail, { item: origin }))
-    const button = [...host.querySelectorAll("button")].find((el) => el.textContent?.includes("Variante anlegen"))
+    const button = host.querySelector('[data-reverse-list="family"] [data-list-action="create-variant"]')
+    expect(button?.textContent).toBe("+ Variante")
     expect(button).toBeDefined()
     await act(async () => { button!.click() })
     expect(startCreate).toHaveBeenCalledWith("statement", {
@@ -199,7 +211,7 @@ describe("a variant lands in the space of its origin (Varianten rule 2, #507)", 
 
   it("is not offered when the origin's space cannot be determined", async () => {
     const text = await render(createElement(StatementDetail, { item: { ...origin, id: "not-in-store" } }))
-    expect(text).not.toContain("Variante anlegen")
+    expect(text).not.toContain("+ Variante")
   })
 
   it("renders nothing at all when it has nothing to show — no empty wrapper (slot rule)", async () => {
@@ -211,6 +223,6 @@ describe("a variant lands in the space of its origin (Varianten rule 2, #507)", 
     const single = statement("s-single", ME, 5, { title: "Kommt wer mit zum Klettern heute?" })
     await render(createElement(StatementDetail, { item: single }), [single])
     expect(host.textContent).not.toContain("Fassungen")
-    expect([...host.querySelectorAll("button")].some((el) => el.textContent?.includes("Variante"))).toBe(true)
+    expect(host.querySelector('[data-list-action="create-variant"]')?.textContent).toBe("+ Variante")
   })
 })

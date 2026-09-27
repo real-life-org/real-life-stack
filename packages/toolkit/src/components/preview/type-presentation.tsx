@@ -67,7 +67,10 @@ import {
 import { RegisterMeta, RegisterPeopleStack } from "./register-meta"
 import { RegisterActions, actionEdges } from "./register-actions"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
-import { StatementDetail, StatementVariantLine } from "../resonance/statement-variants"
+import { StatementVariantLine, familyListQuery } from "../resonance/statement-variants"
+import { registerListQuery } from "./list-queries"
+import { RegisterReverse, hasReverseLists } from "./register-reverse"
+import { RegisterCardRefs } from "./register-card-refs"
 import { VoteBar } from "../resonance/vote-bar"
 import { MessageSquareQuote } from "lucide-react"
 
@@ -204,6 +207,16 @@ const REGISTER_DETAIL: ComponentType<ItemSlotProps> = function RegisterDetail({ 
   const presentation = resolveTypePresentation(item.type)
   return <RegisterMeta item={item} fields={readableFields(presentation.fields)} edges={presentation.edges} lists={presentation.lists} />
 }
+
+/** Slot `reverse` aus dem Register: Rückwärts-Listen (Detail-Anatomie, Regel 8). */
+const REGISTER_REVERSE: ComponentType<ItemSlotProps> = function RegisterReverseSlot({ item }) {
+  const presentation = resolveTypePresentation(item.type)
+  return <RegisterReverse item={item} lists={presentation.lists} edges={presentation.edges} />
+}
+
+// Die benannten Abfragen der Toolkit-Typen (06, Regel 12): `family` definiert
+// die Resonanz-Spec (resonance.md → Varianten).
+registerListQuery("family", { lazy: () => familyListQuery })
 
 /** Slot `actions` aus dem Register (C2, C4). */
 const REGISTER_ACTIONS: ComponentType<ItemSlotProps> = function RegisterActionsSlot({ item }) {
@@ -377,7 +390,27 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     id: "statement",
     label: "Aussage",
     badge: { icon: MessageSquareQuote, className: "bg-sky-50 text-sky-700 border-sky-200" },
-    fields: [{ ...TITLE, label: "Aussage" }, { ...DESCRIPTION, label: "Kontext" }, TAGS],
+    fields: [
+      { ...TITLE, label: "Aussage" },
+      { ...DESCRIPTION, label: "Kontext" },
+      // Feld mit Item-Verweis (B15, Regel 11): gehört zum signierten Wortlaut,
+      // darum ein Feld und keine Kante; nach dem Anlegen fest. Auf der Karte
+      // als Chip, im Detail durch die Liste `family` abgedeckt (`covers`).
+      {
+        key: "variantOf",
+        widget: "item-ref",
+        pos: "meta",
+        label: "Variante von",
+        edit: "fixed",
+        ref: { type: "statement", missing: "nicht verfügbare Aussage" },
+      },
+      TAGS,
+    ],
+    // Fassungen und „+ Variante" (resonance.md → Varianten; Entscheidung 24:
+    // die Aktion gehört zur Liste, nicht ins ⋮-Menü).
+    lists: [
+      { query: "family", label: "Fassungen", action: { id: "create-variant", label: "+ Variante" }, covers: ["variantOf"] },
+    ],
     // Die Stimme ist ein Qualifier am Record (08, Qualifier an Kanten). Im
     // Detail steht sie im Slot `actions` (Pills und Balken, C4); die Karte
     // zeigt im Übergang weiter den `footer` (Regel 17).
@@ -402,13 +435,6 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
       },
     ],
     composer: { submitLabel: "Einbringen" },
-    // Ausführlich im Panel: Fassungen der Aussage und „Variante anlegen"
-    // (resonance.md → Varianten); `preview` bleibt frei, damit die Karten
-    // ihr Badge behalten.
-    detail: StatementDetail,
-    // Nach Antons Design hat die Aussage keine Meta-Box: Fassungen und
-    // „+ Variante" stehen als Rückwärts-Liste unter dem Inhalt.
-    detailSlot: "reverse",
     footer: StatementVotesFooter,
   },
 ]
@@ -651,10 +677,11 @@ export function resolveTypePresentation(typeId: string): ResolvedTypePresentatio
   // Typ ohne Feldliste behält die Vorschau-Zeile.
   const fromRegister = hasRegisterLists(entry) ? REGISTER_DETAIL : (entry.preview ?? GENERIC_DETAIL)
   const inReverse = entry.detail && entry.detailSlot === "reverse"
+  const reverse = inReverse ? entry.detail : hasReverseLists(entry.lists, entry.edges) ? REGISTER_REVERSE : undefined
   return {
     ...entry,
     detail: inReverse ? fromRegister : (entry.detail ?? fromRegister),
-    ...(inReverse ? { reverse: entry.detail } : {}),
+    ...(reverse ? { reverse } : {}),
     ...(actionEdges(entry.edges).length > 0 ? { actions: REGISTER_ACTIONS } : {}),
     generic: false,
   }
@@ -681,7 +708,15 @@ export function renderTypeFooter(item: Item): ReactNode {
  */
 export function renderTypeCardFooter(item: Item): ReactNode {
   const presentation = resolveTypePresentation(item.type)
-  if (presentation.footer) return createElement(presentation.footer, { item })
-  if (!presentation.edges?.length) return null
-  return createElement(RegisterPeopleStack, { item, edges: presentation.edges })
+  // Felder mit Item-Verweis stehen auf der Karte immer als Chip (B15, Regel 11).
+  const refs = (presentation.fields ?? []).some((f) => f.widget === "item-ref")
+    ? createElement(RegisterCardRefs, { item, fields: presentation.fields })
+    : null
+  const main = presentation.footer
+    ? createElement(presentation.footer, { item })
+    : presentation.edges?.length
+      ? createElement(RegisterPeopleStack, { item, edges: presentation.edges })
+      : null
+  if (!refs) return main
+  return createElement("div", { className: "flex w-full flex-col gap-1.5" }, main, refs)
 }

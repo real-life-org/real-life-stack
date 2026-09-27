@@ -2,22 +2,18 @@
 
 import { useMemo } from "react"
 import { GitBranch } from "lucide-react"
+import type { ListQuery } from "../preview/list-queries"
 import type { Item } from "@real-life-stack/data-interface"
 import { hasItemGroups, isWritable } from "@real-life-stack/data-interface"
-import { cn } from "@/lib/utils"
 import { useConnector } from "@/hooks/connector-context"
 import { useItems } from "@/hooks/use-items"
 import { useIsFrozen } from "@/hooks/use-item-frozen"
-import { useOptionalItemFocus } from "@/hooks/use-item-focus"
 import { useOptionalCurrentUser } from "@/hooks/use-auth"
 import { statementFamily, variantOfValue, type StatementFamily } from "@/lib/resonance-variants"
 import { useOptionalCreate } from "../host/create-host"
-import { Button } from "../primitives/button"
-import { VoteBar } from "./vote-bar"
+import { VoteMiniBar } from "./vote-bar"
 
 const STATEMENTS = { type: "statement" } as const
-
-const titleOf = (item: Item) => (typeof item.data.title === "string" && item.data.title) || "Ohne Titel"
 
 /** The statement's family within the current space (resonance.md → Varianten). */
 function useStatementFamily(item: Item): StatementFamily {
@@ -25,122 +21,63 @@ function useStatementFamily(item: Item): StatementFamily {
   return useMemo(() => statementFamily(item, statements), [item, statements])
 }
 
-function FocusLink({ item, className }: { item: Item; className?: string }) {
-  const focus = useOptionalItemFocus()
-  const title = titleOf(item)
-  if (!focus) return <span className={className}>„{title}“</span>
-  return (
-    <button
-      type="button"
-      className={cn("truncate underline-offset-2 hover:underline", className)}
-      onClick={(event) => {
-        event.stopPropagation()
-        focus.focusItem(item.id)
-      }}
-    >
-      „{title}“
-    </button>
-  )
-}
-
 /**
- * Card line (Varianten rule 5): of which statement this one is a variant,
- * and how many variants exist of it. Nothing when neither applies.
+ * Card line (Varianten rule 5): how many variants exist of this statement.
+ * Of which statement it is a variant stands on the card as the chip of the
+ * `variantOf` field (B15, Spec 06 Regel 11; renderTypeCardFooter). Nothing
+ * when there are no variants.
  */
 export function StatementVariantLine({ item }: { item: Item }) {
-  const { parent, variants } = useStatementFamily(item)
-  if (parent === null && variants.length === 0) return null
+  const { variants } = useStatementFamily(item)
+  if (variants.length === 0) return null
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
       <GitBranch className="size-3 shrink-0" aria-hidden />
-      {parent === "missing" && <span>Variante einer nicht verfügbaren Aussage</span>}
-      {parent !== null && parent !== "missing" && (
-        <span className="flex min-w-0 items-center gap-1">
-          Variante von <FocusLink item={parent} className="max-w-[16rem]" />
-        </span>
-      )}
-      {parent !== null && variants.length > 0 && <span aria-hidden>·</span>}
-      {variants.length > 0 && <span>{variants.length === 1 ? "1 Variante" : `${variants.length} Varianten`}</span>}
+      <span>{variants.length === 1 ? "1 Variante" : `${variants.length} Varianten`}</span>
     </div>
   )
 }
 
 /**
- * Detail slot of a statement: the meta row, a hint for the author once the
- * wording is frozen, the family with each version's distribution side by
- * side, and „Variante anlegen" (resonance.md, Wortlaut rule 3, Varianten
- * rules 1 and 5).
+ * The named query `family` (resonance.md → Varianten, rules 1 and 5; Spec 06,
+ * Feld- und Kantenregister, Regel 12): the statement's family within the
+ * current space — origin first, then every variant once. Each row carries
+ * „Ausgang" or „Variante", „diese" for the shown version and a small vote bar.
+ * The list action `create-variant` opens the composer prefilled with the
+ * wording, `variantOf` fixed and the origin's space fixed (Varianten rule 2).
+ * Unknown space → not offered, never a silent fallback to „Privat".
+ * Once the wording is frozen, the author reads why at the list (Modi,
+ * Regel 4; resonance.md, Wortlaut rule 3).
  */
-export function StatementDetail({ item }: { item: Item }) {
+export const familyListQuery: ListQuery = function useFamilyList(item) {
   const connector = useConnector()
   const create = useOptionalCreate()
   const frozen = useIsFrozen(item)
   const { data: currentUser } = useOptionalCurrentUser()
   const { members } = useStatementFamily(item)
-  // A variant belongs to the space of its origin: `variantOf` is a
-  // space-local reference (Varianten rule 2). Unknown space → not offered,
-  // never a silent fallback to „Privat".
   const originGroup = hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
   const canCreateVariant = isWritable(connector) && create !== null && originGroup !== null
   const isAuthor = currentUser?.id === item.createdBy
-  const showHint = frozen && isAuthor
-  const showFamily = members.length > 1
-
-  // Ein Slot, der nichts zu zeigen hat, gibt null — eine leere Hülle hebelt
-  // das Ausblenden der umgebenden Fläche aus (shared-components,
-  // Detail-Anatomie, Regel 1). Datum und Ort hat eine Aussage nie; die
-  // Meta-Zeile stand hier nur aus Gewohnheit.
-  if (!showHint && !showFamily && !canCreateVariant) return null
-
-  return (
-    <div className="space-y-3">
-      {showHint && (
-        <p className="text-xs text-muted-foreground">
-          Andere haben zu diesem Wortlaut abgestimmt, deshalb lässt er sich nicht mehr ändern. Für eine neue Formulierung leg eine Variante an.
-        </p>
-      )}
-
-      {showFamily && (
-        <section aria-label="Fassungen dieser Aussage" className="space-y-2">
-          <h3 className="text-xs font-medium text-muted-foreground">Fassungen</h3>
-          <ul className="space-y-2">
-            {members.map((member) => (
-              <li
-                key={member.id}
-                className={cn(
-                  "space-y-1.5 rounded-md border px-3 py-2",
-                  member.id === item.id ? "border-primary/40 bg-primary/5" : "border-border",
-                )}
-              >
-                <div className="flex min-w-0 items-baseline gap-2 text-sm">
-                  {member.id === item.id
-                    ? <span className="truncate font-medium">„{titleOf(member)}“</span>
-                    : <FocusLink item={member} className="text-left font-medium" />}
-                  {member.id === item.id && <span className="shrink-0 text-xs text-muted-foreground">diese Fassung</span>}
-                </div>
-                <VoteBar statementId={member.id} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {canCreateVariant && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => create.startCreate("statement", {
-            title: typeof item.data.title === "string" ? item.data.title : "",
-            text: typeof item.data.description === "string" ? item.data.description : "",
-            variantOf: variantOfValue(item),
-          }, { fixedGroup: originGroup!, fixedGroupReason: "Varianten bleiben im Space ihrer Aussage" })}
-        >
-          <GitBranch className="size-3.5" aria-hidden />
-          Variante anlegen
-        </Button>
-      )}
-    </div>
-  )
+  const rootId = members[0]?.id
+  return {
+    entries: members,
+    decorate: (member) => ({
+      badge: member.id === rootId ? "Ausgang" : "Variante",
+      ...(member.id === item.id ? { mark: "diese" } : {}),
+      trailing: <VoteMiniBar statementId={member.id} />,
+    }),
+    ...(canCreateVariant
+      ? {
+          action: () =>
+            create!.startCreate("statement", {
+              title: typeof item.data.title === "string" ? item.data.title : "",
+              text: typeof item.data.description === "string" ? item.data.description : "",
+              variantOf: variantOfValue(item),
+            }, { fixedGroup: originGroup!, fixedGroupReason: "Varianten bleiben im Space ihrer Aussage" }),
+        }
+      : {}),
+    ...(frozen && isAuthor
+      ? { note: "Andere haben zu diesem Wortlaut abgestimmt, deshalb lässt er sich nicht mehr ändern. Für eine neue Formulierung leg eine Variante an." }
+      : {}),
+  }
 }

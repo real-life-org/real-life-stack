@@ -145,3 +145,25 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
     </div>
   )
 }
+
+/**
+ * Die kleine Stimmleiste einer Zeile (shared-components, Detail-Anatomie
+ * Regel 8: „je Zeile … eine kleine Stimmleiste"): nur der Balken, ohne
+ * Knöpfe. Abgestimmt wird im Detail der Fassung. Nichts ohne Stimmen.
+ */
+export function VoteMiniBar({ statementId, className }: VoteBarProps) {
+  const { data: summary } = useVotes(statementId)
+  if (summary.total === 0) return null
+  return (
+    <div
+      data-vote-mini
+      className={cn("flex h-1.5 w-full overflow-hidden rounded-full bg-muted", className)}
+      role="img"
+      aria-label={VOTE_ORDER.map((value) => `${VOTE_LABELS[value]}: ${summary[value]}`).join(", ")}
+    >
+      {VOTE_ORDER.map((value) =>
+        summary[value] > 0 ? <div key={value} className={SEGMENT_CLASSES[value]} style={{ flexGrow: summary[value] }} /> : null,
+      )}
+    </div>
+  )
+}

@@ -473,7 +473,7 @@ Typ-Register, 06).
 | Profil | Payload | Mutation | Katalog v0.1 |
 |---|---|---|---|
 | `authorial` | `relation-authorial` (Identität **+ Inhalt** inkl. `fields` und `confirmationRef`) | nur der Autor; jedes `updateRelationRecord` (auch `confirmationRef`-Änderung) MUSS re-signieren | `votesOn`, `knows`, `connectedWith`, `takesPlaceAt`, `attends` |
-| `structural` | kein Record-Claim; als eigenständiges Relation-Item trägt der Record den **Item-Herkunfts-Claim** (unten) | kollaborativ | — (heute keine Record-Prädikate; eingebettete `assignedTo`/`invited`/`blocks`/`childOf` deckt der Herkunfts-Claim des Trägeritems) |
+| `structural` | kein Record-Claim; als eigenständiges Relation-Item trägt der Record den **Item-Herkunfts-Claim** (unten) | kollaborativ | — (heute keine Record-Prädikate; eingebettete `assignedTo`/`invited`/`blocks`/`childOf`/`partOf` deckt der Herkunfts-Claim des Trägeritems) |
 | `item-authorial` | Item-Claim über Identität **+ Inhalt** einer Aussage einer Person (unten) | nur die Autorin; jede Änderung des Inhalts MUSS neu signieren | Items der Typen `statement`, `comment`, `reaction` |
 
 **Exklusivität (ein Claim pro Datensatz):** `data.claim` trägt genau EINEN
