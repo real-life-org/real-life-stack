@@ -38,6 +38,7 @@ export {
   type TypePresentationFragment,
   type TypePresentationLayer,
   type SelfActionOverride,
+  type QualifierValuesEntry,
   type ResolvedTypePresentation,
 } from "./type-presentation"
 export {

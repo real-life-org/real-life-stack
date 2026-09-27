@@ -86,7 +86,9 @@ function ausFeldliste(
       return {
         predicate: e.predicate,
         label: joined ? joined.label : e.label,
-        ...(e.qualifier
+        // Ohne deklarierte Werte kein Qualifier im Formular; vorhandene Werte
+        // bleiben beim Speichern erhalten (Regel 20).
+        ...(e.qualifier && e.qualifier.values.length > 0
           ? {
               qualifier: {
                 key: e.qualifier.key,

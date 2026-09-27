@@ -12,6 +12,7 @@ import {
 } from "../src/components/composer/people-relations"
 import { PeopleWidget } from "../src/components/composer/widgets/people-widget"
 import { contentTypeFromRegister } from "../src/components/composer/content-types"
+import { EXAMPLE_LEARNING_LAYER } from "../src/story-support/example-learning-layer"
 import { createComposerMapping } from "../src/components/composer/composer-mapping"
 import {
   registerTypePresentation,
@@ -178,12 +179,23 @@ describe("Qualifier mit default (Spec 06, Regel 7; S3b: assignedTo fehlend = can
   const WITH_DEFAULT = { ...QUALIFIER, default: "can" }
   const CONFIG_DEFAULT = { peopleRelations: [{ predicate: "assignedTo", label: "Wer", qualifier: WITH_DEFAULT }] }
 
-  it("die Aufgabe gibt role mit default can an ihr Personenfeld", () => {
+  it("die Aufgabe: ohne Schicht kein Qualifier im Personenfeld, mit der Beispiel-Schicht deren Werte, ohne default", () => {
+    expect(contentTypeFromRegister("task").peopleRelations?.[0]?.qualifier).toBeUndefined()
+    registerTypePresentation("beispiel", { extensions: [EXAMPLE_LEARNING_LAYER] })
     expect(contentTypeFromRegister("task").peopleRelations?.[0]?.qualifier).toEqual({
       key: "role",
       values: [{ id: "can", label: "kann" }, { id: "learns", label: "lernt" }],
-      default: "can",
     })
+  })
+
+  it("ohne Schicht bleibt ein vorhandener role-Wert beim Speichern erhalten", () => {
+    const existing = [{ predicate: "assignedTo", target: "global:timo", meta: { role: "learns" } }]
+    const mapping = createComposerMapping([contentTypeFromRegister("task")])
+    const result = mapping.mapSubmission(
+      { contentType: "task", data: { title: "T", people: ["timo"] } } as never,
+      { existingItem: { id: "t", type: "task", createdAt: "", createdBy: "", data: {}, relations: existing } } as never,
+    )
+    expect(result?.relations).toEqual(existing)
   })
 
   it("fehlt ein Wert in der eingereichten Menge, gilt default: role entfällt, übriges meta bleibt", () => {

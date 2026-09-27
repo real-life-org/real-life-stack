@@ -15,6 +15,7 @@ import {
 } from "../src/components/preview/type-presentation"
 import { firstOptionWithRole, statusRole } from "../src/components/preview/field-register"
 import { peopleLine, peopleLineGroups } from "../src/components/preview/people-line"
+import { EXAMPLE_LEARNING_LAYER } from "../src/story-support/example-learning-layer"
 
 /**
  * S3b PR B: Zustandsmodell der Aufgabe (Spec 06, Regeln 9, 18, 19, 20;
@@ -342,79 +343,95 @@ describe("Mitmachen und ✓ Dabei (Regel 9, join)", () => {
   })
 })
 
-describe("assignedTo.role can | learns im Kern (Regel 20)", () => {
+describe("Option D: das Modul bringt sein Vokabular mit (Regel 20)", () => {
   const TASK = () => resolveTypePresentation("task")
+  const assigned = () => TASK().edges?.find((e) => e.predicate === "assignedTo")
+  const example = () => registerTypePresentation("beispiel", { extensions: [EXAMPLE_LEARNING_LAYER] })
 
-  it("das Toolkit deklariert den Qualifier mit default can", () => {
-    const assigned = TASK().edges?.find((e) => e.predicate === "assignedTo")
-    expect(assigned?.qualifier?.key).toBe("role")
-    expect(assigned?.qualifier?.values.map((v) => v.id)).toEqual(["can", "learns"])
-    expect(assigned?.qualifier?.default).toBe("can")
-    // Die Kanban-Selbstaktion setzt keinen Qualifier.
-    expect(assigned?.selfAction?.qualifiers).toBeUndefined()
+  it("der Kern erlaubt den Qualifier role an assignedTo, deklariert aber keine Werte und keine Knopftexte", () => {
+    expect(assigned()?.qualifier).toEqual({ key: "role", values: [] })
+    expect(assigned()?.selfAction?.qualifiers).toBeUndefined()
+    expect(JSON.stringify(TASK())).not.toMatch(/Kann ich|Will lernen|learns/)
   })
 
-  it("Menschen-Zeile: fehlend ohne Text, learns „lernt“, unbekannt ohne Text", () => {
+  it("ohne Schicht: jeder Wert bleibt ohne Zustandstext („Timo“), auch learns", () => {
+    const item = task([
+      { predicate: "assignedTo", target: "global:anna" },
+      { predicate: "assignedTo", target: "global:timo", meta: { role: "learns" } },
+    ])
+    const [group] = peopleLineGroups(TASK().edges)
+    const byUser = Object.fromEntries(peopleLine(item, group!, []).map((e) => [e.userId, e.qualifier?.label]))
+    expect(byUser).toEqual({ anna: undefined, timo: undefined })
+  })
+
+  it("mit der Beispiel-Schicht: „Timo lernt“; ein fehlender Wert ohne Text; ein unbekannter ohne Text", () => {
+    example()
+    expect(assigned()?.qualifier?.values.map((v) => v.id)).toEqual(["can", "learns"])
     const item = task([
       { predicate: "assignedTo", target: "global:anna" },
       { predicate: "assignedTo", target: "global:timo", meta: { role: "learns" } },
       { predicate: "assignedTo", target: "global:lena", meta: { role: "foo" } },
     ])
     const [group] = peopleLineGroups(TASK().edges)
-    const line = peopleLine(item, group!, [])
-    const byUser = Object.fromEntries(line.map((e) => [e.userId, e.qualifier?.label]))
+    const byUser = Object.fromEntries(peopleLine(item, group!, []).map((e) => [e.userId, e.qualifier?.label]))
     expect(byUser).toEqual({ anna: undefined, timo: "lernt", lena: undefined })
   })
 
-  it("Übernehmen (Kanban) schreibt die Kante ohne role", async () => {
+  it("Kanban-Selbstaktion ohne Schicht schreibt die Kante ohne role", async () => {
     await render(task([]))
     await click(pill("Übernehmen"))
     expect((await saved())?.relations).toEqual([{ predicate: "assignedTo", target: `global:${ME}` }])
   })
 
-  const karabirrdt = () => {
-    registerTypePresentation("karabirrdt", {
-      extensions: [{
-        id: "task",
-        selfActions: [{
-          predicate: "assignedTo",
-          itemRole: "from",
-          selfAction: { label: "Kann ich", mine: "Dabei", qualifiers: ["can", "learns"], followUps: { field: "status", complete: { label: "Erledigt" }, release: "Zurückgeben" } },
-        }],
-      }],
-    })
-  }
+  it("jede assignedTo-Kante zählt als zugewiesen, egal welcher Wert (auch unbekannt)", async () => {
+    await render(task([{ predicate: "assignedTo", target: `global:${TIMO}`, meta: { role: "foo" } }], "open"))
+    expect(pills()).toEqual(["Mitmachen"])
+  })
 
-  it("eine App ersetzt die Selbstaktion: Pills „Kann ich · Will lernen“ schreiben role", async () => {
-    karabirrdt()
-    const assigned = TASK().edges?.find((e) => e.predicate === "assignedTo")
-    expect(assigned?.selfAction?.qualifiers).toEqual(["can", "learns"])
-    // Prädikat, Speicherort und Qualifier bleiben die des Toolkits.
-    expect(assigned?.qualifier?.default).toBe("can")
+  it("die Schicht bringt Pills mit: „Kann ich · Will lernen“ schreiben role, der Status folgt Regel 19", async () => {
+    example()
     await render(task([]))
     expect(pills()).toEqual(["Kann ich", "Will lernen"])
     await click(pill("Will lernen"))
     const item = await saved()
     expect(item?.relations).toEqual([{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: "learns" } }])
-    // Jede Zuweisung zählt fürs Zustandsmodell.
     expect(item?.data.status).toBe("in-progress")
   })
 
-  it("die Ersetzung darf nur deklarierte Werte schreiben", () => {
+  it("die Pills einer Schicht dürfen nur Werte schreiben, die eine Schicht deklariert", () => {
     expect(() =>
       registerTypePresentation("app", {
-        extensions: [{ id: "task", selfActions: [{ predicate: "assignedTo", itemRole: "from", selfAction: { label: "X", mine: "Y", qualifiers: ["maybe"] } }] }],
+        extensions: [{ id: "task", selfActions: [{ predicate: "assignedTo", itemRole: "from", selfAction: { label: "X", mine: "Y", qualifiers: ["learns"] } }] }],
       }),
-    ).toThrow(/maybe/)
+    ).toThrow(/learns/)
   })
 
-  it("die Ersetzung braucht eine Kante mit Selbstaktion im Toolkit-Register und ist nur einmal erlaubt", () => {
+  it("Werte nur an einer Kern-Kante mit Qualifier; derselbe Wert aus zwei Schichten ist ein Konflikt", () => {
+    expect(() =>
+      registerTypePresentation("app", {
+        extensions: [{ id: "task", qualifierValues: [{ predicate: "blocks", itemRole: "from", values: [{ id: "hard", label: "hart" }] }] }],
+      }),
+    ).toThrow(/Qualifier/)
+    example()
+    expect(() =>
+      registerTypePresentation("zweite", {
+        extensions: [{ id: "task", qualifierValues: [{ predicate: "assignedTo", itemRole: "from", values: [{ id: "learns", label: "übt" }] }] }],
+      }),
+    ).toThrow(/learns/)
+    // Eine weitere Schicht darf neue Werte ergänzen.
+    registerTypePresentation("dritte", {
+      extensions: [{ id: "task", qualifierValues: [{ predicate: "assignedTo", itemRole: "from", values: [{ id: "leads", label: "leitet" }] }] }],
+    })
+    expect(assigned()?.qualifier?.values.map((v) => v.id)).toEqual(["can", "learns", "leads"])
+  })
+
+  it("die Ersetzung der Selbstaktion braucht eine Kante mit Selbstaktion im Toolkit-Register und ist nur einmal erlaubt", () => {
     expect(() =>
       registerTypePresentation("app", {
         extensions: [{ id: "task", selfActions: [{ predicate: "blocks", itemRole: "from", selfAction: { label: "X", mine: "Y" } }] }],
       }),
     ).toThrow(/Selbstaktion/)
-    karabirrdt()
+    example()
     expect(() =>
       registerTypePresentation("zweite", {
         extensions: [{ id: "task", selfActions: [{ predicate: "assignedTo", itemRole: "from", selfAction: { label: "X", mine: "Y" } }] }],
@@ -429,6 +446,7 @@ describe("Codex Runde 1, Befund 3: join mit Qualifier-Pills", () => {
       registerTypePresentation("app", {
         extensions: [{
           id: "task",
+          qualifierValues: EXAMPLE_LEARNING_LAYER.qualifierValues,
           selfActions: [{
             predicate: "assignedTo", itemRole: "from",
             selfAction: { label: "Kann ich", mine: "Dabei", qualifiers: ["can", "learns"], join: { label: "Mitmachen", mine: "Dabei", release: "Raus" } },
@@ -535,9 +553,7 @@ describe("Anton zu #542: erledigt zeigt nur Zustände, keine Aktionen", () => {
   })
 
   it("gilt auch für eine App-Ersetzung mit Folgeaktion: keine Pills der App im erledigten Zustand", async () => {
-    registerTypePresentation("karabirrdt", {
-      extensions: [{ id: "task", selfActions: [{ predicate: "assignedTo", itemRole: "from", selfAction: { label: "Kann ich", mine: "Dabei", qualifiers: ["can", "learns"], followUps: { field: "status", complete: { label: "Erledigt" }, release: "Zurückgeben" } } }] }],
-    })
+    registerTypePresentation("beispiel", { extensions: [EXAMPLE_LEARNING_LAYER] })
     await render(task([{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: "learns" } }], "done"))
     expect(states()).toEqual(["Lernt", "Erledigt"])
     expect(buttons()).toHaveLength(0)

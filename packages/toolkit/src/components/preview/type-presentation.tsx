@@ -66,6 +66,7 @@ import {
   type MenuActionEntry,
   type RegisterLists,
   type SelfActionEntry,
+  type FieldOption,
 } from "./field-register"
 import type { RelationRole } from "@real-life-stack/data-interface"
 import { RegisterMeta, RegisterPeopleStack } from "./register-meta"
@@ -166,6 +167,18 @@ export interface SelfActionOverride {
   selfAction: SelfActionEntry
 }
 
+/**
+ * Qualifier-Werte einer Schicht für eine Kante des Toolkit-Registers, die
+ * einen Qualifier ohne (oder mit anderen) Werten erlaubt (Spec 06, Regel 20:
+ * das Modul bringt sein Vokabular mit). Vereinigt nach Wert-Id; derselbe Wert
+ * aus zwei Schichten ist ein Konflikt.
+ */
+export interface QualifierValuesEntry {
+  predicate: string
+  itemRole: RelationRole
+  values: readonly FieldOption[]
+}
+
 /** Additively fills fields an existing presentation left unset
  *  (spec: Erweiterungsfragment, Darstellungsseite). */
 export interface TypePresentationFragment extends RegisterLists {
@@ -173,6 +186,8 @@ export interface TypePresentationFragment extends RegisterLists {
   id: string
   /** Eigene Bedienung einer Toolkit-Kante (Regel 20), je Kante höchstens einmal über alle Schichten. */
   selfActions?: readonly SelfActionOverride[]
+  /** Qualifier-Werte samt Anzeige für Toolkit-Kanten (Regel 20). */
+  qualifierValues?: readonly QualifierValuesEntry[]
   badge?: TypeBadgeStyle
   composerWidgets?: readonly string[]
   /** United by key; an existing key is a conflict. */
@@ -370,18 +385,12 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
         pos: "meta",
         label: "Zugewiesen",
         add: "Zuweisen…",
-        // Daten und Bedeutung gemeinsam, Bedienung je App (Spec 06, Regel
-        // 20): `role` mit can | learns gehört zum Kern, fehlend = can. Das
-        // Kanban schreibt die Kante ohne role; eine App (Karabirrdt) ersetzt
-        // die Selbstaktion durch „Kann ich · Will lernen" (`action`).
-        qualifier: {
-          key: "role",
-          values: [
-            { id: "can", label: "kann", action: "Kann ich" },
-            { id: "learns", label: "lernt", action: "Will lernen" },
-          ],
-          default: "can",
-        },
+        // Das Modul bringt sein Vokabular mit (Spec 06, Regel 20): Der Kern
+        // erlaubt `role` an der Zuweisung, deklariert aber keine Werte und
+        // keine Knopftexte. Werte samt Anzeige und eigene Pills bringt die
+        // Register-Schicht eines Moduls (`qualifierValues`, `selfActions`);
+        // unbekannte Werte bleiben erhalten und stehen ohne Zustandstext da.
+        qualifier: { key: "role", values: [] },
         // „Übernehmen", mit anderen an der Kante „Mitmachen"; danach
         // „✓ Übernommen" (allein) oder „✓ Dabei" (mit anderen) · „Erledigt".
         // Übergänge des Status nach Regel 19.
@@ -629,6 +638,8 @@ function composePresentation(): Map<string, TypePresentationEntry> {
   }
   // Welche Selbstaktionen schon ersetzt sind, je Typ und Kante (Regel 20: einmal).
   const overridden = new Map<string, string>()
+  // Welche Schicht welchen Qualifier-Wert deklariert, je Typ, Kante und Wert.
+  const valueOwners = new Map<string, string>()
   // Pass 2: extensions — additive only (spec: Erweiterungsfragment). Sorted
   // by layer name: the lists are ordered, and the composed view must not
   // depend on registration order (Spec 06, Erweiterung und Merge).
@@ -660,7 +671,16 @@ function composePresentation(): Map<string, TypePresentationEntry> {
         widgets[key] = widget
       }
       Object.assign(base, uniteRegisterLists(base, frag, frag.id, name))
-      if (frag.selfActions?.length) overrideSelfActions(base, frag.selfActions, name, overridden)
+      if (frag.qualifierValues?.length) addQualifierValues(base, frag.qualifierValues, name, valueOwners)
+    }
+  }
+  // Pass 3: Selbstaktionen der Schichten (Regel 20) — erst nachdem alle
+  // Qualifier-Werte vereinigt sind, damit die Pills gegen das zusammengesetzte
+  // Vokabular geprüft werden, unabhängig von der Reihenfolge der Schichten.
+  for (const [name, layer] of [...layers].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    for (const frag of layer.extensions ?? []) {
+      const base = composed.get(frag.id)
+      if (base && frag.selfActions?.length) overrideSelfActions(base, frag.selfActions, name, overridden)
     }
   }
   // Was aus der Feldliste abgeleitet wird, darf nicht zusätzlich von Hand
@@ -698,8 +718,48 @@ function overrideSelfActions(
     const owner = overridden.get(slot)
     if (owner) fail(`Selbstaktion an (${override.predicate}, ${override.itemRole}) ist bereits von Schicht "${owner}" ersetzt`)
     overridden.set(slot, layerName)
-    assertSelfActionValues(toolkitEdge!, override.selfAction, fail)
+    // Gegen das zusammengesetzte Vokabular: Werte bringt die Schicht mit.
+    const composedEdge = (base.edges ?? []).find((e) => edgeKey(e) === key) ?? toolkitEdge!
+    assertSelfActionValues(composedEdge, override.selfAction, fail)
     base.edges = (base.edges ?? []).map((edge) => (edgeKey(edge) === key ? { ...edge, selfAction: override.selfAction } : edge))
+  }
+}
+
+/**
+ * Regel 20: Eine Schicht bringt Qualifier-Werte samt Anzeige für eine Kante
+ * des Toolkit-Registers mit, die einen Qualifier erlaubt. Schlüssel,
+ * Prädikat und Speicherort bleiben die des Kerns. Werte werden nach Id
+ * vereinigt; einen Wert, den der Kern oder eine andere Schicht schon
+ * deklariert, umzudefinieren ist ein Konflikt (Erweiterung und Merge, Punkt 2)
+ * — auch mit gleichem Label, damit die Anzeige nie von der Ladereihenfolge
+ * abhängt.
+ */
+function addQualifierValues(
+  base: TypePresentationEntry,
+  entries: readonly QualifierValuesEntry[],
+  layerName: string,
+  owners: Map<string, string>,
+): void {
+  const fail = (message: string): never => {
+    throw new Error(`Typ-Register [${layerName}]: ${message} an "${base.id}" (Spec 06, Feld- und Kantenregister, Regel 20).`)
+  }
+  const core = layers.get("core")?.definitions?.find((d) => d.id === base.id)
+  for (const entry of entries) {
+    const key = edgeKey(entry)
+    const toolkitEdge = core?.edges?.find((e) => edgeKey(e) === key)
+    if (!toolkitEdge?.qualifier) fail(`Qualifier-Werte an (${entry.predicate}, ${entry.itemRole}) nennen keine Kante mit Qualifier im Toolkit-Register`)
+    base.edges = (base.edges ?? []).map((edge) => {
+      if (edgeKey(edge) !== key || !edge.qualifier) return edge
+      const values = [...edge.qualifier.values]
+      for (const value of entry.values) {
+        const slot = `${base.id}|${key}|${value.id}`
+        const owner = values.some((v) => v.id === value.id) ? (owners.get(slot) ?? "core") : undefined
+        if (owner) fail(`Qualifier-Wert "${value.id}" an (${entry.predicate}, ${entry.itemRole}) ist bereits von Schicht "${owner}" deklariert`)
+        owners.set(slot, layerName)
+        values.push(value)
+      }
+      return { ...edge, qualifier: { ...edge.qualifier, values } }
+    })
   }
 }
 

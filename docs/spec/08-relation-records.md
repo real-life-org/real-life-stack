@@ -263,7 +263,7 @@ Einordnung der bestehenden Fälle:
 |---|---|---|---|
 | `votesOn` (Person → Statement) | Record | `fields.value` | `green` · `yellow` · `red` ([modules/resonance.md](modules/resonance.md)) |
 | `attends` (Person → Event) | Record | `fields.role`, dazu `fields.tense` | `going` · `maybe` · `declined`; `coming` · `currently` · `has-been` |
-| `assignedTo` (Item → Person, App-Beispiel Karabirrdt) | eingebettet | `meta.role` | `can` · `learns` |
+| `assignedTo` (Item → Person) | eingebettet | `meta.role` | keine im Kern; nichtnormatives Beispiel: `can` · `learns` aus der Schicht der Karabirrdt-App ([06, Regel 20](06-schema-composition.md#feld--und-kantenregister)) |
 
 Nichtnormative Beispiele für Item → Item, hier nicht eingeführt: `blocks` mit „zwingend" oder „hilfreich", `partOf` mit einer Rolle im Projekt.
 

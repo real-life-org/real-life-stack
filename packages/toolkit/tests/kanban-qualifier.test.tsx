@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
 
 import { KanbanBoard } from "../src/components/kanban/kanban-board"
 import { ItemAssignees } from "../src/components/preview/item-assignees"
 import { qualifierLabel } from "../src/components/preview/people-line"
-import { resolveTypePresentation } from "../src/components/preview/type-presentation"
+import { registerTypePresentation, resetTypePresentationForTests, resolveTypePresentation } from "../src/components/preview/type-presentation"
+import { EXAMPLE_LEARNING_LAYER } from "../src/story-support/example-learning-layer"
 
 /**
  * S3b: `assignedTo.role` (can | learns, fehlend = can) steht auch auf der
@@ -23,6 +24,17 @@ const karte = (relations: Item["relations"]): Item =>
   ({ id: "k1", type: "task", createdAt: "2026-09-27T10:00:00.000Z", createdBy: "anna", data: { title: "Beet", status: "open" }, relations }) as Item
 
 describe("Qualifier der Zuweisung auf der Karte", () => {
+  beforeEach(() => registerTypePresentation("beispiel", { extensions: [EXAMPLE_LEARNING_LAYER] }))
+  afterEach(() => resetTypePresentationForTests())
+
+  it("ohne Schicht nur der Name: „Anna, Timo“", () => {
+    resetTypePresentationForTests()
+    const html = renderToStaticMarkup(
+      <KanbanBoard items={[karte([{ predicate: "assignedTo", target: "global:anna" }, { predicate: "assignedTo", target: "global:timo", meta: { role: "learns" } }])]} users={users} readOnly />,
+    )
+    expect(html).toContain("Anna, Timo<")
+  })
+
   it("qualifierLabel: fehlend ohne Text, learns „lernt“, unbekannt ohne Text", () => {
     const edge = resolveTypePresentation("task").edges?.find((e) => e.predicate === "assignedTo")
     expect(qualifierLabel(edge, undefined)).toBeUndefined()
