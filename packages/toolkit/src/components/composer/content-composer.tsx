@@ -423,6 +423,32 @@ function dirtySignature(data: WidgetData, peopleKeys: readonly string[], relatio
   return JSON.stringify(out)
 }
 
+/** Bearbeitbare Item-Verweise (B15) aller angebotenen Typen — auch die eines gerade nicht gewählten. */
+function refKeysOf(types: readonly ContentTypeConfig[]): string[] {
+  return types.flatMap((t) => (t.itemRefs ?? []).filter((r) => !r.fixed).map((r) => r.key))
+}
+
+/**
+ * Ein Patch, der den Space im Kopf wechselt, nimmt im SELBEN Zustand die
+ * space-lokalen Ziele heraus (`item:<id>`, Spec 04): Sie zeigten im neuen
+ * Space ins Leere oder auf ein anderes Item. Space-qualifizierte Ziele
+ * (`space:{id}/item:`) bleiben gültig. Betrifft alle Item-Kanten-Felder
+ * (`relation:*`) und bearbeitbaren Item-Verweise, auch die eines anderen
+ * Typs im Formular — ein Typwechsel hin und zurück bringt nichts Ungültiges
+ * zurück. Das erste Setzen eines Space ist kein Wechsel.
+ */
+export function withSpaceChange(d: WidgetData, patch: Partial<WidgetData>, refKeys: readonly string[]): WidgetData {
+  const next: WidgetData = { ...d, ...patch }
+  const before = typeof d.group === "string" ? d.group : ""
+  if (!("group" in patch) || !before || patch.group === before) return next
+  const local = (t: unknown) => typeof t === "string" && t.startsWith("item:")
+  for (const [key, value] of Object.entries(next)) {
+    if (key.startsWith("relation:") && Array.isArray(value)) next[key] = value.filter((t) => !local(t))
+  }
+  for (const key of refKeys) if (local(next[key])) next[key] = ""
+  return next
+}
+
 /**
  * Position of each built-in widget in the FORM (shared-components,
  * Edit-Regeln 2): title → description → meta fields (people → time → place →
@@ -842,15 +868,17 @@ export function ContentComposer({
   // already-entered content intact.
   const peopleKeysRef = React.useRef(peopleKeys)
   const relationKeysRef = React.useRef(relationKeys)
+  const refKeysRef = React.useRef(refKeysOf(contentTypes))
   React.useEffect(() => {
     peopleKeysRef.current = peopleKeys
     relationKeysRef.current = relationKeys
+    refKeysRef.current = refKeysOf(contentTypes)
   })
   React.useEffect(() => {
     if (!apiRef) return
     apiRef.current = {
       patchData: (patch) => {
-        setData((d) => ({ ...d, ...patch }))
+        setData((d) => withSpaceChange(d, patch, refKeysRef.current))
         // Reveal any widget the patch gives a value to, so a field prefilled
         // after mount (e.g. a position handed back from the map picker) isn't
         // stuck hidden behind a "+" toggle. manualWidgets is seeded only from
@@ -873,23 +901,6 @@ export function ContentComposer({
   React.useEffect(() => {
     if (onlySpace && !data.group) setData((d) => (d.group ? d : { ...d, group: onlySpace }))
   }, [onlySpace, data.group])
-  // Item-Verweise sind space-lokal (`item:<id>`, Spec 04): Wechselt der Space
-  // im Kopf, zeigten gewählte Ziele ins Leere oder auf ein anderes Item. Sie
-  // werden darum geleert — nur beim Wechsel, nicht beim ersten Setzen.
-  const groupRef = React.useRef(data.group)
-  React.useEffect(() => {
-    const previous = groupRef.current
-    groupRef.current = data.group
-    if (!previous || previous === data.group) return
-    const keys = relationKeysRef.current
-    if (keys.length === 0) return
-    setData((d) => {
-      const next = { ...d }
-      const refKeys = new Set((currentConfig?.itemRefs ?? []).map((r) => r.key))
-      for (const key of keys) next[key] = refKeys.has(key) ? "" : []
-      return next
-    })
-  }, [data.group])
   // „+ Beschreibung" aufgeklappt? Nur UI-Zustand; mit Inhalt ist sie immer offen.
   const [textOpen, setTextOpen] = React.useState(false)
   const [isPreviewing, setIsPreviewing] = React.useState(false)
@@ -1029,12 +1040,12 @@ export function ContentComposer({
     key: K,
     value: WidgetData[K],
   ) => {
-    setData((d) => ({ ...d, [key]: value }))
+    setData((d) => withSpaceChange(d, { [key]: value } as Partial<WidgetData>, refKeysOf(contentTypes)))
   }
 
   // Multi-field patch (used by widgets that map to several spec fields)
   const updateMany = (patch: Partial<WidgetData>) => {
-    setData((d) => ({ ...d, ...patch }))
+    setData((d) => withSpaceChange(d, patch, refKeysOf(contentTypes)))
   }
 
   // Toggle a manual widget
@@ -1336,7 +1347,7 @@ export function ContentComposer({
                         const value = typeof data[field.key] === "string" ? (data[field.key] as string) : ""
                         if (field.fixed) {
                           // Fest: nur mit Wert sichtbar (06, Regel 14).
-                          return value ? <FixedItemRefField key={field.key} label={field.label} value={value} missing={field.missing} /> : null
+                          return value ? <FixedItemRefField key={field.key} label={field.label} value={value} missing={field.missing} spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined} /> : null
                         }
                         return (
                           <ItemRelationWidget

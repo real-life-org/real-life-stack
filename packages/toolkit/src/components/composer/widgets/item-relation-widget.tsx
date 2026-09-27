@@ -202,7 +202,7 @@ export function ItemRelationWidget({
  * Feste Anzeige eines Felds mit Item-Verweis im Formular (06, Regel 14;
  * Edit-Regeln 9): sichtbar, nicht bearbeitbar, mit Schloss.
  */
-export function FixedItemRefField({ label, value, missing }: { label: string; value: string; missing: string }) {
+export function FixedItemRefField({ label, value, missing, spaceId }: { label: string; value: string; missing: string; spaceId?: string }) {
   const connector = useOptionalConnector()
   const id = targetItemId(value)
   const [item, setItem] = useState<Item | null>(null)
@@ -216,9 +216,18 @@ export function FixedItemRefField({ label, value, missing }: { label: string; va
     <div className="flex flex-col gap-1.5" data-fixed-ref>
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       <div className={cn("flex min-h-10 items-center justify-between gap-2 rounded-md border bg-muted/50 px-2 py-1.5")}>
-        {item ? <ItemRefChip item={item} inert /> : <MissingRefText text={missing} />}
+        {item && fitsSpace(connector, value, item, spaceId) ? <ItemRefChip item={item} inert /> : <MissingRefText text={missing} />}
         <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label="nicht änderbar" />
       </div>
     </div>
   )
+}
+
+/** Das Ziel muss dort liegen, wohin das Target zeigt (04); ohne Spaces gibt es nur einen Bereich. */
+function fitsSpace(connector: DataInterface | null, value: string, item: Item, spaceId: string | undefined): boolean {
+  if (!connector || !hasItemGroups(connector)) return true
+  // Ohne Space im Formular lässt sich ein lokales Ziel nicht gegenprüfen; es
+  // stammt dann aus der Vorbelegung (Variante: Space des Ursprungs, fest).
+  if (!spaceId && value.startsWith("item:")) return targetItemId(value) === item.id
+  return targetPointsTo(value, item, spaceId ?? null, (id) => connector.getItemGroupId(id))
 }

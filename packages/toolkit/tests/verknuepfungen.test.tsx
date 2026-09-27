@@ -378,3 +378,42 @@ describe("Codex Runde 1", () => {
     expect(dirty.at(-1)).toBe(true)
   })
 })
+
+describe("Codex Runde 2", () => {
+  it("withSpaceChange: im selben Zustand, über alle Typen, space-qualifizierte Ziele bleiben", async () => {
+    const { withSpaceChange } = await import("../src/components/composer/content-composer")
+    const d = { group: "g", "relation:blocks": ["item:t-beet", "space:g/item:t-ernte"], "relation:partOf": ["item:p1"], basedOn: "item:t-beet", other: "item:x" }
+    const next = withSpaceChange(d, { group: "h" }, ["basedOn"])
+    expect(next).toEqual({ group: "h", "relation:blocks": ["space:g/item:t-ernte"], "relation:partOf": [], basedOn: "", other: "item:x" })
+    // Erstes Setzen und gleicher Space: nichts
+    expect(withSpaceChange({ group: "", "relation:blocks": ["item:a"] }, { group: "g" }, [])["relation:blocks"]).toEqual(["item:a"])
+    expect(withSpaceChange(d, { group: "g" }, ["basedOn"])).toEqual(d)
+  })
+
+  it("liveUpdate: ein Space-Wechsel sendet keinen Zwischenstand mit alten Zielen", async () => {
+    const { ContentComposer } = await import("../src/components/composer/content-composer")
+    const { contentTypeFromRegister } = await import("../src/components/composer/content-types")
+    const config = { ...contentTypeFromRegister("task"), groupOptions: [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], defaultGroup: "g" }
+    const submitted: Array<Record<string, unknown>> = []
+    let api: { patchData: (p: Record<string, unknown>) => void } | null = null
+    const apiRef = { get current() { return api }, set current(v) { api = v } }
+    await render(createElement(ContentComposer, {
+      contentTypes: [config], initialContentType: "task", apiRef, liveUpdate: true,
+      initialData: { title: "T", group: "g", "relation:blocks": ["item:t-beet"] },
+      onSubmit: (d: { data: Record<string, unknown> }) => { submitted.push(d.data) },
+    } as never))
+    await act(async () => api!.patchData({ group: "h" }))
+    await settle()
+    const inH = submitted.filter((s) => s.group === "h")
+    expect(inH.length).toBeGreaterThan(0)
+    for (const s of inH) expect(s["relation:blocks"]).toEqual([])
+  })
+
+  it("feste Anzeige: ein Ziel aus einem anderen Space erscheint als fehlend", async () => {
+    const { FixedItemRefField } = await import("../src/components/composer/widgets/item-relation-widget")
+    await render(createElement(FixedItemRefField, { label: "Variante von", value: "space:other/item:t-beet", missing: "nicht verfügbar", spaceId: "g" }))
+    await settle()
+    expect(host.textContent).toContain("nicht verfügbar")
+    expect(host.textContent).not.toContain("Beetplan")
+  })
+})
