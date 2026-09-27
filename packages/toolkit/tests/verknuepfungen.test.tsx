@@ -417,3 +417,24 @@ describe("Codex Runde 2", () => {
     expect(host.textContent).not.toContain("Beetplan")
   })
 })
+
+describe("Codex Runde 3", () => {
+  it("feste Anzeige ohne Space-Capability: ein qualifiziertes Ziel gilt als fehlend", async () => {
+    const { FixedItemRefField } = await import("../src/components/composer/widgets/item-relation-widget")
+    const { ConnectorProvider: P } = await import("../src/hooks/connector-context")
+    const plain = new MockConnector({ items: [BEETPLAN], groups: [], users: [{ id: ME, displayName: "Ich" }] } as never, { allowFixtureAuthors: true })
+    await plain.init()
+    const view = { init: () => plain.init(), dispose: () => plain.dispose(), getItems: (f: never) => plain.getItems(f), getItem: (id: string) => plain.getItem(id), observe: (f: never) => plain.observe(f), observeItem: (id: string) => plain.observeItem(id) }
+    await act(async () => {
+      root.render(createElement(P, { connector: view as never }, createElement(FixedItemRefField, { label: "V", value: "space:other/item:t-beet", missing: "fehlt" })))
+    })
+    await settle()
+    expect(host.textContent).toContain("fehlt")
+  })
+
+  it("ein erhaltenes space-qualifiziertes Ziel erscheint nach dem Wechsel weiter als Chip", async () => {
+    const { ItemRelationWidget } = await import("../src/components/composer/widgets/item-relation-widget")
+    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: ["space:g/item:t-beet"], onChange: () => {}, spaceId: "h" }))
+    expect(host.querySelector('[data-relation-chip="t-beet"]')?.textContent).toContain("Beetplan")
+  })
+})

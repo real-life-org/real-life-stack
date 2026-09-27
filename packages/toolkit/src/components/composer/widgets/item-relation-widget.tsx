@@ -27,7 +27,7 @@ export type RequestItemPick = (request: { predicate: string; targetType?: string
  * Ein `item:`-Target ist space-lokal (04), ein Item aus einem anderen Space
  * wäre dort ein anderes oder keins.
  */
-function useCandidates(targetType: string | undefined, spaceId: string | undefined): { items: Item[]; needsSpace: boolean; spaceOf?: (id: string) => string | null } {
+function useCandidates(targetType: string | undefined, spaceId: string | undefined): { items: Item[]; all: readonly Item[]; needsSpace: boolean; spaceOf?: (id: string) => string | null } {
   const connector = useOptionalConnector()
   const filterKey = JSON.stringify(targetFilter(targetType))
   const observable = useMemo(
@@ -40,7 +40,7 @@ function useCandidates(targetType: string | undefined, spaceId: string | undefin
     setItems(observable.current)
     return observable.subscribe((next) => startTransition(() => setItems(next)))
   }, [observable])
-  return useMemo(() => inSpace(connector, items, spaceId), [connector, items, spaceId])
+  return useMemo(() => ({ ...inSpace(connector, items, spaceId), all: items }), [connector, items, spaceId])
 }
 
 /**
@@ -83,8 +83,10 @@ export function ItemRelationWidget({
   single,
   requestItemPick,
 }: ItemRelationWidgetProps) {
-  const { items: candidates, needsSpace, spaceOf } = useCandidates(targetType, spaceId)
-  const resolve = (target: string) => candidates.find((c) => targetPointsTo(target, c, spaceId ?? null, spaceOf))
+  const { items: candidates, all, needsSpace, spaceOf } = useCandidates(targetType, spaceId)
+  // Gewählte Ziele gegen alle sichtbaren Items (ein space-qualifiziertes
+  // bleibt nach einem Space-Wechsel gültig); gesucht wird nur im Formular-Space.
+  const resolve = (target: string) => all.find((c) => targetPointsTo(target, c, spaceId ?? null, spaceOf))
   const [query, setQuery] = useState("")
   const [open, setOpen] = useState(false)
   const listId = useId()
@@ -225,7 +227,8 @@ export function FixedItemRefField({ label, value, missing, spaceId }: { label: s
 
 /** Das Ziel muss dort liegen, wohin das Target zeigt (04); ohne Spaces gibt es nur einen Bereich. */
 function fitsSpace(connector: DataInterface | null, value: string, item: Item, spaceId: string | undefined): boolean {
-  if (!connector || !hasItemGroups(connector)) return true
+  // Ohne Space-Auskunft: ein lokales Ziel nach Id, ein qualifiziertes nie (nicht prüfbar).
+  if (!connector || !hasItemGroups(connector)) return targetPointsTo(value, item, null)
   // Ohne Space im Formular lässt sich ein lokales Ziel nicht gegenprüfen; es
   // stammt dann aus der Vorbelegung (Variante: Space des Ursprungs, fest).
   if (!spaceId && value.startsWith("item:")) return targetItemId(value) === item.id
