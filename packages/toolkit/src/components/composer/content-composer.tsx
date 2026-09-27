@@ -960,8 +960,12 @@ export function ContentComposer({
   const isSpaceMissing = (d: WidgetData) => spaceUnavailable || (spaceRequired && !d.group)
   // Ein ungültiger Wert (Adresse ohne http/https, Zahl außerhalb der Grenzen,
   // kein Telefon/E-Mail) wird nie gespeichert — auch nicht per liveUpdate.
+  // Ein festes Feld prüft nur das Anlegen (Vorgabe des Kontexts); beim
+  // Bearbeiten bleibt der gespeicherte Wert unberührt und sperrt nichts.
   const valueErrorsOf = (d: WidgetData): Record<string, string | null> =>
-    Object.fromEntries((currentConfig?.valueFields ?? []).map((v) => [v.key, valueFieldError(v, (d as Record<string, unknown>)[v.key])]))
+    Object.fromEntries(
+      (currentConfig?.valueFields ?? []).map((v) => [v.key, v.fixed && isEditMode ? null : valueFieldError(v, (d as Record<string, unknown>)[v.key])]),
+    )
   const hasInvalidValues = (d: WidgetData) => Object.values(valueErrorsOf(d)).some(Boolean)
   // Wert-Felder eines anderen angebotenen Typs (nach einem Typwechsel) gehen
   // nicht mit: Sie wären weder geprüft noch nach ihrem Vertrag abgebildet.
@@ -1192,7 +1196,9 @@ export function ContentComposer({
   // Wert-Felder stehen im Formular in Register-Reihenfolge an der Stelle des
   // ersten Wert-Widgets; nur benachbarte Zahlen mit gleicher Beschriftung
   // teilen eine Gruppe (B7).
-  const firstValueWidget = renderOrder.find((w) => VALUE_WIDGETS.has(w))
+  // Der Status gehört dazu, wenn das Register ihn führt (Reihenfolge, Regel 16).
+  const statusInValues = (currentConfig.valueFields ?? []).some((v) => v.widget === "status")
+  const firstValueWidget = renderOrder.find((w) => VALUE_WIDGETS.has(w) || (statusInValues && w === "status"))
   const chipSuggestions = (field: ValueFieldConfig): string[] => {
     const own = field.suggestions ?? []
     const fromSpace = (spaceSources?.items ?? []).flatMap((i) => chipValues((i.data as Record<string, unknown> | undefined)?.[field.key]))
@@ -1396,6 +1402,7 @@ export function ContentComposer({
                     />
                   )}
                   {widgetId === "status" &&
+                    !statusInValues &&
                     currentConfig.statusOptions &&
                     currentConfig.statusOptions.length > 0 && (
                       <StatusWidget
@@ -1520,6 +1527,16 @@ export function ContentComposer({
                                 onChange={(key, v) => updateData(key, v)}
                               />
                             )
+                          case "status":
+                            return currentConfig.statusOptions?.length ? (
+                              <StatusWidget
+                                key={field.key}
+                                value={data.status || ""}
+                                onChange={(v) => updateData("status", v)}
+                                label={getWidgetLabel("status")}
+                                options={currentConfig.statusOptions}
+                              />
+                            ) : null
                           case "select":
                             return (
                               <OptionField

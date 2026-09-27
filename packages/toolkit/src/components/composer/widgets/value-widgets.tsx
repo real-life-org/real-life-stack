@@ -296,11 +296,14 @@ export function ChipsField({ label, value, onChange, suggestions = [], disabled 
   const [adding, setAdding] = React.useState(false)
   const [draft, setDraft] = React.useState("")
   // Nach Bestätigen oder Abbrechen kehrt der Fokus zu „+ eigenes" zurück.
+  // Nur nach Enter oder Escape — wer per Tab oder Klick weitergeht, behält sein Ziel.
   const addButton = React.useRef<HTMLButtonElement>(null)
-  const wasAdding = React.useRef(false)
+  const returnFocus = React.useRef(false)
   React.useEffect(() => {
-    if (wasAdding.current && !adding) addButton.current?.focus()
-    wasAdding.current = adding
+    if (!adding && returnFocus.current) {
+      returnFocus.current = false
+      addButton.current?.focus()
+    }
   }, [adding])
   const add = (text: string) => {
     const t = text.trim()
@@ -357,9 +360,11 @@ export function ChipsField({ label, value, onChange, suggestions = [], disabled 
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault()
+                  returnFocus.current = true
                   commit()
                 } else if (e.key === "Escape") {
                   e.preventDefault()
+                  returnFocus.current = true
                   setDraft("")
                   setAdding(false)
                 }

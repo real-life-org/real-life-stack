@@ -628,3 +628,49 @@ describe("Codex R1", () => {
     await unmount()
   })
 })
+
+describe("Codex R2", () => {
+  it("1: der Status steht im Formular an seiner Register-Stelle zwischen Zahlen", async () => {
+    registriere([HOURS, STATUS, EUROS])
+    const config = contentTypeFromRegister("card")
+    const { container, unmount } = await formular(config, { status: "open" })
+    const order = [...container.querySelectorAll("[data-value-field]")].map((e) => e.getAttribute("data-value-field"))
+    expect(order).toEqual(["number", "segment", "number"])
+    await unmount()
+  })
+
+  it("2: wer die Chips-Eingabe per Klick verlässt, behält seinen Fokus", async () => {
+    const { container, unmount } = await formular(
+      karte([
+        { key: "skills", widget: "chips", label: "Kann" },
+        { key: "website", widget: "url", label: "Website" },
+      ]),
+    )
+    const feld = container.querySelector('[data-value-field="chips"]')!
+    await act(async () => [...feld.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === "+ eigenes")!.click())
+    const website = container.querySelector<HTMLInputElement>('input[aria-label="Website"]')!
+    await act(async () => website.focus())
+    expect(document.activeElement).toBe(website)
+    await unmount()
+  })
+
+  it("3: ein fester, ungültiger Bestandswert sperrt das Bearbeiten nicht", async () => {
+    const config = karte([{ key: "hours", widget: "number", label: "Aufwand", unit: "h", min: 0, fixed: true }])
+    const submits: ContentComposerSubmitData[] = []
+    const r = await rendere(
+      createElement(ContentComposer, {
+        contentTypes: [config],
+        mode: "card",
+        editMode: true,
+        initialData: { title: "Karte", hours: "-1" },
+        showPreview: false,
+        onSubmit: (s: ContentComposerSubmitData) => {
+          submits.push(s)
+        },
+      }),
+    )
+    const speichern = [...r.container.querySelectorAll("button")].find((b) => b.textContent === "Speichern")!
+    expect(speichern.disabled).toBe(false)
+    await r.unmount()
+  })
+})

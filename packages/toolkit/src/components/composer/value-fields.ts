@@ -17,9 +17,13 @@ import {
   urlError,
 } from "../../lib/field-values"
 
-export type ValueWidgetId = "number" | "select" | "url" | "chips" | "contact"
+export type ValueWidgetId = "number" | "select" | "url" | "chips" | "contact" | "status"
 
+/** Wert-Widgets, die nur das Register setzt (nie zum Zuschalten). Status ist zuschaltbar und steht darum nicht hier. */
 export const VALUE_WIDGETS: ReadonlySet<string> = new Set<ValueWidgetId>(["number", "select", "url", "chips", "contact"])
+
+/** Widgets, deren Register-Felder im Formular gemeinsam in Register-Reihenfolge stehen. */
+export const ORDERED_VALUE_WIDGETS: ReadonlySet<string> = new Set<ValueWidgetId>([...VALUE_WIDGETS, "status"] as ValueWidgetId[])
 
 export interface ValueFieldConfig {
   /** `item.data[key]`. */
@@ -41,7 +45,9 @@ export interface ValueFieldConfig {
 /** Die Wert-Felder des Formulars, in Register-Reihenfolge; `edit: false` fehlt. */
 export function valueFieldsFromRegister(fields: readonly FieldEntry[]): ValueFieldConfig[] {
   return fields
-    .filter((x) => VALUE_WIDGETS.has(x.widget) && x.edit !== false && x.pos !== "module" && x.pos !== "system")
+    // Status (B6) steht mit, damit das Formular die Register-Reihenfolge hält;
+    // geschrieben wird er wie bisher über `statusOptions`.
+    .filter((x) => ORDERED_VALUE_WIDGETS.has(x.widget) && (x.widget !== "status" || !!x.options?.length) && x.edit !== false && x.pos !== "module" && x.pos !== "system")
     .map((x) => ({
       key: x.key,
       widget: x.widget as ValueWidgetId,
@@ -105,7 +111,8 @@ export function valueFieldToData(field: ValueFieldConfig, value: unknown): unkno
       if (typeof value !== "string" || value.trim() === "") return undefined
       return contactError(value) ? null : value.trim()
     }
-    case "select": {
+    case "select":
+    case "status": {
       if (typeof value !== "string" || value === "") return undefined
       return value
     }
