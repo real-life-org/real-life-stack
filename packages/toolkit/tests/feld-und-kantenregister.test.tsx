@@ -25,7 +25,7 @@ import { metaRowOrder, type EdgeEntry, type FieldEntry } from "../src/components
 import { RegisterMeta } from "../src/components/preview/register-meta"
 import { renderTypeCardFooter } from "../src/components/preview/type-presentation"
 import { getTypeManifest } from "@real-life-stack/data-interface"
-import { ContentComposer } from "../src/components/composer/content-composer"
+import { ContentComposer, widgetRenderOrder } from "../src/components/composer/content-composer"
 
 /**
  * Spec 06 → Feld- und Kantenregister (S1): Das Darstellungs-Register kennt je
@@ -379,5 +379,23 @@ describe("Codex Runde 1: keine Verluste gegenüber vorher", () => {
     const ohneKante = composeTypeManifest([TOOLKIT_TYPE_LAYER, { name: "app", definitions: [{ ...SICHTUNG, relations: [] }] }])
     expect(() => setTypeManifest(ohneKante)).toThrow()
     expect(getTypeManifest()).toBe(vorher)
+  })
+})
+
+describe("Codex Runde 2: zugeschaltete Widgets stehen an ihrer Stelle in der Anatomie", () => {
+  it("Datum und Ort eines Beitrags kommen vor Tags und Gruppe, der Inhalt bleibt davor", () => {
+    const order = widgetRenderOrder(["text", "media", "tags", "group"])
+    const at = (w: string) => order.indexOf(w)
+    expect(at("date")).toBeLessThan(at("tags"))
+    expect(at("location")).toBeLessThan(at("tags"))
+    expect(at("tags")).toBeLessThan(at("group"))
+    // Die eigene Reihenfolge des Typs bleibt unangetastet.
+    expect(order.filter((w) => ["text", "media", "tags", "group"].includes(w))).toEqual(["text", "media", "tags", "group"])
+  })
+
+  it("die Reihenfolge eines Typs mit allen Widgets bleibt, wie das Register sie ableitet", () => {
+    expect(widgetRenderOrder(["title", "people", "date", "location", "text", "tags", "group"])).toEqual([
+      "title", "people", "date", "location", "status", "text", "media", "tags", "group",
+    ])
   })
 })

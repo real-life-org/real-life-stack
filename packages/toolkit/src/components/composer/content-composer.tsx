@@ -335,15 +335,40 @@ function dirtySignature(data: WidgetData, peopleKeys: readonly string[]): string
 }
 
 /**
- * The built-in widgets in render order: first those the type lists in
- * `defaultWidgets`, in that order; then every other built-in in
- * `WIDGET_ORDER`. Ids the composer has no built-in for (custom widgets, or
- * register widgets that arrive with later steps) are skipped here.
+ * Position of each built-in widget in the detail anatomy (shared-components,
+ * Detail-Anatomie): head → meta (people → time → place → values) → content →
+ * tags → badge. Used to place widgets a user switches on at THEIR slot
+ * instead of at the end (Edit-Regeln 2).
+ */
+const ANATOMY_RANK: Record<WidgetType, number> = {
+  title: 0,
+  people: 1,
+  date: 2,
+  location: 3,
+  status: 4,
+  text: 5,
+  media: 6,
+  tags: 7,
+  group: 8,
+}
+
+/**
+ * The built-in widgets in render order: those the type lists in
+ * `defaultWidgets` keep that order; every other built-in is inserted before
+ * the first listed widget that comes after it in the anatomy. Ids the
+ * composer has no built-in for (custom widgets, or register widgets that
+ * arrive with later steps) are skipped here.
  */
 export function widgetRenderOrder(defaultWidgets: readonly string[]): WidgetType[] {
   const builtIn = new Set<string>(WIDGET_ORDER)
-  const own = defaultWidgets.filter((w, i): w is WidgetType => builtIn.has(w) && defaultWidgets.indexOf(w) === i)
-  return [...own, ...WIDGET_ORDER.filter((w) => !own.includes(w))]
+  const order = defaultWidgets.filter((w, i): w is WidgetType => builtIn.has(w) && defaultWidgets.indexOf(w) === i)
+  const extras = WIDGET_ORDER.filter((w) => !order.includes(w)).sort((a, b) => ANATOMY_RANK[a] - ANATOMY_RANK[b])
+  for (const w of extras) {
+    const before = order.findIndex((o) => ANATOMY_RANK[o] > ANATOMY_RANK[w])
+    if (before === -1) order.push(w)
+    else order.splice(before, 0, w)
+  }
+  return order
 }
 
 // ── Component ────────────────────────────────────────────────────────────
