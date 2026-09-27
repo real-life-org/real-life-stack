@@ -287,14 +287,15 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
       // in dem der Connector ohne `group` anlegt (Space des Formulars, Regel 6).
       contentTypes: withSpacesPending(
         withCreateGroup(withGroupOptions(contentTypesFromRegister(), [...groups], currentSpace, personalGroupId), canScope, currentSpace),
-        // Ungeklärt, solange die Spaces laden und noch keiner bekannt ist (#538).
-        !groupsProp && groupsLoading && groups.length === 0,
+        // Ungeklärt, solange die Spaces laden und noch keiner bekannt ist
+        // (#538) — auch wenn der Rahmen die (noch leere) Liste als Prop reicht.
+        groupsLoading && groups.length === 0 && !personalGroupId,
       ),
       mapper: mapComposerSubmission,
       composerProps,
       shell: createShell,
     }),
-    [groups, currentSpace, personalGroupId, composerProps, createShell, canScope, groupsProp, groupsLoading],
+    [groups, currentSpace, personalGroupId, composerProps, createShell, canScope, groupsLoading],
   )
   useRegisterCreate(entry.id, createConfig)
 

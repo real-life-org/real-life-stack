@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
 import { MockConnector } from "@real-life-stack/mock-connector"
 import { ConnectorProvider } from "../src/hooks/connector-context"
@@ -162,6 +162,35 @@ describe("ResonanceTransferMenu: dieselbe Anlegeprüfung wie das Formular (#538)
     await act(async () => { trigger.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 })) })
     const importItem = [...document.body.querySelectorAll('[role="menuitem"]')].find((el) => el.textContent?.includes("Aussagen importieren"))
     expect(importItem === undefined || importItem.getAttribute("aria-disabled") === "true" || importItem.hasAttribute("data-disabled")).toBe(true)
+  })
+})
+
+describe("ResonanceTransferMenu: im geöffneten Space ohne GroupScopeCapable (#538, Codex-Notiz)", () => {
+  it("legt im geöffneten Space an, ohne zu verschieben", async () => {
+    await act(async () => { root.unmount() })
+    const move = vi.spyOn(connector, "moveItemToGroup")
+    const ohneScope = new Proxy(connector, {
+      get(target, key, receiver) {
+        if (key === "groupScope") return undefined
+        const value = Reflect.get(target, key, receiver)
+        return typeof value === "function" ? value.bind(target) : value
+      },
+      has: (target, key) => (key === "groupScope" ? false : Reflect.has(target, key)),
+    })
+    root = createRoot(host)
+    await act(async () => {
+      root.render(createElement(ConnectorProvider, { connector: ohneScope as never },
+        createElement(ResonanceTransferMenu, {
+          space: "g", userId: "u1", shownStatements: [], verifiedRecords: [],
+          contentHashes: new Map(), population: ALL_PEOPLE, tags: [],
+        })))
+    })
+    await choose(JSON.stringify({ format: "resonance-import/1", statements: [{ title: "Ohne Zusage" }] }))
+    await act(async () => { button("Importieren")!.click() })
+    for (let round = 0; round < 3; round++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+    const created = (await connector.getItems({ type: "statement" })).find((item) => item.data.title === "Ohne Zusage")!
+    expect(connector.getItemGroupId(created.id)).toBe("g")
+    expect(move).not.toHaveBeenCalled()
   })
 })
 

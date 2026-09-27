@@ -202,3 +202,42 @@ describe("Der Modul-Host", () => {
     expect(kontext?.members.map((m) => m.id)).toEqual(["u1"])
   })
 })
+
+describe("#538: Anlegen gesperrt, solange die Spaces laden — auch mit groups-Prop vom Rahmen", () => {
+  it("die leere, noch ladende Gruppenliste sperrt Speichern mit Grund", async () => {
+    const { createObservable } = await import("@real-life-stack/data-interface")
+    const { CreateSheetController } = await import("../src/components/host/create-host")
+    const { GROUPS_LOADING } = await import("../src/components/composer/composer-mapping")
+    const { ModulePanelProvider } = await import("../src/components/module-panel/module-panel")
+    const connector = new MockConnector(
+      { items: [], groups: [{ id: "g1", name: "Garten" }], users: [{ id: "u1", displayName: "Uli" }], groupMembers: { g1: ["u1"] } },
+      { allowFixtureAuthors: true },
+    )
+    // Die Gruppen sind noch unterwegs (Erstsync): leer und nicht geladen.
+    connector.observeGroups = () => createObservable([], false) as never
+    const create = vi.spyOn(connector, "createItem")
+    const entry = eintrag({})
+    await act(async () => {
+      root.render(createElement(ConnectorProvider, { connector },
+        createElement(FilterProvider, null,
+          createElement(MemoryFocusProvider, { module: entry.id },
+            createElement(DetailHostProvider, null,
+              createElement(CreateHostProvider, null,
+                createElement(ModulePanelProvider, null,
+                  // Wie AppFrame/ModuleOutlet: die Gruppenliste kommt als Prop.
+                  createElement(ModuleHost, { entry, groupId: "__overview__", active: true, groups: [] }),
+                  createElement(CreateSheetController))))))))
+    })
+    await act(async () => erstellen!.startCreate("task"))
+    for (let i = 0; i < 4; i++) await act(async () => { await new Promise((r) => setTimeout(r, 10)) })
+    const title = document.body.querySelector<HTMLInputElement>('input[placeholder="Titel"]')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(title, "T")
+      title.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+    expect(document.body.querySelector("[data-space-required]")?.textContent).toContain(GROUPS_LOADING)
+    const speichern = [...document.body.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Erstellen")
+    expect(speichern?.disabled).toBe(true)
+    expect(create).not.toHaveBeenCalled()
+  })
+})
