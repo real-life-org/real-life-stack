@@ -6,6 +6,7 @@ import { composeTypeManifest, TOOLKIT_TYPE_LAYER } from "@real-life-stack/data-i
 
 import { ContentComposer, type ContentComposerProps, type ContentTypeConfig } from "../src/components/composer/content-composer"
 import { pickContentTypes } from "../src/components/composer/content-types"
+import { withFixedGroup, withGroupOptions } from "../src/components/composer/composer-mapping"
 import { setTypeManifest } from "../src/components/preview/type-presentation"
 
 /**
@@ -151,5 +152,84 @@ describe("Codex Runde 4: der Space im Kopf", () => {
     const [task] = pickContentTypes("task")
     await render({ contentTypes: [{ ...task!, groupOptions: GROUPS }], mode: "task" })
     expect(spaceSelect()).not.toBeNull()
+  })
+})
+
+describe("Kopf wie im Design (Anton, 27.09.): Typ als Badge, Space als Pille", () => {
+  const typeSlot = () => host.querySelector('[data-slot="composer-type"]')
+  const spaceSlot = () => host.querySelector('[data-slot="composer-space"]')
+
+  it("Typ wählbar: das Typ-Badge mit Chevron, darüber das (unsichtbare) Auswahlfeld", async () => {
+    await render({ contentTypes: pickContentTypes("post", "event", "task"), initialContentType: "event" })
+    const slot = typeSlot()!
+    expect(slot.textContent).toContain("Event")
+    expect(slot.querySelector("svg.lucide-chevron-down")).not.toBeNull()
+    expect(slot.querySelector('select[aria-label="Typ"]')).not.toBeNull()
+    // Das Badge aus dem Register: Typfarbe des Events
+    expect(slot.innerHTML).toContain("bg-blue-50")
+  })
+
+  it("Typ fest: dasselbe Badge ohne Chevron und ohne Schloss", async () => {
+    await render({ contentTypes: pickContentTypes("task"), mode: "task" })
+    const slot = typeSlot()!
+    expect(slot.textContent).toContain("Task")
+    expect(slot.querySelector("svg.lucide-chevron-down")).toBeNull()
+    expect(slot.querySelector("svg.lucide-lock")).toBeNull()
+  })
+
+  it("Space wählbar: Pille mit Logo-Kachel, Name und Chevron", async () => {
+    const types = withGroupOptions(pickContentTypes("task"), [{ id: "a", name: "Garten", data: { primaryColor: "#16a34a" } } as never, { id: "b", name: "Hof" }], "a")
+    await render({ contentTypes: types, mode: "task" })
+    const slot = spaceSlot()!
+    expect(slot.textContent).toContain("Garten")
+    expect(slot.querySelector('[data-slot="space-logo"]')?.textContent).toBe("G")
+    expect(slot.querySelector("svg.lucide-chevron-down")).not.toBeNull()
+    expect(slot.className).toContain("rounded-full")
+    expect(slot.className).toContain("border")
+  })
+
+  it("Space fest (Variante): gedämpft, ohne Rand, ohne Chevron, ohne Schloss, mit Grund", async () => {
+    const types = withFixedGroup(withGroupOptions(pickContentTypes("statement"), [{ id: "a", name: "Garten" }, { id: "b", name: "Hof" }]), "a", "Varianten bleiben im Space ihrer Aussage")
+    await render({ contentTypes: types, mode: "statement" })
+    const slot = spaceSlot()!
+    expect(slot.textContent).toContain("Garten")
+    expect(slot.querySelector("svg.lucide-chevron-down")).toBeNull()
+    expect(slot.querySelector("svg.lucide-lock")).toBeNull()
+    expect(slot.className).toContain("text-muted-foreground")
+    expect(slot.className).not.toMatch(/(^|\s)border(\s|$)/)
+    expect(slot.getAttribute("title")).toBe("Varianten bleiben im Space ihrer Aussage")
+  })
+
+  it("kein Text „Bearbeiten“ im Kopf", async () => {
+    await render({ contentTypes: pickContentTypes("task"), mode: "task", editMode: true })
+    const head = typeSlot()!.parentElement!
+    expect(head.textContent).not.toContain("Bearbeiten")
+  })
+})
+
+describe("Keine Sichtbarkeitswahl am Speichern-Knopf (Anton, 27.09.)", () => {
+  it("der Knopf ist ein einfaches „Erstellen“ ohne Globus, Schloss und Pfeil", async () => {
+    await render({ contentTypes: pickContentTypes("task"), mode: "task", showPreview: false })
+    const footer = host.querySelector('[data-slot="edit-footer"]')!
+    expect(footer.querySelector("svg.lucide-globe, svg.lucide-lock, svg.lucide-chevron-down")).toBeNull()
+    expect([...footer.querySelectorAll("button")].map((b) => b.textContent?.trim())).toEqual(["Erstellen"])
+  })
+})
+
+describe("Vorauswahl des Space beim Anlegen (wie vor der Umstellung: withGroupOptions → defaultGroup)", () => {
+  const groups = [{ id: "a", name: "Garten" }, { id: "b", name: "Hof" }]
+
+  it("außerhalb eines Space ist „Privat“ vorausgewählt, mit Haus-Logo, ohne Pflichtmarkierung", async () => {
+    await render({ contentTypes: withGroupOptions(pickContentTypes("task"), groups, undefined, "p"), mode: "task" })
+    expect(spaceSelect()!.value).toBe("p")
+    expect(spaceSelect()!.getAttribute("aria-invalid")).toBeNull()
+    const slot = host.querySelector('[data-slot="composer-space"]')!
+    expect(slot.textContent).toContain("Privat")
+    expect(slot.querySelector('[data-slot="space-logo"] svg.lucide-house, [data-slot="space-logo"] svg.lucide-home')).not.toBeNull()
+  })
+
+  it("im Space ist dieser Space vorausgewählt", async () => {
+    await render({ contentTypes: withGroupOptions(pickContentTypes("task"), groups, "b", "p"), mode: "task" })
+    expect(spaceSelect()!.value).toBe("b")
   })
 })

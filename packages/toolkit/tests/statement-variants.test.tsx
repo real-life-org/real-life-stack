@@ -112,7 +112,7 @@ describe("StatementDetail (panel)", () => {
       title: "Wir treffen uns montags",
       text: "Im Garten",
       variantOf: "item:s-a",
-    }, { fixedGroup: "g" })
+    }, { fixedGroup: "g", fixedGroupReason: "Varianten bleiben im Space ihrer Aussage" })
   })
 
   it("tells the author why the wording is frozen once someone else voted on it", async () => {

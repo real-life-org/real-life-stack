@@ -130,7 +130,7 @@ export function StatementDetail({ item }: { item: Item }) {
             title: typeof item.data.title === "string" ? item.data.title : "",
             text: typeof item.data.description === "string" ? item.data.description : "",
             variantOf: variantOfValue(item),
-          }, { fixedGroup: originGroup! })}
+          }, { fixedGroup: originGroup!, fixedGroupReason: "Varianten bleiben im Space ihrer Aussage" })}
         >
           <GitBranch className="size-3.5" aria-hidden />
           Variante anlegen

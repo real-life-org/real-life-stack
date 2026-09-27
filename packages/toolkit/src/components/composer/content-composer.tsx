@@ -1,7 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { ChevronDown, FolderOpen, Globe, Loader2, Lock, Trash2, X } from "lucide-react"
+import { ChevronDown, Globe, Home, Loader2, Lock, Trash2, X } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
+import { ItemTypeBadge } from "../preview/item-type-badge"
+import { GENERIC_BADGE, resolveTypePresentation } from "../preview/type-presentation"
 import { Button } from "@/components/primitives/button"
 import {
   DropdownMenu,
@@ -104,6 +107,12 @@ export interface StatusOption {
 export interface GroupOption {
   id: string
   name: string
+  /** Space logo (`data.image`), as the space switcher shows it. */
+  image?: string
+  /** Space colour (`data.primaryColor`): the logo tile's surface. */
+  color?: string
+  /** The personal space („Privat") — shown with the home icon, like the switcher. */
+  personal?: boolean
 }
 
 export interface ContentTypeConfig {
@@ -119,6 +128,8 @@ export interface ContentTypeConfig {
   groupOptions?: GroupOption[]
   defaultGroup?: string
   groupRequired?: boolean
+  /** Why the space cannot be changed (one fixed option) — tooltip in the form head. */
+  groupFixedReason?: string
   /** Where this type keeps its free text. Default: `content` for `post`, else `description`. */
   textField?: "content" | "description"
   /**
@@ -199,6 +210,12 @@ export interface ContentComposerProps {
   /** Quick-select people suggestions shown as clickable chips below the people input */
   peopleQuickSuggestions?: PersonOption[]
   widgets?: CustomWidgetDefinition[]
+  /**
+   * @deprecated Default `false` since S1 (Anton, 27.09.2026): the stack has no
+   * public items, and the public/private split on the submit button promised
+   * something no connector does — `isPublic` is read by no mapper. Kept for
+   * callers that set it explicitly.
+   */
   showVisibility?: boolean
   defaultPublic?: boolean
   showPreview?: boolean
@@ -379,77 +396,145 @@ export function widgetRenderOrder(defaultWidgets: readonly string[]): WidgetType
 
 // ── Form head ────────────────────────────────────────────────────────────
 
-const HEAD_SELECT =
-  "h-8 min-w-0 max-w-full truncate rounded-md border border-input bg-background pl-2 pr-7 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+/**
+ * The native select lies invisibly over the badge or pill that shows the
+ * choice: the look is the design's, the picker is the platform's (keyboard,
+ * screen reader, phone wheel).
+ */
+const OVERLAY_SELECT = "absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
 
 interface ComposerHeadProps {
   types: readonly ContentTypeConfig[]
   selectedType: string
   /** Set when the type may be chosen (create with several types); otherwise the type is shown fixed. */
   onSelectType?: (id: string) => void
-  space?: { value: string; options: readonly GroupOption[]; required: boolean; onChange: (id: string) => void }
+  space?: {
+    value: string
+    options: readonly GroupOption[]
+    required: boolean
+    fixedReason?: string
+    onChange: (id: string) => void
+  }
 }
 
 /**
- * Kopf des Formulars: Typ und Space als kompakte Auswahlfelder. Ein fester
- * Typ (Bearbeiten, ein einziger Typ) und ein einziger möglicher Space stehen
- * als Anzeige. Fehlt ein Pflicht-Space (Übersicht), ist das Feld markiert.
+ * Kopf des Formulars (shared-components, Edit-Regeln 3; Design Anton
+ * 27.09.2026): links in einer Zeile der Typ als Typ-Badge und der Space als
+ * Pille. Wählbar mit Chevron, fest ohne Chevron und ohne Schloss; ein fester
+ * Space ist gedämpft und nennt im Tooltip den Grund.
  */
 function ComposerHead({ types, selectedType, onSelectType, space }: ComposerHeadProps) {
   const current = types.find((t) => t.id === selectedType) ?? types[0]
-  const Icon = current?.icon
-  const missing = !!space && space.required && !space.value
   return (
     // Eine Zeile; rechts bleibt Platz für die Knöpfe eines Panels darüber (✕).
     <div className="flex min-w-0 items-center gap-2 pr-8">
-      {onSelectType ? (
-        <select
-          aria-label="Typ"
-          value={selectedType}
-          onChange={(e) => onSelectType(e.target.value)}
-          className={cn(HEAD_SELECT, "shrink-0")}
-        >
-          {types.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      ) : (
-        current && (
-          <span data-slot="composer-type" className="inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground">
-            {Icon && <Icon className="h-3.5 w-3.5" />}
-            {current.label}
-          </span>
-        )
-      )}
-      {space &&
-        (space.options.length > 1 ? (
-          <span className="flex min-w-0 flex-1 items-center gap-1">
-            <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            <select
-              aria-label="Space"
-              aria-invalid={missing || undefined}
-              aria-required={space.required || undefined}
-              value={space.value}
-              onChange={(e) => space.onChange(e.target.value)}
-              className={cn(HEAD_SELECT, "w-full sm:w-auto", missing && "border-destructive text-destructive")}
-            >
-              {!space.value && <option value="">Space wählen{space.required ? " *" : ""}</option>}
-              {space.options.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
+      {current && (
+        <span data-slot="composer-type" className="relative inline-flex shrink-0">
+          <TypeBadge config={current} trailing={onSelectType ? <ChevronDown className="h-3 w-3 opacity-80" aria-hidden /> : undefined} />
+          {onSelectType && (
+            <select aria-label="Typ" value={selectedType} onChange={(e) => onSelectType(e.target.value)} className={OVERLAY_SELECT}>
+              {types.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
                 </option>
               ))}
             </select>
-          </span>
-        ) : (
-          <span data-slot="composer-space" className="inline-flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground">
-            <FolderOpen className="h-3.5 w-3.5" aria-hidden />
-            {space.options[0]?.name}
-          </span>
-        ))}
+          )}
+        </span>
+      )}
+      {space && <SpacePill {...space} />}
     </div>
+  )
+}
+
+/** The type as ItemTypeBadge (register colour), sized for the form head. */
+function TypeBadge({ config, trailing }: { config: ContentTypeConfig; trailing?: React.ReactNode }) {
+  const resolved = resolveTypePresentation(config.id)
+  // A composer type the register does not present keeps its own label and icon.
+  const override = resolved.generic
+    ? { [config.id]: { icon: config.icon ?? GENERIC_BADGE.icon, label: config.label, className: GENERIC_BADGE.className } }
+    : undefined
+  return (
+    <ItemTypeBadge
+      type={config.id}
+      config={override}
+      fallback
+      trailing={trailing}
+      className="h-6 px-2.5 text-[11.5px] font-semibold"
+    />
+  )
+}
+
+function spaceInitials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).map((w) => w[0]!).join("").toUpperCase().slice(0, 1) || "?"
+}
+
+/** Logo tile of a space: image, else the initial on the space colour; the personal space shows the home icon. */
+function SpaceLogo({ option }: { option?: GroupOption }) {
+  if (option?.personal) {
+    return (
+      <span data-slot="space-logo" className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] bg-primary/10 text-primary">
+        <Home className="h-3 w-3" aria-hidden />
+      </span>
+    )
+  }
+  return (
+    <Avatar data-slot="space-logo" className="h-[18px] w-[18px] shrink-0 rounded-[5px]">
+      {option?.image && <AvatarImage src={option.image} alt="" className="rounded-[5px] object-cover" />}
+      <AvatarFallback
+        className={cn("rounded-[5px] text-[10px] font-semibold", option?.color ? "text-background" : "bg-muted text-muted-foreground")}
+        style={option?.color ? { backgroundColor: option.color } : undefined}
+      >
+        {option ? spaceInitials(option.name) : "?"}
+      </AvatarFallback>
+    </Avatar>
+  )
+}
+
+function SpacePill({ value, options, required, fixedReason, onChange }: NonNullable<ComposerHeadProps["space"]>) {
+  const selected = options.find((o) => o.id === value)
+  const choosable = options.length > 1
+  const missing = required && !value
+  if (!choosable) {
+    const only = selected ?? options[0]
+    return (
+      <span
+        data-slot="composer-space"
+        title={fixedReason}
+        className="inline-flex h-7 min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+      >
+        <SpaceLogo option={only} />
+        <span className="truncate">{only?.name}</span>
+      </span>
+    )
+  }
+  return (
+    <span
+      data-slot="composer-space"
+      className={cn(
+        "relative inline-flex h-7 min-w-0 items-center gap-1.5 rounded-full border bg-background pl-1 pr-2.5 text-xs text-foreground",
+        missing && "border-destructive text-destructive",
+      )}
+    >
+      {selected && <SpaceLogo option={selected} />}
+      <span className={cn("truncate", !selected && "pl-1.5")}>{selected?.name ?? `Space wählen${required ? " *" : ""}`}</span>
+      <ChevronDown className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
+      <select
+        aria-label="Space"
+        aria-invalid={missing || undefined}
+        aria-required={required || undefined}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={OVERLAY_SELECT}
+      >
+        {!value && <option value="">Space wählen{required ? " *" : ""}</option>}
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.name}
+          </option>
+        ))}
+      </select>
+    </span>
   )
 }
 
@@ -519,7 +604,7 @@ export function ContentComposer({
   tagQuickSuggestions,
   peopleQuickSuggestions,
   widgets: customWidgets,
-  showVisibility = true,
+  showVisibility = false,
   defaultPublic = true,
   showPreview = true,
   renderPreview,
@@ -814,6 +899,7 @@ export function ContentComposer({
                 value: data.group || "",
                 options: currentConfig.groupOptions!,
                 required: currentConfig.groupRequired ?? true,
+                fixedReason: currentConfig.groupFixedReason,
                 onChange: (v) => updateData("group", v),
               }
             : undefined
