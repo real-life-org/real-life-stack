@@ -233,8 +233,10 @@ describe("SignedClaims — I-JSON well-formedness (#230 round 2)", () => {
 
 describe("SignedClaims — authorial catalog (closed, v0.1)", () => {
   it("contains exactly the spec catalog", () => {
-    expect([...AUTHORIAL_PREDICATES].sort()).toEqual(["connectedWith", "knows", "takesPlaceAt", "votesOn"])
+    expect([...AUTHORIAL_PREDICATES].sort()).toEqual(["attends", "connectedWith", "knows", "takesPlaceAt", "votesOn"])
     expect(isAuthorialPredicate("votesOn")).toBe(true)
+    // 08 → Teilnahme am Event, Regel 6: der Sprecher signiert, nur er ändert.
+    expect(isAuthorialPredicate("attends")).toBe(true)
     expect(isAuthorialPredicate("blocks")).toBe(false)
   })
 })

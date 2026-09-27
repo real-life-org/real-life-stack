@@ -18,6 +18,7 @@ export * from "./item-types.js"
 export * from "./mirror.js"
 import { isAuthorialItemType, isAuthoredItemType } from "./claims.js"
 export * from "./votes.js"
+export * from "./relation-count.js"
 export * from "./claims.js"
 export * from "./authored.js"
 export * from "./vocab.js"
@@ -381,6 +382,13 @@ export interface RelationRecord {
   claim?: string
   createdBy: string
   createdAt: string
+  /**
+   * Letzte Änderung des Relation-Items, wo der Connector sie setzt. Nur Lesen:
+   * Ohne Claim bestimmt sie unter `one-per-subject` den Zeitpunkt einer
+   * Aussage (08 → Gewinner unter `one-per-subject`, Regel 4). Nie Teil des
+   * Claim-Payloads.
+   */
+  updatedAt?: string
 }
 
 export interface RelationRecordInput {

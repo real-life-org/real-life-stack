@@ -217,8 +217,13 @@ export const TOOLKIT_TYPE_MANIFEST = [
     id: "event",
     vocabularies: [VOCAB_EVENT],
     // Declared ahead of the composer widget (see content-types.ts history):
-    // attendees link via `invited`, never `assignedTo`.
-    relations: [{ predicate: "invited", itemRole: "from", otherKind: "person" }],
+    // attendees link via `invited`, never `assignedTo`. Eine Zusage ist ein
+    // eigener Record von der Person zum Event (08 → Teilnahme am Event):
+    // `attends`, gerichtet, Claim-Profil `authorial` (claims.ts).
+    relations: [
+      { predicate: "invited", itemRole: "from", otherKind: "person" },
+      { predicate: "attends", itemRole: "to", otherKind: "person" },
+    ],
   },
   { id: "place", vocabularies: [VOCAB_PLACE] },
   {

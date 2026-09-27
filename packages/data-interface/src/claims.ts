@@ -27,6 +27,9 @@ export const AUTHORIAL_PREDICATES: ReadonlySet<string> = new Set([
   "knows",
   "connectedWith",
   "takesPlaceAt",
+  // 08 → Teilnahme am Event, Regel 6: Die Zusage ist die Aussage ihres
+  // Sprechers — er signiert, nur er ändert.
+  "attends",
 ])
 
 export function isAuthorialPredicate(predicate: string): boolean {

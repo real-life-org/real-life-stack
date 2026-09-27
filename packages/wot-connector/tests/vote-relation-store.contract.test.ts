@@ -209,6 +209,18 @@ describe("WotConnector — vote relation store contract", () => {
     expect(await c.verifyRecordClaim(record)).toBe("valid")
   })
 
+  it("signed mode: attends (08, Teilnahme am Event) ist authorial — auch eine Aussage über eine andere Person wird signiert und verifiziert", async () => {
+    const { connector: c } = connector()
+    const own = await c.createRelationRecord({ predicate: "attends", from: `global:${ALICE}`, to: "item:e1", fields: { role: "going", tense: "coming" } })
+    expect(await c.verifyRecordClaim(own)).toBe("valid")
+    // Aussage über andere (08, Qualifier an Kanten, Regel 8): Alice spricht, Bob ist der Gegenstand.
+    const aboutBob = await c.createRelationRecord({ predicate: "attends", from: `global:${BOB}`, to: "item:e1", fields: { role: "maybe", tense: "coming" } })
+    expect(aboutBob.createdBy).toBe(ALICE)
+    expect(await c.verifyRecordClaim(aboutBob)).toBe("valid")
+    const updated = await c.updateRelationRecord(own.id, { fields: { role: "declined", tense: "coming" } })
+    expect(await c.verifyRecordClaim(updated)).toBe("valid")
+  })
+
   it("signed mode WITHOUT an identity refuses authorial writes — never writes unsigned", async () => {
     const { connector: c, handle: h } = connector()
     const anyC = c as any

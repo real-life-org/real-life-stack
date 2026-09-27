@@ -161,6 +161,7 @@ export function relationRecordFromItem(item: Item): RelationRecord | null {
     ...(claim !== undefined ? { claim } : {}),
     createdBy: item.createdBy,
     createdAt: item.createdAt,
+    ...(typeof item.updatedAt === "string" ? { updatedAt: item.updatedAt } : {}),
   }
 }
 
