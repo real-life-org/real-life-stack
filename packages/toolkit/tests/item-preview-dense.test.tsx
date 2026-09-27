@@ -208,3 +208,15 @@ describe("ItemAssignees: Stil neben Qualifier", () => {
     expect(html).toContain("inset")
   })
 })
+
+describe("ItemPreview dense: ohne Titel", () => {
+  it("zeigt wie row den Anfang des Inhalts statt einer leeren Kachel", () => {
+    const html = markup({
+      density: "dense",
+      item: aufgabe({ data: { content: "Nur ein Gedanke\nzweite Zeile" } }),
+    })
+    expect(html).toContain("Nur ein Gedanke")
+    expect(html).not.toContain("zweite Zeile")
+    expect(html).toContain("line-clamp-3")
+  })
+})
