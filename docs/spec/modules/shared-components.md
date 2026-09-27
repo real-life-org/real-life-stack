@@ -306,7 +306,7 @@ interface ReactionBarProps {
 **Vertrag:**
 
 ```ts
-type ItemPreviewDensity = "comfortable" | "compact" | "row"
+type ItemPreviewDensity = "comfortable" | "compact" | "row" | "dense"
 
 interface ItemPreviewProps {
   item: Item
@@ -327,7 +327,7 @@ interface ItemPreviewProps {
   metaAdornment?: ReactNode
   /** Slot unter den Tag-Chips (z.B. Assignees, Comment-Count, ReactionBar). */
   footerAdornment?: ReactNode
-  /** Layout-Density (siehe unten). Default `comfortable`. */
+  /** Layout-Density (siehe unten): `comfortable` | `compact` | `row` | `dense`. Default `comfortable`. */
   density?: ItemPreviewDensity
   /** Hebt eine Karten-Linse als aktuell selektiert hervor. */
   active?: boolean
@@ -344,6 +344,13 @@ interface ItemPreviewProps {
 - `comfortable` (Default) — Feed-Card-Form: Avatar 10×10, font-base Title, p-4 Spacing, Description wird angezeigt, Footer mit Border-Top.
 - `compact` — Kanban-/Liste-Form: Avatar 6×6, font-sm Title, p-3 Spacing, **Description wird ausgeblendet**, Footer ohne Border. Tauglich für dichte Board-Spalten, wo mehrere Cards zugleich sichtbar bleiben sollen.
 - `row` — **eine Zeile** für die Rückwärts-Listen im Detail ([Detail-Anatomie](#detail-anatomie), Regel 8): `headerAdornment` (Typ-Badge), der Title gekürzt auf eine Zeile (ohne Title der Name oder der Anfang des Inhalts, sonst „Ohne Titel"), rechts `footerAdornment` (Markierung, kleiner Zusatz). Sie lässt Description, `metaAdornment`, Tags, Author-Zeile und Kommentar-Hinweis weg. `active` markiert die angezeigte Zeile (`aria-current`) ohne Schatten.
+- `dense` — **Matrix-Kachel** für Raster und Bretter mit 12+ Spalten. Maße aus dem Design (*RLS System Design → Dragon Dreaming.dc.html*, Variante 1a): **112 px breit, 61 px hoch** (75 px mit drei Titelzeilen), Innenabstand 7 px, Radius 6 px (`rounded-md`), Rahmen über das `border`-Token. Die Kachel zeigt **nur**:
+  - den **Title**: 10.5 px, Gewicht 600, Zeilenhöhe 1.3, auf **drei Zeilen** begrenzt (Auslassung danach), mit `overflow-wrap: anywhere`, `hyphens: auto` und `lang="de"`, damit deutsche Komposita in 112 px brechen dürfen. Ohne Title steht wie bei `row` der Name oder der Anfang des Inhalts, sonst „Ohne Titel",
+  - die `footerAdornment`-Zeile, ohne Border-Top, im Regelfall genau ein `ItemAssignees size="xs"`.
+
+  Sie lässt weg, was auch `row` weglässt (Description, `metaAdornment`, Tags, Author-Zeile, Kommentar-Hinweis). `active`/`activeColor`, `onClick` und die Keyboard-Aktivierung sind identisch mit `compact`. Von den Typ-Slots rendert sie `headerAdornment` und `footerAdornment`; Caller legen in `dense` keinen `ItemTypeBadge` in den `headerAdornment`-Slot, eine Matrix-Zelle trägt ihn nicht.
+
+  **Tags:** `dense` zeigt **keine** Tags. Ein Farbpunkt ohne Namen wäre eine zweite Tag-Darstellung neben `TagChip` und verletzt die Regel aus [07-tags.md](../07-tags.md), dass das Default-Display über alle Flächen identisch ist.
 
 **Erledigt:** `completed` setzt ein „✓ " vor den Title (plus `sr-only`-Text „Erledigt: ") und dimmt die Karte auf Opazität 0.55, in jeder Dichte. Was „erledigt" heißt, entscheidet die Fläche (die Rückwärts-Listen: Status der Rolle `done`, [06, Regel 18](../06-schema-composition.md#feld--und-kantenregister)).
 
@@ -470,15 +477,28 @@ Zwei Render-Modi je nach `onClick`:
 **Zweck:** Overlapping Avatar-Stack mit kompakter Namens-Zusammenfassung. Belongs in `footerAdornment`. Rendert `null` bei leerer User-Liste.
 
 ```ts
-type ItemAssigneeUser = User & { qualifier?: string }
+type ItemAssigneeUser = User & { qualifier?: string; variant?: "solid" | "outline" }
 
 interface ItemAssigneesProps {
   users: readonly ItemAssigneeUser[]
+  /** `sm` (Default) mit Namens-Summary, `xs` nur Avatare (für `dense`). */
+  size?: "sm" | "xs"
   className?: string
 }
 ```
 
 Caller löst die User-Objekte auf (typischerweise aus `assignedTo`-Relations + Member-Liste) und übergibt sie als resolved Array. Komponente ist rein präsentational. Namens-Summary: einzelner Name, „A, B" für zwei, „A + N weitere" ab drei; voller Kommaseparierter Liste im Hover-Tooltip. `qualifier` ist der Anzeigetext des Qualifiers an der Kante und steht klein hinter dem Namen („Timo lernt", wie [Detail-Anatomie](#detail-anatomie), Regel 5); ein fehlender Qualifier (`qualifier.default`) steht nicht da. Die Kanban-Karte zeigt so `assignedTo.role`.
+
+**Größe:** `size="sm"` (Default): Avatare 5×5 plus Namens-Summary. `size="xs"`: Avatare 14 px, Initialen 6.5 px fett, Überlappung 4 px, heller Trennring 1.5 px, **ohne** Namens-Summary; die Variante für `ItemPreview density="dense"`, wo keine Textzeile mehr in die Kachel passt. Namen und Qualifier bleiben über den Tooltip erreichbar. Keine zweite Komponente, damit beide Stapel nicht auseinanderlaufen.
+
+**Anzahl:** höchstens **fünf** Avatare; ab dem sechsten stehen die übrigen Namen nur noch im Tooltip.
+
+**Farbe und Form:** Initialen tragen die **Personenfarbe** `getUserColor(userId)`, dieselbe deterministische Palette wie Tags und Spaces, stabil über Geräte und Sitzungen. Jeder Eintrag wählt optional eine von zwei Formen:
+
+- `solid` (Default): ohne Foto gefüllt in der Personenfarbe, Schrift in der lesbaren Gegenfarbe (`getReadableTextColor`); mit Foto das Foto in voller Deckkraft, ohne Ring.
+- `outline`: ein Ring in der Personenfarbe mit einem Innenabstand im Hintergrund-Token; darin ohne Foto die Initialen in der Personenfarbe, mit Foto das Foto kleiner und mit verringerter Deckkraft.
+
+Die Unterscheidung MUSS mit und ohne geladenes Profilfoto, im hellen und dunklen Schema und in `size="xs"` erkennbar bleiben, und sie DARF sich nicht allein auf Farbe stützen: Ring, Innenabstand und die Helligkeit des Fotos tragen sie. Die Formen tragen **keine Bedeutung**. Welche Aussage sie ausdrücken („kann ich" / „will lernen" im Karabirrdt, Zusage / Vielleicht anderswo), entscheidet die App; der Qualifier bleibt der Text dazu.
 
 **Code:** `packages/toolkit/src/components/preview/item-{type-badge,meta-row,comment-count,assignees}.tsx`.
 
