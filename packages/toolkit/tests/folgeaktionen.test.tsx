@@ -102,7 +102,8 @@ afterEach(async () => {
 })
 
 const pressed = (label: string) => pill(label)?.getAttribute("aria-pressed")
-const doneState = () => host.querySelector("[data-self-state]")
+// „✓ Erledigt" steht als letzter Zustand der Zeile.
+const doneState = () => [...host.querySelectorAll("[data-self-state]")].at(-1) ?? null
 
 describe("Folgeaktionen der Aufgabe als Umschalter (Entscheidung 27, Anton)", () => {
   it("nicht übernommen: nur „Übernehmen“; stehen andere an der Kante, „Mitmachen“", async () => {
@@ -153,18 +154,16 @@ describe("Folgeaktionen der Aufgabe als Umschalter (Entscheidung 27, Anton)", ()
     expect(pills()).toEqual(["Mitmachen"])
   })
 
-  it("eine erledigte Aufgabe abgeben: die Zuweisung geht, der Status bleibt erledigt", async () => {
+  it("eine erledigte Aufgabe lässt sich nicht abgeben: „✓ Übernommen“ ist dann Anzeige (Anton zu #542)", async () => {
     await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "done"))
-    await click(pill("Übernommen"))
-    const saved = await connector.getItem("t1")
-    expect(saved?.relations ?? []).toEqual([])
-    expect(saved?.data.status).toBe("done")
-    expect(pills()).toEqual(["Übernehmen"])
+    expect(pill("Übernommen")).toBeUndefined()
+    expect(pills()).toEqual(["Übernommen", "Erledigt"])
   })
 
-  it("wer nicht übernommen hat, sieht kein „Erledigt“ — auch nicht bei einer erledigten Aufgabe", async () => {
+  it("wer nicht übernommen hat, sieht bei einer erledigten Aufgabe nur „✓ Erledigt“", async () => {
     await render(task([{ predicate: "assignedTo", target: `global:${TIMO}` }], "done"))
-    expect(pills()).toEqual(["Mitmachen"])
+    expect(pills()).toEqual(["Erledigt"])
+    expect(host.querySelectorAll("[data-self-action] button")).toHaveLength(0)
   })
 
   it("Doppelklick auf „✓ Übernommen“ gibt ab und übernimmt nicht wieder", async () => {
@@ -185,9 +184,9 @@ describe("Folgeaktionen der Aufgabe als Umschalter (Entscheidung 27, Anton)", ()
   })
 
   it("Barrierefreiheit: die Umschalter nennen die Rücknahme", async () => {
-    await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "done"))
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "in-progress"))
     expect(pill("Übernommen")?.getAttribute("aria-label")).toBe("Übernommen – Übernahme zurückgeben")
-    expect(pill("Erledigt")).toBeUndefined()
+    expect(pill("Erledigt")?.getAttribute("aria-pressed")).toBeNull()
   })
 })
 

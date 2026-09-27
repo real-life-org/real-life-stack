@@ -348,8 +348,9 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
             if (isRecord) {
               // Die Bedingung gilt für das Trägeritem (etwa: noch offen); der
               // Record liegt daneben.
-              const carrier = guard ? await freshItem(connector, item) : null
+              const carrier = guard || transitions ? await freshItem(connector, item) : null
               if (guard && (!carrier || !guard(carrier))) written = false
+              else if (transitions && carrier && isDone(carrier, transitions)) written = false
               else {
                 await writeOwnStatement(connector, item, { predicate: edge.predicate, from: `${PERSON}${meId}`, key: edge.qualifier!.key, value: typeof next === "string" ? next : null })
                 if (transitions && (current === undefined) !== (next === undefined)) {
@@ -402,6 +403,11 @@ function transitionStatus(current: Item, transitions: StatusTransitions, joining
   return nobodyLeft && role === "active" ? firstOptionWithRole(field, "open") : undefined
 }
 
+/** Hat der Status des frisch gelesenen Items die Rolle `done`? */
+function isDone(current: Item, transitions: StatusTransitions): boolean {
+  return statusRole(transitions.field, (current.data as Record<string, unknown> | undefined)?.[transitions.field.key], transitions.defaultStatus) === "done"
+}
+
 /** Die eingebettete Kante: ich stehe daran (mit Wert) oder nicht (`undefined`); mit Übergang in DEMSELBEN updateItem. */
 async function writeEmbedded(
   connector: DataInterface,
@@ -416,6 +422,8 @@ async function writeEmbedded(
   const current = await freshItem(connector, item)
   // Die Bedingung gegen DENSELBEN Stand, aus dem die neuen Relationen entstehen.
   if (guard && !guard(current)) return false
+  // Erledigt: keine Selbstaktion (nur Zustände, Anton zu #542).
+  if (transitions && isDone(current, transitions)) return false
   const target = `${PERSON}${meId}`
   const relations = current.relations ?? []
   const key = edge.qualifier?.key

@@ -204,7 +204,7 @@ describe("Codex Runde 5", () => {
   }
   const pill = (label: string) => [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === label)
 
-  it("#531 (Umschalter): Abgeben einer inzwischen erledigten Aufgabe lässt den Status erledigt", async () => {
+  it("#531 (Umschalter): wird die Aufgabe beim Abgeben inzwischen erledigt, bleibt beides stehen (erledigt: keine Aktion, Anton zu #542)", async () => {
     const t = item("t1", "task", { title: "T", status: "open" }, [{ predicate: "assignedTo", target: `global:${ME}` }])
     await render(createElement(Live, { id: "t1" }), [t], { g: ["t1"] }, "g")
     const mine = pill("Übernommen")!
@@ -216,7 +216,7 @@ describe("Codex Runde 5", () => {
     await act(async () => mine.click())
     await settle()
     const saved = await connector.getItem("t1")
-    expect(saved?.relations ?? []).toEqual([])
+    expect(saved?.relations ?? []).toEqual([{ predicate: "assignedTo", target: `global:${ME}` }])
     expect(saved?.data.status).toBe("done")
   })
 })

@@ -207,12 +207,7 @@ describe("Übergänge beim Dazukommen und Abgeben (Regel 19)", () => {
     expect((await saved())?.data.status).toBe("in-progress")
   })
 
-  it("Übernehmen einer erledigten oder archivierten Aufgabe ändert den Status nicht", async () => {
-    await render(task([], "done"))
-    await click(pill("Übernehmen"))
-    expect((await saved())?.data.status).toBe("done")
-    await act(async () => root.unmount())
-    root = createRoot(host)
+  it("Übernehmen einer archivierten Aufgabe ändert den Status nicht (erledigt: kein Übernehmen, siehe unten)", async () => {
     await render(task([], "archived"))
     await click(pill("Übernehmen"))
     expect((await saved())?.data.status).toBe("archived")
@@ -245,10 +240,18 @@ describe("Übergänge beim Dazukommen und Abgeben (Regel 19)", () => {
     expect(item?.data.status).toBe("in-progress")
   })
 
-  it("die letzte Person gibt eine erledigte Aufgabe ab: sie bleibt erledigt", async () => {
-    await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "done"))
-    await click(pill("Übernommen"))
-    expect((await saved())?.data.status).toBe("done")
+  it("wird die Aufgabe während des Abgebens erledigt, schreibt das Abgeben nichts (frischer Stand)", async () => {
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "in-progress"))
+    const mine = pill("Übernommen")!
+    const original = connector.getItem.bind(connector)
+    vi.spyOn(connector, "getItem").mockImplementationOnce(async (id: string) => {
+      await connector.updateItem("t1", { data: { title: "Kompost umsetzen", status: "done" } })
+      return original(id)
+    })
+    await click(mine)
+    const item = await saved()
+    expect(item?.relations).toEqual([{ predicate: "assignedTo", target: `global:${ME}` }])
+    expect(item?.data.status).toBe("done")
   })
 
   it("wer beim Klick nicht mehr allein ist, setzt nicht zurück (frischer Stand)", async () => {
@@ -267,7 +270,7 @@ describe("Übergänge beim Dazukommen und Abgeben (Regel 19)", () => {
     await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "in-progress"))
     await click(pill("Erledigt"))
     expect((await saved())?.data.status).toBe("done")
-    expect(host.querySelector("[data-self-state]")?.textContent).toContain("Erledigt")
+    expect([...host.querySelectorAll("[data-self-state]")].at(-1)?.textContent).toContain("Erledigt")
   })
 
   it("archiviert (keine Rolle): kein „Erledigt“ und kein „✓ Erledigt“", async () => {
@@ -476,5 +479,67 @@ describe("Codex Runde 2, Befund 1: Herkunft des Items", () => {
     await click(pill("Übernehmen"))
     expect((await saved())?.relations ?? []).toEqual([])
     expect(host.querySelector('[role="alert"]')?.textContent).toContain("geöffneten Space")
+  })
+})
+
+describe("Anton zu #542: erledigt zeigt nur Zustände, keine Aktionen", () => {
+  const states = () => [...host.querySelectorAll("[data-self-action] [data-self-state]")].map((el) => el.textContent?.trim())
+  const buttons = () => [...host.querySelectorAll("[data-self-action] button")]
+
+  it("erledigt, ich allein zugewiesen: „✓ Übernommen · ✓ Erledigt“, beides Anzeige", async () => {
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "done"))
+    expect(states()).toEqual(["Übernommen", "Erledigt"])
+    expect(buttons()).toHaveLength(0)
+    for (const el of host.querySelectorAll("[data-self-state]")) {
+      expect(el.getAttribute("role")).toBe("status")
+      expect(el.getAttribute("tabindex")).toBeNull()
+    }
+  })
+
+  it("erledigt, ich mit anderen: „✓ Dabei · ✓ Erledigt“", async () => {
+    await render(task([{ predicate: "assignedTo", target: `global:${TIMO}` }, { predicate: "assignedTo", target: `global:${ME}` }], "done"))
+    expect(states()).toEqual(["Dabei", "Erledigt"])
+    expect(buttons()).toHaveLength(0)
+  })
+
+  it("erledigt, ich nicht zugewiesen: nur „✓ Erledigt“ — kein Mitmachen, kein Übernehmen", async () => {
+    await render(task([{ predicate: "assignedTo", target: `global:${TIMO}` }], "done"))
+    expect(states()).toEqual(["Erledigt"])
+    expect(buttons()).toHaveLength(0)
+    await act(async () => root.unmount())
+    root = createRoot(host)
+    await render(task([], "done"))
+    expect(states()).toEqual(["Erledigt"])
+    expect(buttons()).toHaveLength(0)
+  })
+
+  it("wieder geöffnet (Bearbeiten/Kanban): die normalen Aktionen kehren zurück", async () => {
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "done"))
+    await act(async () => {
+      await connector.updateItem("t1", { data: { title: "Kompost umsetzen", status: "open" } })
+    })
+    await settle()
+    expect(pills()).toEqual(["Übernommen", "Erledigt"])
+    expect(buttons()).toHaveLength(2)
+  })
+
+  it("wird die Aufgabe zwischen Render und Klick erledigt, schreibt Übernehmen nichts", async () => {
+    await render(task([], "open"))
+    const stale = pill("Übernehmen")!
+    const stored = await saved()
+    // Direkt im Speicher, ohne dass die Zeile neu rendert.
+    const update = connector.updateItem.bind(connector)
+    await update("t1", { data: { ...(stored?.data ?? {}), status: "done" } })
+    await click(stale)
+    expect((await saved())?.relations ?? []).toEqual([])
+  })
+
+  it("gilt auch für eine App-Ersetzung mit Folgeaktion: keine Pills der App im erledigten Zustand", async () => {
+    registerTypePresentation("karabirrdt", {
+      extensions: [{ id: "task", selfActions: [{ predicate: "assignedTo", itemRole: "from", selfAction: { label: "Kann ich", mine: "Dabei", qualifiers: ["can", "learns"], followUps: { field: "status", complete: { label: "Erledigt" }, release: "Zurückgeben" } } }] }],
+    })
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: "learns" } }], "done"))
+    expect(states()).toEqual(["Lernt", "Erledigt"])
+    expect(buttons()).toHaveLength(0)
   })
 })
