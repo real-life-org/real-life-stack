@@ -335,7 +335,7 @@ export interface FollowUpState {
  * „Wieder öffnen" den Standard-Status. Geschrieben wird das Trägeritem nach
  * dessen Rechten; das übrige `data` bleibt.
  */
-export function useFollowUps(item: Item, statusField: FieldEntry | undefined, defaultStatus?: string): FollowUpState {
+export function useFollowUps(item: Item, statusField: FieldEntry | undefined, defaultStatus?: string, edge?: EdgeEntry): FollowUpState {
   const connector = useConnector()
   const { data: me } = useOptionalCurrentUser()
   const meId = me?.id
@@ -353,7 +353,18 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
       setBusy(true)
       setError(null)
       try {
-        const current = (await connector.getItem(item.id)) ?? item
+        // #531: gegen den GELTENDEN Stand entscheiden, nicht gegen den Render.
+        // Bin ich nicht mehr an der Kante, oder passt der Status nicht mehr zur
+        // Aktion, wird nichts geschrieben; die Zeile folgt dem lebenden Item.
+        // Ein fremder Edit zwischen Lesen und Schreiben bleibt möglich (kein
+        // bedingtes Schreiben im DataInterface); das betrifft nur die Semantik
+        // der Folgeaktion, Mitglieder dürfen den Status ohnehin ändern.
+        const current = await connector.getItem(item.id)
+        if (!current || !meId) return
+        const status = (current.data as Record<string, unknown> | undefined)?.[statusField.key]
+        const isDone = status === doneValue(statusField)
+        if ((id === "complete" && isDone) || (id === "reopen" && !isDone)) return
+        if (edge && !(await stillMine(connector, current, edge, meId))) return
         await connector.updateItem(item.id, { data: { ...(current.data ?? {}), [statusField.key]: value } })
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err))
@@ -361,7 +372,16 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
         setBusy(false)
       }
     },
-    [available, connector, defaultStatus, item, statusField],
+    [available, connector, defaultStatus, edge, item, meId, statusField],
   )
   return { available, busy, error, run }
+}
+
+/** Stehe ich (noch) an der Kante? Eingebettet am Item, als Record über den RelationStore. */
+async function stillMine(connector: DataInterface, current: Item, edge: EdgeEntry, meId: string): Promise<boolean> {
+  const self = `global:${meId}`
+  if (edge.storage === "embedded") return (current.relations ?? []).some((r) => r.predicate === edge.predicate && r.target === self)
+  if (!hasRelationRecords(connector)) return false
+  const own = await connector.getRelationRecords({ predicate: edge.predicate, from: self, to: `item:${current.id}` })
+  return own.some((record) => record.createdBy === meId)
 }

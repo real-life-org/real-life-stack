@@ -83,7 +83,7 @@ export function SelfActionPills({
   const { available, mine, act, withdraw, busy, error } = useSelfAction(item, edge)
   const followUps = edge.selfAction?.followUps
   const statusField = followUps ? fields?.find((f) => f.key === followUps.field) : undefined
-  const follow = useFollowUps(item, statusField, defaultStatus)
+  const follow = useFollowUps(item, statusField, defaultStatus, edge)
   if (!available || !edge.selfAction) return null
   const values = edge.selfAction.qualifiers?.length
     ? edge.selfAction.qualifiers
