@@ -28,7 +28,7 @@ import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { resolveCanCreate, resolveItemPermissions } from "../../hooks/use-item-permissions"
 import { writeOwnStatement } from "../../lib/own-statement"
 import { useVerifiedRelationRecords } from "../../hooks/use-votes"
-import type { EdgeEntry } from "./field-register"
+import { doneValue, reopenValue, type EdgeEntry, type FieldEntry, type SelfActionFollowUp } from "./field-register"
 import { peopleLine, peopleLineGroups, recordPeopleEdges, type PeopleLineEntry } from "./people-line"
 
 const NO_RECORDS: RelationRecord[] = []
@@ -308,4 +308,50 @@ async function writeEmbedded(connector: DataInterface, item: Item, edge: EdgeEnt
   // An ihrer Stelle, damit die Reihenfolge der Kanten bleibt.
   const nextRelations = existing ? relations.map((r) => (r === existing ? mine : r)) : [...relations, mine]
   await connector.updateItem(item.id, { relations: nextRelations })
+}
+
+export interface FollowUpState {
+  /** Schreibrecht am Item (Modi, Regel 1): Status ändern heißt das Item schreiben. */
+  available: boolean
+  busy: boolean
+  error: string | null
+  /** Führt `complete` oder `reopen` aus („Abgeben" läuft über die Selbstaktion). */
+  run: (id: SelfActionFollowUp["id"]) => Promise<void>
+}
+
+/**
+ * Folgeaktionen einer Selbstaktion am Status-Feld (Entscheidung 27):
+ * „Erledigt" schreibt den Wert, den das Register als erledigt markiert,
+ * „Wieder öffnen" den Standard-Status. Geschrieben wird das Trägeritem nach
+ * dessen Rechten; das übrige `data` bleibt.
+ */
+export function useFollowUps(item: Item, statusField: FieldEntry | undefined, defaultStatus?: string): FollowUpState {
+  const connector = useConnector()
+  const { data: me } = useOptionalCurrentUser()
+  const meId = me?.id
+  const available = useMemo(
+    () => !!statusField && !!meId && isWritable(connector) && resolveItemPermissions(connector, item, meId).canEdit,
+    [connector, item, meId, statusField],
+  )
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const run = useCallback(
+    async (id: SelfActionFollowUp["id"]) => {
+      if (!available || !statusField || !isWritable(connector)) return
+      const value = id === "complete" ? doneValue(statusField) : id === "reopen" ? reopenValue(statusField, defaultStatus) : undefined
+      if (value === undefined) return
+      setBusy(true)
+      setError(null)
+      try {
+        const current = (await connector.getItem(item.id)) ?? item
+        await connector.updateItem(item.id, { data: { ...(current.data ?? {}), [statusField.key]: value } })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err))
+      } finally {
+        setBusy(false)
+      }
+    },
+    [available, connector, defaultStatus, item, statusField],
+  )
+  return { available, busy, error, run }
 }

@@ -5,8 +5,8 @@ import { Check } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 import { VoteActions } from "../resonance/vote-actions"
-import type { EdgeEntry } from "./field-register"
-import { useSelfAction } from "./use-people-line"
+import { FOLLOW_UP_WHEN, doneValue, type EdgeEntry, type FieldEntry } from "./field-register"
+import { useFollowUps, useSelfAction } from "./use-people-line"
 
 /**
  * Slot `actions` aus dem Register: Selbstaktionen als Pill-Zeile (C2) und die
@@ -19,7 +19,19 @@ import { useSelfAction } from "./use-people-line"
  * Verzweigt über das Widget der Kante, nie über den Typ. Rendert `null`, wenn
  * keine Aktion möglich ist — ohne Schreibrecht entfällt die Zeile ganz.
  */
-export function RegisterActions({ item, edges }: { item: Item; edges?: readonly EdgeEntry[] }) {
+export function RegisterActions({
+  item,
+  edges,
+  fields,
+  defaultStatus,
+}: {
+  item: Item
+  edges?: readonly EdgeEntry[]
+  /** Die Felder des Typs: Folgeaktionen lesen daraus ihr Status-Feld. */
+  fields?: readonly FieldEntry[]
+  /** Standard-Status für „Wieder öffnen" (`composer.defaultStatus`). */
+  defaultStatus?: string
+}) {
   const rows = actionEdges(edges)
   if (rows.length === 0) return null
   return (
@@ -28,7 +40,7 @@ export function RegisterActions({ item, edges }: { item: Item; edges?: readonly 
         edge.widget === "vote" ? (
           <VoteActions key={`${edge.predicate}:${edge.itemRole}`} item={item} edge={edge} />
         ) : (
-          <SelfActionPills key={`${edge.predicate}:${edge.itemRole}`} item={item} edge={edge} />
+          <SelfActionPills key={`${edge.predicate}:${edge.itemRole}`} item={item} edge={edge} fields={fields} defaultStatus={defaultStatus} />
         ),
       )}
     </>
@@ -51,9 +63,27 @@ const capitalize = (word: string) => word.charAt(0).toLocaleUpperCase("de") + wo
  * Pill-Zeile einer Selbstaktion (C2): vor der Aktion neutral (die erste Pill
  * hervorgehoben), danach mein Zustand („✓ Zugesagt"). Auch `declined` ist ein
  * Zustand und bleibt als meiner sichtbar (Detail-Anatomie, Regel 7).
+ *
+ * Deklariert die Kante Folgeaktionen (`selfAction.followUps`, Entscheidung
+ * 27), stehen sie nach meinem Zustand in derselben Zeile — nur für mich, wenn
+ * ich die Selbstaussage habe, und nur mit Schreibrecht am Item. Mein Zustand
+ * ist dann eine Anzeige, kein Umschalter: Abgeben ist eine eigene Aktion.
  */
-export function SelfActionPills({ item, edge }: { item: Item; edge: EdgeEntry }) {
+export function SelfActionPills({
+  item,
+  edge,
+  fields,
+  defaultStatus,
+}: {
+  item: Item
+  edge: EdgeEntry
+  fields?: readonly FieldEntry[]
+  defaultStatus?: string
+}) {
   const { available, mine, act, error } = useSelfAction(item, edge)
+  const followUps = edge.selfAction?.followUps
+  const statusField = followUps ? fields?.find((f) => f.key === followUps.field) : undefined
+  const follow = useFollowUps(item, statusField, defaultStatus)
   if (!available || !edge.selfAction) return null
   const values = edge.selfAction.qualifiers?.length
     ? edge.selfAction.qualifiers
@@ -61,6 +91,8 @@ export function SelfActionPills({ item, edge }: { item: Item; edge: EdgeEntry })
         .filter((v): v is NonNullable<typeof v> => !!v)
     : null
   const neutral = mine === undefined
+  const withFollowUps = !!followUps && !neutral && follow.available
+  const isDone = withFollowUps && doneValue(statusField) !== undefined && item.data?.[followUps!.field] === doneValue(statusField)
 
   const pills = values
     ? values.map((value, index) => ({
@@ -80,6 +112,11 @@ export function SelfActionPills({ item, edge }: { item: Item; edge: EdgeEntry })
         },
       ]
 
+  const release = () => act(typeof mine === "string" ? mine : undefined)
+  const followActions = withFollowUps
+    ? followUps!.actions.filter((a) => FOLLOW_UP_WHEN[a.id] === (isDone ? "done" : "open"))
+    : []
+
   return (
     <div
       role="group"
@@ -88,23 +125,54 @@ export function SelfActionPills({ item, edge }: { item: Item; edge: EdgeEntry })
       className="flex flex-wrap items-center gap-1.5"
       onClick={(event) => event.stopPropagation()}
     >
-      {pills.map((pill) => (
+      {isDone ? (
+        <StatePill label={followUps!.done} />
+      ) : (
+        pills.map((pill) =>
+          withFollowUps && pill.on && !values ? (
+            // Mein Zustand als Anzeige: Die Folgeaktionen sagen, was geht.
+            <StatePill key={pill.key} label={pill.label} />
+          ) : (
+            <button
+              key={pill.key}
+              type="button"
+              aria-pressed={pill.on}
+              onClick={() => void act(pill.value)}
+              className={cn(PILL, pill.on ? PILL_ON : pill.primary ? PILL_PRIMARY : PILL_IDLE)}
+            >
+              {pill.on && <Check className="h-3.5 w-3.5" aria-hidden />}
+              {pill.label}
+            </button>
+          ),
+        )
+      )}
+      {followActions.map((action) => (
         <button
-          key={pill.key}
+          key={action.id}
           type="button"
-          aria-pressed={pill.on}
-          onClick={() => void act(pill.value)}
-          className={cn(PILL, pill.on ? PILL_ON : pill.primary ? PILL_PRIMARY : PILL_IDLE)}
+          disabled={follow.busy}
+          data-follow-up={action.id}
+          onClick={() => void (action.id === "release" ? release() : follow.run(action.id))}
+          className={cn(PILL, PILL_IDLE, "disabled:opacity-60")}
         >
-          {pill.on && <Check className="h-3.5 w-3.5" aria-hidden />}
-          {pill.label}
+          {action.label}
         </button>
       ))}
-      {error && (
+      {(error || follow.error) && (
         <span role="alert" className="basis-full text-xs text-destructive">
-          Konnte nicht gespeichert werden. {error}
+          Konnte nicht gespeichert werden. {error ?? follow.error}
         </span>
       )}
     </div>
+  )
+}
+
+/** Mein Zustand als Pill, ohne Aktion („✓ Übernommen", „✓ Erledigt"). */
+function StatePill({ label }: { label: string }) {
+  return (
+    <span data-self-state className={cn(PILL, PILL_ON)}>
+      <Check className="h-3.5 w-3.5" aria-hidden />
+      {label}
+    </span>
   )
 }

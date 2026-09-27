@@ -52,6 +52,7 @@ import {
 
 import { ItemMetaRow } from "./item-meta-row"
 import {
+  assertFollowUps,
   assertJoins,
   assertRegisterLists,
   hasRegisterLists,
@@ -207,7 +208,7 @@ const REGISTER_DETAIL: ComponentType<ItemSlotProps> = function RegisterDetail({ 
 /** Slot `actions` aus dem Register (C2, C4). */
 const REGISTER_ACTIONS: ComponentType<ItemSlotProps> = function RegisterActionsSlot({ item }) {
   const presentation = resolveTypePresentation(item.type)
-  return <RegisterActions item={item} edges={presentation.edges} />
+  return <RegisterActions item={item} edges={presentation.edges} fields={presentation.fields} defaultStatus={presentation.composer?.defaultStatus} />
 }
 
 function EventPreview({ item }: ItemSlotProps) {
@@ -318,7 +319,8 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
         options: [
           { id: "open", label: "To Do" },
           { id: "in-progress", label: "In Arbeit" },
-          { id: "done", label: "Erledigt" },
+          // Der Erledigt-Wert: Folgeaktionen und durchgestrichene Ziele lesen ihn.
+          { id: "done", label: "Erledigt", done: true },
         ],
       },
       TAGS,
@@ -335,7 +337,20 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
         pos: "meta",
         label: "Zugewiesen",
         add: "Zuweisen…",
-        selfAction: { label: "Übernehmen", mine: "Übernommen" },
+        // Folgeaktionen nur für die Person, die übernommen hat (Entscheidung 27).
+        selfAction: {
+          label: "Übernehmen",
+          mine: "Übernommen",
+          followUps: {
+            field: "status",
+            done: "Erledigt",
+            actions: [
+              { id: "complete", label: "Erledigt" },
+              { id: "release", label: "Abgeben" },
+              { id: "reopen", label: "Wieder öffnen" },
+            ],
+          },
+        },
       },
     ],
   },
@@ -586,6 +601,7 @@ function composePresentation(): Map<string, TypePresentationEntry> {
   for (const entry of composed.values()) {
     assertNoParallelComposerSource(entry)
     assertJoins(entry.id, entry.edges)
+    assertFollowUps(entry.id, entry.fields, entry.edges, entry.composer?.defaultStatus)
   }
   composedCache = composed
   return composed

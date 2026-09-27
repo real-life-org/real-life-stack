@@ -43,6 +43,41 @@ export interface FieldOption {
    * „zugesagt" am Chip steht). Ohne Angabe steht `label` auf der Pill.
    */
   action?: string
+  /**
+   * Nur Optionen eines `status`-Felds: Dieser Wert heißt „erledigt". Höchstens
+   * eine Option je Feld. Folgeaktionen („Erledigt", „Wieder öffnen") und die
+   * Leseform erledigter Ziele (C3, durchgestrichen) lesen ihn; die Spalten
+   * eines Kanban sind je App verschieden und sagen es nicht.
+   */
+  done?: boolean
+}
+
+/**
+ * Eine Folgeaktion der Selbstaktion (C2, Entscheidung 27). Was sie tut, ist
+ * ihre Id, nicht die Fläche:
+ * - `complete`: schreibt die Option des Status-Felds mit `done: true`; nur offen.
+ * - `reopen`: schreibt den Standard-Status (`composer.defaultStatus`); nur erledigt.
+ * - `release`: nimmt meine Kante heraus („Abgeben"); nur offen.
+ */
+export interface SelfActionFollowUp {
+  id: "complete" | "reopen" | "release"
+  label: string
+}
+
+/** Die Folgeaktionen einer Selbstaktion, bezogen auf ein Status-Feld. */
+export interface SelfActionFollowUps {
+  /** `key` eines `status`-Felds desselben Typs, das eine Option mit `done: true` führt. */
+  field: string
+  /** Beschriftung meines Zustands, solange das Item erledigt ist („Erledigt"). */
+  done: string
+  actions: readonly SelfActionFollowUp[]
+}
+
+/** Wann eine Folgeaktion angeboten wird: offen oder erledigt. */
+export const FOLLOW_UP_WHEN: Readonly<Record<SelfActionFollowUp["id"], "open" | "done">> = {
+  complete: "open",
+  release: "open",
+  reopen: "done",
 }
 
 export interface FieldEntry {
@@ -82,8 +117,12 @@ export interface EdgeEntry {
   pos: "meta" | "actions" | "list" | "badge"
   label: string
   qualifier?: { key: string; values: readonly FieldOption[] }
-  /** Selbstaktion (C2). */
-  selfAction?: { label: string; mine: string; qualifiers?: readonly string[] }
+  /**
+   * Selbstaktion (C2). `followUps`: was nach der Selbstaktion in derselben
+   * Zeile steht („✓ Übernommen · Erledigt · Abgeben"), nur für die Person
+   * mit der Selbstaussage (Entscheidung 27).
+   */
+  selfAction?: { label: string; mine: string; qualifiers?: readonly string[]; followUps?: SelfActionFollowUps }
   /** Nur für `itemRole: "to"` (Rückwärts-Liste). */
   list?: { filter?: "open" | "upcoming"; sort?: string }
   /** Nur `storage: "record"` (Regel 8). */
@@ -97,6 +136,42 @@ export interface EdgeEntry {
    * Ohne Angabe steht jede Personen-Kante in ihrer eigenen Zeile.
    */
   joins?: string
+}
+
+/**
+ * Folgeaktionen einer Selbstaktion (Entscheidung 27) brauchen ein Status-Feld
+ * desselben Typs mit genau einem Erledigt-Wert; „Wieder öffnen" braucht dazu
+ * einen offenen Wert. Geprüft nach dem Vereinigen, weil Feld und Kante aus
+ * verschiedenen Beiträgen kommen dürfen.
+ */
+export function assertFollowUps(typeId: string, fields: readonly FieldEntry[] = [], edges: readonly EdgeEntry[] = [], defaultStatus?: string): void {
+  for (const edge of edges) {
+    const followUps = edge.selfAction?.followUps
+    if (!followUps) continue
+    const where = `Folgeaktionen an (${edge.predicate}, ${edge.itemRole}) an "${typeId}"`
+    const field = fields.find((f) => f.key === followUps.field && f.widget === "status")
+    const done = field?.options?.filter((o) => o.done) ?? []
+    if (!field || done.length !== 1) {
+      throw new Error(`Typ-Register: ${where} nennen "${followUps.field}", aber kein status-Feld mit genau einem Erledigt-Wert (Spec 06, Feld- und Kantenregister).`)
+    }
+    const ids = followUps.actions.map((a) => a.id)
+    if (new Set(ids).size !== ids.length) throw new Error(`Typ-Register: ${where} sind doppelt (Spec 06).`)
+    if (ids.includes("reopen") && !reopenValue(field, defaultStatus)) {
+      throw new Error(`Typ-Register: ${where}: „reopen" braucht einen offenen Wert (Spec 06).`)
+    }
+  }
+}
+
+/** Der Erledigt-Wert eines Status-Felds, oder undefined. */
+export function doneValue(field: FieldEntry | undefined): string | undefined {
+  return field?.options?.find((o) => o.done)?.id
+}
+
+/** Der Wert für „Wieder öffnen": der Standard-Status, sonst die erste offene Option. */
+export function reopenValue(field: FieldEntry | undefined, defaultStatus?: string): string | undefined {
+  const options = field?.options ?? []
+  if (defaultStatus && options.some((o) => o.id === defaultStatus && !o.done)) return defaultStatus
+  return options.find((o) => !o.done)?.id
 }
 
 /**
@@ -159,6 +234,9 @@ export function assertRegisterLists(
     // Regel 11: item-ref trägt ref, und nur item-ref.
     if (field.widget === "item-ref" && !field.ref) fail(layer, typeId, `Feld "${field.key}" (item-ref) braucht ref`)
     if (field.widget !== "item-ref" && field.ref) fail(layer, typeId, `Feld "${field.key}" trägt ref, ist aber kein item-ref`)
+    const doneOptions = (field.options ?? []).filter((o) => o.done)
+    if (doneOptions.length > 0 && field.widget !== "status") fail(layer, typeId, `Feld "${field.key}" markiert einen Erledigt-Wert, ist aber kein status`)
+    if (doneOptions.length > 1) fail(layer, typeId, `Feld "${field.key}" markiert mehr als einen Erledigt-Wert`)
   }
 
   const declared = new Set((manifest.get(typeId)?.relations ?? []).map(relationAffordanceKey))

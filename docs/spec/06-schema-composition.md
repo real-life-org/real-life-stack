@@ -189,7 +189,7 @@ interface FieldEntry {
   label?: string                 // Intl-Schlüssel
   required?: boolean
   unit?: string                  // number (B7)
-  options?: { id: string; label: string; tone?: string }[]   // status (B6), select (B8)
+  options?: { id: string; label: string; tone?: string; done?: boolean }[]   // status (B6), select (B8); done: der Erledigt-Wert eines status-Felds
   edit?: false | "fixed"         // false: nie im Formular; "fixed": sichtbar, nicht bearbeitbar
   ref?: { type: string; missing: string }   // item-ref (B15): Zieltyp, Intl-Schlüssel für ein fehlendes Ziel
 }
@@ -203,7 +203,14 @@ interface EdgeEntry {
   label: string                  // Intl-Schlüssel: „Braucht", „Teil von", „Findet hier statt"
   qualifier?: { key: string; values: { id: string; label: string; tone?: string; action?: string }[] }
                                  // action: Beschriftung der Pill, die den Wert setzt („Zusagen" für going)
-  selfAction?: { label: string; mine: string; qualifiers?: string[] }   // C2
+  selfAction?: {                 // C2
+    label: string; mine: string; qualifiers?: string[]
+    followUps?: {                // Folgeaktionen nach der Selbstaktion, nur für die Person mit der Selbstaussage
+      field: string              // key eines status-Felds mit Erledigt-Wert
+      done: string               // Intl-Schlüssel meines Zustands, solange erledigt: „Erledigt"
+      actions: { id: "complete" | "reopen" | "release"; label: string }[]
+    }
+  }
   add?: string                   // Intl-Schlüssel des Hinzufügen-Felds im Formular (C1): „Einladen…", „Zuweisen…"
   joins?: string                 // nur Personen-Kanten: Prädikat der Kante, deren Menschen-Zeile und Formularfeld diese Kante teilt
   list?: { filter?: "open" | "upcoming"; sort?: string }                // für itemRole "to"
@@ -233,7 +240,7 @@ Regeln:
 6. `storage` hält fest, wo die Kante liegt. Der Wert MUSS den Regeln aus [04](04-items-relations-groups-spaces.md) und [08, Regel 9](08-relation-records.md#relationrecord-als-item) folgen; das Register wählt den Mechanismus nicht frei. Lese- und Schreibform lesen und schreiben dort.
 7. Jede Kante DARF einen Qualifier deklarieren, gleich ob ihr Ziel eine Person oder ein Item ist. Er liegt bei `storage: "embedded"` in `meta` der Relation (`meta.role` oder `meta[qualifier.key]`), bei `storage: "record"` als Feld `qualifier.key` am Record. `qualifier.values` ist die Menge der erlaubten Werte ([08 → Qualifier an Kanten](08-relation-records.md#qualifier-an-kanten)).
 8. `count` deklariert für Record-Kanten, wie mehrere Aussagen über denselben Gegenstand zusammenwirken ([08 → Qualifier an Kanten](08-relation-records.md#qualifier-an-kanten), Regel 10). Eine Record-Kante mit Qualifier MUSS `count` setzen. Welcher Record unter `one-per-subject` gilt, bestimmt 08 deterministisch ([Gewinner unter `one-per-subject`](08-relation-records.md#gewinner-unter-one-per-subject)). Eine Personen-Kante mit `collect-accepted` lehnt das Toolkit vorerst ab, bis die Annahmeprüfung aus [05](05-confirmations-and-trust.md) angebunden ist.
-9. Eine Kante mit `selfAction` erscheint im Slot `actions` als Pill-Zeile. `qualifiers` nennt die Werte, die die Pills setzen; `mine` ist die Beschriftung meines Zustands.
+9. Eine Kante mit `selfAction` erscheint im Slot `actions` als Pill-Zeile. `qualifiers` nennt die Werte, die die Pills setzen; `mine` ist die Beschriftung meines Zustands. **Folgeaktionen** (`followUps`) stehen nach meinem Zustand in derselben Zeile, nur für die Person mit der Selbstaussage und nur mit Schreibrecht am Item. Was eine Folgeaktion tut, sagt ihre Id: `complete` schreibt in `field` die Option mit `done: true` (angeboten, solange das Item nicht erledigt ist), `reopen` schreibt den Standard-Status (`composer.defaultStatus`, sonst die erste Option ohne `done`; angeboten, solange es erledigt ist), `release` nimmt meine Kante heraus (angeboten, solange es nicht erledigt ist). Solange das Item erledigt ist, zeigt die Zeile `done` als meinen Zustand. `field` MUSS ein `status`-Feld desselben Typs mit genau einer Option `done: true` sein. Die Fläche verzweigt über die Id der Folgeaktion, nie über den Typ.
 10. Rückwärts-Listen (`itemRole: "to"`, `pos: "list"`) deklariert der Typ, dessen Detail sie zeigt, mit Filter und Sortierung. Es werden alle Einträge gezeigt.
 11. **Feld mit Item-Verweis (B15 `item-ref`):** Ein Datenfeld, dessen Wert ein Item-Target ist (`item:<id>`), ist ein Feld und keine Kante, wenn es zum Inhalt des Items gehört (etwa zum signierten Wortlaut, 08). Lesend erscheint es wie C3 als Chip in der Farbe des Zieltyps: auf der Karte immer, im Detail als Meta-Zeile nur, wenn keine Liste des Typs es in `covers` führt. Ein nicht auflösbares Ziel erscheint als Text (`ref.missing`), nie als Fehler. Schreibbar ist es nur, soweit `edit` es erlaubt.
 12. **Liste über benannte Abfrage:** Statt einer direkten eingehenden Kante DARF ein Typ eine Rückwärts-Liste über eine benannte Abfrage deklarieren (`lists`). Das Register nennt nur den Namen; was die Abfrage liefert, definiert die Spec des Typs oder Moduls. Die Liste zeigt alle Einträge, jeden einmal. Eine Liste DARF eine Aktion tragen (`action`), die in ihrem Kopf steht; hat die Liste keinen Eintrag außer dem Item selbst, steht die Aktion allein an ihrer Stelle. Was die Aktion tut, definiert die Spec des Typs oder Moduls. Sichtbar ist sie nur, wenn Capability und Autorisierung sie erlauben (Typ-Register, Regeln, Regel 4).
@@ -242,6 +249,7 @@ Regeln:
 15. Apps liefern Einträge, keine Mappings. Die Abbildung Composer ↔ Item (`composer-mapping.ts`) und die Detail-Leseansicht liegen im Toolkit und lesen nur das Register.
 16. `ContentTypeConfig` wird abgeleitet: `defaultWidgets` aus den Feldern und Kanten mit `pos` `head`, `meta`, `content`, `tags` oder `badge` und ohne `edit: false`, in der Reihenfolge des Formulars (`head` → `content` → `meta` in der Reihenfolge der Meta-Box → `tags` → `badge`, [shared-components → Edit-Regeln](modules/shared-components.md#edit-regeln), Regel 2); `peopleRelations` aus den Kanten mit `widget: "people"` und `pos: "meta"`; `statusOptions` aus `options` des `status`-Feldes; `widgetLabels` aus `label`.
 17. **Übergang:** In S1 lesen die Flächen `detail` und `footer` noch für Typen ohne Feldliste. Mit S6 entfallen beide. Der Übergangs-Slot `detail` steht dort, wo der Typ ihn hinlegt (`detailSlot`); Standard ist `meta`. Die Aussage legt ihn nach `reverse` (Fassungen und „+ Variante") und hat keine Meta-Box. Bis dahin DARF ein Typ sie weiter setzen (etwa die Resonanz-Varianten, rls#505); die Stimmleiste zieht mit S2 von `footer` nach `actions`.
+18. **Erledigt-Wert:** Ein `status`-Feld DARF höchstens eine Option mit `done: true` markieren. Folgeaktionen (Regel 9) und die Leseform von Item-Kanten (erledigte Ziele durchgestrichen, [shared-components → Widget-Paare](modules/shared-components.md#widget-paare), C3) lesen ihn. Die Spalten eines Kanban sind je App verschieden und sagen es nicht.
 
 **Register je Typ (nichtnormativ).** So sehen die Einträge der Toolkit-Typen und eines App-Typs aus. Schreibweise: Feld `key` Widget @`pos`; Kante `predicate` (→ `from`, ← `to`) Widget @`pos`.
 
@@ -250,7 +258,7 @@ Regeln:
 | `post` | content B2 @content · media B5 @content · tags B14 | reactsTo/commentOn C7 @bar | – | – |
 | `event` | title B1 · description B2 · start/end/rrule B3 @meta · meetingLink B9 @meta · group B13 @badge · tags B14 | →locatedAt place C3 @meta · →invited person C1 @meta (eingebettet, angezeigt „eingeladen") und ←attends person C1 @meta (Record, `role` `going` · `maybe` · `declined`, `tense`, `count: one-per-subject`) in einer Zeile | attends: `going` · `maybe` · `declined` (Zusagen · Vielleicht · Absagen) | – |
 | `place` | title · description · address/position B4 @meta · tags | ←locatedAt C3 @list | – | „Findet hier statt" (Events, upcoming) |
-| `task` | title · description · status B6 @meta · start B3 @meta („Fällig") · tags · order @module | →assignedTo person C1 @meta · →partOf project C3 @meta („Teil von") · →blocks task C3 @meta („Ermöglicht") · ←blocks task C3 @meta („Braucht") | assignedTo: Übernehmen | – |
+| `task` | title · description · status B6 @meta (To Do · In Arbeit · Erledigt, `done` markiert) · start B3 @meta („Fällig") · tags · order @module | →assignedTo person C1 @meta · →partOf project C3 @meta („Teil von") · →blocks task C3 @meta („Ermöglicht") · ←blocks task C3 @meta („Braucht") | assignedTo: Übernehmen; danach ✓ Übernommen · Erledigt · Abgeben, erledigt ✓ Erledigt · Wieder öffnen (`followUps` am Feld `status`) | – |
 | `person` | displayName B1 @head · avatarUrl B11 @head · bio B2 · address/position B4 @meta · skills/offers/needs B10 @meta („Kann", „Bietet", „Sucht") · phone/email B12 @meta · did @system | keine Kommentare, keine Reaktionen | – | „Nächste Termine" (upcoming) · „Aufgaben" (←assignedTo, open) |
 | `project` | title · description · website/repo B9 @meta · address/position B4 @meta · tags | ←partOf C3 @list | – | „Offene Aufgaben" (←partOf task, open) · „Nächste Termine" (←partOf event, upcoming) |
 | `resource` | title · description · kind B8 @meta · availability B8 oder B2 @meta · tags | – | – | – |
