@@ -1,0 +1,6 @@
+{
+  "format": "resonance-export/1", "exportedAt": "2026-09-27T18:00:00.000Z", "space": "g", "filter": { "people": null, "tags": [] },
+  "statements": [{ "id": "s", "title": "t", "tags": [], "createdBy": "u", "createdAt": "2026-09-27T10:00:00.000Z", "contentHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "votes": [{ "voter": "v", "value": "green", "contentHash": "sha256:9f2c4e", "createdAt": "2026-09-27T11:00:00.000Z" }],
+    "summary": { "green": 1, "yellow": 0, "red": 0, "noVote": null } }]
+}

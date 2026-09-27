@@ -27,7 +27,11 @@
     "statements": { "type": "array", "items": { "$ref": "#/$defs/statement" } }
   },
   "$defs": {
-    "contentHash": { "type": "string", "pattern": "^sha256:" },
+    "contentHash": {
+      "description": "Spec 08, Inhalts-Hash: \"sha256:\" followed by the 64 lowercase hex digits of the SHA-256 digest.",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "voteValue": { "enum": ["green", "yellow", "red"] },
     "statement": {
       "type": "object",
