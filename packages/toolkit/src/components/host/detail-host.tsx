@@ -181,6 +181,9 @@ export function ItemDetailRead({ item, actions, groupId }: { item: Item; actions
       // Was in der Meta-Box steht, sagt der TYP (spec 06) — derselbe Slot,
       // aus dem auch die Vorschau ihre Zeile zieht.
       meta={<presentation.detail item={item} />}
+      // Übergangs-Slot eines Typs, der ihn nach `reverse` legt (Aussage:
+      // Fassungen und „+ Variante", Spec 06 Regel 17).
+      reverse={presentation.reverse ? <presentation.reverse item={item} /> : undefined}
       footer={
         <div className="flex w-full flex-col gap-2">
           {renderTypeFooter(item)}

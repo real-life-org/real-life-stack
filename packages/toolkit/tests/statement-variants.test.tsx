@@ -201,4 +201,16 @@ describe("a variant lands in the space of its origin (Varianten rule 2, #507)", 
     const text = await render(createElement(StatementDetail, { item: { ...origin, id: "not-in-store" } }))
     expect(text).not.toContain("Variante anlegen")
   })
+
+  it("renders nothing at all when it has nothing to show — no empty wrapper (slot rule)", async () => {
+    await render(createElement(StatementDetail, { item: { ...origin, id: "not-in-store", data: { title: "Allein" } } }))
+    expect(host.innerHTML).toBe("")
+  })
+
+  it("a single version with a known space: the action stands alone in place of the list", async () => {
+    const single = statement("s-single", ME, 5, { title: "Kommt wer mit zum Klettern heute?" })
+    await render(createElement(StatementDetail, { item: single }), [single])
+    expect(host.textContent).not.toContain("Fassungen")
+    expect([...host.querySelectorAll("button")].some((el) => el.textContent?.includes("Variante"))).toBe(true)
+  })
 })

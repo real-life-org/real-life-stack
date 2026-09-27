@@ -341,7 +341,10 @@ describe("Meta-Box aus dem Register", () => {
   it("Übergang (Regel 17): ein Typ mit eigenem detail/footer behält beide (Resonanz)", () => {
     const statement = resolveTypePresentation("statement")
     expect(statement.footer).toBeDefined()
-    expect(statement.detail.name).toBe("StatementDetail")
+    // Die Aussage hat keine Meta-Box: ihr Übergangs-Slot steht in `reverse`
+    // (Fassungen und „+ Variante", Design Anton), die Meta-Box kommt aus dem Register.
+    expect(statement.reverse?.name).toBe("StatementDetail")
+    expect(statement.detail.name).toBe("RegisterDetail")
   })
 })
 

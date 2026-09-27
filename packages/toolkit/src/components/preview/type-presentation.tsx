@@ -114,6 +114,12 @@ export interface TypePresentationEntry extends RegisterLists {
    * Meta-Box aus `fields`/`edges`; entfällt mit S6.
    */
   detail?: ComponentType<ItemSlotProps>
+  /**
+   * Wo der Übergangs-Slot `detail` im Detail steht (Regel 17): Standard
+   * `meta`. Die Aussage legt ihn nach `reverse` (Fassungen, „+ Variante") und
+   * hat dann keine Meta-Box aus diesem Slot.
+   */
+  detailSlot?: "meta" | "reverse"
   /** Type-own footer, rendered IN ADDITION to surface footers. Übergang bis S6 (Regel 17). */
   footer?: ComponentType<ItemSlotProps>
   /**
@@ -148,6 +154,7 @@ export interface TypePresentationFragment extends RegisterLists {
   relationWidgets?: Readonly<Record<string, string>>
   preview?: ComponentType<ItemSlotProps>
   detail?: ComponentType<ItemSlotProps>
+  detailSlot?: "meta" | "reverse"
   footer?: ComponentType<ItemSlotProps>
   composer?: TypeComposerPresentation
 }
@@ -165,7 +172,10 @@ export interface ResolvedTypePresentation extends RegisterLists {
   composerWidgets?: readonly string[]
   relationWidgets?: Readonly<Record<string, string>>
   preview?: ComponentType<ItemSlotProps>
+  /** Inhalt der Meta-Box. */
   detail: ComponentType<ItemSlotProps>
+  /** Übergangs-Slot im Slot `reverse`, wo der Typ ihn dorthin legt (`detailSlot`). */
+  reverse?: ComponentType<ItemSlotProps>
   footer?: ComponentType<ItemSlotProps>
   composer?: TypeComposerPresentation
   /** True when rendering generically: the type is unknown to the manifest OR
@@ -322,6 +332,9 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     // (resonance.md → Varianten); `preview` bleibt frei, damit die Karten
     // ihr Badge behalten.
     detail: StatementDetail,
+    // Nach Antons Design hat die Aussage keine Meta-Box: Fassungen und
+    // „+ Variante" stehen als Rückwärts-Liste unter dem Inhalt.
+    detailSlot: "reverse",
     footer: StatementVotesFooter,
   },
 ]
@@ -471,7 +484,7 @@ export function registerTypePresentation(
   }
 }
 
-const SCALAR_SLOTS = ["badge", "composerWidgets", "preview", "detail", "footer", "composer"] as const
+const SCALAR_SLOTS = ["badge", "composerWidgets", "preview", "detail", "detailSlot", "footer", "composer"] as const
 
 function composePresentation(): Map<string, TypePresentationEntry> {
   if (composedCache) return composedCache
@@ -555,11 +568,15 @@ export function resolveTypePresentation(typeId: string): ResolvedTypePresentatio
   if (!entry || !manifest.has(id)) {
     return { id, label: id, detail: GENERIC_DETAIL, generic: true }
   }
+  // Übergang (Regel 17): ein gesetztes `detail` gewinnt, dort, wo der Typ es
+  // hinlegt (Standard: Meta-Box); sonst die Meta-Box aus dem Register; ein
+  // Typ ohne Feldliste behält die Vorschau-Zeile.
+  const fromRegister = hasRegisterLists(entry) ? REGISTER_DETAIL : (entry.preview ?? GENERIC_DETAIL)
+  const inReverse = entry.detail && entry.detailSlot === "reverse"
   return {
     ...entry,
-    // Übergang (Regel 17): ein gesetztes `detail` gewinnt; sonst die Meta-Box
-    // aus dem Register; ein Typ ohne Feldliste behält die Vorschau-Zeile.
-    detail: entry.detail ?? (hasRegisterLists(entry) ? REGISTER_DETAIL : (entry.preview ?? GENERIC_DETAIL)),
+    detail: inReverse ? fromRegister : (entry.detail ?? fromRegister),
+    ...(inReverse ? { reverse: entry.detail } : {}),
     generic: false,
   }
 }

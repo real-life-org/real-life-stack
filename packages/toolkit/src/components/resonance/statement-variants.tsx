@@ -12,7 +12,6 @@ import { useOptionalItemFocus } from "@/hooks/use-item-focus"
 import { useOptionalCurrentUser } from "@/hooks/use-auth"
 import { statementFamily, variantOfValue, type StatementFamily } from "@/lib/resonance-variants"
 import { useOptionalCreate } from "../host/create-host"
-import { ItemMetaRow } from "../preview/item-meta-row"
 import { Button } from "../primitives/button"
 import { VoteBar } from "./vote-bar"
 
@@ -84,18 +83,24 @@ export function StatementDetail({ item }: { item: Item }) {
   const originGroup = hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
   const canCreateVariant = isWritable(connector) && create !== null && originGroup !== null
   const isAuthor = currentUser?.id === item.createdBy
+  const showHint = frozen && isAuthor
+  const showFamily = members.length > 1
+
+  // Ein Slot, der nichts zu zeigen hat, gibt null — eine leere Hülle hebelt
+  // das Ausblenden der umgebenden Fläche aus (shared-components,
+  // Detail-Anatomie, Regel 1). Datum und Ort hat eine Aussage nie; die
+  // Meta-Zeile stand hier nur aus Gewohnheit.
+  if (!showHint && !showFamily && !canCreateVariant) return null
 
   return (
     <div className="space-y-3">
-      <ItemMetaRow item={item} />
-
-      {frozen && isAuthor && (
+      {showHint && (
         <p className="text-xs text-muted-foreground">
           Andere haben zu diesem Wortlaut abgestimmt, deshalb lässt er sich nicht mehr ändern. Für eine neue Formulierung leg eine Variante an.
         </p>
       )}
 
-      {members.length > 1 && (
+      {showFamily && (
         <section aria-label="Fassungen dieser Aussage" className="space-y-2">
           <h3 className="text-xs font-medium text-muted-foreground">Fassungen</h3>
           <ul className="space-y-2">
