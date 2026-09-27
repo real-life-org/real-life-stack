@@ -4,6 +4,7 @@ import { deriveContext, hasItemGroups } from "@real-life-stack/data-interface"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useConnector } from "./connector-context"
 import type { ContentComposerSubmitData } from "../components/composer/content-composer"
+import { writeOwnStatement, type OwnStatement } from "../lib/own-statement"
 
 /**
  * The shape a caller-supplied mapper returns. The hook handles the
@@ -22,6 +23,12 @@ export interface ItemEditorPayload {
    * vocabulary outside the activation heuristic is needed.
    */
   "@context"?: string[]
+  /**
+   * Eigene Aussagen an Record-Kanten, die nach dem Speichern geschrieben
+   * werden (Event: Zusagen im Personenfeld, 08 → Teilnahme am Event). Nie
+   * Teil des Items.
+   */
+  statements?: readonly OwnStatement[]
 }
 
 /**
@@ -230,6 +237,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
           const payload = buildCreatePayload(mapped, currentUserId)
           const created = await createItem(payload)
           await applyItemGroup(connector, created.id, submission.data.group)
+          await applyStatements(connector, created, mapped.statements)
           await onCreated?.(created)
           return created
         }
@@ -237,6 +245,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
         const update = buildUpdatePayload(mapped, existingItem!)
         const updated = await updateItem(existingItem!.id, update)
         await applyItemGroup(connector, updated.id, submission.data.group)
+        await applyStatements(connector, updated, mapped.statements)
         if (currentItem && currentItem.id === existingItem!.id) {
           setCurrentItem(updated)
         }
@@ -286,4 +295,9 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
     submit,
     remove,
   }
+}
+
+/** Nach dem Speichern: die eigenen Aussagen, der Reihe nach (Fehler brechen ab und zeigen sich im Formular). */
+async function applyStatements(connector: DataInterface, item: Item, statements: readonly OwnStatement[] | undefined): Promise<void> {
+  for (const statement of statements ?? []) await writeOwnStatement(connector, item, statement)
 }

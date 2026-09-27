@@ -76,9 +76,10 @@ describe("people-relations mit Qualifier", () => {
 })
 
 describe("Register → Composer", () => {
-  it("event: das Personenfeld heißt nach der Kante und bietet „Einladen…“; attends ist kein Formularfeld", () => {
+  it("event: EIN Personenfeld „Wer“ mit „Einladen…“, attends trägt seinen Zustand dorthin", () => {
     const event = contentTypeFromRegister("event")
-    expect(event.peopleRelations).toEqual([{ predicate: "invited", label: "Eingeladen", placeholder: "Einladen…" }])
+    expect(event.peopleRelations).toHaveLength(1)
+    expect(event.peopleRelations?.[0]).toMatchObject({ predicate: "invited", label: "Wer", placeholder: "Einladen…", record: { predicate: "attends", key: "role" } })
   })
 
   it("eine Kante mit Qualifier gibt ihn an das Personenfeld weiter (App-Typ wie die Karabirrdt-Karte)", () => {

@@ -79,6 +79,56 @@ export function usePeopleLines(item: Item, edges: readonly EdgeEntry[] | undefin
   )
 }
 
+/**
+ * Kann ich hier eigene Aussagen an Record-Kanten schreiben — und sehen, dass
+ * sie gelten? Lesen, Schreiben und Verifikation (Leseregel L1), angemeldet,
+ * schreibbar, und mit Autorisierungsmodell `item/create` für Relation-Items
+ * im Space des Items (beim Anlegen: im aktuellen Space).
+ */
+export function canWriteStatements(connector: DataInterface, item: Item | null, meId: string | undefined): boolean {
+  if (!meId || !isWritable(connector) || !isAuthenticatable(connector)) return false
+  if (!(hasRelationRecords(connector) && hasRelationRecordWriter(connector) && hasClaimVerification(connector))) return false
+  if (!hasAuthorization(connector)) return true
+  const space = item && hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
+  return resolveCanCreate(connector, space, "relation")
+}
+
+const NEW_ITEM: Item = { id: "__new__", type: "", createdAt: "", createdBy: "", data: {} }
+
+/**
+ * Geltende Zustände der Personenfelder mit Record-Kante für das Formular
+ * (Event: `invited` + `attends` in einem Feld), je Prädikat des Feldes.
+ * Ohne Schreibmöglichkeit kein Eintrag — das Feld zeigt dann keine Zustände.
+ */
+export function usePeopleFormStates(item: Item | null, edges: readonly EdgeEntry[] | undefined): Record<string, { live: Record<string, { state: string; locked?: boolean; mine?: boolean }> }> {
+  const connector = useConnector()
+  const { data: me } = useOptionalCurrentUser()
+  const meId = me?.id
+  const lines = usePeopleLines(item ?? NEW_ITEM, item ? edges : undefined)
+  const groups = useMemo(() => peopleLineGroups(edges), [edges])
+  return useMemo(() => {
+    const out: Record<string, { live: Record<string, { state: string; locked?: boolean; mine?: boolean }> }> = {}
+    if (!canWriteStatements(connector, item, meId)) return out
+    for (const group of groups) {
+      if (!group.some((edge) => edge.storage === "record" && edge.qualifier)) continue
+      const live: Record<string, { state: string; locked?: boolean; mine?: boolean }> = {}
+      const entries = lines.find((line) => line.edges[0] === group[0])?.entries ?? []
+      for (const entry of entries) {
+        if (entry.edge.storage !== "record" || !entry.qualifier) continue
+        const selfStatement = !entry.speakerId
+        live[entry.userId] = {
+          state: entry.qualifier.id,
+          // Die eigene Aussage einer anderen Person gewinnt immer (08); sie ändert nur sie.
+          ...(selfStatement && entry.userId !== meId ? { locked: true } : {}),
+          ...((selfStatement ? entry.userId === meId : entry.speakerId === meId) ? { mine: true } : {}),
+        }
+      }
+      out[group[0].predicate] = { live }
+    }
+    return out
+  }, [connector, groups, item, lines, meId])
+}
+
 export interface SelfActionState {
   /** Die Selbstaktion ist hier möglich (Capability, Anmeldung, Schreibrecht). */
   available: boolean
@@ -120,11 +170,7 @@ export function useSelfAction(item: Item, edge: EdgeEntry): SelfActionState {
 
   const available = useMemo(() => {
     if (!meId || !isWritable(connector) || !isAuthenticatable(connector)) return false
-    if (isRecord) {
-      if (!(edge.itemRole === "to" && !!edge.qualifier && hasRelationRecords(connector) && hasRelationRecordWriter(connector) && hasClaimVerification(connector))) return false
-      const space = hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
-      return hasAuthorization(connector) ? resolveCanCreate(connector, space, "relation") : true
-    }
+    if (isRecord) return edge.itemRole === "to" && !!edge.qualifier && canWriteStatements(connector, item, meId)
     return edge.itemRole === "from" && resolveItemPermissions(connector, item, meId).canEdit
   }, [connector, edge, isRecord, item, meId])
 

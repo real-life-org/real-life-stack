@@ -13,6 +13,8 @@ import { useItemEditor, type ItemEditorMapper } from "../../hooks/use-item-edito
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { useSetDraftItem, DRAFT_ITEM_ID } from "../../hooks/use-draft-item"
 import { useSetUnsavedDirty } from "../../hooks/use-unsaved-changes"
+import { resolveTypePresentation } from "../preview/type-presentation"
+import { usePeopleFormStates } from "../preview/use-people-line"
 
 export interface ItemComposerProps {
   /** Types offered. Create: a module's subset; edit: locked to the item's type. */
@@ -95,9 +97,15 @@ export function ItemComposer({
   const setUnsavedDirty = useSetUnsavedDirty()
   useEffect(() => () => setUnsavedDirty(false), [setUnsavedDirty])
 
+  // Zustände der Personenfelder mit Record-Kante (Event: Zusagen), live aus
+  // den geltenden Records; gilt für den Typ, den das Formular bearbeitet.
+  const formType = existingItem?.type ?? initialContentType ?? contentTypes[0]?.id ?? ""
+  const peopleStates = usePeopleFormStates(existingItem ?? null, resolveTypePresentation(formType).edges)
+
   return (
     <ContentComposer
       apiRef={apiRef}
+      peopleStates={peopleStates}
       className={className}
       contentTypes={contentTypes}
       initialContentType={initialContentType}

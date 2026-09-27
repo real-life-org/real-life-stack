@@ -30,6 +30,22 @@ interface PeopleWidgetProps {
   onQualifiersChange?: (next: Record<string, string>) => void
   /** Beschriftung des leeren Eingabefelds („Einladen…", „Zuweisen…"). */
   placeholder?: string
+  /**
+   * Zustände aus einer Record-Kante derselben Zeile (Event: `invited` +
+   * `attends`, 08 → Teilnahme am Event). Der Chip zeigt „Name · Zustand";
+   * Antippen wechselt im Kreis Grundzustand → Werte. `live` ist der
+   * geltende Zustand aus den Records (fest, wenn es die eigene Aussage einer
+   * anderen Person ist), `changes` die Änderungen dieses Formulars.
+   */
+  record?: PeopleWidgetRecord
+}
+
+export interface PeopleWidgetRecord {
+  base: { id: string; label: string }
+  values: readonly { id: string; label: string }[]
+  live: Record<string, { state: string; locked?: boolean; mine?: boolean }>
+  changes: Record<string, string | null>
+  onChangesChange: (next: Record<string, string | null>) => void
 }
 
 export function PeopleWidget({
@@ -43,6 +59,7 @@ export function PeopleWidget({
   qualifiers,
   onQualifiersChange,
   placeholder,
+  record,
 }: PeopleWidgetProps) {
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<PersonOption[]>([])
@@ -130,11 +147,35 @@ export function PeopleWidget({
 
   const removePerson = (id: string) => {
     onChange(value.filter((p) => p !== id))
+    // Eine eigene Aussage über die Person geht mit (keine Aussage mehr).
+    if (record && (record.live[id]?.mine || (record.changes[id] ?? null) !== null)) {
+      record.onChangesChange({ ...record.changes, [id]: null })
+    }
     if (qualifier && onQualifiersChange && qualifiers && id in qualifiers) {
       const { [id]: _removed, ...rest } = qualifiers
       onQualifiersChange(rest)
     }
   }
+
+  // Zustände: Grundzustand, dann die Werte der Record-Kante.
+  const states = record ? [record.base, ...record.values] : []
+  const stateOf = (id: string) => {
+    if (!record) return undefined
+    const changed = record.changes[id]
+    const stateId = changed !== undefined && changed !== null ? changed : changed === null ? record.base.id : (record.live[id]?.state ?? record.base.id)
+    return states.find((s) => s.id === stateId) ?? record.base
+  }
+  const cycleState = (id: string) => {
+    if (!record || record.live[id]?.locked) return
+    const index = states.findIndex((s) => s.id === stateOf(id)?.id)
+    const next = states[(index + 1) % states.length]
+    record.onChangesChange({ ...record.changes, [id]: next.id })
+  }
+  // Wer eine geltende Aussage hat, steht im Feld, auch ohne Einladung —
+  // außer das Formular nimmt die eigene Aussage gerade zurück.
+  const shown = record
+    ? [...value, ...Object.keys(record.live).filter((id) => !value.includes(id) && record.changes[id] !== null)]
+    : value
 
   const qualifierOf = (id: string) => qualifier?.values.find((v) => v.id === qualifiers?.[id])
 
@@ -162,30 +203,50 @@ export function PeopleWidget({
     <div className="relative" ref={wrapperRef}>
       <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
       <div className="flex flex-wrap items-center gap-1.5 rounded-md border px-2 py-1.5">
-        {value.map((personId) => (
+        {shown.map((personId) => (
           <span
             key={personId}
-            className="inline-flex items-center gap-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 px-2 py-0.5 text-xs font-medium"
+            data-person-chip={personId}
+            // Wie im Design: neutraler Chip, Zustand gedämpft dahinter.
+            className="inline-flex items-center gap-0.5 rounded-full border bg-background px-2 py-0.5 text-xs font-medium text-foreground"
           >
             {resolveLabel(personId)}
+            {record && <span aria-hidden className="px-0.5 text-muted-foreground">·</span>}
+            {record && (
+              <button
+                type="button"
+                data-qualifier-toggle
+                disabled={!!record.live[personId]?.locked}
+                onClick={() => cycleState(personId)}
+                title={record.live[personId]?.locked ? "Eigene Aussage der Person — nur sie ändert sie" : undefined}
+                aria-label={`${resolveLabel(personId)}: ${stateOf(personId)?.label} — ${record.live[personId]?.locked ? "eigene Aussage, fest" : "wechseln"}`}
+                className="rounded-sm px-0.5 font-normal text-muted-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-default disabled:no-underline"
+              >
+                {stateOf(personId)?.label}
+              </button>
+            )}
+            {qualifier && <span aria-hidden className="px-0.5 text-muted-foreground">·</span>}
             {qualifier && (
               <button
                 type="button"
                 data-qualifier-toggle
                 onClick={() => cycleQualifier(personId)}
                 aria-label={`${resolveLabel(personId)}: ${qualifierOf(personId)?.label ?? "ohne Angabe"} — wechseln`}
-                className="rounded-sm px-0.5 font-normal opacity-80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="rounded-sm px-0.5 font-normal text-muted-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 {qualifierOf(personId)?.label ?? "…"}
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => removePerson(personId)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-2.5 w-2.5" />
-            </button>
+            {(value.includes(personId) || !record?.live[personId]?.locked) && (
+              <button
+                type="button"
+                aria-label={`${resolveLabel(personId)} entfernen`}
+                onClick={() => removePerson(personId)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            )}
           </span>
         ))}
         <input
@@ -196,7 +257,8 @@ export function PeopleWidget({
           }}
           onFocus={() => setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
-          placeholder={value.length === 0 ? (placeholder ?? "Hinzufuegen...") : ""}
+          // Eine eigene Beschriftung („Einladen…") bleibt stehen, wie im Design.
+          placeholder={placeholder ?? (value.length === 0 ? "Hinzufuegen..." : "")}
           className="min-w-[60px] flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
         />
       </div>
@@ -217,10 +279,15 @@ export function PeopleWidget({
           ))}
         </div>
       )}
-      {quickSuggestions && quickSuggestions.filter((s) => !value.includes(s.id)).length > 0 && (
+      {record && (
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Chip antippen wechselt: {states.map((s) => s.label).join(" · ")}
+        </p>
+      )}
+      {quickSuggestions && quickSuggestions.filter((s) => !shown.includes(s.id)).length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
           {quickSuggestions
-            .filter((s) => !value.includes(s.id))
+            .filter((s) => !shown.includes(s.id))
             .map((person) => (
               <button
                 key={person.id}

@@ -30,6 +30,30 @@ export interface PeopleRelationConfig {
   qualifier?: PeopleQualifier
   /** Beschriftung des Hinzufügen-Felds („Einladen…", „Zuweisen…"). */
   placeholder?: string
+  /** Record-Kante in derselben Zeile (`joins`), deren Zustand der Chip trägt. */
+  record?: PeopleRecordStates
+}
+
+/**
+ * Zustände eines Personenfelds, das eine eingebettete Kante mit einer
+ * Record-Kante vereint (Event: `invited` + `attends`, 08 → Teilnahme am
+ * Event). `base` ist der Zustand ohne Aussage („eingeladen"), `values` die
+ * Werte des Records in Register-Reihenfolge.
+ */
+export interface PeopleRecordStates {
+  predicate: string
+  key: string
+  base: { id: string; label: string }
+  values: readonly { id: string; label: string }[]
+}
+
+/** Eine Aussage, die nach dem Speichern als eigener Record geschrieben wird. */
+export interface PeopleStatement {
+  predicate: string
+  from: string
+  key: string
+  /** `null`: keine Aussage mehr. */
+  value: string | null
 }
 
 /** Ein aufgelöstes Personenfeld, so wie der Composer es rendert. */
@@ -40,6 +64,7 @@ export interface PeopleField {
   label: string
   qualifier?: PeopleQualifier
   placeholder?: string
+  record?: PeopleRecordStates
 }
 
 /** Der Datenschlüssel des ersten (bzw. einzigen) Personenfeldes. */
@@ -57,6 +82,37 @@ const USER_TARGET_PREFIX = "global:"
  */
 export function peopleQualifierKey(dataKey: string): string {
   return `${dataKey}#qualifier`
+}
+
+/**
+ * Datenschlüssel der geänderten Zustände eines Personenfelds mit Record-Kante:
+ * `{ [userId]: zustandId | null }`. Nur Änderungen; der aktuelle Zustand
+ * kommt live aus den Records.
+ */
+export function peopleStatementKey(dataKey: string): string {
+  return `${dataKey}#statement`
+}
+
+/**
+ * Formulardaten → eigene Aussagen (08, Qualifier an Kanten, Regel 8): Ein
+ * Wert der Record-Kante schreibt meine Aussage über die Person, der
+ * Grundzustand oder `null` nimmt sie zurück.
+ */
+export function peopleStatementsFromWidgetData(config: PeopleRelationSource, data: Record<string, unknown>): PeopleStatement[] {
+  const out: PeopleStatement[] = []
+  for (const field of resolvePeopleFields(config)) {
+    if (!field.record) continue
+    const changes = asRecordOfUnknown(data[peopleStatementKey(field.dataKey)])
+    for (const [userId, value] of Object.entries(changes)) {
+      const known = typeof value === "string" && field.record.values.some((v) => v.id === value)
+      out.push({ predicate: field.record.predicate, from: `${USER_TARGET_PREFIX}${userId}`, key: field.record.key, value: known ? (value as string) : null })
+    }
+  }
+  return out
+}
+
+function asRecordOfUnknown(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
 }
 
 /** Datenschlüssel eines weiteren Personenfeldes, abgeleitet aus dem Prädikat. */
@@ -97,6 +153,7 @@ export function resolvePeopleFields(config: PeopleRelationSource): PeopleField[]
       label: entry.label,
       ...(entry.qualifier ? { qualifier: entry.qualifier } : {}),
       ...(entry.placeholder ? { placeholder: entry.placeholder } : {}),
+      ...(entry.record ? { record: entry.record } : {}),
     }))
   }
   const label = config.widgetLabels?.[PEOPLE_DATA_KEY] ?? DEFAULT_PEOPLE_LABEL

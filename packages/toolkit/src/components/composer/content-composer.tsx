@@ -32,9 +32,9 @@ import {
 import { LocationWidget } from "./widgets/location-widget"
 import type { Geocoder, ReverseGeocoder } from "@/lib/geocode"
 import { MediaWidget } from "./widgets/media-widget"
-import { PeopleWidget, type PersonOption } from "./widgets/people-widget"
+import { PeopleWidget, type PeopleWidgetRecord, type PersonOption } from "./widgets/people-widget"
 export type { PersonOption } from "./widgets/people-widget"
-import { peopleQualifierKey, resolvePeopleFields, type PeopleRelationConfig } from "./people-relations"
+import { peopleQualifierKey, peopleStatementKey, resolvePeopleFields, type PeopleRelationConfig } from "./people-relations"
 export type { PeopleRelationConfig } from "./people-relations"
 import { TagsWidget } from "./widgets/tags-widget"
 import { StatusWidget } from "./widgets/status-widget"
@@ -239,6 +239,12 @@ export interface ContentComposerProps {
   geocode?: Geocoder
   /** Reverse geocoder: fills the address field after a map pick. */
   reverseGeocode?: ReverseGeocoder
+  /**
+   * Geltende Zustände der Personenfelder mit Record-Kante (Event: Zusagen),
+   * je Prädikat des Feldes. Fehlt der Eintrag, kann der Connector die
+   * Aussagen nicht schreiben, und das Feld zeigt keine Zustände.
+   */
+  peopleStates?: Record<string, { live: PeopleWidgetRecord["live"] }>
   /** Structured people options: stores IDs, displays names. Takes precedence over peopleSuggestions. */
   peopleOptions?: PersonOption[]
   /** Simple string suggestions (legacy). Ignored when `peopleOptions` is provided. */
@@ -387,7 +393,7 @@ const DIRTY_FIELDS: readonly string[] = [
 function dirtySignature(data: WidgetData, peopleKeys: readonly string[]): string {
   const out: Record<string, unknown> = {}
   // Qualifier je Person zählen mit: Antippen am Chip ist eine Änderung.
-  const fields = [...new Set([...DIRTY_FIELDS, ...peopleKeys.flatMap((key) => [key, peopleQualifierKey(key)])])]
+  const fields = [...new Set([...DIRTY_FIELDS, ...peopleKeys.flatMap((key) => [key, peopleQualifierKey(key), peopleStatementKey(key)])])]
   for (const field of fields) {
     const value = (data as Record<string, unknown>)[field]
     if (value === "" || value === null || value === undefined) continue
@@ -756,6 +762,7 @@ export function ContentComposer({
   geocode,
   reverseGeocode,
   peopleOptions,
+  peopleStates,
   peopleSuggestions,
   tagSuggestions,
   tagQuickSuggestions,
@@ -1230,6 +1237,17 @@ export function ContentComposer({
                           suggestions={peopleSuggestions}
                           quickSuggestions={peopleQuickSuggestions}
                           placeholder={field.placeholder}
+                          {...(field.record && field.predicate && peopleStates?.[field.predicate]
+                            ? {
+                                record: {
+                                  base: field.record.base,
+                                  values: field.record.values,
+                                  live: peopleStates[field.predicate].live,
+                                  changes: (data[peopleStatementKey(field.dataKey)] as Record<string, string | null> | undefined) ?? {},
+                                  onChangesChange: (next: Record<string, string | null>) => updateData(peopleStatementKey(field.dataKey), next),
+                                },
+                              }
+                            : {})}
                           {...(field.qualifier
                             ? {
                                 qualifier: field.qualifier,

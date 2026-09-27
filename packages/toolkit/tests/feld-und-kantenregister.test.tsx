@@ -194,7 +194,8 @@ describe("ContentTypeConfig aus dem Register (Spec 06, Regel 16)", () => {
   it("event: defaultWidgets in der Reihenfolge des Formulars — Titel → Inhalt → Meta-Box → Tags → Badge", () => {
     const event = contentTypeFromRegister("event")
     expect(event.defaultWidgets).toEqual(["title", "text", "people", "date", "location", "tags", "group"])
-    expect(event.peopleRelations).toEqual([{ predicate: "invited", label: "Eingeladen", placeholder: "Einladen…" }])
+    // Ein Feld „Wer“ für Eingeladene und Zusagen (S2, attends.joins).
+    expect(event.peopleRelations).toMatchObject([{ predicate: "invited", label: "Wer", placeholder: "Einladen…", record: { predicate: "attends" } }])
   })
 
   it("task: Status-Optionen und Beschriftungen aus den Feldeinträgen", () => {

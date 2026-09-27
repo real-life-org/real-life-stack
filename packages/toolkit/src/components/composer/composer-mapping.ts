@@ -6,6 +6,8 @@ import {
   peopleDataKeys,
   peopleQualifierKey,
   peopleRelationsFromWidgetData,
+  peopleStatementKey,
+  peopleStatementsFromWidgetData,
   peopleRelationsToWidgetData,
 } from "./people-relations"
 import { toStoredDateTime } from "./date-widget-state"
@@ -95,7 +97,7 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
     // Which keys carry people is said by the type (an entry may set its own
     // dataKey) — they become relations, not item.data.
     const peopleKeys = new Set(
-      (typeConfig ? peopleDataKeys(typeConfig) : ["people"]).flatMap((key) => [key, peopleQualifierKey(key)]),
+      (typeConfig ? peopleDataKeys(typeConfig) : ["people"]).flatMap((key) => [key, peopleQualifierKey(key), peopleStatementKey(key)]),
     )
 
     // Base on the existing data so unmanaged fields survive an edit; empty on create.
@@ -145,11 +147,16 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
         existingItem?.relations)
       : existingItem?.relations
 
+    // Zustände an Record-Kanten (Event: Zusagen) schreibt der Editor nach
+    // dem Speichern als eigene Aussagen.
+    const statements = typeConfig ? peopleStatementsFromWidgetData(typeConfig, submission.data) : []
+
     return {
       type,
       data: itemData,
       ...(tags ? { tags } : {}),
       ...(relations ? { relations } : {}),
+      ...(statements.length > 0 ? { statements } : {}),
     }
   }
 

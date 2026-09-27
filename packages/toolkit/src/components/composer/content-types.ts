@@ -75,12 +75,28 @@ function ausFeldliste(
   // Relationen; Record-Kanten (attends) schreibt die Selbstaktion (S2).
   const peopleRelations = edges
     .filter((e) => e.widget === "people" && e.pos === "meta" && e.storage === "embedded" && e.itemRole === "from")
-    .map((e) => ({
-      predicate: e.predicate,
-      label: e.label,
-      ...(e.qualifier ? { qualifier: { key: e.qualifier.key, values: e.qualifier.values.map((v) => ({ id: v.id, label: v.label })) } } : {}),
-      ...(e.add ? { placeholder: e.add } : {}),
-    }))
+    .map((e) => {
+      // Eine Record-Kante, die die Zeile dieser Kante teilt (`joins`), trägt
+      // ihren Zustand in dasselbe Feld: das Event führt Eingeladene und
+      // Zusagen in EINEM Feld „Wer" (08 → Teilnahme am Event).
+      const joined = edges.find((r) => r.joins === e.predicate && r.storage === "record" && r.widget === "people" && r.qualifier)
+      return {
+        predicate: e.predicate,
+        label: joined ? joined.label : e.label,
+        ...(e.qualifier ? { qualifier: { key: e.qualifier.key, values: e.qualifier.values.map((v) => ({ id: v.id, label: v.label })) } } : {}),
+        ...(e.add ? { placeholder: e.add } : {}),
+        ...(joined && joined.qualifier
+          ? {
+              record: {
+                predicate: joined.predicate,
+                key: joined.qualifier.key,
+                base: { id: e.predicate, label: e.label.charAt(0).toLocaleLowerCase("de") + e.label.slice(1) },
+                values: joined.qualifier.values.map((v) => ({ id: v.id, label: v.label })),
+              },
+            }
+          : {}),
+      }
+    })
   const status = fields.find((x) => x.widget === "status" && x.options && x.options.length > 0)
   const body = fields.find((x) => x.widget === "text" && x.pos === "content")
   return {
