@@ -173,12 +173,17 @@ export function PeopleWidget({
     else stateId = changed
     return states.find((s) => s.id === stateId) ?? record.base
   }
+  // Der Zyklus folgt der lokalen Auswahl, nicht der Anzeige (Codex Runde 3):
+  // eine verbleibende fremde Aussage darf den Kreis nicht festhalten.
   const cycleState = (id: string) => {
     if (!record || record.live[id]?.locked) return
-    const index = states.findIndex((s) => s.id === stateOf(id)?.id)
+    const changed = record.changes[id]
+    const selected = changed === undefined ? (record.live[id]?.state ?? record.base.id) : (changed ?? record.base.id)
+    const index = states.findIndex((s) => s.id === selected)
     const next = states[(index + 1) % states.length]
     record.onChangesChange({ ...record.changes, [id]: next.id })
   }
+
   // Wer eine geltende Aussage hat, steht im Feld, auch ohne Einladung —
   // außer das Formular nimmt die eigene Aussage gerade zurück.
   const shown = record
@@ -245,7 +250,9 @@ export function PeopleWidget({
                 {qualifierOf(personId)?.label ?? "…"}
               </button>
             )}
-            {(value.includes(personId) || !record?.live[personId]?.locked) && (
+            {/* Entfernen, wo es etwas zurückzunehmen gibt: die Einladung oder
+                meine eigene Aussage, auch wenn sie gerade überstimmt ist. */}
+            {(value.includes(personId) || !record?.live[personId]?.locked || !!record?.live[personId]?.mine) && (
               <button
                 type="button"
                 aria-label={`${resolveLabel(personId)} entfernen`}

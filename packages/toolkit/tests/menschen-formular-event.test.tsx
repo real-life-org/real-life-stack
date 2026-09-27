@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement } from "react"
+import { act, createElement, useState } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
@@ -197,5 +197,47 @@ describe("Codex Runde 2: Anzeige nach dem Speichern, Entfernen", () => {
     await act(async () => remove.click())
     expect(onChangesChange).toHaveBeenCalledWith({ [TIMO]: null })
     await unmount()
+  })
+})
+
+describe("Codex Runde 3", () => {
+  const RECORD = {
+    base: { id: "invited", label: "eingeladen" },
+    values: [{ id: "going", label: "zugesagt" }, { id: "maybe", label: "vielleicht" }, { id: "declined", label: "abgesagt" }],
+  }
+  function Harness({ live, value }: { live: Record<string, unknown>; value: string[] }) {
+    const [changes, setChanges] = useState<Record<string, string | null>>({})
+    return createElement(PeopleWidget, {
+      value, onChange: () => {}, label: "Wer", options: [{ id: TIMO, name: "Timo" }, { id: ME, name: "Ich" }],
+      record: { ...RECORD, live: live as never, changes, onChangesChange: setChanges },
+    })
+  }
+
+  it("Befund 1: der Kreis läuft über alle Zustände, auch bei verbleibender fremder Aussage", async () => {
+    const host = document.createElement("div")
+    const root = createRoot(host)
+    await act(async () => root.render(createElement(Harness, { live: { [ME]: { state: "going", mine: true, fallback: "maybe" } }, value: [ME] })))
+    const toggleMe = () => host.querySelector<HTMLButtonElement>("[data-qualifier-toggle]")!
+    const seen: string[] = []
+    for (let i = 0; i < 4; i++) {
+      await act(async () => toggleMe().click())
+      seen.push(toggleMe().textContent ?? "")
+    }
+    // going → maybe → declined → invited (zeigt die fremde „vielleicht“) → going
+    expect(seen).toEqual(["vielleicht", "abgesagt", "vielleicht", "zugesagt"])
+    await act(async () => root.unmount())
+  })
+
+  it("Befund 2: meine überstimmte Aussage lässt sich ohne Einladung zurücknehmen", async () => {
+    const onChangesChange = vi.fn()
+    const host = document.createElement("div")
+    const root = createRoot(host)
+    await act(async () => root.render(createElement(PeopleWidget, {
+      value: [], onChange: () => {}, label: "Wer", options: [{ id: TIMO, name: "Timo" }],
+      record: { ...RECORD, live: { [TIMO]: { state: "declined", locked: true, mine: true } }, changes: {}, onChangesChange },
+    })))
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Timo entfernen"]')!.click())
+    expect(onChangesChange).toHaveBeenCalledWith({ [TIMO]: null })
+    await act(async () => root.unmount())
   })
 })
