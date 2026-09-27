@@ -5,7 +5,6 @@ import { Download, MoreHorizontal, Upload } from "lucide-react"
 import type { Item, RelationRecord } from "@real-life-stack/data-interface"
 import { deriveContext, hasItemGroups, isWritable } from "@real-life-stack/data-interface"
 import { useConnector } from "@/hooks/connector-context"
-import { useItems } from "@/hooks/use-items"
 import { buildExport, importItemData, planImport, type ImportPlan } from "@/lib/resonance-transfer"
 import type { ResonancePopulation } from "@/lib/resonance-sort"
 import { Button } from "../primitives/button"
@@ -44,7 +43,7 @@ export interface ResonanceTransferMenuProps {
 }
 
 type ImportState =
-  | { phase: "review"; plan: ImportPlan; fileName: string }
+  | { phase: "review"; plan: ImportPlan; fileName: string; raw: unknown; target: string | null }
   | { phase: "writing"; plan: ImportPlan }
   | { phase: "done"; created: number; skipped: number }
   | { phase: "failed"; message: string }
@@ -76,9 +75,6 @@ export function ResonanceTransferMenu({
   tags,
 }: ResonanceTransferMenuProps) {
   const connector = useConnector()
-  // All statements of the space — not only the shown ones: idempotency and
-  // variantOf targets are about the space, not the current filter.
-  const { data: spaceStatements } = useItems(STATEMENTS)
   const fileInput = useRef<HTMLInputElement>(null)
   const [importState, setImportState] = useState<ImportState | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
@@ -90,11 +86,16 @@ export function ResonanceTransferMenu({
   const canPick = space === undefined && hasItemGroups(connector) && targetSpaces.length > 0
   const canImport = userId !== undefined && isWritable(connector) && (space !== undefined || canPick)
 
-  // Idempotency and variantOf targets are about the TARGET space.
-  const statementsOf = (spaceId: string | null) =>
-    spaceId !== null && hasItemGroups(connector)
-      ? spaceStatements.filter((item) => connector.getItemGroupId(item.id) === spaceId)
-      : spaceStatements
+  // Idempotency and variantOf targets are about the TARGET space — all its
+  // statements, not only the shown ones. Read FRESH from the connector: an
+  // observed snapshot may still be empty while the first load runs, and the
+  // import would then create duplicates (#521).
+  const loadStatementsOf = async (spaceId: string | null) => {
+    const all = await connector.getItems(STATEMENTS)
+    return spaceId !== null && hasItemGroups(connector)
+      ? all.filter((item) => connector.getItemGroupId(item.id) === spaceId)
+      : all
+  }
 
   const readFile = async (file: File) => {
     let parsed: unknown
@@ -104,14 +105,25 @@ export function ResonanceTransferMenu({
       setImportState({ phase: "failed", message: `„${file.name}“ ist keine gültige JSON-Datei.` })
       return
     }
-    const plan = await planImport(parsed, { userId: userId!, statements: statementsOf(target) })
-    setImportState({ phase: "review", plan, fileName: file.name })
+    try {
+      const plan = await planImport(parsed, { userId: userId!, statements: await loadStatementsOf(target) })
+      setImportState({ phase: "review", plan, fileName: file.name, raw: parsed, target })
+    } catch (error) {
+      setImportState({ phase: "failed", message: error instanceof Error ? error.message : "Die Aussagen des Space ließen sich nicht laden." })
+    }
   }
 
-  const runImport = async (plan: ImportPlan) => {
+  const runImport = async (review: Extract<ImportState, { phase: "review" }>) => {
     if (!isWritable(connector)) return
-    setImportState({ phase: "writing", plan })
+    setImportState({ phase: "writing", plan: review.plan })
     try {
+      // Never run a plan that may have gone stale while the dialog was open:
+      // plan again against the space as it is now.
+      const plan = await planImport(review.raw, { userId: userId!, statements: await loadStatementsOf(review.target) })
+      if (plan.errors.length > 0) {
+        setImportState({ phase: "review", plan, fileName: review.fileName, raw: review.raw, target: review.target })
+        return
+      }
       for (const entry of plan.create) {
         const data = importItemData(entry)
         const created = await connector.createItem({
@@ -123,8 +135,8 @@ export function ResonanceTransferMenu({
         })
         // The space is a connector association, not item data (as in the
         // composer): place the statement where the import was aimed.
-        if (target !== null && hasItemGroups(connector) && connector.getItemGroupId(created.id) !== target) {
-          await connector.moveItemToGroup(created.id, target)
+        if (review.target !== null && hasItemGroups(connector) && connector.getItemGroupId(created.id) !== review.target) {
+          await connector.moveItemToGroup(created.id, review.target)
         }
       }
       setImportState({ phase: "done", created: plan.create.length, skipped: plan.skipped.length })
@@ -223,7 +235,7 @@ export function ResonanceTransferMenu({
                 <DialogClose asChild>
                   <Button variant="outline">Abbrechen</Button>
                 </DialogClose>
-                <Button onClick={() => void runImport(importState.plan)}>Importieren</Button>
+                <Button onClick={() => void runImport(importState)}>Importieren</Button>
               </>
             ) : (
               <DialogClose asChild>

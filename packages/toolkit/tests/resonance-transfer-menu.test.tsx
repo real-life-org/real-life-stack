@@ -137,3 +137,38 @@ describe("ResonanceTransferMenu: import from the overview", () => {
     expect(connector.getItemGroupId(created.id)).toBe("g")
   })
 })
+
+describe("ResonanceTransferMenu: import against the loaded space (#521)", () => {
+  it("does not duplicate while the observed statements are still loading", async () => {
+    // Observation still empty and not loaded — the store already has the statement.
+    connector.observe = (() => ({ current: [], loaded: false, subscribe: () => () => {} })) as never
+    await act(async () => { root.unmount() })
+    root = createRoot(host)
+    await act(async () => {
+      root.render(createElement(ConnectorProvider, { connector: connector as never },
+        createElement(ResonanceTransferMenu, {
+          space: "g", userId: "u1", shownStatements: [], verifiedRecords: [],
+          contentHashes: new Map(), population: ALL_PEOPLE, tags: [],
+        })))
+    })
+    const text = await choose(JSON.stringify({
+      format: "resonance-import/1",
+      statements: [{ title: "Wir treffen uns montags" }, { title: "Variante", variantOf: "item:s-1" }],
+    }))
+    expect(text).toContain("1 Aussage wird angelegt, 1 übersprungen")
+    await act(async () => { button("Importieren")!.click() })
+    for (let round = 0; round < 3; round++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+    const titles = (await connector.getItems({ type: "statement" })).map((item) => item.data.title).sort()
+    expect(titles).toEqual(["Variante", "Wir treffen uns montags"])
+  })
+
+  it("plans again on confirm instead of running a stale plan", async () => {
+    await choose(JSON.stringify({ format: "resonance-import/1", statements: [{ title: "Neu hier" }] }))
+    // Meanwhile the same statement arrives (another device, a second tab).
+    await connector.createItem({ type: "statement", createdBy: "u1", data: { title: "Neu hier" } })
+    await act(async () => { button("Importieren")!.click() })
+    for (let round = 0; round < 3; round++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+    expect(document.body.textContent).toContain("0 Aussagen angelegt, 1 übersprungen")
+    expect((await connector.getItems({ type: "statement" })).filter((item) => item.data.title === "Neu hier")).toHaveLength(1)
+  })
+})
