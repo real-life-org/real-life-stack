@@ -84,6 +84,12 @@ Review, Verifikation oder Attestation werden nicht stillschweigend zu
 7. Drag-and-drop ist im schreibbaren Board nur eine UI-Interaktion; die
    dauerhafte Wahrheit liegt erst nach erfolgreicher Connector-Mutation
    vor.
+8. Verschieben schreibt nur `data[statusField]` und `data.order`.
+   Zuweisungen bleiben stehen; die Übergänge von Übernehmen und Abgeben
+   gelten nur für die Selbstaktion
+   ([06, Regel 19](../06-schema-composition.md#feld--und-kantenregister)).
+   Das Kanban ist neben dem Formular der Weg, eine erledigte Aufgabe
+   wieder zu öffnen.
 
 ## Capabilities
 

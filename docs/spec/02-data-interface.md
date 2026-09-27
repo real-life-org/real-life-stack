@@ -141,6 +141,7 @@ interface ItemFilter {
   hasTag?: string[]
   createdBy?: string
   source?: string
+  group?: string
   bbox?: [number, number, number, number]
   limit?: number
   offset?: number
@@ -156,12 +157,27 @@ Mindestbedeutung:
 | `hasTag` | Nur Items, deren top-level `tags` alle genannten Strings enthält (AND, leeres Array matched alle) — siehe [07-tags.md](07-tags.md) |
 | `createdBy` | Nur Items dieser Autor-ID |
 | `source` | Optionaler Quellenfilter, wenn ein Connector mehrere Quellen unterscheidet |
+| `group` | Nur Items dieses Space, unabhängig vom geöffneten Space; siehe [Lesen in einem bestimmten Space](#lesen-in-einem-bestimmten-space-group) |
 | `bbox` | Nur Items mit Position innerhalb der Bounding-Box `[west, south, east, north]` (GeoJSON-Längen-/Breitengrade). Viewport-begrenzte Abfrage (v.a. Karte); ein Connector ohne Geo-Index DARF clientseitig filtern, ein backend-gestützter Connector SOLLTE serverseitig einschränken. |
 | `limit` / `offset` | UI-Paginierung über eine bereits geladene oder beobachtbare Menge |
 
 `limit` und `offset` sind UI-Optimierungen. Sie ersetzen keine Trust-, Sichtbarkeits- oder Berechtigungslogik.
 
 `bbox` ist der Daten-Seam für skalierende Karten: dieselbe Abfrage liefert lokal (voller Satz, clientseitig gefiltert) wie später backend-gestützt (z.B. GraphQL, serverseitig eingeschränkt) nur die Items im sichtbaren Ausschnitt. Serverseitiges **Clustering** bei sehr großen Mengen (Rückgabe aggregierter Cluster statt Einzel-Items) ist eine **zukünftige, separate Query** und nicht Teil von `ItemFilter` (der `Item[]` zurückgibt) — siehe [modules/map.md](modules/map.md) → Datenquelle.
+
+### Lesen in einem bestimmten Space (`group`)
+
+Ohne `group` liest ein Connector im Scope des geöffneten Space: im Space von `GroupManager.getCurrentGroup()`; ist keiner geöffnet (Übersicht) oder trägt der geöffnete Space `scope: "aggregate"`, in allen zugänglichen Spaces. `group` setzt den Space für eine einzelne Abfrage ausdrücklich. Wer die Menge des geöffneten Space nachträglich nach `getItemGroupId()` filtert, findet in einem anderen Space nichts; das ersetzt `group` nicht.
+
+Regeln:
+
+1. Mit `group` liefern `getItems()` und `observe()` die Items, die im Space `group` liegen und die der Nutzer lesen darf. Das gilt unabhängig davon, welcher Space geöffnet ist und ob einer geöffnet ist. Die übrigen Filterfelder gelten zusätzlich.
+2. `group` ist die Id einer Group aus `GroupManager.getGroups()` oder die Id des persönlichen Space (`ItemGroupCapable.getPersonalGroupId()`, „Privat"). Ein unbekannter oder nicht zugänglicher Space ergibt eine leere Menge, nie Items eines anderen Space.
+3. Items ohne Space, die ein Connector jedem Space zurechnet (etwa globale `feature`-Items), rechnet er mit `group` genauso zu wie im geöffneten Space.
+4. Eine Abfrage mit `group` DARF den geöffneten Space NICHT wechseln (`setCurrentGroup`) und keinen anderen App-Zustand ändern.
+5. `observe({ group, … })` MUSS Änderungen in diesem Space melden, auch solange er nicht geöffnet ist. `loaded` gilt wie in [Observable](#observable), Regel 3.
+6. `group` versteht nur ein Connector, der es zusagt: `GroupFilterCapable` mit Type Guard `hasGroupFilter()` ([03](03-capabilities.md)). Ein Connector übergeht unbekannte Filterfelder; ohne die Zusage würde er die Items des geöffneten Space liefern, als wären es die des angefragten. Eine Fläche DARF `group` darum NICHT an einen Connector ohne `hasGroupFilter()` geben. Sie zeigt stattdessen, dass sie in diesem Space nicht lesen kann ([shared-components → Space des Formulars](modules/shared-components.md#space-des-formulars)).
+7. `hasGroupFilter()` und `hasItemGroups()` sind unabhängig. `ItemGroupCapable` beantwortet für ein bekanntes Item, in welchem Space es liegt, und verschiebt es; `GroupFilterCapable` liest die Items eines Space. Ein Connector mit `GroupManager` SOLLTE `GroupFilterCapable` erfüllen.
 
 ## Nicht-Ziele
 

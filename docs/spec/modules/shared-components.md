@@ -635,7 +635,7 @@ Regeln:
 4. Eine Item-Referenz erscheint als Chip in der Farbe ihres Typs. Ein Klick darauf öffnet das Ziel in derselben Panel-Instanz. Ein Wert erscheint als Text; führt er zu einer Sicht, gilt [01 → Ein Feld führt zu seiner Sicht](../01-app-composition.md#ein-feld-führt-zu-seiner-sicht).
 5. Menschen stehen in **einer Zeile je Personen-Kante**. Der Qualifier steht klein hinter dem Namen am Chip (etwa „Maria zugesagt" für `going`, „Timo lernt" für `learns`). Gespeichert wird die Id, das Wort kommt über die Intl-Schicht. Stammt die geltende Aussage nicht von der Person selbst, sagt der Chip, von wem: „Timo zugesagt · eingetragen von Anton" ([08 → Qualifier an Kanten](../08-relation-records.md#qualifier-an-kanten)). Ein Qualifier an einer Item-Kante (C3) steht ebenso klein hinter dem Chip. Das Event führt Eingeladene (`invited`) und Zusagen (`attends`) in einer Zeile. Eine Person mit geltendem `declined` erscheint nicht in der Zeile und nicht in ihrer Zusammenfassung, nur in der vollständigen Liste („Alle").
 6. Position im Modul (Spalte, Stufe, Reihenfolge) steht nicht in der Meta-Box.
-7. Eine Selbstaktion ist eine Kante von mir zum Item. Sie steht als eigene Pill-Zeile direkt unter der Meta-Box: vor der Aktion neutral („Zusagen · Vielleicht · Absagen"), danach mit meinem Zustand („✓ Zugesagt" für `going`). Auch `declined` ist ein Zustand und bleibt als meiner sichtbar. Jede Pill ist ein Umschalter; der zweite Klick auf meinen Zustand nimmt ihn zurück. Deklariert die Kante eine Folgeaktion ([06 → Feld- und Kantenregister](../06-schema-composition.md#feld--und-kantenregister), Regel 9), steht sie als weiterer Umschalter nach meinem Zustand. Die Aufgabe: nicht übernommen „Übernehmen"; übernommen „✓ Übernommen · Erledigt"; erledigt „✓ Übernommen · ✓ Erledigt". Klick auf „✓ Übernommen" gibt ab (der Status bleibt), Klick auf „✓ Erledigt" setzt den Standard-Status. Die Umschalter tragen `aria-pressed`, gedrückt nennt die Beschriftung die Rücknahme („Übernahme zurückgeben", „Als offen markieren"). „Erledigt" sieht nur die Person mit der Selbstaussage, und nur mit Schreibrecht am Item (Modi, Regel 1); alle anderen ändern den Status im Formular oder im Modul.
+7. Eine Selbstaktion ist eine Kante von mir zum Item. Sie steht als eigene Pill-Zeile direkt unter der Meta-Box: vor der Aktion neutral („Zusagen · Vielleicht · Absagen"), danach mit meinem Zustand („✓ Zugesagt" für `going`). Auch `declined` ist ein Zustand und bleibt als meiner sichtbar. Die Pill meines Zustands ist ein Umschalter; der zweite Klick nimmt ihn zurück. Deklariert die Kante eine Folgeaktion ([06 → Feld- und Kantenregister](../06-schema-composition.md#feld--und-kantenregister), Regel 9), steht sie nach meinem Zustand. Die Aufgabe: niemand zugewiesen „Übernehmen"; andere zugewiesen, ich nicht „Mitmachen"; ich allein „✓ Übernommen · Erledigt"; ich mit anderen „✓ Dabei · Erledigt"; erledigt „✓ Übernommen · ✓ Erledigt" oder „✓ Dabei · ✓ Erledigt". Klick auf „✓ Übernommen" oder „✓ Dabei" gibt ab. „✓ Erledigt" ist ein Zustand, kein Knopf, und für Screenreader als Status lesbar; zurück geht es nur über Bearbeiten oder das Kanban. Den Status beim Übernehmen, Mitmachen, Abgeben und Erledigen regelt [06, Regel 19](../06-schema-composition.md#feld--und-kantenregister): Übernehmen setzt eine offene Aufgabe auf „In Arbeit", und wer als letzte Person eine Aufgabe in Arbeit abgibt, setzt sie auf offen zurück. Der Umschalter meines Zustands trägt `aria-pressed`, gedrückt nennt die Beschriftung die Rücknahme („Übernahme zurückgeben", „Nicht mehr mitmachen"). „Erledigt" sieht nur eine Person an der Kante, und nur mit Schreibrecht am Item (Modi, Regel 1); alle anderen ändern den Status im Formular oder im Modul.
 8. Rückwärts-Listen deklariert der Typ des angezeigten Items (Register, `itemRole: "to"`, Slot `list`, oder eine benannte Abfrage in `lists`). Sie zeigen alle Einträge, jeden einmal, ohne Kappung, als kompakte `ItemPreview`s (Kartenflächen-MUSS, siehe [`ItemPreview`](#itempreview)). Trägt eine Liste eine Aktion, steht sie im Listenkopf; hat die Liste keinen Eintrag außer dem Item selbst, steht die Aktion allein an ihrer Stelle. Die Liste `family` eines Statements heißt „Fassungen N"; je Zeile stehen ein Badge („Ausgang" oder „Variante"), der Titel, „diese" bei der angezeigten Fassung und eine kleine Stimmleiste. Ihre Aktion ist „+ Variante" ([resonance.md → Varianten](resonance.md#varianten)).
 9. Die Karte (`ItemPreview`) zeigt aus demselben Register: Titel, erste Meta-Zeile, Avatar-Stack, Tags gekappt. Ein Feld mit Item-Verweis (B15) steht auf der Karte als Chip („Variante von …"). Im Detail entfällt seine Meta-Zeile, wenn eine Liste des Typs es abdeckt (`covers`); beim Statement zeigt die Liste `family` die Herkunft.
 10. Ob `bar` und `comments` erscheinen, sagt das Register des Typs. Für `person` entfallen beide.
@@ -680,8 +680,8 @@ Jedes Feld und jede Kante hat eine Lese- und eine Schreibform auf **einem** Date
 | # | Widget | Lesen | Schreiben |
 |---|---|---|---|
 | C1 | `people` | eine Zeile: Chips mit Avatar, Name und Qualifier; ab Schwelle Zusammenfassung je Qualifier | Chips mit Qualifier-Text, Antippen wechselt den Qualifier, „Einladen…" |
-| C2 | self-action | Pill-Zeile im Slot `actions`, neutral oder mein Zustand, danach die Folgeaktion (nur für mich); alles Umschalter | entfällt (die Pill-Zeile schreibt selbst) |
-| C3 | `item-relation` | eine Zeile je Prädikat mit Label und Chips in Typfarbe, gekappt „+N"; erledigte Ziele durchgestrichen | Chips und „@ … suchen oder im Modul klicken…" |
+| C2 | self-action | Pill-Zeile im Slot `actions`, neutral („Übernehmen", mit anderen an der Kante „Mitmachen") oder mein Zustand („✓ Übernommen", mit anderen „✓ Dabei"), danach die Folgeaktion (nur für mich); mein Zustand ist Umschalter, „✓ Erledigt" nur Zustand | entfällt (die Pill-Zeile schreibt selbst) |
+| C3 | `item-relation` | eine Zeile je Prädikat mit Label und Chips in Typfarbe, gekappt „+N"; Ziele mit Status der Rolle `done` durchgestrichen | Chips und „@ … suchen oder im Modul klicken…" |
 | C4 | `vote` | Balken grün/gelb/rot, Prozent, „12 von 14", Namen je Stufe | Pills Dafür · Skeptisch · Dagegen (als C2) |
 | C7 | comment/reaction | Aktionsleiste (`bar`) und Thread (`comments`) | inline, nie im Formular |
 
@@ -718,13 +718,36 @@ Regeln:
 
 1. Bearbeiten tauscht die Slots `meta` bis `comments` in derselben Card gegen die Schreibformen. Kommentarliste und Kommentar-Eingabe entfallen. Das ✕ bleibt.
 2. Das Formular hat diese Reihenfolge: Kopf (Typ, Space) → Titel → Beschreibung → Felder in der Reihenfolge der Meta-Zeilen → Tags. Die Beschreibung ist als „+ Beschreibung" eingeklappt, wenn sie leer ist; ohne Titelfeld (Beitrag) ist sie der Inhalt und nie eingeklappt. Lesen bleibt Titel → Meta-Box → Beschreibung: Titel und Text schreibt man in einem Zug, beim Lesen stehen die Fakten zuerst.
-3. Typ und Space stehen im Kopf als kompakte Auswahlfelder. Der Space steht oben, weil er Sichtbarkeit sowie Personen- und Tag-Vorschläge bestimmt. Beim Erstellen sind Typ und Space wählbar. Beim Bearbeiten steht der Typ fest; der Space ist wählbar, wenn der Connector Items verschieben kann (`moveItemToGroup`). Ist ein Space Pflicht und keiner gesetzt (Übersicht), ist das Feld markiert.
+3. Typ und Space stehen im Kopf als kompakte Auswahlfelder. Der Space steht oben, weil er Sichtbarkeit sowie Personen- und Tag-Vorschläge bestimmt. Beim Erstellen sind Typ und Space wählbar. Beim Bearbeiten steht der Typ fest; der Space ist wählbar, wenn der Connector Items verschieben kann (`moveItemToGroup`), sonst steht er fest da. Was der Space im Formular bestimmt und wann er Pflicht ist, regelt [Space des Formulars](#space-des-formulars).
 4. Die Fußzeile klebt am Ende der Card. Sie hat Löschen links (nur mit Recht, hinter Bestätigung) und Abbrechen und Speichern rechts. Speichern schließt nur bei Erfolg. Ein Fehler erscheint inline, die Eingaben bleiben. Beim Schließen mit ungespeicherten Änderungen fragt ein Unsaved-Guard nach.
 5. Position, Reihenfolge und System-Felder (`pos: "module"` und `pos: "system"` im Register) erscheinen nicht im Formular.
 6. Ein Qualifier-Chip wechselt beim Antippen zum nächsten Wert, den das Register für die Kante deklariert.
-7. Eine Item-Relation (C3) wird über eine `@`-Suche über die Items des Space gesetzt. Der zweite Weg ist der Modul-Pick (Brett-Klick, Marker-Klick); ihn liefert das Modul.
+7. Eine Item-Relation (C3) wird über eine `@`-Suche über die Items des Formular-Space gesetzt ([Space des Formulars](#space-des-formulars)). Der zweite Weg ist der Modul-Pick (Brett-Klick, Marker-Klick); ihn liefert das Modul.
 8. Es gibt keinen zweiten Editor neben dem Item-Edit.
 9. Ein Feld mit `edit: "fixed"` erscheint fest: sichtbar, nicht bearbeitbar, mit einem Symbol dafür. Beispiele: „Variante von" (Chip) und „Space" im Formular einer Variante.
+
+### Space des Formulars
+
+Das Formular führt den Space als eigenen Zustand, den **Formular-Space**. Er ist der Space, in dem das Item nach dem Speichern liegt. Er gilt für Erstellen und Bearbeiten gleich.
+
+Regeln:
+
+1. **Vorauswahl.** Beim Erstellen ist der Formular-Space der geöffnete Space. Ist keiner geöffnet (Übersicht), ist er „Privat" (`getPersonalGroupId()`); hat der Connector keinen persönlichen Space, ist keiner gesetzt. Ein Kontext DARF ihn fest vorgeben (Varianten, [Edit-Regeln](#edit-regeln), Regel 9). Beim Bearbeiten ist er der Space des Items (`getItemGroupId()`).
+2. **Eine Quelle.** Nach dem Öffnen DARF das Formular den Space nur aus dem Formular-Space lesen, nie aus dem geöffneten Space (`getCurrentGroup()`). Nur die Auswahl im Kopf ändert ihn. Wechselt die App den geöffneten Space, während das Formular offen ist, bleibt der Formular-Space.
+3. **Weitergabe.** Jeder Teil des Formulars, der vom Space abhängt, bekommt den Formular-Space:
+
+    | Teil | Verwendung des Formular-Space |
+    |---|---|
+    | `@`-Suche einer Item-Kante (C3) | `ItemFilter.group` ([02 → Lesen in einem bestimmten Space](../02-data-interface.md#lesen-in-einem-bestimmten-space-group)) |
+    | Personen-Vorschläge (C1) | Mitglieder dieses Space (`observeMembers(space)`) |
+    | Tag-Vorschläge (B14) | Tags dieses Space |
+    | Prüfung einer Verknüpfung (Suche, Modul-Pick, gewählte Chips) | Das Ziel liegt in diesem Space; ein `item:`-Target ist space-lokal ([04 → Target-Konventionen](../04-items-relations-groups-spaces.md#target-konventionen)) |
+    | Speichern | Das Item liegt danach in diesem Space |
+
+4. **Wechsel im Formular.** Wechselt der Formular-Space, gelten Suche, Vorschläge und Prüfung sofort für den neuen Space. Eine schon gewählte Item-Kante, deren Ziel nicht im neuen Space liegt, steht markiert da, und Speichern ist gesperrt, bis sie entfernt oder der Space zurückgewechselt ist. Personen-Kanten bleiben; ihr Ziel ist nicht space-lokal.
+5. **Speichern in einem Zug.** Legt der Connector das Item zuerst im geöffneten Space an und verschiebt es dann (`moveItemToGroup`), gehört beides zu einem Speichervorgang. Scheitert das Verschieben, zeigt das Formular den Fehler (Zustand „Fehler"); „Erneut" setzt am schon angelegten Item fort.
+6. **Kein Vortäuschen.** Kann der Connector nicht im Formular-Space lesen (`hasGroupFilter()` fehlt) und ist dieser nicht der geöffnete Space, sagt die Suche das, statt leer zu bleiben oder Items des geöffneten Space anzubieten. Dasselbe gilt für Personen- und Tag-Vorschläge.
+7. **Pflicht nur beim Anlegen.** Hat der Connector Spaces und ist beim Erstellen keiner gesetzt, ist das Feld markiert und Speichern gesperrt. `composer.groupRequired` gilt nur beim Erstellen. Beim Bearbeiten ist der Space nie Pflicht: Ein Item ohne bekannten Space bleibt speicherbar.
 
 ## Hooks
 
