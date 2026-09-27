@@ -24,8 +24,9 @@ export function useModuleFilter<T>(key: string, initial: T): [T, (next: T) => vo
   const moduleId = useOptionalModuleHost()?.entry.id ?? "_"
   const [local, setLocal] = useState<T>(initial)
   const fullKey = `${moduleId}:${key}`
-  const stored = shared?.moduleFilters[fullKey]
-  const value = shared ? (stored === undefined ? initial : (stored as T)) : local
+  // Unset until the module sets it — by presence of the key, so a module
+  // that sets `undefined` gets `undefined` back, not its initial value (#517).
+  const value = shared ? (fullKey in shared.moduleFilters ? (shared.moduleFilters[fullKey] as T) : initial) : local
   const setModuleFilter = shared?.setModuleFilter
   const setValue = useCallback(
     (next: T) => (setModuleFilter ? setModuleFilter(fullKey, next) : setLocal(next)),

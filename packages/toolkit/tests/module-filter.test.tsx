@@ -84,6 +84,23 @@ describe("useModuleFilter", () => {
     expect(seen.kanban!.value).toEqual(["bert"])
   })
 
+  it("keeps a deliberately set undefined instead of restoring the initial value (#517)", async () => {
+    let current: string | undefined = "x"
+    let set: (next: string | undefined) => void = () => {}
+    function Optional() {
+      const [value, setValue] = useModuleFilter<string | undefined>("focus", "start")
+      current = value
+      set = setValue
+      return null
+    }
+    await act(async () => {
+      root.render(createElement(FilterProvider, null, createElement(Optional)))
+    })
+    expect(current).toBe("start")
+    await act(async () => { set(undefined) })
+    expect(current).toBeUndefined()
+  })
+
   it("without a filter owner it is plain local state", async () => {
     await show("resonance", false)
     await act(async () => { seen.resonance!.set(["anna"]) })

@@ -54,7 +54,9 @@ function useFilterValue(): SharedFilterValue {
     setSearchText("")
   }, [])
   const setModuleFilter = useCallback((key: string, next: unknown) => {
-    setModuleFilters((current) => (Object.is(current[key], next) ? current : { ...current, [key]: next }))
+    // Presence, not the value, marks a set filter: `undefined` is a value a
+    // module may set on purpose (#517).
+    setModuleFilters((current) => (key in current && Object.is(current[key], next) ? current : { ...current, [key]: next }))
   }, [])
   return useMemo(
     () => ({ value, setValue, searchText, setSearchText, clear, moduleFilters, setModuleFilter }),
