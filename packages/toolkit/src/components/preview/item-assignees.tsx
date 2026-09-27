@@ -131,13 +131,16 @@ export function ItemAssignees({ users, size = "sm", className }: ItemAssigneesPr
                   >
                     <AvatarImage
                       src={user.avatarUrl}
-                      alt={name}
+                      // Schmuck: Der Name steht an der Profil-Schaltflaeche und
+                      // in der Screenreader-Liste; ein alt sagte ihn ein drittes Mal.
+                      alt=""
                       // Umrandet tritt das Foto zurueck: kleiner und blasser.
                       // So traegt die Helligkeit die Unterscheidung mit, nicht
                       // die Farbe allein.
                       className={umrandet ? "rounded-full opacity-50" : undefined}
                     />
                     <AvatarFallback
+                      aria-hidden
                       className={cn("font-bold", winzig ? "text-[6.5px]" : "text-[8px]")}
                       style={
                         umrandet
