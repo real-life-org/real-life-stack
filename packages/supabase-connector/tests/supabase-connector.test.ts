@@ -346,6 +346,19 @@ describe("SupabaseConnector — GroupScopeCapable (02 → Lesen/Anlegen in einem
     expect(client.tables.get("items")!.length).toBe(before)
   })
 
+  it("observe mit group folgt einem Mitgliedschaftswechsel (Codex R1/4)", async () => {
+    const { connector, userId, groupB } = await world()
+    await connector.createItem({ type: "scope-member", createdBy: userId, data: {} }, { group: groupB.id })
+    const observable = connector.observe({ type: "scope-member", group: groupB.id })
+    await flush()
+    expect(observable.current).toHaveLength(1)
+    await connector.removeMember(groupB.id, userId)
+    await flush()
+    await flush()
+    expect(await connector.getItems({ type: "scope-member", group: groupB.id })).toEqual([])
+    expect(observable.current).toEqual([])
+  })
+
   it("observe mit group folgt einem externen Insert in diesem Space, solange er nicht geöffnet ist", async () => {
     const { client, connector, userId, groupB } = await world()
     const observable = connector.observe({ type: "scope-obs", group: groupB.id })

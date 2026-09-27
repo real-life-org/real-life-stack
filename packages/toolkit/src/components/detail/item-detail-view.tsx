@@ -90,13 +90,14 @@ export function ItemDetailView({
   // (ItemDetailActions) — nur mit Recht, immer hinter der Bestätigung.
   const perms = useItemPermissions(item)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  // Der Space des Items (Vorauswahl beim Bearbeiten, Space des Formulars
-  // Regel 1) und ob es Beziehungen hat, die es dort halten (Regel 5).
-  const itemGroup = item && hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
-  const hasBindings = useItemHasBindings(item ?? null, itemGroup)
   // Uncontrolled by default; controlled when a `mode` prop is supplied (URL-driven).
   const [internalMode, setInternalMode] = useState<"read" | "edit">("read")
   const mode = modeProp ?? internalMode
+  // Der Space des Items (Vorauswahl beim Bearbeiten, Space des Formulars
+  // Regel 1) und ob es Beziehungen hat, die es dort halten (Regel 5) —
+  // gelesen nur im Bearbeiten.
+  const itemGroup = item && hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
+  const hasBindings = useItemHasBindings(mode === "edit" ? (item ?? null) : null, itemGroup)
   const changeMode = useCallback(
     (next: "read" | "edit") => {
       onModeChange?.(next)
@@ -123,10 +124,12 @@ export function ItemDetailView({
   // verschieben kann (moveItemToGroup); sonst steht er nicht zur Wahl.
   // Ohne Verschieben steht der bekannte Space fest im Kopf (Edit-Regeln 3).
   // Hat das Item Beziehungen — oder ist das noch nicht bekannt —, steht er
-  // ebenfalls fest, mit Grund (Space des Formulars, Regel 5).
+  // ebenfalls fest, mit Grund (Space des Formulars, Regel 5). Vorgabe ist
+  // nur der Space des Items, nie die des Erstellens (Regel 1; Codex R1/5):
+  // Ohne bekannten Space bleibt der Kopf leer, und Speichern verschiebt nicht.
   const canMove = hasItemGroups(connector)
   const composerTypes = withEditGroup(
-    (vorlage ? contentTypes.filter((t) => t.id === vorlage) : []).map((t) => (itemGroup ? { ...t, defaultGroup: itemGroup } : t)),
+    (vorlage ? contentTypes.filter((t) => t.id === vorlage) : []).map((t) => ({ ...t, defaultGroup: itemGroup ?? undefined })),
     canMove,
     hasBindings === false ? undefined : ITEM_BINDINGS_REASON,
   )

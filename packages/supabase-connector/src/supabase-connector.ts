@@ -91,7 +91,8 @@ export class SupabaseConnector implements DataInterface, ItemWriter, GroupScopeC
   private currentUser: User | null = null
   private authUnsubscribe: (() => void) | null = null
 
-  private itemObservables = new Map<string, { observable: ItemsObservable; filter: ItemFilter }>()
+  /** `gen`: nur die Antwort der jüngsten Abfrage gilt (eine verspätete aus einem früheren Berechtigungsstand wird verworfen). */
+  private itemObservables = new Map<string, { observable: ItemsObservable; filter: ItemFilter; gen: number }>()
   private singleItemObservables = new Map<string, ReturnType<typeof createObservable<Item | null>>>()
   private channels: ChannelLike[] = []
   private itemsRefreshScheduled = false
@@ -174,6 +175,9 @@ export class SupabaseConnector implements DataInterface, ItemWriter, GroupScopeC
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "group_members" }, (payload) => {
         this.scheduleGroupsRefresh()
+        // Mitgliedschaft entscheidet, welche Items lesbar sind — auch für
+        // Abfragen mit `group` (02, Lesen Regel 5; Codex R1/4).
+        this.scheduleItemsRefresh()
         const inserted = payload.eventType === "INSERT" ? payload.new as { group_id?: string; user_id?: string; invited_by?: string } | null : null
         if (inserted?.user_id === this.sessionUserId && inserted.invited_by
           && inserted.invited_by !== this.sessionUserId && inserted.group_id) {
@@ -342,11 +346,13 @@ export class SupabaseConnector implements DataInterface, ItemWriter, GroupScopeC
     // Starts unloaded; markLoaded() once the first fetch settles so consumers
     // can tell "still loading" from "loaded, empty".
     const observable = createObservable<Item[]>([], false)
-    this.itemObservables.set(key, { observable, filter })
+    const entry = { observable, filter, gen: 0 }
+    this.itemObservables.set(key, entry)
     void this.getItems(filter)
-      .then((items) => observable.set(items))
+      .then((items) => { if (entry.gen === 0) observable.set(items) })
       .catch((error) => console.error("[SupabaseConnector] observe initial load failed", error))
-      .finally(() => observable.markLoaded())
+      // Hat eine jüngere Abfrage übernommen, meldet sie „geladen“.
+      .finally(() => { if (entry.gen === 0) observable.markLoaded() })
     return observable
   }
 
@@ -369,10 +375,18 @@ export class SupabaseConnector implements DataInterface, ItemWriter, GroupScopeC
     this.itemsRefreshScheduled = true
     queueMicrotask(() => {
       this.itemsRefreshScheduled = false
-      for (const { observable, filter } of this.itemObservables.values()) {
-        void this.getItems(filter)
-          .then((items) => observable.set(items))
-          .catch((error) => console.error("[SupabaseConnector] observe refresh failed", error))
+      for (const entry of this.itemObservables.values()) {
+        const gen = ++entry.gen
+        void this.getItems(entry.filter)
+          .then((items) => {
+            if (entry.gen !== gen) return
+            entry.observable.set(items)
+            entry.observable.markLoaded()
+          })
+          .catch((error) => {
+            console.error("[SupabaseConnector] observe refresh failed", error)
+            if (entry.gen === gen) entry.observable.markLoaded()
+          })
       }
       for (const [id, observable] of this.singleItemObservables) {
         void this.getItem(id)

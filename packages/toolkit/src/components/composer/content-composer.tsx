@@ -903,7 +903,9 @@ export function ContentComposer({
   const [isPublic, setIsPublic] = React.useState(defaultPublic)
   // Genau ein möglicher Space: Er steht fest im Kopf und MUSS dann auch
   // gesetzt sein — eine Anzeige, die beim Speichern nicht gilt, täuscht.
-  const onlySpace = currentConfig?.groupOptions?.length === 1 ? currentConfig.groupOptions[0]!.id : undefined
+  // Nur beim Erstellen: Beim Bearbeiten gibt allein der Space des Items vor
+  // (Space des Formulars, Regel 1), sonst verschöbe Speichern.
+  const onlySpace = !isEditMode && currentConfig?.groupOptions?.length === 1 ? currentConfig.groupOptions[0]!.id : undefined
   React.useEffect(() => {
     if (onlySpace && !data.group) setData((d) => (d.group ? d : { ...d, group: onlySpace }))
   }, [onlySpace, data.group])

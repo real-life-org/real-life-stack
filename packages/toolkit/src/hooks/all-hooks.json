@@ -114,7 +114,7 @@
             "docs/spec/02-data-interface.md"
           ],
           "source": "packages/toolkit/src/hooks/use-item-editor.ts",
-          "line": 218
+          "line": 232
         },
         {
           "name": "useCreateItem",
@@ -699,7 +699,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/components/host/create-host.tsx",
-          "line": 297
+          "line": 301
         },
         {
           "name": "useOptionalCreate",
@@ -714,7 +714,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/components/host/create-host.tsx",
-          "line": 314
+          "line": 318
         },
         {
           "name": "useModuleHost",

@@ -283,8 +283,8 @@ export function withGroupOptions(
   personalGroupId?: string | null,
 ): ContentTypeConfig[] {
   // Options = the user's personal/private space („Privat", the „share with
-  // nobody" target) + the shared groups. Only surface a picker when there's a
-  // real choice (≥2 options).
+  // nobody" target) + the shared groups. One option is shown fixed (the
+  // composer sets it); a picker only with a real choice (≥2 options).
   const options: GroupOption[] = []
   if (personalGroupId) options.push({ id: personalGroupId, name: "Privat", personal: true })
   options.push(
@@ -296,7 +296,9 @@ export function withGroupOptions(
       ...(Array.isArray(g.members) ? { memberCount: g.members.length } : {}),
     })),
   )
-  if (options.length < 2) return types
+  // Auch EIN Space steht im Kopf (fest) und wird gesetzt: sonst entfiele
+  // die Pflicht beim Anlegen (Space des Formulars, Regel 8; Codex R1/6).
+  if (options.length === 0) return types
 
   // Default to the current space; in the personal/overview view (no concrete
   // space) default to „Privat" so a new item stays private unless shared.

@@ -23,6 +23,7 @@ import type {
   RelationRecordCapable,
   RelationRecordFilter,
   RelationRecordInput,
+  RelationRecordCreateConnector,
   RelationRecordUpdate,
   RelationRecordWriterCapable,
   Source,
@@ -38,6 +39,7 @@ import {
   withoutAuthoredClaim,
   applyPagination,
   createDefaultRelationStore,
+  createRelationRecordWith,
   createObservable,
   deriveActivitySummary,
   itemDisplayTitle,
@@ -705,7 +707,21 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
 
   async createRelationRecord(input: RelationRecordInput): Promise<RelationRecord> {
     this.requireCurrentUser()
-    return this.relationStore.createRelationRecord(input)
+    // Ein Record gehört NEBEN das Item, auf das er zielt (wie Local und
+    // Supabase): Liegt das Ziel in einem anderen als dem geöffneten Space
+    // (angelegt mit `group`, 02), entsteht der Record dort — sonst zeigte sein
+    // space-lokales `item:`-Ziel ins Leere.
+    const targetItemId = input.to.startsWith("item:") ? input.to.slice("item:".length) : null
+    const targetGroupId = targetItemId ? this.getItemGroupId(targetItemId) : null
+    if (targetGroupId === null || targetGroupId === this.currentGroup?.id) {
+      return this.relationStore.createRelationRecord(input)
+    }
+    const scoped: RelationRecordCreateConnector = {
+      getItem: async (id: string) => this.itemsByScope.get(targetGroupId)?.get(id) ?? null,
+      createItem: (item: CreateItemInput) => this.createItem(item, { group: targetGroupId }),
+      getCurrentUser: () => this.getCurrentUser(),
+    }
+    return createRelationRecordWith(scoped, input)
   }
 
   async updateRelationRecord(id: string, updates: RelationRecordUpdate): Promise<RelationRecord> {

@@ -46,7 +46,7 @@ async function settle() {
   }
 }
 
-function makeConnector(items: Item[] = [IN_G, IN_H], groupItems: Record<string, string[]> = { g: ["t-g"], h: ["t-h"] }) {
+function makeConnector(items: Item[] = [IN_G, IN_H], groupItems: Record<string, string[]> = { g: ["t-g"], h: ["t-h"] }, fixture = true) {
   return new MockConnector(
     {
       items,
@@ -55,7 +55,7 @@ function makeConnector(items: Item[] = [IN_G, IN_H], groupItems: Record<string, 
       groupMembers: { g: [ME], h: [ME, HOFI] },
       groupItems,
     } as never,
-    { allowFixtureAuthors: true },
+    { allowFixtureAuthors: fixture },
   )
 }
 
@@ -331,5 +331,96 @@ describe("Nach dem Anlegen in einem anderen Space (Regel 6)", () => {
     connector.setCurrentGroup(null)
     expect(createdItemIsVisible(connector, inH)).toBe(true)
     expect(createdItemIsVisible(null, inH)).toBe(true)
+    // Ohne ItemGroupCapable (Supabase) zählt der Space des Formulars (Codex R1/7).
+    connector.setCurrentGroup("g")
+    const ohneZuordnung = new Proxy(connector, { has: (t, k) => (k === "getItemGroupId" || k === "moveItemToGroup" ? false : Reflect.has(t, k)) }) as never
+    expect(createdItemIsVisible(ohneZuordnung, inH, "h")).toBe(false)
+    expect(createdItemIsVisible(ohneZuordnung, inG, "g")).toBe(true)
+  })
+})
+
+describe("Codex R1/2+3: Erneut nach teilweisem Anlegen in einem anderen Space", () => {
+  it("der Space steht nach dem Anlegen fest, „Erneut“ schreibt nur die Aussage — im Space des Items", async () => {
+    const { pickContentTypes } = await import("../src/components/composer/content-types")
+    // Ohne Fixture-Modus: nur dann schreibt der Connector verifizierte Aussagen.
+    connector = makeConnector(undefined, undefined, false)
+    await connector.init()
+    connector.setCurrentGroup("g")
+    const onDone = vi.fn()
+    await render(createElement(ItemComposer, {
+      contentTypes: withGroupOptions(pickContentTypes("event"), [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], "g"),
+      initialContentType: "event", mapper: mapComposerSubmission, initialData: { group: "h" }, onDone, onCancel: () => {},
+    }))
+    const button = (text: string) => [...document.body.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === text)
+    const title = host.querySelector<HTMLInputElement>('input[type="text"], input:not([type])')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(title, "Hoffest")
+      title.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+    await act(async () => button("Hofi")!.click())
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>("[data-qualifier-toggle]")].find((b) => b.getAttribute("aria-label")?.startsWith("Hofi"))!.click())
+    const create = connector.createRelationRecord.bind(connector)
+    let failOnce = true
+    connector.createRelationRecord = (async (input: never) => {
+      if (failOnce) {
+        failOnce = false
+        throw new Error("Relay nicht erreichbar")
+      }
+      return create(input)
+    }) as never
+    await act(async () => button("Erstellen")!.click())
+    await settle()
+    expect(host.querySelector('[data-slot="save-error"]')).toBeTruthy()
+    // Schon angelegt: kein Umzug mehr über die Kopfauswahl (Regel 5/6).
+    expect(host.querySelector('button[aria-label^="Space wählen"]')).toBeNull()
+    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain("Hof")
+    const update = vi.spyOn(connector, "updateItem")
+    await act(async () => button("Erneut")!.click())
+    await settle()
+    expect(update).not.toHaveBeenCalled()
+    const events = await connector.getItems({ type: "event", group: "h" })
+    expect(events).toHaveLength(1)
+    const records = await connector.getItems({ type: "relation", group: "h" })
+    expect(records).toHaveLength(1)
+    expect(onDone).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("Codex R1/5: Bearbeiten ohne bekannten Space verschiebt nicht", () => {
+  it("übernimmt keine Erstellen-Vorgabe; Speichern lässt das Item, wo es ist", async () => {
+    const loose = item("t-lose", "task", { title: "Lose", status: "open" })
+    connector = makeConnector([IN_G, IN_H, loose], { g: ["t-g"], h: ["t-h"] })
+    await connector.init()
+    connector.setCurrentGroup(null)
+    const move = vi.spyOn(connector, "moveItemToGroup")
+    const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], "g")
+    await render(createElement(ItemDetailView, {
+      itemId: "t-lose", mode: "edit", renderRead: () => null, contentTypes: types, mapper: mapComposerSubmission,
+      editInitialData: (i: Item) => ({ title: String(i.data.title), status: "open" }), onClose: () => {},
+    }))
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Speichern")!.click())
+    await settle()
+    expect(move).not.toHaveBeenCalled()
+    expect(connector.getItemGroupId("t-lose")).toBeNull()
+  })
+})
+
+describe("Codex R1/6: Pflicht auch bei nur einem möglichen Space", () => {
+  it("withGroupOptions bildet einen einzelnen Space ab; das Formular setzt ihn", async () => {
+    const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }], undefined, null)
+    expect(types[0]!.groupOptions?.map((o) => o.id)).toEqual(["g"])
+    const seen: Array<Record<string, unknown>> = []
+    await render(createElement(ItemComposer, {
+      contentTypes: types, initialContentType: "task", mapper: mapComposerSubmission,
+      initialData: { title: "T" }, onDone: () => {}, onCancel: () => {},
+      composerProps: { onChange: (d: { data: Record<string, unknown> }) => seen.push(d.data) } as never,
+    }))
+    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain("Garten")
+    expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Erstellen")?.disabled).toBe(false)
+  })
+
+  it("ohne jeden Space (keine Gruppen, kein persönlicher) keine Space-Konfiguration", () => {
+    const types = [contentTypeFromRegister("task")]
+    expect(withGroupOptions(types, [], undefined, null)).toBe(types)
   })
 })

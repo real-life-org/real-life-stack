@@ -15,6 +15,12 @@ import { useSetDraftItem, DRAFT_ITEM_ID } from "../../hooks/use-draft-item"
 import { useSetUnsavedDirty } from "../../hooks/use-unsaved-changes"
 import { resolveTypePresentation } from "../preview/type-presentation"
 import { usePeopleFormStates } from "../preview/use-people-line"
+import { withFixedGroup } from "./composer-mapping"
+import { useItemHasBindings } from "./use-item-bindings"
+import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
+
+/** Tooltip, wenn das Item beim Erstellen schon angelegt ist, ein Folgeschritt aber scheiterte (#523). */
+export const GROUP_FIXED_PERSISTED = "Schon angelegt – bleibt in diesem Space"
 
 export interface ItemComposerProps {
   /** Types offered. Create: a module's subset; edit: locked to the item's type. */
@@ -32,8 +38,8 @@ export interface ItemComposerProps {
   className?: string
   /** Imperative handle, e.g. to patch the open form's date without remounting. */
   apiRef?: ContentComposerProps["apiRef"]
-  /** After a successful create/update — receives the saved item. */
-  onDone: (item: Item) => void
+  /** After a successful create/update — receives the saved item and the form's space. */
+  onDone: (item: Item, info: { group: string | null }) => void
   /** Cancel without saving. */
   onCancel: () => void
 }
@@ -73,6 +79,11 @@ export function ItemComposer({
   // Typ fest, Zustände live aus seinen Records, „Erneut" setzt daran fort.
   const [persisted, setPersisted] = useState<Item | null>(null)
   const persistedRef = useRef<Item | null>(null)
+  // Der Space, in dem es angelegt wurde: Ein Wechsel im Kopf wäre jetzt ein
+  // Verschieben — beim Erstellen gibt es das nicht (Space des Formulars,
+  // Regel 6), und mit Aussagen gilt Regel 5.
+  const [persistedGroup, setPersistedGroup] = useState<string | null>(null)
+  const persistedHasBindings = useItemHasBindings(existingItem ? null : persisted, persistedGroup)
   const current = existingItem ?? persisted ?? undefined
   // Der Space im Kopf des Formulars — für das Schreibrecht der Aussagen
   // beim Erstellen (Codex Runde 2, Befund 1).
@@ -126,8 +137,10 @@ export function ItemComposer({
   const offeredTypes = useMemo(() => {
     if (!persisted || existingItem) return contentTypes
     const own = contentTypes.filter((t) => t.id === persisted.type)
-    return own.length > 0 ? own : contentTypes
-  }, [contentTypes, persisted, existingItem])
+    const types = own.length > 0 ? own : contentTypes
+    if (!persistedGroup) return types
+    return withFixedGroup(types, persistedGroup, persistedHasBindings ? ITEM_BINDINGS_REASON : GROUP_FIXED_PERSISTED)
+  }, [contentTypes, persisted, existingItem, persistedGroup, persistedHasBindings])
 
   return (
     <ContentComposer
@@ -153,13 +166,19 @@ export function ItemComposer({
           if (existingItem) return
           persistedRef.current = item
           setPersisted(item)
+          const group = typeof data.data.group === "string" && data.data.group !== "" ? data.data.group : null
+          setPersistedGroup((prev) => prev ?? group)
         }
-        const saved = await editor.submit(data, target ? { existingItem: target, onError, onPersisted } : { onError, onPersisted })
+        // Fortsetzen eines Anlegens (#523): Unveränderte Felder schreibt der
+        // zweite Versuch nicht noch einmal (Codex R1/2) — das Item kann in
+        // einem anderen als dem geöffneten Space liegen.
+        const resume = !existingItem && !!persistedRef.current
+        const saved = await editor.submit(data, target ? { existingItem: target, onError, onPersisted, resume } : { onError, onPersisted })
         if (saved) {
           // Clear synchronously BEFORE onDone navigates, so the nav guard doesn't
           // block the very navigation the save triggers.
           setUnsavedDirty(false)
-          onDone(saved)
+          onDone(saved, { group: typeof data.data.group === "string" && data.data.group !== "" ? data.data.group : null })
         }
         // submit() swallows connector errors into editor.error and returns null;
         // surface it so the composer shows its inline error instead of looking

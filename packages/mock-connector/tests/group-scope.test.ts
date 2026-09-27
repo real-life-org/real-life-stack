@@ -28,3 +28,23 @@ describe("MockConnector — GroupScopeCapable", () => {
     expect(await c.getItems({ group: "nirgends" })).toEqual([])
   })
 })
+
+describe("MockConnector — Records zu Items in einem anderen Space (Codex R1/1)", () => {
+  it("legt den Record im Space seines Ziel-Items an, nicht im geöffneten", async () => {
+    const c = new MockConnector({
+      items: [],
+      groups: [{ id: "a", name: "A" }, { id: "b", name: "B" }],
+      users: [{ id: "u", displayName: "U" }],
+      groupMembers: { a: ["u"], b: ["u"] },
+      groupItems: {},
+    })
+    c.setCurrentGroup("a")
+    const event = await c.createItem({ type: "event", createdBy: "u", data: { title: "E" } }, { group: "b" })
+    const record = await c.createRelationRecord({ predicate: "attends", from: "global:u", to: `item:${event.id}`, fields: { role: "going" } })
+    expect(c.getItemGroupId(record.id)).toBe("b")
+    expect((await c.getItems({ type: "relation", group: "a" })).map(({ id }) => id)).not.toContain(record.id)
+    // Idempotent auch im anderen Space.
+    const again = await c.createRelationRecord({ predicate: "attends", from: "global:u", to: `item:${event.id}`, fields: { role: "going" } })
+    expect(again.id).toBe(record.id)
+  })
+})

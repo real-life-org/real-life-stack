@@ -98,6 +98,13 @@ export interface UseItemEditorResult {
        * on this item instead of creating a second one (#523).
        */
       onPersisted?: (item: Item) => void
+      /**
+       * Setzt ein Anlegen fort, dessen Folgeschritt scheiterte (#523): Hat
+       * sich am Item nichts geändert, wird es nicht noch einmal geschrieben,
+       * nur die Folgeschritte laufen. Das Item kann in einem anderen als dem
+       * geöffneten Space liegen (Space des Formulars, Regel 6).
+       */
+      resume?: boolean
     },
   ): Promise<Item | null>
 
@@ -165,6 +172,13 @@ export function buildUpdatePayload(
     ...(mapped.tags !== undefined ? { tags: mapped.tags } : {}),
     ...(mapped.relations !== undefined ? { relations: mapped.relations } : {}),
   }
+}
+
+/** Ändert `update` nichts an `stored`? (Leere Tags/Relationen gleich fehlenden.) */
+function sameAsStored(update: Partial<Item>, stored: Item): boolean {
+  const norm = (key: string, value: unknown) =>
+    JSON.stringify(value ?? (key === "tags" || key === "relations" ? [] : null))
+  return Object.entries(update).every(([key, value]) => norm(key, value) === norm(key, (stored as unknown as Record<string, unknown>)[key]))
 }
 
 /** Der Space des Formulars aus der Einreichung; leer = keiner. */
@@ -249,7 +263,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
   const submit = useCallback(
     async (
       submission: ContentComposerSubmitData,
-      submitOptions?: { existingItem?: Item; onError?: (error: Error) => void; onPersisted?: (item: Item) => void },
+      submitOptions?: { existingItem?: Item; onError?: (error: Error) => void; onPersisted?: (item: Item) => void; resume?: boolean },
     ): Promise<Item | null> => {
       const existingItem = submitOptions?.existingItem ?? currentItem
       const activeMode: "create" | "edit" = existingItem ? "edit" : "create"
@@ -274,7 +288,9 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
         }
 
         const update = buildUpdatePayload(mapped, existingItem!)
-        const updated = await updateItem(existingItem!.id, update)
+        const updated = submitOptions?.resume && sameAsStored(update, existingItem!)
+          ? existingItem!
+          : await updateItem(existingItem!.id, update)
         submitOptions?.onPersisted?.(updated)
         await applyItemGroup(connector, updated.id, submission.data.group)
         await applyStatements(connector, updated, mapped.statements)
