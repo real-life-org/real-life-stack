@@ -592,3 +592,21 @@ describe("Codex Runde 4: mein Zustand, auch wenn die Pills meinen Wert nicht anb
     expect(states()).toEqual(["Dabei", "Erledigt"])
   })
 })
+
+describe("Codex Runde 5, Befund 1: reihenfolgeunabhängig", () => {
+  const vocabulary = { extensions: [{ id: "task", qualifierValues: EXAMPLE_LEARNING_LAYER.qualifierValues }] }
+  const actions = { extensions: [{ id: "task", selfActions: EXAMPLE_LEARNING_LAYER.selfActions }] }
+
+  it("Pills, deren Werte eine ANDERE Schicht bringt, werden in jeder Reihenfolge abgelehnt", () => {
+    registerTypePresentation("vokabular", vocabulary)
+    expect(() => registerTypePresentation("aktionen", actions)).toThrow(/dieselbe Schicht/)
+    resetTypePresentationForTests()
+    expect(() => registerTypePresentation("aktionen", actions)).toThrow(/dieselbe Schicht/)
+  })
+
+  it("eine Schicht mit Werten und Pills gelingt unabhängig davon, welche anderen Schichten vorher kamen", () => {
+    registerTypePresentation("andere", { extensions: [{ id: "task", qualifierValues: [{ predicate: "assignedTo", itemRole: "from", values: [{ id: "leads", label: "leitet" }] }] }] })
+    registerTypePresentation("beispiel", { extensions: [EXAMPLE_LEARNING_LAYER] })
+    expect(resolveTypePresentation("task").edges?.find((e) => e.predicate === "assignedTo")?.selfAction?.qualifiers).toEqual(["can", "learns"])
+  })
+})

@@ -718,7 +718,22 @@ function overrideSelfActions(
     const owner = overridden.get(slot)
     if (owner) fail(`Selbstaktion an (${override.predicate}, ${override.itemRole}) ist bereits von Schicht "${owner}" ersetzt`)
     overridden.set(slot, layerName)
-    // Gegen das zusammengesetzte Vokabular: Werte bringt die Schicht mit.
+    // Das Modul bringt sein Vokabular mit: Die Pills einer Schicht schreiben
+    // nur Werte, die der Kern oder DIESELBE Schicht deklariert. So hängt das
+    // Ergebnis nicht davon ab, in welcher Reihenfolge Schichten registriert
+    // werden (Erweiterung und Merge; Codex R5/1).
+    const own = new Set([
+      ...(toolkitEdge!.qualifier?.values ?? []).map((v) => v.id),
+      ...(layers.get(layerName)?.extensions ?? [])
+        .filter((f) => f.id === base.id)
+        .flatMap((f) => f.qualifierValues ?? [])
+        .filter((q) => edgeKey(q) === key)
+        .flatMap((q) => q.values.map((v) => v.id)),
+    ])
+    const foreign = (override.selfAction.qualifiers ?? []).filter((q) => !own.has(q))
+    if (foreign.length > 0) {
+      fail(`Selbstaktion an (${override.predicate}, ${override.itemRole}) setzt ${foreign.join(", ")}, das weder der Kern noch dieselbe Schicht deklariert`)
+    }
     const composedEdge = (base.edges ?? []).find((e) => edgeKey(e) === key) ?? toolkitEdge!
     assertSelfActionValues(composedEdge, override.selfAction, fail)
     base.edges = (base.edges ?? []).map((edge) => (edgeKey(edge) === key ? { ...edge, selfAction: override.selfAction } : edge))

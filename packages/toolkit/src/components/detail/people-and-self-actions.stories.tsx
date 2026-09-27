@@ -4,7 +4,7 @@ import type { Item, User } from "@real-life-stack/data-interface"
 import { useEffect, type ReactNode } from "react"
 
 import { ItemDetailRead } from "../host/detail-host"
-import { registerTypePresentation, resetTypePresentationForTests } from "../preview/type-presentation"
+import { registerTypePresentation } from "../preview/type-presentation"
 import { EXAMPLE_LEARNING_LAYER } from "../../story-support/example-learning-layer"
 import { useItem } from "../../hooks/use-items"
 import { STORY_EVENT, STORY_TASK, STORY_USERS, StoryWorld } from "../../story-support/story-world"
@@ -139,15 +139,20 @@ export const TaskRoleWithoutLayer: Story = {
   render: () => <Frame item={LEARNS_TASK} seed={[]} />,
 }
 
-/** Registers the example layer only while this story is shown. */
+/**
+ * Registers the example layer only while this story is shown. The register is
+ * module-global, so the story stays out of the docs page (its own iframe) and
+ * on unmount empties only its own layer, never others.
+ */
 function WithExampleLayer({ children }: { children: ReactNode }) {
   registerTypePresentation("beispiel", { extensions: [EXAMPLE_LEARNING_LAYER] })
-  useEffect(() => () => resetTypePresentationForTests(), [])
+  useEffect(() => () => registerTypePresentation("beispiel", {}), [])
   return <>{children}</>
 }
 
 /** Task with a module layer (example): „Lea lernt“, pills „Kann ich · Will lernen“ instead of „Mitmachen“. */
 export const TaskWithModuleLayer: Story = {
+  tags: ["!autodocs"],
   render: () => (
     <WithExampleLayer>
       <Frame item={LEARNS_TASK} seed={[]} />
