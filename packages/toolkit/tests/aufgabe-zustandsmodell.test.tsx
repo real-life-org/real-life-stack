@@ -435,3 +435,36 @@ describe("Codex Runde 1, Befund 3: join mit Qualifier-Pills", () => {
     ).toThrow(/join/)
   })
 })
+
+describe("Loop-Review: Schreiben nie am falschen Item", () => {
+  async function renderStatic(rendered: Item, stored: Item) {
+    connector = new MockConnector(
+      { items: [stored], groups: [{ id: "g", name: "Garten", data: {} }], users: [{ id: ME, displayName: "Ich" }, { id: TIMO, displayName: "Timo" }], groupMembers: { g: [ME, TIMO] }, groupItems: { g: [stored.id] } } as never,
+    )
+    await connector.init()
+    connector.setCurrentGroup("g")
+    const Actions = resolveTypePresentation("task").actions!
+    await act(async () => {
+      root.render(createElement(ConnectorProvider, { connector: connector as never }, createElement(Actions, { item: rendered })))
+    })
+    await settle()
+  }
+
+  it("Selbstaktion: liefert der geöffnete Space unter derselben Id ein anderes Item, wird nichts geschrieben", async () => {
+    const rendered = { ...task([], "open"), createdAt: "2026-01-01T00:00:00.000Z", createdBy: ME }
+    const stored = task([], "open")
+    await renderStatic(rendered, stored)
+    await click(pill("Übernehmen"))
+    expect((await saved())?.relations ?? []).toEqual([])
+    expect((await saved())?.data.status).toBe("open")
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain("geöffneten Space")
+  })
+
+  it("Folgeaktion: dasselbe — „Erledigt“ schreibt nicht an einem fremden Item", async () => {
+    const mine = [{ predicate: "assignedTo", target: `global:${ME}` }]
+    const rendered = { ...task(mine, "in-progress"), createdAt: "2026-01-01T00:00:00.000Z", createdBy: ME }
+    await renderStatic(rendered, task(mine, "in-progress"))
+    await click(pill("Erledigt"))
+    expect((await saved())?.data.status).toBe("in-progress")
+  })
+})

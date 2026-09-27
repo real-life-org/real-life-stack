@@ -379,10 +379,30 @@ async function applyIncoming(
     throw new Error("„Braucht“ lässt sich nur im geöffneten Space speichern – zum Verknüpfen dorthin wechseln")
   }
   const space = formGroup ?? (hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null)
+  // Vorprüfung: Erst wenn jede Quelle erreichbar und schreibbar ist, wird
+  // geschrieben — ein vorhersehbarer Teilfehler entsteht so nicht. Atomar ist
+  // das nicht; scheitert ein Schreibvorgang doch, setzt „Erneut" fort.
+  for (const change of changes) {
+    for (const id of [...change.add, ...change.remove]) await checkedSource(connector, id, currentUserId, space)
+  }
   for (const change of changes) {
     for (const id of change.add) await writeIncoming(connector, item, change.predicate, id, true, currentUserId, space)
     for (const id of change.remove) await writeIncoming(connector, item, change.predicate, id, false, currentUserId, space)
   }
+}
+
+/** Die Quelle frisch, im richtigen Space und schreibbar — sonst ein Fehler mit Grund. */
+async function checkedSource(connector: DataInterface, sourceId: string, currentUserId: string | undefined, space: string | null): Promise<Item> {
+  if (!isWritable(connector)) throw new Error("Dieser Speicher ist nur lesbar")
+  const source = await connector.getItem(sourceId)
+  if (!source || (space && hasItemGroups(connector) && connector.getItemGroupId(sourceId) !== space)) {
+    throw new Error("Eine verknüpfte Aufgabe ist hier nicht erreichbar – die Verknüpfung wurde nicht gespeichert")
+  }
+  const title = typeof source.data?.title === "string" && source.data.title.trim() !== "" ? source.data.title : "Ohne Titel"
+  if (!resolveItemPermissions(connector, source, currentUserId).canEdit) {
+    throw new Error(`Keine Schreibrechte an „${title}“ – die Verknüpfung wurde dort nicht gespeichert`)
+  }
+  return source
 }
 
 async function writeIncoming(
@@ -394,15 +414,9 @@ async function writeIncoming(
   currentUserId: string | undefined,
   space: string | null,
 ): Promise<void> {
-  if (!isWritable(connector)) throw new Error("Dieser Speicher ist nur lesbar")
-  const source = await connector.getItem(sourceId)
-  if (!source || (space && hasItemGroups(connector) && connector.getItemGroupId(sourceId) !== space)) {
-    throw new Error("Eine verknüpfte Aufgabe ist hier nicht erreichbar – die Verknüpfung wurde nicht gespeichert")
-  }
-  const title = typeof source.data?.title === "string" && source.data.title.trim() !== "" ? source.data.title : "Ohne Titel"
-  if (!resolveItemPermissions(connector, source, currentUserId).canEdit) {
-    throw new Error(`Keine Schreibrechte an „${title}“ – die Verknüpfung wurde dort nicht gespeichert`)
-  }
+  // Frisch vor jedem Schreibvorgang: eine Kante, die inzwischen dazukam, bleibt.
+  const source = await checkedSource(connector, sourceId, currentUserId, space)
+  if (!isWritable(connector)) return
   const relations = source.relations ?? []
   // Wie die Leseform (04, Target-Konventionen): `item:<id>` ist space-lokal,
   // `space:{id}/item:<id>` zeigt auf genau diesen Space.

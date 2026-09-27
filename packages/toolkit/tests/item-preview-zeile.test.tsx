@@ -95,3 +95,11 @@ describe("ItemPreview density row", () => {
     await act(async () => root.unmount())
   })
 })
+
+describe("CodeRabbit: completed ohne Titel", () => {
+  it("zeigt Häkchen und Screenreader-Text auch ohne Titel", () => {
+    const out = renderToStaticMarkup(createElement(ItemPreview, { item: { ...ITEM, data: { content: "Notiz" } }, density: "compact", completed: true }))
+    expect(out).toContain("Erledigt: ")
+    expect(out).toContain("✓")
+  })
+})

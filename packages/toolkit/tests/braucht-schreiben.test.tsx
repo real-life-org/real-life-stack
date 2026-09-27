@@ -274,3 +274,23 @@ describe("Codex Runde 1", () => {
     expect(host.querySelectorAll('[data-relation-chip] button[aria-label$="entfernen"]').length).toBe(0)
   })
 })
+
+describe("CodeRabbit: Vorprüfung aller Quellen", () => {
+  let submit: ReturnType<typeof useItemEditor>["submit"] | undefined
+  function Probe(): ReactNode {
+    submit = useItemEditor({ currentUserId: ME, mapSubmission: mapComposerSubmission }).submit
+    return null
+  }
+  it("eine Quelle ohne Schreibrecht verhindert auch die Schreibvorgänge an den anderen", async () => {
+    await setup()
+    await render(createElement(Probe))
+    const saved = await act(async () =>
+      submit!(
+        { contentType: "task", isPublic: false, data: { ...itemToComposerData(KOMPOST), group: "g", [itemRelationDataKey("blocks", true)]: ["item:t-beet", "item:t-timo2"] } } as never,
+        { existingItem: KOMPOST },
+      ),
+    )
+    expect(saved).toBeNull()
+    expect((await connector.getItem("t-beet"))?.relations ?? []).toEqual([])
+  })
+})

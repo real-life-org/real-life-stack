@@ -31,7 +31,8 @@ export function isItemDone(item: Item): boolean {
   const presentation = resolveTypePresentation(item.type)
   for (const field of presentation.fields ?? []) {
     if (field.widget !== "status") continue
-    if (statusRole(field, (item.data as Record<string, unknown> | undefined)?.[field.key]) === "done") return true
+    // Ohne Wert gilt der Standard-Status des Typs (wie Übergänge und Folgeaktion).
+    if (statusRole(field, (item.data as Record<string, unknown> | undefined)?.[field.key], presentation.composer?.defaultStatus) === "done") return true
   }
   return false
 }

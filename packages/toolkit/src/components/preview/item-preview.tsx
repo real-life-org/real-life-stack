@@ -392,6 +392,9 @@ export const ItemPreview = memo(function ItemPreview({
         </div>
       )}
 
+      {/* Erledigt ohne Titel: das Häkchen braucht trotzdem einen Platz. */}
+      {!title && completed && <div className="text-sm font-semibold text-muted-foreground">{erledigt}</div>}
+
       {!title && headerAdornment && !actions && (
         <div className="flex flex-wrap items-center gap-1.5">{headerAdornment}</div>
       )}

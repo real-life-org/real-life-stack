@@ -47,3 +47,16 @@ describe("Qualifier der Zuweisung auf der Karte", () => {
     expect(html).toContain("Anna, Timo lernt")
   })
 })
+
+describe("CodeRabbit: isItemDone mit Standard-Status", () => {
+  it("ohne Status gilt der Standard-Status des Typs", async () => {
+    const { isItemDone } = await import("../src/components/preview/item-ref-chip")
+    const { composeTypeManifest, TOOLKIT_TYPE_LAYER } = await import("@real-life-stack/data-interface")
+    const { registerTypePresentation, setTypeManifest, resetTypePresentationForTests } = await import("../src/components/preview/type-presentation")
+    setTypeManifest(composeTypeManifest([TOOLKIT_TYPE_LAYER, { name: "app", definitions: [{ id: "note", vocabularies: [], relations: [] }] }]))
+    registerTypePresentation("app", [{ id: "note", label: "Notiz", composer: { defaultStatus: "fertig" }, fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "neu", label: "Neu", role: "open" }, { id: "fertig", label: "Fertig", role: "done" }] }] }])
+    expect(isItemDone({ id: "n", type: "note", createdAt: "", createdBy: "", data: {} })).toBe(true)
+    expect(isItemDone({ id: "n", type: "note", createdAt: "", createdBy: "", data: { status: "neu" } })).toBe(false)
+    resetTypePresentationForTests()
+  })
+})

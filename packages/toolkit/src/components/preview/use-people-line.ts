@@ -198,6 +198,26 @@ export interface StatusTransitions {
 
 const PERSON = "global:"
 
+/** Grund, wenn der geöffnete Space unter der Id des Items ein anderes (oder keins) liefert. */
+export const ITEM_ELSEWHERE = "Dieses Item liegt nicht im geöffneten Space – dort bearbeiten"
+
+/**
+ * Dasselbe Item? `updateItem` erreicht nur den geöffneten Space, und
+ * `item:<id>` ist space-lokal (04): Unter derselben Id kann dort ein anderes
+ * Item liegen. Geschrieben wird nur, wenn das frisch gelesene Item das
+ * angezeigte ist (Id, Urheber, Anlagezeitpunkt).
+ */
+function sameItem(fresh: Item, shown: Item): boolean {
+  return fresh.id === shown.id && fresh.createdBy === shown.createdBy && fresh.createdAt === shown.createdAt
+}
+
+/** Das angezeigte Item frisch aus dem geöffneten Space — oder ein Fehler mit Grund, nie ein anderes. */
+async function freshItem(connector: DataInterface, shown: Item): Promise<Item> {
+  const fresh = await connector.getItem(shown.id)
+  if (!fresh || !sameItem(fresh, shown)) throw new Error(ITEM_ELSEWHERE)
+  return fresh
+}
+
 /** Personen an einer eingebetteten Kante, außer `meId` (gleich welcher Qualifier). */
 function othersOnEmbeddedEdge(item: Item, edge: EdgeEntry, meId: string): boolean {
   const self = `${PERSON}${meId}`
@@ -311,7 +331,7 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
             if (isRecord) {
               // Die Bedingung gilt für das Trägeritem (etwa: noch offen); der
               // Record liegt daneben.
-              const carrier = guard ? await connector.getItem(item.id) : null
+              const carrier = guard ? await freshItem(connector, item) : null
               if (guard && (!carrier || !guard(carrier))) written = false
               else {
                 await writeOwnStatement(connector, item, { predicate: edge.predicate, from: `${PERSON}${meId}`, key: edge.qualifier!.key, value: typeof next === "string" ? next : null })
@@ -376,7 +396,7 @@ async function writeEmbedded(
   transitions?: StatusTransitions,
 ): Promise<boolean> {
   if (!isWritable(connector)) throw new Error("Dieser Speicher ist nur lesbar")
-  const current = (await connector.getItem(item.id)) ?? item
+  const current = await freshItem(connector, item)
   // Die Bedingung gegen DENSELBEN Stand, aus dem die neuen Relationen entstehen.
   if (guard && !guard(current)) return false
   const target = `${PERSON}${meId}`
@@ -413,7 +433,7 @@ async function writeEmbedded(
 async function applyRecordTransition(connector: DataInterface, item: Item, edge: EdgeEntry, meId: string, joining: boolean, transitions: StatusTransitions): Promise<void> {
   if (!isWritable(connector) || !resolveItemPermissions(connector, item, meId).canEdit) return
   const current = await connector.getItem(item.id)
-  if (!current) return
+  if (!current || !sameItem(current, item)) return
   const nobodyLeft = joining ? false : !(await othersOnRecordEdge(connector, current, edge, meId))
   const value = transitionStatus(current, transitions, joining, nobodyLeft)
   if (value === undefined) return
@@ -472,8 +492,8 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
         // lebenden Item. Ein fremder Edit zwischen Lesen und Schreiben bleibt
         // möglich (kein bedingtes Schreiben im DataInterface); Mitglieder
         // dürfen den Status ohnehin ändern.
-        const current = await connector.getItem(item.id)
-        if (!current || !meId) return
+        if (!meId) return
+        const current = await freshItem(connector, item)
         const role = statusRole(statusField, (current.data as Record<string, unknown> | undefined)?.[statusField.key], defaultStatus)
         if (role !== "open" && role !== "active") return
         if (edge && !(await stillMine(connector, current, edge, meId))) return
