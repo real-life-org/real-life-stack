@@ -133,7 +133,16 @@ describe("StatementDetail (panel)", () => {
     await act(async () => { root.unmount() })
     root = createRoot(host)
     const frozen = await render(createElement(StatementDetail, { item: origin }), [foreignVote])
-    expect(frozen).toContain("lässt er sich nicht mehr ändern")
+    expect(frozen).toContain("Wortlaut eingefroren")
+  })
+
+  it("frozen: one compact note with the lock and „+ Variante“ inside it, none in the list head (Claude Design)", async () => {
+    await render(createElement(StatementDetail, { item: origin }), [foreignVote])
+    const note = host.querySelector('[data-reverse-list="family"] [data-list-note]')
+    expect(note?.textContent).toContain("Wortlaut eingefroren")
+    expect(note?.getAttribute("title")).toContain("lässt er sich nicht mehr ändern")
+    expect(note?.querySelector('[data-list-action="create-variant"]')?.textContent).toBe("+ Variante")
+    expect(host.querySelectorAll('[data-list-action="create-variant"]')).toHaveLength(1)
   })
 })
 
@@ -223,6 +232,10 @@ describe("a variant lands in the space of its origin (Varianten rule 2, #507)", 
     const single = statement("s-single", ME, 5, { title: "Kommt wer mit zum Klettern heute?" })
     await render(createElement(StatementDetail, { item: single }), [single])
     expect(host.textContent).not.toContain("Fassungen")
-    expect(host.querySelector('[data-list-action="create-variant"]')?.textContent).toBe("+ Variante")
+    const action = host.querySelector('[data-list-action="create-variant"]')
+    expect(action?.textContent).toBe("+ Variante")
+    // A small link on the right, as in the list head — not an outlined button.
+    expect(action?.closest("[data-reverse-list]")?.className).toContain("justify-end")
+    expect(action?.className).not.toContain("border")
   })
 })

@@ -1,11 +1,11 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { Lock } from "lucide-react"
 import type { Item } from "@real-life-stack/data-interface"
 
 import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import { cn } from "../../lib/utils"
-import { Button } from "../primitives/button"
 import type { EdgeEntry, ListEntry } from "./field-register"
 import { isItemDone } from "./item-ref-chip"
 import { resolveListQuery, type ListRowDecoration } from "./list-queries"
@@ -20,7 +20,9 @@ import { isItemEdge, useItemEdges } from "./use-item-edges"
  * Regel 8; 06 → Feld- und Kantenregister, Regeln 10 und 12; Entscheidung 15:
  * alle Einträge, jeder einmal, keine Kappung. Trägt eine Liste eine Aktion,
  * steht sie im Kopf; hat die Liste keinen Eintrag außer dem Item selbst,
- * steht die Aktion allein an ihrer Stelle.
+ * steht die Aktion allein an ihrer Stelle. Ein Hinweis (Modi, Regel 4) ist
+ * eine kompakte Zeile mit Schloss; die Aktion steht dann in ihr, nicht im
+ * Kopf (Claude Design, Detail-Simulator „Eingefroren").
  *
  * Verzweigt über den Namen der Abfrage und das Widget der Kante, nie über
  * den Typ. Rendert `null`, wenn es nichts zu zeigen gibt.
@@ -46,7 +48,7 @@ export function hasReverseLists(lists: readonly ListEntry[] | undefined, edges: 
 function QueryList({ item, entry }: { item: Item; entry: ListEntry }) {
   // Pro Instanz dieselbe Abfrage (key = Name): gleiche Hooks je Render.
   const useQuery = resolveListQuery(entry.query)!
-  const { entries, decorate, action, note } = useQuery(item, entry)
+  const { entries, decorate, action, note, noteDetail } = useQuery(item, entry)
   return (
     <ReverseList
       id={entry.query}
@@ -56,6 +58,7 @@ function QueryList({ item, entry }: { item: Item; entry: ListEntry }) {
       decorate={decorate}
       action={entry.action && action ? { label: entry.action.label, run: action, id: entry.action.id } : undefined}
       note={note}
+      noteDetail={noteDetail}
     />
   )
 }
@@ -90,6 +93,7 @@ function ReverseList({
   decorate,
   action,
   note,
+  noteDetail,
 }: {
   id: string
   item: Item
@@ -98,20 +102,30 @@ function ReverseList({
   decorate?: (entry: Item) => ListRowDecoration
   action?: { id: string; label: string; run: () => void }
   note?: ReactNode
+  noteDetail?: string
 }) {
   const others = entries.filter((e) => e.id !== item.id)
+  const actionLink = action && <ListActionLink action={action} />
+  const noteRow = note && (
+    <div
+      data-list-note
+      title={noteDetail}
+      className="flex min-w-0 items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-2 text-xs text-muted-foreground"
+    >
+      <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1 truncate">{note}</span>
+      {noteDetail && <span className="sr-only">{noteDetail}</span>}
+      {actionLink}
+    </div>
+  )
   if (others.length === 0) {
-    // Kein Eintrag außer dem Item selbst: die Aktion allein an ihrer Stelle.
+    // Kein Eintrag außer dem Item selbst: der Hinweis, sonst die Aktion
+    // allein an ihrer Stelle — rechts, wie im Kopf einer Liste.
     if (!action && !note) return null
-    return (
-      <div data-reverse-list={id} className="flex flex-col items-start gap-2">
-        {note && <p className="text-xs text-muted-foreground">{note}</p>}
-        {action && (
-          <Button type="button" variant="outline" size="sm" data-list-action={action.id} onClick={action.run}>
-            {action.label}
-          </Button>
-        )}
-      </div>
+    return noteRow ? (
+      <div data-reverse-list={id}>{noteRow}</div>
+    ) : (
+      <div data-reverse-list={id} className="flex justify-end">{actionLink}</div>
     )
   }
   return (
@@ -120,18 +134,9 @@ function ReverseList({
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {label} <span className="font-normal tabular-nums">{entries.length}</span>
         </h3>
-        {action && (
-          <button
-            type="button"
-            data-list-action={action.id}
-            onClick={action.run}
-            className="rounded px-1 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          >
-            {action.label}
-          </button>
-        )}
+        {!noteRow && actionLink}
       </div>
-      {note && <p className="text-xs text-muted-foreground">{note}</p>}
+      {noteRow}
       <ul className="flex flex-col gap-1.5">
         {entries.map((entry) => (
           <li key={entry.id}>
@@ -140,6 +145,20 @@ function ReverseList({
         ))}
       </ul>
     </section>
+  )
+}
+
+/** Die Aktion einer Liste als kleiner Link (Kopf, Hinweiszeile oder allein). */
+function ListActionLink({ action }: { action: { id: string; label: string; run: () => void } }) {
+  return (
+    <button
+      type="button"
+      data-list-action={action.id}
+      onClick={action.run}
+      className="shrink-0 rounded px-1 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+    >
+      {action.label}
+    </button>
   )
 }
 

@@ -77,7 +77,10 @@ export const familyListQuery: ListQuery = function useFamilyList(item) {
         }
       : {}),
     ...(frozen && isAuthor
-      ? { note: "Andere haben zu diesem Wortlaut abgestimmt, deshalb lässt er sich nicht mehr ändern. Für eine neue Formulierung leg eine Variante an." }
+      ? {
+          note: "Wortlaut eingefroren",
+          noteDetail: "Andere haben zu diesem Wortlaut abgestimmt, deshalb lässt er sich nicht mehr ändern. Für eine neue Formulierung leg eine Variante an.",
+        }
       : {}),
   }
 }

@@ -22,8 +22,10 @@ export interface ListQueryResult {
   decorate?: (entry: Item) => ListRowDecoration
   /** Die Aktion der Liste (`ListEntry.action`), wenn Capability und Autorisierung sie erlauben. */
   action?: () => void
-  /** Hinweis an der Stelle der Liste (Modi, Regel 4: „Wortlaut eingefroren"). */
+  /** Hinweis an der Stelle der Liste (Modi, Regel 4: „Wortlaut eingefroren"), kurz. */
   note?: ReactNode
+  /** Die Erklärung zum Hinweis (Tooltip): warum es so ist und was bleibt. */
+  noteDetail?: string
 }
 
 /** Hook: die Liste zu einem Item. Muss bei jedem Render gleich viele Hooks rufen. */
