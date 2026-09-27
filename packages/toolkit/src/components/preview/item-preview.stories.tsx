@@ -168,6 +168,18 @@ export const KanbanCardShape: Story = {
   },
 }
 
+/** Rückwärts-Listen im Detail (Detail-Anatomie Regel 8): eine Zeile aus ItemPreview. */
+export const RowDensity: Story = {
+  name: "Row density — one line for reverse lists",
+  render: () => (
+    <div className="flex max-w-md flex-col gap-1.5">
+      <ItemPreview item={taskItem} density="row" author={null} headerAdornment={<ItemTypeBadge type="task" />} onClick={() => console.log("click")} />
+      <ItemPreview item={taskItem} density="row" author={null} active headerAdornment={<ItemTypeBadge type="task" />} footerAdornment={<span className="text-xs text-muted-foreground">diese</span>} />
+      <ItemPreview item={{ ...taskItem, id: "done", data: { ...taskItem.data, title: "Kompost umsetzen" } }} density="row" author={null} completed headerAdornment={<ItemTypeBadge type="task" />} />
+    </div>
+  ),
+}
+
 export const CompactWithDescription: Story = {
   name: "Compact density drops the description block",
   args: {

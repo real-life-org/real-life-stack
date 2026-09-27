@@ -114,7 +114,7 @@
             "docs/spec/02-data-interface.md"
           ],
           "source": "packages/toolkit/src/hooks/use-item-editor.ts",
-          "line": 223
+          "line": 231
         },
         {
           "name": "useCreateItem",

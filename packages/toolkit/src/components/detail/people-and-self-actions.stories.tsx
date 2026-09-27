@@ -19,8 +19,12 @@ import { STORY_EVENT, STORY_TASK, STORY_USERS, StoryWorld } from "../../story-su
  *   Declining writes `declined` and keeps the record; the same pill again
  *   removes my statement.
  * - **Many:** above the threshold the row summarises per qualifier.
- * - **Task:** only „Übernehmen" in the core; can/learns stays a Karabirrdt
- *   function.
+ * - **Task:** „Übernehmen" when nobody is assigned, „Mitmachen" when others
+ *   are; then „✓ Übernommen" (alone) or „✓ Dabei" (with others) · „Erledigt".
+ *   Joining an open task sets it to „In Arbeit"; the last person leaving a
+ *   task in progress sets it back to open (spec 06, rule 19). `assignedTo`
+ *   carries `role` can | learns in the core (missing = can, not shown); the
+ *   pills „Kann ich · Will lernen" are an app's operation (rule 20).
  * - **Statement:** the vote moved from the footer into the action slot — pills
  *   and bar. The card keeps its compact vote bar.
  *
@@ -108,9 +112,24 @@ export const Many: Story = {
   ),
 }
 
-/** Task: „Übernehmen" puts you into the assignment; then „✓ Übernommen · Erledigt" (see Links and lists). */
+/** Task with Lea assigned: „Mitmachen"; then „✓ Dabei · Erledigt". */
 export const Task: Story = {
   render: () => <Frame item={STORY_TASK} seed={[]} />,
+}
+
+/** Task nobody took yet: „Übernehmen" sets it to „In Arbeit"; „✓ Übernommen" again gives it back and reopens it. */
+export const TaskAlone: Story = {
+  render: () => <Frame item={{ ...STORY_TASK, id: "task-allein", relations: [] }} seed={[]} />,
+}
+
+/** Lea learns (`assignedTo.role: learns`): the row reads „Lea lernt"; a missing role (can) shows nothing. */
+export const TaskLearns: Story = {
+  render: () => (
+    <Frame
+      item={{ ...STORY_TASK, id: "task-lernt", data: { ...STORY_TASK.data, status: "in-progress" }, relations: [{ predicate: "assignedTo", target: "global:lea", meta: { role: "learns" } }, { predicate: "assignedTo", target: "global:jonas" }] }}
+      seed={[]}
+    />
+  ),
 }
 
 const STATEMENT: Item = {

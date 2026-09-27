@@ -306,7 +306,7 @@ interface ReactionBarProps {
 **Vertrag:**
 
 ```ts
-type ItemPreviewDensity = "comfortable" | "compact"
+type ItemPreviewDensity = "comfortable" | "compact" | "row"
 
 interface ItemPreviewProps {
   item: Item
@@ -331,6 +331,8 @@ interface ItemPreviewProps {
   density?: ItemPreviewDensity
   /** Hebt eine Karten-Linse als aktuell selektiert hervor. */
   active?: boolean
+  /** Erledigt: „✓ " vor dem Title (für Screenreader „Erledigt: "), Karte auf Opazität 0.55 gedimmt. */
+  completed?: boolean
   /** Optionaler `#rrggbb`-Override für den Active-Glow; Default ist neutral. */
   activeGlowColor?: string
   className?: string
@@ -341,6 +343,9 @@ interface ItemPreviewProps {
 
 - `comfortable` (Default) — Feed-Card-Form: Avatar 10×10, font-base Title, p-4 Spacing, Description wird angezeigt, Footer mit Border-Top.
 - `compact` — Kanban-/Liste-Form: Avatar 6×6, font-sm Title, p-3 Spacing, **Description wird ausgeblendet**, Footer ohne Border. Tauglich für dichte Board-Spalten, wo mehrere Cards zugleich sichtbar bleiben sollen.
+- `row` — **eine Zeile** für die Rückwärts-Listen im Detail ([Detail-Anatomie](#detail-anatomie), Regel 8): `headerAdornment` (Typ-Badge), der Title gekürzt auf eine Zeile (ohne Title der Name oder der Anfang des Inhalts, sonst „Ohne Titel"), rechts `footerAdornment` (Markierung, kleiner Zusatz). Sie lässt Description, `metaAdornment`, Tags, Author-Zeile und Kommentar-Hinweis weg. `active` markiert die angezeigte Zeile (`aria-current`) ohne Schatten.
+
+**Erledigt:** `completed` setzt ein „✓ " vor den Title (plus `sr-only`-Text „Erledigt: ") und dimmt die Karte auf Opazität 0.55, in jeder Dichte. Was „erledigt" heißt, entscheidet die Fläche (die Rückwärts-Listen: Status der Rolle `done`, [06, Regel 18](../06-schema-composition.md#feld--und-kantenregister)).
 
 **Default-Body:** Author-Row (Avatar + Name + `RelativeTime`), Title, Description (`data.content ?? data.description`, max 4 Zeilen), Tags (chips, top-level `item.tags`, Color via `getTagColor`). Tags und Urheber teilen eine Zeile, die nie umbricht: Es stehen so viele Tags, wie neben den Urheber passen, der Rest als „+N"; der Urheber behält seinen Platz rechts. Das gilt in beiden Dichten.
 
@@ -465,13 +470,15 @@ Zwei Render-Modi je nach `onClick`:
 **Zweck:** Overlapping Avatar-Stack mit kompakter Namens-Zusammenfassung. Belongs in `footerAdornment`. Rendert `null` bei leerer User-Liste.
 
 ```ts
+type ItemAssigneeUser = User & { qualifier?: string }
+
 interface ItemAssigneesProps {
-  users: readonly User[]
+  users: readonly ItemAssigneeUser[]
   className?: string
 }
 ```
 
-Caller löst die User-Objekte auf (typischerweise aus `assignedTo`-Relations + Member-Liste) und übergibt sie als resolved Array. Komponente ist rein präsentational. Namens-Summary: einzelner Name, „A, B" für zwei, „A + N weitere" ab drei; voller Kommaseparierter Liste im Hover-Tooltip.
+Caller löst die User-Objekte auf (typischerweise aus `assignedTo`-Relations + Member-Liste) und übergibt sie als resolved Array. Komponente ist rein präsentational. Namens-Summary: einzelner Name, „A, B" für zwei, „A + N weitere" ab drei; voller Kommaseparierter Liste im Hover-Tooltip. `qualifier` ist der Anzeigetext des Qualifiers an der Kante und steht klein hinter dem Namen („Timo lernt", wie [Detail-Anatomie](#detail-anatomie), Regel 5); ein fehlender Qualifier (`qualifier.default`) steht nicht da. Die Kanban-Karte zeigt so `assignedTo.role`.
 
 **Code:** `packages/toolkit/src/components/preview/item-{type-badge,meta-row,comment-count,assignees}.tsx`.
 
