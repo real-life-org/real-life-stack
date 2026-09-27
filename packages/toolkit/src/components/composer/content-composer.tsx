@@ -206,6 +206,13 @@ export interface ContentComposerProps {
   renderPreview?: (data: WidgetData, contentType: string) => React.ReactNode
   /** When true, every data change immediately calls onSubmit and the footer is hidden */
   liveUpdate?: boolean
+  /**
+   * Pin the action footer (Löschen · Abbrechen · Speichern) to the bottom of
+   * the surrounding scroll area — the edit form inside the detail card
+   * (shared-components, Edit-Regeln 3). The composer then fills the card's
+   * height so the footer sits at the card end even for a short form.
+   */
+  stickyFooter?: boolean
   /** Fires on every data/type change (and on mount) — for a live preview of the
    *  in-progress item without persisting it. */
   onChange?: (submission: ContentComposerSubmitData) => void
@@ -382,6 +389,7 @@ export function ContentComposer({
   onSubmit,
   onCancel,
   onDelete,
+  stickyFooter = false,
   editMode: editModeProp,
   requestMapPick,
   geocode,
@@ -911,7 +919,13 @@ export function ContentComposer({
         </p>
       )}
       {/* Footer: actions (hidden in liveUpdate mode) */}
-      {!liveUpdate && <div className="flex items-center justify-between pt-1">
+      {!liveUpdate && <div
+        data-slot="edit-footer"
+        className={cn(
+          "flex items-center justify-between pt-1",
+          stickyFooter && "sticky bottom-0 z-10 -mx-4 mt-auto border-t bg-card px-4 py-3",
+        )}
+      >
         <div className="flex items-center gap-2">
           {/* Delete button (edit mode only) */}
           {isEditMode && onDelete && (
@@ -920,16 +934,18 @@ export function ContentComposer({
               variant="ghost"
               size="sm"
               onClick={onDelete}
-              className="gap-1.5 text-xs text-destructive hover:text-destructive"
+              // Schmal gehalten: Auf dem Telefon (390 px) passen Löschen,
+              // Abbrechen und der Speichern-Split sonst nicht in eine Zeile.
+              className="gap-1.5 px-2 has-[>svg]:px-1.5 text-xs text-destructive hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Loeschen
+              Löschen
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {onCancel && (
-            <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+            <Button type="button" variant="ghost" size="sm" className="px-2" onClick={onCancel}>
               Abbrechen
             </Button>
           )}
@@ -953,7 +969,7 @@ export function ContentComposer({
                 onClick={handleSubmit}
                 disabled={!canSubmit || submitting}
                 aria-busy={submitting}
-                className="gap-1.5 rounded-r-none"
+                className="gap-1.5 rounded-r-none has-[>svg]:px-2"
               >
                 {submitting ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
