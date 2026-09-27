@@ -6,11 +6,15 @@ import { Calendar, MapPin, Users } from "lucide-react"
 
 import { useMembers } from "../../hooks/use-groups"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
+import { useUserNameResolver } from "../../hooks/use-user-names"
 import { cn } from "../../lib/utils"
 import { useFieldLink } from "../navigation/field-navigation"
 import { ItemAssignees } from "./item-assignees"
 import { formatEventRange } from "./item-meta-row"
 import { metaRowOrder, type EdgeEntry, type FieldEntry, type MetaRow } from "./field-register"
+import type { PeopleLineEntry } from "./people-line"
+import { PeopleLineRow } from "./people-line-row"
+import { usePeopleLine } from "./use-people-line"
 
 /**
  * `RegisterMeta` — die Meta-Box eines Items aus seiner Feld- und Kantenliste.
@@ -23,9 +27,10 @@ import { metaRowOrder, type EdgeEntry, type FieldEntry, type MetaRow } from "./f
  * eine einzige Zeile rendert die Komponente `null`, damit die Box entfällt.
  * Verzweigt wird über das Widget des Eintrags, nie über den Typ des Items.
  *
- * Stand S1: Lesen können `people` (eingebettete Kanten), `date` und
- * `location`. Die anderen Widgets (Status, Zahl, Auswahl, Link, Item-Kanten …)
- * folgen mit S2–S4; bis dahin erzeugen sie keine Zeile.
+ * Stand S2: Lesen können `people` (eingebettete Kanten und Record-Kanten in
+ * EINER Menschen-Zeile, mit Qualifier), `date` und `location`. Die anderen
+ * Widgets (Status, Zahl, Auswahl, Link, Item-Kanten …) folgen mit S3–S4; bis
+ * dahin erzeugen sie keine Zeile.
  */
 export interface RegisterMetaProps {
   item: Item
@@ -43,18 +48,42 @@ export function RegisterMeta({ item, fields, edges, className }: RegisterMetaPro
   // im eigenen Space nicht unter den Mitgliedern steht.
   const { data: members } = useMembers(null)
   const { data: currentUser } = useOptionalCurrentUser()
+  const resolveName = useUserNameResolver()
   const resolveUser = (id: string): User | undefined =>
     members.find((m) => m.id === id) ?? (currentUser?.id === id ? currentUser : undefined)
+  const line = usePeopleLine(item, edges)
+  const people = line.filter((entry) => resolveUser(entry.userId))
 
-  const rows = metaRowOrder(fields, edges).filter((row) => hasReader(row) && hasValue(row, item, resolveUser))
+  const rows = collapsePeople(metaRowOrder(fields, edges)).filter(
+    (row) => hasReader(row) && (row.kind === "edge" ? people.length > 0 : hasValue(row, item)),
+  )
   if (rows.length === 0) return null
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      {rows.map((row) => (
-        <MetaRowView key={rowKey(row)} row={row} item={item} resolveUser={resolveUser} />
-      ))}
+      {rows.map((row) =>
+        row.kind === "edge" ? (
+          <PeopleRow key={rowKey(row)} edge={row.entry} entries={people} resolveUser={resolveUser} resolveName={resolveName} currentUserId={currentUser?.id} />
+        ) : (
+          <MetaRowView key={rowKey(row)} row={row} item={item} />
+        ),
+      )}
     </div>
   )
+}
+
+/**
+ * Eine Menschen-Zeile je Typ: Alle Personen-Kanten der Meta-Box fließen in
+ * die Zeile der ersten (das Event führt Eingeladene und Zusagen zusammen,
+ * shared-components, Detail-Anatomie, Regel 5).
+ */
+function collapsePeople(rows: MetaRow[]): MetaRow[] {
+  let seen = false
+  return rows.filter((row) => {
+    if (row.kind !== "edge" || row.entry.widget !== "people") return true
+    if (seen) return false
+    seen = true
+    return true
+  })
 }
 
 type ResolveUser = (id: string) => User | undefined
@@ -62,43 +91,33 @@ type ResolveUser = (id: string) => User | undefined
 /**
  * Die Personen-Kanten eines Items als ein Avatar-Stapel — für Karten, die
  * „Avatar-Stack" aus dem Register zeigen (shared-components, Item-Detail aus
- * dem Register, Regel 9). `null`, wenn niemand aufzulösen ist.
+ * dem Register, Regel 9). Dieselbe Menschen-Zeile wie im Detail, ohne die
+ * Verborgenen (`declined`). `null`, wenn niemand aufzulösen ist.
  */
 export function RegisterPeopleStack({ item, edges }: { item: Item; edges?: readonly EdgeEntry[] }) {
   const { data: members } = useMembers(null)
   const { data: currentUser } = useOptionalCurrentUser()
   const resolveUser: ResolveUser = (id) =>
     members.find((m) => m.id === id) ?? (currentUser?.id === id ? currentUser : undefined)
-  const seen = new Set<string>()
-  const users: User[] = []
-  for (const row of metaRowOrder([], edges)) {
-    if (row.kind !== "edge" || !hasReader(row)) continue
-    for (const user of peopleOf(item, row.entry, resolveUser)) {
-      if (!seen.has(user.id)) {
-        seen.add(user.id)
-        users.push(user)
-      }
-    }
-  }
-  return users.length > 0 ? <ItemAssignees users={users} /> : null
-}
-
-function peopleOf(item: Item, edge: EdgeEntry, resolveUser: ResolveUser): User[] {
-  return peopleIds(item, edge)
-    .map(resolveUser)
+  const line = usePeopleLine(item, edges)
+  const users = line
+    .filter((entry) => !entry.hidden)
+    .map((entry) => resolveUser(entry.userId))
     .filter((user): user is User => !!user)
+  return users.length > 0 ? <ItemAssignees users={users} /> : null
 }
 
 function rowKey(row: MetaRow): string {
   return row.kind === "field" ? `f:${row.entry.key}` : `e:${row.entry.predicate}:${row.entry.itemRole}`
 }
 
-/** Welche Einträge S1 lesen kann. */
+/** Welche Einträge die Meta-Box lesen kann. */
 function hasReader(row: MetaRow): boolean {
   if (row.kind === "edge") {
-    // Eingebettete Personen-Kanten, die das Item selbst trägt. Record-Kanten
-    // (attends) und eingehende Kanten brauchen eine Abfrage — S2/S3.
-    return row.entry.widget === "people" && row.entry.storage === "embedded" && row.entry.itemRole === "from"
+    // Personen-Kanten: eingebettete, die das Item trägt, und Record-Kanten,
+    // die auf das Item zeigen (attends). Item-Kanten folgen mit S3.
+    const edge = row.entry
+    return edge.widget === "people" && ((edge.storage === "embedded" && edge.itemRole === "from") || (edge.storage === "record" && edge.itemRole === "to"))
   }
   return row.entry.widget === "date" || row.entry.widget === "location"
 }
@@ -115,20 +134,12 @@ function placeText(item: Item, field: FieldEntry): string | undefined {
   return text(d.locationName) ?? text(d.address) ?? text(d[field.key])
 }
 
-function peopleIds(item: Item, edge: EdgeEntry): string[] {
-  return (item.relations ?? [])
-    .filter((relation) => relation.predicate === edge.predicate && relation.target.startsWith("global:"))
-    .map((relation) => relation.target.slice("global:".length))
-}
-
-function hasValue(row: MetaRow, item: Item, resolveUser: ResolveUser): boolean {
-  if (row.kind === "edge") return peopleOf(item, row.entry, resolveUser).length > 0
+function hasValue(row: MetaRow & { kind: "field" }, item: Item): boolean {
   if (row.entry.widget === "date") return !!text(data(item)[row.entry.key])
   return !!placeText(item, row.entry)
 }
 
-function MetaRowView({ row, item, resolveUser }: { row: MetaRow; item: Item; resolveUser: ResolveUser }) {
-  if (row.kind === "edge") return <PeopleRow users={peopleOf(item, row.entry, resolveUser)} edge={row.entry} />
+function MetaRowView({ row, item }: { row: MetaRow & { kind: "field" }; item: Item }) {
   if (row.entry.widget === "date") return <DateRow item={item} field={row.entry} />
   return <LocationRow item={item} field={row.entry} />
 }
@@ -145,14 +156,23 @@ function Row({ id, icon, label, children }: { id: string; icon: ReactNode; label
   )
 }
 
-/**
- * Menschen (C1, Lesen). S1 nimmt den vorhandenen Baustein `ItemAssignees`;
- * die Chip-Zeile mit Qualifier kommt mit S2.
- */
-function PeopleRow({ users, edge }: { users: readonly User[]; edge: EdgeEntry }) {
+/** Menschen (C1, Lesen): eine Zeile, Chips mit Qualifier, „Alle". */
+function PeopleRow({
+  edge,
+  entries,
+  resolveUser,
+  resolveName,
+  currentUserId,
+}: {
+  edge: EdgeEntry
+  entries: readonly PeopleLineEntry[]
+  resolveUser: ResolveUser
+  resolveName: (id: string) => string
+  currentUserId?: string
+}) {
   return (
-    <Row id={edge.predicate} icon={<Users className="h-3.5 w-3.5" />} label={edge.label}>
-      <ItemAssignees users={users} className="[&>span]:text-xs" />
+    <Row id={edge.predicate} icon={<Users className="h-3.5 w-3.5" />} label="Menschen">
+      <PeopleLineRow entries={entries} resolveUser={resolveUser} resolveName={resolveName} currentUserId={currentUserId} />
     </Row>
   )
 }

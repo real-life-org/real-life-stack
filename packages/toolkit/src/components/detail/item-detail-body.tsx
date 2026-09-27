@@ -65,15 +65,16 @@ export interface ItemDetailBodyProps {
   /**
    * Slot `actions`: die Selbstaktion als Pill-Zeile direkt unter der Meta-Box
    * (C2, „Zusagen · Vielleicht · Absagen"). Heisst hier nicht `actions`, weil
-   * der Prop schon das ⋮-Menue traegt. Gefuellt ab S2.
+   * der Prop schon das ⋮-Menue traegt. Jede Kante bringt ihre eigene Zeile
+   * mit; die Stimme (C4) steht hier mit Pills und Balken.
    */
   selfActions?: ReactNode
   /** Slot `reverse`: Rückwärts-Listen als kompakte ItemPreviews. Gefuellt ab S3. */
   reverse?: ReactNode
   /**
-   * Slot `bar`: Reaktionen und Kommentieren, ueber dem Divider. Traegt im
-   * Uebergang auch die Typ-Fusszeile (Stimmen, Spec 06, Regel 17), bis sie
-   * mit S2 nach `selfActions` zieht.
+   * Slot `bar`: Reaktionen und Kommentieren, ueber dem Divider. Die
+   * Typ-Fusszeile steht hier nur noch fuer Typen ohne Feld- und Kantenliste
+   * (Spec 06, Regel 17); Zusagen und Stimmen stehen in `selfActions`.
    */
   footer?: ReactNode
   /** Slot `note`: Nur-lesen-Hinweis oder Fehler-Banner, ganz unten. Gefuellt ab S5. */
@@ -145,7 +146,7 @@ export function ItemDetailBody({
       {selfActions && (
         // Slot `actions`: `empty:hidden` wie bei der Meta-Box — eine
         // Selbstaktion, die nichts anzubieten hat, rendert `null`.
-        <div data-slot="actions" className="flex flex-wrap items-center gap-2 empty:hidden">
+        <div data-slot="actions" className="flex flex-col gap-2 empty:hidden">
           {selfActions}
         </div>
       )}

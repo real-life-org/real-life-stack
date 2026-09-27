@@ -37,6 +37,12 @@ export interface FieldOption {
   id: string
   label: string
   tone?: string
+  /**
+   * Nur Qualifier-Werte einer Kante mit Selbstaktion: die Beschriftung der
+   * Pill, die diesen Wert setzt („Zusagen" für `going`, dessen `label`
+   * „zugesagt" am Chip steht). Ohne Angabe steht `label` auf der Pill.
+   */
+  action?: string
 }
 
 export interface FieldEntry {
@@ -82,6 +88,8 @@ export interface EdgeEntry {
   list?: { filter?: "open" | "upcoming"; sort?: string }
   /** Nur `storage: "record"` (Regel 8). */
   count?: "one-per-subject" | "collect-accepted"
+  /** Beschriftung des Hinzufügen-Felds im Formular (C1: „Einladen…", „Zuweisen…"). */
+  add?: string
 }
 
 export interface ListEntry {
@@ -147,6 +155,14 @@ export function assertRegisterLists(
     }
     if (edge.storage === "record" && edge.qualifier && !edge.count) {
       fail(layer, typeId, `Record-Kante (${edge.predicate}, ${edge.itemRole}) mit Qualifier braucht count`)
+    }
+    // Regel 9: Die Pills einer Selbstaktion setzen deklarierte Qualifier-Werte.
+    if (edge.selfAction?.qualifiers?.length) {
+      const allowed = new Set((edge.qualifier?.values ?? []).map((v) => v.id))
+      const unknown = edge.selfAction.qualifiers.filter((q) => !allowed.has(q))
+      if (unknown.length > 0) {
+        fail(layer, typeId, `Selbstaktion an (${edge.predicate}, ${edge.itemRole}) setzt ${unknown.join(", ")}, das der Qualifier nicht deklariert`)
+      }
     }
     // Regel 10: Rückwärts-Listen sind eingehende Kanten.
     if ((edge.pos === "list" || edge.list) && edge.itemRole !== "to") {

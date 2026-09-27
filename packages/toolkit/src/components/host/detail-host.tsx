@@ -183,6 +183,8 @@ export function ItemDetailRead({ item, actions, groupId }: { item: Item; actions
       meta={<presentation.detail item={item} />}
       // Übergangs-Slot eines Typs, der ihn nach `reverse` legt (Aussage:
       // Fassungen und „+ Variante", Spec 06 Regel 17).
+      // Slot `actions`: Selbstaktionen und Stimme aus dem Register (S2).
+      selfActions={presentation.actions ? <presentation.actions item={item} /> : undefined}
       reverse={presentation.reverse ? <presentation.reverse item={item} /> : undefined}
       footer={
         <div className="flex w-full flex-col gap-2">

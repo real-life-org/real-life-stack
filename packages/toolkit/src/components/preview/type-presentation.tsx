@@ -63,6 +63,7 @@ import {
   type RegisterLists,
 } from "./field-register"
 import { RegisterMeta, RegisterPeopleStack } from "./register-meta"
+import { RegisterActions, actionEdges } from "./register-actions"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
 import { StatementDetail, StatementVariantLine } from "../resonance/statement-variants"
 import { VoteBar } from "../resonance/vote-bar"
@@ -176,6 +177,11 @@ export interface ResolvedTypePresentation extends RegisterLists {
   detail: ComponentType<ItemSlotProps>
   /** Übergangs-Slot im Slot `reverse`, wo der Typ ihn dorthin legt (`detailSlot`). */
   reverse?: ComponentType<ItemSlotProps>
+  /**
+   * Slot `actions`: Selbstaktionen (C2) und Stimme (C4) aus den Kanten, wo der
+   * Typ welche führt (Spec 06, Regel 9).
+   */
+  actions?: ComponentType<ItemSlotProps>
   footer?: ComponentType<ItemSlotProps>
   composer?: TypeComposerPresentation
   /** True when rendering generically: the type is unknown to the manifest OR
@@ -195,6 +201,12 @@ export interface ResolvedTypePresentation extends RegisterLists {
 const REGISTER_DETAIL: ComponentType<ItemSlotProps> = function RegisterDetail({ item }) {
   const presentation = resolveTypePresentation(item.type)
   return <RegisterMeta item={item} fields={readableFields(presentation.fields)} edges={presentation.edges} />
+}
+
+/** Slot `actions` aus dem Register (C2, C4). */
+const REGISTER_ACTIONS: ComponentType<ItemSlotProps> = function RegisterActionsSlot({ item }) {
+  const presentation = resolveTypePresentation(item.type)
+  return <RegisterActions item={item} edges={presentation.edges} />
 }
 
 function EventPreview({ item }: ItemSlotProps) {
@@ -248,7 +260,30 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     composer: { submitLabel: "Erstellen" },
     badge: { icon: Calendar, className: "bg-blue-50 text-blue-700 border-blue-200" },
     fields: [TITLE, DESCRIPTION, { key: "start", widget: "date", pos: "meta" }, ADDRESS, GROUP, TAGS],
-    edges: [{ predicate: "invited", itemRole: "from", storage: "embedded", widget: "people", pos: "meta", label: "Eingeladen" }],
+    // Eingeladene und Zusagen in EINER Menschen-Zeile (08 → Teilnahme am
+    // Event, Regel 5): `invited` bleibt eingebettet, die Zusage ist ein
+    // eigener Record von der Person zum Event (Entscheidung 22/23).
+    edges: [
+      { predicate: "invited", itemRole: "from", storage: "embedded", widget: "people", pos: "meta", label: "Eingeladen", add: "Einladen…" },
+      {
+        predicate: "attends",
+        itemRole: "to",
+        storage: "record",
+        widget: "people",
+        pos: "meta",
+        label: "Teilnahme",
+        qualifier: {
+          key: "role",
+          values: [
+            { id: "going", label: "zugesagt", action: "Zusagen" },
+            { id: "maybe", label: "vielleicht", action: "Vielleicht" },
+            { id: "declined", label: "abgesagt", action: "Absagen" },
+          ],
+        },
+        selfAction: { label: "Zusagen", mine: "Zugesagt", qualifiers: ["going", "maybe", "declined"] },
+        count: "one-per-subject",
+      },
+    ],
     preview: EventPreview,
   },
   {
@@ -286,7 +321,19 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
       // Position im Modul: nie im Formular, nie in der Meta-Box (Regel 4).
       { key: "order", widget: "number", pos: "module", edit: false },
     ],
-    edges: [{ predicate: "assignedTo", itemRole: "from", storage: "embedded", widget: "people", pos: "meta", label: "Zugewiesen" }],
+    // Selbstaktion nur „Übernehmen"; kann/lernt bleibt Karabirrdt (Entscheidung 17).
+    edges: [
+      {
+        predicate: "assignedTo",
+        itemRole: "from",
+        storage: "embedded",
+        widget: "people",
+        pos: "meta",
+        label: "Zugewiesen",
+        add: "Zuweisen…",
+        selfAction: { label: "Übernehmen", mine: "Übernommen" },
+      },
+    ],
   },
   {
     id: "person",
@@ -305,9 +352,9 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     label: "Aussage",
     badge: { icon: MessageSquareQuote, className: "bg-sky-50 text-sky-700 border-sky-200" },
     fields: [{ ...TITLE, label: "Aussage" }, { ...DESCRIPTION, label: "Kontext" }, TAGS],
-    // Die Stimme ist ein Qualifier am Record (08, Qualifier an Kanten). Die
-    // Selbstaktion und die Stimmleiste im Slot `actions` kommen mit S2; bis
-    // dahin zeichnet der Übergangs-`footer` sie (Regel 17).
+    // Die Stimme ist ein Qualifier am Record (08, Qualifier an Kanten). Im
+    // Detail steht sie im Slot `actions` (Pills und Balken, C4); die Karte
+    // zeigt im Übergang weiter den `footer` (Regel 17).
     edges: [
       {
         predicate: "votesOn",
@@ -324,6 +371,7 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
             { id: "red", label: "Dagegen" },
           ],
         },
+        selfAction: { label: "Abstimmen", mine: "Abgestimmt", qualifiers: ["green", "yellow", "red"] },
         count: "one-per-subject",
       },
     ],
@@ -577,15 +625,22 @@ export function resolveTypePresentation(typeId: string): ResolvedTypePresentatio
     ...entry,
     detail: inReverse ? fromRegister : (entry.detail ?? fromRegister),
     ...(inReverse ? { reverse: entry.detail } : {}),
+    ...(actionEdges(entry.edges).length > 0 ? { actions: REGISTER_ACTIONS } : {}),
     generic: false,
   }
 }
 
-/** Render a type's footer slot for an item, or null. Convenience for
- *  surfaces that compose footers (reactions, comment counts) around it. */
+/**
+ * Die Typ-Fußzeile im DETAIL, oder null. Übergang (Spec 06, Regel 17): nur
+ * noch für Typen ohne Feld- und Kantenliste — Zusagen und Stimmen stehen mit
+ * S2 im Slot `actions`, der Prop `footer` trägt danach nur Reaktionen und
+ * Kommentieren (shared-components, `ItemDetailBody`). Karten nehmen
+ * {@link renderTypeCardFooter}.
+ */
 export function renderTypeFooter(item: Item): ReactNode {
-  const Footer = resolveTypePresentation(item.type).footer
-  return Footer ? createElement(Footer, { item }) : null
+  const presentation = resolveTypePresentation(item.type)
+  if (hasRegisterLists(presentation) || !presentation.footer) return null
+  return createElement(presentation.footer, { item })
 }
 
 /**
