@@ -389,7 +389,10 @@ async function createConnector(type: string): Promise<DataInterface> {
     return connector
   }
   if (type === "local") {
-    const c = new LocalConnector(demoData)
+    // `?identity=tab`: jeder Browser-Tab ist eine eigene Person — zum Testen
+    // von Mehrpersonen-Geschichten (Abstimmen, Varianten, Einfrieren).
+    const identity = new URLSearchParams(window.location.search).get("identity") === "tab" ? "per-tab" : "shared"
+    const c = new LocalConnector(demoData, { identity })
     await c.init()
     return c
   }
