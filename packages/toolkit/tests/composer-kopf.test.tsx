@@ -51,8 +51,8 @@ const withGroups = (types: ContentTypeConfig[], defaultGroup?: string): ContentT
 
 // Typ und Space sind Menü-Knöpfe (Design Anton, 27.09.): der gewählte Wert
 // steht in `data-value`, die Optionen im geöffneten Menü (Portal im body).
-const typeSelect = () => host.querySelector<HTMLButtonElement>('button[aria-label="Typ wählen"]')
-const spaceSelect = () => host.querySelector<HTMLButtonElement>('button[aria-label="Space wählen"]')
+const typeSelect = () => host.querySelector<HTMLButtonElement>('button[aria-label^="Typ wählen"]')
+const spaceSelect = () => host.querySelector<HTMLButtonElement>('button[aria-label^="Space wählen"]')
 const valueOf = (el: HTMLElement | null) => el?.getAttribute("data-value") ?? ""
 async function openMenu(trigger: HTMLElement) {
   await act(async () => {
@@ -177,7 +177,7 @@ describe("Kopf wie im Design (Anton, 27.09.): Typ als Badge, Space als Pille", (
     const slot = typeSlot()!
     expect(slot.textContent).toContain("Event")
     expect(slot.querySelector("svg.lucide-chevron-down")).not.toBeNull()
-    expect(slot.querySelector('button[aria-label="Typ wählen"]')).not.toBeNull()
+    expect(slot.querySelector('button[aria-label^="Typ wählen"]')).not.toBeNull()
     // Das Badge aus dem Register: Typfarbe des Events
     expect(slot.innerHTML).toContain("bg-blue-50")
   })
@@ -302,5 +302,31 @@ describe("Auswahl-Menüs im Kopf (Design Anton, 27.09.)", () => {
     await openMenu(spaceSelect()!)
     await choose("Hof")
     expect(valueOf(spaceSelect())).toBe("b")
+  })
+})
+
+describe("Codex Runde 8: Menüs zugänglich", () => {
+  const groups = [{ id: "a", name: "Garten" }, { id: "b", name: "Hof" }]
+
+  it("der Knopf nennt den aktuellen Wert, die Einträge tragen ihren Auswahlzustand", async () => {
+    await render({ contentTypes: withGroupOptions(pickContentTypes("post", "task"), groups, "a"), initialContentType: "task" })
+    expect(typeSelect()!.getAttribute("aria-label")).toBe("Typ wählen, aktuell Task")
+    expect(spaceSelect()!.getAttribute("aria-label")).toBe("Space wählen, aktuell Garten")
+    await openMenu(typeSelect()!)
+    const items = menuItems()
+    expect(items.every((el) => el.getAttribute("role") === "menuitemradio")).toBe(true)
+    expect(items.filter((el) => el.getAttribute("aria-checked") === "true").map((el) => el.textContent?.trim())).toEqual(["Task"])
+  })
+
+  it("Space-Menü per Tastatur: Suchfeld hat den Fokus, Pfeil runter führt in die Treffer", async () => {
+    await render({ contentTypes: withGroupOptions(pickContentTypes("task"), groups, "a"), mode: "task" })
+    await openMenu(spaceSelect()!)
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 5)) })
+    const suche = document.body.querySelector<HTMLInputElement>('input[placeholder="Space suchen…"]')!
+    expect(document.activeElement).toBe(suche)
+    await act(async () => {
+      suche.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }))
+    })
+    expect(document.activeElement?.getAttribute("role")).toBe("menuitemradio")
   })
 })

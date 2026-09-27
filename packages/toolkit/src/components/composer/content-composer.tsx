@@ -440,13 +440,16 @@ function ComposerHead({ types, selectedType, onSelectType, space }: ComposerHead
         <span data-slot="composer-type" className="inline-flex shrink-0">
           {onSelectType ? (
             <DropdownMenu>
-              <DropdownMenuTrigger aria-label="Typ wählen" data-value={current.id} className={HEAD_TRIGGER}>
+              <DropdownMenuTrigger aria-label={`Typ wählen, aktuell ${current.label}`} data-value={current.id} className={HEAD_TRIGGER}>
                 <TypeBadge config={current} trailing={<ChevronDown className="h-3 w-3 opacity-80" aria-hidden />} />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={6} className={cn(HEAD_MENU, "w-[220px]")}>
                 {types.map((t) => (
                   <DropdownMenuItem
                     key={t.id}
+                    // Auswahlzustand für Screenreader, nicht nur als Häkchen.
+                    role="menuitemradio"
+                    aria-checked={t.id === current.id}
                     data-current={t.id === current.id}
                     onSelect={() => onSelectType(t.id)}
                     className={HEAD_ITEM}
@@ -538,6 +541,7 @@ function SpacePill({ value, options, required, fixedReason, onChange }: NonNulla
   const choosable = options.length > 1
   const missing = required && !value
   const [query, setQuery] = React.useState("")
+  const searchRef = React.useRef<HTMLInputElement>(null)
   if (!choosable) {
     const only = selected ?? options[0]
     const fixed = (
@@ -566,7 +570,14 @@ function SpacePill({ value, options, required, fixedReason, onChange }: NonNulla
   const personal = shown.filter((o) => o.personal)
   const groups = shown.filter((o) => !o.personal)
   const row = (o: GroupOption) => (
-    <DropdownMenuItem key={o.id} data-current={o.id === value} onSelect={() => onChange(o.id)} className={HEAD_ITEM}>
+    <DropdownMenuItem
+      key={o.id}
+      role="menuitemradio"
+      aria-checked={o.id === value}
+      data-current={o.id === value}
+      onSelect={() => onChange(o.id)}
+      className={HEAD_ITEM}
+    >
       <SpaceLogo option={o} size="md" />
       <span data-slot="space-name" className="min-w-0 flex-1 truncate">{o.name}</span>
       {o.memberCount !== undefined && <span className="text-xs font-normal text-muted-foreground">{o.memberCount}</span>}
@@ -575,9 +586,19 @@ function SpacePill({ value, options, required, fixedReason, onChange }: NonNulla
   )
   return (
     <span data-slot="composer-space" className="inline-flex min-w-0">
-      <DropdownMenu onOpenChange={(open) => { if (!open) setQuery("") }}>
+      <DropdownMenu
+        onOpenChange={(open) => {
+          if (!open) {
+            setQuery("")
+            return
+          }
+          // Das Suchfeld bekommt beim Öffnen den Fokus, nachdem Radix ihn
+          // auf Menü oder ersten Eintrag gesetzt hat: tippen filtert sofort.
+          setTimeout(() => searchRef.current?.focus(), 0)
+        }}
+      >
         <DropdownMenuTrigger
-          aria-label="Space wählen"
+          aria-label={selected ? `Space wählen, aktuell ${selected.name}` : "Space wählen"}
           aria-invalid={missing || undefined}
           aria-required={required || undefined}
           data-value={value}
@@ -592,8 +613,13 @@ function SpacePill({ value, options, required, fixedReason, onChange }: NonNulla
           <span className="truncate">{selected?.name ?? `Space wählen${required ? " *" : ""}`}</span>
           <ChevronDown className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" sideOffset={6} className={cn(HEAD_MENU, "w-[250px]")}>
+        <DropdownMenuContent
+          align="start"
+          sideOffset={6}
+          className={cn(HEAD_MENU, "w-[250px]")}
+        >
           <input
+            ref={searchRef}
             type="search"
             placeholder="Space suchen…"
             aria-label="Space suchen"
@@ -602,7 +628,14 @@ function SpacePill({ value, options, required, fixedReason, onChange }: NonNulla
             // Tippen gehört dem Feld, nicht der Typeahead-Suche des Menüs;
             // Pfeiltasten und Escape bleiben beim Menü.
             onKeyDown={(e) => {
-              if (!["ArrowDown", "ArrowUp", "Escape", "Tab"].includes(e.key)) e.stopPropagation()
+              // Pfeil runter führt in die Treffer; Escape bleibt beim Menü.
+              if (e.key === "ArrowDown") {
+                e.preventDefault()
+                e.stopPropagation()
+                e.currentTarget.closest('[role="menu"]')?.querySelector<HTMLElement>('[role="menuitemradio"]')?.focus()
+                return
+              }
+              if (e.key !== "Escape") e.stopPropagation()
             }}
             className="mb-1 h-8 w-full rounded-lg border bg-background px-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
           />
