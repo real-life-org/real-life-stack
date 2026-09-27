@@ -170,6 +170,11 @@ export interface CustomWidgetDefinition {
 
 export interface ContentComposerSubmitData {
   contentType: string
+  /**
+   * @deprecated Kein Mapper und kein Connector liest den Wert; die
+   * Sichtbarkeit folgt aus dem Space im Kopf des Formulars (shared-components,
+   * Edit-Regeln 3). Bleibt bis zum nächsten Major im Vertrag.
+   */
   isPublic: boolean
   data: WidgetData
 }

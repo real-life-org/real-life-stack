@@ -156,3 +156,19 @@ describe("PeopleWidget: Antippen wechselt den Qualifier", () => {
     await act(async () => root.unmount())
   })
 })
+
+describe("Nachzügler S1: Space im Bearbeiten-Kopf ohne Verschieben (Edit-Regeln 3)", () => {
+  it("zeigt den bekannten Space fest statt ihn wegzulassen; mit Verschieben bleibt er wählbar", async () => {
+    const { withEditGroup, withGroupOptions, GROUP_FIXED_NO_MOVE } = await import("../src/components/composer/composer-mapping")
+    const { pickContentTypes } = await import("../src/components/composer/content-types")
+    const types = withGroupOptions(pickContentTypes("task"), [{ id: "a", name: "Garten" }, { id: "b", name: "Hof" }], "a")
+    expect(withEditGroup(types, true)).toBe(types)
+    const fixed = withEditGroup(types, false)[0]
+    expect(fixed.groupOptions).toEqual([{ id: "a", name: "Garten" }])
+    expect(fixed.defaultGroup).toBe("a")
+    expect(fixed.groupFixedReason).toBe(GROUP_FIXED_NO_MOVE)
+    // Ohne bekannten Space kein Space im Kopf.
+    const unknown = withEditGroup(pickContentTypes("task"), false)[0]
+    expect(unknown.groupOptions).toBeUndefined()
+  })
+})

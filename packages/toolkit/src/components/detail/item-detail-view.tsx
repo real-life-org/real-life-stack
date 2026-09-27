@@ -13,6 +13,7 @@ import {
   type WidgetData,
 } from "../composer/content-composer"
 import { ItemComposer } from "../composer/item-composer"
+import { withEditGroup } from "../composer/composer-mapping"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import { useIsFrozen } from "../../hooks/use-item-frozen"
 import { useItem } from "../../hooks/use-items"
@@ -114,10 +115,9 @@ export function ItemDetailView({
   const vorlage = editTemplateFor(item, contentTypes)
   // Der Space ist beim Bearbeiten nur wählbar, wenn der Connector Items
   // verschieben kann (moveItemToGroup); sonst steht er nicht zur Wahl.
+  // Ohne Verschieben steht der bekannte Space fest im Kopf (Edit-Regeln 3).
   const canMove = hasItemGroups(connector)
-  const composerTypes = (vorlage ? contentTypes.filter((t) => t.id === vorlage) : []).map((t) =>
-    canMove ? t : { ...t, groupOptions: undefined, defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") },
-  )
+  const composerTypes = withEditGroup(vorlage ? contentTypes.filter((t) => t.id === vorlage) : [], canMove)
   const canEdit = composerTypes.length > 0 && !frozen
 
   // Pre-fill the group widget with the item's ACTUAL group/space (not just the

@@ -210,6 +210,24 @@ export function withFixedGroup(types: ContentTypeConfig[], groupId: string, reas
   })
 }
 
+/**
+ * Der Space im Kopf des Bearbeiten-Formulars (shared-components, Edit-Regeln
+ * 3): wählbar, wenn der Connector Items verschieben kann
+ * (`moveItemToGroup`); sonst steht der bekannte Space fest da — der, auf den
+ * die Optionen vorausgewählt sind —, statt wegzufallen. Ist keiner bekannt,
+ * gibt es keinen Space im Kopf.
+ */
+export const GROUP_FIXED_NO_MOVE = "Dieser Speicher kann Einträge nicht in einen anderen Space verschieben"
+
+export function withEditGroup(types: ContentTypeConfig[], canMove: boolean): ContentTypeConfig[] {
+  if (canMove) return types
+  return types.flatMap((t) => {
+    const known = t.defaultGroup && t.groupOptions?.some((o) => o.id === t.defaultGroup) ? t.defaultGroup : undefined
+    if (known) return withFixedGroup([t], known, GROUP_FIXED_NO_MOVE)
+    return [{ ...t, groupOptions: undefined, defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") }]
+  })
+}
+
 export function withGroupOptions(
   types: ContentTypeConfig[],
   // May be undefined while the groups query is still loading — guarded below.
