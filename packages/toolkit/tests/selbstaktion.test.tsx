@@ -2,7 +2,7 @@
 import { act, createElement, type ReactNode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import { deriveRelationRecordId, type Item } from "@real-life-stack/data-interface"
 import { MockConnector } from "@real-life-stack/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
@@ -196,5 +196,68 @@ describe("Stimme im Slot actions (C4)", () => {
     expect(pill("Dafür")).toBeTruthy()
     expect(renderTypeFooter(STATEMENT)).toBeNull()
     expect(resolveTypePresentation("statement").footer).toBeDefined()
+  })
+})
+
+describe("Codex Runde 1: Selbstaktion schreibt gegen den geltenden Zustand", () => {
+  it("Befund 1: ein eigener Record ohne gültiges Verdikt wird bei „Zusagen“ nicht gelöscht", async () => {
+    const Actions = resolveTypePresentation("event").actions!
+    // Der kanonische eigene Slot (08, Regel 4), aber ohne positives Verdikt.
+    const id = await deriveRelationRecordId(ME, "attends", `global:${ME}`, "item:e1")
+    const mineInvalid = record(id, ME, ME, "going")
+    await render((c) => {
+      c.verifyRecordClaim = (async (r: { id: string }) => (r.id === id ? "invalid" : "trusted")) as never
+      return createElement(Actions, { item: EVENT })
+    }, [mineInvalid])
+    // Der ungültige Record zählt nicht: neutral.
+    expect(pill("Zusagen")?.getAttribute("aria-pressed")).toBe("false")
+    await click(pill("Zusagen"))
+    const mine = await connector.getRelationRecords({ predicate: "attends", from: `global:${ME}` })
+    expect(mine).toHaveLength(1)
+    expect(mine[0].fields?.role).toBe("going")
+  })
+
+  it("Befund 2: zwei Klicks vor dem nächsten Render entscheiden gegeneinander und die Anzeige konvergiert", async () => {
+    const Actions = resolveTypePresentation("event").actions!
+    await render(() => createElement(Actions, { item: EVENT }))
+    const zusagen = pill("Zusagen") as HTMLButtonElement
+    await act(async () => {
+      zusagen.click()
+      zusagen.click()
+    })
+    await settle()
+    expect(await connector.getRelationRecords({ predicate: "attends", from: `global:${ME}` })).toHaveLength(0)
+    expect(pill("Zusagen")?.getAttribute("aria-pressed")).toBe("false")
+  })
+
+  it("Befund 3: ohne Schreibrecht im Space keine Pills (Modi, Regel 1)", async () => {
+    const Actions = resolveTypePresentation("event").actions!
+    await render((c) => {
+      Object.assign(c, { can: () => false })
+      return createElement(Actions, { item: EVENT })
+    })
+    expect(pill("Zusagen")).toBeUndefined()
+  })
+
+  it("eine Ablehnung des Connectors wird sichtbar, die Anzeige fällt zurück", async () => {
+    const Actions = resolveTypePresentation("event").actions!
+    await render((c) => {
+      c.createRelationRecord = (async () => {
+        throw new Error("Kein Schreibrecht")
+      }) as never
+      return createElement(Actions, { item: EVENT })
+    })
+    await click(pill("Zusagen"))
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain("Kein Schreibrecht")
+    expect(pill("Zusagen")?.getAttribute("aria-pressed")).toBe("false")
+  })
+})
+
+describe("Codex Runde 1, Befund 6: Qualifier und Sprecher sind zugänglich", () => {
+  it("der Profil-Link nennt Qualifier und Sprecher", async () => {
+    const Meta = resolveTypePresentation("event").detail
+    await render(() => createElement(Meta, { item: EVENT }), [record("rel-ulf-by-timo", TIMO, ULF, "maybe")])
+    const labels = [...host.querySelectorAll("[aria-label]")].map((el) => el.getAttribute("aria-label"))
+    expect(labels).toContain("Profil von Ulf öffnen — vielleicht, eingetragen von Timo")
   })
 })

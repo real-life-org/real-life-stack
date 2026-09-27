@@ -47,6 +47,12 @@ function PersonAvatar({ user, className }: { user: User; className?: string }) {
   )
 }
 
+/** Der Name des Profil-Links trägt, was der Chip zeigt: Qualifier und Sprecher. */
+function accessibleLabel(name: string, entry: PeopleLineEntry, speaker: (id: string) => string): string {
+  const parts = [entry.qualifier?.label, entry.speakerId ? `eingetragen von ${speaker(entry.speakerId)}` : undefined].filter(Boolean)
+  return parts.length > 0 ? `Profil von ${name} öffnen — ${parts.join(", ")}` : `Profil von ${name} öffnen`
+}
+
 export function PeopleLineRow({ entries, resolveUser, resolveName, currentUserId }: PeopleLineRowProps) {
   const [open, setOpen] = useState(false)
   const listId = useId()
@@ -75,7 +81,7 @@ export function PeopleLineRow({ entries, resolveUser, resolveName, currentUserId
               const user = resolveUser(entry.userId)!
               const name = user.displayName ?? user.id
               return (
-                <ProfileLink key={entry.userId} userId={user.id} label={`Profil von ${name} öffnen`}>
+                <ProfileLink key={entry.userId} userId={user.id} label={accessibleLabel(name, entry, speaker)}>
                   <span
                     data-person={entry.userId}
                     className="inline-flex max-w-full items-center gap-1.5 rounded-full border bg-background py-0.5 pl-0.5 pr-2 text-xs font-medium text-foreground"

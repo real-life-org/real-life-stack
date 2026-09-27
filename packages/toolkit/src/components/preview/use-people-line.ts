@@ -13,17 +13,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react"
 import type { DataInterface, Item, RelationRecord } from "@real-life-stack/data-interface"
 import {
+  hasAuthorization,
   hasClaimVerification,
+  hasItemGroups,
   hasRelationRecords,
   hasRelationRecordWriter,
   isAuthenticatable,
   isWritable,
-  selfStatementFields,
 } from "@real-life-stack/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
-import { resolveItemPermissions } from "../../hooks/use-item-permissions"
+import { resolveCanCreate, resolveItemPermissions } from "../../hooks/use-item-permissions"
+import { writeOwnStatement } from "../../lib/own-statement"
 import { useVerifiedRelationRecords } from "../../hooks/use-votes"
 import type { EdgeEntry } from "./field-register"
 import { peopleLine, peopleLineGroups, recordPeopleEdges, type PeopleLineEntry } from "./people-line"
@@ -81,12 +83,15 @@ export interface SelfActionState {
   /** Die Selbstaktion ist hier möglich (Capability, Anmeldung, Schreibrecht). */
   available: boolean
   /**
-   * Mein Zustand: bei einer Kante mit Qualifier der Wert meiner eigenen
-   * Aussage, sonst `true`, wenn ich an der Kante stehe. `undefined`: neutral.
+   * Mein Zustand: bei einer Kante mit Qualifier der Wert meiner eigenen,
+   * GELTENDEN Aussage, sonst `true`, wenn ich an der Kante stehe.
+   * `undefined`: neutral.
    */
   mine: string | true | undefined
   /** Setzt meinen Zustand; derselbe Wert noch einmal nimmt die Aussage zurück. */
   act: (value?: string) => Promise<void>
+  /** Der letzte Schreibversuch scheiterte (Ablehnung des Connectors). */
+  error: string | null
 }
 
 /**
@@ -96,9 +101,15 @@ export interface SelfActionState {
  * Eingebettete Kanten schreiben das Trägeritem (jedes Mitglied darf,
  * Entscheidung 14).
  *
- * Nicht verfügbar ohne die nötige Capability — die Pill-Zeile täuscht nichts
- * vor, was der Connector nicht kann (Record: Lesen, Schreiben und
- * Verifikation; sonst zählte die eigene Aussage nie).
+ * Nicht verfügbar ohne die nötige Capability oder Berechtigung — die
+ * Pill-Zeile täuscht nichts vor (Record: Lesen, Schreiben, Verifikation und
+ * `item/create` für Relation-Items im Space des Items; eingebettet:
+ * Bearbeiten des Trägeritems). Modi, Regel 1.
+ *
+ * Entschieden wird gegen den GELTENDEN Zustand (verifizierte eigene Aussage,
+ * Leseregel L1) plus die noch laufende Absicht, nie gegen ungeprüfte Records:
+ * Ein eigener Record ohne gültigen Claim wird über das Anlegen repariert,
+ * nicht gelöscht.
  */
 export function useSelfAction(item: Item, edge: EdgeEntry): SelfActionState {
   const connector = useConnector()
@@ -110,7 +121,9 @@ export function useSelfAction(item: Item, edge: EdgeEntry): SelfActionState {
   const available = useMemo(() => {
     if (!meId || !isWritable(connector) || !isAuthenticatable(connector)) return false
     if (isRecord) {
-      return edge.itemRole === "to" && !!edge.qualifier && hasRelationRecords(connector) && hasRelationRecordWriter(connector) && hasClaimVerification(connector)
+      if (!(edge.itemRole === "to" && !!edge.qualifier && hasRelationRecords(connector) && hasRelationRecordWriter(connector) && hasClaimVerification(connector))) return false
+      const space = hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
+      return hasAuthorization(connector) ? resolveCanCreate(connector, space, "relation") : true
     }
     return edge.itemRole === "from" && resolveItemPermissions(connector, item, meId).canEdit
   }, [connector, edge, isRecord, item, meId])
@@ -129,78 +142,89 @@ export function useSelfAction(item: Item, edge: EdgeEntry): SelfActionState {
     return typeof value === "string" ? value : true
   }, [edge, isRecord, item.relations, meId, records])
 
-  // Optimistische Anzeige bis der Connector den Schreibvorgang zurückmeldet.
-  const [pending, setPending] = useState<{ value: string | true | undefined } | null>(null)
+  // Optimistische Anzeige, gebunden an Item, Person und Connector. Sie endet,
+  // sobald der geltende Zustand sie einholt, oder — nach Abschluss aller
+  // Schreibvorgänge — mit der nächsten Meldung der Quelle.
+  const context = `${item.id}|${meId ?? ""}`
+  const [pending, setPending] = useState<{ value: string | true | undefined; context: string; settledAt?: unknown } | null>(null)
+  const source = isRecord ? records : item
+  const active = pending && pending.context === context ? pending : null
   useEffect(() => {
-    if (pending && pending.value === persisted) setPending(null)
-  }, [pending, persisted])
-  const mine = pending ? pending.value : persisted
+    if (!pending) return
+    if (pending.context !== context) setPending(null)
+    else if (pending.value === persisted) setPending(null)
+    else if (pending.settledAt !== undefined && pending.settledAt !== source) setPending(null)
+  }, [pending, persisted, context, source])
+  const mine = active ? active.value : persisted
+
+  // Die Absicht der laufenden Kette: Zwei Klicks vor dem nächsten Render
+  // entscheiden gegeneinander, nicht beide gegen denselben alten Zustand.
+  const intent = useRef<{ value: string | true | undefined; context: string } | null>(null)
+  const mineRef = useRef(mine)
+  mineRef.current = mine
+  const sourceRef = useRef(source)
+  sourceRef.current = source
+  const queued = useRef(0)
+  const [error, setError] = useState<string | null>(null)
 
   const chain = useRef<Promise<void>>(Promise.resolve())
   const act = useCallback(
     (value?: string) => {
+      queued.current += 1
       const run = async () => {
-        if (!available || !meId) return
-        const next = mine === (value ?? true) ? undefined : (value ?? true)
-        setPending({ value: next })
         try {
-          if (isRecord) await writeOwnRecord(connector, item, edge, meId, value)
-          else await writeEmbedded(connector, item, edge, meId, value)
-        } catch {
-          setPending(null)
+          if (!available || !meId) return
+          const current = intent.current && intent.current.context === context ? intent.current.value : mineRef.current
+          const wanted = value ?? true
+          const next = current === wanted ? undefined : wanted
+          intent.current = { value: next, context }
+          setPending({ value: next, context })
+          setError(null)
+          try {
+            if (isRecord) {
+              await writeOwnStatement(connector, item, { predicate: edge.predicate, from: `global:${meId}`, key: edge.qualifier!.key, value: typeof next === "string" ? next : null })
+            } else {
+              await writeEmbedded(connector, item, edge, meId, next)
+            }
+          } catch (err) {
+            intent.current = null
+            setPending(null)
+            setError(err instanceof Error ? err.message : String(err))
+          }
+        } finally {
+          queued.current -= 1
+          if (queued.current === 0) {
+            intent.current = null
+            setPending((p) => (p ? { ...p, settledAt: sourceRef.current } : p))
+          }
         }
       }
       const next = chain.current.then(run)
       chain.current = next.catch(() => undefined)
       return next
     },
-    [available, connector, edge, isRecord, item, meId, mine],
+    [available, connector, context, edge, isRecord, item, meId],
   )
 
-  return { available, mine, act }
+  return { available, mine, act, error }
 }
 
-async function writeOwnRecord(connector: DataInterface, item: Item, edge: EdgeEntry, meId: string, value: string | undefined) {
-  if (!hasRelationRecords(connector) || !hasRelationRecordWriter(connector) || !edge.qualifier || !value) return
-  const key = edge.qualifier.key
-  const from = `global:${meId}`
-  const to = `item:${item.id}`
-  // Die Entscheidung liest frisch, nicht aus dem letzten Render: Doppelklicks
-  // laufen gegen den wahren Stand.
-  const fresh = await connector.getRelationRecords({ predicate: edge.predicate, from, to })
-  const own = fresh.find((record) => record.createdBy === meId)
-  const fields = selfStatementFields(edge.predicate, key, value, item)
-  if (own) {
-    if (own.fields?.[key] === value) {
-      await connector.deleteRelationRecord(own.id)
-      return
-    }
-    await connector.updateRelationRecord(own.id, { fields: { ...(own.fields ?? {}), ...fields } })
-    return
-  }
-  const created = await connector.createRelationRecord({ predicate: edge.predicate, from, to, fields })
-  // Idempotentes Anlegen gibt einen vorhandenen kanonischen Record unverändert
-  // zurück — auch einen mit anderem Wert. Dann den eigenen angleichen.
-  if (created.fields?.[key] !== value) {
-    await connector.updateRelationRecord(created.id, { fields: { ...(created.fields ?? {}), ...fields } })
-  }
-}
-
-async function writeEmbedded(connector: DataInterface, item: Item, edge: EdgeEntry, meId: string, value: string | undefined) {
-  if (!isWritable(connector)) return
+/** Die eingebettete Kante: ich stehe daran (mit Wert) oder nicht (`undefined`). */
+async function writeEmbedded(connector: DataInterface, item: Item, edge: EdgeEntry, meId: string, next: string | true | undefined) {
+  if (!isWritable(connector)) throw new Error("Dieser Speicher ist nur lesbar")
   const current = (await connector.getItem(item.id)) ?? item
   const target = `global:${meId}`
   const relations = current.relations ?? []
-  const existing = relations.find((r) => r.predicate === edge.predicate && r.target === target)
   const key = edge.qualifier?.key
-  let next
-  if (existing && (!key || !value || existing.meta?.[key] === value)) {
-    // Dieselbe Pill noch einmal: ich trete von der Kante zurück.
-    next = relations.filter((r) => r !== existing)
-  } else if (existing && key && value) {
-    next = relations.map((r) => (r === existing ? { ...r, meta: { ...(r.meta ?? {}), [key]: value } } : r))
-  } else {
-    next = [...relations, { predicate: edge.predicate, target, ...(key && value ? { meta: { [key]: value } } : {}) }]
+  const others = relations.filter((r) => !(r.predicate === edge.predicate && r.target === target))
+  if (next === undefined) {
+    await connector.updateItem(item.id, { relations: others })
+    return
   }
-  await connector.updateItem(item.id, { relations: next })
+  const existing = relations.find((r) => r.predicate === edge.predicate && r.target === target)
+  const meta = { ...(existing?.meta ?? {}), ...(key && typeof next === "string" ? { [key]: next } : {}) }
+  const mine = { predicate: edge.predicate, target, ...(Object.keys(meta).length > 0 ? { meta } : {}) }
+  // An ihrer Stelle, damit die Reihenfolge der Kanten bleibt.
+  const nextRelations = existing ? relations.map((r) => (r === existing ? mine : r)) : [...relations, mine]
+  await connector.updateItem(item.id, { relations: nextRelations })
 }

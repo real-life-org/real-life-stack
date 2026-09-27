@@ -53,7 +53,7 @@ const capitalize = (word: string) => word.charAt(0).toLocaleUpperCase("de") + wo
  * Zustand und bleibt als meiner sichtbar (Detail-Anatomie, Regel 7).
  */
 export function SelfActionPills({ item, edge }: { item: Item; edge: EdgeEntry }) {
-  const { available, mine, act } = useSelfAction(item, edge)
+  const { available, mine, act, error } = useSelfAction(item, edge)
   if (!available || !edge.selfAction) return null
   const values = edge.selfAction.qualifiers?.length
     ? edge.selfAction.qualifiers
@@ -100,6 +100,11 @@ export function SelfActionPills({ item, edge }: { item: Item; edge: EdgeEntry })
           {pill.label}
         </button>
       ))}
+      {error && (
+        <span role="alert" className="basis-full text-xs text-destructive">
+          Konnte nicht gespeichert werden. {error}
+        </span>
+      )}
     </div>
   )
 }
