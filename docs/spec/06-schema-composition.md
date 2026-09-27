@@ -206,7 +206,7 @@ interface EdgeEntry {
   widget: "people" | "item-relation" | "membership" | "vote" | "origin" | "confirmations" | "activity"
   pos: "meta" | "actions" | "list" | "badge"
   label: string                  // Intl-Schlüssel: „Braucht", „Teil von", „Findet hier statt"
-  qualifier?: { key: string; values: { id: string; label: string; tone?: string; action?: string }[]; default?: string }
+  qualifier?: { key: string; values: { id: string; label: string; tone?: Tone; action?: string }[]; default?: string }
                                  // action: Beschriftung der Pill, die den Wert setzt („Zusagen" für going)
                                  // default: der Wert, als der ein fehlender Qualifier gilt (optional)
   selfAction?: {                 // C2
