@@ -25,7 +25,7 @@ import { useGroupVocabulary } from "../../hooks/use-group-vocabulary"
 import type { ModuleEntry } from "../../lib/module-register"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { contentTypesFromRegister, mapComposerSubmission, withGroupOptions } from "../composer/content-types"
-import { withCreateGroup } from "../composer/composer-mapping"
+import { withCreateGroup, withSpacesPending } from "../composer/composer-mapping"
 import { useOptionalSharedFilter } from "../filter/filter-store"
 import { useOptionalModulePanel } from "../module-panel/module-panel"
 import { CreateFab } from "../create-fab/create-fab"
@@ -204,7 +204,7 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
   // `null` fragt die Vereinigung aller bekannten Mitglieder ab, damit im
   // Aggregat ein Autor aus einem anderen Space noch aufloest.
   const { data: members } = useMembers(isOverview ? null : groupId)
-  const { data: groupsLive } = useGroups()
+  const { data: groupsLive, isLoading: groupsLoading } = useGroups()
   const groups = groupsProp ?? groupsLive
   const personalGroupId = usePersonalGroupId()
   // Die Farbe kommt aus derselben Ableitung wie Herkunft und Privatheit (useItemPresentation); der Host reicht nur die Farbe weiter.
@@ -285,12 +285,16 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
       // ALLE Typen; die Gruppenauswahl steht auf dem aktuellen Space, im
       // Aggregat auf dem persoenlichen. Ohne GroupScopeCapable nur der Space,
       // in dem der Connector ohne `group` anlegt (Space des Formulars, Regel 6).
-      contentTypes: withCreateGroup(withGroupOptions(contentTypesFromRegister(), [...groups], currentSpace, personalGroupId), canScope, currentSpace),
+      contentTypes: withSpacesPending(
+        withCreateGroup(withGroupOptions(contentTypesFromRegister(), [...groups], currentSpace, personalGroupId), canScope, currentSpace),
+        // Ungeklärt, solange die Spaces laden und noch keiner bekannt ist (#538).
+        !groupsProp && groupsLoading && groups.length === 0,
+      ),
       mapper: mapComposerSubmission,
       composerProps,
       shell: createShell,
     }),
-    [groups, currentSpace, personalGroupId, composerProps, createShell, canScope],
+    [groups, currentSpace, personalGroupId, composerProps, createShell, canScope, groupsProp, groupsLoading],
   )
   useRegisterCreate(entry.id, createConfig)
 

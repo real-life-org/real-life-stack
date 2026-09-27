@@ -138,6 +138,33 @@ describe("ResonanceTransferMenu: import from the overview", () => {
   })
 })
 
+describe("ResonanceTransferMenu: dieselbe Anlegeprüfung wie das Formular (#538)", () => {
+  it("ohne GroupScopeCapable bietet die Übersicht keinen Import an (kein anlegen-dann-verschieben)", async () => {
+    await act(async () => { root.unmount() })
+    connector.setCurrentGroup(null as never)
+    const ohneScope = new Proxy(connector, {
+      get(target, key, receiver) {
+        if (key === "groupScope") return undefined
+        const value = Reflect.get(target, key, receiver)
+        return typeof value === "function" ? value.bind(target) : value
+      },
+      has: (target, key) => (key === "groupScope" ? false : Reflect.has(target, key)),
+    })
+    root = createRoot(host)
+    await act(async () => {
+      root.render(createElement(ConnectorProvider, { connector: ohneScope as never },
+        createElement(ResonanceTransferMenu, {
+          space: undefined, targetSpaces: [{ id: "g", name: "Garten" }], userId: "u1", shownStatements: [], verifiedRecords: [],
+          contentHashes: new Map(), population: ALL_PEOPLE, tags: [],
+        })))
+    })
+    const trigger = host.querySelector<HTMLButtonElement>('button[aria-label="Weitere Aktionen"]')!
+    await act(async () => { trigger.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 })) })
+    const importItem = [...document.body.querySelectorAll('[role="menuitem"]')].find((el) => el.textContent?.includes("Aussagen importieren"))
+    expect(importItem === undefined || importItem.getAttribute("aria-disabled") === "true" || importItem.hasAttribute("data-disabled")).toBe(true)
+  })
+})
+
 describe("ResonanceTransferMenu: import against the loaded space (#521)", () => {
   it("does not duplicate while the observed statements are still loading", async () => {
     // Observation still empty and not loaded — the store already has the statement.

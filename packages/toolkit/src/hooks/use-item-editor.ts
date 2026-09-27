@@ -1,10 +1,11 @@
 import { useCallback, useState } from "react"
 import type { DataInterface, Item, Relation } from "@real-life-stack/data-interface"
-import { deriveContext, hasGroups, hasGroupScope, hasItemGroups } from "@real-life-stack/data-interface"
+import { deriveContext, hasItemGroups } from "@real-life-stack/data-interface"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useConnector } from "./connector-context"
 import type { ContentComposerSubmitData } from "../components/composer/content-composer"
 import { writeOwnStatement, type OwnStatement } from "../lib/own-statement"
+import { createOptionsForSpace } from "../lib/create-in-space"
 
 /**
  * The shape a caller-supplied mapper returns. The hook handles the
@@ -189,19 +190,9 @@ function formGroupOf(submission: ContentComposerSubmitData): string | undefined 
 
 /**
  * Anlegen in einem Schritt (shared-components → Space des Formulars, Regel
- * 6): mit `hasGroupScope()` direkt im Formular-Space
- * (`createItem(item, { group })`), nie anlegen und danach verschieben. Ohne
- * die Zusage legt der Connector im geöffneten Space an; zeigt das Formular
- * einen anderen, scheitert das Speichern, statt das Item still woanders
- * abzulegen (Regel 7).
+ * 6): die gemeinsame Anlegeprüfung {@link createOptionsForSpace}.
  */
-function createOptionsFor(connector: DataInterface, group: string | undefined): { group: string } | undefined {
-  if (group === undefined) return undefined
-  if (hasGroupScope(connector)) return { group }
-  const open = hasGroups(connector) ? (connector.getCurrentGroup()?.id ?? null) : null
-  if (open !== group) throw new Error("Dieser Speicher kann nur im geöffneten Space anlegen")
-  return undefined
-}
+const createOptionsFor = createOptionsForSpace
 
 /**
  * Beim Bearbeiten: Wechselt der Space im Formular, verschiebt das Item

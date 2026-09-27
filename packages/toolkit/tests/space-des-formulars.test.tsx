@@ -559,3 +559,24 @@ describe("#538 Codex-Runde: Übergänge", () => {
     expect(host.querySelector("[data-space-required]")?.textContent).toContain(GROUP_UNAVAILABLE_NO_SCOPE)
   })
 })
+
+describe("#538 Codex-Runde 2: Spaces noch nicht geladen", () => {
+  it("withSpacesPending sperrt das Anlegen, solange die Spaces laden und keine Option bekannt ist", async () => {
+    const { withSpacesPending, GROUPS_LOADING } = await import("../src/components/composer/composer-mapping")
+    const base = [contentTypeFromRegister("task")]
+    expect(withSpacesPending(base, false)).toBe(base)
+    const pending = withSpacesPending(base, true)
+    expect(pending[0]!.groupUnavailableReason).toBe(GROUPS_LOADING)
+    // Sind Optionen schon bekannt, gilt die normale Pflicht.
+    const withOptions = withGroupOptions(base, [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], undefined, null)
+    expect(withSpacesPending(withOptions, true)).toBe(withOptions)
+    const create = vi.spyOn(connector, "createItem")
+    await render(createElement(ItemComposer, {
+      contentTypes: pending, initialContentType: "task", mapper: mapComposerSubmission,
+      initialData: { title: "T" }, onDone: () => {}, onCancel: () => {}, composerProps: { liveUpdate: true },
+    }))
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
+    expect(create).not.toHaveBeenCalled()
+    expect(host.querySelector("[data-space-required]")?.textContent).toContain(GROUPS_LOADING)
+  })
+})

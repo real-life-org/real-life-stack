@@ -318,3 +318,15 @@ export function withGroupOptions(
     ...(t.defaultWidgets.includes("group") ? {} : { defaultWidgets: [...t.defaultWidgets, "group"] }),
   }))
 }
+
+/**
+ * Solange die Spaces noch laden und keine Option bekannt ist, ist der
+ * Formular-Space ungeklärt: Anlegen gesperrt, mit Grund (Space des
+ * Formulars, Regel 8; Codex zu #538). Ein Connector ohne Spaces lädt nie.
+ */
+export const GROUPS_LOADING = "Spaces werden geladen – gleich lässt sich speichern"
+
+export function withSpacesPending(types: ContentTypeConfig[], pending: boolean): ContentTypeConfig[] {
+  if (!pending || types.every((t) => (t.groupOptions?.length ?? 0) > 0)) return types
+  return types.map((t) => ((t.groupOptions?.length ?? 0) > 0 ? t : { ...t, groupUnavailableReason: GROUPS_LOADING }))
+}
