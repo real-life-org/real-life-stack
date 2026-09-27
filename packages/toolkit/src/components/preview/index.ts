@@ -29,6 +29,7 @@ export {
   registerTypePresentation,
   resolveTypePresentation,
   renderTypeFooter,
+  renderTypeCardFooter,
   setTypeManifest,
   GENERIC_BADGE,
   type ItemSlotProps,
@@ -40,6 +41,7 @@ export {
 } from "./type-presentation"
 export {
   metaRowOrder,
+  readableFields,
   composerWidgetsFromRegister,
   type WidgetId,
   type EdgeWidgetId,
@@ -50,4 +52,4 @@ export {
   type MenuActionEntry,
   type MetaRow,
 } from "./field-register"
-export { RegisterMeta, type RegisterMetaProps } from "./register-meta"
+export { RegisterMeta, RegisterPeopleStack, type RegisterMetaProps } from "./register-meta"

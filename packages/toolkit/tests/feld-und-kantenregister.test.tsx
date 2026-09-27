@@ -23,6 +23,8 @@ import {
 import { contentTypeFromRegister } from "../src/components/composer/content-types"
 import { metaRowOrder, type EdgeEntry, type FieldEntry } from "../src/components/preview/field-register"
 import { RegisterMeta } from "../src/components/preview/register-meta"
+import { renderTypeCardFooter } from "../src/components/preview/type-presentation"
+import { getTypeManifest } from "@real-life-stack/data-interface"
 import { ContentComposer } from "../src/components/composer/content-composer"
 
 /**
@@ -340,5 +342,42 @@ describe("Meta-Box aus dem Register", () => {
     const statement = resolveTypePresentation("statement")
     expect(statement.footer).toBeDefined()
     expect(statement.detail.name).toBe("StatementDetail")
+  })
+})
+
+describe("Codex Runde 1: keine Verluste gegenüber vorher", () => {
+  it("Widget-Paare: ein zugeschaltetes Datum oder ein Ort erscheint im Detail, auch wenn der Typ es nicht deklariert", async () => {
+    const post = item("post", { content: "x", start: "2026-07-19T16:00:00+02:00", address: "Markthalle 7" })
+    const Detail = resolveTypePresentation("post").detail
+    const { container, unmount } = await rendere(createElement(Detail, { item: post }))
+    const rows = [...container.querySelectorAll("[data-meta-row]")].map((el) => el.getAttribute("data-meta-row"))
+    expect(rows).toEqual(["start", "address"])
+    await unmount()
+    // Die Composer-Defaults bleiben, wie der Typ sie deklariert.
+    expect(contentTypeFromRegister("post").defaultWidgets).toEqual(["text", "media", "tags"])
+  })
+
+  it("task mit Ort: die Adresse bleibt sichtbar", async () => {
+    const task = item("task", { title: "T", address: "Gartenstraße 3" })
+    const Detail = resolveTypePresentation("task").detail
+    const { container, unmount } = await rendere(createElement(Detail, { item: task }))
+    expect(container.querySelector('[data-meta-row="address"]')?.textContent).toContain("Gartenstraße 3")
+    await unmount()
+  })
+
+  it("Karte: die Personen-Kanten erscheinen als Avatar-Stapel (Regel 9), eine explizite Fußzeile gewinnt", async () => {
+    const task = item("task", { title: "T" }, [{ predicate: "assignedTo", target: "global:u2" }])
+    const { container, unmount } = await rendere(createElement("div", null, renderTypeCardFooter(task)))
+    expect(container.textContent).toContain("Kollegin")
+    await unmount()
+    expect(renderTypeCardFooter(item("post"))).toBeNull()
+  })
+
+  it("ein abgelehntes Neubinden lässt beide Manifest-Bindungen unverändert", () => {
+    registriere([], [{ predicate: "spottedBy", itemRole: "from", storage: "embedded", widget: "people", pos: "meta", label: "x" }])
+    const vorher = getTypeManifest()
+    const ohneKante = composeTypeManifest([TOOLKIT_TYPE_LAYER, { name: "app", definitions: [{ ...SICHTUNG, relations: [] }] }])
+    expect(() => setTypeManifest(ohneKante)).toThrow()
+    expect(getTypeManifest()).toBe(vorher)
   })
 })

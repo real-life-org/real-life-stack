@@ -59,6 +59,30 @@ export function RegisterMeta({ item, fields, edges, className }: RegisterMetaPro
 
 type ResolveUser = (id: string) => User | undefined
 
+/**
+ * Die Personen-Kanten eines Items als ein Avatar-Stapel — für Karten, die
+ * „Avatar-Stack" aus dem Register zeigen (shared-components, Item-Detail aus
+ * dem Register, Regel 9). `null`, wenn niemand aufzulösen ist.
+ */
+export function RegisterPeopleStack({ item, edges }: { item: Item; edges?: readonly EdgeEntry[] }) {
+  const { data: members } = useMembers(null)
+  const { data: currentUser } = useOptionalCurrentUser()
+  const resolveUser: ResolveUser = (id) =>
+    members.find((m) => m.id === id) ?? (currentUser?.id === id ? currentUser : undefined)
+  const seen = new Set<string>()
+  const users: User[] = []
+  for (const row of metaRowOrder([], edges)) {
+    if (row.kind !== "edge" || !hasReader(row)) continue
+    for (const user of peopleOf(item, row.entry, resolveUser)) {
+      if (!seen.has(user.id)) {
+        seen.add(user.id)
+        users.push(user)
+      }
+    }
+  }
+  return users.length > 0 ? <ItemAssignees users={users} /> : null
+}
+
 function peopleOf(item: Item, edge: EdgeEntry, resolveUser: ResolveUser): User[] {
   return peopleIds(item, edge)
     .map(resolveUser)

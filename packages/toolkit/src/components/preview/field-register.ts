@@ -236,6 +236,23 @@ export function metaRowOrder(fields: readonly FieldEntry[] = [], edges: readonly
     .map(({ row }) => row)
 }
 
+/**
+ * Leseformen für Widgets, die der Composer JEDEM Typ zum Zuschalten anbietet
+ * (Datum, Ort). Ein Item kann diese Werte tragen, ohne dass sein Typ sie
+ * deklariert; die Paar-Regel (shared-components, Widget-Paare) verlangt dann
+ * trotzdem eine Leseform. Nur für die Meta-Box — die Composer-Defaults
+ * bleiben, wie der Typ sie deklariert.
+ */
+const SWITCHABLE_READERS: readonly FieldEntry[] = [
+  { key: "start", widget: "date", pos: "meta" },
+  { key: "address", widget: "location", pos: "meta" },
+]
+
+/** Die Felder, die die Meta-Box liest: die deklarierten plus die zuschaltbaren, die der Typ nicht selbst führt. */
+export function readableFields(fields: readonly FieldEntry[] = []): FieldEntry[] {
+  return [...fields, ...SWITCHABLE_READERS.filter((r) => !fields.some((f) => f.widget === r.widget))]
+}
+
 // ---------------------------------------------------------------------------
 // Composer (Spec 06, Regel 16)
 

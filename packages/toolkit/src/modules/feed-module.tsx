@@ -18,7 +18,7 @@ import { ItemPreview } from "../components/preview/item-preview"
 import { ItemPreviewSkeleton } from "../components/preview/item-preview-skeleton"
 import { ItemPrivateBadge } from "../components/preview/item-private-badge"
 import { ItemTypeBadge } from "../components/preview/item-type-badge"
-import { renderTypeFooter } from "../components/preview/type-presentation"
+import { renderTypeCardFooter } from "../components/preview/type-presentation"
 import { EmptyState } from "../components/primitives/empty-state"
 import { ReactionBar } from "../components/reactions/reaction-bar"
 import type { ModuleViewProps } from "../lib/module-register"
@@ -179,12 +179,13 @@ const FeedCard = memo(function FeedCard({
 export function feedFooter(item: Item, onCommentClick: () => void) {
   const commentCount = (item.data as Record<string, unknown>).commentCount
   const count = typeof commentCount === "number" ? commentCount : 0
-  // Type-own footer (statement -> votes, task -> assignees) comes from the
-  // type register (spec 06, rule 3) - this surface adds ONLY its own
-  // conventions: reactions left, comment count right. No type branching.
+  // Type-own card footer (statement -> votes, task -> assignees as avatar
+  // stack) comes from the type register (spec 06, rule 3) - this surface adds
+  // ONLY its own conventions: reactions left, comment count right. No type
+  // branching.
   return (
     <div className="flex w-full flex-col gap-2">
-      {renderTypeFooter(item)}
+      {renderTypeCardFooter(item)}
       <div className="flex items-center">
         <ReactionBar itemId={item.id} />
         {count > 0 && (

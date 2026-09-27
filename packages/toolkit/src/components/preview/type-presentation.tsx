@@ -54,6 +54,7 @@ import { ItemMetaRow } from "./item-meta-row"
 import {
   assertRegisterLists,
   hasRegisterLists,
+  readableFields,
   uniteRegisterLists,
   type EdgeEntry,
   type FieldEntry,
@@ -61,7 +62,7 @@ import {
   type MenuActionEntry,
   type RegisterLists,
 } from "./field-register"
-import { RegisterMeta } from "./register-meta"
+import { RegisterMeta, RegisterPeopleStack } from "./register-meta"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
 import { StatementDetail, StatementVariantLine } from "../resonance/statement-variants"
 import { VoteBar } from "../resonance/vote-bar"
@@ -183,7 +184,7 @@ export interface ResolvedTypePresentation extends RegisterLists {
  */
 const REGISTER_DETAIL: ComponentType<ItemSlotProps> = function RegisterDetail({ item }) {
   const presentation = resolveTypePresentation(item.type)
-  return <RegisterMeta item={item} fields={presentation.fields} edges={presentation.edges} />
+  return <RegisterMeta item={item} fields={readableFields(presentation.fields)} edges={presentation.edges} />
 }
 
 function EventPreview({ item }: ItemSlotProps) {
@@ -355,9 +356,8 @@ let composedCache: Map<string, TypePresentationEntry> | null = null
  * manifest so a narrower manifest cannot leave orphans behind.
  */
 export function setTypeManifest(next: ComposedTypeManifest): void {
-  // Dasselbe Manifest für Hinweise und Filter in data-interface: Wer im
-  // Toolkit bindet, bindet einmal (Spec 06, Regel 1 — eine Identitätsquelle).
-  bindDataInterfaceManifest(next)
+  // Erst alles prüfen, dann binden: Ein abgelehntes Manifest darf weder hier
+  // noch in data-interface ankommen, sonst widersprechen sich die Schichten.
   for (const [name, layer] of layers) {
     for (const entry of layer.definitions ?? []) {
       if (!next.has(entry.id)) {
@@ -375,6 +375,9 @@ export function setTypeManifest(next: ComposedTypeManifest): void {
       assertRegisterLists(next, frag.id, frag, name)
     }
   }
+  // Dasselbe Manifest für Hinweise und Filter in data-interface: Wer im
+  // Toolkit bindet, bindet einmal (Spec 06, Regel 1 — eine Identitätsquelle).
+  bindDataInterfaceManifest(next)
   manifest = next
 }
 
@@ -566,4 +569,17 @@ export function resolveTypePresentation(typeId: string): ResolvedTypePresentatio
 export function renderTypeFooter(item: Item): ReactNode {
   const Footer = resolveTypePresentation(item.type).footer
   return Footer ? createElement(Footer, { item }) : null
+}
+
+/**
+ * Die Fußzeile einer KARTE: die Typ-Fußzeile, wo ein Typ sie im Übergang noch
+ * setzt (Regel 17), sonst der Avatar-Stapel seiner Personen-Kanten aus dem
+ * Register (shared-components, Item-Detail aus dem Register, Regel 9). Im
+ * Detail stehen die Personen in der Meta-Box, dort gilt {@link renderTypeFooter}.
+ */
+export function renderTypeCardFooter(item: Item): ReactNode {
+  const presentation = resolveTypePresentation(item.type)
+  if (presentation.footer) return createElement(presentation.footer, { item })
+  if (!presentation.edges?.length) return null
+  return createElement(RegisterPeopleStack, { item, edges: presentation.edges })
 }
