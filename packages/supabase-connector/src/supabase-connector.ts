@@ -5,6 +5,8 @@ import type {
   ContactInfo,
   IncomingEvent,
   CreateItemInput,
+  CreateItemOptions,
+  GroupScopeCapable,
   DataInterface,
   Group,
   Item,
@@ -72,7 +74,7 @@ function throwOnError<T>(result: SupabaseResult<T>, action: string): T {
  * the update path, 0012 keeps the content of authorial items (spec 08
  * catalog) with their author — NOT on this client code.
  */
-export class SupabaseConnector implements DataInterface, ItemWriter {
+export class SupabaseConnector implements DataInterface, ItemWriter, GroupScopeCapable {
   private readonly client: SupabaseClientLike
   private readonly allowFixtureAuthors: boolean
 
@@ -257,8 +259,8 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
     return this.currentGroupId
   }
 
-  private applyGroupScope<Q extends FilterBuilderLike>(query: Q): Q {
-    const groupId = this.currentReadScopeGroupId()
+  private applyGroupScope<Q extends FilterBuilderLike>(query: Q, explicitGroup?: string): Q {
+    const groupId = explicitGroup ?? this.currentReadScopeGroupId()
     if (groupId === null) return query
     if (!SupabaseConnector.SAFE_SCOPE_ID.test(groupId)) {
       throw new Error(`[SupabaseConnector] unsupported group id for server-side scoping: ${JSON.stringify(groupId)}`)
@@ -271,7 +273,23 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
   /** PostgREST caps unbounded queries at max_rows (config.toml: 1000). */
   private static readonly SERVER_PAGE = 1000
 
+  /**
+   * Ist der angemeldete Nutzer Mitglied von `groupId`? Für `group` (02,
+   * Lesen Regel 2 / Anlegen Regel 3): Ein Space ohne Mitgliedschaft ergibt
+   * nichts — RLS verbirgt seine Zeilen, aber globale feature-Items
+   * (group_id IS NULL) sähe man sonst trotzdem.
+   */
+  private async isMemberOf(groupId: string): Promise<boolean> {
+    const userId = this.sessionUserId ?? (await this.getCurrentUser())?.id
+    if (!userId || !SupabaseConnector.SAFE_SCOPE_ID.test(groupId)) return false
+    const result = await this.client.from("group_members").select("group_id").eq("group_id", groupId).eq("user_id", userId).maybeSingle()
+    return throwOnError(result, "group scope") !== null
+  }
+
   async getItems(filter?: ItemFilter): Promise<Item[]> {
+    // 02 → Lesen in einem bestimmten Space: ein fremder Space ergibt nichts.
+    const group = filter?.group
+    if (group !== undefined && !(await this.isMemberOf(group))) return []
     // Page past the server's silent max_rows cap in EVERY case: unbounded
     // reads fetch everything, and an explicit limit above the cap is honored
     // window by window — never quietly truncated to the first 1000.
@@ -283,7 +301,7 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
         ? SupabaseConnector.SERVER_PAGE
         : Math.min(SupabaseConnector.SERVER_PAGE, target - results.length)
       if (window <= 0) break
-      const query = applyItemFilter(this.applyGroupScope(this.client.from("items").select("*")), {
+      const query = applyItemFilter(this.applyGroupScope(this.client.from("items").select("*"), group), {
         ...(filter ?? {}),
         limit: window,
         offset,
@@ -364,8 +382,17 @@ export class SupabaseConnector implements DataInterface, ItemWriter {
     })
   }
 
-  async createItem(item: CreateItemInput): Promise<Item> {
-    return this.createItemInGroup(item, this.currentGroupId)
+  /** 02 → Lesen/Anlegen in einem bestimmten Space. */
+  readonly groupScope = true as const
+
+  async createItem(item: CreateItemInput, options?: CreateItemOptions): Promise<Item> {
+    const target = options?.group
+    if (target === undefined) return this.createItemInGroup(item, this.currentGroupId)
+    // EIN Insert mit group_id — atomar, nie anlegen und verschieben. Die
+    // Insert-Policy (0003) prüft die Mitgliedschaft ohnehin; die Prüfung hier
+    // gibt einen klaren Fehler, bevor etwas gesendet wird.
+    if (!(await this.isMemberOf(target))) throw new Error(`[SupabaseConnector] createItem: not a member of space ${target}`)
+    return this.createItemInGroup(item, target)
   }
 
   private async createItemInGroup(item: CreateItemInput, groupId: string | null): Promise<Item> {

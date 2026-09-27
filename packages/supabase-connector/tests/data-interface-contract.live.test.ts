@@ -79,6 +79,15 @@ if (!url || !anonKey || !serviceKey) {
     bindsAuthorToSession: false,
     cannotSeedForeignItem:
       "Service-Role umgeht RLS — die Autorenregel wird in den Raw-DML-Tests mit echten Nutzern geprueft",
+    // 02 → Lesen/Anlegen in einem bestimmten Space: zwei frische Gruppen, die
+    // erste geoeffnet. Die Mitgliedschaft legt createGroup an.
+    async groupScope({ connector }) {
+      const c = connector as SupabaseConnector
+      const open = await c.createGroup(`scope-open-${Date.now()}`)
+      const other = await c.createGroup(`scope-other-${Date.now()}`)
+      c.setCurrentGroup(open.id)
+      return { open: open.id, other: other.id }
+    },
   })
 
   describe("SupabaseConnector (live, authoritative) — the RLS boundary itself", () => {

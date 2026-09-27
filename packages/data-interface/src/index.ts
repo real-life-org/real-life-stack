@@ -162,6 +162,12 @@ export interface ItemFilter {
    */
   bbox?: [number, number, number, number]
   source?: string
+  /**
+   * Nur Items dieses Space, unabhängig vom geöffneten (Spec 02 → Lesen in
+   * einem bestimmten Space). Nur an einen Connector mit {@link hasGroupScope}
+   * geben: Ein anderer übergeht das Feld und lieferte den geöffneten Space.
+   */
+  group?: string
   limit?: number
   offset?: number
 }
@@ -872,6 +878,28 @@ export interface ItemGroupCapable {
   getPersonalGroupId?(): string | null
 }
 
+// --- Group Scope (Lesen und Anlegen in einem bestimmten Space) ---
+
+/**
+ * Items eines bestimmten Space lesen (`ItemFilter.group`) und in ihm anlegen
+ * (`createItem(item, { group })`), ohne ihn zu öffnen. Spec 02 → Lesen in
+ * einem bestimmten Space / Anlegen in einem bestimmten Space; 03.
+ *
+ * Mit `options.group` legt der Connector das Item atomar unmittelbar in
+ * diesem Space an — nie „anlegen, dann verschieben". Ein unbekannter oder
+ * nicht beschreibbarer Space lehnt ab, ohne irgendwo anzulegen. Unabhängig
+ * von {@link ItemGroupCapable} (Regel 7).
+ */
+export interface GroupScopeCapable {
+  readonly groupScope: true
+  createItem(item: CreateItemInput, options?: CreateItemOptions): Promise<Item>
+}
+
+export interface CreateItemOptions {
+  /** Der Space, in dem das Item angelegt wird; ohne: der geöffnete. */
+  group?: string
+}
+
 // --- Convenience: Full-Featured Connector ---
 
 export type FullConnector = DataInterface & ItemWriter & RelationCapable & GroupManager & Authenticatable & MultiSource
@@ -1058,6 +1086,17 @@ export function hasEventListener(c: DataInterface): c is DataInterface & EventLi
 
 export function hasItemGroups(c: DataInterface): c is DataInterface & ItemGroupCapable {
   return "getItemGroupId" in c && "moveItemToGroup" in c
+}
+
+/**
+ * Sagt der Connector `ItemFilter.group` und `createItem(item, { group })` zu?
+ * Nur die ausdrückliche Zusage `groupScope === true` zählt: `createItem` hat
+ * jeder Schreiber, und ein Connector ohne Zusage übergeht `group` still
+ * (Spec 02, Regel 6).
+ */
+export function hasGroupScope(c: DataInterface): c is DataInterface & ItemWriter & GroupScopeCapable {
+  const candidate = c as DataInterface & Partial<GroupScopeCapable>
+  return candidate.groupScope === true && typeof candidate.createItem === "function"
 }
 
 /**

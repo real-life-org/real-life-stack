@@ -76,6 +76,41 @@ describeDataInterfaceContract("WotConnector", {
     if (!value.replication) value.replication = { openSpace: async () => value.currentHandle }
     return "space-move-ziel"
   },
+  // 02 → Lesen/Anlegen in einem bestimmten Space: „space" ist offen,
+  // „space-2" nicht. Ein echter CrossGroupIndex über eine Replikations-
+  // Attrappe mit zwei Dokumenten — derselbe Weg wie in der App, in der der
+  // Index alle Spaces offen hält. Live-Beobachtung braucht die volle
+  // Laufzeit; sie prüft group-scope.test.ts.
+  async groupScope({ connector }) {
+    const value = connector as any
+    const docs: Record<string, RlsSpaceDoc> = { space: value.currentHandle.getDoc(), "space-2": doc() }
+    const handles: Record<string, ReturnType<typeof handle>> = { space: value.currentHandle, "space-2": handle(docs["space-2"]) }
+    value.replication = {
+      openSpace: async (id: string) => {
+        if (!handles[id]) throw new Error(`unknown space ${id}`)
+        return handles[id]
+      },
+      watchSpaces: () => ({
+        getValue: () => [{ id: "space", type: "shared" }, { id: "space-2", type: "shared" }],
+        subscribe: () => () => {},
+      }),
+    }
+    value.groupsCache = [{ id: "space", name: "Offen" }, { id: "space-2", name: "Anderer" }]
+    // Für setCurrentGroup(null) (Übersicht) — sonst setzt der Konstruktor es.
+    value.currentGroupObservable = createObservable(value.groupsCache[0])
+    value.privateSpaceId = null
+    const { CrossGroupIndex } = await import("../src/CrossGroupIndex.js")
+    const { deserializeItem } = await import("../src/serialization.js")
+    value.crossGroupIndex = new CrossGroupIndex(
+      value.replication,
+      (d: RlsSpaceDoc) => new Map(Object.entries(d.items ?? {}).map(([id, s]) => [id, deserializeItem(s)])),
+      (item: { type: string }) => item.type,
+    )
+    value.crossGroupIndex.start()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    return { open: "space", other: "space-2" }
+  },
+  observesGroupScopeLive: false,
   // Direkt ins Space-Dokument, ohne Ingress: genau so taucht ein fremdes
   // Item in Wirklichkeit auf — es kommt per Sync von einem anderen Geraet.
   async seedForeignItem({ connector }, item) {

@@ -51,4 +51,10 @@ describeDataInterfaceContract("LocalConnector", {
   async movableTarget() {
     return "g2"
   },
+  // 02 → Lesen/Anlegen in einem bestimmten Space: g1 offen, g2 nicht.
+  async groupScope({ connector }) {
+    ;(connector as unknown as { setCurrentGroup(id: string): void }).setCurrentGroup("g1")
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    return { open: "g1", other: "g2" }
+  },
 })

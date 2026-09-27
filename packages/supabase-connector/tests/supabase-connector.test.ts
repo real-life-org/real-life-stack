@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 import {
   deriveRelationRecordId,
   hasClaimVerification,
+  hasGroupScope,
   voteRecordInput,
   votesFromRelationRecords,
   VOTE_PREDICATE,
@@ -296,6 +297,66 @@ describe("SupabaseConnector — group scope on read paths (#238 review)", () => 
     connector.setCurrentGroup(groupB.id)
     await flush()
     expect(observable.current.map(({ id }) => id)).toEqual([inB.id])
+  })
+})
+
+describe("SupabaseConnector — GroupScopeCapable (02 → Lesen/Anlegen in einem bestimmten Space)", () => {
+  async function world() {
+    const base = await makeConnector()
+    const { connector, userId } = base
+    const groupA = await connector.createGroup("Gruppe A")
+    const groupB = await connector.createGroup("Gruppe B")
+    connector.setCurrentGroup(groupA.id)
+    return { ...base, userId, groupA, groupB }
+  }
+
+  it("sagt group zu", async () => {
+    const { connector } = await makeConnector()
+    expect(hasGroupScope(connector)).toBe(true)
+  })
+
+  it("legt mit group in EINEM Insert im genannten Space an, ohne den geöffneten zu wechseln", async () => {
+    const { client, connector, userId, groupA, groupB } = await world()
+    const created = await connector.createItem({ type: "scope-create", createdBy: userId, data: {} }, { group: groupB.id })
+    const rows = client.tables.get("items")!.filter((row) => row.id === created.id)
+    expect(rows.map((row) => row.group_id)).toEqual([groupB.id])
+    expect(connector.getCurrentGroup()?.id).toBe(groupA.id)
+    expect((await connector.getItems({ type: "scope-create", group: groupB.id })).map(({ id }) => id)).toEqual([created.id])
+    expect(await connector.getItems({ type: "scope-create" })).toEqual([])
+  })
+
+  it("liest mit group den genannten Space, samt globalen feature-Items (Regel 3)", async () => {
+    const { connector, userId, groupA, groupB } = await world()
+    connector.setCurrentGroup(null)
+    const feature = await connector.createItem({ type: "feature", createdBy: userId, data: {} })
+    const inB = await connector.createItem({ type: "scope-read", createdBy: userId, data: {} }, { group: groupB.id })
+    connector.setCurrentGroup(groupA.id)
+    const ids = (await connector.getItems({ group: groupB.id })).map(({ id }) => id)
+    expect(ids).toContain(inB.id)
+    expect(ids).toContain(feature.id)
+  })
+
+  it("ein Space ohne Mitgliedschaft ergibt nichts — auch keine globalen feature-Items — und lehnt das Anlegen ab", async () => {
+    const { client, connector, userId } = await world()
+    await connector.createItem({ type: "feature", createdBy: userId, data: {} })
+    client.tables.get("groups")!.push({ id: "fremd", name: "Fremd", data: {}, created_by: "user-other", created_at: new Date().toISOString() })
+    expect(await connector.getItems({ group: "fremd" })).toEqual([])
+    const before = client.tables.get("items")!.length
+    await expect(connector.createItem({ type: "x", createdBy: userId, data: {} }, { group: "fremd" })).rejects.toThrow()
+    expect(client.tables.get("items")!.length).toBe(before)
+  })
+
+  it("observe mit group folgt einem externen Insert in diesem Space, solange er nicht geöffnet ist", async () => {
+    const { client, connector, userId, groupB } = await world()
+    const observable = connector.observe({ type: "scope-obs", group: groupB.id })
+    await flush()
+    expect(observable.loaded).toBe(true)
+    expect(observable.current).toEqual([])
+    client.serviceRole = true
+    await client.from("items").insert({ id: "ext-1", type: "scope-obs", data: {}, created_by: userId, group_id: groupB.id }).select().single()
+    await flush()
+    await flush()
+    expect(observable.current.map(({ id }) => id)).toEqual(["ext-1"])
   })
 })
 

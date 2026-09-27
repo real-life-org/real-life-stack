@@ -1,5 +1,7 @@
 import type {
   CreateItemInput,
+  CreateItemOptions,
+  GroupScopeCapable,
   FullConnector,
   Item,
   ItemFilter,
@@ -146,7 +148,7 @@ const tabClaims = new WeakMap<object, TabClaim>()
 
 // --- LocalConnector ---
 
-export class LocalConnector implements FullConnector, ActivityLogCapable, ScopedActivityLogCapable, NotificationStateCapable {
+export class LocalConnector implements FullConnector, GroupScopeCapable, ActivityLogCapable, ScopedActivityLogCapable, NotificationStateCapable {
   private items: Item[] = []
   private notifyScheduled = false
   private groups: Group[] = []
@@ -524,21 +526,33 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
 
   // --- Items ---
 
-  private getScopedItems(): Item[] {
+  /**
+   * Die Items eines Space (02 → Lesen in einem bestimmten Space): ohne
+   * `group` der geöffnete Space (Übersicht/Aggregat: alle), mit `group`
+   * genau dieser — ein unbekannter ergibt nichts.
+   */
+  private getScopedItems(group?: string): Item[] {
+    if (group !== undefined) {
+      if (!this.groups.some((g) => g.id === group)) return []
+      return this.itemsInGroup(group)
+    }
     const groupId = this.currentGroup?.id
     const scope = (this.currentGroup?.data?.scope as string) ?? "group"
 
     if (!groupId || scope === "aggregate") {
       return this.items
     }
+    return this.itemsInGroup(groupId)
+  }
 
+  private itemsInGroup(groupId: string): Item[] {
     const itemIds = this.groupItems[groupId]
     if (!itemIds) return this.items.filter((i) => i.type === "feature")
     return this.items.filter((i) => itemIds.includes(i.id) || i.type === "feature")
   }
 
   async getItems(filter?: ItemFilter): Promise<Item[]> {
-    const scoped = this.getScopedItems()
+    const scoped = this.getScopedItems(filter?.group)
     if (!filter) return scoped
     const filtered = scoped.filter((item) => matchesFilter(item, filter))
     return applyPagination(filtered, filter.limit, filter.offset)
@@ -551,7 +565,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
   observe(filter: ItemFilter): Observable<Item[]> {
     const key = JSON.stringify(filter)
     if (!this.itemObservables.has(key)) {
-      const scoped = this.getScopedItems()
+      const scoped = this.getScopedItems(filter.group)
       const filtered = scoped.filter((item) => matchesFilter(item, filter))
       this.itemObservables.set(key, createObservable(applyPagination(filtered, filter.limit, filter.offset)))
     }
@@ -566,10 +580,20 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
     return this.singleItemObservables.get(id)!
   }
 
-  async createItem(item: CreateItemInput): Promise<Item> {
+  /** 02 → Lesen/Anlegen in einem bestimmten Space. */
+  readonly groupScope = true as const
+
+  async createItem(item: CreateItemInput, options?: CreateItemOptions): Promise<Item> {
+    const target = options?.group
+    // Ein unbekannter Space lehnt ab, bevor irgendetwas angelegt ist (02,
+    // Anlegen Regel 3). Mit Ziel legt EINE Transaktion das Item samt
+    // Zuordnung an — nie anlegen und danach verschieben (Regel 2).
+    if (target !== undefined && !this.groups.some((g) => g.id === target)) {
+      throw new Error(`Space not found: ${target}`)
+    }
     // A fresh item was never edited — a caller-supplied stamp is a forgery.
     item = stripEditStamp(item)
-    return this.createItemInGroup(item, this.currentGroup?.id ?? null)
+    return this.createItemInGroup(item, target ?? this.currentGroup?.id ?? null)
   }
 
   private allowFixtureAuthors = false
@@ -1252,7 +1276,8 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
     const scoped = this.getScopedItems()
     for (const [key, observable] of this.itemObservables) {
       const filter: ItemFilter = JSON.parse(key)
-      const filtered = scoped.filter((item) => matchesFilter(item, filter))
+      const inScope = filter.group !== undefined ? this.getScopedItems(filter.group) : scoped
+      const filtered = inScope.filter((item) => matchesFilter(item, filter))
       observable.set(applyPagination(filtered, filter.limit, filter.offset))
     }
     for (const [id, observable] of this.singleItemObservables) {

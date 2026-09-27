@@ -132,6 +132,11 @@ export class CrossGroupIndex<TDoc, TItem> {
     return result
   }
 
+  /** Ist dieser Space schon indiziert? (Ein offener, aber noch leerer Space ist es.) */
+  hasGroup(groupId: string): boolean {
+    return this.groupItemMaps.has(groupId)
+  }
+
   getByGroup(groupId: string): Map<string, TItem> {
     return this.groupItemMaps.get(groupId) ?? new Map()
   }

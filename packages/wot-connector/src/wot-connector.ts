@@ -1,5 +1,7 @@
 import type {
   CreateItemInput,
+  CreateItemOptions,
+  GroupScopeCapable,
   Item,
   ItemFilter,
   Group,
@@ -350,7 +352,7 @@ function isVerificationConfirmation(c: ConfirmationView): boolean {
 
 // --- WotConnector ---
 
-export class WotConnector extends BaseConnector implements ActivityLogCapable, ScopedActivityLogCapable, NotificationStateCapable, InitialSyncCapable {
+export class WotConnector extends BaseConnector implements GroupScopeCapable, ActivityLogCapable, ScopedActivityLogCapable, NotificationStateCapable, InitialSyncCapable {
   private config: WotConnectorConfig
   private runtimeOverrides: WotConnectorRuntimeOverrides
   private identity: WorkflowBackedIdentity
@@ -1206,6 +1208,10 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
 
   override async getItems(filter?: ItemFilter): Promise<Item[]> {
     await this.handleReady
+    if (filter?.group !== undefined) {
+      const inSpace = await this.itemsInSpace(filter.group)
+      return applyPagination(inSpace.filter((item) => matchesFilter(item, filter)), filter.limit, filter.offset)
+    }
     const allItems = this.getCachedItems()
     if (allItems.length === 0) return []
     if (!filter) return allItems
@@ -1227,8 +1233,67 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     return deserializeItem(serialized)
   }
 
-  override async createItem(item: CreateItemInput): Promise<Item> {
+  /** 02 → Lesen/Anlegen in einem bestimmten Space. Am Prototyp, nicht als Instanzfeld: gilt auch für Instanzen ohne Konstruktor (Test-Harnesse). */
+  get groupScope(): true {
+    return true
+  }
+
+  /**
+   * Ist `group` ein Space, den dieser Nutzer liest und beschreibt? Die
+   * Gruppen aus `getGroups()` und der persönliche Space (02, Lesen Regel 2).
+   */
+  private isKnownSpace(group: string): boolean {
+    return group === this.privateSpaceId || this.groupsCache.some((g) => g.id === group)
+  }
+
+  /**
+   * Die Items eines Space, synchron, wenn bekannt: das Dokument des
+   * geöffneten Space, sonst der CrossGroupIndex (hält alle Spaces offen und
+   * folgt Remote-Updates). `null`: noch nicht indiziert.
+   */
+  private itemsInSpaceNow(group: string): Item[] | null {
+    if (!this.isKnownSpace(group)) return []
+    if (group === this.currentGroupId) {
+      const doc = this.getCurrentDoc()
+      if (doc) return Object.values(doc.items ?? {}).map(deserializeItem)
+    }
+    if (this.crossGroupIndex?.hasGroup(group)) return [...this.crossGroupIndex.getByGroup(group).values()]
+    return null
+  }
+
+  /** Wie {@link itemsInSpaceNow}; ein noch nicht indizierter Space wird aus seinem Dokument gelesen. */
+  private async itemsInSpace(group: string): Promise<Item[]> {
+    const now = this.itemsInSpaceNow(group)
+    if (now) return now
+    if (!this.replication) return []
+    const handle = await this.replication.openSpace<RlsSpaceDoc>(group)
+    try {
+      return Object.values(handle.getDoc().items ?? {}).map(deserializeItem)
+    } finally {
+      handle.close()
+    }
+  }
+
+  override async createItem(item: CreateItemInput, options?: CreateItemOptions): Promise<Item> {
     await this.handleReady
+
+    // Anlegen in einem bestimmten Space (02): EINE Transaktion im
+    // Dokument des Ziel-Space — verschlüsselt mit dessen Schlüssel, zu
+    // keinem Zeitpunkt in einem anderen Space. Nie anlegen und verschieben.
+    const target = options?.group
+    if (target !== undefined) {
+      if (!this.isKnownSpace(target)) throw new Error(`Space not found: ${target}`)
+      if (target === this.currentGroupId && this.currentHandle) {
+        return this.createItemOnHandle(this.currentHandle, item, target)
+      }
+      if (!this.replication) throw new Error("Not authenticated")
+      const targetHandle = await this.replication.openSpace<RlsSpaceDoc>(target)
+      try {
+        return await this.createItemOnHandle(targetHandle, item, target)
+      } finally {
+        targetHandle.close()
+      }
+    }
 
     // In overview mode, create in private space
     if (this.currentGroupId === null) {
@@ -2905,6 +2970,16 @@ export class WotConnector extends BaseConnector implements ActivityLogCapable, S
     // Update item list observables
     for (const [key, obs] of this.itemObservables) {
       const filter: ItemFilter = JSON.parse(key)
+      if (filter.group !== undefined) {
+        // Ein bestimmter Space, unabhängig vom geöffneten (02, Lesen Regel 5).
+        const group = filter.group
+        const apply = (inSpace: Item[]) =>
+          obs.set(applyPagination(inSpace.filter((item) => matchesFilter(item, filter)), filter.limit, filter.offset))
+        const now = this.itemsInSpaceNow(group)
+        if (now) apply(now)
+        else void this.itemsInSpace(group).then(apply).catch((err) => console.error("[WotConnector] observe(group) failed", err))
+        continue
+      }
       if (!hasData) {
         obs.set([])
       } else {

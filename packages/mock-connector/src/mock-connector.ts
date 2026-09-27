@@ -1,5 +1,7 @@
 import type {
   CreateItemInput,
+  CreateItemOptions,
+  GroupScopeCapable,
   DefaultRelationStoreOptions,
   FullConnector,
   Item,
@@ -85,7 +87,7 @@ function compareActivity(a: ActivityEntry, b: ActivityEntry): number {
   return b.ts.localeCompare(a.ts) || b.actor.localeCompare(a.actor) || b.id.localeCompare(a.id)
 }
 
-export class MockConnector implements FullConnector, ActivityLogCapable, ScopedActivityLogCapable, NotificationStateCapable, RelationRecordCapable, RelationRecordWriterCapable {
+export class MockConnector implements FullConnector, GroupScopeCapable, ActivityLogCapable, ScopedActivityLogCapable, NotificationStateCapable, RelationRecordCapable, RelationRecordWriterCapable {
   private itemsByScope = new Map<string | null, Map<string, Item>>()
   private itemOrder: Array<{ scopeId: string | null; id: string }> = []
   private notifyScheduled = false
@@ -322,7 +324,16 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
 
   // --- Items ---
 
-  private getScopedItems(): Item[] {
+  /**
+   * Die Items eines Space (02 → Lesen in einem bestimmten Space): ohne
+   * `group` der geöffnete Space (Übersicht/Aggregat: alle), mit `group`
+   * genau dieser — ein unbekannter ergibt nichts.
+   */
+  private getScopedItems(group?: string): Item[] {
+    if (group !== undefined) {
+      if (!this.groups.some((g) => g.id === group)) return []
+      return this.itemsInGroup(group)
+    }
     const groupId = this.currentGroup?.id
     const scope = (this.currentGroup?.data?.scope as string) ?? "group"
 
@@ -336,6 +347,10 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
       })
     }
 
+    return this.itemsInGroup(groupId)
+  }
+
+  private itemsInGroup(groupId: string): Item[] {
     const scopedItems = [...(this.itemsByScope.get(groupId)?.values() ?? [])]
     const globalFeatures = [...(this.itemsByScope.get(null)?.values() ?? [])]
       .filter((item) => item.type === "feature")
@@ -343,7 +358,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
   }
 
   async getItems(filter?: ItemFilter): Promise<Item[]> {
-    const scoped = this.getScopedItems()
+    const scoped = this.getScopedItems(filter?.group)
     if (!filter) return scoped
     const filtered = scoped.filter((item) => matchesFilter(item, filter))
     return applyPagination(filtered, filter.limit, filter.offset)
@@ -356,7 +371,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
   observe(filter: ItemFilter): Observable<Item[]> {
     const key = JSON.stringify(filter)
     if (!this.itemObservables.has(key)) {
-      const scoped = this.getScopedItems()
+      const scoped = this.getScopedItems(filter.group)
       const filtered = scoped.filter((item) => matchesFilter(item, filter))
       this.itemObservables.set(key, createObservable(applyPagination(filtered, filter.limit, filter.offset)))
     }
@@ -371,7 +386,16 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     return this.singleItemObservables.get(id)!
   }
 
-  async createItem(item: CreateItemInput): Promise<Item> {
+  /** 02 → Lesen/Anlegen in einem bestimmten Space. */
+  readonly groupScope = true as const
+
+  async createItem(item: CreateItemInput, options?: CreateItemOptions): Promise<Item> {
+    // Ein unbekannter Space lehnt ab, bevor irgendetwas angelegt ist (02,
+    // Anlegen Regel 3).
+    const target = options?.group
+    if (target !== undefined && !this.groups.some((g) => g.id === target)) {
+      throw new Error(`Space not found: ${target}`)
+    }
     // A fresh item was never edited — drop any caller-supplied stamp.
     item = stripEditStamp(item)
     const sessionUser = this.requireCurrentUser()
@@ -381,7 +405,7 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     // Authoritative store (spec 08): the connector owns data.claim of
     // authorial items and writes none.
     item = withoutAuthoredClaim(item)
-    const scopeId = item.type === "feature" ? null : this.currentGroup?.id ?? null
+    const scopeId = item.type === "feature" ? null : target ?? this.currentGroup?.id ?? null
     const scopeItems = this.getScopeItems(scopeId, true)
     if (item.id !== undefined) {
       const existing = scopeItems.get(item.id)
@@ -891,7 +915,8 @@ export class MockConnector implements FullConnector, ActivityLogCapable, ScopedA
     const scoped = this.getScopedItems()
     for (const [key, observable] of this.itemObservables) {
       const filter: ItemFilter = JSON.parse(key)
-      const filtered = scoped.filter((item) => matchesFilter(item, filter))
+      const inScope = filter.group !== undefined ? this.getScopedItems(filter.group) : scoped
+      const filtered = inScope.filter((item) => matchesFilter(item, filter))
       observable.set(applyPagination(filtered, filter.limit, filter.offset))
     }
     for (const [id, observable] of this.singleItemObservables) {
