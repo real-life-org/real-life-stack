@@ -176,8 +176,27 @@ Regeln:
 3. Items ohne Space, die ein Connector jedem Space zurechnet (etwa globale `feature`-Items), rechnet er mit `group` genauso zu wie im geöffneten Space.
 4. Eine Abfrage mit `group` DARF den geöffneten Space NICHT wechseln (`setCurrentGroup`) und keinen anderen App-Zustand ändern.
 5. `observe({ group, … })` MUSS Änderungen in diesem Space melden, auch solange er nicht geöffnet ist. `loaded` gilt wie in [Observable](#observable), Regel 3.
-6. `group` versteht nur ein Connector, der es zusagt: `GroupFilterCapable` mit Type Guard `hasGroupFilter()` ([03](03-capabilities.md)). Ein Connector übergeht unbekannte Filterfelder; ohne die Zusage würde er die Items des geöffneten Space liefern, als wären es die des angefragten. Eine Fläche DARF `group` darum NICHT an einen Connector ohne `hasGroupFilter()` geben. Sie zeigt stattdessen, dass sie in diesem Space nicht lesen kann ([shared-components → Space des Formulars](modules/shared-components.md#space-des-formulars)).
-7. `hasGroupFilter()` und `hasItemGroups()` sind unabhängig. `ItemGroupCapable` beantwortet für ein bekanntes Item, in welchem Space es liegt, und verschiebt es; `GroupFilterCapable` liest die Items eines Space. Ein Connector mit `GroupManager` SOLLTE `GroupFilterCapable` erfüllen.
+6. `group` versteht nur ein Connector, der es zusagt: `GroupScopeCapable` mit Type Guard `hasGroupScope()` ([03](03-capabilities.md)). Dieselbe Zusage deckt das Anlegen in einem Space ([Anlegen in einem bestimmten Space](#anlegen-in-einem-bestimmten-space)). Ein Connector übergeht unbekannte Filterfelder; ohne die Zusage würde er die Items des geöffneten Space liefern, als wären es die des angefragten. Eine Fläche DARF `group` darum NICHT an einen Connector ohne `hasGroupScope()` geben. Sie zeigt stattdessen, dass sie in diesem Space nicht lesen kann ([shared-components → Space des Formulars](modules/shared-components.md#space-des-formulars)).
+7. `hasGroupScope()` und `hasItemGroups()` sind unabhängig. `ItemGroupCapable` beantwortet für ein bekanntes Item, in welchem Space es liegt, und verschiebt es; `GroupScopeCapable` liest die Items eines Space und legt in ihm an. Ein Connector mit `GroupManager` SOLLTE `GroupScopeCapable` erfüllen.
+
+### Anlegen in einem bestimmten Space
+
+```ts
+interface GroupScopeCapable {
+  readonly groupScope: true
+  createItem(item: CreateItemInput, options?: { group?: string }): Promise<Item>
+}
+```
+
+`ItemWriter.createItem(item)` legt im geöffneten Space an; ist keiner geöffnet, bestimmt der Connector den Space (etwa „Privat"). `options.group` nennt den Space ausdrücklich.
+
+Regeln:
+
+1. Mit `options.group` MUSS der Connector das Item unmittelbar im Space `group` anlegen. Das Anlegen ist atomar: Das Item liegt zu keinem Zeitpunkt in einem anderen Space und ist dort für niemanden sichtbar. Scheitert es, gibt es kein Item.
+2. Anlegen und anschließendes `moveItemToGroup` erfüllt Regel 1 nicht und DARF NICHT als Anlegen mit `group` gelten.
+3. `group` ist eine Id wie in [Lesen in einem bestimmten Space](#lesen-in-einem-bestimmten-space-group), Regel 2. Ist der Space unbekannt oder darf der Nutzer dort nicht schreiben, lehnt der Connector mit einem Fehler ab und legt nirgends an.
+4. Das Anlegen mit `group` DARF den geöffneten Space NICHT wechseln.
+5. Eine Fläche DARF `options.group` nur an einen Connector mit `hasGroupScope()` geben. Ein Connector ohne Zusage übergeht das zweite Argument und legte das Item im falschen Space an.
 
 ## Nicht-Ziele
 
