@@ -197,7 +197,9 @@ describe("Kopf wie im Design (Anton, 27.09.): Typ als Badge, Space als Pille", (
     expect(slot.querySelector("svg.lucide-lock")).toBeNull()
     expect(slot.className).toContain("text-muted-foreground")
     expect(slot.className).not.toMatch(/(^|\s)border(\s|$)/)
-    expect(slot.getAttribute("title")).toBe("Varianten bleiben im Space ihrer Aussage")
+    // Der Grund ist per Tastatur erreichbar (Fokus öffnet den Tooltip) und für Screenreader lesbar.
+    expect(slot.getAttribute("tabindex")).toBe("0")
+    expect(slot.textContent).toContain("Varianten bleiben im Space ihrer Aussage")
   })
 
   it("kein Text „Bearbeiten“ im Kopf", async () => {
@@ -231,5 +233,15 @@ describe("Vorauswahl des Space beim Anlegen (wie vor der Umstellung: withGroupOp
   it("im Space ist dieser Space vorausgewählt", async () => {
     await render({ contentTypes: withGroupOptions(pickContentTypes("task"), groups, "b", "p"), mode: "task" })
     expect(spaceSelect()!.value).toBe("b")
+  })
+})
+
+describe("Codex Runde 6: Fokus im Kopf sichtbar", () => {
+  it("Badge und Space-Pille zeigen den Fokus ihres unsichtbaren Auswahlfelds", async () => {
+    const types = withGroupOptions(pickContentTypes("post", "task"), [{ id: "a", name: "Garten" }, { id: "b", name: "Hof" }], "a")
+    await render({ contentTypes: types })
+    for (const slot of ["composer-type", "composer-space"]) {
+      expect(host.querySelector(`[data-slot="${slot}"]`)!.className).toContain("has-[select:focus-visible]:ring-2")
+    }
   })
 })

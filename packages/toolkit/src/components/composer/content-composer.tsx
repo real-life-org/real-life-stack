@@ -3,6 +3,7 @@
 import * as React from "react"
 import { ChevronDown, Globe, Home, Loader2, Lock, Trash2, X } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/primitives/tooltip"
 import { ItemTypeBadge } from "../preview/item-type-badge"
 import { GENERIC_BADGE, resolveTypePresentation } from "../preview/type-presentation"
 import { Button } from "@/components/primitives/button"
@@ -402,6 +403,8 @@ export function widgetRenderOrder(defaultWidgets: readonly string[]): WidgetType
  * screen reader, phone wheel).
  */
 const OVERLAY_SELECT = "absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
+/** The invisible select hides its own focus ring; the visible wrapper shows it instead. */
+const FOCUS_RING = "has-[select:focus-visible]:ring-2 has-[select:focus-visible]:ring-ring/50"
 
 interface ComposerHeadProps {
   types: readonly ContentTypeConfig[]
@@ -429,7 +432,7 @@ function ComposerHead({ types, selectedType, onSelectType, space }: ComposerHead
     // Eine Zeile; rechts bleibt Platz für die Knöpfe eines Panels darüber (✕).
     <div className="flex min-w-0 items-center gap-2 pr-8">
       {current && (
-        <span data-slot="composer-type" className="relative inline-flex shrink-0">
+        <span data-slot="composer-type" className={cn("relative inline-flex shrink-0 rounded-full", FOCUS_RING)}>
           <TypeBadge config={current} trailing={onSelectType ? <ChevronDown className="h-3 w-3 opacity-80" aria-hidden /> : undefined} />
           {onSelectType && (
             <select aria-label="Typ" value={selectedType} onChange={(e) => onSelectType(e.target.value)} className={OVERLAY_SELECT}>
@@ -497,15 +500,25 @@ function SpacePill({ value, options, required, fixedReason, onChange }: NonNulla
   const missing = required && !value
   if (!choosable) {
     const only = selected ?? options[0]
-    return (
+    const fixed = (
       <span
         data-slot="composer-space"
-        title={fixedReason}
-        className="inline-flex h-7 min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+        // Mit Grund fokussierbar: Der Tooltip öffnet auch per Tastatur, und
+        // der Grund steht für Screenreader im Text.
+        tabIndex={fixedReason ? 0 : undefined}
+        className="inline-flex h-7 min-w-0 items-center gap-1.5 rounded-full text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       >
         <SpaceLogo option={only} />
         <span className="truncate">{only?.name}</span>
+        {fixedReason && <span className="sr-only">{`: ${fixedReason}`}</span>}
       </span>
+    )
+    if (!fixedReason) return fixed
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{fixed}</TooltipTrigger>
+        <TooltipContent side="bottom">{fixedReason}</TooltipContent>
+      </Tooltip>
     )
   }
   return (
@@ -513,6 +526,7 @@ function SpacePill({ value, options, required, fixedReason, onChange }: NonNulla
       data-slot="composer-space"
       className={cn(
         "relative inline-flex h-7 min-w-0 items-center gap-1.5 rounded-full border bg-background pl-1 pr-2.5 text-xs text-foreground",
+        FOCUS_RING,
         missing && "border-destructive text-destructive",
       )}
     >
