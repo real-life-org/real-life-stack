@@ -211,6 +211,19 @@ describe("LocalConnector identity per tab", () => {
     expect((await (await openTab(copy.storage)).connector.getCurrentUser())?.id).toBe(other.id)
   })
 
+  it("makes two connectors in one tab one person (React StrictMode)", async () => {
+    const storage = tabStorage()
+    const [first, second] = await Promise.all([openTab(storage), openTab(storage)])
+    // The first instance is never disposed (StrictMode's discarded mount).
+    const person = (await first.connector.getCurrentUser())!.id
+    expect((await second.connector.getCurrentUser())?.id).toBe(person)
+    await second.connector.dispose()
+    const reloaded = await openTab(storage)
+    expect((await reloaded.connector.getCurrentUser())?.id).toBe(person)
+    const tabPeople = (await reloaded.connector.getMembers(null)).filter((user) => user.id.startsWith("tab-"))
+    expect(tabPeople).toHaveLength(1)
+  })
+
   it("leaves the shared mode unchanged: every instance is the first person", async () => {
     const shared = new LocalConnector(seed)
     await shared.init()

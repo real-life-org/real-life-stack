@@ -132,6 +132,18 @@ function nextTabName(users: readonly User[]): string {
  */
 const TAB_IDENTITY_CLAIM_MS = 300
 
+/**
+ * A tab's claim on its person, shared by every connector instance of the page
+ * (React StrictMode mounts two, and discards the first without disposing it).
+ * Keyed by the tab's storage; released when the last holder disposes.
+ */
+interface TabClaim {
+  userId: Promise<string>
+  holders: number
+  release: () => void
+}
+const tabClaims = new WeakMap<object, TabClaim>()
+
 // --- LocalConnector ---
 
 export class LocalConnector implements FullConnector, ActivityLogCapable, ScopedActivityLogCapable, NotificationStateCapable {
@@ -164,9 +176,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
   private readonly identityMode: "shared" | "per-tab"
   private readonly identityStorage: Pick<Storage, "getItem" | "setItem"> | null
   private readonly identityLocks: Pick<LockManager, "request"> | null
-  /** The person this tab holds (its Web Lock), fixed for the page's lifetime. */
-  private heldTabUserId: string | null = null
-  private releaseTabUser: (() => void) | null = null
+  private tabClaim: TabClaim | null = null
   private channel: BroadcastChannel | null = null
   private readonly instanceId = crypto.randomUUID()
   private store = createStore("rls-local-connector", "state")
@@ -334,8 +344,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
   async dispose(): Promise<void> {
     this.channel?.close()
     this.channel = null
-    this.releaseTabUser?.()
-    this.releaseTabUser = null
+    this.releaseTabClaim()
     for (const obs of this.itemObservables.values()) obs.destroy()
     for (const obs of this.singleItemObservables.values()) obs.destroy()
     for (const obs of this.relatedObservables.values()) obs.destroy()
@@ -991,24 +1000,45 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
   }
 
   /**
-   * Hold `userId` for this tab (Web Lock, released when the page goes). False
-   * when another live tab holds it past {@link TAB_IDENTITY_CLAIM_MS}. Without
-   * Web Locks every claim succeeds.
+   * This tab's person id, resolved ONCE per page: the one in sessionStorage if
+   * no other live tab holds it (reload), else a fresh one (new tab, or a
+   * copied sessionStorage whose origin tab still lives). Held by a Web Lock.
    */
-  private async holdTabUser(userId: string): Promise<boolean> {
-    if (!this.identityLocks) {
-      this.heldTabUserId = userId
-      return true
+  private claimTabUser(): Promise<string> {
+    if (this.tabClaim) return this.tabClaim.userId
+    const key = this.identityStorage ?? this
+    let claim = tabClaims.get(key)
+    if (!claim) {
+      const created: TabClaim = { userId: Promise.resolve(""), holders: 0, release: () => {} }
+      created.userId = (async () => {
+        const saved = this.readTabIdentity()?.userId
+        if (saved && await this.lockTabUser(saved, created)) return saved
+        const fresh = `${TAB_USER_PREFIX}${crypto.randomUUID().slice(0, 8)}`
+        await this.lockTabUser(fresh, created)
+        return fresh
+      })()
+      tabClaims.set(key, created)
+      claim = created
     }
+    claim.holders++
+    this.tabClaim = claim
+    return claim.userId
+  }
+
+  /**
+   * Take the Web Lock of `userId` for the claim, held until released. False
+   * when another live tab holds it past {@link TAB_IDENTITY_CLAIM_MS}.
+   * Without Web Locks every lock succeeds.
+   */
+  private lockTabUser(userId: string, claim: TabClaim): Promise<boolean> {
+    if (!this.identityLocks) return Promise.resolve(true)
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TAB_IDENTITY_CLAIM_MS)
     return new Promise<boolean>((resolve) => {
       this.identityLocks!.request(`${TAB_IDENTITY_KEY}:${userId}`, { signal: controller.signal }, () => {
         clearTimeout(timer)
-        this.releaseTabUser?.()
-        this.heldTabUserId = userId
         resolve(true)
-        return new Promise<void>((release) => { this.releaseTabUser = release })
+        return new Promise<void>((release) => { claim.release = release })
       }).catch(() => {
         clearTimeout(timer)
         resolve(false)
@@ -1016,28 +1046,33 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
     })
   }
 
+  private releaseTabClaim(): void {
+    const claim = this.tabClaim
+    if (!claim) return
+    this.tabClaim = null
+    if (--claim.holders > 0) return
+    claim.release()
+    tabClaims.delete(this.identityStorage ?? this)
+  }
+
   /**
-   * This tab's person: the one it holds, the one in sessionStorage if no live
-   * tab holds it (reload), or a new one with the next free name (new tab, or a
-   * copied sessionStorage whose origin tab still lives). A new person is added
+   * This tab's person ({@link claimTabUser}), added to the shared store with
+   * the next free name if it is not there yet. A new person is added
    * ATOMICALLY to the shared store and joins every space; memberships of an
    * existing person are left as they are — removals stay removed. Also
    * restores the tab's space.
    */
   private async ensureTabIdentity(): Promise<void> {
     const saved = this.readTabIdentity()
-    let userId = this.heldTabUserId ?? saved?.userId ?? null
-    if (this.heldTabUserId === null && userId !== null && !(await this.holdTabUser(userId))) userId = null
+    const userId = await this.claimTabUser()
     let committed: StoredState | undefined
     await updateStoredValue<StoredState>("state", (stored) => {
       const base = stored ?? this.createStoredState()
-      if (userId !== null && base.users.some((u) => u.id === userId)) {
+      if (base.users.some((u) => u.id === userId)) {
         committed = base
         return base
       }
-      const existing = userId !== null ? this.users.find((u) => u.id === userId) : undefined
-      const user: User = existing ?? { id: userId ?? `${TAB_USER_PREFIX}${crypto.randomUUID().slice(0, 8)}`, displayName: nextTabName(base.users) }
-      userId = user.id
+      const user: User = this.users.find((u) => u.id === userId) ?? { id: userId, displayName: nextTabName(base.users) }
       const groupMembers = { ...base.groupMembers }
       for (const group of base.groups) {
         const members = groupMembers[group.id] ?? []
@@ -1046,8 +1081,7 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
       committed = { ...base, users: [...base.users, user], groupMembers }
       return committed
     }, this.store)
-    if (!committed || userId === null) return
-    if (this.heldTabUserId !== userId) await this.holdTabUser(userId)
+    if (!committed) return
     this.users = committed.users
     this.groups = committed.groups
     this.groupMembers = committed.groupMembers
