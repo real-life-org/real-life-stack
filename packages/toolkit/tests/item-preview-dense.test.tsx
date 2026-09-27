@@ -220,3 +220,49 @@ describe("ItemPreview dense: ohne Titel", () => {
     expect(html).toContain("line-clamp-3")
   })
 })
+
+/**
+ * Codex-Review: Die Kachel hat eigene Masse, nicht erst durch den Container —
+ * 112 px breit, mindestens 61 px hoch; drei Titelzeilen duerfen sie wachsen
+ * lassen.
+ */
+describe("ItemPreview dense: Masse", () => {
+  it("setzt 112 px Breite und 61 px Mindesthoehe selbst", () => {
+    const html = markup({ density: "dense" })
+    expect(html).toContain("w-[112px]")
+    expect(html).toContain("min-h-[61px]")
+  })
+
+  it("laesst die Breite vom Caller ueberschreiben", () => {
+    const html = markup({ density: "dense", className: "w-full" })
+    expect(html).toContain("w-full")
+    expect(html).not.toContain("w-[112px]")
+  })
+})
+
+/**
+ * Codex-Review: Wer mit dem Screenreader auf einen Avatar faellt, hoert Name
+ * und Qualifier; die vollstaendige Liste (auch Person sechs und folgende)
+ * steht als Text im Baum, nicht nur im Tooltip.
+ */
+describe("ItemAssignees: zugaenglich ohne Tooltip", () => {
+  it("nennt den Qualifier in der Profilbeschriftung", () => {
+    const html = renderToStaticMarkup(
+      <ItemAssignees users={[{ ...lena, qualifier: "lernt" }]} size="xs" />,
+    )
+    expect(html).toContain("Profil von Lena Berg (lernt) öffnen")
+  })
+
+  it("fuehrt in xs die vollstaendige Liste als Screenreader-Text", () => {
+    const viele = Array.from({ length: 7 }, (_, i) => ({
+      id: `u${i}`,
+      displayName: `Person ${i}`,
+      ...(i === 6 ? { qualifier: "lernt" } : {}),
+    })) as User[]
+    const html = renderToStaticMarkup(<ItemAssignees users={viele} size="xs" />)
+    const doc = new DOMParser().parseFromString(html, "text/html")
+    const sr = [...doc.querySelectorAll(".sr-only")].map((e) => e.textContent).join(" ")
+    expect(sr).toContain("Person 6 lernt")
+    expect(sr).toContain("Person 0")
+  })
+})
