@@ -120,6 +120,12 @@ export interface StoryWorldOptions {
   group?: string
   /** Nur die sechs Kernmethoden des DataInterface: kein Schreiben, keine Gruppen, keine Relations. Zeigt, wie der Rahmen ohne Fähigkeiten aussieht. */
   readOnly?: boolean
+  /**
+   * Records und Aussagen gelten als verifiziert (`trusted`), wie beim Mock-Connector ohne
+   * Fixture-Modus. Sonst zählt ohne Verifikation keine Aussage (Spec 08,
+   * Leseregel L1) — Zusagen und Stimmen im Bestand blieben unsichtbar.
+   */
+  trustRecords?: boolean
 }
 
 /**
@@ -143,7 +149,7 @@ export function readOnlyView(source: MockConnector): DataInterface {
  * gesetzten Urheber, damit eine Story mehrere Menschen zeigen kann (Spec 08
  * erlaubt das ausdrücklich für Fixtures).
  */
-export function makeStoryConnector({ seed, group = "garden" }: StoryWorldOptions = {}): MockConnector {
+export function makeStoryConnector({ seed, group = "garden", trustRecords = false }: StoryWorldOptions = {}): MockConnector {
   const merged: MockConnectorSeed = { ...structuredClone(STORY_SEED), ...seed }
   // Der Mock-Connector zeigt im aktiven Space nur, was `groupItems` ihm
   // zuordnet. Ein Kommentar oder eine Reaktion, die dort fehlt, liegt außerhalb
@@ -160,6 +166,10 @@ export function makeStoryConnector({ seed, group = "garden" }: StoryWorldOptions
   }
   const connector = new MockConnector(merged, { allowFixtureAuthors: true })
   connector.setCurrentGroup(group)
+  if (trustRecords) {
+    connector.verifyRecordClaim = async () => "trusted"
+    connector.verifyItemClaim = async () => "trusted"
+  }
   return connector
 }
 
@@ -174,7 +184,7 @@ export function StoryWorld({ children, ...options }: StoryWorldOptions & { child
   // in `HostWorld`), verschwand mit jedem Tabwechsel alles, was die Story
   // geschrieben hatte (rls#431). Neu entsteht er nur, wenn Seed oder Space
   // wirklich andere sind — der bewusste Reset einer Story bleibt moeglich.
-  const key = JSON.stringify([options.group ?? null, options.seed ?? null, options.readOnly ?? false])
+  const key = JSON.stringify([options.group ?? null, options.seed ?? null, options.readOnly ?? false, options.trustRecords ?? false])
   const source = useMemo(() => makeStoryConnector(options), [key]) // eslint-disable-line react-hooks/exhaustive-deps
   const connector = useMemo(() => (options.readOnly ? readOnlyView(source) : source), [source, options.readOnly])
   useEffect(() => () => void source.dispose(), [source])

@@ -63,7 +63,8 @@ async function readWith(
   await settle()
   const text = container.textContent ?? ""
   const reactionButtons = container.querySelectorAll('[aria-label="Add reaction"]').length
-  const voteButtons = container.querySelectorAll('[aria-label^="Zustimmung"]').length
+  // Seit S2 steht die Stimme im Detail im Slot `actions` (Pills und Balken, C4).
+  const voteButtons = container.querySelectorAll('[data-slot="actions"] [data-vote-actions]').length
   await act(async () => { root.unmount() })
   container.remove()
   return { text, reactionButtons, voteButtons }

@@ -328,6 +328,91 @@
     "tags": [
       "meeting",
       "weekly"
+    ],
+    "relations": [
+      {
+        "predicate": "invited",
+        "target": "global:user-3"
+      },
+      {
+        "predicate": "invited",
+        "target": "global:user-4"
+      }
+    ]
+  },
+  {
+    "@context": [
+      "https://real-life-stack.org/vocab/base/v1",
+      "https://real-life-stack.org/vocab/relation/v1"
+    ],
+    "id": "rel-32b6abbaf9960a85546c452879775e9bd1041cf5cea11f7b76eb0746880b2a0d",
+    "type": "relation",
+    "createdAt": "2026-03-02T09:00:00.000Z",
+    "createdBy": "user-2",
+    "data": {
+      "predicate": "attends",
+      "role": "going",
+      "tense": "coming"
+    },
+    "relations": [
+      {
+        "predicate": "from",
+        "target": "global:user-2"
+      },
+      {
+        "predicate": "to",
+        "target": "item:event-1"
+      }
+    ]
+  },
+  {
+    "@context": [
+      "https://real-life-stack.org/vocab/base/v1",
+      "https://real-life-stack.org/vocab/relation/v1"
+    ],
+    "id": "rel-871da2c24b0a703ed8dbdca7b82f013fffa297bcbc3901d75d9a5c802662c5af",
+    "type": "relation",
+    "createdAt": "2026-03-02T10:00:00.000Z",
+    "createdBy": "user-1",
+    "data": {
+      "predicate": "attends",
+      "role": "maybe",
+      "tense": "coming"
+    },
+    "relations": [
+      {
+        "predicate": "from",
+        "target": "global:user-4"
+      },
+      {
+        "predicate": "to",
+        "target": "item:event-1"
+      }
+    ]
+  },
+  {
+    "@context": [
+      "https://real-life-stack.org/vocab/base/v1",
+      "https://real-life-stack.org/vocab/relation/v1"
+    ],
+    "id": "rel-209701a7f1e1d4aeda8dfa490ce0e94d3c59dcce079becd0ae342b83113b285c",
+    "type": "relation",
+    "createdAt": "2026-03-03T08:00:00.000Z",
+    "createdBy": "user-3",
+    "data": {
+      "predicate": "attends",
+      "role": "declined",
+      "tense": "coming"
+    },
+    "relations": [
+      {
+        "predicate": "from",
+        "target": "global:user-3"
+      },
+      {
+        "predicate": "to",
+        "target": "item:event-1"
+      }
     ]
   },
   {
