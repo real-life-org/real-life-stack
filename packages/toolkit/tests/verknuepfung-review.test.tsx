@@ -182,3 +182,54 @@ describe("#531: Folgeaktionen prüfen beim Auslösen den geltenden Zustand", () 
     expect((await connector.getItem("t1"))?.data.status).toBe("in-progress")
   })
 })
+
+describe("Codex Runde 5", () => {
+  it("#530: ein asynchroner Pick überschreibt keine zwischenzeitliche Auswahl", async () => {
+    const other = item("t-g2", "task", { title: "Zweite im Garten", status: "open" })
+    let onPick: ((id: string) => unknown) | undefined
+    function Harness() {
+      const [value, setValue] = useState<string[]>([])
+      return createElement("div", null,
+        createElement(ItemRelationWidget, { label: "E", predicate: "blocks", targetType: "task", value, onChange: setValue, spaceId: "g", requestItemPick: (_r, cb) => { onPick = cb } }),
+        createElement("output", { id: "value" }, value.join(",")))
+    }
+    await render(createElement(Harness), [IN_G, other], { g: ["t-g", "t-g2"] }, "g")
+    await act(async () => [...host.querySelectorAll("button")].find((b) => b.textContent?.includes("Im Modul wählen"))!.click())
+    // Während der Picker offen ist, wählt die Person per Suche etwas anderes.
+    const input = host.querySelector<HTMLInputElement>("[data-item-relation-field] input")!
+    await act(async () => {
+      input.focus()
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "Zweite")
+      input.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+    await settle()
+    await act(async () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })))
+    await act(async () => { onPick!("t-g") })
+    await settle()
+    expect(host.querySelector("#value")?.textContent).toBe("item:t-g2,item:t-g")
+  })
+
+  function Live({ id }: { id: string }): ReactNode {
+    const { data } = useItem(id)
+    if (!data) return null
+    const Actions = resolveTypePresentation("task").actions!
+    return createElement(Actions, { item: data })
+  }
+  const pill = (label: string) => [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === label)
+
+  it("#531: „Abgeben“ gibt nicht ab, wenn die Aufgabe inzwischen erledigt ist", async () => {
+    const t = item("t1", "task", { title: "T", status: "open" }, [{ predicate: "assignedTo", target: `global:${ME}` }])
+    await render(createElement(Live, { id: "t1" }), [t], { g: ["t1"] }, "g")
+    const abgeben = pill("Abgeben")!
+    const original = connector.getItem.bind(connector)
+    vi.spyOn(connector, "getItem").mockImplementationOnce(async (id: string) => {
+      await connector.updateItem("t1", { data: { title: "T", status: "done" } })
+      return original(id)
+    })
+    await act(async () => abgeben.click())
+    await settle()
+    const saved = await connector.getItem("t1")
+    expect(saved?.relations).toEqual([{ predicate: "assignedTo", target: `global:${ME}` }])
+    expect(pill("Wieder öffnen")).toBeTruthy()
+  })
+})

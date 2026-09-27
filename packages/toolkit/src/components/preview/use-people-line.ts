@@ -321,6 +321,11 @@ async function writeEmbedded(connector: DataInterface, item: Item, edge: EdgeEnt
 }
 
 export interface FollowUpState {
+  /**
+   * Gilt die Folgeaktion noch? Liest das Item frisch: ich stehe an der Kante
+   * und der Status passt (offen für complete/release, erledigt für reopen).
+   */
+  stillApplies: (id: SelfActionFollowUp["id"]) => Promise<boolean>
   /** Schreibrecht am Item (Modi, Regel 1): Status ändern heißt das Item schreiben. */
   available: boolean
   busy: boolean
@@ -345,6 +350,18 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const stillApplies = useCallback(
+    async (id: SelfActionFollowUp["id"]) => {
+      if (!statusField || !meId) return false
+      const current = await connector.getItem(item.id)
+      if (!current) return false
+      const status = (current.data as Record<string, unknown> | undefined)?.[statusField.key]
+      const isDone = status === doneValue(statusField)
+      if ((id === "reopen") !== isDone) return false
+      return !edge || (await stillMine(connector, current, edge, meId))
+    },
+    [connector, edge, item, meId, statusField],
+  )
   const run = useCallback(
     async (id: SelfActionFollowUp["id"]) => {
       if (!available || !statusField || !isWritable(connector)) return
@@ -374,14 +391,20 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
     },
     [available, connector, defaultStatus, edge, item, meId, statusField],
   )
-  return { available, busy, error, run }
+  return { available, busy, error, run, stillApplies }
 }
 
 /** Stehe ich (noch) an der Kante? Eingebettet am Item, als Record über den RelationStore. */
 async function stillMine(connector: DataInterface, current: Item, edge: EdgeEntry, meId: string): Promise<boolean> {
   const self = `global:${meId}`
   if (edge.storage === "embedded") return (current.relations ?? []).some((r) => r.predicate === edge.predicate && r.target === self)
-  if (!hasRelationRecords(connector)) return false
+  // Nur geltende eigene Aussagen (Leseregeln L1/L2): verifiziert valid oder trusted.
+  if (!hasRelationRecords(connector) || !hasClaimVerification(connector)) return false
   const own = await connector.getRelationRecords({ predicate: edge.predicate, from: self, to: `item:${current.id}` })
-  return own.some((record) => record.createdBy === meId)
+  for (const record of own) {
+    if (record.createdBy !== meId) continue
+    const verdict = await connector.verifyRecordClaim(record)
+    if (verdict === "valid" || verdict === "trusted") return true
+  }
+  return false
 }

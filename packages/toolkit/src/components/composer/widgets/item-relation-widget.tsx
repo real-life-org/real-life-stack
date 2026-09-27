@@ -121,8 +121,8 @@ export function ItemRelationWidget({
     : []
 
   // Der Modul-Pick kommt asynchron: geprüft wird gegen den Stand beim Eintreffen.
-  const latest = useRef({ candidates, value, excludeId, spaceId, spaceOf, full: false })
-  latest.current = { candidates, value, excludeId, spaceId, spaceOf, full: !!single && value.length > 0 }
+  const latest = useRef({ candidates, value, excludeId, spaceId, spaceOf, full: false, onChange })
+  latest.current = { candidates, value, excludeId, spaceId, spaceOf, full: !!single && value.length > 0, onChange }
   const checkPick = (id: string): ItemPickResult => {
     const now = latest.current
     if (now.full) return { ok: false, reason: "Das Feld hat schon ein Ziel" }
@@ -143,9 +143,12 @@ export function ItemRelationWidget({
     return result
   }
 
+  // Gegen den aktuellen Stand: Ein asynchroner Pick darf zwischenzeitliche
+  // Änderungen nicht überschreiben.
   const add = (id: string) => {
     const target = `item:${id}`
-    onChange(single ? [target] : value.includes(target) ? [...value] : [...value, target])
+    const { value: now, onChange: change } = latest.current
+    change(single ? [target] : now.includes(target) ? [...now] : [...now, target])
     setQuery("")
     setOpen(false)
   }

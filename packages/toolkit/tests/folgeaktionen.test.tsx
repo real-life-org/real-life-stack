@@ -248,3 +248,29 @@ describe("Register: Erledigt-Wert und Folgeaktionen", () => {
     expect(resolveTypePresentation("chore").actions).toBeDefined()
   })
 })
+
+describe("Codex Runde 5: Record-Kante mit Folgeaktionen", () => {
+  it("ein ungültiger eigener Record zählt nicht als „ich stehe an der Kante“", async () => {
+    const { useFollowUps } = await import("../src/components/preview/use-people-line")
+    const edge = { predicate: "attends", itemRole: "to" as const, storage: "record" as const, widget: "people" as const, pos: "meta" as const, label: "x" }
+    const statusField = { key: "status", widget: "status" as const, pos: "meta" as const, options: [{ id: "open", label: "o" }, { id: "done", label: "d", done: true }] }
+    const t = task([], "open")
+    const record: Item = { id: "rel-1", type: "relation", createdBy: ME, createdAt: "2026-09-27T10:00:00.000Z", data: { predicate: "attends", role: "going" }, relations: [{ predicate: "from", target: `global:${ME}` }, { predicate: "to", target: "item:t1" }] }
+    let run: ((id: "complete") => Promise<void>) | undefined
+    function Probe() {
+      run = useFollowUps(t, statusField, "open", edge).run
+      return null
+    }
+    connector = new MockConnector({ items: [t, record], groups: [{ id: "g", name: "G", data: {} }], users: [{ id: ME, displayName: "Ich" }], groupMembers: { g: [ME] }, groupItems: { g: ["t1", "rel-1"] } } as never, { allowFixtureAuthors: true })
+    await connector.init()
+    connector.setCurrentGroup("g")
+    connector.verifyRecordClaim = (async () => "invalid") as never
+    await act(async () => root.render(createElement(ConnectorProvider, { connector: connector as never }, createElement(Probe))))
+    await settle()
+    await act(async () => run!("complete"))
+    expect((await connector.getItem("t1"))?.data.status).toBe("open")
+    connector.verifyRecordClaim = (async () => "trusted") as never
+    await act(async () => run!("complete"))
+    expect((await connector.getItem("t1"))?.data.status).toBe("done")
+  })
+})

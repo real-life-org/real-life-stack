@@ -151,7 +151,7 @@ export function SelfActionPills({
           type="button"
           disabled={follow.busy || busy}
           data-follow-up={action.id}
-          onClick={() => void (action.id === "release" ? withdraw() : follow.run(action.id))}
+          onClick={() => void (action.id === "release" ? follow.stillApplies("release").then((ok) => (ok ? withdraw() : undefined)) : follow.run(action.id))}
           className={cn(PILL, PILL_IDLE, "disabled:opacity-60")}
         >
           {action.label}
