@@ -45,7 +45,7 @@ export interface FieldOption {
   action?: string
   /**
    * Nur Optionen eines `status`-Felds: Dieser Wert heißt „erledigt". Höchstens
-   * eine Option je Feld. Folgeaktionen („Erledigt", „Wieder öffnen") und die
+   * eine Option je Feld. der Umschalter „Erledigt" (an und zurück) und die
    * Leseform erledigter Ziele (C3, durchgestrichen) lesen ihn; die Spalten
    * eines Kanban sind je App verschieden und sagen es nicht.
    */
@@ -53,31 +53,20 @@ export interface FieldOption {
 }
 
 /**
- * Eine Folgeaktion der Selbstaktion (C2, Entscheidung 27). Was sie tut, ist
- * ihre Id, nicht die Fläche:
- * - `complete`: schreibt die Option des Status-Felds mit `done: true`; nur offen.
- * - `reopen`: schreibt den Standard-Status (`composer.defaultStatus`); nur erledigt.
- * - `release`: nimmt meine Kante heraus („Abgeben"); nur offen.
+ * Die Folgeaktion einer Selbstaktion (C2, Entscheidung 27, Anton): ein
+ * Umschalter „Erledigt" am Status-Feld, wie die Zusagen am Event. An schreibt
+ * die Option mit `done: true`, ein zweiter Klick den Standard-Status
+ * (`composer.defaultStatus`, sonst die erste offene Option). Abgeben ist der
+ * zweite Klick auf meinen Zustand („✓ Übernommen"). Zuweisung und Status sind
+ * getrennt: Wer eine erledigte Aufgabe abgibt, lässt sie erledigt.
  */
-export interface SelfActionFollowUp {
-  id: "complete" | "reopen" | "release"
-  label: string
-}
-
-/** Die Folgeaktionen einer Selbstaktion, bezogen auf ein Status-Feld. */
 export interface SelfActionFollowUps {
   /** `key` eines `status`-Felds desselben Typs, das eine Option mit `done: true` führt. */
   field: string
-  /** Beschriftung meines Zustands, solange das Item erledigt ist („Erledigt"). */
-  done: string
-  actions: readonly SelfActionFollowUp[]
-}
-
-/** Wann eine Folgeaktion angeboten wird: offen oder erledigt. */
-export const FOLLOW_UP_WHEN: Readonly<Record<SelfActionFollowUp["id"], "open" | "done">> = {
-  complete: "open",
-  release: "open",
-  reopen: "done",
+  /** Der Umschalter: Beschriftung („Erledigt") und seine Rücknahme für Screenreader („Als offen markieren"). */
+  complete: { label: string; undo: string }
+  /** Rücknahme meines Zustands für Screenreader („Übernahme zurückgeben"). */
+  release: string
 }
 
 export interface FieldEntry {
@@ -119,7 +108,7 @@ export interface EdgeEntry {
   qualifier?: { key: string; values: readonly FieldOption[] }
   /**
    * Selbstaktion (C2). `followUps`: was nach der Selbstaktion in derselben
-   * Zeile steht („✓ Übernommen · Erledigt · Abgeben"), nur für die Person
+   * Zeile steht („✓ Übernommen · Erledigt"), nur für die Person
    * mit der Selbstaussage (Entscheidung 27).
    */
   selfAction?: { label: string; mine: string; qualifiers?: readonly string[]; followUps?: SelfActionFollowUps }
@@ -140,7 +129,7 @@ export interface EdgeEntry {
 
 /**
  * Folgeaktionen einer Selbstaktion (Entscheidung 27) brauchen ein Status-Feld
- * desselben Typs mit genau einem Erledigt-Wert; „Wieder öffnen" braucht dazu
+ * desselben Typs mit genau einem Erledigt-Wert; die Rücknahme braucht dazu
  * einen offenen Wert. Geprüft nach dem Vereinigen, weil Feld und Kante aus
  * verschiedenen Beiträgen kommen dürfen.
  */
@@ -154,10 +143,8 @@ export function assertFollowUps(typeId: string, fields: readonly FieldEntry[] = 
     if (!field || done.length !== 1) {
       throw new Error(`Typ-Register: ${where} nennen "${followUps.field}", aber kein status-Feld mit genau einem Erledigt-Wert (Spec 06, Feld- und Kantenregister).`)
     }
-    const ids = followUps.actions.map((a) => a.id)
-    if (new Set(ids).size !== ids.length) throw new Error(`Typ-Register: ${where} sind doppelt (Spec 06).`)
-    if (ids.includes("reopen") && !reopenValue(field, defaultStatus)) {
-      throw new Error(`Typ-Register: ${where}: „reopen" braucht einen offenen Wert (Spec 06).`)
+    if (!reopenValue(field, defaultStatus)) {
+      throw new Error(`Typ-Register: ${where}: Die Rücknahme von „${followUps.complete.label}" braucht einen offenen Wert (Spec 06).`)
     }
   }
 }
@@ -167,7 +154,7 @@ export function doneValue(field: FieldEntry | undefined): string | undefined {
   return field?.options?.find((o) => o.done)?.id
 }
 
-/** Der Wert für „Wieder öffnen": der Standard-Status, sonst die erste offene Option. */
+/** Der Wert beim Zurücknehmen von „Erledigt": der Standard-Status, sonst die erste offene Option. */
 export function reopenValue(field: FieldEntry | undefined, defaultStatus?: string): string | undefined {
   const options = field?.options ?? []
   if (defaultStatus && options.some((o) => o.id === defaultStatus && !o.done)) return defaultStatus

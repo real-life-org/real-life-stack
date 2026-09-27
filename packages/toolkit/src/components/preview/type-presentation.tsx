@@ -350,18 +350,14 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
         pos: "meta",
         label: "Zugewiesen",
         add: "Zuweisen…",
-        // Folgeaktionen nur für die Person, die übernommen hat (Entscheidung 27).
+        // Folgeaktion „Erledigt" nur für die Person, die übernommen hat; beides Umschalter (Entscheidung 27).
         selfAction: {
           label: "Übernehmen",
           mine: "Übernommen",
           followUps: {
             field: "status",
-            done: "Erledigt",
-            actions: [
-              { id: "complete", label: "Erledigt" },
-              { id: "release", label: "Abgeben" },
-              { id: "reopen", label: "Wieder öffnen" },
-            ],
+            complete: { label: "Erledigt", undo: "Als offen markieren" },
+            release: "Übernahme zurückgeben",
           },
         },
       },

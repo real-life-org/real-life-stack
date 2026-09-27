@@ -28,7 +28,7 @@ import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { resolveCanCreate, resolveItemPermissions } from "../../hooks/use-item-permissions"
 import { writeOwnStatement } from "../../lib/own-statement"
 import { useVerifiedRelationRecords } from "../../hooks/use-votes"
-import { doneValue, reopenValue, type EdgeEntry, type FieldEntry, type SelfActionFollowUp } from "./field-register"
+import { doneValue, reopenValue, type EdgeEntry, type FieldEntry } from "./field-register"
 import { peopleLine, peopleLineGroups, recordPeopleEdges, type PeopleLineEntry } from "./people-line"
 
 const NO_RECORDS: RelationRecord[] = []
@@ -175,7 +175,7 @@ export interface SelfActionState {
   mine: string | true | undefined
   /** Setzt meinen Zustand; derselbe Wert noch einmal nimmt die Aussage zurück. */
   act: (value?: string) => Promise<void>
-  /** Nimmt meine Aussage zurück — idempotent, nie ein Umschalter („Abgeben"). */
+  /** Nimmt meine Aussage zurück — idempotent („✓ Übernommen" zurückgeben). */
   withdraw: (guard?: (current: Item) => boolean) => Promise<void>
   /** Ein Schreibvorgang läuft. */
   busy: boolean
@@ -264,7 +264,7 @@ export function useSelfAction(item: Item, edge: EdgeEntry): SelfActionState {
           const current = intent.current && intent.current.context === context ? intent.current.value : mineRef.current
           const wanted = value ?? true
           const next = mode === "withdraw" ? undefined : current === wanted ? undefined : wanted
-          // Zurücknehmen ohne eigene Aussage: nichts zu tun (Doppelklick auf „Abgeben").
+          // Zurücknehmen ohne eigene Aussage: nichts zu tun (Doppelklick auf meinen Zustand).
           if (mode === "withdraw" && current === undefined) return
           intent.current = { value: next, context }
           setPending({ value: next, context })
@@ -321,6 +321,8 @@ async function writeEmbedded(connector: DataInterface, item: Item, edge: EdgeEnt
   const key = edge.qualifier?.key
   const others = relations.filter((r) => !(r.predicate === edge.predicate && r.target === target))
   if (next === undefined) {
+    // Nichts zurückzunehmen: nicht schreiben (die Kante fehlt schon, #531).
+    if (others.length === relations.length) return false
     await connector.updateItem(item.id, { relations: others })
     return true
   }
@@ -338,14 +340,14 @@ export interface FollowUpState {
   available: boolean
   busy: boolean
   error: string | null
-  /** Führt `complete` oder `reopen` aus („Abgeben" läuft über die Selbstaktion). */
-  run: (id: SelfActionFollowUp["id"]) => Promise<void>
+  /** Schreibt den Erledigt-Wert (`complete`) oder den Standard-Status (`reopen`). */
+  run: (id: "complete" | "reopen") => Promise<void>
 }
 
 /**
  * Folgeaktionen einer Selbstaktion am Status-Feld (Entscheidung 27):
  * „Erledigt" schreibt den Wert, den das Register als erledigt markiert,
- * „Wieder öffnen" den Standard-Status. Geschrieben wird das Trägeritem nach
+ * sein zweiter Klick den Standard-Status. Geschrieben wird das Trägeritem nach
  * dessen Rechten; das übrige `data` bleibt.
  */
 export function useFollowUps(item: Item, statusField: FieldEntry | undefined, defaultStatus?: string, edge?: EdgeEntry): FollowUpState {
@@ -359,7 +361,7 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const run = useCallback(
-    async (id: SelfActionFollowUp["id"]) => {
+    async (id: "complete" | "reopen") => {
       if (!available || !statusField || !isWritable(connector)) return
       const value = id === "complete" ? doneValue(statusField) : id === "reopen" ? reopenValue(statusField, defaultStatus) : undefined
       if (value === undefined) return

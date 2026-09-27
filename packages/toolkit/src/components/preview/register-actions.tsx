@@ -5,7 +5,7 @@ import { Check } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 import { VoteActions } from "../resonance/vote-actions"
-import { FOLLOW_UP_WHEN, doneValue, type EdgeEntry, type FieldEntry } from "./field-register"
+import { doneValue, type EdgeEntry, type FieldEntry } from "./field-register"
 import { useFollowUps, useSelfAction } from "./use-people-line"
 
 /**
@@ -29,7 +29,7 @@ export function RegisterActions({
   edges?: readonly EdgeEntry[]
   /** Die Felder des Typs: Folgeaktionen lesen daraus ihr Status-Feld. */
   fields?: readonly FieldEntry[]
-  /** Standard-Status für „Wieder öffnen" (`composer.defaultStatus`). */
+  /** Standard-Status beim Zurücknehmen von „Erledigt" (`composer.defaultStatus`). */
   defaultStatus?: string
 }) {
   const rows = actionEdges(edges)
@@ -62,12 +62,15 @@ const capitalize = (word: string) => word.charAt(0).toLocaleUpperCase("de") + wo
 /**
  * Pill-Zeile einer Selbstaktion (C2): vor der Aktion neutral (die erste Pill
  * hervorgehoben), danach mein Zustand („✓ Zugesagt"). Auch `declined` ist ein
- * Zustand und bleibt als meiner sichtbar (Detail-Anatomie, Regel 7).
+ * Zustand und bleibt als meiner sichtbar (Detail-Anatomie, Regel 7). Jede
+ * Pill ist ein Umschalter; der zweite Klick auf meinen Zustand nimmt ihn
+ * zurück — idempotent, ein Doppelklick übernimmt nicht wieder.
  *
- * Deklariert die Kante Folgeaktionen (`selfAction.followUps`, Entscheidung
- * 27), stehen sie nach meinem Zustand in derselben Zeile — nur für mich, wenn
- * ich die Selbstaussage habe, und nur mit Schreibrecht am Item. Mein Zustand
- * ist dann eine Anzeige, kein Umschalter: Abgeben ist eine eigene Aktion.
+ * Deklariert die Kante eine Folgeaktion (`selfAction.followUps`, Entscheidung
+ * 27), steht nach meinem Zustand der Umschalter „Erledigt" — nur für mich,
+ * wenn ich die Selbstaussage habe, und nur mit Schreibrecht am Item:
+ * „✓ Übernommen · Erledigt", erledigt „✓ Übernommen · ✓ Erledigt". Abgeben
+ * lässt den Status, wie er ist.
  */
 export function SelfActionPills({
   item,
@@ -91,8 +94,9 @@ export function SelfActionPills({
         .filter((v): v is NonNullable<typeof v> => !!v)
     : null
   const neutral = mine === undefined
-  const withFollowUps = !!followUps && !neutral && follow.available
-  const isDone = withFollowUps && doneValue(statusField) !== undefined && item.data?.[followUps!.field] === doneValue(statusField)
+  const withFollowUp = !!followUps && !neutral && follow.available
+  const doneId = doneValue(statusField)
+  const isDone = withFollowUp && doneId !== undefined && item.data?.[followUps!.field] === doneId
 
   const pills = values
     ? values.map((value, index) => ({
@@ -112,14 +116,6 @@ export function SelfActionPills({
         },
       ]
 
-  // „Abgeben" nur, solange das Item offen ist — geprüft im Schreibpfad gegen
-  // denselben Stand, aus dem die Relationen entstehen (#531).
-  const doneId = doneValue(statusField)
-  const stillOpen = (current: Item) => !followUps || doneId === undefined || (current.data as Record<string, unknown> | undefined)?.[followUps.field] !== doneId
-  const followActions = withFollowUps
-    ? followUps!.actions.filter((a) => FOLLOW_UP_WHEN[a.id] === (isDone ? "done" : "open"))
-    : []
-
   return (
     <div
       role="group"
@@ -128,54 +124,42 @@ export function SelfActionPills({
       className="flex flex-wrap items-center gap-1.5"
       onClick={(event) => event.stopPropagation()}
     >
-      {isDone ? (
-        <StatePill label={followUps!.done} />
-      ) : (
-        pills.map((pill) =>
-          withFollowUps && pill.on ? (
-            // Mein Zustand als Anzeige: Die Folgeaktionen sagen, was geht.
-            <StatePill key={pill.key} label={pill.label} />
-          ) : (
-            <button
-              key={pill.key}
-              type="button"
-              aria-pressed={pill.on}
-              onClick={() => void act(pill.value)}
-              className={cn(PILL, pill.on ? PILL_ON : pill.primary ? PILL_PRIMARY : PILL_IDLE)}
-            >
-              {pill.on && <Check className="h-3.5 w-3.5" aria-hidden />}
-              {pill.label}
-            </button>
-          ),
-        )
-      )}
-      {followActions.map((action) => (
+      {pills.map((pill) => (
         <button
-          key={action.id}
+          key={pill.key}
           type="button"
-          disabled={follow.busy || busy}
-          data-follow-up={action.id}
-          onClick={() => void (action.id === "release" ? withdraw(stillOpen) : follow.run(action.id))}
-          className={cn(PILL, PILL_IDLE, "disabled:opacity-60")}
+          aria-pressed={pill.on}
+          // Mein Zustand nimmt beim zweiten Klick zurück; der Name sagt es.
+          aria-label={pill.on && followUps ? `${pill.label} – ${followUps.release}` : undefined}
+          disabled={pill.on && busy}
+          // Zurücknehmen ist idempotent (withdraw), kein Umschalter über den alten Render.
+          onClick={() => void (pill.on ? withdraw() : act(pill.value))}
+          className={cn(PILL, pill.on ? PILL_ON : pill.primary ? PILL_PRIMARY : PILL_IDLE)}
         >
-          {action.label}
+          {pill.on && <Check className="h-3.5 w-3.5" aria-hidden />}
+          {pill.label}
         </button>
       ))}
+      {withFollowUp && (
+        <button
+          type="button"
+          aria-pressed={isDone}
+          aria-label={isDone ? `${followUps!.complete.label} – ${followUps!.complete.undo}` : undefined}
+          disabled={follow.busy || busy}
+          data-follow-up="complete"
+          // Frisch geprüft beim Auslösen (#531): nur, wenn ich noch an der Kante stehe und der Status passt.
+          onClick={() => void follow.run(isDone ? "reopen" : "complete")}
+          className={cn(PILL, isDone ? PILL_ON : PILL_IDLE, "disabled:opacity-60")}
+        >
+          {isDone && <Check className="h-3.5 w-3.5" aria-hidden />}
+          {followUps!.complete.label}
+        </button>
+      )}
       {(error || follow.error) && (
         <span role="alert" className="basis-full text-xs text-destructive">
           Konnte nicht gespeichert werden. {error ?? follow.error}
         </span>
       )}
     </div>
-  )
-}
-
-/** Mein Zustand als Pill, ohne Aktion („✓ Übernommen", „✓ Erledigt"). */
-function StatePill({ label }: { label: string }) {
-  return (
-    <span data-self-state className={cn(PILL, PILL_ON)}>
-      <Check className="h-3.5 w-3.5" aria-hidden />
-      {label}
-    </span>
   )
 }

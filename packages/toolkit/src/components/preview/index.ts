@@ -51,7 +51,6 @@ export {
   type ListEntry,
   type MenuActionEntry,
   type MetaRow,
-  type SelfActionFollowUp,
   type SelfActionFollowUps,
 } from "./field-register"
 export {

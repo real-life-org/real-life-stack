@@ -166,10 +166,11 @@ describe("#531: Folgeaktionen prüfen beim Auslösen den geltenden Zustand", () 
     expect(pill("Übernehmen")).toBeTruthy()
   })
 
-  it("„Wieder öffnen“ schreibt nicht, wenn die Aufgabe inzwischen wieder offen ist", async () => {
+  it("„✓ Erledigt“ (zurück auf offen) schreibt nicht, wenn die Aufgabe inzwischen wieder offen ist", async () => {
     const t = item("t1", "task", { title: "T", status: "done" }, [{ predicate: "assignedTo", target: `global:${ME}` }])
     await render(createElement(Live, { id: "t1" }), [t], { g: ["t1"] }, "g")
-    const reopen = pill("Wieder öffnen")!
+    const reopen = pill("Erledigt")!
+    expect(reopen.getAttribute("aria-pressed")).toBe("true")
     const original = connector.getItem.bind(connector)
     const update = vi.spyOn(connector, "updateItem")
     vi.spyOn(connector, "getItem").mockImplementationOnce(async (id: string) => {
@@ -217,20 +218,20 @@ describe("Codex Runde 5", () => {
   }
   const pill = (label: string) => [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === label)
 
-  it("#531: „Abgeben“ gibt nicht ab, wenn die Aufgabe inzwischen erledigt ist", async () => {
+  it("#531 (Umschalter): Abgeben einer inzwischen erledigten Aufgabe lässt den Status erledigt", async () => {
     const t = item("t1", "task", { title: "T", status: "open" }, [{ predicate: "assignedTo", target: `global:${ME}` }])
     await render(createElement(Live, { id: "t1" }), [t], { g: ["t1"] }, "g")
-    const abgeben = pill("Abgeben")!
+    const mine = pill("Übernommen")!
     const original = connector.getItem.bind(connector)
     vi.spyOn(connector, "getItem").mockImplementationOnce(async (id: string) => {
       await connector.updateItem("t1", { data: { title: "T", status: "done" } })
       return original(id)
     })
-    await act(async () => abgeben.click())
+    await act(async () => mine.click())
     await settle()
     const saved = await connector.getItem("t1")
-    expect(saved?.relations).toEqual([{ predicate: "assignedTo", target: `global:${ME}` }])
-    expect(pill("Wieder öffnen")).toBeTruthy()
+    expect(saved?.relations ?? []).toEqual([])
+    expect(saved?.data.status).toBe("done")
   })
 })
 
@@ -243,26 +244,26 @@ describe("Codex Runde 6", () => {
   }
   const pill = (label: string) => [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === label)
 
-  it("#531: „Abgeben“ prüft gegen den Stand, aus dem es schreibt (auch beim zweiten Lesen)", async () => {
+  it("#531: Abgeben entfernt nichts, wenn meine Kante beim Lesen schon fehlt (kein Schreiben)", async () => {
     const t = item("t1", "task", { title: "T", status: "open" }, [{ predicate: "assignedTo", target: `global:${ME}` }])
     await render(createElement(Live, { id: "t1" }), [t], { g: ["t1"] }, "g")
     const original = connector.getItem.bind(connector)
-    let reads = 0
-    vi.spyOn(connector, "getItem").mockImplementation(async (id: string) => {
-      reads += 1
-      if (reads === 1) await connector.updateItem("t1", { data: { title: "T", status: "done" } })
+    vi.spyOn(connector, "getItem").mockImplementationOnce(async (id: string) => {
+      await connector.updateItem("t1", { relations: [{ predicate: "assignedTo", target: "global:u-other" }] })
       return original(id)
     })
-    await act(async () => pill("Abgeben")!.click())
+    const update = vi.spyOn(connector, "updateItem")
+    await act(async () => pill("Übernommen")!.click())
     await settle()
-    expect((await original("t1"))?.relations).toEqual([{ predicate: "assignedTo", target: `global:${ME}` }])
+    expect(update).toHaveBeenCalledTimes(1) // nur der fremde Edit
+    expect((await original("t1"))?.relations).toEqual([{ predicate: "assignedTo", target: "global:u-other" }])
   })
 
   it("ein Lesefehler beim Abgeben wird sichtbar, ohne unbehandelte Ablehnung", async () => {
     const t = item("t1", "task", { title: "T", status: "open" }, [{ predicate: "assignedTo", target: `global:${ME}` }])
     await render(createElement(Live, { id: "t1" }), [t], { g: ["t1"] }, "g")
     vi.spyOn(connector, "getItem").mockRejectedValueOnce(new Error("Lesen fehlgeschlagen"))
-    await act(async () => pill("Abgeben")!.click())
+    await act(async () => pill("Übernommen")!.click())
     await settle()
     expect(host.querySelector('[role="alert"]')?.textContent).toContain("Lesen fehlgeschlagen")
   })

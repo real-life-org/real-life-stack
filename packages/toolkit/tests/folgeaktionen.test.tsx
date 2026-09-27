@@ -16,8 +16,9 @@ import {
 
 /**
  * S3, Teil A: Folgeaktionen der Aufgabe (Entscheidung 27; shared-components,
- * C2). Nach „Übernehmen" steht „✓ Übernommen · Erledigt · Abgeben", erledigt
- * „✓ Erledigt · Wieder öffnen" — nur für die Person, die übernommen hat.
+ * C2), umgebaut nach Antons Entscheidung: Umschalter wie die Zusagen am Event.
+ * Nicht übernommen „Übernehmen"; übernommen „✓ Übernommen · Erledigt";
+ * erledigt „✓ Übernommen · ✓ Erledigt". Zweiter Klick nimmt zurück.
  */
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -98,55 +99,67 @@ afterEach(async () => {
   resetTypePresentationForTests()
 })
 
-describe("Folgeaktionen der Aufgabe (Entscheidung 27)", () => {
+const pressed = (label: string) => pill(label)?.getAttribute("aria-pressed")
+
+describe("Folgeaktionen der Aufgabe als Umschalter (Entscheidung 27, Anton)", () => {
   it("nicht übernommen: nur „Übernehmen“", async () => {
     await render(task([{ predicate: "assignedTo", target: `global:${TIMO}` }]))
     expect(pills()).toEqual(["Übernehmen"])
   })
 
-  it("übernommen und offen: „✓ Übernommen · Erledigt · Abgeben“; Erledigt schreibt den Erledigt-Wert", async () => {
+  it("übernommen: „✓ Übernommen · Erledigt“; Erledigt schreibt den Erledigt-Wert, dann „✓ Übernommen · ✓ Erledigt“", async () => {
     await render(task([]))
     await click(pill("Übernehmen"))
-    expect(pills()).toEqual(["Übernommen", "Erledigt", "Abgeben"])
+    expect(pills()).toEqual(["Übernommen", "Erledigt"])
+    expect(pressed("Übernommen")).toBe("true")
+    expect(pressed("Erledigt")).toBe("false")
     await click(pill("Erledigt"))
     expect((await connector.getItem("t1"))?.data.status).toBe("done")
-    // Erledigt: „✓ Erledigt · Wieder öffnen“; die Kante bleibt.
-    expect(pills()).toEqual(["Erledigt", "Wieder öffnen"])
+    expect(pills()).toEqual(["Übernommen", "Erledigt"])
+    expect(pressed("Erledigt")).toBe("true")
     expect((await connector.getItem("t1"))?.relations).toEqual([{ predicate: "assignedTo", target: `global:${ME}` }])
   })
 
-  it("„Wieder öffnen“ schreibt den Standard-Status", async () => {
+  it("Klick auf „✓ Erledigt“ setzt den Standard-Status", async () => {
     await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "done"))
-    expect(pills()).toEqual(["Erledigt", "Wieder öffnen"])
-    await click(pill("Wieder öffnen"))
+    expect(pressed("Erledigt")).toBe("true")
+    await click(pill("Erledigt"))
     expect((await connector.getItem("t1"))?.data.status).toBe("open")
-    expect(pills()).toEqual(["Übernommen", "Erledigt", "Abgeben"])
+    expect(pressed("Erledigt")).toBe("false")
   })
 
-  it("„Abgeben“ nimmt nur meine Kante heraus; andere und ihr meta bleiben", async () => {
+  it("Klick auf „✓ Übernommen“ gibt ab: nur meine Kante, andere und ihr meta bleiben", async () => {
     await render(task([
       { predicate: "assignedTo", target: `global:${TIMO}`, meta: { note: "bleibt" } },
       { predicate: "assignedTo", target: `global:${ME}` },
     ]))
-    await click(pill("Abgeben"))
+    await click(pill("Übernommen"))
     expect((await connector.getItem("t1"))?.relations).toEqual([
       { predicate: "assignedTo", target: `global:${TIMO}`, meta: { note: "bleibt" } },
     ])
     expect(pills()).toEqual(["Übernehmen"])
   })
 
-  it("wer nicht übernommen hat, sieht keine Folgeaktionen — auch nicht bei einer erledigten Aufgabe", async () => {
-    await render(task([{ predicate: "assignedTo", target: `global:${TIMO}` }], "done"))
+  it("eine erledigte Aufgabe abgeben: die Zuweisung geht, der Status bleibt erledigt", async () => {
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "done"))
+    await click(pill("Übernommen"))
+    const saved = await connector.getItem("t1")
+    expect(saved?.relations ?? []).toEqual([])
+    expect(saved?.data.status).toBe("done")
     expect(pills()).toEqual(["Übernehmen"])
-    expect(pill("Wieder öffnen")).toBeUndefined()
   })
 
-  it("Codex R1/3: Doppelklick auf „Abgeben“ gibt ab und übernimmt nicht wieder", async () => {
+  it("wer nicht übernommen hat, sieht kein „Erledigt“ — auch nicht bei einer erledigten Aufgabe", async () => {
+    await render(task([{ predicate: "assignedTo", target: `global:${TIMO}` }], "done"))
+    expect(pills()).toEqual(["Übernehmen"])
+  })
+
+  it("Doppelklick auf „✓ Übernommen“ gibt ab und übernimmt nicht wieder", async () => {
     await render(task([{ predicate: "assignedTo", target: `global:${ME}` }]))
-    const abgeben = pill("Abgeben") as HTMLButtonElement
+    const mine = pill("Übernommen") as HTMLButtonElement
     await act(async () => {
-      abgeben.click()
-      abgeben.click()
+      mine.click()
+      mine.click()
     })
     await settle()
     expect((await connector.getItem("t1"))?.relations ?? []).toEqual([])
@@ -158,27 +171,23 @@ describe("Folgeaktionen der Aufgabe (Entscheidung 27)", () => {
     expect(pills()).toEqual([])
   })
 
-  it("„✓ Übernommen“ ist ein Zustand, kein Umschalter: Abgeben geht über „Abgeben“", async () => {
-    await render(task([{ predicate: "assignedTo", target: `global:${ME}` }]))
-    expect(pill("Übernommen")).toBeUndefined()
-    expect(host.querySelector("[data-self-state]")?.textContent).toContain("Übernommen")
+  it("Barrierefreiheit: die Umschalter nennen die Rücknahme", async () => {
+    await render(task([{ predicate: "assignedTo", target: `global:${ME}` }], "done"))
+    expect(pill("Übernommen")?.getAttribute("aria-label")).toBe("Übernommen – Übernahme zurückgeben")
+    expect(pill("Erledigt")?.getAttribute("aria-label")).toBe("Erledigt – Als offen markieren")
   })
 })
 
-describe("Register: Erledigt-Wert und Folgeaktionen", () => {
-  it("die Aufgabe markiert „done“ als Erledigt-Wert und deklariert die Folgeaktionen an assignedTo", () => {
+describe("Register: Erledigt-Wert und Folgeaktion", () => {
+  it("die Aufgabe markiert „done“ als Erledigt-Wert und deklariert den Umschalter an assignedTo", () => {
     const t = resolveTypePresentation("task")
     const status = t.fields?.find((f) => f.key === "status")
     expect(status?.options?.filter((o) => o.done).map((o) => o.id)).toEqual(["done"])
     const assigned = t.edges?.find((e) => e.predicate === "assignedTo")
     expect(assigned?.selfAction?.followUps).toEqual({
       field: "status",
-      done: "Erledigt",
-      actions: [
-        { id: "complete", label: "Erledigt" },
-        { id: "release", label: "Abgeben" },
-        { id: "reopen", label: "Wieder öffnen" },
-      ],
+      complete: { label: "Erledigt", undo: "Als offen markieren" },
+      release: "Übernahme zurückgeben",
     })
   })
 
@@ -186,7 +195,8 @@ describe("Register: Erledigt-Wert und Folgeaktionen", () => {
     TOOLKIT_TYPE_LAYER,
     { name: "app", definitions: [{ id: "chore", vocabularies: [], relations: [{ predicate: "assignedTo", itemRole: "from", otherKind: "person" }] }] },
   ])
-  const edge = (followUps: object) => ({
+  const FOLLOW = { field: "status", complete: { label: "Fertig", undo: "Offen" }, release: "Zurückgeben" }
+  const edge = (followUps: object = FOLLOW) => ({
     predicate: "assignedTo", itemRole: "from" as const, storage: "embedded" as const, widget: "people" as const, pos: "meta" as const, label: "Wer",
     selfAction: { label: "Übernehmen", mine: "Übernommen", followUps: followUps as never },
   })
@@ -197,9 +207,20 @@ describe("Register: Erledigt-Wert und Folgeaktionen", () => {
       registerTypePresentation("app", [{
         id: "chore", label: "Dienst",
         fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A" }] }],
-        edges: [edge({ field: "status", done: "Erledigt", actions: [{ id: "complete", label: "Erledigt" }] })],
+        edges: [edge()],
       }]),
     ).toThrow(/Erledigt-Wert/)
+  })
+
+  it("lehnt einen Status ohne offenen Wert ab (die Rücknahme braucht einen)", () => {
+    setTypeManifest(manifest)
+    expect(() =>
+      registerTypePresentation("app", [{
+        id: "chore", label: "Dienst",
+        fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "z", label: "Z", done: true }] }],
+        edges: [edge()],
+      }]),
+    ).toThrow(/offenen Wert/)
   })
 
   it("lehnt mehr als einen Erledigt-Wert ab", () => {
@@ -212,15 +233,15 @@ describe("Register: Erledigt-Wert und Folgeaktionen", () => {
     ).toThrow(/mehr als einen Erledigt-Wert/)
   })
 
-  it("Codex R1/5: mit Qualifier ist mein Zustand bei Folgeaktionen eine Anzeige", async () => {
+  it("mit Qualifier: mein Wert ist ein Umschalter, daneben „Fertig“", async () => {
     setTypeManifest(manifest)
     registerTypePresentation("app", [{
       id: "chore", label: "Dienst",
       fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A" }, { id: "z", label: "Z", done: true }] }],
       edges: [{
-        ...edge({ field: "status", done: "Fertig", actions: [{ id: "complete", label: "Fertig" }, { id: "release", label: "Abgeben" }] }),
+        ...edge(),
         qualifier: { key: "role", values: [{ id: "can", label: "kann" }, { id: "learns", label: "lernt" }] },
-        selfAction: { label: "Übernehmen", mine: "Übernommen", qualifiers: ["can", "learns"], followUps: { field: "status", done: "Fertig", actions: [{ id: "complete", label: "Fertig" }, { id: "release", label: "Abgeben" }] } },
+        selfAction: { label: "Übernehmen", mine: "Übernommen", qualifiers: ["can", "learns"], followUps: FOLLOW },
       }],
     }])
     const chore: Item = { id: "c1", type: "chore", createdBy: TIMO, createdAt: "2026-09-20T10:00:00.000Z", data: { title: "C", status: "a" }, relations: [{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: "can" } }] }
@@ -232,10 +253,9 @@ describe("Register: Erledigt-Wert und Folgeaktionen", () => {
       root.render(createElement(ConnectorProvider, { connector: connector as never }, createElement(Actions, { item: chore })))
     })
     await settle()
-    expect(host.querySelector("[data-self-state]")?.textContent).toContain("Kann")
-    expect(pill("Kann")).toBeUndefined()
-    expect(pill("Lernt")).toBeTruthy()
-    expect(pill("Abgeben")).toBeTruthy()
+    expect(pressed("Kann")).toBe("true")
+    expect(pressed("Lernt")).toBe("false")
+    expect(pressed("Fertig")).toBe("false")
   })
 
   it("nimmt einen gültigen Eintrag an", () => {
@@ -243,7 +263,7 @@ describe("Register: Erledigt-Wert und Folgeaktionen", () => {
     registerTypePresentation("app", [{
       id: "chore", label: "Dienst",
       fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "a", label: "A" }, { id: "z", label: "Z", done: true }] }],
-      edges: [edge({ field: "status", done: "Fertig", actions: [{ id: "complete", label: "Fertig" }, { id: "reopen", label: "Neu" }] })],
+      edges: [edge()],
     }])
     expect(resolveTypePresentation("chore").actions).toBeDefined()
   })
