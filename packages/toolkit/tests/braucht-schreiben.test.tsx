@@ -294,3 +294,23 @@ describe("CodeRabbit: Vorprüfung aller Quellen", () => {
     expect((await connector.getItem("t-beet"))?.relations ?? []).toEqual([])
   })
 })
+
+describe("Codex Runde 2", () => {
+  let submit: ReturnType<typeof useItemEditor>["submit"] | undefined
+  function Probe(): ReactNode {
+    submit = useItemEditor({ currentUserId: ME, mapSubmission: mapComposerSubmission }).submit
+    return null
+  }
+  it("Befund 2: bei unbekanntem Space bleibt eine qualifizierte Kante in einen anderen Space stehen", async () => {
+    const qualified = { predicate: "blocks", target: "space:h/item:t-kompost" }
+    const source = item("t-beet", { title: "Quelle", status: "open" }, [{ predicate: "blocks", target: "item:t-kompost" }, qualified])
+    await setup([KOMPOST, source])
+    Object.assign(connector, { getItemGroupId: () => null })
+    await render(createElement(Probe))
+    const result = await act(async () =>
+      submit!({ contentType: "task", isPublic: false, data: { ...itemToComposerData(KOMPOST), [incomingRemovedKey("blocks")]: ["item:t-beet"] } } as never, { existingItem: KOMPOST }),
+    )
+    expect(result).toBeTruthy()
+    expect((await connector.getItem("t-beet"))?.relations).toEqual([qualified])
+  })
+})

@@ -424,7 +424,9 @@ async function writeIncoming(
     if (r.predicate !== predicate) return false
     if (parseLocalItemTarget(r.target) === item.id) return true
     const qualified = parseQualifiedItemTarget(r.target)
-    return !!qualified && qualified.itemId === item.id && (space === null || qualified.homeSpaceId === space)
+    // Nur bei bekanntem Space — wie die Leseform (targetPointsTo), sonst träfe
+    // es eine Kante in einen anderen Space (Codex R2/2).
+    return !!qualified && space !== null && qualified.itemId === item.id && qualified.homeSpaceId === space
   }
   if (add) {
     if (relations.some(pointsHere)) return

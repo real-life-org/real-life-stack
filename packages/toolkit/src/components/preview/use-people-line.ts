@@ -16,6 +16,7 @@ import { onePerSubjectWinners } from "@real-life-stack/data-interface"
 import {
   hasAuthorization,
   hasClaimVerification,
+  hasGroups,
   hasItemGroups,
   hasRelationRecords,
   hasRelationRecordWriter,
@@ -213,9 +214,25 @@ function sameItem(fresh: Item, shown: Item): boolean {
 
 /** Das angezeigte Item frisch aus dem geöffneten Space — oder ein Fehler mit Grund, nie ein anderes. */
 async function freshItem(connector: DataInterface, shown: Item): Promise<Item> {
+  if (!inOpenSpace(connector, shown)) throw new Error(ITEM_ELSEWHERE)
   const fresh = await connector.getItem(shown.id)
   if (!fresh || !sameItem(fresh, shown)) throw new Error(ITEM_ELSEWHERE)
   return fresh
+}
+
+/**
+ * Herkunft, soweit der Connector sie kennt: Liegt das Item laut
+ * `getItemGroupId` in einem anderen als dem geöffneten Space, erreicht
+ * `updateItem` es nicht (Codex R2/1). Ohne geöffneten Space (Übersicht) oder
+ * ohne Auskunft entscheidet {@link sameItem}. Zwei Items mit derselben Id und
+ * denselben Metadaten in zwei Spaces unterscheidet kein Schreibpfad — das
+ * DataInterface adressiert `updateItem` nur über die Id (offen, Spec 02).
+ */
+function inOpenSpace(connector: DataInterface, shown: Item): boolean {
+  if (!hasGroups(connector) || !hasItemGroups(connector)) return true
+  const open = connector.getCurrentGroup()?.id ?? null
+  const home = connector.getItemGroupId(shown.id)
+  return !open || !home || home === open
 }
 
 /** Personen an einer eingebetteten Kante, außer `meId` (gleich welcher Qualifier). */
@@ -432,6 +449,7 @@ async function writeEmbedded(
  */
 async function applyRecordTransition(connector: DataInterface, item: Item, edge: EdgeEntry, meId: string, joining: boolean, transitions: StatusTransitions): Promise<void> {
   if (!isWritable(connector) || !resolveItemPermissions(connector, item, meId).canEdit) return
+  if (!inOpenSpace(connector, item)) return
   const current = await connector.getItem(item.id)
   if (!current || !sameItem(current, item)) return
   const nobodyLeft = joining ? false : !(await othersOnRecordEdge(connector, current, edge, meId))

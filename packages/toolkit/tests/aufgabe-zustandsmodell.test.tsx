@@ -468,3 +468,13 @@ describe("Loop-Review: Schreiben nie am falschen Item", () => {
     expect((await saved())?.data.status).toBe("in-progress")
   })
 })
+
+describe("Codex Runde 2, Befund 1: Herkunft des Items", () => {
+  it("liegt das Item laut Connector in einem anderen als dem geöffneten Space, schreibt die Selbstaktion nicht", async () => {
+    await render(task([], "open"))
+    Object.assign(connector, { getItemGroupId: () => "h" })
+    await click(pill("Übernehmen"))
+    expect((await saved())?.relations ?? []).toEqual([])
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain("geöffneten Space")
+  })
+})
