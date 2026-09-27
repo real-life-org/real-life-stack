@@ -142,6 +142,12 @@ export interface ContentTypeConfig {
   groupRequired?: boolean
   /** Why the space cannot be changed (one fixed option) — tooltip in the form head. */
   groupFixedReason?: string
+  /**
+   * Der Connector hat Spaces, das Formular kann aber keinen bestimmen (etwa
+   * ohne GroupScopeCapable in der Übersicht): Anlegen ist gesperrt, der
+   * Grund steht im Formular (Space des Formulars, Regeln 6 und 8).
+   */
+  groupUnavailableReason?: string
   /** Where this type keeps its free text. Default: `content` for `post`, else `description`. */
   textField?: "content" | "description"
   /**
@@ -925,12 +931,17 @@ export function ContentComposer({
   // Space-Pflicht beim Anlegen (Space des Formulars, Regel 8), EIN Tor für
   // jeden Weg, der `onSubmit` erreicht: Speichern, „Erneut“ und liveUpdate
   // (#538). Beim Bearbeiten ist der Space nie Pflicht.
-  const spaceRequired = !isEditMode && (currentConfig?.groupOptions?.length ?? 0) > 0 && (currentConfig?.groupRequired ?? true)
-  const isSpaceMissing = (d: WidgetData) => spaceRequired && !d.group
+  const spaceUnavailable = !isEditMode && !!currentConfig?.groupUnavailableReason
+  const spaceRequired = spaceUnavailable || (!isEditMode && (currentConfig?.groupOptions?.length ?? 0) > 0 && (currentConfig?.groupRequired ?? true))
+  const isSpaceMissing = (d: WidgetData) => spaceUnavailable || (spaceRequired && !d.group)
   const submitGuarded = (submission: ContentComposerSubmitData): void | Promise<void> => {
     if (isSpaceMissing(submission.data)) return
     return onSubmit(submission)
   }
+  // Ein verzögerter liveUpdate prüft beim Auslösen gegen den AKTUELLEN Stand
+  // (Konfiguration, Typ, Daten), nicht gegen den beim Planen (Codex zu #538).
+  const liveRef = React.useRef({ submitGuarded, selectedType, isPublic, data })
+  liveRef.current = { submitGuarded, selectedType, isPublic, data }
   // „+ Beschreibung" aufgeklappt? Nur UI-Zustand; mit Inhalt ist sie immer offen.
   const [textOpen, setTextOpen] = React.useState(false)
   const [isPreviewing, setIsPreviewing] = React.useState(false)
@@ -989,7 +1000,8 @@ export function ContentComposer({
         prev.media !== data.media
       if (isTextOnly && !hasNonTextChange) {
         const timer = setTimeout(() => {
-          void Promise.resolve(submitGuarded({ contentType: selectedType, isPublic, data })).catch(() => {})
+          const now = liveRef.current
+          void Promise.resolve(now.submitGuarded({ contentType: now.selectedType, isPublic: now.isPublic, data: now.data })).catch(() => {})
         }, 300)
         return () => clearTimeout(timer)
       }
@@ -1183,7 +1195,7 @@ export function ContentComposer({
       {/* Ohne Space wird nichts angelegt — auch nicht per liveUpdate (#538). Sichtbar, sobald es etwas zu speichern gäbe. */}
       {spaceMissing && hasContent && (
         <p data-space-required role="status" className="text-xs text-destructive">
-          Erst einen Space wählen – vorher wird nichts gespeichert.
+          {currentConfig.groupUnavailableReason && !isEditMode ? currentConfig.groupUnavailableReason : "Erst einen Space wählen – vorher wird nichts gespeichert."}
         </p>
       )}
 

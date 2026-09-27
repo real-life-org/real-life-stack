@@ -269,9 +269,13 @@ export function withCreateGroup(types: ContentTypeConfig[], canScope: boolean, o
   return types.map((t) => {
     if (!t.groupOptions) return t
     if (openSpace && t.groupOptions.some((o) => o.id === openSpace)) return withFixedGroup([t], openSpace, GROUP_FIXED_NO_SCOPE)[0]!
-    return { ...t, groupOptions: undefined, defaultGroup: undefined, defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") }
+    // Spaces gibt es, aber keinen, in dem das Formular anlegen könnte: Anlegen
+    // gesperrt, statt den Connector still wählen zu lassen (Regel 8).
+    return { ...t, groupOptions: undefined, defaultGroup: undefined, groupUnavailableReason: GROUP_UNAVAILABLE_NO_SCOPE, defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") }
   })
 }
+
+export const GROUP_UNAVAILABLE_NO_SCOPE = "Dieser Speicher legt nur im geöffneten Space an – zum Erstellen einen Space öffnen"
 
 export function withGroupOptions(
   types: ContentTypeConfig[],

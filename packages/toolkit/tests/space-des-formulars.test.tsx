@@ -523,3 +523,39 @@ describe("#538: Space-Pflicht auf jedem Anlege-Pfad, auch liveUpdate", () => {
     expect(update).toHaveBeenCalled()
   })
 })
+
+describe("#538 Codex-Runde: Übergänge", () => {
+  it("ein ausstehender liveUpdate prüft beim Auslösen den aktuellen Stand (Konfiguration während der Frist)", async () => {
+    const { ContentComposer } = await import("../src/components/composer/content-composer")
+    const submitted: Array<Record<string, unknown>> = []
+    let api: { patchData: (p: Record<string, unknown>) => void } | null = null
+    const apiRef = { get current() { return api }, set current(v) { api = v } }
+    const base = contentTypeFromRegister("task")
+    const props = (types: unknown[]) => ({
+      contentTypes: types, initialContentType: "task", apiRef, liveUpdate: true,
+      onSubmit: (d: { data: Record<string, unknown> }) => { submitted.push(d.data) },
+    }) as never
+    await act(async () => { root.render(createElement(ContentComposer, props([base]))) })
+    submitted.length = 0
+    await act(async () => api!.patchData({ title: "Neu" }))
+    // Innerhalb der 300 ms kommen Space-Optionen ohne Vorauswahl dazu.
+    await act(async () => { root.render(createElement(ContentComposer, props([{ ...base, groupOptions: [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }] }]))) })
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
+    expect(submitted.filter((d) => d.title === "Neu")).toEqual([])
+  })
+
+  it("ohne GroupScopeCapable in der Übersicht: kein Anlegen ohne bestimmbaren Space, mit Grund", async () => {
+    const { GROUP_UNAVAILABLE_NO_SCOPE } = await import("../src/components/composer/composer-mapping")
+    const types = withCreateGroup(withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], undefined, null), false, undefined)
+    expect(types[0]!.groupUnavailableReason).toBe(GROUP_UNAVAILABLE_NO_SCOPE)
+    connector.setCurrentGroup(null)
+    const create = vi.spyOn(connector, "createItem")
+    await render(createElement(ItemComposer, {
+      contentTypes: types, initialContentType: "task", mapper: mapComposerSubmission,
+      initialData: { title: "T" }, onDone: () => {}, onCancel: () => {}, composerProps: { liveUpdate: true },
+    }), withoutScope(connector))
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
+    expect(create).not.toHaveBeenCalled()
+    expect(host.querySelector("[data-space-required]")?.textContent).toContain(GROUP_UNAVAILABLE_NO_SCOPE)
+  })
+})
