@@ -14,7 +14,7 @@ import { ItemMetaRow } from "../components/preview/item-meta-row"
 import { ItemPreview } from "../components/preview/item-preview"
 import { ItemPreviewSkeleton } from "../components/preview/item-preview-skeleton"
 import { ItemTypeBadge } from "../components/preview/item-type-badge"
-import { renderTypeFooter } from "../components/preview/type-presentation"
+import { renderTypeCardFooter } from "../components/preview/type-presentation"
 import { Button } from "../components/primitives/button"
 import {
   DropdownMenu,
@@ -117,7 +117,8 @@ export function ResonanceModule({ items: statements = [], itemsLoading: isLoadin
                 onClick={() => focusItem(item.id)}
                 headerAdornment={<ItemTypeBadge type={item.type} />}
                 metaAdornment={<ItemMetaRow item={item} />}
-                footerAdornment={renderTypeFooter(item)}
+                // Karte: die Typ-Fußzeile bleibt im Übergang (06, Regel 17); das Detail zeigt die Stimme im Slot `actions` (#520).
+                footerAdornment={renderTypeCardFooter(item)}
               />
             </div>
           ))
