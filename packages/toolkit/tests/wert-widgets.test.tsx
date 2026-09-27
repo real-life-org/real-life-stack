@@ -50,7 +50,7 @@ const STATUS = f("status", "status", {
     { id: "open", label: "Offen", role: "open" },
     { id: "doing", label: "In Arbeit", role: "active" },
     { id: "done", label: "Erledigt", role: "done" },
-    { id: "wait", label: "Wartet", tone: "rose" },
+    { id: "blocked", label: "Blockiert", tone: "danger" },
   ],
 })
 const KIND = f("kind", "select", {
@@ -58,7 +58,7 @@ const KIND = f("kind", "select", {
   options: [
     { id: "tool", label: "Werkzeug" },
     { id: "room", label: "Raum" },
-    { id: "know", label: "Wissen", tone: "purple" },
+    { id: "know", label: "Wissen", tone: "info" },
   ],
 })
 const HOURS = f("hours", "number", { label: "Aufwand", unit: "h", min: 0 })
@@ -135,8 +135,8 @@ async function rendere(node: ReactNode) {
   }
 }
 
-async function meta(fields: FieldEntry[], data: Record<string, unknown>, typeTone?: string) {
-  return rendere(createElement(RegisterMeta, { item: item(data), fields, typeTone }))
+async function meta(fields: FieldEntry[], data: Record<string, unknown>) {
+  return rendere(createElement(RegisterMeta, { item: item(data), fields }))
 }
 
 const rows = (c: HTMLElement) => [...c.querySelectorAll("[data-meta-row]")].map((el) => el.getAttribute("data-meta-row"))
@@ -157,44 +157,52 @@ describe("Lesen: Leerzustand = keine Zeile", () => {
   })
 })
 
-describe("B6 status: Chip, Ton aus der Option, sonst aus der Rolle", () => {
-  it("zeigt die Beschriftung der Option als Chip", async () => {
-    const { container, unmount } = await meta([STATUS], { status: "doing" }, "bg-amber-50 text-amber-700 border-amber-200")
-    const chip = row(container, "status")!.querySelector("[data-value-chip]")!
-    expect(chip.textContent).toBe("In Arbeit")
-    // Rolle active: der Ton des Typs.
-    expect(chip.className).toContain("text-amber-700")
+describe("B6 status und B8 select lesen: Chip mit Punkt im Ton (Design 27.09.)", () => {
+  const chipOf = async (fields: FieldEntry[], data: Record<string, unknown>, typeTone?: string) => {
+    const { container, unmount } = await rendere(createElement(RegisterMeta, { item: item(data), fields, typeTone }))
+    const chip = container.querySelector<HTMLElement>("[data-value-chip]")!
+    const out = { tone: chip.getAttribute("data-tone"), cls: chip.className, text: chip.textContent, dot: !!chip.querySelector("[data-tone-dot]") }
     await unmount()
+    return out
+  }
+
+  it("Ton aus der Rolle: open neutral, active warning, done success", async () => {
+    expect((await chipOf([STATUS], { status: "open" })).tone).toBe("neutral")
+    expect((await chipOf([STATUS], { status: "doing" })).tone).toBe("warning")
+    expect((await chipOf([STATUS], { status: "done" })).tone).toBe("success")
   })
 
-  it("Rolle done ist grün, open neutral, ein Ton an der Option gewinnt", async () => {
-    const chip = async (status: string) => {
-      const { container, unmount } = await meta([STATUS], { status }, "TYPTON")
-      const cls = container.querySelector("[data-value-chip]")!.className
-      await unmount()
-      return cls
+  it("ein tone an der Option gewinnt; der Chip trägt Punkt und Beschriftung", async () => {
+    const c = await chipOf([STATUS], { status: "blocked" })
+    expect(c.tone).toBe("danger")
+    expect(c.dot).toBe(true)
+    expect(c.text).toBe("Blockiert")
+  })
+
+  it("ohne Rolle und ohne tone: die Typfarbe", async () => {
+    const c = await chipOf([KIND], { kind: "tool" }, "TYPTON")
+    expect(c.tone).toBe("type")
+    expect(c.cls).toContain("TYPTON")
+    expect((await chipOf([KIND], { kind: "know" })).tone).toBe("info")
+  })
+
+  it("Farbe nur über Tokens: keine Tailwind-Farbskala an Chips mit semantischem Ton", async () => {
+    for (const status of ["open", "doing", "done", "blocked"]) {
+      expect((await chipOf([STATUS], { status })).cls, status).not.toMatch(/-(red|rose|green|amber|blue|purple|teal|violet|emerald|sky)-\d/)
     }
-    expect(await chip("done")).toContain("green")
-    expect(await chip("open")).toContain("bg-muted")
-    expect(await chip("wait")).toContain("rose")
   })
 
   it("ein unbekannter Wert erscheint als er selbst, neutral, nie verworfen", async () => {
-    const { container, unmount } = await meta([STATUS], { status: "archived" })
-    expect(container.querySelector("[data-value-chip]")!.textContent).toBe("archived")
-    await unmount()
+    const c = await chipOf([STATUS], { status: "archived" })
+    expect(c.text).toBe("archived")
+    expect(c.tone).toBe("neutral")
   })
 })
 
-describe("B8 select: Chip im Ton des Typs", () => {
-  it("zeigt die Option als Chip, ein Ton an der Option gewinnt", async () => {
-    const a = await meta([KIND], { kind: "tool" }, "TYPTON")
-    expect(a.container.querySelector("[data-value-chip]")!.textContent).toBe("Werkzeug")
-    expect(a.container.querySelector("[data-value-chip]")!.className).toContain("TYPTON")
-    await a.unmount()
-    const b = await meta([KIND], { kind: "know" }, "TYPTON")
-    expect(b.container.querySelector("[data-value-chip]")!.className).toContain("purple")
-    await b.unmount()
+describe("Register: tone ist semantisch", () => {
+  it("nimmt nur neutral, warning, success, danger, info", () => {
+    expect(() => registriere([f("kind", "select", { options: [{ id: "a", label: "A", tone: "rose" }] })])).toThrow(/tone/)
+    expect(() => registriere([f("kind", "select", { options: [{ id: "a", label: "A", tone: "danger" }] })])).not.toThrow()
   })
 })
 
@@ -352,7 +360,7 @@ async function formular(config: ContentTypeConfig, initialData: Record<string, u
 const OPTS3 = [
   { id: "tool", label: "Werkzeug" },
   { id: "room", label: "Raum" },
-  { id: "know", label: "Wissen" },
+  { id: "know", label: "Wissen", tone: "info" },
 ]
 
 describe("B8 select schreiben: Segment bis 4 Optionen, sonst Dropdown", () => {
@@ -635,7 +643,7 @@ describe("Codex R2", () => {
     const config = contentTypeFromRegister("card")
     const { container, unmount } = await formular(config, { status: "open" })
     const order = [...container.querySelectorAll("[data-value-field]")].map((e) => e.getAttribute("data-value-field"))
-    expect(order).toEqual(["number", "segment", "number"])
+    expect(order).toEqual(["number", "pills", "number"])
     await unmount()
   })
 
@@ -727,6 +735,34 @@ describe("#544: Zahlen werden nie still gerundet", () => {
     const alt = { id: "c", type: "card", createdAt: "x", createdBy: "u", data: { title: "N", weight: 1e-21 } } as Item
     const { container, unmount } = await formular(typ, editInitialData(alt))
     expect(container.querySelector<HTMLInputElement>('input[aria-label="Gewicht (kg)"]')!.value).toBe("1e-21")
+    await unmount()
+  })
+})
+
+describe("Pillen mit Punkt (Design 27.09.)", () => {
+  it("jede Pille trägt einen Punkt in ihrem Ton; die gewählte ist pastell im Ton und halbfett, die anderen hell mit Rand", async () => {
+    const opts = [
+      { id: "high", label: "Hoch", tone: "danger" },
+      { id: "mid", label: "Mittel", tone: "warning" },
+      { id: "low", label: "Niedrig", tone: "info" },
+    ]
+    const { container, unmount } = await formular(karte([{ key: "prio", widget: "select", label: "Priorität", options: opts }]), { prio: "high" })
+    expect(container.querySelector('[data-value-field="pills"]')).not.toBeNull()
+    const radios = [...container.querySelectorAll<HTMLButtonElement>('[role="radio"]')]
+    expect(radios.map((r) => r.querySelector("[data-tone-dot]")?.getAttribute("data-tone"))).toEqual(["danger", "warning", "info"])
+    expect(radios[0]!.getAttribute("data-tone")).toBe("danger")
+    expect(radios[0]!.className).toContain("font-semibold")
+    expect(radios[1]!.className).toContain("border-border")
+    expect(radios[1]!.className).toContain("text-muted-foreground")
+    await unmount()
+  })
+
+  it("der Status der Aufgabe: Töne aus den Rollen", async () => {
+    const task = contentTypeFromRegister("task")
+    const { container, unmount } = await formular(task, { status: "in-progress" })
+    const dots = [...container.querySelectorAll('[role="radio"] [data-tone-dot]')].map((d) => d.getAttribute("data-tone"))
+    expect(dots).toEqual(["neutral", "warning", "success"])
+    expect(container.querySelector('[role="radio"][aria-checked="true"]')!.getAttribute("data-tone")).toBe("warning")
     await unmount()
   })
 })

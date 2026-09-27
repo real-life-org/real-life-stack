@@ -5,7 +5,8 @@ import { Globe, Lock, Mail, Phone, X } from "lucide-react"
 
 import { Input } from "@/components/primitives/input"
 import { cn } from "@/lib/utils"
-import { contactKind } from "@/lib/field-values"
+import { contactKind, type OptionTone } from "@/lib/field-values"
+import { ToneDot, toneSoftClass } from "@/components/preview/value-tone"
 
 /**
  * Schreibformen der einfachen Wert-Widgets (S4a; shared-components →
@@ -47,7 +48,9 @@ function FixedMark() {
 export interface OptionFieldOption {
   id: string
   label: string
-  /** Klassen des gewählten Segments (nur die alte StatusWidget-Schnittstelle). */
+  /** Ton der Pille (`optionTone`); ohne ihn neutral. */
+  tone?: OptionTone | "type"
+  /** Klassen der gewählten Pille (alte StatusWidget-Schnittstelle); schlägt `tone`. */
   className?: string
 }
 
@@ -59,12 +62,14 @@ export interface OptionFieldProps {
   /** Ein zweiter Klick auf die gewählte Option nimmt sie zurück (optionale Felder). */
   allowClear?: boolean
   disabled?: boolean
+  /** Klassen der Typfarbe des Items, für Optionen mit Ton `"type"`. */
+  typeTone?: string
 }
 
-/** Bis zu vier Optionen als Segment, sonst als Dropdown (Widget-Paare B6, B8). */
+/** Bis zu vier Optionen als Pillen, sonst als Dropdown (Widget-Paare B6, B8). */
 export const SEGMENT_MAX = 4
 
-export function OptionField({ label, options, value, onChange, allowClear, disabled }: OptionFieldProps) {
+export function OptionField({ label, options, value, onChange, allowClear, disabled, typeTone }: OptionFieldProps) {
   const id = React.useId()
   if (options.length > SEGMENT_MAX) {
     return (
@@ -99,9 +104,9 @@ export function OptionField({ label, options, value, onChange, allowClear, disab
     if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => document.getElementById(`${id}-${next}`)?.focus())
   }
   return (
-    <div data-value-field="segment">
+    <div data-value-field="pills">
       <FieldLabel>{label}</FieldLabel>
-      <div role="radiogroup" aria-label={label} aria-disabled={disabled || undefined} className="inline-flex max-w-full flex-wrap gap-0.5 rounded-lg border border-border bg-muted p-0.5">
+      <div role="radiogroup" aria-label={label} aria-disabled={disabled || undefined} className="flex max-w-full flex-wrap items-center gap-1.5">
         {options.map((option, index) => {
           const checked = index === checkedIndex
           return (
@@ -123,13 +128,16 @@ export function OptionField({ label, options, value, onChange, allowClear, disab
                   move(index, -1)
                 }
               }}
+              data-tone={option.tone ?? "neutral"}
               className={cn(
-                "rounded-md px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50",
+                // Pillen (Design 27.09.): Punkt im Ton; gewählt pastell im Ton, halbfett.
+                "inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50",
                 checked
-                  ? option.className || "bg-background font-medium text-foreground shadow-sm ring-1 ring-border"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? option.className || cn("font-semibold", toneSoftClass(option.tone ?? "neutral", typeTone))
+                  : "border-border bg-background font-medium text-muted-foreground hover:text-foreground",
               )}
             >
+              <ToneDot tone={option.tone ?? "neutral"} typeTone={typeTone} />
               {option.label}
             </button>
           )

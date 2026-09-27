@@ -43,7 +43,7 @@ import { StatusWidget } from "./widgets/status-widget"
 import { ChipsField, ContactField, NumberGroupField, OptionField, UrlField } from "./widgets/value-widgets"
 import { VALUE_WIDGETS, valueFieldError, type ValueFieldConfig } from "./value-fields"
 import { groupNumberFields } from "../preview/field-register"
-import { chipValues } from "../../lib/field-values"
+import { chipValues, type OptionTone } from "../../lib/field-values"
 import { FixedItemRefField, IncomingRelationField, ItemRelationWidget, type RequestItemPick } from "./widgets/item-relation-widget"
 import { incomingRemovedKey, itemRelationChoiceKeys, itemRelationDataKey, itemRelationDataKeys, type ItemRefFieldConfig, type ItemRelationFieldConfig } from "./item-relations"
 
@@ -121,6 +121,8 @@ export interface WidgetData {
 export interface StatusOption {
   id: string
   label: string
+  /** Ton der Pille, aus dem Register (Ton der Option, sonst Rolle, sonst Typfarbe). */
+  tone?: OptionTone | "type"
   className?: string
 }
 
@@ -1415,6 +1417,7 @@ export function ContentComposer({
                         onChange={(v) => updateData("status", v)}
                         label={widgetLabel}
                         options={currentConfig.statusOptions}
+                        typeTone={typeBadgeStyle(currentConfig).className}
                       />
                     )}
                   {widgetId === "people" && (
@@ -1540,6 +1543,7 @@ export function ContentComposer({
                                 onChange={(v) => updateData("status", v)}
                                 label={getWidgetLabel("status")}
                                 options={currentConfig.statusOptions}
+                                typeTone={typeBadgeStyle(currentConfig).className}
                               />
                             ) : null
                           case "select":
@@ -1552,6 +1556,7 @@ export function ContentComposer({
                                 onChange={(v) => updateData(field.key, v)}
                                 allowClear
                                 disabled={field.fixed}
+                                typeTone={typeBadgeStyle(currentConfig).className}
                               />
                             )
                           case "url":

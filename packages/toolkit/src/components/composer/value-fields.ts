@@ -11,6 +11,8 @@ import type { FieldEntry } from "../preview/field-register"
 import {
   chipValues,
   contactError,
+  optionTone,
+  type OptionTone,
   normalizeUrl,
   numberError,
   parseNumberInput,
@@ -35,7 +37,7 @@ export interface ValueFieldConfig {
   min?: number
   max?: number
   /** select: die Werte. */
-  options?: readonly { id: string; label: string }[]
+  options?: readonly { id: string; label: string; tone?: OptionTone | "type" }[]
   /** chips: Vorschläge des Hosts; dazu kommen die Werte desselben Felds im Formular-Space. */
   suggestions?: readonly string[]
   /** `edit: "fixed"` (06, Regel 14): sichtbar, nicht bearbeitbar. */
@@ -55,7 +57,7 @@ export function valueFieldsFromRegister(fields: readonly FieldEntry[]): ValueFie
       ...(x.unit !== undefined ? { unit: x.unit } : {}),
       ...(x.min !== undefined ? { min: x.min } : {}),
       ...(x.max !== undefined ? { max: x.max } : {}),
-      ...(x.options ? { options: x.options.map((o) => ({ id: o.id, label: o.label })) } : {}),
+      ...(x.options ? { options: x.options.map((o) => ({ id: o.id, label: o.label, tone: optionTone(x.widget, o) })) } : {}),
       ...(x.edit === "fixed" ? { fixed: true } : {}),
     }))
 }

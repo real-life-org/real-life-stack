@@ -14,6 +14,7 @@ import {
   type ComposedTypeManifest,
   type RelationRole,
 } from "@real-life-stack/data-interface"
+import { OPTION_TONES } from "../../lib/field-values"
 
 /** Ein Widget je Datentyp, nicht je Fachfeld (B1–B15). */
 export type WidgetId =
@@ -39,6 +40,11 @@ export type StatusRole = "open" | "active" | "done"
 export interface FieldOption {
   id: string
   label: string
+  /**
+   * Nur Optionen von status (B6) und select (B8): der semantische Ton
+   * (`OPTION_TONES`: neutral, warning, success, danger, info), nie eine Farbe.
+   * Ohne ihn gilt beim Status die Rolle, sonst die Typfarbe.
+   */
   tone?: string
   /**
    * Nur Qualifier-Werte einer Kante mit Selbstaktion: die Beschriftung der
@@ -99,10 +105,7 @@ export interface FieldEntry {
   required?: boolean
   /** Einheit (number, B7). */
   unit?: string
-  /**
-   * Grenzen (number, B7). Nicht in der FieldEntry-Liste von Spec 06; der
-   * S4-Brief verlangt „Min/Max aus dem Register" — im PR als Frage an Anton.
-   */
+  /** Grenzen (number, B7). */
   min?: number
   max?: number
   /** Werte (status B6, select B8). */
@@ -274,6 +277,9 @@ export function assertRegisterLists(
     if (field.min !== undefined && field.max !== undefined && field.min > field.max) {
       fail(layer, typeId, `Feld "${field.key}" hat min über max`)
     }
+    // Der Ton einer Option ist semantisch, nie eine Farbe.
+    const badTone = (field.options ?? []).find((o) => o.tone !== undefined && !(OPTION_TONES as readonly string[]).includes(o.tone))
+    if (badTone) fail(layer, typeId, `Feld "${field.key}" nennt tone "${badTone.tone}"; erlaubt: ${OPTION_TONES.join(", ")}`)
     // Regel 18: Rollen nur an Optionen eines status-Felds.
     if (field.widget !== "status" && (field.options ?? []).some((o) => o.role)) {
       fail(layer, typeId, `Feld "${field.key}" gibt Optionen eine Rolle, ist aber kein status`)

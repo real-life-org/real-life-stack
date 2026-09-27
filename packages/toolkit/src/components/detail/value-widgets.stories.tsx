@@ -10,6 +10,23 @@ import { createComposerMapping } from "../composer/composer-mapping"
 import { valueFieldsFromRegister } from "../composer/value-fields"
 import { composerWidgetsFromRegister } from "../preview/field-register"
 import { StoryWorld } from "../../story-support/story-world"
+import { scalesForColor } from "../../lib/color-scales"
+import { themeTokens } from "../../lib/theme-tokens"
+import { optionTone } from "../../lib/field-values"
+import type { CSSProperties, ReactNode } from "react"
+
+/** Ein Space mit eigener Farbe (Theme-Achsen), hell oder dunkel — die Chips und Pillen folgen ihm. */
+function Space({ color, dark, children }: { color: string; dark?: boolean; children: ReactNode }) {
+  const scheme = dark ? "dark" : "light"
+  const style = themeTokens({ ...scalesForColor(color, scheme), scheme }) as CSSProperties
+  return (
+    <div className={dark ? "dark" : undefined}>
+      <div style={style} className="rounded-3xl bg-background p-3 text-foreground">
+        {children}
+      </div>
+    </div>
+  )
+}
 
 /**
  * **Value widgets** (S4a; spec shared-components → „Item-Detail aus dem
@@ -19,9 +36,9 @@ import { StoryWorld } from "../../story-support/story-world"
  *
  * | Widget | Read (meta box) | Write (form) |
  * |---|---|---|
- * | B6 `status` | chip: the option's tone, else by role (done green, open neutral, active in the type tone) | segment (≤ 4 options), else a list |
+ * | B6 `status` | chip with a dot: pastel ground, text and border in the tone — the option's `tone`, else by role (open neutral, active warning, done success), else the type colour | pills (≤ 4 options), each with a dot in its tone; the chosen one pastel in its tone, semibold; else a list |
  * | B7 `number` | „Aufwand 12 h · 300 €" — number fields with the same label share one row | one number field per value, side by side, unit inside |
- * | B8 `select` | chip in the type tone (or the option's tone) | segment (≤ 4), else dropdown; a second click clears |
+ * | B8 `select` | chip like B6 (the option's `tone`, else the type colour) | pills like B6 (≤ 4), else dropdown; a second click clears |
  * | B9 `url` | link with globe, only http/https, `rel="noopener noreferrer"` | text field, checked; a bare domain gets `https://` |
  * | B10 `chips` | chip row after the label, capped „+N" by room | chips, suggestions, „+ eigenes" |
  * | B12 `contact` | value with „Anrufen" (`tel:`) or „E-Mail schreiben" (`mailto:`) | text field, checked, with who sees it |
@@ -84,7 +101,7 @@ const RESOURCE_FIELDS: FieldEntry[] = [
   },
 ]
 const CARD_FIELDS: FieldEntry[] = [
-  { key: "status", widget: "status", pos: "meta", label: "Stand", options: [{ id: "open", label: "Offen", role: "open" }, { id: "done", label: "Erledigt", role: "done" }] },
+  { key: "status", widget: "status", pos: "meta", label: "Stand", options: [{ id: "open", label: "Offen", role: "open" }, { id: "done", label: "Erledigt", role: "done" }, { id: "blocked", label: "Blockiert", tone: "danger" }] },
   { key: "hours", widget: "number", pos: "meta", label: "Aufwand", unit: "h", min: 0 },
   { key: "euros", widget: "number", pos: "meta", label: "Aufwand", unit: "€", min: 0 },
 ]
@@ -95,19 +112,12 @@ const GOAL_FIELDS: FieldEntry[] = [
     pos: "meta",
     label: "Priorität",
     options: [
-      { id: "high", label: "Priorität hoch", tone: "rose" },
-      { id: "medium", label: "Priorität mittel", tone: "amber" },
-      { id: "low", label: "Priorität niedrig" },
+      { id: "high", label: "Hoch", tone: "danger" },
+      { id: "medium", label: "Mittel", tone: "warning" },
+      { id: "low", label: "Niedrig", tone: "info" },
     ],
   },
 ]
-
-const TONE = {
-  person: "bg-violet-50 text-violet-700 border-violet-200",
-  project: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  resource: "bg-teal-50 text-teal-700 border-teal-200",
-  task: "bg-amber-50 text-amber-700 border-amber-200",
-}
 
 const LENA: Item = {
   id: "profil-lena",
@@ -148,11 +158,11 @@ const KARTE: Item = {
 const ZIEL: Item = { id: "ziel-team", type: "project", createdAt: at(3), createdBy: "mira", data: { title: "Team-Organisation", priority: "high" } }
 
 /** Detail wie im Panel: Kopf, Meta-Box aus den Einträgen. */
-function Detail({ item, fields, tone }: { item: Item; fields: FieldEntry[]; tone: string }) {
+function Detail({ item, fields }: { item: Item; fields: FieldEntry[] }) {
   return (
     <StoryWorld seed={{ items: [item] }}>
       <div className="w-[380px] overflow-hidden rounded-2xl border bg-background p-4 shadow-xl">
-        <ItemDetailBody item={item} meta={<RegisterMeta item={item} fields={fields} typeTone={tone} />} />
+        <ItemDetailBody item={item} meta={<RegisterMeta item={item} fields={fields} />} />
       </div>
     </StoryWorld>
   )
@@ -167,7 +177,7 @@ function Edit({ item, fields, label }: { item: Item; fields: FieldEntry[]; label
     label,
     defaultWidgets: composerWidgetsFromRegister(withTitle),
     valueFields: valueFieldsFromRegister(fields),
-    ...(status ? { statusOptions: status.options!.map((o) => ({ id: o.id, label: o.label })), widgetLabels: { status: status.label! } } : {}),
+    ...(status ? { statusOptions: status.options!.map((o) => ({ id: o.id, label: o.label, tone: optionTone("status", o) })), widgetLabels: { status: status.label! } } : {}),
     groupOptions: [{ id: "garden", name: "Gartenprojekt" }],
     defaultGroup: "garden",
   }
@@ -182,27 +192,29 @@ function Edit({ item, fields, label }: { item: Item; fields: FieldEntry[]; label
 }
 
 /** Profile: location, three chip rows („Kann" capped „+N"), phone and e-mail with their jumps. */
-export const Profile: Story = { render: () => <Detail item={LENA} fields={PROFILE_FIELDS} tone={TONE.person} /> }
+export const Profile: Story = { render: () => <Detail item={LENA} fields={PROFILE_FIELDS} /> }
 /** Profile form: chips with „+ eigenes", contact fields with who sees them. */
 export const ProfileEdit: Story = { render: () => <Edit item={LENA} fields={PROFILE_FIELDS} label="Profil" /> }
 
 /** Project: website and repo as safe links. */
-export const Project: Story = { render: () => <Detail item={GARTEN} fields={PROJECT_FIELDS} tone={TONE.project} /> }
+export const Project: Story = { render: () => <Detail item={GARTEN} fields={PROJECT_FIELDS} /> }
 /** Project form: url fields, checked (try `javascript:`). */
 export const ProjectEdit: Story = { render: () => <Edit item={GARTEN} fields={PROJECT_FIELDS} label="Projekt" /> }
 
-/** Resource: kind as a chip in the type tone, availability as a chip. */
-export const Resource: Story = { render: () => <Detail item={ANHAENGER} fields={RESOURCE_FIELDS} tone={TONE.resource} /> }
+/** Resource: kind and availability as chips in the space colour. */
+export const Resource: Story = { render: () => <Detail item={ANHAENGER} fields={RESOURCE_FIELDS} /> }
 /** Resource form: four kinds as a segment, five availabilities as a dropdown. */
 export const ResourceEdit: Story = { render: () => <Edit item={ANHAENGER} fields={RESOURCE_FIELDS} label="Ressource" /> }
 
 /** Karabirrdt card: status „Offen" and „Aufwand 12 h · 300 €" — replaces the app's own AufwandWidget. */
-export const KanbanCard: Story = { render: () => <Detail item={KARTE} fields={CARD_FIELDS} tone={TONE.task} /> }
+export const KanbanCard: Story = { render: () => <Detail item={KARTE} fields={CARD_FIELDS} /> }
 /** Karabirrdt card form: status as a segment, hours and euros side by side. */
 export const KanbanCardEdit: Story = { render: () => <Edit item={KARTE} fields={CARD_FIELDS} label="Karte" /> }
 
-/** Karabirrdt goal: priority as a select with its own tones (decision 16: select instead of sticker dots). */
-export const Goal: Story = { render: () => <Detail item={ZIEL} fields={GOAL_FIELDS} tone={TONE.project} /> }
+/** Karabirrdt goal: priority as a select with tones Hoch danger · Mittel warning · Niedrig info (decision 16). */
+export const Goal: Story = { render: () => <Detail item={ZIEL} fields={GOAL_FIELDS} /> }
+/** Karabirrdt goal form: priority pills, each with its dot. */
+export const GoalEdit: Story = { render: () => <Edit item={ZIEL} fields={GOAL_FIELDS} label="Ziel" /> }
 
 const TASK: Item = { id: "task-kompost", type: "task", createdAt: at(3), createdBy: "jonas", data: { title: "Kompost umsetzen", status: "in-progress", start: at(25) } }
 const ERNTEFEST: Item = {
@@ -213,7 +225,7 @@ const ERNTEFEST: Item = {
   data: { title: "Gemeinsames Ernten am Beet", start: "2026-07-19T16:00:00+02:00", address: "Markthalle 7", meetingLink: "https://meet.jit.si/gartenprojekt" },
 }
 
-/** Toolkit register: the task's status as a chip („In Arbeit" in the type tone), and the event's `meetingLink` (B9). */
+/** Toolkit register: the task's status as a chip („In Arbeit" warning by its role), and the event's `meetingLink` (B9). */
 export const ToolkitRegister: Story = {
   render: () => (
     <StoryWorld trustRecords seed={{ items: [TASK, ERNTEFEST] }}>
@@ -227,4 +239,28 @@ export const ToolkitRegister: Story = {
       </div>
     </StoryWorld>
   ),
+}
+
+/** Two spaces with different colours, light and dark: the tones are instance colours and stay put; the pastel is tinted in the dark. */
+export const SpaceColours: Story = {
+  render: () => (
+    <div className="grid grid-cols-2 gap-4">
+      {[
+        { color: "#e5484d", dark: false },
+        { color: "#3e63dd", dark: false },
+        { color: "#e5484d", dark: true },
+        { color: "#3e63dd", dark: true },
+      ].map(({ color, dark }) => (
+        <Space key={color + dark} color={color} dark={dark}>
+          <div className="flex flex-col gap-3">
+            <Detail item={KARTE} fields={CARD_FIELDS} />
+            <Edit item={KARTE} fields={CARD_FIELDS} label="Karte" />
+            <Detail item={ZIEL} fields={GOAL_FIELDS} />
+            <Edit item={ZIEL} fields={GOAL_FIELDS} label="Ziel" />
+          </div>
+        </Space>
+      ))}
+    </div>
+  ),
+  parameters: { layout: "padded" },
 }

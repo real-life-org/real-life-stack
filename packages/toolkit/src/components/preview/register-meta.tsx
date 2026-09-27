@@ -12,7 +12,8 @@ import { useFieldLink } from "../navigation/field-navigation"
 import { ItemAssignees } from "./item-assignees"
 import { formatEventRange } from "./item-meta-row"
 import { groupNumberFields, metaRowOrder, type EdgeEntry, type FieldEntry, type ListEntry, type MetaRow } from "./field-register"
-import { chipValues, contactHref, contactKind, formatNumber, parseNumberInput, safeHref, toneClass, urlLabel } from "../../lib/field-values"
+import { chipValues, contactHref, contactKind, formatNumber, optionTone, parseNumberInput, safeHref, urlLabel } from "../../lib/field-values"
+import { ToneDot, toneSoftClass } from "./value-tone"
 import { useFittingTags } from "./use-fitting-tags"
 import { ItemRefValue, ItemRelationChips, LabeledChips, itemRefId } from "./item-relation-row"
 import { isItemEdge, useItemEdges, type EdgeTarget } from "./use-item-edges"
@@ -36,7 +37,7 @@ import { usePeopleLines } from "./use-people-line"
  * (`item-relation`, C3: eingebettet, ausgehend und eingehend), Felder mit
  * Item-Verweis (`item-ref`, B15) — diese nur, wenn keine Liste des Typs sie
  * abdeckt (`covers`) — und die einfachen Wert-Widgets: `status` (B6) und
- * `select` (B8) als Chip, `number` (B7) als Text mit Einheit, `url` (B9) als
+ * `select` (B8) als Chip in der Farbe des Space, `number` (B7) als Text mit Einheit, `url` (B9) als
  * sicherer Link, `chips` (B10) als Chip-Reihe, `contact` (B12) mit Sprung.
  */
 export interface RegisterMetaProps {
@@ -45,10 +46,7 @@ export interface RegisterMetaProps {
   edges?: readonly EdgeEntry[]
   /** Listen des Typs: deren `covers` nimmt Felder aus der Meta-Box (06, Regel 11). */
   lists?: readonly ListEntry[]
-  /**
-   * Klassen des Typtons (das Typ-Badge): Chips von status und select ohne
-   * eigenen Ton stehen darin (Widget-Paare B6 „Chip im Typton", B8).
-   */
+  /** Klassen der Typfarbe (Typ-Badge): Ton einer Option ohne Rolle und ohne `tone`. */
   typeTone?: string
   className?: string
 }
@@ -212,7 +210,7 @@ function MetaRowView({ row, item, typeTone }: { row: MetaRow & { kind: "field" }
     case "select":
       return (
         <Row id={field.key} icon={field.widget === "status" ? <CircleDot className="h-3.5 w-3.5" /> : <Layers className="h-3.5 w-3.5" />} label={field.label ?? (field.widget === "status" ? "Status" : undefined)}>
-          <ValueChip className={optionTone(field, value as string, typeTone)}>{optionLabel(field, value as string)}</ValueChip>
+          <OptionChip field={field} value={value as string} typeTone={typeTone} />
         </Row>
       )
     case "number":
@@ -327,17 +325,22 @@ function optionLabel(field: FieldEntry, value: string): string {
 }
 
 /**
- * Ton eines status- oder select-Chips: der Ton der Option; ohne ihn beim
- * Status die Rolle (erledigt grün, offen neutral, in Arbeit im Typton,
- * Spec 06, Regel 18), sonst der Typton. Ein unbekannter Wert ist neutral.
+ * Chip eines status- oder select-Werts (B6, B8; Design 27.09.): Punkt,
+ * Pastellgrund, Schrift und Rand im Ton — wie die gewählte Pille. Ton der
+ * Option, sonst der Rolle, sonst die Typfarbe; ein unbekannter Wert neutral.
  */
-function optionTone(field: FieldEntry, value: string, typeTone: string | undefined): string {
-  const option = field.options?.find((o) => o.id === value)
-  if (!option) return toneClass("neutral")
-  if (option.tone) return toneClass(option.tone)
-  if (field.widget === "status" && option.role === "done") return toneClass("green")
-  if (field.widget === "status" && option.role === "open") return toneClass("neutral")
-  return typeTone ?? toneClass("neutral")
+function OptionChip({ field, value, typeTone }: { field: FieldEntry; value: string; typeTone?: string }) {
+  const tone = optionTone(field.widget, field.options?.find((o) => o.id === value))
+  return (
+    <span
+      data-value-chip
+      data-tone={tone}
+      className={cn("inline-flex h-6 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold", toneSoftClass(tone, typeTone))}
+    >
+      <ToneDot tone={tone} typeTone={typeTone} />
+      <span className="truncate">{optionLabel(field, value)}</span>
+    </span>
+  )
 }
 
 /** Zahlen mit Einheit, mehrere mit „ · " („Aufwand 12 h · 300 €", B7). */

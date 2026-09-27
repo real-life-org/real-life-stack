@@ -671,9 +671,9 @@ Jedes Feld und jede Kante hat eine Lese- und eine Schreibform auf **einem** Date
 | B3 | `date` | Zeile mit Sprung in den Kalender; Wiederholung als zweite Zeile | Datum und Uhrzeit, Ende, Wiederholung als Auswahl |
 | B4 | `location` | Ort-Item als Chip oder Adresse als Text mit Sprung auf die Karte | ein Feld; die Autovervollständigung mischt Ort-Items und Adressen; Karten-Pick daneben |
 | B5 | `media` | Bildreihe im Inhalt | Chips „+ Bilder hinzufügen" |
-| B6 | `status` | Chip im Typton | Segment |
-| B7 | `number` | Text mit Einheit („12 h · 300 €") | ein Zahlenfeld je Wert, nebeneinander |
-| B8 | `select` | Chip | Segment (bis 4 Optionen) oder Dropdown |
+| B6 | `status` | Chip mit Punkt im Ton der Option (Pastellgrund, Schrift und Rand im Ton) | Pillen (bis 4 Optionen), jede mit Punkt im Ton, die gewählte wie der Chip; sonst Liste |
+| B7 | `number` | Text mit Einheit („12 h · 300 €"), ungerundet | ein Zahlenfeld je Wert, nebeneinander |
+| B8 | `select` | Chip wie B6 | Pillen wie B6 (bis 4 Optionen); sonst Dropdown |
 | B9 | `url` | Link mit Globus-Icon | Textfeld mit Icon |
 | B10 | `chips` | Chip-Reihe mit Label | Chips mit Vorschlägen und „+ eigenes" |
 | B11 | `avatar` | Kopf-Avatar | Bild wählen, Resize auf 512 px |
@@ -697,6 +697,8 @@ Später, nicht Teil dieses Entwurfs: C5 `membership` (Mitglieder-Stack im Projek
 Regeln:
 
 1. Es gibt ein Widget je Datentyp, nicht je Fachfeld. `number` deckt Stunden, Euro und Punkte ab. Beschriftung, Einheit und Optionen kommen aus dem Register.
+   Zahlenfelder (`number`), die in der Reihenfolge der Meta-Box aufeinander folgen und dasselbe `label` tragen, teilen eine Zeile („Aufwand 12 h · 300 €") und im Formular eine Gruppe mit einem Zahlenfeld je Wert. Ein Wert erscheint ungerundet.
+   Chip und Pillen von `status` und `select` tragen den Ton der Option ([06, Regel 21](../06-schema-composition.md#feld--und-kantenregister)): Jede Pille hat links einen Punkt im Ton; nicht gewählt steht sie hell mit Rand und gedämpfter Schrift, gewählt und als Chip mit Pastellgrund, Schrift und Rand im Ton, halbfett. Im Dunkeln ist der Pastellgrund getönt statt hell.
 2. Beschriftungen kommen über die Intl-Schicht (DE/EN), nicht aus dem Widget.
 3. `blocks` heißt in allen Typen von beiden Enden gleich: „Braucht" (eingehend) und „Ermöglicht" (ausgehend).
 4. Ein Record ist nie eine Karte. Er wird über das Item gelesen, das er berührt.

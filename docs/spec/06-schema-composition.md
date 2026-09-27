@@ -182,6 +182,8 @@ type WidgetId =
   | "select" | "url" | "chips" | "avatar" | "contact" | "group" | "tags"   // B1–B14
   | "item-ref"                                                             // B15
 
+type Tone = "neutral" | "warning" | "success" | "danger" | "info"   // semantisch, nie eine Farbe (B6, B8)
+
 interface FieldEntry {
   key: string                    // data-Schlüssel, z. B. "start", "hours"
   widget: WidgetId
@@ -189,7 +191,9 @@ interface FieldEntry {
   label?: string                 // Intl-Schlüssel
   required?: boolean
   unit?: string                  // number (B7)
-  options?: { id: string; label: string; tone?: string; role?: "open" | "active" | "done" }[]
+  min?: number                   // number (B7): kleinster erlaubter Wert
+  max?: number                   // number (B7): größter erlaubter Wert
+  options?: { id: string; label: string; tone?: Tone; role?: "open" | "active" | "done" }[]
                                  // status (B6), select (B8); role nur an status-Feldern (Regel 18)
   edit?: false | "fixed"         // false: nie im Formular; "fixed": sichtbar, nicht bearbeitbar
   ref?: { type: string; missing: string }   // item-ref (B15): Zieltyp, Intl-Schlüssel für ein fehlendes Ziel
@@ -271,6 +275,8 @@ Regeln:
     Liegt die Kante eingebettet (`storage: "embedded"`), MUSS die Fläche Kante und Status in einem `updateItem` schreiben. Ob nach dem Abgeben noch jemand an der Kante steht, entscheidet der frisch gelesene Stand (Regel 9), nicht der Render. Bearbeiten und Modul ändern den Status frei und lassen die Kante stehen; eine Zuweisung im Formular (C1) ändert den Status nicht. Ein Typ ohne Option der Rolle `active` (die Karabirrdt-Karte: Offen · Erledigt) bleibt beim Dazukommen `open`, und Abgeben ändert seinen Status nicht.
 
 20. **Daten gemeinsam; Bedeutung und Bedienung kommen mit der Schicht des Moduls.** Prädikat und Speicherort einer Kante und ob sie einen Qualifier trägt (`qualifier.key`) stehen im Register des Toolkit-Typs und gelten für jede App. Die Werte samt Anzeige (Bedeutung) und eigene Pills (Bedienung) DARF die Register-Schicht eines Moduls oder einer App für eine Kante des Toolkit-Registers mitbringen: Werte als Erweiterung, vereinigt nach Wert-Id ([Erweiterung und Merge](#erweiterung-und-merge), Punkt 2); denselben Wert deklarieren zwei Schichten nicht, auch nicht mit gleicher Anzeige — das ist ein Konflikt. Die Pills ersetzen die Selbstaktion (`selfAction`) der Kante, schreiben nur Werte, die der Kern oder dieselbe Schicht deklariert (so hängt das Register nicht von der Reihenfolge der Schichten ab), und kommen je Kante aus höchstens einer Schicht; das ist die einzige Ausnahme von „kein Override" (Punkt 3). Prädikat, `storage` und `qualifier.key` DARF keine Schicht ändern. Es gilt das zusammengesetzte Register der App für alle ihre Flächen. Der Kern bewahrt Unbekanntes: Einen Wert, den keine geladene Schicht kennt, liest und speichert jede Fläche unverändert und zeigt ihn ohne Zustandstext. Für das Zustandsmodell (Regel 19) steht jede Person an der Kante, gleich welcher Wert. Beispiel (nichtnormativ): Das Toolkit erlaubt `role` an `assignedTo` ohne Werte; das Kanban bietet „Übernehmen"/„Mitmachen" und schreibt die Kante ohne `role`. Die Schicht der Karabirrdt-App bringt `can` („kann") und `learns` („lernt") mit und die Pills „Kann ich"/„Will lernen". Ist sie in derselben App geladen, zeigt auch das Kanban „Timo lernt", sonst „Timo".
+
+21. **Ton einer Option (B6, B8):** `options[].tone` ist semantisch (`Tone`), nie eine Farbe; die Flächen malen ihn über Theme-Tokens der Instanz (`--muted-foreground`, `--warning`, `--success`, `--destructive`, `--info`), in hell und dunkel. Ohne `tone` gilt beim Status die Rolle (`open` neutral, `active` warning, `done` success), sonst die Typfarbe des Items. Ein Wert, den das Register nicht kennt, ist neutral. Beispiel (nichtnormativ): „Blockiert" `danger`; Priorität Hoch · Mittel · Niedrig `danger` · `warning` · `info`.
 
 **Register je Typ (nichtnormativ).** So sehen die Einträge der Toolkit-Typen und eines App-Typs aus. Schreibweise: Feld `key` Widget @`pos`; Kante `predicate` (→ `from`, ← `to`) Widget @`pos`.
 

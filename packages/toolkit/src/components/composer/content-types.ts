@@ -12,6 +12,7 @@ import {
 import type { ContentTypeConfig } from "./content-composer"
 import { createComposerMapping, withGroupOptions } from "./composer-mapping"
 import { valueFieldsFromRegister } from "./value-fields"
+import { optionTone } from "../../lib/field-values"
 
 /**
  * Die Inhaltstypen des Composers, ZUSAMMENGESETZT aus dem Typ-Register
@@ -135,7 +136,8 @@ function ausFeldliste(
   return {
     defaultWidgets: composerWidgetsFromRegister(fields, edges),
     ...(peopleRelations.length > 0 ? { peopleRelations } : {}),
-    ...(status ? { statusOptions: status.options!.map((o) => ({ id: o.id, label: o.label })) } : {}),
+    // Ton der Pille: tone der Option, sonst ihre Rolle, sonst die Typfarbe (B6).
+    ...(status ? { statusOptions: status.options!.map((o) => ({ id: o.id, label: o.label, tone: optionTone("status", o) })) } : {}),
     ...(Object.keys(widgetLabels).length > 0 ? { widgetLabels } : {}),
     ...(body && (body.key === "content" || body.key === "description") ? { textField: body.key } : {}),
     ...(itemRelations.length > 0 ? { itemRelations } : {}),

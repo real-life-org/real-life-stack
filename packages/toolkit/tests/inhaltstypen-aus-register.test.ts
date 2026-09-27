@@ -33,7 +33,9 @@ describe("Inhaltstypen aus dem Register", () => {
   })
 
   it("nimmt die Kanban-Spalten als Statuswerte — dieselben wie das Board", () => {
-    expect(resolveContentType("task")?.statusOptions).toEqual(defaultColumns.map((c) => ({ id: c.id, label: c.label })))
+    expect(resolveContentType("task")?.statusOptions?.map(({ id, label }) => ({ id, label }))).toEqual(defaultColumns.map((c) => ({ id: c.id, label: c.label })))
+    // Ton der Pille aus der Rolle (06, Regel 21).
+    expect(resolveContentType("task")?.statusOptions?.map((o) => o.tone)).toEqual(["neutral", "warning", "success"])
   })
 
   it("leitet die Personenfelder aus den Personen-Kanten der Feld- und Kantenliste ab", () => {

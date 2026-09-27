@@ -180,26 +180,28 @@ export function chipValues(value: unknown): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// Ton eines Chips (status B6, select B8)
+// Ton einer Option (status B6, select B8; Design 27.09.2026)
 
 /**
- * Die Töne, die eine Option im Register tragen darf (`options[].tone`). Die
- * Spec lässt den Wertebereich offen; das Toolkit bietet eine feste Palette
- * mit Hell und Dunkel. Ein unbekannter Ton ist neutral.
+ * Die Töne, die eine Option im Register tragen darf (`options[].tone`):
+ * semantisch, nie eine Farbe. Gemalt wird über die Theme-Tokens
+ * (`--muted-foreground`, `--warning`, `--success`, `--destructive`, `--info`).
  */
-const TONES: Readonly<Record<string, string>> = {
-  neutral: "bg-muted text-muted-foreground",
-  // Dieselben Klassen wie die Tag-Palette: Die Apps scannen im Toolkit nur
-  // `.tsx`, diese Datei nicht; globals.css meldet sie per `@source inline` an.
-  blue: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-  green: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-  amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-  purple: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-  rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
-}
+export const OPTION_TONES = ["neutral", "warning", "success", "danger", "info"] as const
+export type OptionTone = (typeof OPTION_TONES)[number]
 
-export const CHIP_TONES: readonly string[] = Object.keys(TONES)
-
-export function toneClass(tone: string | undefined): string {
-  return (tone && TONES[tone]) || TONES.neutral!
+/**
+ * Der Ton einer Option: ihr `tone`; ohne ihn beim Status die Rolle (open
+ * neutral, active warning, done success; Spec 06, Regel 18); sonst die
+ * Typfarbe des Items (`"type"`). Ohne Option (unbekannter Wert) neutral.
+ */
+export function optionTone(widget: string, option: { tone?: string; role?: string } | undefined): OptionTone | "type" {
+  if (!option) return "neutral"
+  if (option.tone && (OPTION_TONES as readonly string[]).includes(option.tone)) return option.tone as OptionTone
+  if (widget === "status") {
+    if (option.role === "open") return "neutral"
+    if (option.role === "active") return "warning"
+    if (option.role === "done") return "success"
+  }
+  return "type"
 }

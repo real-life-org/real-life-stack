@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -13,8 +11,6 @@ import {
   urlLabel,
   contactError,
   urlError,
-  toneClass,
-  CHIP_TONES,
 } from "../src/lib/field-values"
 
 /**
@@ -139,21 +135,17 @@ describe("number (B7): Zahl mit Einheit, Grenzen aus dem Register", () => {
   })
 })
 
-describe("Ton eines Chips", () => {
-  it("kennt eine feste Palette; Unbekanntes und nichts ist neutral", () => {
-    expect(toneClass("green")).toContain("green")
-    expect(toneClass("rose")).toContain("rose")
-    expect(toneClass("irgendwas")).toContain("bg-muted")
-    expect(toneClass(undefined)).toContain("bg-muted")
-  })
-})
-
-describe("Die Töne melden ihre Klassen an (wie die Tag-Palette)", () => {
-  it("jede Klasse eines farbigen Tons steht in globals.css als @source inline", () => {
-    const css = readFileSync(join(__dirname, "../src/styles/globals.css"), "utf8")
-    const angemeldet = new Set([...css.matchAll(/@source inline\(\s*"([^"]*)"\s*\)/g)].flatMap((m) => m[1]!.split(/\s+/)))
-    for (const tone of CHIP_TONES.filter((t) => t !== "neutral")) {
-      for (const klasse of toneClass(tone).split(/\s+/)) expect(angemeldet.has(klasse), `${tone}: ${klasse}`).toBe(true)
-    }
+describe("Ton einer Option (Design 27.09.)", () => {
+  it("tone gewinnt, sonst die Rolle (nur status), sonst die Typfarbe; ohne Option neutral", async () => {
+    const { optionTone, OPTION_TONES } = await import("../src/lib/field-values")
+    expect([...OPTION_TONES]).toEqual(["neutral", "warning", "success", "danger", "info"])
+    expect(optionTone("status", { role: "open" })).toBe("neutral")
+    expect(optionTone("status", { role: "active" })).toBe("warning")
+    expect(optionTone("status", { role: "done" })).toBe("success")
+    expect(optionTone("status", { role: "done", tone: "danger" })).toBe("danger")
+    expect(optionTone("status", {})).toBe("type")
+    expect(optionTone("select", { role: "done" })).toBe("type")
+    expect(optionTone("select", { tone: "info" })).toBe("info")
+    expect(optionTone("select", undefined)).toBe("neutral")
   })
 })
