@@ -36,7 +36,7 @@ export function fitCount(
  * die Karte springt nicht. Ohne Messung gilt `fallback`.
  */
 export function useFittingTags(
-  count: number,
+  tags: readonly string[],
   fallback: number,
   gapBetweenGroups: number,
 ): {
@@ -50,6 +50,9 @@ export function useFittingTags(
   const rowRef = useRef<HTMLDivElement | null>(null)
   const fixedRef = useRef<HTMLDivElement | null>(null)
   const measureRef = useRef<HTMLDivElement | null>(null)
+  const count = tags.length
+  // Neu messen, wenn sich der INHALT ändert, nicht nur die Anzahl (#514).
+  const contentKey = tags.join("\u0000")
   const [visible, setVisible] = useState(Math.min(count, fallback))
   // Erst nach dem Einhängen messen: Die Messzeile erscheint im selben
   // synchronen Durchlauf vor dem ersten Bild, also ohne Springen — und
@@ -73,10 +76,15 @@ export function useFittingTags(
     }
     update()
     if (typeof ResizeObserver === "undefined") return
+    // Zeile, Messzeile und Urheber: jede Breitenänderung (Schrift geladen,
+    // Name aufgelöst) misst neu. setVisible mit gleichem Wert rendert nicht
+    // erneut, darum schaukelt sich nichts auf.
     const observer = new ResizeObserver(update)
     observer.observe(row)
+    observer.observe(measure)
+    if (fixedRef.current) observer.observe(fixedRef.current)
     return () => observer.disconnect()
-  }, [count, fallback, gapBetweenGroups, measuring])
+  }, [count, contentKey, fallback, gapBetweenGroups, measuring])
 
   return { visible, measuring, rowRef, fixedRef, measureRef }
 }

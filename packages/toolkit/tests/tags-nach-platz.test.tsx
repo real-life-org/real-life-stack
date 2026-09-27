@@ -32,6 +32,8 @@ describe("fitCount", () => {
   })
 })
 
+let chipWidth = 60
+
 describe("ItemPreview misst die Tag-Zeile", () => {
   let host: HTMLDivElement
   let root: Root
@@ -46,7 +48,7 @@ describe("ItemPreview misst die Tag-Zeile", () => {
       get(this: HTMLElement) {
         const m = this.getAttribute("data-measure")
         if (m && widths.has(m)) return widths.get(m)
-        if (m === "tag-chip") return 60
+        if (m === "tag-chip") return chipWidth
         if (m === "tag-plus") return 30
         return 0
       },
@@ -74,5 +76,40 @@ describe("ItemPreview misst die Tag-Zeile", () => {
     const sichtbar = host.querySelectorAll('[data-visible-tag]')
     expect(sichtbar).toHaveLength(4)
     expect(host.textContent).toContain("+3")
+  })
+
+  it("#513: passt kein Chip, steht allein „+N“ mit allen Tags im Titel — auch ohne Urheber", async () => {
+    widths.set("tag-row", 152)
+    const zwei = { ...item, tags: ["lang-eins", "lang-zwei"] }
+    await act(async () => {
+      root.render(createElement(ItemPreview, { item: zwei, density: "compact", author: { id: "u", displayName: "U" } as never }))
+    })
+    // verfügbar 152 − 80 − 12 = 60: ein Chip (60) plus Zähler passt nicht, +2 (30) schon
+    expect(host.querySelectorAll("[data-visible-tag]")).toHaveLength(0)
+    const plus = [...host.querySelectorAll("span")].find((el) => el.textContent === "+2" && !el.closest('[aria-hidden="true"]'))
+    expect(plus?.getAttribute("title")).toBe("lang-eins, lang-zwei")
+
+    widths.set("tag-row", 60)
+    await act(async () => {
+      root.render(createElement(ItemPreview, { item: zwei, density: "compact", author: null }))
+    })
+    expect([...host.querySelectorAll("span")].some((el) => el.textContent === "+2" && !el.closest('[aria-hidden="true"]'))).toBe(true)
+    widths.set("tag-row", 400)
+  })
+
+  it("#514: gleiche Anzahl, andere Texte — die Zeile misst neu", async () => {
+    const kurz = { ...item, tags: ["a", "b"] }
+    await act(async () => {
+      root.render(createElement(ItemPreview, { item: kurz, density: "compact", author: { id: "u", displayName: "U" } as never }))
+    })
+    expect(host.querySelectorAll("[data-visible-tag]")).toHaveLength(2)
+    chipWidth = 250
+    const lang = { ...item, tags: ["sehr-lang-eins", "sehr-lang-zwei"] }
+    await act(async () => {
+      root.render(createElement(ItemPreview, { item: lang, density: "compact", author: { id: "u", displayName: "U" } as never }))
+    })
+    // 308 verfügbar: 250 + 6 + 30 = 286 → ein Chip und +1
+    expect(host.querySelectorAll("[data-visible-tag]")).toHaveLength(1)
+    chipWidth = 60
   })
 })

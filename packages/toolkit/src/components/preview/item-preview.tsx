@@ -277,7 +277,7 @@ export const ItemPreview = memo(function ItemPreview({
   // viele, wie hineinpassen (Anton, 27.09.2026). Gemessen an einer
   // unsichtbaren Zeile vor dem ersten Bild, darum springt die Karte nicht;
   // ohne Layout (Server, Tests) gilt die alte feste Zahl.
-  const tagFit = useFittingTags(tags.length, isCompact ? 1 : MAX_SICHTBARE_TAGS, 12)
+  const tagFit = useFittingTags(tags, isCompact ? 1 : MAX_SICHTBARE_TAGS, 12)
   const sichtbareTags = tags.slice(0, tagFit.visible)
   const verborgeneTags = tags.length - sichtbareTags.length
 
@@ -346,7 +346,7 @@ export const ItemPreview = memo(function ItemPreview({
           bleibt: Wer etwas geschrieben hat, ist die verlaesslichere Auskunft
           als der fuenfte Tag. Umbrechen darf hier nichts — sonst waechst die
           Karte je nach Anzahl der Tags unterschiedlich hoch. */}
-      {(sichtbareTags.length > 0 || author !== null) && (
+      {(tags.length > 0 || author !== null) && (
         <div ref={tagFit.rowRef} data-measure="tag-row" className="relative flex items-center gap-x-3 overflow-hidden">
           {tagFit.measuring && tags.length > 0 && (
             // Messzeile: alle Chips und ein „+N"-Muster, unsichtbar und ohne
@@ -366,7 +366,9 @@ export const ItemPreview = memo(function ItemPreview({
               </span>
             </div>
           )}
-          {sichtbareTags.length > 0 && (
+          {/* Auch ohne einen einzigen passenden Chip: dann steht allein „+N"
+              mit allen Tags im Titel, nie gar nichts (#513). */}
+          {tags.length > 0 && (
             <div className="flex min-w-0 shrink items-center gap-1.5 overflow-hidden">
               {sichtbareTags.map((tag) => (
                 <span key={tag} data-visible-tag className="shrink-0">
