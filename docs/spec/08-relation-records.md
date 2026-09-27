@@ -265,9 +265,22 @@ Regeln:
 7. **Aussagen über andere sind erlaubt.** Ein Record DARF eine andere Person als `from` tragen als seinen Autor: `createdBy` ist der Sprecher, der ihn signiert, `from` die Person, über die er spricht. Weil die `id` `createdBy` enthält (Regel 4), ist die Aussage eines anderen ein eigener Record neben dem der Person. Ändern und löschen darf jeder nur seine eigenen Records (Fassaden-Regel 7, creator-owns).
 8. Leseflächen MÜSSEN eine Aussage über andere als solche zeigen: „Timo zugesagt · eingetragen von Anton" (Beispiel für `going`). Sie DÜRFEN sie nicht als Selbstaussage der Person ausgeben.
 9. **Zählregel.** Wie mehrere Records zur selben Person und demselben Item zusammenwirken, deklariert das Register je Kante (`EdgeEntry.count`):
-   - `one-per-person` („eine je Person, eigene gewinnt"): Je Person gilt ihre Selbstaussage (`createdBy` = Identität von `from`). Fehlt sie, gilt die jüngste Aussage eines anderen. Die Person überstimmt jede fremde Aussage durch eine eigene, auch durch eine ablehnende (`declined`). Löscht sie ihren eigenen Record, hat sie keine Aussage mehr, und es gilt wieder die jüngste fremde. Form für Zusagen, die in der Zukunft liegen.
+   - `one-per-person` („eine je Person, eigene gewinnt"): Je Person gilt ihre Selbstaussage (`createdBy` = Identität von `from`). Fehlt sie, gilt die jüngste Aussage eines anderen. Die Person überstimmt jede fremde Aussage durch eine eigene, auch durch eine ablehnende (`declined`). Löscht sie ihren eigenen Record, hat sie keine Aussage mehr, und es gilt wieder die jüngste fremde. Form für Zusagen, die in der Zukunft liegen. Die Auswahl regelt „Gewinner unter `one-per-person`" unten.
    - `collect-accepted` („sammeln, Person nimmt an"): Die Aussagen addieren sich, keine überstimmt eine andere. Öffentlich angezeigt wird eine Aussage über eine Person erst, wenn diese sie angenommen hat ([05 → UI-Regeln](05-confirmations-and-trust.md#ui-regeln), Regel 5, `isAccepted`). Das ist die Form für spätere Teilnahme-Bestätigungen („war dabei, bestätigt von Maria und Jonas"); Bestätigungen selbst regelt 05, nicht dieser Abschnitt.
 10. Wer Personen-Kanten neu schreibt (Composer-Mapper), MUSS `meta.role` jeder Person erhalten, deren Kante bestehen bleibt ([shared-components.md → Personenfelder](modules/shared-components.md#personenfelder-people), Regel 6).
+
+### Gewinner unter `one-per-person`
+
+Für eine Person und ein Item bestimmen alle Clients denselben Record:
+
+1. Es nehmen nur Records teil, die nach dieser Spec gelten: nach Leseregel L1 gezählt (`valid` oder `trusted`), nicht `invalid` (L2), mit genau einem `from` und `to` (Regel 8 oben).
+2. Je Sprecher und Person gibt es höchstens einen Record, weil die `id` aus (`createdBy`, `predicate`, `from`, `to`) folgt (Regel 4 oben). Das gilt auch für `attends`: `to` ist das Event, `from` die Person, `createdBy` der Sprecher.
+3. Die Selbstaussage (`createdBy` = Identität von `from`) gewinnt immer, unabhängig von jedem Zeitpunkt.
+4. Sonst gewinnt die Fremdaussage mit dem jüngsten Zeitpunkt. Der Zeitpunkt ist `createdAt` aus dem Payload des verifizierten Claims (`relation-authorial` bindet `createdAt`; ein Feld für den Änderungszeitpunkt hat das Payload nicht). Ohne Claim (Modus `authoritative`) gilt `updatedAt` des Relation-Items, fehlt es, `createdAt`.
+5. Bei gleichem Zeitpunkt gewinnt der Record mit der lexikographisch größten `id` (Vergleich nach UTF-16-Codeeinheiten wie in JCS). Das Ergebnis MUSS auf allen Clients gleich sein und DARF nicht von Lade- oder Sync-Reihenfolge abhängen.
+6. Grenze: Zeitstempel sind Angaben des Sprechers und beweisen keine Reihenfolge. Die Regel sichert gleiche Ergebnisse auf allen Clients, nicht die Wahrheit über die Reihenfolge. Weil das Claim-Payload nur `createdAt` bindet, verschiebt eine spätere Änderung der `role` durch den Sprecher den Zeitpunkt seiner Aussage im Modus `signed` nicht.
+
+Testvektor (nichtnormativ): Anton und Jonas sagen über Timo aus, Timo selbst nicht. Anton: `role: "going"`, `id: "rel-3f…"`; Jonas: `role: "declined"`, `id: "rel-a1…"`; beide mit `createdAt: "2026-09-27T10:00:00.000Z"`. Gewinner ist Jonas' Record (`"rel-a1…" > "rel-3f…"`), die Zeile zeigt Timo nicht (`declined`, siehe „Teilnahme am Event"). Sagt Timo danach selbst `maybe`, gewinnt seine Aussage, gleich wann sie entstand.
 
 ### Teilnahme am Event: `attends` und `invited`
 
