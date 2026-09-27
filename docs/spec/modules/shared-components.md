@@ -732,7 +732,7 @@ Das Formular führt den Space als eigenen Zustand, den **Formular-Space**. Er is
 
 Regeln:
 
-1. **Vorauswahl.** Beim Erstellen ist der Formular-Space der geöffnete Space. Ist keiner geöffnet (Übersicht), ist er „Privat" (`getPersonalGroupId()`); hat der Connector keinen persönlichen Space, ist keiner gesetzt. Ein Kontext DARF ihn fest vorgeben (Varianten, [Edit-Regeln](#edit-regeln), Regel 9). Beim Bearbeiten ist er der Space des Items (`getItemGroupId()`).
+1. **Vorauswahl.** Beim Erstellen ist der Formular-Space der geöffnete Space. Ist keiner geöffnet (Übersicht), ist er „Privat" (`getPersonalGroupId()`). Hat der Connector keinen persönlichen Space, ist der einzige mögliche Space vorausgewählt; gibt es mehrere, ist keiner gesetzt. Ein Kontext DARF ihn fest vorgeben (Varianten, [Edit-Regeln](#edit-regeln), Regel 9). Beim Bearbeiten ist er der Space des Items (`getItemGroupId()`).
 2. **Eine Quelle.** Nach dem Öffnen DARF das Formular den Space nur aus dem Formular-Space lesen, nie aus dem geöffneten Space (`getCurrentGroup()`). Nur die Auswahl im Kopf ändert ihn. Wechselt die App den geöffneten Space, während das Formular offen ist, bleibt der Formular-Space.
 3. **Weitergabe.** Jeder Teil des Formulars, der vom Space abhängt, bekommt den Formular-Space:
 

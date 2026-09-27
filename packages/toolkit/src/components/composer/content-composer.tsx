@@ -906,9 +906,13 @@ export function ContentComposer({
   const [isPublic, setIsPublic] = React.useState(defaultPublic)
   // Genau ein möglicher Space: Er steht fest im Kopf und MUSS dann auch
   // gesetzt sein — eine Anzeige, die beim Speichern nicht gilt, täuscht.
-  // Kein Setzen „weil es nur einen gibt“: Den Formular-Space setzen nur die
-  // Vorauswahl (defaultGroup, ein fester Kontext) und die Wahl im Kopf
-  // (Space des Formulars, Regeln 1 und 8; Codex R2/2).
+  // Genau ein möglicher Space ist beim Erstellen vorausgewählt (Space des
+  // Formulars, Regel 1): Er steht fest im Kopf und gilt dann auch. Beim
+  // Bearbeiten gibt allein der Space des Items vor, sonst verschöbe Speichern.
+  const onlySpace = !isEditMode && currentConfig?.groupOptions?.length === 1 ? currentConfig.groupOptions[0]!.id : undefined
+  React.useEffect(() => {
+    if (onlySpace && !data.group) setData((d) => (d.group ? d : { ...d, group: onlySpace }))
+  }, [onlySpace, data.group])
   // Der Formular-Space (shared-components → Space des Formulars): EINE
   // Quelle, `data.group`. Suche, Vorschläge, Prüfung und Speichern lesen ihn
   // von hier, nie den geöffneten Space der App.

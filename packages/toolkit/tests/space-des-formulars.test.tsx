@@ -419,16 +419,30 @@ describe("Codex R1/5: Bearbeiten ohne bekannten Space verschiebt nicht", () => {
 })
 
 describe("Codex R1/6: Pflicht auch bei nur einem möglichen Space", () => {
-  it("withGroupOptions bildet einen einzelnen Space ab; ohne Vorauswahl ist er zu wählen (R2/2)", async () => {
+  it("withGroupOptions: genau ein möglicher Space ist vorausgewählt (Regel 1, Anton 27.09.)", async () => {
     const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }], undefined, null)
     expect(types[0]!.groupOptions?.map((o) => o.id)).toEqual(["g"])
-    expect(types[0]!.defaultGroup).toBeUndefined()
+    expect(types[0]!.defaultGroup).toBe("g")
     await render(createElement(ItemComposer, {
       contentTypes: types, initialContentType: "task", mapper: mapComposerSubmission,
       initialData: { title: "T" }, onDone: () => {}, onCancel: () => {},
     }))
-    expect(host.querySelector('button[aria-label^="Space wählen"]')?.getAttribute("aria-invalid")).toBe("true")
-    expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Erstellen")?.disabled).toBe(true)
+    expect(host.querySelector('button[aria-label^="Space wählen"]')).toBeNull()
+    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain("Garten")
+    expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Erstellen")?.disabled).toBe(false)
+  })
+
+  it("beim Bearbeiten setzt auch ein einziger möglicher Space nichts (Regel 1: der Space des Items)", async () => {
+    const move = vi.spyOn(connector, "moveItemToGroup")
+    const seen: Array<Record<string, unknown>> = []
+    await render(createElement(ItemComposer, {
+      contentTypes: [{ ...contentTypeFromRegister("task"), groupOptions: [{ id: "g", name: "Garten" }] }],
+      initialContentType: "task", existingItem: item("t-y", "task", { title: "Y" }),
+      mapper: mapComposerSubmission, initialData: { title: "Y" }, onDone: () => {}, onCancel: () => {},
+      composerProps: { onChange: (d: { data: Record<string, unknown> }) => seen.push(d.data) } as never,
+    }))
+    expect(seen.at(-1)?.group ?? "").toBe("")
+    expect(move).not.toHaveBeenCalled()
   })
 
   it("Bearbeiten ohne bekannten Space bei Beziehungen: „Space unbekannt“, nie eine erfundene Gruppe (R2/3)", async () => {

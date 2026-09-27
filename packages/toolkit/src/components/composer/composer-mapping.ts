@@ -302,10 +302,11 @@ export function withGroupOptions(
 
   // Default to the current space; in the personal/overview view (no concrete
   // space) default to „Privat" so a new item stays private unless shared.
+  // Genau ein möglicher Space ist vorausgewählt (Space des Formulars, Regel 1).
   const defaultGroup =
     currentGroupId && options.some((o) => o.id === currentGroupId)
       ? currentGroupId
-      : personalGroupId ?? undefined
+      : personalGroupId ?? (options.length === 1 ? options[0]!.id : undefined)
   return types.map((t) => ({
     ...t,
     groupOptions: options,
