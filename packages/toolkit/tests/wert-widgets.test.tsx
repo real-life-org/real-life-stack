@@ -706,3 +706,18 @@ describe("Codex R3", () => {
     await r.unmount()
   })
 })
+
+describe("#544: Zahlen werden nie still gerundet", () => {
+  it("Lesen: 0,001 kg erscheint als 0,001 kg", async () => {
+    const { container, unmount } = await meta([f("weight", "number", { label: "Gewicht", unit: "kg" })], { weight: 0.001 })
+    expect(row(container, "weight")!.textContent).toContain("0,001 kg")
+    await unmount()
+  })
+
+  it("Schreiben: das Feld zeigt den gespeicherten Wert unverändert", () => {
+    const typ = karte([{ key: "weight", widget: "number", label: "Gewicht", unit: "kg" }])
+    const { editInitialData } = createComposerMapping([typ])
+    const alt = { id: "c", type: "card", createdAt: "x", createdBy: "u", data: { title: "N", weight: 0.001 } } as Item
+    expect(editInitialData(alt).weight).toBe("0.001")
+  })
+})

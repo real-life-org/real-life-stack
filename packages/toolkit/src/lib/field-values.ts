@@ -108,9 +108,13 @@ export function numberError(input: unknown, range: { min?: number; max?: number 
   return null
 }
 
-/** Deutsch geschrieben, mit Einheit dahinter („1.500 €"). */
+/**
+ * Deutsch geschrieben, mit Einheit dahinter („1.500 €"). Nie gerundet: Das
+ * Register kennt keine Genauigkeit, also steht der gespeicherte Wert
+ * ungekürzt da — 0,001 kg bleibt 0,001 kg, nie „0 kg" (#544).
+ */
 export function formatNumber(value: number, unit?: string): string {
-  const text = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 }).format(value)
+  const text = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 20 }).format(value)
   return unit ? `${text} ${unit}` : text
 }
 

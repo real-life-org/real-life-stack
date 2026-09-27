@@ -103,6 +103,14 @@ describe("number (B7): Zahl mit Einheit, Grenzen aus dem Register", () => {
     expect(numberError("abc", {})).toMatch(/Zahl/)
   })
 
+  it("#544: formatNumber kürzt nie still — 0,001 kg bleibt 0,001 kg", () => {
+    expect(formatNumber(0.001, "kg")).toBe("0,001 kg")
+    expect(formatNumber(12, "h")).toBe("12 h")
+    expect(formatNumber(12.5)).toBe("12,5")
+    expect(formatNumber(0.123456789)).toBe("0,123456789")
+    expect(formatNumber(1e-7)).not.toMatch(/^0$/)
+  })
+
   it("formatNumber schreibt deutsch mit Einheit", () => {
     expect(formatNumber(12, "h")).toBe("12 h")
     expect(formatNumber(1500, "€")).toBe("1.500 €")
