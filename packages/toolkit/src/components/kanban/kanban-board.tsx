@@ -8,6 +8,8 @@ import {
 } from "../../lib/selection-focus"
 import { ItemPreview } from "../preview/item-preview"
 import { ItemAssignees } from "../preview/item-assignees"
+import { qualifierLabel } from "../preview/people-line"
+import { resolveTypePresentation } from "../preview/type-presentation"
 import { ItemCommentCount } from "../preview/item-comment-count"
 import { normalizeStatus } from "./reorder"
 import { EyeOff, Eye, ChevronDown, ChevronRight } from "lucide-react"
@@ -57,10 +59,19 @@ interface DropTarget {
   index: number
 }
 
-function getAssigneeIds(item: Item): string[] {
+/**
+ * Die Zugewiesenen einer Karte mit dem Qualifier ihrer Kante (`role`: can |
+ * learns, fehlend = can; Spec 06, Regeln 7 und 20) — beschriftet aus dem
+ * Register des Typs, nie über die Id.
+ */
+function getAssignees(item: Item): { id: string; qualifier?: string }[] {
+  const edge = resolveTypePresentation(item.type).edges?.find((e) => e.predicate === "assignedTo" && e.itemRole === "from")
   return (item.relations ?? [])
     .filter((r: Relation) => r.predicate === "assignedTo")
-    .map((r: Relation) => r.target.replace(/^global:/, ""))
+    .map((r: Relation) => {
+      const qualifier = edge?.qualifier ? qualifierLabel(edge, r.meta?.[edge.qualifier.key]) : undefined
+      return { id: r.target.replace(/^global:/, ""), ...(qualifier ? { qualifier } : {}) }
+    })
 }
 
 
@@ -87,9 +98,11 @@ interface KanbanCardProps {
 }
 
 const KanbanCard = memo(function KanbanCard({ item, users, readOnly, isDragged, active, renderAdornment, glowColor, onDragStart, onDragEnd, onClick }: KanbanCardProps) {
-  const assigneeIds = getAssigneeIds(item)
   const userMap = new Map((users ?? []).map((u) => [u.id, u]))
-  const assignees = assigneeIds.map((id) => userMap.get(id)).filter((u): u is User => u != null)
+  const assignees = getAssignees(item).flatMap(({ id, qualifier }) => {
+    const user = userMap.get(id)
+    return user ? [{ ...user, ...(qualifier ? { qualifier } : {}) }] : []
+  })
   const commentCount = (item.data.commentCount as number | undefined) ?? 0
   const showFooter = assignees.length > 0 || commentCount > 0
 

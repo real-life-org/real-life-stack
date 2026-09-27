@@ -70,6 +70,16 @@ function declared(edge: EdgeEntry, value: unknown): FieldOption | undefined {
   return edge.qualifier?.values.find((option) => option.id === value)
 }
 
+/**
+ * Der Anzeigetext eines Qualifier-Werts an einer Kante: nur ein deklarierter
+ * Wert hat einen; ein fehlender (default) und ein unbekannter zeigen keinen
+ * (Spec 06, Regel 7).
+ */
+export function qualifierLabel(edge: Pick<EdgeEntry, "qualifier"> | undefined, value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined
+  return edge?.qualifier?.values.find((option) => option.id === value)?.label
+}
+
 /** Ein Wort ohne Qualifier: die Beschriftung der Kante, klein wie ein Qualifier („eingeladen"). */
 function edgeWord(edge: EdgeEntry): string {
   return edge.label.charAt(0).toLocaleLowerCase("de") + edge.label.slice(1)

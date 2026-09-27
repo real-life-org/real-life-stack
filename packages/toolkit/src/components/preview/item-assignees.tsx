@@ -24,8 +24,16 @@ import { cn } from "../../lib/utils"
  *   "A + N weitere" for three or more
  * - Hover-tooltip with the full comma-separated list
  */
+/**
+ * Eine zugewiesene Person, optional mit dem Anzeigetext ihres Qualifiers an
+ * der Kante („lernt" für `assignedTo.role: learns`). Er steht klein hinter
+ * dem Namen, wie in der Menschen-Zeile (shared-components, Detail-Anatomie
+ * Regel 5); ein fehlender Qualifier (default) steht nicht da.
+ */
+export type ItemAssigneeUser = User & { qualifier?: string }
+
 export interface ItemAssigneesProps {
-  users: readonly User[]
+  users: readonly ItemAssigneeUser[]
   className?: string
 }
 
@@ -37,14 +45,16 @@ function getInitials(name: string): string {
 export function ItemAssignees({ users, className }: ItemAssigneesProps) {
   if (users.length === 0) return null
 
+  // „Timo lernt": der Qualifier klein hinter dem Namen.
+  const named = (u: ItemAssigneeUser) => `${u.displayName ?? u.id}${u.qualifier ? ` ${u.qualifier}` : ""}`
   const summary =
     users.length === 1
-      ? users[0].displayName ?? users[0].id
+      ? named(users[0])
       : users.length === 2
-        ? `${users[0].displayName ?? users[0].id}, ${users[1].displayName ?? users[1].id}`
-        : `${users[0].displayName ?? users[0].id} + ${users.length - 1} weitere`
+        ? `${named(users[0])}, ${named(users[1])}`
+        : `${named(users[0])} + ${users.length - 1} weitere`
 
-  const fullList = users.map((u) => u.displayName ?? u.id).join(", ")
+  const fullList = users.map(named).join(", ")
 
   return (
     <Tooltip>
