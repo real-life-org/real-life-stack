@@ -23,6 +23,7 @@ import {
   VOCAB_RESOURCE,
   VOCAB_TASK,
 } from "./vocab.js"
+import type { RelationPredicateDefinition } from "./relation-records.js"
 
 /** Which role THIS item plays on an edge. `either` is for symmetric
  *  predicates only (08 canonicalizes their endpoints — there is no direction). */
@@ -229,13 +230,49 @@ export const TOOLKIT_TYPE_MANIFEST = [
   {
     id: "task",
     vocabularies: [VOCAB_TASK],
-    relations: [{ predicate: "assignedTo", itemRole: "from", otherKind: "person" }],
+    // S3 (Spec 06, Register je Typ): Eine Aufgabe blockiert andere und wird
+    // blockiert („Ermöglicht" · „Braucht", beide Rollen am selben Typ, Regel
+    // 1) und ist Teil eines Projekts. Beide Prädikate sind gerichtet und
+    // eingebettet (04; 08, Regel 9: feste Forward-Beziehungen des Trägers);
+    // ihre Definition steht in TOOLKIT_RELATION_PREDICATES.
+    relations: [
+      { predicate: "assignedTo", itemRole: "from", otherKind: "person" },
+      { predicate: "partOf", itemRole: "from", otherKind: "project" },
+      { predicate: "blocks", itemRole: "from", otherKind: "task" },
+      { predicate: "blocks", itemRole: "to", otherKind: "task" },
+    ],
   },
   { id: "person", vocabularies: [VOCAB_PERSON] },
   { id: "project", vocabularies: [VOCAB_PROJECT] },
   { id: "resource", vocabularies: [VOCAB_RESOURCE] },
   STATEMENT_TYPE_DEFINITION,
 ] as const satisfies readonly TypeManifestEntry[]
+
+/**
+ * Relation-Typ-Definitionen der Prädikate, die das Toolkit-Manifest führt
+ * (Spec 06, Verhältnis zu Relations, Regel 3; 08, Regel 3): Ein Prädikat im
+ * Typ-Register MUSS definiert sein. Heute App-Konfiguration in derselben Form
+ * wie der Katalog der Netzwerk-App; Ziel ist die versionierte
+ * RelationTypeDefinition im Space. `symmetric` bestimmt die Kanonisierung
+ * der Endpunkte und damit Relation-Ids — ein gesetztes Flag zu ändern heißt
+ * Ids migrieren. Alle Toolkit-Prädikate sind gerichtet.
+ *
+ * - `assignedTo` (Aufgabe → Person), `invited` (Event → Person): eingebettet.
+ * - `attends` (Person → Event), `votesOn` (Person → Aussage): Records, authorial.
+ * - `blocks` (Aufgabe → Aufgabe, „Ermöglicht"/„Braucht"): eingebettet am
+ *   blockierenden Item, 0..n.
+ * - `partOf` (Aufgabe → Projekt, „Teil von"): eingebettet an der Aufgabe.
+ *   Dasselbe Prädikat führt die Netzwerk-App als Record (Person → Projekt);
+ *   gleiche Richtung, anderer Mechanismus (08, Regel 9).
+ */
+export const TOOLKIT_RELATION_PREDICATES = [
+  { predicate: "assignedTo", symmetric: false },
+  { predicate: "invited", symmetric: false },
+  { predicate: "attends", symmetric: false },
+  { predicate: "votesOn", symmetric: false },
+  { predicate: "blocks", symmetric: false },
+  { predicate: "partOf", symmetric: false },
+] as const satisfies readonly RelationPredicateDefinition[]
 
 /** Toolkit type ids, derived from the manifest — never maintained as a list. */
 export type ToolkitItemTypeId = (typeof TOOLKIT_TYPE_MANIFEST)[number]["id"]

@@ -52,6 +52,9 @@ describe("type manifest composition", () => {
     expect(manifest.ids).toEqual([...TOOLKIT_TYPE_MANIFEST.map((t) => t.id), "sighting"])
     expect(manifest.get("task")?.relations).toEqual([
       { predicate: "assignedTo", itemRole: "from", otherKind: "person" },
+      { predicate: "partOf", itemRole: "from", otherKind: "project" },
+      { predicate: "blocks", itemRole: "from", otherKind: "task" },
+      { predicate: "blocks", itemRole: "to", otherKind: "task" },
     ])
   })
 
@@ -71,14 +74,15 @@ describe("type manifest composition", () => {
         extensions: [{
           id: "task",
           relations: [
-            { predicate: "blocks", itemRole: "from", otherKind: "item" },
-            { predicate: "blocks", itemRole: "to", otherKind: "item" },
+            { predicate: "follows", itemRole: "from", otherKind: "item" },
+            { predicate: "follows", itemRole: "to", otherKind: "item" },
           ],
         }],
       }),
     ])
-    // Both roles of the same predicate coexist — the key is the PAIR.
-    expect(manifest.get("task")?.relations).toHaveLength(3)
+    // Both roles of the same predicate coexist — the key is the PAIR (the
+    // toolkit's own task already carries `blocks` in both roles, S3).
+    expect(manifest.get("task")?.relations).toHaveLength(6)
   })
 
   it("rejects a fragment addressing an unknown id", () => {
