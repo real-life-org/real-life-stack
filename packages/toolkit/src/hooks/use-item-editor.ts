@@ -288,9 +288,14 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
         }
 
         const update = buildUpdatePayload(mapped, existingItem!)
-        const updated = submitOptions?.resume && sameAsStored(update, existingItem!)
-          ? existingItem!
-          : await updateItem(existingItem!.id, update)
+        const unchanged = submitOptions?.resume && sameAsStored(update, existingItem!)
+        // Fortsetzen mit geänderten Feldern: Bearbeiten erreicht nur Items im
+        // geöffneten Space. Liegt das angelegte Item woanders, sagt das
+        // Formular es, statt zu scheitern oder etwas vorzutäuschen (Codex R2/1).
+        if (submitOptions?.resume && !unchanged && !(await connector.getItem(existingItem!.id))) {
+          throw new Error("Schon in einem anderen Space angelegt – Änderungen dort bearbeiten; ohne Änderung setzt „Erneut“ fort")
+        }
+        const updated = unchanged ? existingItem! : await updateItem(existingItem!.id, update)
         submitOptions?.onPersisted?.(updated)
         await applyItemGroup(connector, updated.id, submission.data.group)
         await applyStatements(connector, updated, mapped.statements)

@@ -635,14 +635,17 @@ function SpaceLogo({ option, size = "sm" }: { option?: GroupOption; size?: "sm" 
 
 function SpacePill({ value, options, required, fixedReason: fixedBy, lockedReason, onChange }: NonNullable<ComposerHeadProps["space"]>) {
   const selected = options.find((o) => o.id === value)
-  // Mit Beziehungen fest wie der feste Space einer Variante (Regel 5).
-  const choosable = options.length > 1 && !(lockedReason && selected)
+  // Mit Beziehungen fest wie der feste Space einer Variante (Regel 5). Ohne
+  // gesetzten Space ist auch eine einzige Option zu wählen, statt als gesetzt
+  // zu erscheinen (Regeln 1 und 8).
+  const choosable = (options.length > 1 || (!selected && !fixedBy)) && !(lockedReason && selected)
   const fixedReason = (selected && lockedReason) || fixedBy
   const missing = required && !value
   const [query, setQuery] = React.useState("")
   const searchRef = React.useRef<HTMLInputElement>(null)
   if (!choosable) {
-    const only = selected ?? options[0]
+    // Nur der tatsächliche Wert; ohne ihn „Space unbekannt“ (Codex R2/3).
+    const only = selected
     const fixed = (
       <span
         data-slot="composer-space"
@@ -651,8 +654,8 @@ function SpacePill({ value, options, required, fixedReason: fixedBy, lockedReaso
         tabIndex={fixedReason ? 0 : undefined}
         className="inline-flex h-7 min-w-0 items-center gap-1.5 rounded-full text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       >
-        <SpaceLogo option={only} />
-        <span className="truncate">{only?.name}</span>
+        {only && <SpaceLogo option={only} />}
+        <span className="truncate">{only?.name ?? "Space unbekannt"}</span>
         {fixedReason && <span className="sr-only">{`: ${fixedReason}`}</span>}
       </span>
     )
@@ -903,12 +906,9 @@ export function ContentComposer({
   const [isPublic, setIsPublic] = React.useState(defaultPublic)
   // Genau ein möglicher Space: Er steht fest im Kopf und MUSS dann auch
   // gesetzt sein — eine Anzeige, die beim Speichern nicht gilt, täuscht.
-  // Nur beim Erstellen: Beim Bearbeiten gibt allein der Space des Items vor
-  // (Space des Formulars, Regel 1), sonst verschöbe Speichern.
-  const onlySpace = !isEditMode && currentConfig?.groupOptions?.length === 1 ? currentConfig.groupOptions[0]!.id : undefined
-  React.useEffect(() => {
-    if (onlySpace && !data.group) setData((d) => (d.group ? d : { ...d, group: onlySpace }))
-  }, [onlySpace, data.group])
+  // Kein Setzen „weil es nur einen gibt“: Den Formular-Space setzen nur die
+  // Vorauswahl (defaultGroup, ein fester Kontext) und die Wahl im Kopf
+  // (Space des Formulars, Regeln 1 und 8; Codex R2/2).
   // Der Formular-Space (shared-components → Space des Formulars): EINE
   // Quelle, `data.group`. Suche, Vorschläge, Prüfung und Speichern lesen ihn
   // von hier, nie den geöffneten Space der App.

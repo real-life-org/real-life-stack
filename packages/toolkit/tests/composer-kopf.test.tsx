@@ -146,7 +146,11 @@ describe("Reihenfolge: Titel → Beschreibung → Meta-Felder → Tags", () => {
 })
 
 describe("Codex Runde 4: der Space im Kopf", () => {
-  it("genau ein möglicher Space ohne Vorgabe wird gesetzt und gespeichert", async () => {
+  // S3b A (Space des Formulars, Regeln 1 und 8; Codex R2/2): Ohne Vorauswahl
+  // ist kein Space gesetzt, auch wenn es nur einen gibt. Die Pille zeigt
+  // nichts, was beim Speichern nicht gilt: Sie ist wählbar, und bis zur Wahl
+  // ist Erstellen gesperrt.
+  it("genau ein möglicher Space ohne Vorgabe: wählbar, Erstellen erst nach der Wahl", async () => {
     const [task] = pickContentTypes("task")
     let submitted: Record<string, unknown> | undefined
     await render({
@@ -155,9 +159,12 @@ describe("Codex Runde 4: der Space im Kopf", () => {
       initialData: { title: "T" },
       onSubmit: ({ data }) => { submitted = data },
     })
-    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain("Garten")
-    const speichern = [...host.querySelectorAll("button")].find((b) => b.textContent?.includes("Erstellen"))!
-    await act(async () => speichern.click())
+    const erstellen = () => [...host.querySelectorAll("button")].find((b) => b.textContent?.includes("Erstellen"))!
+    expect(spaceSelect()?.getAttribute("aria-invalid")).toBe("true")
+    expect(erstellen().disabled).toBe(true)
+    await openMenu(spaceSelect()!)
+    await choose("Garten")
+    await act(async () => erstellen().click())
     expect(submitted?.group).toBe("a")
   })
 

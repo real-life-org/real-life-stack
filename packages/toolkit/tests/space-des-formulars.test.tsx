@@ -374,6 +374,19 @@ describe("Codex R1/2+3: Erneut nach teilweisem Anlegen in einem anderen Space", 
     // Schon angelegt: kein Umzug mehr über die Kopfauswahl (Regel 5/6).
     expect(host.querySelector('button[aria-label^="Space wählen"]')).toBeNull()
     expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain("Hof")
+    // Mit geändertem Titel: klare Meldung statt eines scheiternden Updates im geöffneten Space (R2/1).
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(title, "Hoffest 2")
+      title.dispatchEvent(new Event("input", { bubbles: true }))
+    })
+    await act(async () => button("Erneut")!.click())
+    await settle()
+    expect(host.querySelector('[data-slot="save-error"]')?.textContent).toContain("anderen Space angelegt")
+    expect(await connector.getItems({ type: "relation", group: "h" })).toHaveLength(0)
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(title, "Hoffest")
+      title.dispatchEvent(new Event("input", { bubbles: true }))
+    })
     const update = vi.spyOn(connector, "updateItem")
     await act(async () => button("Erneut")!.click())
     await settle()
@@ -406,17 +419,27 @@ describe("Codex R1/5: Bearbeiten ohne bekannten Space verschiebt nicht", () => {
 })
 
 describe("Codex R1/6: Pflicht auch bei nur einem möglichen Space", () => {
-  it("withGroupOptions bildet einen einzelnen Space ab; das Formular setzt ihn", async () => {
+  it("withGroupOptions bildet einen einzelnen Space ab; ohne Vorauswahl ist er zu wählen (R2/2)", async () => {
     const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }], undefined, null)
     expect(types[0]!.groupOptions?.map((o) => o.id)).toEqual(["g"])
-    const seen: Array<Record<string, unknown>> = []
+    expect(types[0]!.defaultGroup).toBeUndefined()
     await render(createElement(ItemComposer, {
       contentTypes: types, initialContentType: "task", mapper: mapComposerSubmission,
       initialData: { title: "T" }, onDone: () => {}, onCancel: () => {},
-      composerProps: { onChange: (d: { data: Record<string, unknown> }) => seen.push(d.data) } as never,
     }))
-    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain("Garten")
-    expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Erstellen")?.disabled).toBe(false)
+    expect(host.querySelector('button[aria-label^="Space wählen"]')?.getAttribute("aria-invalid")).toBe("true")
+    expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Erstellen")?.disabled).toBe(true)
+  })
+
+  it("Bearbeiten ohne bekannten Space bei Beziehungen: „Space unbekannt“, nie eine erfundene Gruppe (R2/3)", async () => {
+    await render(createElement(ItemComposer, {
+      contentTypes: [{ ...contentTypeFromRegister("task"), groupOptions: [{ id: "g", name: "Garten" }], groupFixedReason: "fest" }],
+      initialContentType: "task", existingItem: item("t-x", "task", { title: "X" }),
+      mapper: mapComposerSubmission, initialData: { title: "X" }, onDone: () => {}, onCancel: () => {},
+    }))
+    const head = host.querySelector('[data-slot="composer-space"]')?.textContent ?? ""
+    expect(head).toContain("Space unbekannt")
+    expect(head).not.toContain("Garten")
   })
 
   it("ohne jeden Space (keine Gruppen, kein persönlicher) keine Space-Konfiguration", () => {
