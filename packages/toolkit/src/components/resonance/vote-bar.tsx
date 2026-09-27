@@ -75,7 +75,10 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
     [canVote, vote],
   )
 
-  if (summary.total === 0 && !canVote) return null
+  // Nothing to show only when there are no votes, no own vote AND no known
+  // non-participation: „N ohne Stimme" is evaluation information in its own
+  // right, also for readers without voting rights (resonance.md → Auswertung).
+  if (summary.total === 0 && !canVote && !(summary.noVote && summary.noVote > 0)) return null
 
   return (
     // Voting is its own interaction — it must never bubble into the card's
