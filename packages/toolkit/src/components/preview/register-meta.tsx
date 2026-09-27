@@ -14,7 +14,7 @@ import { formatEventRange } from "./item-meta-row"
 import { metaRowOrder, type EdgeEntry, type FieldEntry, type MetaRow } from "./field-register"
 import type { PeopleLineEntry } from "./people-line"
 import { PeopleLineRow } from "./people-line-row"
-import { usePeopleLine } from "./use-people-line"
+import { usePeopleLines } from "./use-people-line"
 
 /**
  * `RegisterMeta` — die Meta-Box eines Items aus seiner Feld- und Kantenliste.
@@ -51,39 +51,29 @@ export function RegisterMeta({ item, fields, edges, className }: RegisterMetaPro
   const resolveName = useUserNameResolver()
   const resolveUser = (id: string): User | undefined =>
     members.find((m) => m.id === id) ?? (currentUser?.id === id ? currentUser : undefined)
-  const line = usePeopleLine(item, edges)
-  const people = line.filter((entry) => resolveUser(entry.userId))
+  const lines = usePeopleLines(item, edges)
+  const peopleFor = (edge: EdgeEntry) =>
+    (lines.find((line) => line.edges[0] === edge)?.entries ?? []).filter((entry) => resolveUser(entry.userId))
 
-  const rows = collapsePeople(metaRowOrder(fields, edges)).filter(
-    (row) => hasReader(row) && (row.kind === "edge" ? people.length > 0 : hasValue(row, item)),
-  )
+  // Eine Zeile je Menschen-Zeile: Kanten, die per `joins` eine andere teilen,
+  // stehen an deren Stelle (shared-components, Detail-Anatomie, Regel 5).
+  const rows = metaRowOrder(fields, edges).filter((row) => {
+    if (!hasReader(row)) return false
+    if (row.kind === "edge") return peopleFor(row.entry).length > 0
+    return hasValue(row, item)
+  })
   if (rows.length === 0) return null
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       {rows.map((row) =>
         row.kind === "edge" ? (
-          <PeopleRow key={rowKey(row)} edge={row.entry} entries={people} resolveUser={resolveUser} resolveName={resolveName} currentUserId={currentUser?.id} />
+          <PeopleRow key={rowKey(row)} edge={row.entry} entries={peopleFor(row.entry)} resolveUser={resolveUser} resolveName={resolveName} currentUserId={currentUser?.id} />
         ) : (
           <MetaRowView key={rowKey(row)} row={row} item={item} />
         ),
       )}
     </div>
   )
-}
-
-/**
- * Eine Menschen-Zeile je Typ: Alle Personen-Kanten der Meta-Box fließen in
- * die Zeile der ersten (das Event führt Eingeladene und Zusagen zusammen,
- * shared-components, Detail-Anatomie, Regel 5).
- */
-function collapsePeople(rows: MetaRow[]): MetaRow[] {
-  let seen = false
-  return rows.filter((row) => {
-    if (row.kind !== "edge" || row.entry.widget !== "people") return true
-    if (seen) return false
-    seen = true
-    return true
-  })
 }
 
 type ResolveUser = (id: string) => User | undefined
@@ -99,9 +89,11 @@ export function RegisterPeopleStack({ item, edges }: { item: Item; edges?: reado
   const { data: currentUser } = useOptionalCurrentUser()
   const resolveUser: ResolveUser = (id) =>
     members.find((m) => m.id === id) ?? (currentUser?.id === id ? currentUser : undefined)
-  const line = usePeopleLine(item, edges)
-  const users = line
-    .filter((entry) => !entry.hidden)
+  const lines = usePeopleLines(item, edges)
+  const seen = new Set<string>()
+  const users = lines
+    .flatMap((line) => line.entries)
+    .filter((entry) => !entry.hidden && !seen.has(entry.userId) && !!seen.add(entry.userId))
     .map((entry) => resolveUser(entry.userId))
     .filter((user): user is User => !!user)
   return users.length > 0 ? <ItemAssignees users={users} /> : null

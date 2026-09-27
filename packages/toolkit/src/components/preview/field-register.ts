@@ -90,6 +90,28 @@ export interface EdgeEntry {
   count?: "one-per-subject" | "collect-accepted"
   /** Beschriftung des Hinzufügen-Felds im Formular (C1: „Einladen…", „Zuweisen…"). */
   add?: string
+  /**
+   * Nur Personen-Kanten: Prädikat einer anderen Personen-Kante desselben
+   * Typs, deren Menschen-Zeile diese Kante teilt. Das Event führt so
+   * `attends` in der Zeile von `invited` (08 → Teilnahme am Event, Regel 5).
+   * Ohne Angabe steht jede Personen-Kante in ihrer eigenen Zeile.
+   */
+  joins?: string
+}
+
+/**
+ * `joins` muss eine Personen-Kante der zusammengesetzten Kantenliste nennen
+ * (geprüft nach dem Vereinigen, weil ein Fragment die Zielkante der Basis
+ * nennen darf).
+ */
+export function assertJoins(typeId: string, edges: readonly EdgeEntry[] = []): void {
+  for (const edge of edges) {
+    if (!edge.joins) continue
+    const target = edges.find((e) => e !== edge && e.predicate === edge.joins && e.widget === "people" && e.pos === "meta" && !e.joins)
+    if (edge.widget !== "people" || !target) {
+      throw new Error(`Typ-Register: Kante (${edge.predicate}, ${edge.itemRole}) an "${typeId}" nennt in joins "${edge.joins}", aber keine Personen-Kante der Meta-Box ohne eigenes joins (Spec 06, Feld- und Kantenregister).`)
+    }
+  }
 }
 
 export interface ListEntry {

@@ -5,14 +5,14 @@
 // docs/spec/08-relation-records.md → „Qualifier an Kanten", Regeln 6, 9, 10,
 // und „Teilnahme am Event".
 //
-// Eine Zeile je Typ: alle Personen-Kanten der Meta-Box (`widget: "people"`,
-// `pos: "meta"`) fließen in EINE Zeile. So führt das Event Eingeladene
-// (`invited`, eingebettet) und Zusagen (`attends`, Record) zusammen; die
-// anderen Kerntypen haben genau eine Personen-Kante. Je Person steht ein Chip;
-// eine geltende Record-Aussage schlägt die eingebettete Kante (08, Teilnahme
-// am Event, Regel 5).
+// Eine Zeile je Personen-Kante der Meta-Box (`widget: "people"`, `pos:
+// "meta"`). Eine Kante mit `joins` teilt die Zeile der genannten Kante: So
+// führt das Event Eingeladene (`invited`, eingebettet) und Zusagen
+// (`attends`, Record) zusammen. Je Person steht ein Chip; eine geltende
+// Record-Aussage schlägt die eingebettete Kante (08, Teilnahme am Event,
+// Regel 5).
 
-import { onePerSubjectWinners, type Item, type RelationRecord } from "@real-life-stack/data-interface"
+import { collectAccepted, onePerSubjectWinners, type Item, type RelationRecord } from "@real-life-stack/data-interface"
 import type { EdgeEntry, FieldOption } from "./field-register"
 
 const PERSON_PREFIX = "global:"
@@ -38,6 +38,20 @@ export interface PeopleLineEntry {
 /** Die Kanten, die in die Menschen-Zeile fließen, in Register-Reihenfolge. */
 export function peopleLineEdges(edges: readonly EdgeEntry[] | undefined): EdgeEntry[] {
   return (edges ?? []).filter((edge) => edge.widget === "people" && edge.pos === "meta")
+}
+
+/**
+ * Die Menschen-Zeilen eines Typs: je Personen-Kante eine, Kanten mit `joins`
+ * in der Zeile ihrer Zielkante. In Register-Reihenfolge der ersten Kante.
+ */
+export function peopleLineGroups(edges: readonly EdgeEntry[] | undefined): EdgeEntry[][] {
+  const all = peopleLineEdges(edges)
+  const groups: EdgeEntry[][] = []
+  for (const edge of all) {
+    if (edge.joins && all.some((e) => e.predicate === edge.joins && !e.joins)) continue
+    groups.push([edge, ...all.filter((e) => e.joins === edge.predicate && !edge.joins)])
+  }
+  return groups
 }
 
 /** Record-Kanten der Zeile: Aussagen, die über eine Abfrage kommen. */
@@ -86,8 +100,15 @@ export function peopleLine(item: Item, edges: readonly EdgeEntry[], records: rea
   edges.forEach((edge, edgeIndex) => {
     if (edge.storage === "record") {
       if (edge.itemRole !== "to") return
-      const own = records.filter((record) => record.predicate === edge.predicate)
-      for (const [from, record] of onePerSubjectWinners(own, `item:${item.id}`)) {
+      const own = records.filter((record) => record.predicate === edge.predicate && record.to === `item:${item.id}`)
+      // Zählregel der Kante (08, Regel 10). `collect-accepted` zeigt eine
+      // Aussage über eine Person erst nach ihrer Annahme; die Annahmeprüfung
+      // (05) gibt es hier noch nicht — also nur Selbstaussagen, fail closed.
+      const counted =
+        edge.count === "collect-accepted"
+          ? collectAccepted(own, () => false).map((record) => [record.from, record] as const)
+          : [...onePerSubjectWinners(own, `item:${item.id}`)]
+      for (const [from, record] of counted) {
         const userId = personId(from)
         if (!userId) continue
         const option = edge.qualifier ? declared(edge, record.fields?.[edge.qualifier.key]) : undefined

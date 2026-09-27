@@ -13,7 +13,7 @@ import {
   resolveTypePresentation,
   setTypeManifest,
 } from "../src/components/preview/type-presentation"
-import { peopleLine, peopleLineEdges, summarizePeople, PEOPLE_SUMMARY_THRESHOLD } from "../src/components/preview/people-line"
+import { peopleLine, peopleLineEdges, peopleLineGroups, summarizePeople, PEOPLE_SUMMARY_THRESHOLD } from "../src/components/preview/people-line"
 import type { EdgeEntry } from "../src/components/preview/field-register"
 
 /**
@@ -164,5 +164,49 @@ describe("Zustand „Viele“ (shared-components, Zustände)", () => {
       ["eingeladen", 1, 1],
     ])
     expect(summarizePeople(line.slice(0, PEOPLE_SUMMARY_THRESHOLD))).toBeNull()
+  })
+})
+
+describe("Codex Runde 1, Befund 5: nur die deklarierte Kombination teilt eine Zeile", () => {
+  const TYP: TypeManifestEntry = {
+    id: "gig",
+    vocabularies: [],
+    relations: [
+      { predicate: "hosts", itemRole: "from", otherKind: "person" },
+      { predicate: "plays", itemRole: "from", otherKind: "person" },
+      { predicate: "confirms", itemRole: "to", otherKind: "person" },
+    ],
+  }
+  const people = (predicate: string, extra: Partial<EdgeEntry> = {}): EdgeEntry => ({
+    predicate, itemRole: "from", storage: "embedded", widget: "people", pos: "meta", label: predicate, ...extra,
+  })
+
+  it("zwei Personen-Kanten ohne joins stehen in zwei Zeilen", () => {
+    expect(peopleLineGroups([people("hosts"), people("plays")]).map((g) => g.map((e) => e.predicate))).toEqual([["hosts"], ["plays"]])
+  })
+
+  it("das Event führt invited und attends über attends.joins in einer Zeile", () => {
+    expect(peopleLineGroups(resolveTypePresentation("event").edges).map((g) => g.map((e) => e.predicate))).toEqual([["invited", "attends"]])
+  })
+
+  it("joins muss eine Personen-Kante desselben Typs nennen", () => {
+    setTypeManifest(composeTypeManifest([TOOLKIT_TYPE_LAYER, { name: "app", definitions: [TYP] }]))
+    const confirms: EdgeEntry = {
+      predicate: "confirms", itemRole: "to", storage: "record", widget: "people", pos: "meta", label: "Bestätigt",
+      qualifier: { key: "role", values: [{ id: "yes", label: "ja" }] }, count: "one-per-subject", joins: "gibt-es-nicht",
+    }
+    expect(() => registerTypePresentation("app", [{ id: "gig", label: "Gig", edges: [people("hosts"), confirms] }])).toThrow(/joins/)
+    expect(() => registerTypePresentation("app", [{ id: "gig", label: "Gig", edges: [people("hosts"), { ...confirms, joins: "hosts" }] }])).not.toThrow()
+  })
+})
+
+describe("Codex Runde 1, Befund 4: collect-accepted wird nicht als one-per-subject ausgewertet", () => {
+  it("zeigt ohne Annahmeprüfung nur Selbstaussagen", () => {
+    const kante: EdgeEntry = {
+      predicate: "attends", itemRole: "to", storage: "record", widget: "people", pos: "meta", label: "War dabei",
+      qualifier: { key: "role", values: [{ id: "going", label: "dabei" }] }, count: "collect-accepted",
+    }
+    const line = peopleLine(EVENT, [kante], [attends("rel-1", "timo", "timo", "going"), attends("rel-2", "anton", "maria", "going")])
+    expect(line.map((e) => e.userId)).toEqual(["timo"])
   })
 })

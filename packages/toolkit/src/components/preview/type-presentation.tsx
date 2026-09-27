@@ -52,6 +52,7 @@ import {
 
 import { ItemMetaRow } from "./item-meta-row"
 import {
+  assertJoins,
   assertRegisterLists,
   hasRegisterLists,
   readableFields,
@@ -271,7 +272,8 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
         storage: "record",
         widget: "people",
         pos: "meta",
-        label: "Teilnahme",
+        // Beschriftung des gemeinsamen Personenfelds im Formular (Design: „Wer").
+        label: "Wer",
         qualifier: {
           key: "role",
           values: [
@@ -282,6 +284,8 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
         },
         selfAction: { label: "Zusagen", mine: "Zugesagt", qualifiers: ["going", "maybe", "declined"] },
         count: "one-per-subject",
+        // Eine Zeile mit den Eingeladenen, im Lesen wie im Formular.
+        joins: "invited",
       },
     ],
     preview: EventPreview,
@@ -579,7 +583,10 @@ function composePresentation(): Map<string, TypePresentationEntry> {
   }
   // Was aus der Feldliste abgeleitet wird, darf nicht zusätzlich von Hand
   // gesetzt sein — sonst gäbe es zwei Quellen für dieselbe Antwort (Regeln 2, 16).
-  for (const entry of composed.values()) assertNoParallelComposerSource(entry)
+  for (const entry of composed.values()) {
+    assertNoParallelComposerSource(entry)
+    assertJoins(entry.id, entry.edges)
+  }
   composedCache = composed
   return composed
 }

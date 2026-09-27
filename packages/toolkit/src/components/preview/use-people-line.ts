@@ -26,7 +26,7 @@ import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { resolveItemPermissions } from "../../hooks/use-item-permissions"
 import { useVerifiedRelationRecords } from "../../hooks/use-votes"
 import type { EdgeEntry } from "./field-register"
-import { peopleLine, peopleLineEdges, recordPeopleEdges, type PeopleLineEntry } from "./people-line"
+import { peopleLine, peopleLineGroups, recordPeopleEdges, type PeopleLineEntry } from "./people-line"
 
 const NO_RECORDS: RelationRecord[] = []
 
@@ -60,12 +60,21 @@ export function useItemRecords(item: Item, predicates: readonly string[]): Relat
   return useVerifiedRelationRecords(relevant)
 }
 
-/** Die Menschen-Zeile eines Items aus seinen Personen-Kanten. */
-export function usePeopleLine(item: Item, edges: readonly EdgeEntry[] | undefined): PeopleLineEntry[] {
-  const lineEdges = useMemo(() => peopleLineEdges(edges), [edges])
+export interface PeopleLineGroup {
+  /** Die Kanten der Zeile; die erste ist die, an deren Stelle die Zeile steht. */
+  edges: EdgeEntry[]
+  entries: PeopleLineEntry[]
+}
+
+/** Die Menschen-Zeilen eines Items aus seinen Personen-Kanten (je Kante eine, `joins` teilt). */
+export function usePeopleLines(item: Item, edges: readonly EdgeEntry[] | undefined): PeopleLineGroup[] {
+  const groups = useMemo(() => peopleLineGroups(edges), [edges])
   const predicates = useMemo(() => recordPeopleEdges(edges).map((edge) => edge.predicate), [edges])
   const records = useItemRecords(item, predicates)
-  return useMemo(() => peopleLine(item, lineEdges, records), [item, lineEdges, records])
+  return useMemo(
+    () => groups.map((group) => ({ edges: group, entries: peopleLine(item, group, records) })),
+    [item, groups, records],
+  )
 }
 
 export interface SelfActionState {
