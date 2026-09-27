@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useId, useMemo, useState, startTransition } from "react"
-import { hasItemGroups, type DataInterface, type Item } from "@real-life-stack/data-interface"
+import { useEffect, useId, useMemo, useRef, useState, startTransition } from "react"
+import { hasGroups, hasItemGroups, type DataInterface, type Item } from "@real-life-stack/data-interface"
 import { Lock, MousePointerClick } from "lucide-react"
 
 import { useOptionalConnector } from "../../../hooks/connector-context"
@@ -19,17 +19,30 @@ import { itemTitle } from "../item-relations"
  * liefert das Modul über `requestItemPick`; ohne ihn gibt es keinen Knopf.
  */
 
-/** Einsprung für den Modul-Pick (Edit-Regeln 7): das Modul ruft `onPick` mit der Item-Id. */
-export type RequestItemPick = (request: { predicate: string; targetType?: string }, onPick: (itemId: string) => void) => void
+/** Antwort auf einen Modul-Pick: übernommen, oder abgewiesen mit Grund (#530). */
+export type ItemPickResult = { ok: true } | { ok: false; reason: string }
+
+/**
+ * Einsprung für den Modul-Pick (Edit-Regeln 7): das Modul ruft `onPick` mit
+ * der Item-Id. Das Feld prüft das Ziel wie ein Suchergebnis (Typ der
+ * Gegenstelle, Space des Formulars, nicht das Item selbst, nicht doppelt) und
+ * antwortet; ein abgewiesenes Ziel übernimmt es nicht.
+ */
+export type RequestItemPick = (request: { predicate: string; targetType?: string }, onPick: (itemId: string) => ItemPickResult) => void
 
 /**
  * Die Items der Gegenstelle, ohne Provider leer. Nur der Space des Formulars:
  * Ein `item:`-Target ist space-lokal (04), ein Item aus einem anderen Space
  * wäre dort ein anderes oder keins.
  */
-function useCandidates(targetType: string | undefined, spaceId: string | undefined): { items: Item[]; all: readonly Item[]; needsSpace: boolean; spaceOf?: (id: string) => string | null } {
+function useCandidates(targetType: string | undefined, spaceId: string | undefined): { items: Item[]; all: readonly Item[]; needsSpace: boolean; otherSpace: boolean; spaceOf?: (id: string) => string | null } {
   const connector = useOptionalConnector()
   const filterKey = JSON.stringify(targetFilter(targetType))
+  // #529: Items liest der Connector im geöffneten Space (Übersicht: alle).
+  // Ist das ein anderer als der im Formularkopf, gibt es keine Kandidaten —
+  // das Feld sagt es, statt still leer zu bleiben (DataInterface hat keinen
+  // Lesezugriff auf einen anderen Space; offen, siehe PR #528).
+  const openSpace = connector && hasGroups(connector) ? (connector.getCurrentGroup()?.id ?? null) : null
   const observable = useMemo(
     () => (connector ? connector.observe(JSON.parse(filterKey)) : null),
     [connector, filterKey],
@@ -40,7 +53,10 @@ function useCandidates(targetType: string | undefined, spaceId: string | undefin
     setItems(observable.current)
     return observable.subscribe((next) => startTransition(() => setItems(next)))
   }, [observable])
-  return useMemo(() => ({ ...inSpace(connector, items, spaceId), all: items }), [connector, items, spaceId])
+  return useMemo(
+    () => ({ ...inSpace(connector, items, spaceId), all: items, otherSpace: !!spaceId && openSpace !== null && openSpace !== spaceId }),
+    [connector, items, spaceId, openSpace],
+  )
 }
 
 /**
@@ -83,7 +99,11 @@ export function ItemRelationWidget({
   single,
   requestItemPick,
 }: ItemRelationWidgetProps) {
-  const { items: candidates, all, needsSpace, spaceOf } = useCandidates(targetType, spaceId)
+  const { items: candidates, all, needsSpace, otherSpace, spaceOf } = useCandidates(targetType, spaceId)
+  const connector = useOptionalConnector()
+  const groupName = useGroupName(connector, otherSpace ? spaceId : undefined)
+  const spaceName = groupName ?? "diesem Space"
+  const [pickError, setPickError] = useState<string | null>(null)
   // Gewählte Ziele gegen alle sichtbaren Items (ein space-qualifiziertes
   // bleibt nach einem Space-Wechsel gültig); gesucht wird nur im Formular-Space.
   const resolve = (target: string) => all.find((c) => targetPointsTo(target, c, spaceId ?? null, spaceOf))
@@ -99,6 +119,29 @@ export function ItemRelationWidget({
         .filter((c) => needle === "" || itemTitle(c).toLocaleLowerCase("de").includes(needle))
         .slice(0, 6)
     : []
+
+  // Der Modul-Pick kommt asynchron: geprüft wird gegen den Stand beim Eintreffen.
+  const latest = useRef({ candidates, value, excludeId, spaceId, spaceOf, full: false })
+  latest.current = { candidates, value, excludeId, spaceId, spaceOf, full: !!single && value.length > 0 }
+  const checkPick = (id: string): ItemPickResult => {
+    const now = latest.current
+    if (now.full) return { ok: false, reason: "Das Feld hat schon ein Ziel" }
+    if (id === now.excludeId) return { ok: false, reason: "Ein Item verweist nicht auf sich selbst" }
+    const target = now.candidates.find((c) => c.id === id)
+    if (!target) {
+      return { ok: false, reason: targetType ? "Das Ziel ist nicht vom passenden Typ oder liegt nicht in diesem Space" : "Das Ziel liegt nicht in diesem Space" }
+    }
+    if (now.value.some((t) => targetPointsTo(t, target, now.spaceId ?? null, now.spaceOf))) return { ok: false, reason: "Das Ziel ist schon gewählt" }
+    return { ok: true }
+  }
+  const onPick = (id: string): ItemPickResult => {
+    const result = checkPick(id)
+    if (result.ok) {
+      setPickError(null)
+      add(id)
+    } else setPickError(result.reason)
+    return result
+  }
 
   const add = (id: string) => {
     const target = `item:${id}`
@@ -135,7 +178,10 @@ export function ItemRelationWidget({
           {!full && needsSpace && (
             <span data-needs-space className="text-sm text-muted-foreground">Erst einen Space wählen</span>
           )}
-          {!full && !needsSpace && (
+          {!full && otherSpace && (
+            <span data-other-space className="text-sm text-muted-foreground">Suche nur im geöffneten Space – zum Verknüpfen in „{spaceName}“ dorthin wechseln</span>
+          )}
+          {!full && !needsSpace && !otherSpace && (
             <input
               type="text"
               role="combobox"
@@ -164,10 +210,10 @@ export function ItemRelationWidget({
               className="min-w-[8rem] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           )}
-          {requestItemPick && !full && !needsSpace && (
+          {requestItemPick && !full && !needsSpace && !otherSpace && (
             <button
               type="button"
-              onClick={() => requestItemPick({ predicate, targetType }, add)}
+              onClick={() => requestItemPick({ predicate, targetType }, onPick)}
               className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <MousePointerClick className="h-3.5 w-3.5" aria-hidden />
@@ -175,6 +221,11 @@ export function ItemRelationWidget({
             </button>
           )}
         </div>
+        {pickError && (
+          <p role="alert" className="mt-1 text-xs text-destructive">
+            {pickError}
+          </p>
+        )}
         {suggestions.length > 0 && (
           <ul id={listId} role="listbox" className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-auto rounded-md border bg-popover p-1 shadow-md">
             {suggestions.map((c) => (
@@ -233,4 +284,20 @@ function fitsSpace(connector: DataInterface | null, value: string, item: Item, s
   // stammt dann aus der Vorbelegung (Variante: Space des Ursprungs, fest).
   if (!spaceId && value.startsWith("item:")) return targetItemId(value) === item.id
   return targetPointsTo(value, item, spaceId ?? null, (id) => connector.getItemGroupId(id))
+}
+
+/** Name eines Space für den Hinweis; ohne Treffer undefined. */
+function useGroupName(connector: DataInterface | null, spaceId: string | undefined): string | undefined {
+  const [name, setName] = useState<string | undefined>()
+  useEffect(() => {
+    if (!connector || !spaceId || !hasGroups(connector)) return
+    let alive = true
+    void connector.getGroups().then((groups) => {
+      if (alive) setName(groups.find((g) => g.id === spaceId)?.name)
+    })
+    return () => {
+      alive = false
+    }
+  }, [connector, spaceId])
+  return name
 }
