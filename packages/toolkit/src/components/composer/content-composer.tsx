@@ -38,6 +38,8 @@ import { peopleQualifierKey, peopleStatementKey, resolvePeopleFields, type Peopl
 export type { PeopleRelationConfig } from "./people-relations"
 import { TagsWidget } from "./widgets/tags-widget"
 import { StatusWidget } from "./widgets/status-widget"
+import { FixedItemRefField, ItemRelationWidget, type RequestItemPick } from "./widgets/item-relation-widget"
+import { itemRelationDataKey, itemRelationDataKeys, type ItemRefFieldConfig, type ItemRelationFieldConfig } from "./item-relations"
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -51,6 +53,10 @@ export type WidgetType =
   | "tags"
   | "status"
   | "group"
+  /** Item-Kanten (C3) aus dem Register — nie zum Zuschalten. */
+  | "item-relation"
+  /** Felder mit Item-Verweis (B15) aus dem Register — nie zum Zuschalten. */
+  | "item-ref"
 
 export interface MediaFile {
   id: string
@@ -153,6 +159,10 @@ export interface ContentTypeConfig {
    * Auflösung siehe {@link resolvePeopleFields}.
    */
   peopleRelations?: readonly PeopleRelationConfig[]
+  /** Item-Kanten (C3), je Kante ein Feld; abgeleitet aus dem Register. */
+  itemRelations?: readonly ItemRelationFieldConfig[]
+  /** Felder mit Item-Verweis (B15); abgeleitet aus dem Register. */
+  itemRefs?: readonly ItemRefFieldConfig[]
 }
 
 export interface WidgetComponentProps<T = unknown> {
@@ -245,6 +255,13 @@ export interface ContentComposerProps {
    * Aussagen nicht schreiben, und das Feld zeigt keine Zustände.
    */
   peopleStates?: Record<string, { live: PeopleWidgetRecord["live"] }>
+  /**
+   * Modul-Pick für Item-Kanten (Brett-Klick, Marker-Klick; Edit-Regeln 7):
+   * Das Modul liefert ihn, das Feld zeigt dann „Im Modul wählen".
+   */
+  requestItemPick?: RequestItemPick
+  /** Das bearbeitete Item — nie sein eigenes Ziel einer Item-Kante. */
+  itemId?: string
   /** Structured people options: stores IDs, displays names. Takes precedence over peopleSuggestions. */
   peopleOptions?: PersonOption[]
   /** Simple string suggestions (legacy). Ignored when `peopleOptions` is provided. */
@@ -306,6 +323,8 @@ const WIDGET_ORDER: WidgetType[] = [
 ]
 
 const DEFAULT_WIDGET_LABELS: Record<WidgetType, string> = {
+  "item-relation": "Verknüpfungen",
+  "item-ref": "Verweis",
   group: "Gruppe",
   title: "Titel",
   text: "Text",
@@ -390,10 +409,10 @@ const DIRTY_FIELDS: readonly string[] = [
  * field, or leaving the form untouched, reads as not dirty. Fixed field order
  * keeps the JSON key order deterministic.
  */
-function dirtySignature(data: WidgetData, peopleKeys: readonly string[]): string {
+function dirtySignature(data: WidgetData, peopleKeys: readonly string[], relationKeys: readonly string[] = []): string {
   const out: Record<string, unknown> = {}
   // Qualifier je Person zählen mit: Antippen am Chip ist eine Änderung.
-  const fields = [...new Set([...DIRTY_FIELDS, ...peopleKeys.flatMap((key) => [key, peopleQualifierKey(key), peopleStatementKey(key)])])]
+  const fields = [...new Set([...DIRTY_FIELDS, ...peopleKeys.flatMap((key) => [key, peopleQualifierKey(key), peopleStatementKey(key)]), ...relationKeys])]
   for (const field of fields) {
     const value = (data as Record<string, unknown>)[field]
     if (value === "" || value === null || value === undefined) continue
@@ -417,10 +436,15 @@ const ANATOMY_RANK: Record<WidgetType, number> = {
   people: 3,
   date: 4,
   location: 5,
+  "item-relation": 5.5,
+  "item-ref": 5.6,
   status: 6,
   tags: 7,
   group: 8,
 }
+
+/** Widgets, die nur das Register setzt: Sie stehen, wo der Typ sie führt, und sind nie zuschaltbar. */
+const REGISTER_ONLY_WIDGETS: ReadonlySet<string> = new Set(["item-relation", "item-ref"])
 
 /**
  * The built-in widgets in render order: those the type lists in
@@ -430,7 +454,7 @@ const ANATOMY_RANK: Record<WidgetType, number> = {
  * arrive with later steps) are skipped here.
  */
 export function widgetRenderOrder(defaultWidgets: readonly string[]): WidgetType[] {
-  const builtIn = new Set<string>(WIDGET_ORDER)
+  const builtIn = new Set<string>([...WIDGET_ORDER, ...REGISTER_ONLY_WIDGETS])
   const order = defaultWidgets.filter((w, i): w is WidgetType => builtIn.has(w) && defaultWidgets.indexOf(w) === i)
   const extras = WIDGET_ORDER.filter((w) => !order.includes(w)).sort((a, b) => ANATOMY_RANK[a] - ANATOMY_RANK[b])
   for (const w of extras) {
@@ -763,6 +787,8 @@ export function ContentComposer({
   reverseGeocode,
   peopleOptions,
   peopleStates,
+  requestItemPick,
+  itemId,
   peopleSuggestions,
   tagSuggestions,
   tagQuickSuggestions,
@@ -793,6 +819,8 @@ export function ContentComposer({
   // Welche Datenschlüssel Personen tragen, sagt die Konfiguration.
   const peopleFields = resolvePeopleFields(currentConfig ?? {})
   const peopleKeys = peopleFields.map((field) => field.dataKey)
+  // Item-Kanten (C3) je Kante ein Datenschlüssel.
+  const relationKeys = itemRelationDataKeys(currentConfig?.itemRelations)
 
   const [data, setData] = React.useState<WidgetData>(() => ({
     ...DEFAULT_DATA,
@@ -810,8 +838,10 @@ export function ContentComposer({
   // it — e.g. update only `start` when another calendar date is clicked, keeping
   // already-entered content intact.
   const peopleKeysRef = React.useRef(peopleKeys)
+  const relationKeysRef = React.useRef(relationKeys)
   React.useEffect(() => {
     peopleKeysRef.current = peopleKeys
+    relationKeysRef.current = relationKeys
   })
   React.useEffect(() => {
     if (!apiRef) return
@@ -886,7 +916,7 @@ export function ContentComposer({
         prev.status !== data.status ||
         prev.group !== data.group ||
         prev.tags !== data.tags ||
-        peopleKeys.some(
+        [...peopleKeys, ...relationKeys].some(
           (key) => (prev as Record<string, unknown>)[key] !== (data as Record<string, unknown>)[key],
         ) ||
         prev.start !== data.start ||
@@ -919,10 +949,10 @@ export function ContentComposer({
   // changes something, and an emptied form goes back to clean.
   const dirtyBaselineRef = React.useRef<string | null>(null)
   if (dirtyBaselineRef.current === null) {
-    dirtyBaselineRef.current = dirtySignature({ ...DEFAULT_DATA, ...initialData }, peopleKeys)
+    dirtyBaselineRef.current = dirtySignature({ ...DEFAULT_DATA, ...initialData }, peopleKeys, relationKeys)
   }
   React.useEffect(() => {
-    onDirtyChange?.(dirtySignature(data, peopleKeysRef.current) !== dirtyBaselineRef.current)
+    onDirtyChange?.(dirtySignature(data, peopleKeysRef.current, relationKeysRef.current) !== dirtyBaselineRef.current)
   }, [onDirtyChange, data])
 
   // Auf dem Telefon oeffnet ein Autofokus die Tastatur und schiebt den Kopf des
@@ -959,10 +989,11 @@ export function ContentComposer({
   const toggleableWidgets = renderOrder.filter(
     (w) =>
       !activeWidgets.has(w) &&
+      !REGISTER_ONLY_WIDGETS.has(w) &&
       w !== "title" &&
       w !== "text" &&
       !(w === "status" && !hasStatusOptions),
-  ) as WidgetType[]
+  ) as Exclude<WidgetType, "item-relation" | "item-ref">[]
 
   // Get widget label
   const getWidgetLabel = (widgetId: string): string => {
@@ -1259,6 +1290,48 @@ export function ContentComposer({
                             : {})}
                         />
                       ))}
+                    </div>
+                  )}
+                  {widgetId === "item-relation" && (
+                    <div className="flex flex-col gap-4">
+                      {(currentConfig.itemRelations ?? []).map((field) => (
+                        <ItemRelationWidget
+                          key={field.predicate}
+                          label={field.label}
+                          predicate={field.predicate}
+                          targetType={field.targetType}
+                          placeholder={field.placeholder}
+                          value={(data[itemRelationDataKey(field.predicate)] as string[] | undefined) ?? []}
+                          onChange={(v) => updateData(itemRelationDataKey(field.predicate), v)}
+                          excludeId={itemId}
+                          spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined}
+                          requestItemPick={requestItemPick}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {widgetId === "item-ref" && (
+                    <div className="flex flex-col gap-4">
+                      {(currentConfig.itemRefs ?? []).map((field) => {
+                        const value = typeof data[field.key] === "string" ? (data[field.key] as string) : ""
+                        if (field.fixed) {
+                          // Fest: nur mit Wert sichtbar (06, Regel 14).
+                          return value ? <FixedItemRefField key={field.key} label={field.label} value={value} missing={field.missing} /> : null
+                        }
+                        return (
+                          <ItemRelationWidget
+                            key={field.key}
+                            single
+                            label={field.label}
+                            predicate={field.key}
+                            targetType={field.targetType}
+                            value={value ? [value] : []}
+                            onChange={(v) => updateData(field.key, v[0] ?? "")}
+                            excludeId={itemId}
+                            spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined}
+                          />
+                        )
+                      })}
                     </div>
                   )}
                   {widgetId === "tags" && (

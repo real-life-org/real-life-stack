@@ -133,6 +133,7 @@ export function ItemComposer({
     <ContentComposer
       apiRef={apiRef}
       peopleStates={peopleStates}
+      itemId={current?.id}
       className={className}
       contentTypes={offeredTypes}
       initialContentType={initialContentType}

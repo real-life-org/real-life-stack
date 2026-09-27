@@ -1,9 +1,11 @@
 import { getTypeManifest, relationAffordanceKey } from "@real-life-stack/data-interface"
 
 import { resolveTypePresentation } from "../preview/type-presentation"
+import { otherKindOf } from "../preview/use-item-edges"
 import {
   composerWidgetsFromRegister,
   hasRegisterLists,
+  isFormItemEdge,
   type EdgeEntry,
   type FieldEntry,
 } from "../preview/field-register"
@@ -41,7 +43,7 @@ export function contentTypeFromRegister(id: string): ContentTypeConfig {
     ...(c.defaultStatus ? { defaultStatus: c.defaultStatus } : {}),
     ...(c.groupRequired ? { groupRequired: true } : {}),
   }
-  if (hasRegisterLists(darstellung)) return { ...gemeinsam, ...ausFeldliste(darstellung.fields ?? [], darstellung.edges ?? []) }
+  if (hasRegisterLists(darstellung)) return { ...gemeinsam, ...ausFeldliste(id, darstellung.fields ?? [], darstellung.edges ?? []) }
 
   // Übergang: Typen ohne Feld- und Kantenliste (Spec 06, Regel 17).
   // peopleRelation = die Manifest-Kante, deren Composer-Widget "people" ist.
@@ -64,9 +66,10 @@ export function contentTypeFromRegister(id: string): ContentTypeConfig {
  * `label`, das Body-Feld aus dem `text`-Feld (Regel 5).
  */
 function ausFeldliste(
+  typeId: string,
   fields: readonly FieldEntry[],
   edges: readonly EdgeEntry[],
-): Pick<ContentTypeConfig, "defaultWidgets" | "peopleRelations" | "statusOptions" | "widgetLabels" | "textField"> {
+): Pick<ContentTypeConfig, "defaultWidgets" | "peopleRelations" | "statusOptions" | "widgetLabels" | "textField" | "itemRelations" | "itemRefs"> {
   const widgetLabels: Record<string, string> = {}
   for (const field of fields) {
     if (field.label && !(field.widget in widgetLabels)) widgetLabels[field.widget] = field.label
@@ -97,6 +100,21 @@ function ausFeldliste(
           : {}),
       }
     })
+  // Item-Kanten (C3): je ausgehende eingebettete Kante ein Feld, die
+  // Gegenstelle aus dem Manifest (06, Verhältnis zu Relations, Regel 2).
+  const itemRelations = edges.filter(isFormItemEdge).map((e) => {
+    const targetType = otherKindOf(typeId, e)
+    return {
+      predicate: e.predicate,
+      label: e.label,
+      ...(e.add ? { placeholder: e.add } : {}),
+      ...(targetType && targetType !== "item" ? { targetType } : {}),
+    }
+  })
+  // Felder mit Item-Verweis (B15), die im Formular stehen.
+  const itemRefs = fields
+    .filter((x) => x.widget === "item-ref" && x.ref && x.edit !== false)
+    .map((x) => ({ key: x.key, label: x.label ?? x.key, targetType: x.ref!.type, missing: x.ref!.missing, fixed: x.edit === "fixed" }))
   const status = fields.find((x) => x.widget === "status" && x.options && x.options.length > 0)
   const body = fields.find((x) => x.widget === "text" && x.pos === "content")
   return {
@@ -105,6 +123,8 @@ function ausFeldliste(
     ...(status ? { statusOptions: status.options!.map((o) => ({ id: o.id, label: o.label })) } : {}),
     ...(Object.keys(widgetLabels).length > 0 ? { widgetLabels } : {}),
     ...(body && (body.key === "content" || body.key === "description") ? { textField: body.key } : {}),
+    ...(itemRelations.length > 0 ? { itemRelations } : {}),
+    ...(itemRefs.length > 0 ? { itemRefs } : {}),
   }
 }
 

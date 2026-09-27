@@ -200,7 +200,7 @@ describe("ContentTypeConfig aus dem Register (Spec 06, Regel 16)", () => {
 
   it("task: Status-Optionen und Beschriftungen aus den Feldeinträgen", () => {
     const task = contentTypeFromRegister("task")
-    expect(task.defaultWidgets).toEqual(["title", "text", "people", "date", "status", "tags"])
+    expect(task.defaultWidgets).toEqual(["title", "text", "people", "date", "item-relation", "status", "tags"])
     expect(task.statusOptions?.map((o) => o.id)).toEqual(["open", "in-progress", "done"])
     expect(task.widgetLabels).toMatchObject({ text: "Beschreibung", date: "Fällig" })
     expect(task.peopleRelations).toEqual([{ predicate: "assignedTo", label: "Zugewiesen", placeholder: "Zuweisen…" }])
@@ -276,6 +276,8 @@ const users: User[] = [
   { id: "u2", displayName: "Kollegin" },
 ]
 const connector = {
+  // Item-Kanten (C3) lösen ihre Ziele über observe auf; hier gibt es keine.
+  observe: () => createObservable<Item[]>([]),
   observeMembers: () => createObservable(users),
   observeCurrentUser: () => createObservable<User | null>(users[0]!),
   getAuthState: () => createObservable({ status: "authenticated", user: users[0] }),

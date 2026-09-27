@@ -395,6 +395,16 @@ const FORM_POSITIONS = ["head", "content", "meta", "tags", "badge"] as const
 const FORM_EDGE_WIDGETS: ReadonlySet<EdgeWidgetId> = new Set(["people", "item-relation"])
 
 /**
+ * Item-Kanten mit Schreibform im Formular: die eingebetteten ausgehenden, die
+ * das Item selbst trägt. Eine eingehende Kante („Braucht") liegt am anderen
+ * Item; sie zu schreiben hieße fremde Items umschreiben — im Formular dieses
+ * Items steht sie nicht (offen, siehe PR S3).
+ */
+export function isFormItemEdge(edge: EdgeEntry): boolean {
+  return edge.widget === "item-relation" && edge.storage === "embedded" && edge.itemRole === "from" && edge.pos === "meta"
+}
+
+/**
  * `defaultWidgets` aus Feldern und Kanten: `pos` head, content, meta, tags,
  * badge, ohne `edit: false`; `meta` in der Reihenfolge der Meta-Box, die
  * anderen Slots in Register-Reihenfolge. Ein Widget steht einmal, auch wenn
@@ -402,7 +412,7 @@ const FORM_EDGE_WIDGETS: ReadonlySet<EdgeWidgetId> = new Set(["people", "item-re
  */
 export function composerWidgetsFromRegister(fields: readonly FieldEntry[] = [], edges: readonly EdgeEntry[] = []): string[] {
   const formFields = fields.filter((x) => x.edit !== false)
-  const formEdges = edges.filter((e) => FORM_EDGE_WIDGETS.has(e.widget))
+  const formEdges = edges.filter((e) => FORM_EDGE_WIDGETS.has(e.widget) && (e.widget !== "item-relation" || isFormItemEdge(e)))
   const order: string[] = []
   const add = (widget: string) => {
     if (!order.includes(widget)) order.push(widget)

@@ -11,6 +11,7 @@ import {
   peopleRelationsToWidgetData,
 } from "./people-relations"
 import { toStoredDateTime } from "./date-widget-state"
+import { itemRelationDataKeys, itemRelationsFromWidgetData, itemRelationsToWidgetData } from "./item-relations"
 
 /**
  * Composer ↔ item: the one mapping every module and every app shares.
@@ -96,9 +97,13 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
 
     // Which keys carry people is said by the type (an entry may set its own
     // dataKey) — they become relations, not item.data.
-    const peopleKeys = new Set(
-      (typeConfig ? peopleDataKeys(typeConfig) : ["people"]).flatMap((key) => [key, peopleQualifierKey(key), peopleStatementKey(key)]),
-    )
+    const peopleKeys = new Set([
+      ...(typeConfig ? peopleDataKeys(typeConfig) : ["people"]).flatMap((key) => [key, peopleQualifierKey(key), peopleStatementKey(key)]),
+      // Item-Kanten (C3) werden Relationen, nicht item.data.
+      ...itemRelationDataKeys(typeConfig?.itemRelations),
+    ])
+    // Ein bearbeitbares Feld mit Item-Verweis (B15) darf man leeren; ein festes nie.
+    const clearableRefs = new Set((typeConfig?.itemRefs ?? []).filter((r) => !r.fixed).map((r) => r.key))
 
     // Base on the existing data so unmanaged fields survive an edit; empty on create.
     const itemData: Record<string, unknown> = { ...(existingItem?.data ?? {}) }
@@ -106,7 +111,7 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
       if (peopleKeys.has(key)) continue
       if (!isEmptyValue(value)) {
         itemData[key] = value
-      } else if (existingItem && CLEARABLE_DATA_FIELDS.has(key)) {
+      } else if (existingItem && (CLEARABLE_DATA_FIELDS.has(key) || clearableRefs.has(key))) {
         delete itemData[key]
       }
     }
@@ -142,10 +147,13 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
 
     // People → relations on the type's predicates. Only the predicates of the
     // submitted fields are replaced; other relations stay.
-    const relations = typeConfig
+    const withPeople = typeConfig
       ? (peopleRelationsFromWidgetData(typeConfig, submission.data, existingItem?.relations) ??
         existingItem?.relations)
       : existingItem?.relations
+    // Item-Kanten (C3): nur die Prädikate der eingereichten Felder; meta und
+    // Stelle bleibender Kanten bleiben (08, Qualifier an Kanten, Regel 11).
+    const relations = itemRelationsFromWidgetData(typeConfig?.itemRelations, submission.data, withPeople) ?? withPeople
 
     // Zustände an Record-Kanten (Event: Zusagen) schreibt der Editor nach
     // dem Speichern als eigene Aussagen.
@@ -170,6 +178,10 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
     const typeConfig = resolve(type)
     const text = d[textFieldFor(type, typeConfig)]
     const people = typeConfig ? peopleRelationsToWidgetData(typeConfig, item.relations) : {}
+    const itemRelations = itemRelationsToWidgetData(typeConfig?.itemRelations, item.relations)
+    // Felder mit Item-Verweis (B15): der Wert für die (feste) Anzeige.
+    const refs: Record<string, string> = {}
+    for (const ref of typeConfig?.itemRefs ?? []) if (typeof d[ref.key] === "string") refs[ref.key] = d[ref.key] as string
     return {
       ...(typeof d.title === "string" ? { title: d.title } : {}),
       ...(typeof text === "string" ? { text } : {}),
@@ -184,6 +196,8 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
       ...(Array.isArray(d.media) && d.media.length > 0 ? { media: d.media as WidgetData["media"] } : {}),
       ...(typeof d.status === "string" ? { status: d.status } : {}),
       ...people,
+      ...itemRelations,
+      ...refs,
       tags: item.tags ?? [],
     }
   }

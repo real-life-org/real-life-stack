@@ -202,7 +202,7 @@ export interface ResolvedTypePresentation extends RegisterLists {
  */
 const REGISTER_DETAIL: ComponentType<ItemSlotProps> = function RegisterDetail({ item }) {
   const presentation = resolveTypePresentation(item.type)
-  return <RegisterMeta item={item} fields={readableFields(presentation.fields)} edges={presentation.edges} />
+  return <RegisterMeta item={item} fields={readableFields(presentation.fields)} edges={presentation.edges} lists={presentation.lists} />
 }
 
 /** Slot `actions` aus dem Register (C2, C4). */
@@ -231,11 +231,11 @@ export const GENERIC_BADGE: TypeBadgeStyle = {
 /** The seven core types RLS ships (spec 06, "Core-Typ"). Labels and badge
  *  styles are verbatim from the previous ItemTypeBadge DEFAULT_CONFIG; the
  *  preview slots are the previous getItemPreviewAdornments bodies. */
-// Feld- und Kantenlisten der Toolkit-Typen (Spec 06, Register je Typ). S1
-// fuehrt nur Kanten, die das Manifest heute deklariert (Regel 1): `locatedAt`,
-// `partOf`, `blocks` und `attends` kommen erst mit ihrer Relation-Typ-
-// Definition. Felder, deren Widget es noch nicht gibt (`meetingLink` als url,
-// `variantOf` als item-ref), folgen mit S3/S4.
+// Feld- und Kantenlisten der Toolkit-Typen (Spec 06, Register je Typ). Nur
+// Kanten, die das Manifest deklariert (Regel 1): `partOf` und `blocks` seit S3
+// mit ihrer Relation-Typ-Definition (TOOLKIT_RELATION_PREDICATES); `locatedAt`
+// am Event folgt mit S4 (Kollision 7 aus #506). Felder, deren Widget es noch
+// nicht gibt (`meetingLink` als url), folgen mit S4.
 const TITLE: FieldEntry = { key: "title", widget: "title", pos: "head" }
 const DESCRIPTION: FieldEntry = { key: "description", widget: "text", pos: "content", label: "Beschreibung" }
 const TAGS: FieldEntry = { key: "tags", widget: "tags", pos: "tags" }
@@ -352,6 +352,13 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
           },
         },
       },
+      // Item-Kanten (C3). `blocks` heißt von beiden Enden gleich: „Braucht"
+      // (eingehend) und „Ermöglicht" (ausgehend) (Entscheidung 19). Beide
+      // eingebettet am blockierenden Item; geschrieben wird im Formular die
+      // ausgehende Kante, die das Item selbst trägt.
+      { predicate: "blocks", itemRole: "to", storage: "embedded", widget: "item-relation", pos: "meta", label: "Braucht" },
+      { predicate: "blocks", itemRole: "from", storage: "embedded", widget: "item-relation", pos: "meta", label: "Ermöglicht", add: "@ Aufgabe suchen…" },
+      { predicate: "partOf", itemRole: "from", storage: "embedded", widget: "item-relation", pos: "meta", label: "Teil von", add: "@ Projekt suchen…" },
     ],
   },
   {

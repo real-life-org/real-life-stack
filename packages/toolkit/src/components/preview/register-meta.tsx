@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 import type { Item, User } from "@real-life-stack/data-interface"
-import { Calendar, MapPin, Users } from "lucide-react"
+import { ArrowLeft, ArrowRight, Calendar, Link2, MapPin, Users } from "lucide-react"
 
 import { useMembers } from "../../hooks/use-groups"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
@@ -11,7 +11,9 @@ import { cn } from "../../lib/utils"
 import { useFieldLink } from "../navigation/field-navigation"
 import { ItemAssignees } from "./item-assignees"
 import { formatEventRange } from "./item-meta-row"
-import { metaRowOrder, type EdgeEntry, type FieldEntry, type MetaRow } from "./field-register"
+import { metaRowOrder, type EdgeEntry, type FieldEntry, type ListEntry, type MetaRow } from "./field-register"
+import { ItemRefValue, ItemRelationChips, LabeledChips, itemRefId } from "./item-relation-row"
+import { isItemEdge, useItemEdges, type EdgeTarget } from "./use-item-edges"
 import type { PeopleLineEntry } from "./people-line"
 import { PeopleLineRow } from "./people-line-row"
 import { usePeopleLines } from "./use-people-line"
@@ -27,19 +29,23 @@ import { usePeopleLines } from "./use-people-line"
  * eine einzige Zeile rendert die Komponente `null`, damit die Box entfällt.
  * Verzweigt wird über das Widget des Eintrags, nie über den Typ des Items.
  *
- * Stand S2: Lesen können `people` (eingebettete Kanten und Record-Kanten in
- * EINER Menschen-Zeile, mit Qualifier), `date` und `location`. Die anderen
- * Widgets (Status, Zahl, Auswahl, Link, Item-Kanten …) folgen mit S3–S4; bis
- * dahin erzeugen sie keine Zeile.
+ * Stand S3: Lesen können `people` (eingebettete Kanten und Record-Kanten in
+ * EINER Menschen-Zeile, mit Qualifier), `date`, `location`, Item-Kanten
+ * (`item-relation`, C3: eingebettet, ausgehend und eingehend) und Felder mit
+ * Item-Verweis (`item-ref`, B15) — diese nur, wenn keine Liste des Typs sie
+ * abdeckt (`covers`). Die Wert-Widgets (Status, Zahl, Auswahl, Link …)
+ * folgen mit S4; bis dahin erzeugen sie keine Zeile.
  */
 export interface RegisterMetaProps {
   item: Item
   fields?: readonly FieldEntry[]
   edges?: readonly EdgeEntry[]
+  /** Listen des Typs: deren `covers` nimmt Felder aus der Meta-Box (06, Regel 11). */
+  lists?: readonly ListEntry[]
   className?: string
 }
 
-export function RegisterMeta({ item, fields, edges, className }: RegisterMetaProps) {
+export function RegisterMeta({ item, fields, edges, lists, className }: RegisterMetaProps) {
   // Personen werden hier aufgelöst, nicht erst in der Zeile: Ob eine Zeile
   // entsteht, muss feststehen, bevor die Box sich zeichnet — sonst bliebe bei
   // lauter unbekannten Personen ein leerer grauer Kasten stehen. Über die
@@ -57,9 +63,16 @@ export function RegisterMeta({ item, fields, edges, className }: RegisterMetaPro
 
   // Eine Zeile je Menschen-Zeile: Kanten, die per `joins` eine andere teilen,
   // stehen an deren Stelle (shared-components, Detail-Anatomie, Regel 5).
+  const itemEdges = useItemEdges(item, edges)
+  const covered = new Set((lists ?? []).flatMap((list) => list.covers ?? []))
+
   const rows = metaRowOrder(fields, edges).filter((row) => {
     if (!hasReader(row)) return false
-    if (row.kind === "edge") return peopleFor(row.entry).length > 0
+    if (row.kind === "edge") {
+      if (isItemEdge(row.entry)) return (itemEdges.get(row.entry)?.length ?? 0) > 0
+      return peopleFor(row.entry).length > 0
+    }
+    if (row.entry.widget === "item-ref") return !covered.has(row.entry.key) && itemRefId(item, row.entry) !== null
     return hasValue(row, item)
   })
   if (rows.length === 0) return null
@@ -67,12 +80,31 @@ export function RegisterMeta({ item, fields, edges, className }: RegisterMetaPro
     <div className={cn("flex flex-col gap-2", className)}>
       {rows.map((row) =>
         row.kind === "edge" ? (
-          <PeopleRow key={rowKey(row)} edge={row.entry} entries={peopleFor(row.entry)} resolveUser={resolveUser} resolveName={resolveName} currentUserId={currentUser?.id} />
+          isItemEdge(row.entry) ? (
+            <ItemEdgeRow key={rowKey(row)} edge={row.entry} targets={itemEdges.get(row.entry) ?? []} />
+          ) : (
+            <PeopleRow key={rowKey(row)} edge={row.entry} entries={peopleFor(row.entry)} resolveUser={resolveUser} resolveName={resolveName} currentUserId={currentUser?.id} />
+          )
         ) : (
           <MetaRowView key={rowKey(row)} row={row} item={item} />
         ),
       )}
     </div>
+  )
+}
+
+/**
+ * Item-Kante (C3, Lesen): Label aus dem Register, Chips in Typfarbe, „+N".
+ * Das Icon sagt die Richtung (ausgehend, eingehend), nicht den Typ.
+ */
+function ItemEdgeRow({ edge, targets }: { edge: EdgeEntry; targets: readonly EdgeTarget[] }) {
+  const Icon = edge.itemRole === "to" ? ArrowLeft : ArrowRight
+  return (
+    <Row id={`${edge.predicate}:${edge.itemRole}`} icon={<Icon className="h-3.5 w-3.5" />}>
+      <LabeledChips label={edge.label}>
+        <ItemRelationChips targets={targets} />
+      </LabeledChips>
+    </Row>
   )
 }
 
@@ -107,11 +139,13 @@ function rowKey(row: MetaRow): string {
 function hasReader(row: MetaRow): boolean {
   if (row.kind === "edge") {
     // Personen-Kanten: eingebettete, die das Item trägt, und Record-Kanten,
-    // die auf das Item zeigen (attends). Item-Kanten folgen mit S3.
+    // die auf das Item zeigen (attends). Item-Kanten (C3): eingebettet, in
+    // beide Richtungen.
     const edge = row.entry
+    if (isItemEdge(edge)) return true
     return edge.widget === "people" && ((edge.storage === "embedded" && edge.itemRole === "from") || (edge.storage === "record" && edge.itemRole === "to"))
   }
-  return row.entry.widget === "date" || row.entry.widget === "location"
+  return row.entry.widget === "date" || row.entry.widget === "location" || row.entry.widget === "item-ref"
 }
 
 const data = (item: Item) => (item.data ?? {}) as Record<string, unknown>
@@ -133,6 +167,15 @@ function hasValue(row: MetaRow & { kind: "field" }, item: Item): boolean {
 
 function MetaRowView({ row, item }: { row: MetaRow & { kind: "field" }; item: Item }) {
   if (row.entry.widget === "date") return <DateRow item={item} field={row.entry} />
+  if (row.entry.widget === "item-ref") {
+    return (
+      <Row id={row.entry.key} icon={<Link2 className="h-3.5 w-3.5" />}>
+        <LabeledChips label={row.entry.label}>
+          <ItemRefValue item={item} field={row.entry} />
+        </LabeledChips>
+      </Row>
+    )
+  }
   return <LocationRow item={item} field={row.entry} />
 }
 
