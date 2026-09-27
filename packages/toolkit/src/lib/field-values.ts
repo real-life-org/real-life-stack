@@ -109,13 +109,56 @@ export function numberError(input: unknown, range: { min?: number; max?: number 
 }
 
 /**
- * Deutsch geschrieben, mit Einheit dahinter („1.500 €"). Nie gerundet: Das
- * Register kennt keine Genauigkeit, also steht der gespeicherte Wert
- * ungekürzt da — 0,001 kg bleibt 0,001 kg, nie „0 kg" (#544).
+ * Deutsch geschrieben, mit Einheit dahinter („1.500 €"). Werttreu: Das
+ * Register kennt keine Genauigkeit, also steht die Zahl so da, wie sie
+ * gespeichert ist — aus ihrer kürzesten exakten Schreibweise (`String`),
+ * nie gerundet (#544). 0,001 kg bleibt 0,001 kg; ein Wert ungleich 0 wird
+ * nie „0". Sehr kleine und sehr große Zahlen stehen mit Exponent („1e-21").
  */
 export function formatNumber(value: number, unit?: string): string {
-  const text = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 20 }).format(value)
+  const text = formatExact(value)
   return unit ? `${text} ${unit}` : text
+}
+
+/**
+ * Längste Ziffernfolge, die eine Zahl in Exponentschreibweise (`1e-7`)
+ * ausgeschrieben erscheint; darüber bleibt der Exponent.
+ */
+const MAX_PLAIN = 21
+
+function formatExact(value: number): string {
+  if (!Number.isFinite(value)) return String(value)
+  if (value === 0) return "0" // auch -0
+  const sign = value < 0 ? "-" : ""
+  const raw = String(Math.abs(value)) // kürzeste Schreibweise, die exakt zurückliest
+  const [mantissa, expPart] = raw.split("e")
+  const exp = expPart ? Number(expPart) : 0
+  const [intDigits, fracDigits = ""] = mantissa!.split(".")
+  const digits = intDigits! + fracDigits
+  const point = intDigits!.length + exp // Stelle des Kommas in `digits`
+  let int: string
+  let frac: string
+  if (point <= 0) {
+    int = "0"
+    frac = "0".repeat(-point) + digits
+  } else if (point >= digits.length) {
+    int = digits + "0".repeat(point - digits.length)
+    frac = ""
+  } else {
+    int = digits.slice(0, point)
+    frac = digits.slice(point)
+  }
+  int = int.replace(/^0+(?=\d)/, "")
+  frac = frac.replace(/0+$/, "")
+  if (expPart && int.length + frac.length > MAX_PLAIN) {
+    // Exponent statt hunderter Nullen; die Mantisse bleibt vollständig.
+    const lead = digits.replace(/^0+/, "")
+    const e = exp + intDigits!.length - 1 - (digits.length - lead.length)
+    const m = lead.replace(/0+$/, "")
+    return `${sign}${m[0]}${m.length > 1 ? "," + m.slice(1) : ""}e${e}`
+  }
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+  return `${sign}${grouped}${frac ? "," + frac : ""}`
 }
 
 // ---------------------------------------------------------------------------

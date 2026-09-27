@@ -720,4 +720,13 @@ describe("#544: Zahlen werden nie still gerundet", () => {
     const alt = { id: "c", type: "card", createdAt: "x", createdBy: "u", data: { title: "N", weight: 0.001 } } as Item
     expect(editInitialData(alt).weight).toBe("0.001")
   })
+
+  it("Schreiben: das gerenderte Feld zeigt auch einen Exponentialwert unverändert", async () => {
+    const typ = karte([{ key: "weight", widget: "number", label: "Gewicht", unit: "kg" }])
+    const { editInitialData } = createComposerMapping([typ])
+    const alt = { id: "c", type: "card", createdAt: "x", createdBy: "u", data: { title: "N", weight: 1e-21 } } as Item
+    const { container, unmount } = await formular(typ, editInitialData(alt))
+    expect(container.querySelector<HTMLInputElement>('input[aria-label="Gewicht (kg)"]')!.value).toBe("1e-21")
+    await unmount()
+  })
 })

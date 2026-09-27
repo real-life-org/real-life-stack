@@ -108,7 +108,28 @@ describe("number (B7): Zahl mit Einheit, Grenzen aus dem Register", () => {
     expect(formatNumber(12, "h")).toBe("12 h")
     expect(formatNumber(12.5)).toBe("12,5")
     expect(formatNumber(0.123456789)).toBe("0,123456789")
-    expect(formatNumber(1e-7)).not.toMatch(/^0$/)
+    expect(formatNumber(1e-7)).toBe("0,0000001")
+    expect(formatNumber(-2.5, "€")).toBe("-2,5 €")
+    expect(formatNumber(-0)).toBe("0")
+  })
+
+  it("#544 (Codex): werttreu auch jenseits von 20 Stellen — nie „0“ für einen Wert ungleich 0", () => {
+    expect(formatNumber(1e-21)).toBe("1e-21")
+    expect(formatNumber(-1e-21)).toBe("-1e-21")
+    expect(formatNumber(Number.MIN_VALUE)).toBe("5e-324")
+    expect(formatNumber(1.2345678901234568e-10)).toBe("1,2345678901234568e-10")
+    expect(formatNumber(Number.MAX_VALUE)).toBe("1,7976931348623157e308")
+    expect(formatNumber(1e21)).toBe("1e21")
+    expect(formatNumber(123456789012345680000)).toBe("123.456.789.012.345.680.000")
+    // Zurücklesbar: dieselbe Zahl, nichts gekürzt.
+    for (const n of [1e-21, Number.MIN_VALUE, 1.2345678901234568e-10, Number.MAX_VALUE, 0.1 + 0.2]) {
+      expect(Number(formatNumber(n).replace(/\./g, "").replace(",", ".")), String(n)).toBe(n)
+    }
+  })
+
+  it("#544 (Codex): Grenzmeldungen nennen die Grenze exakt", () => {
+    expect(numberError("0", { min: 1e-21 })).toBe("Mindestens 1e-21")
+    expect(numberError("0", { max: -1e-21 })).toBe("Höchstens -1e-21")
   })
 
   it("formatNumber schreibt deutsch mit Einheit", () => {
