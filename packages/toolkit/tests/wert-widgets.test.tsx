@@ -674,3 +674,35 @@ describe("Codex R2", () => {
     await r.unmount()
   })
 })
+
+describe("Codex R3", () => {
+  it("1: ein unberührtes Aufgabenformular ist nicht ungespeichert (der Standard-Status zählt nicht)", async () => {
+    const task = contentTypeFromRegister("task")
+    const dirty: boolean[] = []
+    const r = await rendere(
+      createElement(ContentComposer, { contentTypes: [task], mode: "task", showPreview: false, onSubmit: () => {}, onDirtyChange: (d: boolean) => dirty.push(d) }),
+    )
+    expect(dirty.at(-1)).toBe(false)
+    await r.unmount()
+  })
+
+  it("2: ein Typ mit statusOptions behält seinen Status, auch wenn ein Register-Typ daneben angeboten wird", async () => {
+    const task = contentTypeFromRegister("task")
+    const alt: ContentTypeConfig = { id: "todo", label: "Todo", defaultWidgets: ["title", "status"], statusOptions: [{ id: "a", label: "A" }, { id: "b", label: "B" }] }
+    const submits: ContentComposerSubmitData[] = []
+    const r = await rendere(
+      createElement(ContentComposer, {
+        contentTypes: [alt, task],
+        initialContentType: "todo",
+        initialData: { title: "T", status: "b" },
+        showPreview: false,
+        onSubmit: (s: ContentComposerSubmitData) => {
+          submits.push(s)
+        },
+      }),
+    )
+    await act(async () => [...r.container.querySelectorAll("button")].find((b) => b.textContent === "Erstellen")!.click())
+    expect(submits.at(-1)?.data.status).toBe("b")
+    await r.unmount()
+  })
+})

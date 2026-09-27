@@ -887,7 +887,8 @@ export function ContentComposer({
     ...itemRelationDataKeys(currentConfig?.itemRelations),
     ...(currentConfig?.itemRefs ?? []).filter((r) => !r.fixed).map((r) => r.key),
     // Wert-Felder (S4a) zählen für Ungespeichert und liveUpdate mit.
-    ...(currentConfig?.valueFields ?? []).map((v) => v.key),
+    // Status nicht: Sein Standardwert ist Konfiguration, keine Eingabe (DIRTY_FIELDS).
+    ...(currentConfig?.valueFields ?? []).filter((v) => v.widget !== "status").map((v) => v.key),
   ]
 
   const [data, setData] = React.useState<WidgetData>(() => ({
@@ -969,7 +970,11 @@ export function ContentComposer({
   const hasInvalidValues = (d: WidgetData) => Object.values(valueErrorsOf(d)).some(Boolean)
   // Wert-Felder eines anderen angebotenen Typs (nach einem Typwechsel) gehen
   // nicht mit: Sie wären weder geprüft noch nach ihrem Vertrag abgebildet.
-  const ownValueKeys = new Set((currentConfig?.valueFields ?? []).map((v) => v.key))
+  // Eigene Felder bleiben, auch der Status eines Typs mit `statusOptions` ohne Register.
+  const ownValueKeys = new Set([
+    ...(currentConfig?.valueFields ?? []).map((v) => v.key),
+    ...(currentConfig?.statusOptions?.length ? ["status"] : []),
+  ])
   const foreignValueKeys = [
     ...new Set(contentTypes.flatMap((t) => (t.valueFields ?? []).map((v) => v.key)).filter((k) => !ownValueKeys.has(k))),
   ]
