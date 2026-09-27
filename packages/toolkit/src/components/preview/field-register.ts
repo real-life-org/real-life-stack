@@ -14,7 +14,7 @@ import {
   type ComposedTypeManifest,
   type RelationRole,
 } from "@real-life-stack/data-interface"
-import { OPTION_TONES } from "../../lib/field-values"
+import { OPTION_TONES, type OptionTone } from "../../lib/field-values"
 
 /** Ein Widget je Datentyp, nicht je Fachfeld (B1–B15). */
 export type WidgetId =
@@ -45,7 +45,7 @@ export interface FieldOption {
    * (`OPTION_TONES`: neutral, warning, success, danger, info), nie eine Farbe.
    * Ohne ihn gilt beim Status die Rolle, sonst die Typfarbe.
    */
-  tone?: string
+  tone?: OptionTone
   /**
    * Nur Qualifier-Werte einer Kante mit Selbstaktion: die Beschriftung der
    * Pill, die diesen Wert setzt („Zusagen" für `going`, dessen `label`

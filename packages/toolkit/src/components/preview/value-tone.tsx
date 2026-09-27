@@ -27,11 +27,12 @@ const TONES: Record<OptionTone, { dot: string; soft: string }> = {
   },
   danger: {
     dot: "bg-destructive",
-    soft: "border-destructive bg-destructive/10 text-destructive dark:bg-destructive/25 dark:text-[color-mix(in_oklch,var(--destructive),white_40%)]",
+    // Schrift abgedunkelt: `text-destructive` auf Pastell bleibt unter 4,5:1 (Codex R5).
+    soft: "border-destructive bg-destructive/10 text-[color-mix(in_oklch,var(--destructive),black_20%)] dark:bg-destructive/25 dark:text-[color-mix(in_oklch,var(--destructive),white_40%)]",
   },
   info: {
     dot: "bg-info",
-    soft: "border-info bg-info/10 text-info dark:bg-info/20 dark:text-[color-mix(in_oklch,var(--info),white_20%)]",
+    soft: "border-info bg-info/10 text-[color-mix(in_oklch,var(--info),black_25%)] dark:bg-info/20 dark:text-[color-mix(in_oklch,var(--info),white_20%)]",
   },
 }
 

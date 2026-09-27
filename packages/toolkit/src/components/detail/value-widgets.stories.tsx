@@ -264,3 +264,30 @@ export const SpaceColours: Story = {
   ),
   parameters: { layout: "padded" },
 }
+
+const TONE_FIELD: FieldEntry = {
+  key: "tone",
+  widget: "select",
+  pos: "meta",
+  label: "Ton",
+  options: [
+    { id: "neutral", label: "Neutral", tone: "neutral" },
+    { id: "warning", label: "Warning", tone: "warning" },
+    { id: "success", label: "Success", tone: "success" },
+    { id: "danger", label: "Danger", tone: "danger" },
+    { id: "info", label: "Info", tone: "info" },
+  ],
+}
+
+/** The five tones (spec 06, rule 21) as chips — for contrast checks in light and dark (theme switch in the toolbar). */
+export const Tones: Story = {
+  render: () => (
+    <StoryWorld seed={{ items: [] }}>
+      <div className="flex w-[380px] flex-col gap-2 rounded-2xl border bg-card p-4">
+        {TONE_FIELD.options!.map((o) => (
+          <RegisterMeta key={o.id} item={{ id: `t-${o.id}`, type: "task", createdAt: at(1), createdBy: "mira", data: { title: o.label, tone: o.id } }} fields={[TONE_FIELD]} />
+        ))}
+      </div>
+    </StoryWorld>
+  ),
+}
