@@ -37,7 +37,7 @@ import { get, set, del, createStore, update as updateStoredValue } from "idb-key
  * — a re-seed throws away anything created locally, which is fine for
  * the local-only dev/test connector.
  */
-export const SEED_VERSION = 3
+export const SEED_VERSION = 4
 
 interface StoredState {
   items: Item[]
@@ -634,7 +634,9 @@ export class LocalConnector implements FullConnector, ActivityLogCapable, Scoped
       // Guard wie update/delete, vor dem ersten Effekt.
       if (item) assertMayMutateAuthoredItem(item, actor, "delete")
       const sourceGroupId = Object.entries(current.groupItems).find(([, ids]) => ids.includes(itemId))?.[0] ?? null
-      if (!item || !sourceGroupId) throw new Error(`Item not found: ${itemId}`)
+      // Ein Item ohne Space (in der Übersicht angelegt oder ohne Zuordnung
+      // geseedet) ist persönlich; der Move setzt dann erstmals einen Space.
+      if (!item) throw new Error(`Item not found: ${itemId}`)
       if (this.currentGroup && sourceGroupId !== this.currentGroup.id) throw new Error(`Item not found: ${itemId}`)
       if (sourceGroupId === targetGroupId) { committedState = current; return current }
       const groupItems = cloneGroupItems(current.groupItems)
