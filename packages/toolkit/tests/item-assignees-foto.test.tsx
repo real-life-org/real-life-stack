@@ -90,3 +90,28 @@ describe("ItemAssignees: Formen mit geladenem Profilfoto", () => {
     expect(solid.style.padding).toBe("")
   })
 })
+
+/**
+ * Codex-Review Runde 2: Foto-`alt` und Initialen wiederholten, was die
+ * Profilbeschriftung und die Screenreader-Liste schon sagen („Lena Berg Lena
+ * Berg lernt"). Das Bild ist Schmuck; der Name steht einmal in der Liste und
+ * einmal an der Profil-Schaltflaeche.
+ */
+describe("ItemAssignees: keine doppelte Ansage", () => {
+  it("gibt dem geladenen Foto ein leeres alt", async () => {
+    const el = await avatar({ ...lena, qualifier: "lernt" })
+    expect(el.querySelector("img")!.getAttribute("alt")).toBe("")
+    expect(host.querySelectorAll(".sr-only").length).toBe(1)
+    expect(host.querySelector(".sr-only")!.textContent).toBe("Lena Berg lernt")
+  })
+
+  it("blendet die Initialen fuer Screenreader aus", async () => {
+    ;(window as unknown as { Image: unknown }).Image = echtesBild
+    await act(async () => {
+      root.render(<ItemAssignees users={[{ id: "u9", displayName: "Emil Kranz" }]} size="xs" />)
+    })
+    const fallback = host.querySelector('[data-slot="avatar-fallback"]')!
+    expect(fallback.getAttribute("aria-hidden")).toBe("true")
+    expect(host.querySelector('[role="button"]')!.getAttribute("aria-label")).toBe("Profil von Emil Kranz öffnen")
+  })
+})
