@@ -1,6 +1,6 @@
 import type { Item } from "@real-life-stack/data-interface"
 import { normalizeItemType } from "@real-life-stack/data-interface"
-import type { ContentTypeConfig, WidgetData } from "./content-composer"
+import type { ContentTypeConfig, GroupOption, WidgetData } from "./content-composer"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import {
   peopleDataKeys,
@@ -194,13 +194,14 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
  * statement variant's `variantOf` must point into its own space
  * (resonance.md, Varianten rule 2).
  */
-export function withFixedGroup(types: ContentTypeConfig[], groupId: string): ContentTypeConfig[] {
+export function withFixedGroup(types: ContentTypeConfig[], groupId: string, reason?: string): ContentTypeConfig[] {
   return types.map((t) => {
     const option = t.groupOptions?.find((o) => o.id === groupId) ?? { id: groupId, name: "Space der Vorlage" }
     return {
       ...t,
       groupOptions: [option],
       defaultGroup: groupId,
+      ...(reason ? { groupFixedReason: reason } : {}),
       ...(t.defaultWidgets.includes("group") ? {} : { defaultWidgets: [...t.defaultWidgets, "group"] }),
     }
   })
@@ -209,16 +210,26 @@ export function withFixedGroup(types: ContentTypeConfig[], groupId: string): Con
 export function withGroupOptions(
   types: ContentTypeConfig[],
   // May be undefined while the groups query is still loading — guarded below.
-  groups: { id: string; name: string }[] | undefined,
+  // `data` carries the space's logo and colour (`image`, `primaryColor`) for
+  // the space pill in the form head, as the space switcher shows them.
+  groups: readonly { id: string; name: string; members?: readonly string[]; data?: Record<string, unknown> }[] | undefined,
   currentGroupId?: string,
   personalGroupId?: string | null,
 ): ContentTypeConfig[] {
   // Options = the user's personal/private space („Privat", the „share with
   // nobody" target) + the shared groups. Only surface a picker when there's a
   // real choice (≥2 options).
-  const options: { id: string; name: string }[] = []
-  if (personalGroupId) options.push({ id: personalGroupId, name: "Privat" })
-  options.push(...(groups ?? []).map((g) => ({ id: g.id, name: g.name })))
+  const options: GroupOption[] = []
+  if (personalGroupId) options.push({ id: personalGroupId, name: "Privat", personal: true })
+  options.push(
+    ...(groups ?? []).map((g) => ({
+      id: g.id,
+      name: g.name,
+      ...(typeof g.data?.image === "string" ? { image: g.data.image } : {}),
+      ...(typeof g.data?.primaryColor === "string" ? { color: g.data.primaryColor } : {}),
+      ...(Array.isArray(g.members) ? { memberCount: g.members.length } : {}),
+    })),
+  )
   if (options.length < 2) return types
 
   // Default to the current space; in the personal/overview view (no concrete

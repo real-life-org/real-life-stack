@@ -36,7 +36,7 @@ type WidgetType =
   | "status"
   | "group"
 
-const WIDGET_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+export const WIDGET_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   media: Image,
   date: Calendar,
   location: MapPin,
@@ -46,7 +46,7 @@ const WIDGET_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
   group: FolderOpen,
 }
 
-const WIDGET_LABELS: Record<string, string> = {
+export const WIDGET_LABELS: Record<string, string> = {
   media: "Medien",
   date: "Datum",
   location: "Ort",
