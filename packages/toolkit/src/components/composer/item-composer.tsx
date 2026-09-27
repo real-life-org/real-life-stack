@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 import {
   ContentComposer,
@@ -98,9 +98,19 @@ export function ItemComposer({
   useEffect(() => () => setUnsavedDirty(false), [setUnsavedDirty])
 
   // Zustände der Personenfelder mit Record-Kante (Event: Zusagen), live aus
-  // den geltenden Records; gilt für den Typ, den das Formular bearbeitet.
-  const formType = existingItem?.type ?? initialContentType ?? contentTypes[0]?.id ?? ""
-  const peopleStates = usePeopleFormStates(existingItem ?? null, resolveTypePresentation(formType).edges)
+  // den geltenden Records. Beim Bearbeiten für den Typ des Items; beim
+  // Erstellen für jeden angebotenen Typ, damit ein Typwechsel sie mitbringt
+  // (#522) — ohne Item gibt es noch keine geltenden Aussagen.
+  const typeIds = contentTypes.map((t) => t.id).join(" ")
+  const formEdges = useMemo(
+    () =>
+      existingItem
+        ? resolveTypePresentation(existingItem.type).edges
+        : typeIds.split(" ").filter(Boolean).flatMap((id) => resolveTypePresentation(id).edges ?? []),
+    [existingItem, typeIds],
+  )
+  const peopleStates = usePeopleFormStates(existingItem ?? null, formEdges)
+  const persistedRef = useRef<Item | null>(null)
 
   return (
     <ContentComposer
@@ -118,7 +128,11 @@ export function ItemComposer({
       onSubmit={async (data) => {
         let failure: Error | undefined
         const onError = (error: Error) => { failure = error }
-        const saved = await editor.submit(data, existingItem ? { existingItem, onError } : { onError })
+        // Ist das Item schon angelegt (ein Folgeschritt scheiterte), setzt
+        // „Erneut" an ihm fort, statt ein zweites anzulegen (#523).
+        const target = existingItem ?? persistedRef.current ?? undefined
+        const onPersisted = (item: Item) => { persistedRef.current = item }
+        const saved = await editor.submit(data, target ? { existingItem: target, onError, onPersisted } : { onError, onPersisted })
         if (saved) {
           // Clear synchronously BEFORE onDone navigates, so the nav guard doesn't
           // block the very navigation the save triggers.

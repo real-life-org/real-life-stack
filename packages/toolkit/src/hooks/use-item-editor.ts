@@ -88,7 +88,17 @@ export interface UseItemEditorResult {
    */
   submit(
     submission: ContentComposerSubmitData,
-    options?: { existingItem?: Item; /** Receives the caught error (the reason) before `submit` resolves `null`. */ onError?: (error: Error) => void },
+    options?: {
+      existingItem?: Item
+      /** Receives the caught error (the reason) before `submit` resolves `null`. */
+      onError?: (error: Error) => void
+      /**
+       * The item is stored (created or updated) — called before the follow-up
+       * steps (space, statements). If one of those fails, a retry continues
+       * on this item instead of creating a second one (#523).
+       */
+      onPersisted?: (item: Item) => void
+    },
   ): Promise<Item | null>
 
   /**
@@ -218,7 +228,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
   const submit = useCallback(
     async (
       submission: ContentComposerSubmitData,
-      submitOptions?: { existingItem?: Item; onError?: (error: Error) => void },
+      submitOptions?: { existingItem?: Item; onError?: (error: Error) => void; onPersisted?: (item: Item) => void },
     ): Promise<Item | null> => {
       const existingItem = submitOptions?.existingItem ?? currentItem
       const activeMode: "create" | "edit" = existingItem ? "edit" : "create"
@@ -236,6 +246,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
         if (activeMode === "create") {
           const payload = buildCreatePayload(mapped, currentUserId)
           const created = await createItem(payload)
+          submitOptions?.onPersisted?.(created)
           await applyItemGroup(connector, created.id, submission.data.group)
           await applyStatements(connector, created, mapped.statements)
           await onCreated?.(created)
@@ -244,6 +255,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
 
         const update = buildUpdatePayload(mapped, existingItem!)
         const updated = await updateItem(existingItem!.id, update)
+        submitOptions?.onPersisted?.(updated)
         await applyItemGroup(connector, updated.id, submission.data.group)
         await applyStatements(connector, updated, mapped.statements)
         if (currentItem && currentItem.id === existingItem!.id) {
