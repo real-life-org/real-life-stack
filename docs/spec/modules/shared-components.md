@@ -625,7 +625,7 @@ Jedes Item öffnet in derselben Anatomie. Sie besteht aus neun Slots in fester R
 | 6 | `tags` | TagChips und Urheberzeile | Tag-Widget |
 | 7 | `bar` | Reaktionen und Kommentieren (C7) | entfällt |
 | 8 | `comments` | Thread mit gepinnter Eingabe | entfällt; stattdessen Fußzeile Löschen · Abbrechen · Speichern |
-| 9 | `note` | Nur-lesen-Hinweis (Modus) | Fehler-Banner inline |
+| 9 | `note` | Nur-lesen-Hinweis (Modus) | entfällt; der Fehler beim Speichern steht als Banner unter dem Kopf des Formulars |
 
 Regeln:
 
@@ -648,7 +648,7 @@ Regeln:
 | Viele | Eine Menschen-Zeile fasst ab einer Schwelle je Qualifier zusammen: drei Avatare, „12 zugesagt" (`going`), „Alle" |
 | Laden | Skeleton in der Anatomie, kein Spinner |
 | Minimal | nur Felder mit Inhalt (Regeln 1 und 2) |
-| Fehler | Banner inline im Slot `note` mit „Erneut"; Eingaben bleiben erhalten |
+| Fehler | Banner inline unter dem Kopf des Formulars mit „Erneut" und, wenn der Connector einen liefert, dem Grund; Eingaben bleiben erhalten. „Erneut" setzt an einem schon angelegten Item fort |
 | Mobil | Drawer von unten, gleiche Slots; Kopf fix, der Rest scrollt |
 
 ### Widget-Paare

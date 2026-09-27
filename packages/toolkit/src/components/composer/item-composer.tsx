@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 import {
   ContentComposer,
@@ -68,8 +68,20 @@ export function ItemComposer({
   // (save/cancel/navigate-away all unmount the composer).
   const setDraft = useSetDraftItem()
   const currentUserId = currentUser?.id
+  // #523, Codex Runde 2: Ist das Item beim Erstellen schon angelegt und ein
+  // Folgeschritt scheiterte, wird das Formular zum Bearbeiten DIESES Items —
+  // Typ fest, Zustände live aus seinen Records, „Erneut" setzt daran fort.
+  const [persisted, setPersisted] = useState<Item | null>(null)
+  const persistedRef = useRef<Item | null>(null)
+  const current = existingItem ?? persisted ?? undefined
+  // Der Space im Kopf des Formulars — für das Schreibrecht der Aussagen
+  // beim Erstellen (Codex Runde 2, Befund 1).
+  const [formGroup, setFormGroup] = useState<string | null>(null)
   const publishDraft = useCallback(
     (submission: ContentComposerSubmitData) => {
+      const group = typeof submission.data.group === "string" && submission.data.group !== "" ? submission.data.group : null
+      setFormGroup((prev) => (prev === group ? prev : group))
+      const existingItem = current
       const payload = mapper(submission, {
         mode: existingItem ? "edit" : "create",
         existingItem: existingItem ?? null,
@@ -87,7 +99,7 @@ export function ItemComposer({
         ...(relations ? { relations } : {}),
       })
     },
-    [mapper, existingItem, currentUserId, setDraft],
+    [mapper, current, currentUserId, setDraft],
   )
   useEffect(() => () => setDraft(null), [setDraft])
 
@@ -104,23 +116,28 @@ export function ItemComposer({
   const typeIds = contentTypes.map((t) => t.id).join(" ")
   const formEdges = useMemo(
     () =>
-      existingItem
-        ? resolveTypePresentation(existingItem.type).edges
+      current
+        ? resolveTypePresentation(current.type).edges
         : typeIds.split(" ").filter(Boolean).flatMap((id) => resolveTypePresentation(id).edges ?? []),
-    [existingItem, typeIds],
+    [current, typeIds],
   )
-  const peopleStates = usePeopleFormStates(existingItem ?? null, formEdges)
-  const persistedRef = useRef<Item | null>(null)
+  const peopleStates = usePeopleFormStates(current ?? null, formEdges, formGroup)
+  // Nach dem Anlegen steht der Typ fest.
+  const offeredTypes = useMemo(() => {
+    if (!persisted || existingItem) return contentTypes
+    const own = contentTypes.filter((t) => t.id === persisted.type)
+    return own.length > 0 ? own : contentTypes
+  }, [contentTypes, persisted, existingItem])
 
   return (
     <ContentComposer
       apiRef={apiRef}
       peopleStates={peopleStates}
       className={className}
-      contentTypes={contentTypes}
+      contentTypes={offeredTypes}
       initialContentType={initialContentType}
       initialData={initialData}
-      editMode={!!existingItem}
+      editMode={!!current}
       showPreview={false}
       {...composerProps}
       onChange={publishDraft}
@@ -131,7 +148,11 @@ export function ItemComposer({
         // Ist das Item schon angelegt (ein Folgeschritt scheiterte), setzt
         // „Erneut" an ihm fort, statt ein zweites anzulegen (#523).
         const target = existingItem ?? persistedRef.current ?? undefined
-        const onPersisted = (item: Item) => { persistedRef.current = item }
+        const onPersisted = (item: Item) => {
+          if (existingItem) return
+          persistedRef.current = item
+          setPersisted(item)
+        }
         const saved = await editor.submit(data, target ? { existingItem: target, onError, onPersisted } : { onError, onPersisted })
         if (saved) {
           // Clear synchronously BEFORE onDone navigates, so the nav guard doesn't

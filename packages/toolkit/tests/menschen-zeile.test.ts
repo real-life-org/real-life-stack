@@ -200,13 +200,15 @@ describe("Codex Runde 1, Befund 5: nur die deklarierte Kombination teilt eine Ze
   })
 })
 
-describe("Codex Runde 1, Befund 4: collect-accepted wird nicht als one-per-subject ausgewertet", () => {
-  it("zeigt ohne Annahmeprüfung nur Selbstaussagen", () => {
-    const kante: EdgeEntry = {
-      predicate: "attends", itemRole: "to", storage: "record", widget: "people", pos: "meta", label: "War dabei",
-      qualifier: { key: "role", values: [{ id: "going", label: "dabei" }] }, count: "collect-accepted",
-    }
-    const line = peopleLine(EVENT, [kante], [attends("rel-1", "timo", "timo", "going"), attends("rel-2", "anton", "maria", "going")])
-    expect(line.map((e) => e.userId)).toEqual(["timo"])
+describe("Codex Runde 1/2, Befund 4/5: collect-accepted", () => {
+  it("wird für Personen-Kanten ausdrücklich abgelehnt, statt anders ausgewertet", () => {
+    setTypeManifest(composeTypeManifest([TOOLKIT_TYPE_LAYER, { name: "app", definitions: [{ id: "gig", vocabularies: [], relations: [{ predicate: "confirms", itemRole: "to", otherKind: "person" }] }] }]))
+    expect(() =>
+      registerTypePresentation("app", [{
+        id: "gig", label: "Gig",
+        edges: [{ predicate: "confirms", itemRole: "to", storage: "record", widget: "people", pos: "meta", label: "War dabei",
+          qualifier: { key: "role", values: [{ id: "yes", label: "dabei" }] }, count: "collect-accepted" }],
+      }]),
+    ).toThrow(/collect-accepted/)
   })
 })

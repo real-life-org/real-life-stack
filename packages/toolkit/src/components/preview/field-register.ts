@@ -186,6 +186,12 @@ export function assertRegisterLists(
         fail(layer, typeId, `Selbstaktion an (${edge.predicate}, ${edge.itemRole}) setzt ${unknown.join(", ")}, das der Qualifier nicht deklariert`)
       }
     }
+    // `collect-accepted` braucht die Annahmeprüfung aus 05 (isAccepted) und
+    // mehrere Aussagen je Person; die Menschen-Zeile kann das noch nicht.
+    // Nicht anders auswerten, sondern ablehnen.
+    if (edge.count === "collect-accepted" && edge.widget === "people") {
+      fail(layer, typeId, `Kante (${edge.predicate}, ${edge.itemRole}) mit count collect-accepted wird von der Menschen-Zeile noch nicht unterstützt`)
+    }
     // Regel 10: Rückwärts-Listen sind eingehende Kanten.
     if ((edge.pos === "list" || edge.list) && edge.itemRole !== "to") {
       fail(layer, typeId, `Kante (${edge.predicate}, ${edge.itemRole}) steht als list, ist aber nicht itemRole "to"`)

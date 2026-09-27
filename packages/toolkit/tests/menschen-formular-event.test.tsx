@@ -157,3 +157,45 @@ describe("Event bearbeiten gegen den MockConnector", () => {
     expect((await connector.getRelationRecords({ predicate: "attends", from: `global:${LENA}` }))[0].createdBy).toBe(LENA)
   })
 })
+
+describe("Codex Runde 2: Anzeige nach dem Speichern, Entfernen", () => {
+  const RECORD_BASE = {
+    base: { id: "invited", label: "eingeladen" },
+    values: [{ id: "going", label: "zugesagt" }, { id: "maybe", label: "vielleicht" }, { id: "declined", label: "abgesagt" }],
+  }
+  async function widget(record: Record<string, unknown>, value: string[]) {
+    const host = document.createElement("div")
+    const root = createRoot(host)
+    await act(async () => {
+      root.render(createElement(PeopleWidget, {
+        value, onChange: () => {}, label: "Wer",
+        options: [{ id: TIMO, name: "Timo" }, { id: ME, name: "Ich" }],
+        record: { ...RECORD_BASE, changes: {}, onChangesChange: () => {}, live: {}, ...record } as never,
+      }))
+    })
+    return { host, unmount: () => act(async () => root.unmount()) }
+  }
+  const stateText = (host: HTMLElement, name: string) =>
+    [...host.querySelectorAll<HTMLButtonElement>("[data-qualifier-toggle]")].find((b) => b.getAttribute("aria-label")?.startsWith(name))?.textContent
+
+  it("Befund 3: eine fremde Selbstaussage schlägt meine lokale Änderung", async () => {
+    const { host, unmount } = await widget({ live: { [TIMO]: { state: "declined", locked: true } }, changes: { [TIMO]: "going" } }, [TIMO])
+    expect(stateText(host, "Timo")).toBe("abgesagt")
+    await unmount()
+  })
+
+  it("Befund 3: nehme ich meine Aussage zurück, zeigt der Chip die verbleibende fremde", async () => {
+    const { host, unmount } = await widget({ live: { [ME]: { state: "going", mine: true, fallback: "maybe" } }, changes: { [ME]: "invited" } }, [ME])
+    expect(stateText(host, "Ich")).toBe("vielleicht")
+    await unmount()
+  })
+
+  it("Befund 4: Entfernen nimmt meine Aussage zurück, auch wenn sie gerade nicht gilt", async () => {
+    const onChangesChange = vi.fn()
+    const { host, unmount } = await widget({ live: { [TIMO]: { state: "declined", locked: true, mine: true } }, onChangesChange }, [TIMO])
+    const remove = host.querySelector<HTMLButtonElement>('button[aria-label="Timo entfernen"]')!
+    await act(async () => remove.click())
+    expect(onChangesChange).toHaveBeenCalledWith({ [TIMO]: null })
+    await unmount()
+  })
+})

@@ -129,3 +129,36 @@ describe("#523 Erneut nach teilweise erfolgreichem Speichern", () => {
     expect(onDone).toHaveBeenCalledTimes(1)
   })
 })
+
+describe("Codex Runde 2", () => {
+  it("Befund 1: mit Autorisierungsmodell zählt der Space im Kopf des Formulars", async () => {
+    Object.assign(connector, { can: (ability: string, target: { space?: string }) => ability !== "item/create" || target.space === "g" })
+    const { withGroupOptions } = await import("../src/components/composer/composer-mapping")
+    await act(async () => {
+      root.render(createElement(ConnectorProvider, { connector: connector as never }, createElement(ItemComposer, {
+        contentTypes: withGroupOptions(pickContentTypes("event"), [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], "g"),
+        initialContentType: "event",
+        mapper: mapComposerSubmission,
+        composerProps: { peopleOptions: [{ id: TIMO, name: "Timo" }], peopleQuickSuggestions: [{ id: TIMO, name: "Timo" }] },
+        onDone,
+        onCancel: () => {},
+      })))
+    })
+    await settle()
+    await act(async () => button("Timo")!.click())
+    expect(toggle("Timo")?.textContent).toBe("eingeladen")
+  })
+
+  it("Befund 2: nach dem Anlegen mit gescheitertem Folgeschritt ist der Typ fest", async () => {
+    await renderComposer("event")
+    await typeTitle("Ernten")
+    await act(async () => button("Timo")!.click())
+    await act(async () => toggle("Timo")!.click())
+    connector.createRelationRecord = (async () => { throw new Error("Relay nicht erreichbar") }) as never
+    await act(async () => button("Erstellen")!.click())
+    await settle()
+    expect(host.querySelector('[data-slot="save-error"]')).toBeTruthy()
+    expect(host.querySelector('button[aria-label^="Typ wählen"]')).toBeNull()
+    expect(button("Speichern")).toBeTruthy()
+  })
+})

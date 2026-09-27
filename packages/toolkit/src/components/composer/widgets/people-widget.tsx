@@ -43,7 +43,7 @@ interface PeopleWidgetProps {
 export interface PeopleWidgetRecord {
   base: { id: string; label: string }
   values: readonly { id: string; label: string }[]
-  live: Record<string, { state: string; locked?: boolean; mine?: boolean }>
+  live: Record<string, { state: string; locked?: boolean; mine?: boolean; fallback?: string }>
   changes: Record<string, string | null>
   onChangesChange: (next: Record<string, string | null>) => void
 }
@@ -159,10 +159,18 @@ export function PeopleWidget({
 
   // Zustände: Grundzustand, dann die Werte der Record-Kante.
   const states = record ? [record.base, ...record.values] : []
+  // Angezeigt wird, was nach dem Speichern gälte (Codex Runde 2, Befund 3):
+  // eine fremde Selbstaussage gewinnt immer; nehme ich meine Aussage zurück,
+  // gilt die verbleibende fremde oder der Grundzustand.
   const stateOf = (id: string) => {
     if (!record) return undefined
+    const live = record.live[id]
     const changed = record.changes[id]
-    const stateId = changed !== undefined && changed !== null ? changed : changed === null ? record.base.id : (record.live[id]?.state ?? record.base.id)
+    let stateId: string
+    if (live?.locked) stateId = live.state
+    else if (changed === undefined) stateId = live?.state ?? record.base.id
+    else if (changed === null || changed === record.base.id) stateId = live?.fallback ?? record.base.id
+    else stateId = changed
     return states.find((s) => s.id === stateId) ?? record.base
   }
   const cycleState = (id: string) => {
@@ -174,7 +182,7 @@ export function PeopleWidget({
   // Wer eine geltende Aussage hat, steht im Feld, auch ohne Einladung —
   // außer das Formular nimmt die eigene Aussage gerade zurück.
   const shown = record
-    ? [...value, ...Object.keys(record.live).filter((id) => !value.includes(id) && record.changes[id] !== null)]
+    ? [...value, ...Object.keys(record.live).filter((id) => !value.includes(id) && (record.changes[id] !== null || !!record.live[id].fallback || !!record.live[id].locked))]
     : value
 
   const qualifierOf = (id: string) => qualifier?.values.find((v) => v.id === qualifiers?.[id])

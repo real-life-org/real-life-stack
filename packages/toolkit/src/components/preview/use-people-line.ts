@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react"
 import type { DataInterface, Item, RelationRecord } from "@real-life-stack/data-interface"
+import { onePerSubjectWinners } from "@real-life-stack/data-interface"
 import {
   hasAuthorization,
   hasClaimVerification,
@@ -85,48 +86,82 @@ export function usePeopleLines(item: Item, edges: readonly EdgeEntry[] | undefin
  * schreibbar, und mit Autorisierungsmodell `item/create` für Relation-Items
  * im Space des Items (beim Anlegen: im aktuellen Space).
  */
-export function canWriteStatements(connector: DataInterface, item: Item | null, meId: string | undefined): boolean {
+export function canWriteStatements(connector: DataInterface, item: Item | null, meId: string | undefined, spaceId?: string | null): boolean {
   if (!meId || !isWritable(connector) || !isAuthenticatable(connector)) return false
   if (!(hasRelationRecords(connector) && hasRelationRecordWriter(connector) && hasClaimVerification(connector))) return false
   if (!hasAuthorization(connector)) return true
-  const space = item && hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null
+  const space = item && hasItemGroups(connector) ? connector.getItemGroupId(item.id) : (spaceId ?? null)
   return resolveCanCreate(connector, space, "relation")
 }
 
 const NEW_ITEM: Item = { id: "__new__", type: "", createdAt: "", createdBy: "", data: {} }
 
+/** Zustand einer Person im Personenfeld mit Record-Kante. */
+export interface FormPersonState {
+  /** Der geltende Zustand (Gewinner nach one-per-subject). */
+  state: string
+  /** Die eigene Aussage einer anderen Person: sie gewinnt immer, nur sie ändert sie. */
+  locked?: boolean
+  /** Ich habe eine Aussage über die Person — gleich ob sie gerade gilt. */
+  mine?: boolean
+  /** Was gälte ohne meine Aussage (die geltende fremde); fehlt: Grundzustand. */
+  fallback?: string
+}
+
 /**
  * Geltende Zustände der Personenfelder mit Record-Kante für das Formular
- * (Event: `invited` + `attends` in einem Feld), je Prädikat des Feldes.
- * Ohne Schreibmöglichkeit kein Eintrag — das Feld zeigt dann keine Zustände.
+ * (Event: `invited` + `attends` in einem Feld), je Prädikat des Feldes, aus
+ * den verifizierten Records (Leseregel L1). Ohne Schreibmöglichkeit kein
+ * Eintrag — das Feld zeigt dann keine Zustände. `spaceId` ist der Space im
+ * Kopf des Formulars, solange es kein Item gibt.
  */
-export function usePeopleFormStates(item: Item | null, edges: readonly EdgeEntry[] | undefined): Record<string, { live: Record<string, { state: string; locked?: boolean; mine?: boolean }> }> {
+export function usePeopleFormStates(
+  item: Item | null,
+  edges: readonly EdgeEntry[] | undefined,
+  spaceId?: string | null,
+): Record<string, { live: Record<string, FormPersonState> }> {
   const connector = useConnector()
   const { data: me } = useOptionalCurrentUser()
   const meId = me?.id
-  const lines = usePeopleLines(item ?? NEW_ITEM, item ? edges : undefined)
   const groups = useMemo(() => peopleLineGroups(edges), [edges])
+  const predicates = useMemo(() => recordPeopleEdges(edges).map((edge) => edge.predicate), [edges])
+  const records = useItemRecords(item ?? NEW_ITEM, item ? predicates : [])
   return useMemo(() => {
-    const out: Record<string, { live: Record<string, { state: string; locked?: boolean; mine?: boolean }> }> = {}
-    if (!canWriteStatements(connector, item, meId)) return out
+    const out: Record<string, { live: Record<string, FormPersonState> }> = {}
+    if (!canWriteStatements(connector, item, meId, spaceId)) return out
+    const to = `item:${item?.id ?? NEW_ITEM.id}`
     for (const group of groups) {
-      if (!group.some((edge) => edge.storage === "record" && edge.qualifier)) continue
-      const live: Record<string, { state: string; locked?: boolean; mine?: boolean }> = {}
-      const entries = lines.find((line) => line.edges[0] === group[0])?.entries ?? []
-      for (const entry of entries) {
-        if (entry.edge.storage !== "record" || !entry.qualifier) continue
-        const selfStatement = !entry.speakerId
-        live[entry.userId] = {
-          state: entry.qualifier.id,
-          // Die eigene Aussage einer anderen Person gewinnt immer (08); sie ändert nur sie.
-          ...(selfStatement && entry.userId !== meId ? { locked: true } : {}),
-          ...((selfStatement ? entry.userId === meId : entry.speakerId === meId) ? { mine: true } : {}),
+      const recordEdge = group.find((edge) => edge.storage === "record" && edge.qualifier)
+      if (!recordEdge || !recordEdge.qualifier) continue
+      const key = recordEdge.qualifier.key
+      const allowed = new Set(recordEdge.qualifier.values.map((v) => v.id))
+      const valueOf = (record: RelationRecord | undefined) => {
+        const value = record?.fields?.[key]
+        return typeof value === "string" && allowed.has(value) ? value : undefined
+      }
+      const own = records.filter((record) => record.predicate === recordEdge.predicate && record.to === to)
+      const winners = onePerSubjectWinners(own, to)
+      const withoutMine = onePerSubjectWinners(own.filter((record) => record.createdBy !== meId), to)
+      const live: Record<string, FormPersonState> = {}
+      for (const [from, winner] of winners) {
+        if (!from.startsWith("global:")) continue
+        const userId = from.slice("global:".length)
+        const state = valueOf(winner)
+        if (!state) continue
+        const selfStatement = winner.createdBy === userId
+        const mine = own.some((record) => record.from === from && record.createdBy === meId)
+        const fallback = valueOf(withoutMine.get(from))
+        live[userId] = {
+          state,
+          ...(selfStatement && userId !== meId ? { locked: true } : {}),
+          ...(mine ? { mine: true } : {}),
+          ...(fallback ? { fallback } : {}),
         }
       }
       out[group[0].predicate] = { live }
     }
     return out
-  }, [connector, groups, item, lines, meId])
+  }, [connector, groups, item, meId, records, spaceId])
 }
 
 export interface SelfActionState {

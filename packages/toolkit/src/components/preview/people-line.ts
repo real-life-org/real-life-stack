@@ -12,7 +12,7 @@
 // Record-Aussage schlägt die eingebettete Kante (08, Teilnahme am Event,
 // Regel 5).
 
-import { collectAccepted, onePerSubjectWinners, type Item, type RelationRecord } from "@real-life-stack/data-interface"
+import { onePerSubjectWinners, type Item, type RelationRecord } from "@real-life-stack/data-interface"
 import type { EdgeEntry, FieldOption } from "./field-register"
 
 const PERSON_PREFIX = "global:"
@@ -101,14 +101,10 @@ export function peopleLine(item: Item, edges: readonly EdgeEntry[], records: rea
     if (edge.storage === "record") {
       if (edge.itemRole !== "to") return
       const own = records.filter((record) => record.predicate === edge.predicate && record.to === `item:${item.id}`)
-      // Zählregel der Kante (08, Regel 10). `collect-accepted` zeigt eine
-      // Aussage über eine Person erst nach ihrer Annahme; die Annahmeprüfung
-      // (05) gibt es hier noch nicht — also nur Selbstaussagen, fail closed.
-      const counted =
-        edge.count === "collect-accepted"
-          ? collectAccepted(own, () => false).map((record) => [record.from, record] as const)
-          : [...onePerSubjectWinners(own, `item:${item.id}`)]
-      for (const [from, record] of counted) {
+      // Zählregel `one-per-subject` (08, Regel 10). `collect-accepted` lehnt
+      // das Register für Personen-Kanten ab, bis es die Annahmeprüfung gibt.
+      if (edge.count === "collect-accepted") return
+      for (const [from, record] of onePerSubjectWinners(own, `item:${item.id}`)) {
         const userId = personId(from)
         if (!userId) continue
         const option = edge.qualifier ? declared(edge, record.fields?.[edge.qualifier.key]) : undefined
