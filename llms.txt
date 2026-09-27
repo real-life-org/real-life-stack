@@ -78,7 +78,7 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 
 - `useSetDraftItem()` → `(draft) => void`: Publish or discard the running draft. Without capability: no-op.
 - `useItemEditor(options)` → `{isOpen, mode, submit, remove, …}`: Open the composer and save an input as an item, including its space. Without capability: throws on call.
-- `useCreateItem()` → `(input) => Promise<Item>`: Create a new item. Without capability: throws on call.
+- `useCreateItem()` → `(input, options?) => Promise<Item>`: Create a new item — optionally directly in a given space (`{ group }`). Without capability: throws on call.
 - `useUpdateItem()` → `(id, updates) => Promise<Item>`: Change an existing item. Without capability: throws on call.
 - `useDeleteItem()` → `(id) => Promise<void>`: Delete an item. Without capability: throws on call.
 - `useUnsavedChanges()` → `{dirty, setDirty} | null`: Are there unsaved inputs that leaving must intercept? Without capability: null — without provider.
