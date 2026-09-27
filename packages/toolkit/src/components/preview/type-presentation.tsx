@@ -350,13 +350,13 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
         pos: "meta",
         label: "Zugewiesen",
         add: "Zuweisen…",
-        // Folgeaktion „Erledigt" nur für die Person, die übernommen hat; beides Umschalter (Entscheidung 27).
+        // Folgeaktion „Erledigt" nur für die Person, die übernommen hat; „✓ Erledigt" ist ein Zustand (Entscheidung 27).
         selfAction: {
           label: "Übernehmen",
           mine: "Übernommen",
           followUps: {
             field: "status",
-            complete: { label: "Erledigt", undo: "Als offen markieren" },
+            complete: { label: "Erledigt" },
             release: "Übernahme zurückgeben",
           },
         },
@@ -630,7 +630,7 @@ function composePresentation(): Map<string, TypePresentationEntry> {
   for (const entry of composed.values()) {
     assertNoParallelComposerSource(entry)
     assertJoins(entry.id, entry.edges)
-    assertFollowUps(entry.id, entry.fields, entry.edges, entry.composer?.defaultStatus)
+    assertFollowUps(entry.id, entry.fields, entry.edges)
   }
   composedCache = composed
   return composed

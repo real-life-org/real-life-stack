@@ -28,7 +28,7 @@ import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { resolveCanCreate, resolveItemPermissions } from "../../hooks/use-item-permissions"
 import { writeOwnStatement } from "../../lib/own-statement"
 import { useVerifiedRelationRecords } from "../../hooks/use-votes"
-import { doneValue, reopenValue, type EdgeEntry, type FieldEntry } from "./field-register"
+import { doneValue, type EdgeEntry, type FieldEntry } from "./field-register"
 import { peopleLine, peopleLineGroups, recordPeopleEdges, type PeopleLineEntry } from "./people-line"
 
 const NO_RECORDS: RelationRecord[] = []
@@ -340,14 +340,14 @@ export interface FollowUpState {
   available: boolean
   busy: boolean
   error: string | null
-  /** Schreibt den Erledigt-Wert (`complete`) oder den Standard-Status (`reopen`). */
-  run: (id: "complete" | "reopen") => Promise<void>
+  /** Schreibt den Erledigt-Wert (`complete`); zurück geht es nur über Bearbeiten oder das Modul. */
+  run: (id: "complete") => Promise<void>
 }
 
 /**
  * Folgeaktionen einer Selbstaktion am Status-Feld (Entscheidung 27):
- * „Erledigt" schreibt den Wert, den das Register als erledigt markiert,
- * sein zweiter Klick den Standard-Status. Geschrieben wird das Trägeritem nach
+ * „Erledigt" schreibt den Wert, den das Register als erledigt markiert;
+ * zurückgenommen wird er nicht (nur über Bearbeiten oder das Modul). Geschrieben wird das Trägeritem nach
  * dessen Rechten; das übrige `data` bleibt.
  */
 export function useFollowUps(item: Item, statusField: FieldEntry | undefined, defaultStatus?: string, edge?: EdgeEntry): FollowUpState {
@@ -361,9 +361,9 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const run = useCallback(
-    async (id: "complete" | "reopen") => {
+    async (id: "complete") => {
       if (!available || !statusField || !isWritable(connector)) return
-      const value = id === "complete" ? doneValue(statusField) : id === "reopen" ? reopenValue(statusField, defaultStatus) : undefined
+      const value = id === "complete" ? doneValue(statusField) : undefined
       if (value === undefined) return
       setBusy(true)
       setError(null)
@@ -378,7 +378,7 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
         if (!current || !meId) return
         const status = (current.data as Record<string, unknown> | undefined)?.[statusField.key]
         const isDone = status === doneValue(statusField)
-        if ((id === "complete" && isDone) || (id === "reopen" && !isDone)) return
+        if (isDone) return
         if (edge && !(await stillMine(connector, current, edge, meId))) return
         await connector.updateItem(item.id, { data: { ...(current.data ?? {}), [statusField.key]: value } })
       } catch (err) {
