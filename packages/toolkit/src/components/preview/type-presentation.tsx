@@ -4,9 +4,12 @@
 //
 // Spec: docs/spec/06-schema-composition.md → "Typ-Register".
 //
-// Entries attach DISPLAY concerns (label, icon, badge, composer widgets, and
-// the preview/detail/footer slot contents for the shared ItemPreview shell)
-// to type ids owned by the type manifest in `data-interface`.
+// Entries attach DISPLAY concerns (label, icon, badge, the field and edge
+// lists of "Feld- und Kantenregister", composer extras, and the preview slot
+// for the shared ItemPreview shell) to type ids owned by the type manifest in
+// `data-interface`. Meta box and composer defaults derive from `fields` and
+// `edges` (field-register.ts); `detail`/`footer` are read only in transition
+// (Spec 06, Regel 17) until S6 removes them.
 //
 // The register is BOUND to the manifest: registering presentation for an id
 // the manifest does not know throws — this layer cannot introduce types
@@ -16,7 +19,8 @@
 // Layers contribute like the manifest (spec "Erweiterung und Merge"):
 // *definitions* present a type for the first time, *extensions* additively
 // fill fields the base left unset — scalar fields only where the base has
-// none, `relationWidgets` united by key. Conflicts throw; no override in
+// none, `relationWidgets`, `fields`, `edges`, `lists` and `menuActions`
+// united by key. Conflicts throw; no override in
 // v0.1. Re-registering the SAME layer replaces it wholesale (Vite HMR
 // re-executes registering modules on edit; throwing would break dev).
 //
@@ -40,18 +44,24 @@ import {
   composeTypeManifest,
   TOOLKIT_TYPE_LAYER,
   setTypeManifest as bindDataInterfaceManifest,
-  isTask,
   relationAffordanceKey,
   type ComposedTypeManifest,
   type Item,
-  type User,
   normalizeItemType,
 } from "@real-life-stack/data-interface"
 
-import { useMembers } from "../../hooks/use-groups"
-import { useOptionalCurrentUser } from "../../hooks/use-auth"
-import { ItemAssignees } from "./item-assignees"
 import { ItemMetaRow } from "./item-meta-row"
+import {
+  assertRegisterLists,
+  hasRegisterLists,
+  uniteRegisterLists,
+  type EdgeEntry,
+  type FieldEntry,
+  type ListEntry,
+  type MenuActionEntry,
+  type RegisterLists,
+} from "./field-register"
+import { RegisterMeta } from "./register-meta"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
 import { StatementDetail, StatementVariantLine } from "../resonance/statement-variants"
 import { VoteBar } from "../resonance/vote-bar"
@@ -70,22 +80,40 @@ export interface TypeBadgeStyle {
 }
 
 /** Presents a type for the first time (spec: Typdefinition, Darstellungsseite). */
-export interface TypePresentationEntry {
+export interface TypePresentationEntry extends RegisterLists {
   /** Must match a manifest id — this layer never introduces types. */
   id: string
   /** Display name; the manifest deliberately carries none (SRP). */
   label: string
   /** Badge styling. Absent = deliberately no badge (e.g. plain posts). */
   badge?: TypeBadgeStyle
-  /** Widget set the composer opens with (ContentTypeConfig.defaultWidgets). */
+  /** Feldliste (Spec 06, Feld- und Kantenregister). */
+  fields?: readonly FieldEntry[]
+  /** Kantenliste, keyed by (`predicate`, `itemRole`); jede Kante adressiert eine Manifest-Kante. */
+  edges?: readonly EdgeEntry[]
+  /** Rückwärts-Listen über eine benannte Abfrage, keyed by `query`. */
+  lists?: readonly ListEntry[]
+  /** Zusätzliche Aktionen im ⋮-Menü, keyed by `id`. */
+  menuActions?: readonly MenuActionEntry[]
+  /**
+   * Widget set the composer opens with. Only for types WITHOUT a field list —
+   * with `fields`/`edges` it is derived (Spec 06, Regel 16).
+   */
   composerWidgets?: readonly string[]
-  /** Composer widget per declared edge, keyed by `relationAffordanceKey`. */
+  /**
+   * Composer widget per declared edge, keyed by `relationAffordanceKey`.
+   * Geht in `edges` auf (Spec 06, Regel 2): nur noch für Typen ohne
+   * Feld- und Kantenliste.
+   */
   relationWidgets?: Readonly<Record<string, string>>
   /** Compact slot for cards and rows (metaAdornment). */
   preview?: ComponentType<ItemSlotProps>
-  /** Panel slot (metaAdornment); defaults to `preview`, then ItemMetaRow. */
+  /**
+   * Panel slot (metaAdornment). Übergang (Spec 06, Regel 17): gewinnt über die
+   * Meta-Box aus `fields`/`edges`; entfällt mit S6.
+   */
   detail?: ComponentType<ItemSlotProps>
-  /** Type-own footer, rendered IN ADDITION to surface footers. */
+  /** Type-own footer, rendered IN ADDITION to surface footers. Übergang bis S6 (Regel 17). */
   footer?: ComponentType<ItemSlotProps>
   /**
    * Was der Composer fuer diesen Typ zusaetzlich wissen muss: Beschriftung
@@ -100,7 +128,9 @@ export interface TypePresentationEntry {
 
 export interface TypeComposerPresentation {
   submitLabel?: string
+  /** Nur ohne Feldliste — sonst kommt die Beschriftung aus `FieldEntry.label`. */
   widgetLabels?: Readonly<Record<string, string>>
+  /** Nur ohne Feldliste — sonst aus `options` des `status`-Feldes. */
   statusOptions?: readonly { id: string; label: string }[]
   defaultStatus?: string
   groupRequired?: boolean
@@ -108,7 +138,7 @@ export interface TypeComposerPresentation {
 
 /** Additively fills fields an existing presentation left unset
  *  (spec: Erweiterungsfragment, Darstellungsseite). */
-export interface TypePresentationFragment {
+export interface TypePresentationFragment extends RegisterLists {
   /** Must address an id already presented by an earlier layer. */
   id: string
   badge?: TypeBadgeStyle
@@ -127,7 +157,7 @@ export interface TypePresentationLayer {
 }
 
 /** What surfaces consume: entry with every fallback already applied. */
-export interface ResolvedTypePresentation {
+export interface ResolvedTypePresentation extends RegisterLists {
   id: string
   label: string
   badge?: TypeBadgeStyle
@@ -145,26 +175,15 @@ export interface ResolvedTypePresentation {
 // ---------------------------------------------------------------------------
 // Core slot components
 
-/** Assignees are a TYPE rule (a task has assignees, wherever it is shown).
- *  `useMembers(null)` asks for the union of all known users, so an assignee
- *  resolves even when they are not a member of the surface's current space —
- *  including the signed-in user in their personal space. */
-function TaskAssigneesFooter({ item }: ItemSlotProps) {
-  // Dieser Slot rendert in jeder Fläche, die renderTypeFooter aufruft — auch
-  // unter einem Connector ohne Gruppen und ohne Anmeldung. Beide Quellen dürfen
-  // deshalb leer sein; dann bleibt die Zeile einfach aus.
-  const { data: members } = useMembers(null)
-  const { data: currentUser } = useOptionalCurrentUser()
-  if (!isTask(item)) return null
-  const users = (item.relations ?? [])
-    .filter((relation) => relation.predicate === "assignedTo")
-    .map((relation) => {
-      const id = relation.target.replace(/^global:/, "")
-      return members.find((m) => m.id === id) ?? (currentUser?.id === id ? currentUser : undefined)
-    })
-    .filter((user): user is User => !!user)
-  if (users.length === 0) return null
-  return <ItemAssignees users={users} />
+/**
+ * Die Meta-Box aus dem Register (shared-components, Item-Detail aus dem
+ * Register): liest Feld- und Kantenliste des Typs, den das Item trägt. Die
+ * Aufgaben-Zuweisungen standen bis S1 als Typ-Fußzeile; sie sind jetzt eine
+ * Kante in der Meta-Box wie jede andere Personen-Kante.
+ */
+const REGISTER_DETAIL: ComponentType<ItemSlotProps> = function RegisterDetail({ item }) {
+  const presentation = resolveTypePresentation(item.type)
+  return <RegisterMeta item={item} fields={presentation.fields} edges={presentation.edges} />
 }
 
 function EventPreview({ item }: ItemSlotProps) {
@@ -187,15 +206,38 @@ export const GENERIC_BADGE: TypeBadgeStyle = {
 /** The seven core types RLS ships (spec 06, "Core-Typ"). Labels and badge
  *  styles are verbatim from the previous ItemTypeBadge DEFAULT_CONFIG; the
  *  preview slots are the previous getItemPreviewAdornments bodies. */
+// Feld- und Kantenlisten der Toolkit-Typen (Spec 06, Register je Typ). S1
+// fuehrt nur Kanten, die das Manifest heute deklariert (Regel 1): `locatedAt`,
+// `partOf`, `blocks` und `attends` kommen erst mit ihrer Relation-Typ-
+// Definition. Felder, deren Widget es noch nicht gibt (`meetingLink` als url,
+// `variantOf` als item-ref), folgen mit S3/S4.
+const TITLE: FieldEntry = { key: "title", widget: "title", pos: "head" }
+const DESCRIPTION: FieldEntry = { key: "description", widget: "text", pos: "content" }
+const TAGS: FieldEntry = { key: "tags", widget: "tags", pos: "tags" }
+const GROUP: FieldEntry = { key: "group", widget: "group", pos: "badge" }
+// Der Ort: Das Location-Widget schreibt address, position und locationName
+// (shared-components, Location-Widget) — ein Feld, ein Widget.
+const ADDRESS: FieldEntry = { key: "address", widget: "location", pos: "meta" }
+
 const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
-  { id: "post", composer: { submitLabel: "Posten" }, label: "Post", composerWidgets: ["text"] },
+  {
+    id: "post",
+    composer: { submitLabel: "Posten" },
+    label: "Post",
+    // Regel 5: Das Body-Feld ist ein Feldeintrag — beim Beitrag `content`.
+    fields: [
+      { key: "content", widget: "text", pos: "content" },
+      { key: "media", widget: "media", pos: "content" },
+      TAGS,
+    ],
+  },
   {
     id: "event",
     label: "Event",
     composer: { submitLabel: "Erstellen" },
     badge: { icon: Calendar, className: "bg-blue-50 text-blue-700 border-blue-200" },
-    composerWidgets: ["title", "text", "date", "location"],
-    relationWidgets: { [relationAffordanceKey({ predicate: "invited", itemRole: "from" })]: "people" },
+    fields: [TITLE, DESCRIPTION, { key: "start", widget: "date", pos: "meta" }, ADDRESS, GROUP, TAGS],
+    edges: [{ predicate: "invited", itemRole: "from", storage: "embedded", widget: "people", pos: "meta", label: "Eingeladen" }],
     preview: EventPreview,
   },
   {
@@ -203,28 +245,37 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     label: "Ort",
     composer: { submitLabel: "Erstellen" },
     badge: { icon: MapPin, className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    composerWidgets: ["title", "text", "location"],
+    fields: [TITLE, DESCRIPTION, ADDRESS, TAGS],
   },
   {
     id: "task",
     label: "Task",
-    // Statuswerte = die Spalten des Kanban (kanban-board.tsx, defaultColumns).
-    // Hier ausgeschrieben statt importiert: Das Darstellungs-Register darf
-    // kein Modul einziehen. Aendert sich eine Spalte, aendern sich beide.
-    composer: {
-      widgetLabels: { text: "Beschreibung", people: "Zugewiesen" },
-      statusOptions: [
-        { id: "open", label: "To Do" },
-        { id: "in-progress", label: "In Arbeit" },
-        { id: "done", label: "Erledigt" },
-      ],
-      defaultStatus: "open",
-      groupRequired: true,
-    },
+    composer: { defaultStatus: "open", groupRequired: true },
     badge: { icon: CheckSquare, className: "bg-amber-50 text-amber-700 border-amber-200" },
-    composerWidgets: ["title", "text", "status", "people", "tags"],
-    relationWidgets: { [relationAffordanceKey({ predicate: "assignedTo", itemRole: "from" })]: "people" },
-    footer: TaskAssigneesFooter,
+    fields: [
+      TITLE,
+      { ...DESCRIPTION, label: "Beschreibung" },
+      // Die Frist schreibt das Datums-Widget nach `start` (Spec 06, Die Rolle
+      // von type: „Ein Task mit Deadline und ein Event tragen beide start").
+      { key: "start", widget: "date", pos: "meta", label: "Fällig" },
+      {
+        key: "status",
+        widget: "status",
+        pos: "meta",
+        // Statuswerte = die Spalten des Kanban (kanban-board.tsx, defaultColumns).
+        // Hier ausgeschrieben statt importiert: Das Darstellungs-Register darf
+        // kein Modul einziehen. Aendert sich eine Spalte, aendern sich beide.
+        options: [
+          { id: "open", label: "To Do" },
+          { id: "in-progress", label: "In Arbeit" },
+          { id: "done", label: "Erledigt" },
+        ],
+      },
+      TAGS,
+      // Position im Modul: nie im Formular, nie in der Meta-Box (Regel 4).
+      { key: "order", widget: "number", pos: "module", edit: false },
+    ],
+    edges: [{ predicate: "assignedTo", itemRole: "from", storage: "embedded", widget: "people", pos: "meta", label: "Zugewiesen" }],
   },
   {
     id: "person",
@@ -242,8 +293,30 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     id: "statement",
     label: "Aussage",
     badge: { icon: MessageSquareQuote, className: "bg-sky-50 text-sky-700 border-sky-200" },
-    composerWidgets: ["title", "text", "tags"],
-    composer: { widgetLabels: { title: "Aussage", text: "Kontext" }, submitLabel: "Einbringen" },
+    fields: [{ ...TITLE, label: "Aussage" }, { ...DESCRIPTION, label: "Kontext" }, TAGS],
+    // Die Stimme ist ein Qualifier am Record (08, Qualifier an Kanten). Die
+    // Selbstaktion und die Stimmleiste im Slot `actions` kommen mit S2; bis
+    // dahin zeichnet der Übergangs-`footer` sie (Regel 17).
+    edges: [
+      {
+        predicate: "votesOn",
+        itemRole: "to",
+        storage: "record",
+        widget: "vote",
+        pos: "actions",
+        label: "Stimmen",
+        qualifier: {
+          key: "value",
+          values: [
+            { id: "green", label: "Dafür" },
+            { id: "yellow", label: "Skeptisch" },
+            { id: "red", label: "Dagegen" },
+          ],
+        },
+        count: "one-per-subject",
+      },
+    ],
+    composer: { submitLabel: "Einbringen" },
     // Ausführlich im Panel: Fassungen der Aussage und „Variante anlegen"
     // (resonance.md → Varianten); `preview` bleibt frei, damit die Karten
     // ihr Badge behalten.
@@ -293,11 +366,13 @@ export function setTypeManifest(next: ComposedTypeManifest): void {
         )
       }
       assertRelationWidgetKeys(next, entry.id, entry.relationWidgets, name)
+      assertRegisterLists(next, entry.id, entry, name)
     }
-    // Extensions carry relationWidgets too — a rebind that skipped them could
-    // leave orphan widget keys behind (#228).
+    // Extensions carry relationWidgets and edges too — a rebind that skipped
+    // them could leave orphan keys behind (#228).
     for (const frag of layer.extensions ?? []) {
       assertRelationWidgetKeys(next, frag.id, frag.relationWidgets, name)
+      assertRegisterLists(next, frag.id, frag, name)
     }
   }
   manifest = next
@@ -373,9 +448,11 @@ export function registerTypePresentation(
       )
     }
     assertRelationWidgetKeys(manifest, entry.id, entry.relationWidgets, layerName)
+    assertRegisterLists(manifest, entry.id, entry, layerName)
   }
   for (const frag of normalized.extensions ?? []) {
     assertRelationWidgetKeys(manifest, frag.id, frag.relationWidgets, layerName)
+    assertRegisterLists(manifest, frag.id, frag, layerName)
   }
 
   const previous = layers.get(layerName)
@@ -403,8 +480,10 @@ function composePresentation(): Map<string, TypePresentationEntry> {
       composed.set(def.id, { ...def, relationWidgets: { ...(def.relationWidgets ?? {}) } })
     }
   }
-  // Pass 2: extensions — additive only (spec: Erweiterungsfragment).
-  for (const [name, layer] of layers) {
+  // Pass 2: extensions — additive only (spec: Erweiterungsfragment). Sorted
+  // by layer name: the lists are ordered, and the composed view must not
+  // depend on registration order (Spec 06, Erweiterung und Merge).
+  for (const [name, layer] of [...layers].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
     for (const frag of layer.extensions ?? []) {
       const base = composed.get(frag.id)
       if (!base) {
@@ -431,10 +510,29 @@ function composePresentation(): Map<string, TypePresentationEntry> {
         }
         widgets[key] = widget
       }
+      Object.assign(base, uniteRegisterLists(base, frag, frag.id, name))
     }
   }
+  // Was aus der Feldliste abgeleitet wird, darf nicht zusätzlich von Hand
+  // gesetzt sein — sonst gäbe es zwei Quellen für dieselbe Antwort (Regeln 2, 16).
+  for (const entry of composed.values()) assertNoParallelComposerSource(entry)
   composedCache = composed
   return composed
+}
+
+function assertNoParallelComposerSource(entry: TypePresentationEntry): void {
+  if (!hasRegisterLists(entry)) return
+  const parallel = [
+    entry.composerWidgets && "composerWidgets",
+    entry.relationWidgets && Object.keys(entry.relationWidgets).length > 0 && "relationWidgets",
+    entry.composer?.widgetLabels && "composer.widgetLabels",
+    entry.composer?.statusOptions && "composer.statusOptions",
+  ].filter(Boolean)
+  if (parallel.length > 0) {
+    throw new Error(
+      `Typ-Register: "${entry.id}" hat eine Feld- und Kantenliste und setzt zusätzlich ${parallel.join(", ")} — das wird aus fields/edges abgeleitet (Spec 06, Feld- und Kantenregister, Regeln 2 und 16).`,
+    )
+  }
 }
 
 /**
@@ -456,7 +554,9 @@ export function resolveTypePresentation(typeId: string): ResolvedTypePresentatio
   }
   return {
     ...entry,
-    detail: entry.detail ?? entry.preview ?? GENERIC_DETAIL,
+    // Übergang (Regel 17): ein gesetztes `detail` gewinnt; sonst die Meta-Box
+    // aus dem Register; ein Typ ohne Feldliste behält die Vorschau-Zeile.
+    detail: entry.detail ?? (hasRegisterLists(entry) ? REGISTER_DETAIL : (entry.preview ?? GENERIC_DETAIL)),
     generic: false,
   }
 }

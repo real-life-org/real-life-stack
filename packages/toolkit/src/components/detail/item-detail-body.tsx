@@ -25,9 +25,13 @@ import { PanelHeaderActions } from "../layout/panel-header-actions"
  * weil man in einer Liste zuerst wissen will, von wem etwas kommt. Wer ein Item
  * geoeffnet hat, will zuerst wissen, WAS es ist.
  *
- * Die Ordnung hier: Typ und Aktionen → Titel → Meta-Box → Beschreibung →
- * Tags und Urheber → Aktionszeile. Der Autor rueckt nach unten, die harten
- * Fakten (wann, wo, mit wem) stehen zusammen in einer eigenen Flaeche.
+ * Die Ordnung sind die Slots der Detail-Anatomie (shared-components, „Item-
+ * Detail aus dem Register"): `head` (Typ, Aktionen, Titel) → `meta` →
+ * `actions` (Selbstaktion, hier `selfActions`) → `content` → `reverse` →
+ * `tags` (mit Urheber) → `bar` (hier `footer`) → `comments` (liefert das
+ * Panel darunter) → `note`. Ein Slot ohne Inhalt erzeugt nichts. Der Autor
+ * rueckt nach unten, die harten Fakten (wann, wo, mit wem) stehen zusammen in
+ * einer eigenen Flaeche.
  *
  * **Was NICHT hier entschieden wird:** was in der Meta-Box und der Fusszeile
  * steht. Das haengt am Item-TYP, nicht an der Flaeche (Spec 06), und kommt
@@ -58,8 +62,22 @@ export interface ItemDetailBodyProps {
    * leere Huelle.
    */
   meta?: ReactNode
-  /** Typ-Fusszeile (Zusagen, Stimmen) und Reaktionen, ueber dem Divider. */
+  /**
+   * Slot `actions`: die Selbstaktion als Pill-Zeile direkt unter der Meta-Box
+   * (C2, „Zusagen · Vielleicht · Absagen"). Heisst hier nicht `actions`, weil
+   * der Prop schon das ⋮-Menue traegt. Gefuellt ab S2.
+   */
+  selfActions?: ReactNode
+  /** Slot `reverse`: Rückwärts-Listen als kompakte ItemPreviews. Gefuellt ab S3. */
+  reverse?: ReactNode
+  /**
+   * Slot `bar`: Reaktionen und Kommentieren, ueber dem Divider. Traegt im
+   * Uebergang auch die Typ-Fusszeile (Stimmen, Spec 06, Regel 17), bis sie
+   * mit S2 nach `selfActions` zieht.
+   */
   footer?: ReactNode
+  /** Slot `note`: Nur-lesen-Hinweis oder Fehler-Banner, ganz unten. Gefuellt ab S5. */
+  note?: ReactNode
   className?: string
 }
 
@@ -80,7 +98,10 @@ export function ItemDetailBody({
   headerAdornment,
   actions,
   meta,
+  selfActions,
+  reverse,
   footer,
+  note,
   className,
 }: ItemDetailBodyProps) {
   const data = item.data as Record<string, unknown>
@@ -121,10 +142,24 @@ export function ItemDetailBody({
         </div>
       )}
 
+      {selfActions && (
+        // Slot `actions`: `empty:hidden` wie bei der Meta-Box — eine
+        // Selbstaktion, die nichts anzubieten hat, rendert `null`.
+        <div data-slot="actions" className="flex flex-wrap items-center gap-2 empty:hidden">
+          {selfActions}
+        </div>
+      )}
+
       {description && (
         // Der Composer schreibt Markdown, also wird ueberall Markdown
         // gerendert. Im Detail ungekuerzt — hier ist Platz.
         <MarkdownText className="text-sm text-foreground">{description}</MarkdownText>
+      )}
+
+      {reverse && (
+        <div data-slot="reverse" className="flex flex-col gap-3 empty:hidden">
+          {reverse}
+        </div>
       )}
 
       {/* Tags und Urheber teilen eine Zeile: die Tags fliessen links, der
@@ -170,6 +205,12 @@ export function ItemDetailBody({
         // Der einzige Trenner der Ansicht — er scheidet das Item von dem, was
         // andere dazu tun (reagieren, zusagen, kommentieren).
         <div className="-mx-4 mt-1 border-t px-4 pt-3">{footer}</div>
+      )}
+
+      {note && (
+        <div data-slot="note" className="text-xs text-muted-foreground empty:hidden">
+          {note}
+        </div>
       )}
     </article>
   )

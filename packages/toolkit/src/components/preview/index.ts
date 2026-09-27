@@ -38,3 +38,16 @@ export {
   type TypePresentationLayer,
   type ResolvedTypePresentation,
 } from "./type-presentation"
+export {
+  metaRowOrder,
+  composerWidgetsFromRegister,
+  type WidgetId,
+  type EdgeWidgetId,
+  type FieldEntry,
+  type FieldOption,
+  type EdgeEntry,
+  type ListEntry,
+  type MenuActionEntry,
+  type MetaRow,
+} from "./field-register"
+export { RegisterMeta, type RegisterMetaProps } from "./register-meta"

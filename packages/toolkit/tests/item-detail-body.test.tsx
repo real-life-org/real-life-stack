@@ -157,4 +157,24 @@ describe("ItemDetailBody: die Ordnung der Detailansicht", () => {
   it("zeigt den Urheber auch ohne aufgelösten Nutzer", () => {
     expect(markup({ author: undefined })).toContain("u1")
   })
+
+  it("ordnet die Slots der Detail-Anatomie: meta → actions → content → reverse → tags → bar → note", () => {
+    const html = markup({
+      item: item({ data: { title: "Repair-Café", content: "INHALT" }, tags: ["TAG"] }),
+      meta: <span>META</span>,
+      selfActions: <span>SELBSTAKTION</span>,
+      reverse: <span>RUECKWAERTS</span>,
+      footer: <span>LEISTE</span>,
+      note: <span>HINWEIS</span>,
+    })
+    const reihe = ["META", "SELBSTAKTION", "INHALT", "RUECKWAERTS", "TAG", "LEISTE", "HINWEIS"]
+    for (let i = 1; i < reihe.length; i++) expect(vorher(html, reihe[i - 1]!, reihe[i]!)).toBe(true)
+  })
+
+  it("erzeugt für leere Slots nichts", () => {
+    const html = markup()
+    expect(html).not.toContain('data-slot="actions"')
+    expect(html).not.toContain('data-slot="reverse"')
+    expect(html).not.toContain('data-slot="note"')
+  })
 })

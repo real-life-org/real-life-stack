@@ -218,7 +218,13 @@ export interface ContentComposerProps {
 
 // ── Constants ────────────────────────────────────────────────────────────
 
-/** Fixed rendering order for widgets */
+/**
+ * Order of the widgets a type does NOT list in `defaultWidgets` (the ones a
+ * user can switch on). The type's own widgets render in ITS order — the order
+ * of the meta box, derived from the field and edge register (Spec 06, Regel
+ * 16; shared-components, Edit-Regeln 2). Until S1 this list fixed the order
+ * for every type, with `group` and `status` first.
+ */
 const WIDGET_ORDER: WidgetType[] = [
   "group",
   "status",
@@ -326,6 +332,18 @@ function dirtySignature(data: WidgetData, peopleKeys: readonly string[]): string
     out[field] = value
   }
   return JSON.stringify(out)
+}
+
+/**
+ * The built-in widgets in render order: first those the type lists in
+ * `defaultWidgets`, in that order; then every other built-in in
+ * `WIDGET_ORDER`. Ids the composer has no built-in for (custom widgets, or
+ * register widgets that arrive with later steps) are skipped here.
+ */
+export function widgetRenderOrder(defaultWidgets: readonly string[]): WidgetType[] {
+  const builtIn = new Set<string>(WIDGET_ORDER)
+  const own = defaultWidgets.filter((w, i): w is WidgetType => builtIn.has(w) && defaultWidgets.indexOf(w) === i)
+  return [...own, ...WIDGET_ORDER.filter((w) => !own.includes(w))]
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -519,8 +537,11 @@ export function ContentComposer({
     activeWidgets.add("group")
   }
 
+  // Render order: the type's widgets in its own order, then the rest.
+  const renderOrder = widgetRenderOrder(currentConfig.defaultWidgets)
+
   // Widgets available to toggle on (not active, not title/text, not status/group without config)
-  const toggleableWidgets = WIDGET_ORDER.filter(
+  const toggleableWidgets = renderOrder.filter(
     (w) =>
       !activeWidgets.has(w) &&
       w !== "title" &&
@@ -657,8 +678,8 @@ export function ContentComposer({
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          {/* Render widgets in fixed order */}
-          {WIDGET_ORDER.map((widgetId) => {
+          {/* Render widgets in the type's order (register), then the rest */}
+          {renderOrder.map((widgetId) => {
             const isActive = activeWidgets.has(widgetId)
             const isDefault = defaultWidgets.has(widgetId)
             const widgetLabel = getWidgetLabel(widgetId)
