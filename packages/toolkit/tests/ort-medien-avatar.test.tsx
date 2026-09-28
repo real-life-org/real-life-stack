@@ -568,6 +568,59 @@ describe("Codex R2", () => {
   })
 })
 
+describe("Codex R3", () => {
+  it("Fokus: nach der Wahl per Tastatur auf dem ✕ des Chips, nach dem Entfernen in der Eingabe", async () => {
+    function Host(): ReactNode {
+      const [selected, setSelected] = useState<Item | null>(null)
+      return createElement(LocationWidget, {
+        label: "Ort",
+        value: {},
+        onChange: () => undefined,
+        places: { selected: selected ? { target: `item:${selected.id}`, item: selected } : null, candidates: [MARKTHALLE], onSelect: setSelected },
+      })
+    }
+    await render(createElement(Host))
+    input().focus()
+    await tippe("markt")
+    await act(async () => {
+      input().dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }))
+    })
+    await act(async () => {
+      input().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+    })
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Markthalle entfernen")
+    await act(async () => (document.activeElement as HTMLButtonElement).click())
+    expect(document.activeElement).toBe(input())
+  })
+
+  it("eine Rückwärtssuche eines abgebauten Felds schreibt nichts mehr", async () => {
+    let signal: AbortSignal | undefined
+    const reverseGeocode = vi.fn((_p: unknown, o?: { signal?: AbortSignal }) => {
+      signal = o?.signal
+      return new Promise<string>(() => undefined)
+    })
+    const box: { h: { onPick: (p: { lat: number; lng: number }) => void } | null } = { h: null }
+    await render(
+      createElement(LocationField, {
+        label: "Ort",
+        data: {},
+        updateMany: () => undefined,
+        reverseGeocode: reverseGeocode as never,
+        requestMapPick: (h: never) => {
+          box.h = h
+        },
+      }),
+    )
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('button[aria-label^="Position auf Karte"]')!.click()
+    })
+    await act(async () => box.h!.onPick({ lat: 1, lng: 2 }))
+    expect(signal?.aborted).toBe(false)
+    await act(async () => root.render(createElement("div")))
+    expect(signal?.aborted).toBe(true)
+  })
+})
+
 describe("Lightbox-Fokus und kommende Events", () => {
   it("nach Escape liegt der Fokus wieder auf dem Vorschaubild", async () => {
     const Content = resolveTypePresentation("post").content!

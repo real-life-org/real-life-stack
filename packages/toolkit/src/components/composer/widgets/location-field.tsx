@@ -118,6 +118,9 @@ function LocationCore({
   // Ort-Item nicht wieder zur Adresse machen (Codex R1/2).
   const reverseAbortRef = React.useRef<AbortController | null>(null)
   const cancelReverse = () => reverseAbortRef.current?.abort()
+  // Wird das Feld abgebaut (etwa beim Typwechsel), zählt seine laufende
+  // Rückwärtssuche nicht mehr (Codex R3/1).
+  React.useEffect(() => () => reverseAbortRef.current?.abort(), [])
   // Der Karten-Pick läuft über Modulwechsel hinweg; sein Rückruf liest den
   // AKTUELLEN Stand (Kandidaten des Formular-Space, Kante), nicht den beim
   // Start (Codex R1/1).

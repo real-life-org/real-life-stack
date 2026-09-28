@@ -92,6 +92,11 @@ export function LocationWidget({
   // can neither reset a newer one nor leave the spinner hanging.
   const loadingControllerRef = React.useRef<AbortController | null>(null)
   const listId = React.useId()
+  // Fokus über den Wechsel Eingabe ↔ Chip hinweg (Codex R3/2): Nach der Wahl
+  // eines Ort-Items steht der Fokus auf dessen ✕, nach dem Entfernen wieder in
+  // der Eingabe — nie auf dem Body.
+  const rootRef = React.useRef<HTMLDivElement>(null)
+  const pendingFocus = React.useRef<"chip" | "input" | null>(null)
 
   React.useEffect(() => {
     if (!geocode || userQuery === null) return
@@ -163,6 +168,7 @@ export function LocationWidget({
 
   const selectOption = (option: Option) => {
     if (option.kind === "place") {
+      pendingFocus.current = "chip"
       places?.onSelect(option.item)
     } else {
       const r = option.result
@@ -193,9 +199,25 @@ export function LocationWidget({
   }
 
   const selected = places?.selected ?? null
+  const removePlace = () => {
+    pendingFocus.current = "input"
+    places!.onSelect(null)
+  }
+  React.useEffect(() => {
+    const want = pendingFocus.current
+    if (!want || !rootRef.current) return
+    const target =
+      want === "chip"
+        ? rootRef.current.querySelector<HTMLElement>("[data-place-chip] button")
+        : rootRef.current.querySelector<HTMLElement>('input[role="combobox"]')
+    if (target) {
+      target.focus()
+      pendingFocus.current = null
+    }
+  })
 
   return (
-    <div className="space-y-2">
+    <div ref={rootRef} className="space-y-2">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
@@ -207,14 +229,14 @@ export function LocationWidget({
               className="flex min-h-9 items-center rounded-md border bg-background px-2 py-1"
             >
               {selected.item ? (
-                <ItemRefChip item={selected.item} inert onRemove={() => places!.onSelect(null)} />
+                <ItemRefChip item={selected.item} inert onRemove={removePlace} />
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5">
                   <MissingRefText text="nicht verfügbarer Ort" />
                   <button
                     type="button"
                     aria-label="Nicht verfügbaren Ort entfernen"
-                    onClick={() => places!.onSelect(null)}
+                    onClick={removePlace}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
                     ✕
