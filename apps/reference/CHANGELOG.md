@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.5.0](https://github.com/real-life-org/real-life-stack/compare/app-v0.4.1...app-v0.5.0) (2026-09-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* aggregateVoteStats(records, contentHashes) verlangt die Inhalts-Hashes der zählenden Statements.
+
+### Features
+
+* **local-connector:** eine Identität je Browser-Tab zum Testen von Mehrpersonen-Geschichten ([#524](https://github.com/real-life-org/real-life-stack/issues/524)) ([6249845](https://github.com/real-life-org/real-life-stack/commit/62498455b6300c7e0e7bcf11556da67270733317))
+* Stimmen an den Wortlaut binden, Beleg-Status aus dem Katalog ([#502](https://github.com/real-life-org/real-life-stack/issues/502)) ([16e6eb8](https://github.com/real-life-org/real-life-stack/commit/16e6eb8886467dd24d47b53c94ef9a884cdc78f2))
+* **toolkit:** Menschen-Zeile mit Qualifier und Selbstaktionen (S2) ([#518](https://github.com/real-life-org/real-life-stack/issues/518)) ([30daafe](https://github.com/real-life-org/real-life-stack/commit/30daafe008daa9ea7bf7387bdde9b3c444b5e68d))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.4.0
+    * @real-life-stack/local-connector bumped to 0.3.0
+    * @real-life-stack/mock-connector bumped to 0.2.2
+    * @real-life-stack/supabase-connector bumped to 0.3.2
+    * @real-life-stack/toolkit bumped to 0.3.0
+    * @real-life-stack/wot-connector bumped to 0.2.2
+
 ## [0.4.1](https://github.com/real-life-org/real-life-stack/compare/app-v0.4.0...app-v0.4.1) (2026-09-24)
 
 

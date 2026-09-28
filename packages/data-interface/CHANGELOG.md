@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.4.0](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.3.1...data-interface-v0.4.0) (2026-09-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **toolkit:** SelfActionFollowUps hat die Form { field, complete, release }; SelfActionFollowUp und FOLLOW_UP_WHEN entfallen (seit #528, nicht released).
+* aggregateVoteStats(records, contentHashes) verlangt die Inhalts-Hashes der zählenden Statements.
+
+### Features
+
+* **data-interface:** item-authorial – Katalog, Inhalts-Hash, Claims und Zählregel ([#494](https://github.com/real-life-org/real-life-stack/issues/494)) ([b2aee96](https://github.com/real-life-org/real-life-stack/commit/b2aee9660d49880fc72a20a75cd68db5f7113ce6))
+* item-authorial im Schreibweg der Connectoren (WoT, Local, Mock) ([#496](https://github.com/real-life-org/real-life-stack/issues/496)) ([cb3a60b](https://github.com/real-life-org/real-life-stack/commit/cb3a60bbb65e79d2df53657503f36b393aacf37d))
+* Space des Formulars und GroupScopeCapable in allen Connectoren (S3b A) ([#536](https://github.com/real-life-org/real-life-stack/issues/536)) ([b4d7eb7](https://github.com/real-life-org/real-life-stack/commit/b4d7eb79475abacb4f25fd018567619e151623bd))
+* Stimmen an den Wortlaut binden, Beleg-Status aus dem Katalog ([#502](https://github.com/real-life-org/real-life-stack/issues/502)) ([16e6eb8](https://github.com/real-life-org/real-life-stack/commit/16e6eb8886467dd24d47b53c94ef9a884cdc78f2))
+* **toolkit:** Fassungen-Liste nach dem Claude Design, Resonanz im Demo-Space ([#537](https://github.com/real-life-org/real-life-stack/issues/537)) ([b2bd4f7](https://github.com/real-life-org/real-life-stack/commit/b2bd4f7269fd245e01161d7c9bed83518209a2cd))
+* **toolkit:** Menschen-Zeile mit Qualifier und Selbstaktionen (S2) ([#518](https://github.com/real-life-org/real-life-stack/issues/518)) ([30daafe](https://github.com/real-life-org/real-life-stack/commit/30daafe008daa9ea7bf7387bdde9b3c444b5e68d))
+* **toolkit:** Varianten im Resonanzmodul, kein Bearbeiten bei eingefrorenem Wortlaut ([#505](https://github.com/real-life-org/real-life-stack/issues/505)) ([ffe4bde](https://github.com/real-life-org/real-life-stack/commit/ffe4bde2a54683c0c813310d20c9a7241540e7d5))
+* **toolkit:** Verknüpfungen, Item-Verweis, Rückwärts-Listen und Folgeaktionen der Aufgabe (S3) ([#528](https://github.com/real-life-org/real-life-stack/issues/528)) ([ee5efb3](https://github.com/real-life-org/real-life-stack/commit/ee5efb3f8dc47ee69539468e9d11bd8aa11f47d5))
+
 ## [0.3.1](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.3.0...data-interface-v0.3.1) (2026-09-24)
 
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.2](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.2.1...mock-connector-v0.2.2) (2026-09-28)
+
+
+### Features
+
+* item-authorial im Schreibweg der Connectoren (WoT, Local, Mock) ([#496](https://github.com/real-life-org/real-life-stack/issues/496)) ([cb3a60b](https://github.com/real-life-org/real-life-stack/commit/cb3a60bbb65e79d2df53657503f36b393aacf37d))
+* Space des Formulars und GroupScopeCapable in allen Connectoren (S3b A) ([#536](https://github.com/real-life-org/real-life-stack/issues/536)) ([b4d7eb7](https://github.com/real-life-org/real-life-stack/commit/b4d7eb79475abacb4f25fd018567619e151623bd))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.4.0
+
 ## [0.2.1](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.2.0...mock-connector-v0.2.1) (2026-09-24)
 
 

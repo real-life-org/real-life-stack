@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.3.0](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.2.1...toolkit-v0.3.0) (2026-09-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **toolkit:** SelfActionFollowUps hat die Form { field, complete, release }; SelfActionFollowUp und FOLLOW_UP_WHEN entfallen (seit #528, nicht released).
+* **toolkit:** Die Gruppenwahl ist kein Widget im Formularkörper mehr, sondern steht im Kopf; der Typ-Umschalter ist ein Auswahlfeld.
+* aggregateVoteStats(records, contentHashes) verlangt die Inhalts-Hashes der zählenden Statements.
+
+### Features
+
+* Space des Formulars und GroupScopeCapable in allen Connectoren (S3b A) ([#536](https://github.com/real-life-org/real-life-stack/issues/536)) ([b4d7eb7](https://github.com/real-life-org/real-life-stack/commit/b4d7eb79475abacb4f25fd018567619e151623bd))
+* Stimmen an den Wortlaut binden, Beleg-Status aus dem Katalog ([#502](https://github.com/real-life-org/real-life-stack/issues/502)) ([16e6eb8](https://github.com/real-life-org/real-life-stack/commit/16e6eb8886467dd24d47b53c94ef9a884cdc78f2))
+* **toolkit:** Auswertung im Resonanzmodul – Personenmenge, Personen-Filter, neue Sortierungen ([#508](https://github.com/real-life-org/real-life-stack/issues/508)) ([7a0fb0b](https://github.com/real-life-org/real-life-stack/commit/7a0fb0b51eaa856e59ee8c279ce818e4e09e28b1))
+* **toolkit:** einfache Wert-Widgets status, number, select, url, chips, contact (S4a) ([#543](https://github.com/real-life-org/real-life-stack/issues/543)) ([847a1e7](https://github.com/real-life-org/real-life-stack/commit/847a1e7c31ceb1c0efd252c5529313adc12d07a8))
+* **toolkit:** Fassungen-Liste nach dem Claude Design, Resonanz im Demo-Space ([#537](https://github.com/real-life-org/real-life-stack/issues/537)) ([b2bd4f7](https://github.com/real-life-org/real-life-stack/commit/b2bd4f7269fd245e01161d7c9bed83518209a2cd))
+* **toolkit:** Import und Export im Resonanzmodul ([#519](https://github.com/real-life-org/real-life-stack/issues/519)) ([1c590cc](https://github.com/real-life-org/real-life-stack/commit/1c590cc363a985c71d189e8c50611d628988eb8d))
+* **toolkit:** Item-Detail und Composer aus dem Feld- und Kantenregister (S1) ([#511](https://github.com/real-life-org/real-life-stack/issues/511)) ([6531610](https://github.com/real-life-org/real-life-stack/commit/6531610f6a544e956fd9cdfc26e9bc3744c0ca91))
+* **toolkit:** ItemPreview-Dichte dense für Matrix-Flächen ([#360](https://github.com/real-life-org/real-life-stack/issues/360)) ([b05ef47](https://github.com/real-life-org/real-life-stack/commit/b05ef478944d97892a609160c37ee0febf7b95a1))
+* **toolkit:** Kommentare und Reaktionen nach Beleg-Status zählen und markieren ([#503](https://github.com/real-life-org/real-life-stack/issues/503)) ([997b1a6](https://github.com/real-life-org/real-life-stack/commit/997b1a61b6fe9d7c47f73adb41b13f43ea72e130))
+* **toolkit:** Menschen-Zeile mit Qualifier und Selbstaktionen (S2) ([#518](https://github.com/real-life-org/real-life-stack/issues/518)) ([30daafe](https://github.com/real-life-org/real-life-stack/commit/30daafe008daa9ea7bf7387bdde9b3c444b5e68d))
+* **toolkit:** Modul-Filter überdauern den Modulwechsel (useModuleFilter) ([#509](https://github.com/real-life-org/real-life-stack/issues/509)) ([0265645](https://github.com/real-life-org/real-life-stack/commit/02656456ffec5d750d803fea92a07ef20f044f43))
+* **toolkit:** Varianten im Resonanzmodul, kein Bearbeiten bei eingefrorenem Wortlaut ([#505](https://github.com/real-life-org/real-life-stack/issues/505)) ([ffe4bde](https://github.com/real-life-org/real-life-stack/commit/ffe4bde2a54683c0c813310d20c9a7241540e7d5))
+* **toolkit:** Verknüpfungen, Item-Verweis, Rückwärts-Listen und Folgeaktionen der Aufgabe (S3) ([#528](https://github.com/real-life-org/real-life-stack/issues/528)) ([ee5efb3](https://github.com/real-life-org/real-life-stack/commit/ee5efb3f8dc47ee69539468e9d11bd8aa11f47d5))
+* **toolkit:** Zustandsmodell der Aufgabe, Mitmachen, assignedTo.role, „Braucht“ schreibbar, Listenzeilen aus ItemPreview (S3b B) ([#542](https://github.com/real-life-org/real-life-stack/issues/542)) ([4e85fa1](https://github.com/real-life-org/real-life-stack/commit/4e85fa1769a9b05baa9f82793e3672388f2b58c2))
+
+
+### Bug Fixes
+
+* **site:** Proportionen der Landing auf dem Telefon ([#483](https://github.com/real-life-org/real-life-stack/issues/483)) ([653310a](https://github.com/real-life-org/real-life-stack/commit/653310a8ef39f017e7efc0dea6e3f5da060c38e7))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/data-interface bumped to 0.4.0
+  * devDependencies
+    * @real-life-stack/mock-connector bumped to 0.2.2
+
 ## [0.2.1](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.2.0...toolkit-v0.2.1) (2026-09-24)
 
 
