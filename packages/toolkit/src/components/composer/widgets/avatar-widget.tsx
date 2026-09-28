@@ -5,7 +5,7 @@ import { Camera, ImagePlus, Loader2, X } from "lucide-react"
 
 import { Avatar, AvatarImage } from "@/components/primitives/avatar"
 import { safeImageSrc } from "@/lib/field-values"
-import { useFieldEpoch } from "@/lib/form-epoch"
+import { useFieldEpoch, type EpochGuard } from "@/lib/form-epoch"
 
 /**
  * Schreibform des Avatars (B11, S4b): Bild wählen, auf 512 px verkleinern
@@ -43,14 +43,17 @@ export interface AvatarFieldProps {
 
 export function AvatarField({ label, value, onChange, disabled, resize = defaultAvatarResize }: AvatarFieldProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const [busy, setBusy] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-  const src = safeImageSrc(value)
-  const errorId = React.useId()
   // Die Epoche des Felds (shared-components → Formular-Epoche): Nur das
   // Ergebnis der letzten Bildwahl zählt; Entfernen, Abbau, Space- oder
   // Typwechsel machen ein laufendes Verkleinern ungültig.
   const epoch = useFieldEpoch()
+  // Beschäftigt ist das Feld, solange die laufende Bildwahl gilt: Wird sie
+  // ungültig (Entfernen, Abbau, Space- oder Typwechsel), ist es frei.
+  const [running, setRunning] = React.useState<EpochGuard<undefined> | null>(null)
+  const busy = !!running?.valid()
+  const [error, setError] = React.useState<string | null>(null)
+  const src = safeImageSrc(value)
+  const errorId = React.useId()
 
   const onFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -61,15 +64,15 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
       return
     }
     setError(null)
-    setBusy(true)
     const work = epoch.begin("image")
+    setRunning(work)
     try {
       const result = await resize(file, AVATAR_SIZE)
       work.apply(() => onChange(result))
     } catch {
       work.apply(() => setError("Bild konnte nicht verarbeitet werden."))
     } finally {
-      work.apply(() => setBusy(false))
+      setRunning((current) => (current === work ? null : current))
     }
   }
 
@@ -125,7 +128,7 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
               aria-label={`${label} entfernen`}
               onClick={() => {
                 epoch.invalidate("image")
-                setBusy(false)
+                setRunning(null)
                 onChange("")
               }}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"

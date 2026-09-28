@@ -110,8 +110,11 @@ export function LocationWidget({
       setFailed(false)
       return
     }
+    // Der Wächter entsteht beim Einplanen: Ein Wechsel von Space oder Typ
+    // während der Wartezeit macht schon den Start ungültig.
+    const search = epoch.begin("geocode")
     const timer = window.setTimeout(() => {
-      const search = epoch.begin("geocode")
+      if (!search.valid()) return
       setLoading(true)
       geocode(q, { signal: search.signal })
         .then((hits) => {

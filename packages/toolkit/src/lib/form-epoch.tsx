@@ -64,12 +64,22 @@ export interface FieldEpochOptions {
    * schreibt auch, wenn das Panel inzwischen zu ist). Standard `true`.
    */
   lifetime?: boolean
+  /**
+   * Stand, der auch ohne Render gilt (etwa der geöffnete Space beim
+   * Connector): beim Start gelesen und bei JEDER Prüfung neu verglichen.
+   * Nötig, wenn die Arbeit den Abbau überdauert (`lifetime: false`) — dann
+   * erfährt das Feld Scope-Wechsel nicht mehr über den Render.
+   */
+  liveScope?: () => readonly unknown[]
 }
 
 /**
  * Die Epoche eines Felds: die des Formulars, der eigene `scope` und die
  * Lebensdauer des Felds. `state` ist der Stand des Felds in diesem Render;
  * ein Wächter liest ihn mit `now()` zum Zeitpunkt des Eintreffens.
+ *
+ * Den Hook im Render VOR jedem `valid()` aufrufen, das in diesem Render
+ * gelesen wird (etwa ein Beschäftigt-Zustand): Er übernimmt den neuen Stand.
  *
  * @answers `{ begin, invalidate }`
  * @without — (ohne `FormEpochProvider` zählt nur die Lebensdauer des Felds)
@@ -119,10 +129,15 @@ export function useFieldEpoch<S = undefined>(state?: S, options: FieldEpochOptio
     }
   }, [lifetime]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const liveScope = useRef(options.liveScope)
+  liveScope.current = options.liveScope
+
   return useMemo<FieldEpoch<S>>(
     () => ({
       begin(channel) {
         const startKey = live.current.key
+        const readLive = liveScope.current
+        const startLive = readLive ? JSON.stringify(readLive()) : null
         const controller = new AbortController()
         const token = {}
         if (channel !== undefined) {
@@ -135,6 +150,7 @@ export function useFieldEpoch<S = undefined>(state?: S, options: FieldEpochOptio
           !controller.signal.aborted &&
           (live.current.alive || !lifetime) &&
           live.current.key === startKey &&
+          (!readLive || JSON.stringify(readLive()) === startLive) &&
           (channel === undefined || running.current.get(channel)?.token === token)
         return {
           signal: controller.signal,

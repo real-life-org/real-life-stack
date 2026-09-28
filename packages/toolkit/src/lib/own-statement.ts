@@ -38,9 +38,22 @@ export interface OwnStatement {
  * Wirft, wenn der Connector nicht schreiben kann oder ablehnt — der Aufrufer
  * zeigt den Fehler.
  */
-export async function writeOwnStatement(connector: DataInterface, item: Item, statement: OwnStatement): Promise<void> {
+export async function writeOwnStatement(
+  connector: DataInterface,
+  item: Item,
+  statement: OwnStatement,
+  /**
+   * Wächter der Epoche (shared-components → Formular-Epoche, Regel 5): vor
+   * jedem Schreiben geprüft; gilt er nicht mehr, wirft `stale()` statt zu
+   * schreiben. Ohne Angabe schreibt die Funktion wie bisher.
+   */
+  work?: { valid(): boolean; stale(): Error },
+): Promise<void> {
   if (!hasRelationRecords(connector) || !hasRelationRecordWriter(connector) || !isAuthenticatable(connector)) {
     throw new Error("Dieser Speicher kann keine Aussagen schreiben")
+  }
+  const check = () => {
+    if (work && !work.valid()) throw work.stale()
   }
   const me = (await connector.getCurrentUser())?.id
   if (!me) throw new Error("Nicht angemeldet")
@@ -49,11 +62,16 @@ export async function writeOwnStatement(connector: DataInterface, item: Item, st
     const mine = (await connector.getRelationRecords({ predicate: statement.predicate, from: statement.from, to })).find(
       (record) => record.createdBy === me,
     )
+    check()
     if (mine) await connector.deleteRelationRecord(mine.id)
     return
   }
   const fields = selfStatementFields(statement.predicate, statement.key, statement.value, item)
+  check()
   const record = await connector.createRelationRecord({ predicate: statement.predicate, from: statement.from, to, fields })
   const differs = Object.entries(fields).some(([k, v]) => record.fields?.[k] !== v)
-  if (differs) await connector.updateRelationRecord(record.id, { fields: { ...(record.fields ?? {}), ...fields } })
+  if (differs) {
+    check()
+    await connector.updateRelationRecord(record.id, { fields: { ...(record.fields ?? {}), ...fields } })
+  }
 }

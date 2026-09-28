@@ -65,6 +65,12 @@ export function useLocatedItems(loaded: readonly Item[]): Item[] {
 
 /** Ein einzelnes Item mit abgeleiteter Position (für den Fokus der Karte), lebend. */
 export function useItemWithPlacePosition(item: Item | null | undefined): Item | null | undefined {
+  // `useItemPlace` hat den Ort schon über den Auflöser bestimmt (mit Space
+  // des Connectors); hier nur noch seine Position übernehmen.
   const place = useItemPlace(item && !latLngFromPoint(item.data?.position) ? item : null)
-  return useMemo(() => (item && place ? withPlacePosition(item, [place]) : item), [item, place])
+  return useMemo(() => {
+    const position = place?.data?.position
+    if (!item || !place || !latLngFromPoint(position)) return item
+    return { ...item, data: { ...item.data, position } }
+  }, [item, place])
 }
