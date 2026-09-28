@@ -32,6 +32,8 @@
     "test:build-info": "node --test scripts/packages/build-info.test.mjs",
     "docs:modules": "node scripts/modules/generate.mjs",
     "check:modules": "node scripts/modules/generate.mjs --check",
+    "check:targets": "node scripts/targets/check.mjs",
+    "test:targets": "node --test scripts/targets/check.test.mjs",
     "test:modules": "node --test scripts/modules/check.test.mjs"
   },
   "devDependencies": {
