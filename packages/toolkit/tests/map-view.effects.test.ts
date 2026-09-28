@@ -122,6 +122,19 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
     await act(async () => { mounted.root.unmount() })
   })
 
+  it("S4b/Codex R10: ein abgeleitetes Event (Position vom Ort) wird fokussiert wie ein geladenes", async () => {
+    const live = new Set<ProbeAdapter>()
+    const createAdapter = () => new ProbeAdapter(live)
+    const ort = point("ort", [13.5, 52.6])
+    const event: Item = { ...point("ev", [13.5, 52.6]), type: "event" }
+    const mounted = await mountMap(createAdapter, { items: [ort], derivedItems: [event], focusedItem: event, activeItemId: event.id, onViewportBoundsChange: vi.fn() })
+    const adapter = [...live][0]!
+    expect(adapter.focusOn).toHaveBeenLastCalledWith([13.5, 52.6], expect.objectContaining({ animate: true, zoom: expect.any(Number) }))
+    // Der Marker des Events ist da.
+    expect(adapter.markerSets.at(-1)!.map((m) => m.id).sort()).toEqual(["ev", "ort"])
+    await act(async () => { mounted.root.unmount() })
+  })
+
   it("lens deep-link centers the active marker without changing zoom", async () => {
     const live = new Set<ProbeAdapter>()
     const mounted = await mountMap(() => new ProbeAdapter(live), { viewportMode: "lens-auto-fit", activeItemId: "a" })

@@ -103,14 +103,19 @@ export function typesWithPlaceEdge(): string[] {
  * über ihre Typen (die mit Ort-Kante) im geöffneten Space; reaktiv über Orte
  * und Kandidaten. Die Karte führt sie neben ihrem Inventar (`derivedItems`).
  */
-export function useLocatedItems(loaded: readonly Item[]): Item[] {
+export function useLocatedItems(loaded: readonly Item[]): { items: Item[]; unpositioned: ReadonlySet<string> } {
   const types = typesWithPlaceEdge()
   const filter = types.length > 0 ? { type: types } : { hasField: ["__rls_no_place_edge__"] }
   const { data: candidates } = useItems(filter)
   const spaceOf = useSpaceOf()
   return useMemo(() => {
     const ids = new Set(loaded.map((i) => i.id))
-    return locatedPositions(candidates, loaded, spaceOf).filter((i) => !ids.has(i.id))
+    return {
+      items: locatedPositions(candidates, loaded, spaceOf).filter((i) => !ids.has(i.id)),
+      // Items mit Ort-Feld ohne eigene Position: ein älterer Eintrag mit
+      // Position im Inventar der Karte gilt nicht mehr.
+      unpositioned: new Set(candidates.filter((c) => !latLngFromPoint(c.data?.position)).map((c) => c.id)),
+    }
   }, [loaded, candidates, spaceOf])
 }
 

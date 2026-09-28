@@ -88,6 +88,25 @@ describe("withPlacePosition (rein)", () => {
     expect(withDerivedItems([...inventory.values()], locatedPositions([ohneKante], []))).toEqual([HALLE])
   })
 
+  it("Codex R10/1: ein alter Eintrag mit eigener Position weicht der Ableitung, auch nachdem die Kante wieder entfällt", () => {
+    const bboxA: [number, number, number, number] = [9, 49, 11, 51]
+    const bboxB: [number, number, number, number] = [13, 52, 14, 53]
+    // In A mit eigener Position geladen.
+    const alt = item("ev-x", "event", { title: "X", position: point(10, 50) })
+    let inventory = reconcileMapInventory(new Map(), [alt], false, bboxA, "bbox-module")
+    // Nach B, dort am Ort umgestellt (lebend ohne eigene Position).
+    inventory = reconcileMapInventory(inventory, [HALLE], false, bboxB, "bbox-module")
+    const lebend = item("ev-x", "event", { title: "X" }, [{ predicate: "locatedAt", target: "item:pl-halle" }])
+    const unpositioned = new Set([lebend.id])
+    const shown = withDerivedItems([...inventory.values()], locatedPositions([lebend], [HALLE]), unpositioned)
+    expect(shown.find((i) => i.id === "ev-x")!.data.position).toEqual(HALLE.data.position)
+    expect(shown.filter((i) => i.id === "ev-x")).toHaveLength(1)
+    // Kante entfernt: weder Ableitung noch der alte Eintrag.
+    const ohne = { ...lebend, relations: [] }
+    const danach = withDerivedItems([...inventory.values()], locatedPositions([ohne], [HALLE]), unpositioned)
+    expect(danach.some((i) => i.id === "ev-x")).toBe(false)
+  })
+
   it("locatedPositions: nur Items, deren Ort in der Menge liegt", () => {
     const shown = locatedPositions([AM_ORT, EIGEN, WEG, POST], [HALLE])
     expect(shown.map((i) => i.id)).toEqual(["ev-ort"])
@@ -126,7 +145,7 @@ describe("useLocatedItems (reaktiv)", () => {
     connector.setCurrentGroup("g")
     let result: Item[] = []
     function Spy({ loaded }: { loaded: Item[] }): ReactNode {
-      result = useLocatedItems(loaded)
+      result = useLocatedItems(loaded).items
       return null
     }
     const draw = async (loaded: Item[]) => {

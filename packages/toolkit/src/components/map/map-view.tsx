@@ -54,6 +54,12 @@ export interface MapViewProps {
    * Entfällt die Ort-Kante, verschwindet der Marker sofort (Codex R9/2).
    */
   derivedItems?: readonly Item[]
+  /**
+   * Ids von Items, die laut Quelle gerade keine eigene Position tragen (sie
+   * liegen an einem Ort oder nirgends). Ein älterer Eintrag mit eigener
+   * Position im bbox-Inventar gilt dann nicht mehr (Codex R10/1).
+   */
+  unpositionedIds?: ReadonlySet<string>
 }
 
 function inBounds(item: Item, bounds: [number, number, number, number]) {
@@ -99,13 +105,21 @@ export function reconcileMapInventoryForKey(
 }
 
 /**
- * Inventar plus abgeleitete Items (B4): Ein Item, das das Inventar selbst
- * führt, gewinnt; abgeleitete kommen nur dazu und werden nie akkumuliert.
+ * Inventar plus abgeleitete Items (B4). Die abgeleitete Fassung gewinnt: Sie
+ * kommt vom lebenden Item, das keine eigene Position hat. Einträge des
+ * Inventars, die laut Quelle keine eigene Position mehr tragen
+ * (`unpositioned`), entfallen — sonst bliebe ein Marker an einer alten
+ * Position stehen, außerhalb des Ausschnitts (Codex R10/1). Abgeleitete
+ * werden nie akkumuliert.
  */
-export function withDerivedItems(inventory: readonly Item[], derived: readonly Item[] | undefined): Item[] {
-  if (!derived || derived.length === 0) return [...inventory]
-  const ids = new Set(inventory.map((i) => i.id))
-  return [...inventory, ...derived.filter((d) => !ids.has(d.id))]
+export function withDerivedItems(
+  inventory: readonly Item[],
+  derived: readonly Item[] | undefined,
+  unpositioned?: ReadonlySet<string>,
+): Item[] {
+  const derivedIds = new Set((derived ?? []).map((d) => d.id))
+  const kept = inventory.filter((i) => !derivedIds.has(i.id) && !unpositioned?.has(i.id))
+  return derived && derived.length > 0 ? [...kept, ...derived] : kept
 }
 
 /** The draft is a display-only overlay and never becomes part of the bbox inventory. */
@@ -327,7 +341,7 @@ export function MapView(props: MapViewProps) {
 function MapViewInner({
   items, itemsLoading, inventoryKey, focusedItem, createAdapter, initialView, viewportMode,
   onViewportBoundsChange, active = true, activeItemId, selectionFocusVisibleArea, onItemClick,
-  allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false, derivedItems,
+  allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false, derivedItems, unpositionedIds,
 }: MapViewProps) {
   const [adapter, setAdapter] = useState<MapAdapter | null>(null)
   const [mountError, setMountError] = useState(false)
@@ -446,10 +460,13 @@ function MapViewInner({
       }
       return
     }
-    if (items.some((item) => item.id === focusedItem.id)) {
+    // Geladen ist, was der Ausschnitt liefert, und was dort abgeleitet an
+    // einem geladenen Ort liegt (B4; Codex R10/2).
+    const available = withDerivedItems(items, derivedItems, unpositionedIds)
+    if (available.some((item) => item.id === focusedItem.id)) {
       settledReveal.current = focusedItem.id
       revealOffset.current = offset
-      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, mapViewSeparationZoom(focusedItem, items)), ...insets, animate: true })
+      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, mapViewSeparationZoom(focusedItem, available)), ...insets, animate: true })
       return
     }
     if (bounds.current && inBounds(focusedItem, bounds.current)) return
@@ -458,7 +475,7 @@ function MapViewInner({
       revealOffset.current = offset
       adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, MIN_REVEAL_ZOOM), ...insets, animate: true })
     }
-  }, [active, adapter, focusedItem, isCompact, items, itemsLoading, kameraKenntSeiten, panelEdges, viewportMode])
+  }, [active, adapter, derivedItems, focusedItem, isCompact, items, itemsLoading, kameraKenntSeiten, panelEdges, unpositionedIds, viewportMode])
   useEffect(() => {
     if (!adapter || !isPicking) return
     return adapter.observeClicks(({ position: [lng, lat] }) => {
@@ -467,7 +484,8 @@ function MapViewInner({
   }, [adapter, confirmPick, isCompact, isPicking, updatePick])
   useEffect(() => { if (!isPicking) setPickPosition(null) }, [isPicking])
 
-  const filtered = useMemo(() => filterMapViewItems(withDerivedItems(inventory, derivedItems), filter, search), [derivedItems, filter, inventory, search])
+  const shownItems = useMemo(() => withDerivedItems(inventory, derivedItems, unpositionedIds), [derivedItems, inventory, unpositionedIds])
+  const filtered = useMemo(() => filterMapViewItems(shownItems, filter, search), [filter, shownItems, search])
   const markerItems = useMemo(() => mapViewMarkerItems(filtered, draftItem, isPicking), [draftItem, filtered, isPicking])
   const lensItems = useMemo(() => pickPosition && isPicking ? [...markerItems, {
     id: PICK_MARKER_ID, type: "__pick__", createdAt: "", createdBy: "", data: { position: { type: "Point", coordinates: [pickPosition.lng, pickPosition.lat] }, color: PICK_MARKER_COLOR },
