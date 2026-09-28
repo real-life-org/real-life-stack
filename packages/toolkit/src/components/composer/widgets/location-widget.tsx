@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import type { Geocoder, GeocodeResult } from "@/lib/geocode"
 import { ItemRefChip, MissingRefText } from "../../preview/item-ref-chip"
 import { itemTitle } from "../item-relations"
-import { useFieldEpoch } from "../../../lib/form-epoch"
+import { useEpochBusy, useFieldEpoch } from "../../../lib/form-epoch"
 
 interface LocationData {
   address?: string
@@ -86,7 +86,6 @@ export function LocationWidget({
   // does not re-search. `null` means "no pending user query".
   const [userQuery, setUserQuery] = React.useState<string | null>(null)
   const [results, setResults] = React.useState<GeocodeResult[]>([])
-  const [loading, setLoading] = React.useState(false)
   const [listOpen, setListOpen] = React.useState(false)
   const [activeIndex, setActiveIndex] = React.useState(-1)
   const [failed, setFailed] = React.useState(false)
@@ -94,6 +93,7 @@ export function LocationWidget({
   // Die Epoche des Felds (shared-components → Formular-Epoche): Nur die
   // letzte Suche für den aktuellen Stand setzt Treffer und Spinner.
   const epoch = useFieldEpoch()
+  const loading = useEpochBusy(epoch, "geocode")
   const listId = React.useId()
   // Fokus über den Wechsel Eingabe ↔ Chip hinweg (Codex R3/2): Nach der Wahl
   // eines Ort-Items steht der Fokus auf dessen ✕, nach dem Entfernen wieder in
@@ -112,10 +112,12 @@ export function LocationWidget({
     }
     // Der Wächter entsteht beim Einplanen: Ein Wechsel von Space oder Typ
     // während der Wartezeit macht schon den Start ungültig.
-    const search = epoch.begin("geocode")
+    const planned = epoch.begin("geocode-plan")
     const timer = window.setTimeout(() => {
-      if (!search.valid()) return
-      setLoading(true)
+      if (!planned.valid()) return
+      planned.finish()
+      // Die Suche selbst: ihren Warte-Zustand (Spinner) führt der Baustein.
+      const search = epoch.begin("geocode")
       geocode(q, { signal: search.signal })
         .then((hits) => {
           search.apply(() => {
@@ -130,15 +132,13 @@ export function LocationWidget({
             setFailed(true)
           })
         })
-        .finally(() => {
-          search.apply(() => setLoading(false))
-        })
+        .finally(() => search.finish())
     }, GEOCODE_DEBOUNCE_MS)
     return () => {
       window.clearTimeout(timer)
-      // Eine überholte Suche gilt nicht mehr; ihr Spinner auch nicht.
+      // Eine überholte Suche gilt nicht mehr; ihr Warte-Zustand endet mit ihr.
+      epoch.invalidate("geocode-plan")
       epoch.invalidate("geocode")
-      setLoading(false)
     }
   }, [userQuery, geocode, epoch])
 

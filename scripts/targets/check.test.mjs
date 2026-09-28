@@ -22,3 +22,15 @@ test("Kommentare zählen nicht; Tests und Stories sind nicht im Umfang", () => {
   assert.equal(inScope("packages/toolkit/tests/a.test.ts"), false)
   assert.equal(inScope("packages/toolkit/src/lib/a.ts"), true)
 })
+
+test("verbietet interne Helfer, abgeschaltete Prüfung und selbst gebaute Kontexte", () => {
+  const src = [
+    'import { resolveTarget, targetItemId } from "../lib/item-targets"',
+    "const a = allSpacesScope(undefined, carrier)",
+    "const b = { carrierSpace: null, spaceOf }",
+    "const c = sameSpaceScope()",
+    "const d = sameSpaceScope() // targets: ein Bereich — begründet",
+  ].join("\n")
+  const lines = findings("packages/toolkit/src/x.ts", src).map((f) => f.line)
+  assert.deepEqual(lines.sort(), [1, 2, 3, 4])
+})

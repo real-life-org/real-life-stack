@@ -117,6 +117,7 @@ export function PeopleWidget({
               .map((s) => ({ id: s, name: s })),
           ),
         )
+        search.finish()
       })
       return () => epoch.invalidate("suggest")
     }

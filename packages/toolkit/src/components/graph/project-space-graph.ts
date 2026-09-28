@@ -6,7 +6,7 @@ import {
 } from "@real-life-stack/data-interface"
 import { itemTitle } from "../../lib/item-text"
 import type { GraphEdge, GraphNode, GraphTypeDescriptor } from "./types"
-import { isLocalItemTarget, resolveTarget } from "../../lib/item-targets"
+import { allSpacesScope, resolveTarget } from "../../lib/item-targets"
 import { otherKindOf, targetFilter } from "../preview/use-item-edges"
 
 /**
@@ -104,7 +104,6 @@ export function projectSpaceGraph(
   }
 
   const itemsById = new Map(cardItems.map((item) => [item.id, item]))
-  const spaceOf = opts?.resolveItemSpace
 
   /**
    * Der Knoten am anderen Ende. Item-Ziele bestimmt der Auflöser (06,
@@ -112,7 +111,7 @@ export function projectSpaceGraph(
    * `space:{id}/item:` genau dort, Typ der Gegenstelle laut Manifest.
    * Personen (`global:`) legt die Funktion bei Bedarf als Knoten an.
    */
-  const endpointNode = (target: string, carrierSpace: string | null | undefined, otherKind?: string): string | null => {
+  const endpointNode = (target: string, carrier: Pick<Item, "id">, otherKind?: string): string | null => {
     if (target.startsWith("global:")) {
       const user = usersById.get(target.slice("global:".length))
       if (!user) return null
@@ -128,12 +127,9 @@ export function projectSpaceGraph(
       }
       return nodeId
     }
-    // Ohne bekannten Space des Trägers ist ein lokales Ziel nicht gegen ihn
-    // prüfbar: dann gilt es im einen sichtbaren Bereich (wie ohne Spaces).
-    const ctx = carrierSpace === undefined && isLocalItemTarget(target)
-      ? { carrierSpace: null, otherKind }
-      : { carrierSpace: carrierSpace ?? null, spaceOf, otherKind }
-    const hit = resolveTarget(target, itemsById, ctx)
+    // Aggregierte Ansicht: Kontext „alle Spaces" (06, Verhältnis zu
+    // Relations, Regel 6) — die Space-Prüfung bleibt an.
+    const hit = resolveTarget(target, allSpacesScope(opts?.resolveItemSpace, carrier, { otherKind }), itemsById)
     return hit ? graphItemNodeId(hit.id) : null
   }
 
@@ -141,7 +137,7 @@ export function projectSpaceGraph(
   for (const item of cardItems) {
     for (const relation of item.relations ?? []) {
       const otherKind = targetFilter(otherKindOf(item.type, { predicate: relation.predicate, itemRole: "from" })).type as string | undefined
-      const other = endpointNode(relation.target, spaceOf ? (spaceOf(item.id) ?? undefined) : null, otherKind)
+      const other = endpointNode(relation.target, item, otherKind)
       if (!other) continue
       edges.push({
         id: `${item.id}|${relation.predicate}|${other}`,
@@ -155,9 +151,8 @@ export function projectSpaceGraph(
   // Relation records (spec 08): from --predicate--> to, as first-class edges.
   for (const record of records) {
     // Die Endpunkte eines Records gelten vom Space des Records aus (08, Regel 7).
-    const recordSpace = spaceOf ? (spaceOf(record.id) ?? undefined) : null
-    const from = endpointNode(record.from, recordSpace)
-    const to = endpointNode(record.to, recordSpace)
+    const from = endpointNode(record.from, record)
+    const to = endpointNode(record.to, record)
     if (!from || !to) continue
     edges.push({ id: record.id, sourceId: from, targetId: to, predicate: record.predicate })
   }

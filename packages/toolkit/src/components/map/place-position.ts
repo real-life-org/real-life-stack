@@ -13,8 +13,8 @@ import { useItems } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
 import { resolveTypePresentation } from "../preview/type-presentation"
 import { locationEdge } from "../preview/use-item-edges"
-import { placeEdgeOf, resolvePlaceOf, spaceOfConnector, useItemPlace } from "../preview/item-place"
-import type { SpaceOf } from "../../lib/item-targets"
+import { placeEdgeOf, resolvePlaceOf, useItemPlace } from "../preview/item-place"
+import { scopesFromConnector, type ScopeFor } from "../../lib/item-targets"
 import { latLngFromPoint } from "../../lib/geo"
 
 /**
@@ -22,19 +22,19 @@ import { latLngFromPoint } from "../../lib/geo"
  * hat und sein Ort unter `places` liegt; sonst das Item selbst. Das
  * gespeicherte Item bleibt unberührt.
  */
-export function withPlacePosition(item: Item, places: Iterable<Item> | ReadonlyMap<string, Item>, spaceOf?: SpaceOf): Item {
+export function withPlacePosition(item: Item, places: Iterable<Item> | ReadonlyMap<string, Item>, scopes: ScopeFor): Item {
   if (latLngFromPoint(item.data?.position)) return item
-  const position = resolvePlaceOf(item, places, spaceOf)?.data?.position
+  const position = resolvePlaceOf(item, places, scopes)?.data?.position
   if (!latLngFromPoint(position)) return item
   return { ...item, data: { ...item.data, position } }
 }
 
 /** Aus `candidates` die Items ohne eigene Position, deren Ort unter `places` liegt — mit dessen Position. */
-export function locatedPositions(candidates: readonly Item[], places: readonly Item[], spaceOf?: SpaceOf): Item[] {
+export function locatedPositions(candidates: readonly Item[], places: readonly Item[], scopes: ScopeFor): Item[] {
   const byId = new Map(places.map((p) => [p.id, p]))
   return candidates
     .filter((c) => !latLngFromPoint(c.data?.position) && !!placeEdgeOf(c))
-    .map((c) => withPlacePosition(c, byId, spaceOf))
+    .map((c) => withPlacePosition(c, byId, scopes))
     .filter((c) => !!latLngFromPoint(c.data?.position))
 }
 
@@ -59,7 +59,7 @@ export function useLocatedItems(loaded: readonly Item[]): Item[] {
   const connector = useConnector()
   return useMemo(() => {
     const ids = new Set(loaded.map((i) => i.id))
-    return locatedPositions(candidates, loaded, spaceOfConnector(connector)).filter((i) => !ids.has(i.id))
+    return locatedPositions(candidates, loaded, scopesFromConnector(connector)).filter((i) => !ids.has(i.id))
   }, [connector, loaded, candidates])
 }
 

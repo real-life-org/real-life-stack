@@ -241,17 +241,22 @@ function assertCurrent(work: EpochGuard<unknown>): void {
 
 /**
  * Die Epoche einer Selbstaktion: Item und geöffneter Space. Der Abbau des
- * Panels beendet sie nicht; den geöffneten Space liest sie darum beim
- * Connector nach (`liveScope`), nicht nur im Render.
+ * Panels beendet sie nicht; Space-Wechsel meldet darum der Connector
+ * (`watch`), nicht nur der Render.
  */
 function useActionEpoch(item: Item) {
   const connector = useConnector()
   const openSpace = useCurrentGroup()?.id ?? null
-  return useFieldEpoch(undefined, {
-    scope: [item.id, openSpace],
-    lifetime: false,
-    liveScope: () => [hasGroups(connector) ? (connector.getCurrentGroup()?.id ?? null) : null],
-  })
+  // Jeder Wechsel des geöffneten Space ist ein Zählerschritt (Regel 6) —
+  // gemeldet vom Connector, auch nachdem die Anzeige abgebaut ist.
+  const watch = useMemo(
+    () =>
+      hasGroups(connector)
+        ? (onChange: () => void) => connector.observeCurrentGroup().subscribe(() => onChange())
+        : undefined,
+    [connector],
+  )
+  return useFieldEpoch(undefined, { scope: [item.id, openSpace], lifetime: false, watch })
 }
 
 /**
@@ -413,6 +418,7 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
             setError(err instanceof Error ? err.message : String(err))
           }
         } finally {
+          work.finish()
           queued.current -= 1
           if (queued.current === 0) {
             setBusy(false)
@@ -559,6 +565,7 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
       if (value === undefined) return
       setBusy(true)
       setError(null)
+      const work = epoch.begin()
       try {
         // #531: gegen den GELTENDEN Stand entscheiden, nicht gegen den Render.
         // Bin ich nicht mehr an der Kante, oder hat der Status keine Rolle
@@ -567,7 +574,6 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
         // möglich (kein bedingtes Schreiben im DataInterface); Mitglieder
         // dürfen den Status ohnehin ändern.
         if (!meId) return
-        const work = epoch.begin()
         const current = await freshItem(connector, item, work)
         const role = statusRole(statusField, (current.data as Record<string, unknown> | undefined)?.[statusField.key], defaultStatus)
         if (role !== "open" && role !== "active") return
@@ -577,6 +583,7 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err))
       } finally {
+        work.finish()
         setBusy(false)
       }
     },

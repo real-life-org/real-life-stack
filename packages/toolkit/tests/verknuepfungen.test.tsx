@@ -9,6 +9,7 @@ import { ConnectorProvider } from "../src/hooks/connector-context"
 import { MemoryFocusProvider, useItemFocus } from "../src/hooks/use-item-focus"
 import { resolveTypePresentation } from "../src/components/preview/type-presentation"
 import { edgeTargets } from "../src/components/preview/use-item-edges"
+import { scopesAcrossSpaces } from "../src/lib/item-targets"
 
 /**
  * S3, Teil B: Item-Kanten (C3) lesen. Spec: shared-components → „Item-Detail
@@ -157,7 +158,7 @@ describe("edgeTargets (rein)", () => {
       { predicate: "blocks", target: "item:t-kompost" },
       { predicate: "blocks", target: "item:t-kompost" },
     ])
-    const targets = edgeTargets(KOMPOST, blocksTo, [SCHUBKARRE, FREMD, doppelt, KOMPOST], "task")
+    const targets = edgeTargets(KOMPOST, blocksTo, [SCHUBKARRE, FREMD, doppelt, KOMPOST], "task", scopesAcrossSpaces(undefined))
     expect(targets.map((t) => t.item.id)).toEqual(["t-karre", "t-d"])
   })
 
@@ -167,7 +168,7 @@ describe("edgeTargets (rein)", () => {
       { predicate: "blocks", target: "space:g/item:t-beet" },
     ])
     const spaceOf = () => "g"
-    expect(edgeTargets(selbst, blocksFrom, [selbst, BEETPLAN], "task", spaceOf).map((t) => t.item.id)).toEqual(["t-beet"])
+    expect(edgeTargets(selbst, blocksFrom, [selbst, BEETPLAN], "task", scopesAcrossSpaces(spaceOf)).map((t) => t.item.id)).toEqual(["t-beet"])
   })
 
   it("Codex R1/1: Targets sind space-lokal — kein Treffer über Space-Grenzen (04)", () => {
@@ -178,12 +179,12 @@ describe("edgeTargets (rein)", () => {
       { predicate: "blocks", target: "space:other/item:t-beet" },
       { predicate: "blocks", target: "item:t-fremd" },
     ])
-    expect(edgeTargets(selbst, blocksFrom, [BEETPLAN, fremd], "task", spaceOf)).toEqual([])
+    expect(edgeTargets(selbst, blocksFrom, [BEETPLAN, fremd], "task", scopesAcrossSpaces(spaceOf))).toEqual([])
     // Eingehend: ein Item in einem anderen Space mit item:t-s meint ein anderes t-s.
     const drüben = item("t-fremd", "task", { title: "Fremd" }, [{ predicate: "blocks", target: "item:t-s" }])
-    expect(edgeTargets(selbst, blocksTo, [drüben], "task", spaceOf)).toEqual([])
+    expect(edgeTargets(selbst, blocksTo, [drüben], "task", scopesAcrossSpaces(spaceOf))).toEqual([])
     const qualifiziert = item("t-fremd", "task", { title: "Fremd" }, [{ predicate: "blocks", target: "space:g/item:t-s" }])
-    expect(edgeTargets(selbst, blocksTo, [qualifiziert], "task", spaceOf).map((t) => t.item.id)).toEqual(["t-fremd"])
+    expect(edgeTargets(selbst, blocksTo, [qualifiziert], "task", scopesAcrossSpaces(spaceOf)).map((t) => t.item.id)).toEqual(["t-fremd"])
   })
 })
 

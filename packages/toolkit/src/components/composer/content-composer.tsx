@@ -49,7 +49,7 @@ import { groupNumberFields } from "../preview/field-register"
 import { chipValues, type OptionTone } from "../../lib/field-values"
 import { FixedItemRefField, IncomingRelationField, ItemRelationWidget, type RequestItemPick } from "./widgets/item-relation-widget"
 import { incomingRemovedKey, itemRelationChoiceKeys, itemRelationDataKey, itemRelationDataKeys, type ItemRefFieldConfig, type ItemRelationFieldConfig } from "./item-relations"
-import { isLocalItemTarget } from "@/lib/item-targets"
+import { survivesSpaceChange } from "@/lib/item-targets"
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -477,7 +477,8 @@ export function withSpaceChange(d: WidgetData, patch: Partial<WidgetData>, refKe
   const next: WidgetData = { ...d, ...patch }
   const before = typeof d.group === "string" ? d.group : ""
   if (!("group" in patch) || !before || patch.group === before) return next
-  const local = (t: unknown) => isLocalItemTarget(t)
+  // Der Auflöser sagt, was einen Space-Wechsel übersteht (04: `item:` ist space-lokal).
+  const local = (t: unknown) => !survivesSpaceChange(t)
   for (const [key, value] of Object.entries(next)) {
     if (key.startsWith("relation:") && Array.isArray(value)) next[key] = value.filter((t) => !local(t))
   }
@@ -1490,7 +1491,7 @@ export function ContentComposer({
                         const value = typeof data[field.key] === "string" ? (data[field.key] as string) : ""
                         if (field.fixed) {
                           // Fest: nur mit Wert sichtbar (06, Regel 14).
-                          return value ? <FixedItemRefField key={field.key} label={field.label} value={value} missing={field.missing} spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined} /> : null
+                          return value ? <FixedItemRefField key={field.key} label={field.label} value={value} missing={field.missing} targetType={field.targetType} spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined} /> : null
                         }
                         return (
                           <ItemRelationWidget

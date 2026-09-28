@@ -33,5 +33,5 @@ export function useItemHasBindings(item: Item | null, spaceId: string | null): b
     return observable.subscribe(() => startTransition(() => setState(read())))
   }, [observable])
   if (!item || !observable || !state.loaded) return undefined
-  return itemHasBindings(item, state.items, spaceId)
+  return itemHasBindings(item, state.items, spaceId, connector)
 }

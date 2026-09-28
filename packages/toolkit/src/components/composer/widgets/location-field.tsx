@@ -64,12 +64,12 @@ export function LocationField(props: LocationFieldProps) {
 function WithPlaces(props: LocationFieldProps & { placeField: ItemRelationFieldConfig }) {
   const { placeField, spaceId, itemId, data, updateMany } = props
   const key = itemRelationDataKey(placeField.predicate)
-  const { items: candidates, all, spaceOf, needsSpace, otherSpace } = useCandidates(placeField.targetType, spaceId)
+  const { items: candidates, all, scope, needsSpace, otherSpace } = useCandidates(placeField.targetType, spaceId)
   const choosable = React.useMemo(() => candidates.filter((c) => c.id !== itemId), [candidates, itemId])
   const targets = Array.isArray(data[key]) ? (data[key] as unknown[]).filter((t): t is string => typeof t === "string" && t !== "") : []
   const target = targets[0]
   // Das gewählte Ort-Item bestimmt der Auflöser (06, Verhältnis zu Relations, Regel 6).
-  const selectedItem = target ? resolveTarget(target, all, { carrierSpace: spaceId ?? null, spaceOf, otherKind: placeField.targetType }) : undefined
+  const selectedItem = target ? resolveTarget(target, scope, all) : undefined
   // Nimmt das Feld dieses Item als Ort? Nur ein wählbarer Kandidat: Typ der
   // Gegenstelle und Space des Formulars prüft schon die Kandidatenmenge.
   const accepts = (item: Item) => choosable.some((c) => c.id === item.id)
@@ -163,6 +163,7 @@ function LocationCore({
                         if (result) reverse.apply(() => updateMany({ address: result }))
                       })
                       .catch(() => {})
+                      .finally(() => reverse.finish())
                   })
                 },
                 // Marker = Ort-Item (B4): nur, wenn das Feld Ort-Items kennt

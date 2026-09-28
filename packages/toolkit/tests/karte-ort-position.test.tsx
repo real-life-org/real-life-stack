@@ -7,6 +7,10 @@ import { MockConnector } from "@real-life-stack/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { projectMapInventory } from "../src/components/map/map-view"
+import { scopesAcrossSpaces } from "../src/lib/item-targets"
+
+/** Ohne Spaces: ein Bereich. */
+const NONE = scopesAcrossSpaces(undefined)
 import { locatedPositions, useItemWithPlacePosition, useLocatedItems, withPlacePosition } from "../src/components/map/place-position"
 
 /**
@@ -37,16 +41,16 @@ const POST = item("post-1", "post", { content: "kein Ort" }, [{ predicate: "loca
 describe("withPlacePosition (rein)", () => {
   it("ein Event ohne Position übernimmt die Position seines Ort-Items, ohne das Item zu ändern", () => {
     const places = new Map([[HALLE.id, HALLE]])
-    const shown = withPlacePosition(AM_ORT, places)
+    const shown = withPlacePosition(AM_ORT, places, NONE)
     expect(shown.data.position).toEqual(HALLE.data.position)
     expect(AM_ORT.data.position).toBeUndefined()
   })
 
   it("eine eigene Position gewinnt; ein fehlender Ort und ein Typ ohne Ort-Feld bleiben, wie sie sind", () => {
     const places = new Map([[HALLE.id, HALLE]])
-    expect(withPlacePosition(EIGEN, places)).toBe(EIGEN)
-    expect(withPlacePosition(WEG, places)).toBe(WEG)
-    expect(withPlacePosition(POST, places)).toBe(POST)
+    expect(withPlacePosition(EIGEN, places, NONE)).toBe(EIGEN)
+    expect(withPlacePosition(WEG, places, NONE)).toBe(WEG)
+    expect(withPlacePosition(POST, places, NONE)).toBe(POST)
   })
 
   it("Codex R8: nur ein Ort des richtigen Typs im richtigen Space", () => {
@@ -54,40 +58,40 @@ describe("withPlacePosition (rein)", () => {
     const spaceOf = (id: string) => (id === "pl-halle" ? "g" : id === "ev-fremd" ? "anders" : "g")
     // Space-qualifiziert auf einen anderen Space: kein Treffer.
     const qualifiziert = item("ev-q", "event", { title: "Q" }, [{ predicate: "locatedAt", target: "space:anders/item:pl-halle" }])
-    expect(withPlacePosition(qualifiziert, places, spaceOf).data.position).toBeUndefined()
+    expect(withPlacePosition(qualifiziert, places, scopesAcrossSpaces(spaceOf)).data.position).toBeUndefined()
     // Lokales Target aus einem anderen Space: kein Treffer.
     const fremd = item("ev-fremd", "event", { title: "F" }, [{ predicate: "locatedAt", target: "item:pl-halle" }])
-    expect(withPlacePosition(fremd, places, spaceOf).data.position).toBeUndefined()
+    expect(withPlacePosition(fremd, places, scopesAcrossSpaces(spaceOf)).data.position).toBeUndefined()
     // Gleiche Id, falscher Typ: kein Treffer.
     const aufgabe = item("pl-halle", "task", { title: "T", position: point(1, 1) })
-    expect(withPlacePosition(AM_ORT, new Map([[aufgabe.id, aufgabe]])).data.position).toBeUndefined()
+    expect(withPlacePosition(AM_ORT, new Map([[aufgabe.id, aufgabe]]), NONE).data.position).toBeUndefined()
     // Richtig: gleicher Space.
-    expect(withPlacePosition(AM_ORT, places, spaceOf).data.position).toEqual(HALLE.data.position)
+    expect(withPlacePosition(AM_ORT, places, scopesAcrossSpaces(spaceOf)).data.position).toEqual(HALLE.data.position)
   })
 
   it("Codex R9/1: die Ort-Kante gilt über alle Klassen, unabhängig von ihrer Reihenfolge", () => {
     const places = new Map([[HALLE.id, HALLE]])
     const a = { ...AM_ORT, type: ["post", "event"] } as unknown as Item
     const b = { ...AM_ORT, type: ["event", "post"] } as unknown as Item
-    expect(withPlacePosition(a, places).data.position).toEqual(HALLE.data.position)
-    expect(withPlacePosition(b, places).data.position).toEqual(HALLE.data.position)
+    expect(withPlacePosition(a, places, NONE).data.position).toEqual(HALLE.data.position)
+    expect(withPlacePosition(b, places, NONE).data.position).toEqual(HALLE.data.position)
   })
 
   it("Codex R9/2, R10, R11 als Vertrag: das Inventar ist eine Projektion aus Abfrage und Ableitung", () => {
     // Ausschnitt A: der Ort ist in der Abfrage, das Event kommt abgeleitet dazu.
-    expect(projectMapInventory([HALLE], locatedPositions([AM_ORT], [HALLE])).map((i) => i.id)).toEqual(["pl-halle", "ev-ort"])
+    expect(projectMapInventory([HALLE], locatedPositions([AM_ORT], [HALLE], NONE)).map((i) => i.id)).toEqual(["pl-halle", "ev-ort"])
     // Nach B: weder Ort noch Event (keine Akkumulation).
-    expect(projectMapInventory([], locatedPositions([AM_ORT], []))).toEqual([])
+    expect(projectMapInventory([], locatedPositions([AM_ORT], [], NONE))).toEqual([])
     // Ein Event mit eigener Position bei A, dann an einen Ort in B umgestellt: nur die Ableitung.
     const lebend = item("ev-x", "event", { title: "X" }, [{ predicate: "locatedAt", target: "item:pl-halle" }])
-    const shown = projectMapInventory([HALLE], locatedPositions([lebend], [HALLE]))
+    const shown = projectMapInventory([HALLE], locatedPositions([lebend], [HALLE], NONE))
     expect(shown.find((i) => i.id === "ev-x")!.data.position).toEqual(HALLE.data.position)
     // Kante entfernt: kein Marker, auch kein alter.
-    expect(projectMapInventory([HALLE], locatedPositions([{ ...lebend, relations: [] }], [HALLE])).map((i) => i.id)).toEqual(["pl-halle"])
+    expect(projectMapInventory([HALLE], locatedPositions([{ ...lebend, relations: [] }], [HALLE], NONE)).map((i) => i.id)).toEqual(["pl-halle"])
   })
 
   it("locatedPositions: nur Items, deren Ort in der Menge liegt", () => {
-    const shown = locatedPositions([AM_ORT, EIGEN, WEG, POST], [HALLE])
+    const shown = locatedPositions([AM_ORT, EIGEN, WEG, POST], [HALLE], NONE)
     expect(shown.map((i) => i.id)).toEqual(["ev-ort"])
   })
 })

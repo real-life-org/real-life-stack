@@ -15,7 +15,7 @@ import { groupNumberFields, metaRowOrder, type EdgeEntry, type FieldEntry, type 
 import { chipValues, contactHref, contactKind, formatNumber, optionTone, parseNumberInput, safeHref, urlLabel } from "../../lib/field-values"
 import { ToneDot, toneSoftClass } from "./value-tone"
 import { useFittingTags } from "./use-fitting-tags"
-import { ItemRefValue, ItemRelationChips, LabeledChips, itemRefId } from "./item-relation-row"
+import { ItemRefValue, ItemRelationChips, LabeledChips, hasItemRef } from "./item-relation-row"
 import { isItemEdge, locationEdge, useItemEdges, type EdgeTarget } from "./use-item-edges"
 import { ItemRefChip } from "./item-ref-chip"
 import type { PeopleLineEntry } from "./people-line"
@@ -93,7 +93,7 @@ export function RegisterMeta({ item, fields, edges, lists, typeTone, className }
         if (isItemEdge(row.entry)) return (itemEdges.get(row.entry)?.length ?? 0) > 0
         return peopleFor(row.entry).length > 0
       }
-      if (row.entry.widget === "item-ref") return !covered.has(row.entry.key) && itemRefId(item, row.entry) !== null
+      if (row.entry.widget === "item-ref") return !covered.has(row.entry.key) && hasItemRef(item, row.entry)
       if (row.entry.widget === "location" && ort) return true
       return hasFieldValue(row.entry, item)
     })

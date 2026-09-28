@@ -6,12 +6,10 @@
 // Relations, Regel 6). Verzweigt über die Ort-Kante des Registers, nie über
 // den Typ.
 
-import { useMemo } from "react"
-import { hasItemGroups, normalizeItemType, type DataInterface, type Item } from "@real-life-stack/data-interface"
+import { normalizeItemType, type Item } from "@real-life-stack/data-interface"
 
-import { useItem } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
-import { resolveTarget, targetItemId, type SpaceOf } from "../../lib/item-targets"
+import { carrierScope, resolveTarget, useResolvedTarget, type ScopeFor } from "../../lib/item-targets"
 import { resolveTypePresentation } from "./type-presentation"
 import { locationEdge, otherKindOf, targetFilter } from "./use-item-edges"
 import type { EdgeEntry } from "./field-register"
@@ -38,33 +36,27 @@ export function placeTargetOf(item: Item): string | null {
   return item.relations?.find((r) => r.predicate === found.edge.predicate)?.target ?? null
 }
 
-/** Die Id, unter der das Ort-Item nachzuschlagen ist — ob es gemeint ist, sagt {@link resolvePlaceOf}. */
-export function placeLookupId(item: Item): string | null {
-  return targetItemId(placeTargetOf(item))
+/** Der Typ der Gegenstelle der Ort-Kante laut Manifest. */
+function placeKind(found: { klasse: string; edge: EdgeEntry }): string | undefined {
+  return targetFilter(otherKindOf(found.klasse, found.edge)).type as string | undefined
 }
 
-/** Space eines Items, wie der Connector ihn kennt; ohne Gruppen-Capability `undefined`. */
-export function spaceOfConnector(connector: DataInterface | null): SpaceOf | undefined {
-  return connector && hasItemGroups(connector) ? (id) => connector.getItemGroupId(id) : undefined
-}
-
-/** Das Ort-Item, auf das das Item zeigt, aus den Kandidaten — über den Auflöser. */
-export function resolvePlaceOf(item: Item, candidates: Iterable<Item> | ReadonlyMap<string, Item>, spaceOf?: SpaceOf): Item | undefined {
+/**
+ * Das Ort-Item, auf das das Item zeigt, aus den Kandidaten — über den
+ * Auflöser, im Kontext `scopes` (Connector oder „alle Spaces").
+ */
+export function resolvePlaceOf(item: Item, candidates: Iterable<Item> | ReadonlyMap<string, Item>, scopes: ScopeFor): Item | undefined {
   const found = placeEdgeOf(item)
-  if (!found) return undefined
-  const target = item.relations?.find((r) => r.predicate === found.edge.predicate)?.target
-  if (!target) return undefined
-  const otherKind = targetFilter(otherKindOf(found.klasse, found.edge)).type as string | undefined
-  return resolveTarget(target, candidates, { carrierSpace: spaceOf ? spaceOf(item.id) : null, spaceOf, otherKind })
+  const target = placeTargetOf(item)
+  if (!found || !target) return undefined
+  return resolveTarget(target, scopes(item, { otherKind: placeKind(found) }), candidates)
 }
 
 /** Das Ort-Item eines Items, lebend (ein Abo auf genau dieses Item). */
 export function useItemPlace(item: Item | null | undefined): Item | undefined {
   const connector = useConnector()
-  const id = item ? placeLookupId(item) : null
-  const { data: place } = useItem(id ?? "")
-  return useMemo(
-    () => (item && place ? resolvePlaceOf(item, [place], spaceOfConnector(connector)) : undefined),
-    [connector, item, place],
-  )
+  const found = item ? placeEdgeOf(item) : undefined
+  const target = item ? placeTargetOf(item) : null
+  const scope = item && found ? carrierScope(connector, item, { otherKind: placeKind(found) }) : null
+  return useResolvedTarget(target, scope).item
 }

@@ -1,8 +1,8 @@
 import type { Item, RelationRecord } from "@real-life-stack/data-interface"
 import { itemContentHash, votesFromRelationRecords } from "@real-life-stack/data-interface"
-import { variantOfId } from "./resonance-variants"
+import { variantOfTarget } from "./resonance-variants"
 import type { ResonancePopulation } from "./resonance-sort"
-import { isLocalItemTarget } from "./item-targets"
+import { isItemTarget, survivesSpaceChange } from "./item-targets"
 
 /**
  * Import und Export des Resonanzmoduls (docs/spec/modules/resonance.md →
@@ -53,7 +53,7 @@ export function importItemData(entry: ImportEntry): Record<string, unknown> {
   return entryData(entry)
 }
 
-function validateEntry(raw: unknown, index: number, statementIds: ReadonlySet<string>): ImportEntry | ImportError {
+function validateEntry(raw: unknown, index: number, statements: ReadonlyMap<string, Item>): ImportEntry | ImportError {
   if (!isRecord(raw)) return { index, message: "ist kein Objekt" }
   const { title, description, tags, variantOf } = raw
   if (typeof title !== "string" || title.trim().length === 0) return { index, message: "„title“ fehlt oder ist leer" }
@@ -62,12 +62,11 @@ function validateEntry(raw: unknown, index: number, statementIds: ReadonlySet<st
     return { index, message: "„tags“ ist keine Liste von Texten" }
   }
   if (variantOf !== undefined) {
-    if (typeof variantOf !== "string" || !isLocalItemTarget(variantOf)) {
+    if (typeof variantOf !== "string" || !isItemTarget(variantOf) || survivesSpaceChange(variantOf)) {
       return { index, message: "„variantOf“ muss die Form item:<id> haben" }
     }
-    // Varianten-Regel 2: das Ziel ist ein Statement im selben Space.
-    const target = variantOfId({ data: { variantOf } } as unknown as Item)
-    if (target === null || !statementIds.has(target)) {
+    // Varianten-Regel 2: das Ziel ist ein Statement im selben Space (Auflöser).
+    if (!variantOfTarget({ data: { variantOf } } as unknown as Item, statements)) {
       return { index, message: `„variantOf“ zeigt auf keine Aussage in diesem Space (${variantOf})` }
     }
   }
@@ -98,11 +97,11 @@ export async function planImport(
     return { create: [], skipped: [], errors: [{ index: -1, message: "„statements“ fehlt oder ist leer." }] }
   }
 
-  const statementIds = new Set(context.statements.map((item) => item.id))
+  const statements = new Map(context.statements.map((item) => [item.id, item]))
   const entries: ImportEntry[] = []
   const errors: ImportError[] = []
   raw.statements.forEach((candidate, index) => {
-    const result = validateEntry(candidate, index, statementIds)
+    const result = validateEntry(candidate, index, statements)
     if ("message" in result) errors.push(result)
     else entries.push(result)
   })

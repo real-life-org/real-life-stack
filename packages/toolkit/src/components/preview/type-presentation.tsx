@@ -51,7 +51,7 @@ import {
 } from "@real-life-stack/data-interface"
 
 import { ItemMetaRow } from "./item-meta-row"
-import { placeLookupId, useItemPlace } from "./item-place"
+import { placeTargetOf, useItemPlace } from "./item-place"
 import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import {
   assertFollowUps,
@@ -294,7 +294,7 @@ const REGISTER_ACTIONS: ComponentType<ItemSlotProps> = function RegisterActionsS
 
 function EventPreview({ item }: ItemSlotProps) {
   // Liegt das Event an einem Ort-Item (B4), nennt die Karte dessen Namen.
-  return placeLookupId(item) ? <EventPreviewAtPlace item={item} /> : <ItemMetaRow item={item} />
+  return placeTargetOf(item) ? <EventPreviewAtPlace item={item} /> : <ItemMetaRow item={item} />
 }
 
 /** Die Karte eines Events an einem Ort-Item: ein Abo auf genau dieses Item, nicht auf alle Orte. */

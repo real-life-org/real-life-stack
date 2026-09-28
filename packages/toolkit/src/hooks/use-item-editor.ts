@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 import type { DataInterface, Item, Relation } from "@real-life-stack/data-interface"
 import { deriveContext, hasGroups, hasItemGroups, isWritable } from "@real-life-stack/data-interface"
-import { targetPointsTo } from "../lib/item-targets"
+import { resolveTarget, resolveTargetFromConnector, spaceScope } from "../lib/item-targets"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useConnector } from "./connector-context"
 import type { ContentComposerSubmitData } from "../components/composer/content-composer"
@@ -384,19 +384,23 @@ async function applyIncoming(
   // geschrieben — ein vorhersehbarer Teilfehler entsteht so nicht. Atomar ist
   // das nicht; scheitert ein Schreibvorgang doch, setzt „Erneut" fort.
   for (const change of changes) {
-    for (const id of [...change.add, ...change.remove]) await checkedSource(connector, id, currentUserId, space)
+    for (const target of [...change.add, ...change.remove]) await checkedSource(connector, target, currentUserId, space)
   }
   for (const change of changes) {
-    for (const id of change.add) await writeIncoming(connector, item, change.predicate, id, true, currentUserId, space)
-    for (const id of change.remove) await writeIncoming(connector, item, change.predicate, id, false, currentUserId, space)
+    for (const target of change.add) await writeIncoming(connector, item, change.predicate, target, true, currentUserId, space)
+    for (const target of change.remove) await writeIncoming(connector, item, change.predicate, target, false, currentUserId, space)
   }
 }
 
-/** Die Quelle frisch, im richtigen Space und schreibbar — sonst ein Fehler mit Grund. */
-async function checkedSource(connector: DataInterface, sourceId: string, currentUserId: string | undefined, space: string | null): Promise<Item> {
+/**
+ * Die Quelle frisch, im richtigen Space und schreibbar — sonst ein Fehler mit
+ * Grund. Welches Item das Target meint, sagt der Auflöser im Kontext des
+ * Formular-Space (06, Verhältnis zu Relations, Regel 6).
+ */
+async function checkedSource(connector: DataInterface, sourceTarget: string, currentUserId: string | undefined, space: string | null): Promise<Item> {
   if (!isWritable(connector)) throw new Error("Dieser Speicher ist nur lesbar")
-  const source = await connector.getItem(sourceId)
-  if (!source || (space && hasItemGroups(connector) && connector.getItemGroupId(sourceId) !== space)) {
+  const source = await resolveTargetFromConnector(sourceTarget, spaceScope(connector, space), connector)
+  if (!source) {
     throw new Error("Eine verknüpfte Aufgabe ist hier nicht erreichbar – die Verknüpfung wurde nicht gespeichert")
   }
   const title = typeof source.data?.title === "string" && source.data.title.trim() !== "" ? source.data.title : "Ohne Titel"
@@ -410,28 +414,26 @@ async function writeIncoming(
   connector: DataInterface,
   item: Item,
   predicate: string,
-  sourceId: string,
+  sourceTarget: string,
   add: boolean,
   currentUserId: string | undefined,
   space: string | null,
 ): Promise<void> {
   // Frisch vor jedem Schreibvorgang: eine Kante, die inzwischen dazukam, bleibt.
-  const source = await checkedSource(connector, sourceId, currentUserId, space)
+  const source = await checkedSource(connector, sourceTarget, currentUserId, space)
   if (!isWritable(connector)) return
   const relations = source.relations ?? []
-  // Wie die Leseform (04, Target-Konventionen): `item:<id>` ist space-lokal,
-  // `space:{id}/item:<id>` zeigt auf genau diesen Space.
-  // Der Auflöser (06, Verhältnis zu Relations, Regel 6): Das Item liegt im
-  // Space `space` (Quelle und Item sind dort); ein qualifiziertes Target nur
-  // bei bekanntem Space (Codex R2/2).
-  const spaceOf = space !== null ? (id: string) => (id === item.id ? space : null) : undefined
-  const pointsHere = (r: Relation) => r.predicate === predicate && targetPointsTo(r.target, item, { carrierSpace: space, spaceOf })
+  // Der Auflöser (06, Verhältnis zu Relations, Regel 6): Quelle und Item
+  // liegen im Formular-Space; das Item ist dort bekannt, auch wenn der
+  // Connector es noch keinem Space zuordnet (gerade angelegt).
+  const scope = spaceScope(connector, space, { knownInSpace: new Set([item.id]) })
+  const pointsHere = (r: Relation) => r.predicate === predicate && resolveTarget(r.target, scope, [item]) === item
   if (add) {
     if (relations.some(pointsHere)) return
-    await connector.updateItem(sourceId, { relations: [...relations, { predicate, target: `item:${item.id}` }] })
+    await connector.updateItem(source.id, { relations: [...relations, { predicate, target: `item:${item.id}` }] })
     return
   }
   const kept = relations.filter((r) => !pointsHere(r))
   if (kept.length === relations.length) return
-  await connector.updateItem(sourceId, { relations: kept })
+  await connector.updateItem(source.id, { relations: kept })
 }

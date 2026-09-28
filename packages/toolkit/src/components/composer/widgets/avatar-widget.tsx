@@ -5,7 +5,7 @@ import { Camera, ImagePlus, Loader2, X } from "lucide-react"
 
 import { Avatar, AvatarImage } from "@/components/primitives/avatar"
 import { safeImageSrc } from "@/lib/field-values"
-import { useFieldEpoch, type EpochGuard } from "@/lib/form-epoch"
+import { useEpochBusy, useFieldEpoch } from "@/lib/form-epoch"
 
 /**
  * Schreibform des Avatars (B11, S4b): Bild wählen, auf 512 px verkleinern
@@ -46,11 +46,10 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
   // Die Epoche des Felds (shared-components → Formular-Epoche): Nur das
   // Ergebnis der letzten Bildwahl zählt; Entfernen, Abbau, Space- oder
   // Typwechsel machen ein laufendes Verkleinern ungültig.
-  const epoch = useFieldEpoch()
+  const epoch = useFieldEpoch({ onChange }, { locked: disabled })
   // Beschäftigt ist das Feld, solange die laufende Bildwahl gilt: Wird sie
   // ungültig (Entfernen, Abbau, Space- oder Typwechsel), ist es frei.
-  const [running, setRunning] = React.useState<EpochGuard<undefined> | null>(null)
-  const busy = !!running?.valid()
+  const busy = useEpochBusy(epoch, "image")
   const [error, setError] = React.useState<string | null>(null)
   const src = safeImageSrc(value)
   const errorId = React.useId()
@@ -65,14 +64,14 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
     }
     setError(null)
     const work = epoch.begin("image")
-    setRunning(work)
     try {
       const result = await resize(file, AVATAR_SIZE)
-      work.apply(() => onChange(result))
+      // Gegen den aktuellen Rückruf; ein inzwischen gesperrtes Feld nimmt nichts an.
+      work.apply((now) => now.onChange(result))
     } catch {
       work.apply(() => setError("Bild konnte nicht verarbeitet werden."))
     } finally {
-      setRunning((current) => (current === work ? null : current))
+      work.finish()
     }
   }
 
@@ -128,7 +127,6 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
               aria-label={`${label} entfernen`}
               onClick={() => {
                 epoch.invalidate("image")
-                setRunning(null)
                 onChange("")
               }}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"

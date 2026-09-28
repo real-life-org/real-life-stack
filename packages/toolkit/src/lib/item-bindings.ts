@@ -1,7 +1,8 @@
 import { normalizeItemType, type Item } from "@real-life-stack/data-interface"
 
 import { resolveTypePresentation } from "../components/preview/type-presentation"
-import { targetItemId, targetPointsTo, type TargetContext } from "./item-targets"
+import { isItemTarget, resolveTarget, spaceScope } from "./item-targets"
+import type { DataInterface } from "@real-life-stack/data-interface"
 
 /**
  * Grund im Tooltip der festen Space-Anzeige (shared-components → Space des
@@ -18,7 +19,7 @@ function itemRefKeys(type: string): string[] {
 
 /** Ein ausgehender Item-Verweis (irgendein Item-Target, lokal oder qualifiziert). */
 function refersOut(value: unknown): boolean {
-  return targetItemId(value) !== null
+  return isItemTarget(value)
 }
 
 /**
@@ -37,13 +38,18 @@ function refersOut(value: unknown): boolean {
  *
  * Personen-Kanten (`global:`) und Tags zählen nicht; sie ziehen mit um.
  */
-export function itemHasBindings(item: Item, spaceItems: readonly Item[], itemSpace: string | null = null): boolean {
+export function itemHasBindings(
+  item: Item,
+  spaceItems: readonly Item[],
+  itemSpace: string | null = null,
+  connector: DataInterface | null = null,
+): boolean {
   if ((item.relations ?? []).some((r) => refersOut(r.target))) return true
   if (itemRefKeys(item.type).some((key) => refersOut(item.data[key]))) return true
-  const ctx: TargetContext = itemSpace !== null
-    ? { carrierSpace: itemSpace, spaceOf: (id) => (id === item.id ? itemSpace : null) }
-    : { carrierSpace: null }
-  const refersHere = (value: unknown) => targetPointsTo(value, item, ctx)
+  // Der Auflöser (06, Verhältnis zu Relations, Regel 6): Die Items liegen im
+  // Space des Items; ohne bekannten Space gilt der eine Bereich der Menge.
+  const scope = spaceScope(connector, itemSpace, { knownInSpace: new Set([item.id, ...spaceItems.map((i) => i.id)]) })
+  const refersHere = (value: unknown) => resolveTarget(value, scope, [item]) === item
   return spaceItems.some(
     (other) =>
       other.id !== item.id &&

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Item } from "@real-life-stack/data-interface"
-import { statementFamily, variantOfId, variantOfValue } from "../src/lib/resonance-variants"
+import { statementFamily, variantOfTarget, variantOfValue } from "../src/lib/resonance-variants"
 
 function statement(id: string, variantOf?: string, createdAt = `2026-09-26T10:00:0${id.length % 10}.000Z`): Item {
   return {
@@ -15,11 +15,15 @@ function statement(id: string, variantOf?: string, createdAt = `2026-09-26T10:00
 const ids = (items: readonly Item[]) => items.map((item) => item.id)
 
 describe("variantOf", () => {
-  it("reads item:<id> and tolerates a bare id", () => {
-    expect(variantOfId(statement("b", "item:a"))).toBe("a")
-    expect(variantOfId(statement("b", "a"))).toBe("a")
-    expect(variantOfId(statement("b"))).toBeNull()
-    expect(variantOfId(statement("b", "item:"))).toBeNull()
+  it("reads item:<id> and tolerates a bare id (über den Auflöser)", () => {
+    const a = statement("a")
+    const pool = [a]
+    expect(variantOfTarget(statement("b", "item:a"), pool)).toBe(a)
+    expect(variantOfTarget(statement("b", "a"), pool)).toBe(a)
+    expect(variantOfTarget(statement("b"), pool)).toBeUndefined()
+    expect(variantOfTarget(statement("b", "item:"), pool)).toBeUndefined()
+    // Eine Variante zeigt nur in ihren Space: qualifiziert nicht prüfbar.
+    expect(variantOfTarget(statement("b", "space:x/item:a"), pool)).toBeUndefined()
     expect(variantOfValue({ id: "a" })).toBe("item:a")
   })
 })

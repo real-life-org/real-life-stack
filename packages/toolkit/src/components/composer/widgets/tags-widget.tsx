@@ -49,6 +49,7 @@ export function TagsWidget({
       const search = epoch.begin("suggest")
       void suggestions(query).then((results) => {
         search.apply((now) => setFiltered(results.filter((s) => !now.value.includes(s))))
+        search.finish()
       })
       return () => epoch.invalidate("suggest")
     }

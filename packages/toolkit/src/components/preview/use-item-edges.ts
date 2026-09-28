@@ -11,7 +11,6 @@
 import { useMemo } from "react"
 import {
   getTypeManifest,
-  hasItemGroups,
   hasItemType,
   itemTypes,
   type Item,
@@ -21,7 +20,7 @@ import {
 import { useItemsUnion } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
 import type { EdgeEntry, FieldEntry } from "./field-register"
-import { resolveTarget, targetPointsTo, type SpaceOf } from "../../lib/item-targets"
+import { resolveTarget, scopesFromConnector, type ScopeFor } from "../../lib/item-targets"
 
 /** Was am anderen Ende einer Kante steht, aus dem Manifest (06, Regel 1). */
 export function otherKindOf(itemType: string | readonly string[], edge: Pick<EdgeEntry, "predicate" | "itemRole">): string | undefined {
@@ -103,16 +102,16 @@ export function useItemEdges(item: Item, edges: readonly EdgeEntry[] | undefined
   const { data: candidates } = useItemsUnion(filters)
   const connector = useConnector()
   return useMemo(() => {
-    const spaceOf: SpaceOf | undefined = hasItemGroups(connector) ? (id) => connector.getItemGroupId(id) : undefined
+    const scopes = scopesFromConnector(connector)
     const out = new Map<EdgeEntry, EdgeTarget[]>()
-    itemEdges.forEach((edge, i) => out.set(edge, edgeTargets(item, edge, candidates, kinds[i], spaceOf)))
+    itemEdges.forEach((edge, i) => out.set(edge, edgeTargets(item, edge, candidates, kinds[i], scopes)))
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connector, item, itemEdges, candidates, kinds.join(" ")])
 }
 
 /** Rein: die Ziele einer Kante über eine gegebene Kandidatenmenge (siehe {@link useItemEdges}). */
-export function edgeTargets(item: Item, edge: EdgeEntry, candidates: readonly Item[], otherKind?: string, spaceOf?: SpaceOf): EdgeTarget[] {
+export function edgeTargets(item: Item, edge: EdgeEntry, candidates: readonly Item[], otherKind: string | undefined, scopes: ScopeFor): EdgeTarget[] {
   if (edge.storage !== "embedded") return []
   // Die Gegenstelle ist, was das Manifest sagt (06, Regel 1): ein Item
   // anderen Typs ist kein Ziel dieser Kante.
@@ -130,10 +129,10 @@ export function edgeTargets(item: Item, edge: EdgeEntry, candidates: readonly It
   if (edge.itemRole === "from") {
     // Der Auflöser (06, Verhältnis zu Relations, Regel 6): Space nach 04,
     // Typ der Gegenstelle über alle Klassen.
-    const carrierSpace = spaceOf ? spaceOf(item.id) : null
+    const scope = scopes(item, { otherKind: filter.type as string | undefined })
     for (const relation of item.relations ?? []) {
       if (relation.predicate !== edge.predicate) continue
-      const target = resolveTarget(relation.target, candidates, { carrierSpace, spaceOf, otherKind: filter.type as string | undefined })
+      const target = resolveTarget(relation.target, scope, candidates)
       if (!target || target.id === item.id || seen.has(target.id)) continue
       seen.add(target.id)
       const qualifier = qualifierOf(relation.meta as Record<string, unknown> | undefined)
@@ -144,9 +143,8 @@ export function edgeTargets(item: Item, edge: EdgeEntry, candidates: readonly It
   if (edge.itemRole === "to") {
     for (const candidate of candidates) {
       if (!fits(candidate) || candidate.id === item.id || seen.has(candidate.id)) continue
-      const relation = (candidate.relations ?? []).find(
-        (r) => r.predicate === edge.predicate && targetPointsTo(r.target, item, { carrierSpace: spaceOf ? spaceOf(candidate.id) : null, spaceOf }),
-      )
+      const scope = scopes(candidate)
+      const relation = (candidate.relations ?? []).find((r) => r.predicate === edge.predicate && resolveTarget(r.target, scope, [item]) === item)
       if (!relation) continue
       seen.add(candidate.id)
       const qualifier = qualifierOf(relation.meta as Record<string, unknown> | undefined)

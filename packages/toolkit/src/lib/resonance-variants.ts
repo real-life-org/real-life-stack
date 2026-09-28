@@ -1,5 +1,5 @@
 import type { Item } from "@real-life-stack/data-interface"
-import { isLocalItemTarget, targetItemId } from "./item-targets"
+import { resolveTarget, sameSpaceScope, type TargetScope } from "./item-targets"
 
 /**
  * Varianten im Resonanzmodul (docs/spec/modules/resonance.md → Varianten).
@@ -9,13 +9,23 @@ import { isLocalItemTarget, targetItemId } from "./item-targets"
  * Statements eines Space; es liest keine Daten nach.
  */
 
-/** Ziel-Id aus `data.variantOf` (`item:<id>`), oder null. */
-export function variantOfId(item: Item): string | null {
+/**
+ * Der Kontext von `variantOf`: Die Statements eines Space bilden einen
+ * Bereich (Varianten-Regel 2: das Ziel liegt im selben Space); alte Werte
+ * ohne Präfix werden geduldet.
+ */
+const VARIANT_SCOPE: TargetScope = sameSpaceScope({ otherKind: "statement", bareId: true }) // targets: ein Bereich — die Statements EINES Space
+
+/** Das Statement, von dem `item` eine Variante ist, aus `statements` — über den Auflöser. */
+export function variantOfTarget(item: Item, statements: Iterable<Item> | ReadonlyMap<string, Item>): Item | undefined {
   const raw = item.data?.variantOf
-  if (typeof raw !== "string" || raw.length === 0) return null
-  // Ein lokales Target über den Auflöser; eine bloße Id (ohne Präfix) wird geduldet.
-  const id = isLocalItemTarget(raw) ? (targetItemId(raw) ?? "") : raw.includes(":") ? "" : raw
-  return id.length > 0 ? id : null
+  return typeof raw === "string" && raw !== "" ? resolveTarget(raw, VARIANT_SCOPE, statements) : undefined
+}
+
+/** Ist `item` eine Variante (hat es einen Wert in `variantOf`)? */
+function hasVariantOf(item: Item): boolean {
+  const raw = item.data?.variantOf
+  return typeof raw === "string" && raw !== ""
 }
 
 /** Der Wert für `data.variantOf`, wenn eine Variante zu `item` entsteht. */
@@ -49,24 +59,23 @@ export function statementFamily(item: Item, statements: readonly Item[]): Statem
 
   const children = new Map<string, Item[]>()
   for (const statement of byId.values()) {
-    const target = variantOfId(statement)
-    if (target === null || target === statement.id) continue
-    const list = children.get(target) ?? []
+    const target = variantOfTarget(statement, byId)
+    if (!target || target.id === statement.id) continue
+    const list = children.get(target.id) ?? []
     list.push(statement)
-    children.set(target, list)
+    children.set(target.id, list)
   }
   for (const list of children.values()) list.sort(byCreatedAt)
 
-  const parentId = variantOfId(item)
-  const parent = parentId === null || parentId === item.id ? null : byId.get(parentId) ?? "missing"
+  const parentItem = variantOfTarget(item, byId)
+  const parent = !hasVariantOf(item) || parentItem?.id === item.id ? null : parentItem ?? "missing"
 
   // Aufwärts zur Ausgangsaussage; ein Zyklus oder ein fehlendes Ziel beendet
   // den Weg beim letzten verfügbaren Statement.
   let root = item
   const climbed = new Set([item.id])
   for (;;) {
-    const up = variantOfId(root)
-    const next = up === null ? undefined : byId.get(up)
+    const next = variantOfTarget(root, byId)
     if (!next || climbed.has(next.id)) break
     climbed.add(next.id)
     root = next
