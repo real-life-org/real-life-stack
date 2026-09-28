@@ -135,6 +135,23 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
     await act(async () => { mounted.root.unmount() })
   })
 
+  it("S4b/Codex R11: ein Eintrag ohne eigene Position verlässt das Inventar dauerhaft", async () => {
+    const live = new Set<ProbeAdapter>()
+    const createAdapter = () => new ProbeAdapter(live)
+    const alt: Item = { ...point("ev", [10, 50]), type: "event" }
+    const mounted = await mountMap(createAdapter, { items: [point("a"), alt] })
+    const adapter = [...live][0]!
+    const ids = () => adapter.markerSets.at(-1)!.map((m) => m.id).sort()
+    expect(ids()).toEqual(["a", "ev"])
+    // Das Event liegt jetzt an einem Ort (lebend ohne eigene Position).
+    await mounted.render({ items: [point("a")], unpositionedIds: new Set(["ev"]) })
+    expect(ids()).toEqual(["a"])
+    // Danach entfällt die Id (Event gelöscht oder anderswo verortet): kein alter Marker.
+    await mounted.render({ items: [point("a")], unpositionedIds: new Set() })
+    expect(ids()).toEqual(["a"])
+    await act(async () => { mounted.root.unmount() })
+  })
+
   it("lens deep-link centers the active marker without changing zoom", async () => {
     const live = new Set<ProbeAdapter>()
     const mounted = await mountMap(() => new ProbeAdapter(live), { viewportMode: "lens-auto-fit", activeItemId: "a" })

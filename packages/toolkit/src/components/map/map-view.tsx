@@ -415,6 +415,15 @@ function MapViewInner({
     if (changed) setInventory([...next.values()])
   }, [inventoryKey, items, itemsLoading, viewportMode])
 
+  // Ein Item, das laut Quelle keine eigene Position mehr trägt, verlässt das
+  // akkumulierte Inventar dauerhaft — nicht nur die Anzeige (Codex R11).
+  useEffect(() => {
+    if (!unpositionedIds || unpositionedIds.size === 0) return
+    let removed = false
+    for (const id of unpositionedIds) if (accumulated.current.delete(id)) removed = true
+    if (removed) setInventory([...accumulated.current.values()])
+  }, [unpositionedIds])
+
   useEffect(() => {
     if (!adapter || viewportMode !== "bbox-module" || !onViewportBoundsChange) return
     return observeMapViewBounds(adapter, (nextBounds) => {
