@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type KeyboardEvent } from "react"
+import { useRef, useState, type KeyboardEvent } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 import { ChevronLeft, ChevronRight, FileText, X } from "lucide-react"
 
@@ -81,6 +81,9 @@ export function RegisterMedia({ item, fields }: { item: Item; fields?: readonly 
     }
   }
   const [open, setOpen] = useState<number | null>(null)
+  // Das Vorschaubild, das die Lightbox geöffnet hat: Der Fokus kehrt dorthin
+  // zurück (die Lightbox hat keinen Radix-Trigger, Codex R1/4).
+  const opener = useRef<HTMLButtonElement | null>(null)
   if (images.length === 0 && files.length === 0) return null
   return (
     <div className="flex flex-col gap-2">
@@ -96,6 +99,7 @@ export function RegisterMedia({ item, fields }: { item: Item; fields?: readonly 
               aria-label={`Bild ${index + 1} von ${images.length} öffnen: ${image.name}`}
               onClick={(event) => {
                 event.stopPropagation()
+                opener.current = event.currentTarget
                 setOpen(index)
               }}
               className={cn(
@@ -132,7 +136,7 @@ export function RegisterMedia({ item, fields }: { item: Item; fields?: readonly 
         </ul>
       )}
       {open !== null && images[open] && (
-        <Lightbox images={images} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />
+        <Lightbox images={images} index={open} onIndex={setOpen} onClose={() => setOpen(null)} returnFocus={() => opener.current?.focus()} />
       )}
     </div>
   )
@@ -148,11 +152,13 @@ function Lightbox({
   index,
   onIndex,
   onClose,
+  returnFocus,
 }: {
   images: readonly ShownImage[]
   index: number
   onIndex: (next: number) => void
   onClose: () => void
+  returnFocus: () => void
 }) {
   const image = images[index]!
   const hasPrev = index > 0
@@ -175,6 +181,10 @@ function Lightbox({
         showCloseButton={false}
         onKeyDown={onKeyDown}
         onClick={(event) => event.stopPropagation()}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault()
+          returnFocus()
+        }}
         className="max-w-[min(96vw,64rem)] gap-2 p-3 sm:max-w-[min(96vw,64rem)]"
       >
         <DialogTitle className="sr-only">{image.name}</DialogTitle>

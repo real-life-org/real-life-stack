@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement, type ReactNode } from "react"
+import { act, createElement, useState, type ReactNode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
@@ -24,6 +24,7 @@ import { ContentComposer, type ContentComposerSubmitData } from "../src/componen
 import { itemRelationDataKey } from "../src/components/composer/item-relations"
 import { valueFieldToData, valueFieldsFromRegister } from "../src/components/composer/value-fields"
 import { LocationWidget } from "../src/components/composer/widgets/location-widget"
+import { LocationField } from "../src/components/composer/widgets/location-field"
 import { AvatarField } from "../src/components/composer/widgets/avatar-widget"
 import { LocationPickProvider, useLocationPick, type LocationPickValue } from "../src/components/map/location-pick"
 import { applyMapViewItemPick } from "../src/components/map/map-view"
@@ -396,6 +397,140 @@ describe("B4 im Formular des Events", () => {
       handlers!.onPick({ lat: 52.5, lng: 13.4 })
     })
     expect(host.querySelector("[data-place-chip]")).toBeNull()
+  })
+})
+
+describe("B4 Formular: Codex R1", () => {
+  type Handlers = { onPick: (p: { lat: number; lng: number }) => void; onPickItem?: (i: Item) => boolean; onCancel?: () => void }
+  async function formular(opts: { reverseGeocode?: (p: unknown, o?: { signal?: AbortSignal }) => Promise<string | null>; initialData?: Record<string, unknown>; groups?: { id: string; name: string }[] } = {}) {
+    const submits: ContentComposerSubmitData[] = []
+    const box: { handlers: Handlers | null } = { handlers: null }
+    await render(
+      createElement(ContentComposer, {
+        contentTypes: [{ ...contentTypeFromRegister("event"), groupOptions: opts.groups ?? [{ id: "g", name: "Garten" }], defaultGroup: "g" }],
+        initialData: { title: "Neues Treffen", group: "g", ...opts.initialData },
+        showPreview: false,
+        reverseGeocode: opts.reverseGeocode,
+        requestMapPick: (h: never) => {
+          box.handlers = h
+        },
+        onSubmit: (sub: ContentComposerSubmitData) => {
+          submits.push(sub)
+        },
+      } as never),
+    )
+    const speichern = async () => {
+      await act(async () => {
+        ;[...host.querySelectorAll("button")].find((b) => b.textContent === "Erstellen")!.click()
+      })
+      await settle()
+      return submits.at(-1)!
+    }
+    const pickStart = async () => {
+      await act(async () => {
+        host.querySelector<HTMLButtonElement>('button[aria-label^="Position auf Karte"]')!.click()
+      })
+      return box.handlers!
+    }
+    return { speichern, pickStart }
+  }
+
+  it("eine verspätete Rückwärtssuche überschreibt ein danach gewähltes Ort-Item nicht", async () => {
+    let resolve!: (v: string) => void
+    const reverseGeocode = vi.fn(() => new Promise<string>((r) => (resolve = r)))
+    const { speichern, pickStart } = await formular({ reverseGeocode: reverseGeocode as never })
+    const h = await pickStart()
+    await act(async () => h.onPick({ lat: 52.5, lng: 13.4 }))
+    await tippe("markt")
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-place-option="pl-markt"] button')!.click()
+    })
+    await act(async () => resolve("Späte Adresse 1"))
+    await settle()
+    const sub = await speichern()
+    expect(sub.data[itemRelationDataKey("locatedAt")]).toEqual(["item:pl-markt"])
+    expect(sub.data.address).toBeUndefined()
+  })
+
+  it("Abbrechen nach einem Ort-Marker stellt auch den Ortsnamen wieder her", async () => {
+    const { speichern, pickStart } = await formular({ initialData: { address: "Hof 1", locationName: "Hinterhof", position: PUNKT } })
+    const h = await pickStart()
+    await act(async () => {
+      h.onPickItem!(MARKTHALLE)
+    })
+    await act(async () => h.onCancel!())
+    const sub = await speichern()
+    expect(sub.data.locationName).toBe("Hinterhof")
+    expect(sub.data.address).toBe("Hof 1")
+    expect(sub.data[itemRelationDataKey("locatedAt")] ?? []).toEqual([])
+  })
+
+  it("der Pick prüft beim Klick die aktuellen Kandidaten: nach einem Space-Wechsel kein Ort aus dem alten Space", async () => {
+    const box: { h: Handlers | null } = { h: null }
+    const updateMany = vi.fn()
+    let setSpace!: (id: string) => void
+    function Host(): ReactNode {
+      const [spaceId, set] = useState("g")
+      setSpace = set
+      return field(spaceId)
+    }
+    const field = (spaceId: string) =>
+      createElement(LocationField, {
+        label: "Ort",
+        data: {},
+        updateMany,
+        requestMapPick: (h: Handlers) => {
+          box.h = h
+        },
+        placeField: contentTypeFromRegister("event").itemRelations!.find((f) => f.location),
+        spaceId,
+      })
+    await render(createElement(Host))
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('button[aria-label^="Position auf Karte"]')!.click()
+    })
+    const h = box.h!
+    await act(async () => setSpace("anders"))
+    await settle()
+    let taken = true
+    await act(async () => {
+      taken = h.onPickItem!(MARKTHALLE)
+    })
+    expect(taken).toBe(false)
+    expect(updateMany).not.toHaveBeenCalledWith(expect.objectContaining({ [itemRelationDataKey("locatedAt")]: ["item:pl-markt"] }))
+  })
+})
+
+describe("Lightbox-Fokus und kommende Events", () => {
+  it("nach Escape liegt der Fokus wieder auf dem Vorschaubild", async () => {
+    const Content = resolveTypePresentation("post").content!
+    await render(createElement(Content, { item: POST }), [POST])
+    const zweites = host.querySelector<HTMLButtonElement>('[data-media-row] button[aria-label^="Bild 2"]')!
+    await act(async () => {
+      zweites.focus()
+      zweites.click()
+    })
+    await act(async () => {
+      document.querySelector("[data-lightbox]")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))
+    })
+    await settle()
+    expect(document.activeElement).toBe(zweites)
+  })
+
+  it("„upcoming“ vergleicht Zeitpunkte, nicht Text", async () => {
+    const jetzt = new Date(HEUTE)
+    const plus = (min: number) => new Date(jetzt.getTime() + min * 60_000)
+    // In einer anderen Zone geschrieben: +02:00, eine Stunde vorbei → nicht mehr kommend.
+    const inZone = (d: Date, offsetH: number) => {
+      const local = new Date(d.getTime() + offsetH * 3_600_000).toISOString().slice(0, 19)
+      return `${local}${offsetH >= 0 ? "+" : "-"}${String(Math.abs(offsetH)).padStart(2, "0")}:00`
+    }
+    const vorbei = item("ev-z1", "event", { title: "Vorbei in +02", start: inZone(plus(-60), 2) }, [{ predicate: "locatedAt", target: "item:pl-garten" }])
+    const bald = item("ev-z2", "event", { title: "Bald in -02", start: inZone(plus(60), -2) }, [{ predicate: "locatedAt", target: "item:pl-garten" }])
+    const Reverse = resolveTypePresentation("place").reverse!
+    await render(createElement(Reverse, { item: GARTEN }), [GARTEN, vorbei, bald])
+    const ids = [...host.querySelectorAll("[data-list-row]")].map((r) => r.getAttribute("data-list-row"))
+    expect(ids).toEqual(["ev-z2"])
   })
 })
 

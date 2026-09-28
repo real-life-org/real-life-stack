@@ -69,15 +69,12 @@ function EdgeLists({ item, edges }: { item: Item; edges: readonly EdgeEntry[] })
   return (
     <>
       {edges.map((edge) => {
-        const now = new Date().toISOString()
+        const now = new Date()
         const entries = (targets.get(edge) ?? [])
           .map((t) => t.item)
           .filter((entry) => {
             if (edge.list?.filter === "open") return !isItemDone(entry)
-            if (edge.list?.filter === "upcoming") {
-              const start = (entry.data as Record<string, unknown> | undefined)?.start
-              return typeof start === "string" && start >= now.slice(0, start.length)
-            }
+            if (edge.list?.filter === "upcoming") return isUpcoming((entry.data as Record<string, unknown> | undefined)?.start, now)
             return true
           })
         // Sortierung nach einem data-Feld, aufsteigend (Regel 10: „kommende
@@ -88,6 +85,21 @@ function EdgeLists({ item, edges }: { item: Item; edges: readonly EdgeEntry[] })
       })}
     </>
   )
+}
+
+/**
+ * Beginnt es jetzt oder später? Zeitpunkte als Zeit, nicht als Text: „13:00+02:00"
+ * liegt vor „12:00Z" (Codex R1/5). Ein reines Datum gilt den ganzen Tag, in
+ * der Zone des Lesenden.
+ */
+export function isUpcoming(start: unknown, now: Date): boolean {
+  if (typeof start !== "string" || start === "") return false
+  if (/^\d{4}-\d{2}-\d{2}$/.test(start)) {
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+    return start >= today
+  }
+  const t = Date.parse(start)
+  return Number.isFinite(t) && t >= now.getTime()
 }
 
 function compareField(a: Item, b: Item, key: string): number {

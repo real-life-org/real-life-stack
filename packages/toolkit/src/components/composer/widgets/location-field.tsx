@@ -29,6 +29,7 @@ import { LocationWidget, type LocationPlaces } from "./location-widget"
 /** Was das Feld vom Formular braucht. */
 export interface LocationFieldData {
   address?: string
+  locationName?: string
   position?: GeoJSONPoint
   [key: string]: unknown
 }
@@ -111,10 +112,25 @@ function LocationCore({
   accepts?: (item: Item) => boolean
   choose?: (item: Item | null) => void
 }) {
-  // Bricht die vorige Rückwärtssuche ab, wenn neu auf der Karte gewählt wird.
+  // Bricht die vorige Rückwärtssuche ab: bei neuer Wahl auf der Karte und bei
+  // jeder anderen Ortswahl — eine späte Adresse darf ein danach gewähltes
+  // Ort-Item nicht wieder zur Adresse machen (Codex R1/2).
   const reverseAbortRef = React.useRef<AbortController | null>(null)
+  const cancelReverse = () => reverseAbortRef.current?.abort()
+  // Der Karten-Pick läuft über Modulwechsel hinweg; sein Rückruf liest den
+  // AKTUELLEN Stand (Kandidaten des Formular-Space, Kante), nicht den beim
+  // Start (Codex R1/1).
+  const latest = React.useRef({ accepts, choose })
+  latest.current = { accepts, choose }
   // Eine Adresse oder ein Punkt ersetzt ein gewähltes Ort-Item.
   const clearPlace = placeKey ? { [placeKey]: [] } : {}
+  const wrappedPlaces: LocationPlaces | undefined = places && {
+    ...places,
+    onSelect: (item) => {
+      cancelReverse()
+      places.onSelect(item)
+    },
+  }
   return (
     <LocationWidget
       value={{
@@ -122,6 +138,7 @@ function LocationCore({
         position: data.position ? latLngFromPoint(data.position) ?? undefined : undefined,
       }}
       onChange={(v) => {
+        if (v.position) cancelReverse()
         updateMany({
           address: v.address || undefined,
           position: v.position ? pointFromLatLng(v.position.lat, v.position.lng) : undefined,
@@ -130,19 +147,23 @@ function LocationCore({
       }}
       label={label}
       geocode={geocode}
-      places={places}
+      places={wrappedPlaces}
       onPickOnMap={
         requestMapPick
           ? () => {
-              const originalPosition = data.position
-              const originalAddress = data.address
-              const originalPlace = placeKey ? data[placeKey] : undefined
+              // Der ganze Ortszustand vor dem Pick, für „Abbrechen" (Codex R1/3).
+              const original = {
+                position: data.position,
+                address: data.address,
+                locationName: data.locationName,
+                ...(placeKey ? { [placeKey]: data[placeKey] } : {}),
+              }
               requestMapPick({
                 onPick: (pos) => {
                   updateMany({ position: pointFromLatLng(pos.lat, pos.lng), ...clearPlace })
                   // Reverse-geocode (aborting the previous one) to fill the address.
+                  cancelReverse()
                   if (reverseGeocode) {
-                    reverseAbortRef.current?.abort()
                     const controller = new AbortController()
                     reverseAbortRef.current = controller
                     reverseGeocode(pos, { signal: controller.signal })
@@ -153,13 +174,14 @@ function LocationCore({
                   }
                 },
                 // Marker = Ort-Item (B4): nur, wenn das Feld Ort-Items kennt
-                // und das Item eines ist, das es nehmen darf.
+                // und das Item eines ist, das es JETZT nehmen darf.
                 ...(accepts && choose
                   ? {
                       onPickItem: (item: Item) => {
-                        if (!accepts(item)) return false
-                        reverseAbortRef.current?.abort()
-                        choose(item)
+                        const now = latest.current
+                        if (!now.accepts || !now.choose || !now.accepts(item)) return false
+                        cancelReverse()
+                        now.choose(item)
                         return true
                       },
                     }
@@ -167,12 +189,8 @@ function LocationCore({
                 onCancel: () => {
                   // Abort a pending reverse-geocode so its late result can't
                   // overwrite the restored address.
-                  reverseAbortRef.current?.abort()
-                  updateMany({
-                    position: originalPosition,
-                    address: originalAddress,
-                    ...(placeKey ? { [placeKey]: originalPlace } : {}),
-                  })
+                  cancelReverse()
+                  updateMany(original)
                 },
               })
             }
