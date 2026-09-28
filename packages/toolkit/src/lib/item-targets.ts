@@ -40,7 +40,7 @@ export function targetItemId(target: unknown): string | null {
   return parseItemTarget(target)?.itemId ?? null
 }
 
-/** Die lokale Form eines Targets (`item:<id>`), sonst `null`. */
+/** Ist das Target lokal (`item:<id>`, space-lokal zum Träger)? */
 export function isLocalItemTarget(target: unknown): boolean {
   const parsed = parseItemTarget(target)
   return !!parsed && parsed.space === undefined

@@ -23,8 +23,6 @@ import { useConnector } from "../../hooks/connector-context"
 import type { EdgeEntry, FieldEntry } from "./field-register"
 import { resolveTarget, targetPointsTo, type SpaceOf } from "../../lib/item-targets"
 
-export type { SpaceOf } from "../../lib/item-targets"
-
 /** Was am anderen Ende einer Kante steht, aus dem Manifest (06, Regel 1). */
 export function otherKindOf(itemType: string | readonly string[], edge: Pick<EdgeEntry, "predicate" | "itemRole">): string | undefined {
   const manifest = getTypeManifest()
