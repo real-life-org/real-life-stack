@@ -790,6 +790,20 @@ Regeln:
 7. **Kein Vortäuschen.** Kann der Connector nicht im Formular-Space lesen (`hasGroupScope()` fehlt) und ist dieser nicht der geöffnete Space, sagt die Suche das, statt leer zu bleiben oder Items des geöffneten Space anzubieten. Dasselbe gilt für Personen- und Tag-Vorschläge.
 8. **Pflicht nur beim Anlegen.** Hat der Connector Spaces und ist beim Erstellen keiner gesetzt, ist das Feld markiert und Speichern gesperrt. `composer.groupRequired` gilt nur beim Erstellen. Beim Bearbeiten ist der Space nie Pflicht: Ein Item ohne bekannten Space bleibt speicherbar.
 
+### Formular-Epoche
+
+**Status:** Normativer Vertrag (S4b, 28.09.2026). Asynchrone Arbeit darf nie einen Stand beschreiben, für den sie nicht begonnen wurde.
+
+Ein Formular hat einen **Stand**: den Space des Formulars, den Typ und die Lebensdauer des Formulars. Jedes Feld hat dazu seine eigene Lebensdauer. Die **Epoche** zählt diesen Stand.
+
+Regeln:
+
+1. **Asynchron heißt: mit Epoche.** Jedes asynchrone Ergebnis im Formular, etwa Geocoding, Rückwärtssuche, Rückrufe des Karten- und Modul-Picks, Verkleinern oder Hochladen eines Bilds, Suche und Vorschläge, merkt sich beim Start die Epoche. Es wird nur angewendet, wenn sie beim Eintreffen noch dieselbe ist. Sonst wird es ohne Schreiben verworfen.
+2. **Was die Epoche erhöht.** Ein Wechsel des Formular-Space, ein Wechsel des Typs, der Abbau des Felds und der Abbau des Formulars erhöhen die Epoche. Beginnt ein Feld dieselbe Arbeit neu (eine neue Suche, eine neue Bildwahl, ein neuer Pick) oder nimmt es sie zurück (Entfernen), verliert die vorige Arbeit dieser Art ihre Gültigkeit.
+3. **Der aktuelle Stand, nicht der beim Start.** Ein gültiges Ergebnis prüft und schreibt gegen den Stand beim Eintreffen: den aktuellen Wert des Felds, die aktuellen Kandidaten und die aktuellen Rechte.
+4. **Ein Baustein.** Widgets implementieren das nicht selbst. Sie nutzen den Epochen-Baustein des Toolkits (`useFieldEpoch`, `FormEpochProvider`). Eigene Zähler, Lebendig-Flags und Refs auf den letzten Stand sind dafür nicht vorgesehen.
+5. **Auch außerhalb des Formulars.** Eine Selbstaktion (C2) liest vor dem Schreiben frisch ([06, Regel 9](../06-schema-composition.md#feld--und-kantenregister)). Ihr Stand ist das Item und der geöffnete Space. Wechselt einer davon, bevor das frische Lesen eintrifft, schreibt sie nichts und meldet den Grund.
+
 ## Hooks
 
 Reine Item-Ableitungen, von beliebigen Komponenten benutzbar.
