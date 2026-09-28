@@ -25,7 +25,10 @@ import { itemRelationDataKey } from "../src/components/composer/item-relations"
 import { valueFieldToData, valueFieldsFromRegister } from "../src/components/composer/value-fields"
 import { LocationWidget } from "../src/components/composer/widgets/location-widget"
 import { LocationField } from "../src/components/composer/widgets/location-field"
-import { AvatarField } from "../src/components/composer/widgets/avatar-widget"
+import { AvatarField, defaultAvatarResize } from "../src/components/composer/widgets/avatar-widget"
+
+const resizeSpy = vi.hoisted(() => vi.fn(async () => "data:image/webp;base64,RESIZED"))
+vi.mock("../src/lib/image-utils", async (orig) => ({ ...(await orig<object>()), resizeImage: resizeSpy }))
 import { LocationPickProvider, useLocationPick, type LocationPickValue } from "../src/components/map/location-pick"
 import { applyMapViewItemPick } from "../src/components/map/map-view"
 import { safeImageSrc } from "../src/lib/field-values"
@@ -677,6 +680,14 @@ describe("Codex R5", () => {
     await act(async () => resolve("data:image/webp;base64,ALT"))
     await settle()
     expect(onChange).not.toHaveBeenCalled()
+  })
+})
+
+describe("Codex R6", () => {
+  it("der Standard-Resize des Avatars rastert auch SVG auf 512 px", async () => {
+    const svg = new File(["<svg/>"], "logo.svg", { type: "image/svg+xml" })
+    expect(await defaultAvatarResize(svg, 512)).toBe("data:image/webp;base64,RESIZED")
+    expect(resizeSpy).toHaveBeenCalledWith(svg, 512, 0.85, { rasterizeSvg: true })
   })
 })
 

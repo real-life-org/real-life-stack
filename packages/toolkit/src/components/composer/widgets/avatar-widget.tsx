@@ -20,10 +20,14 @@ export const AVATAR_SIZE = 512
 
 export type ResizeImage = (file: File, maxSize: number) => Promise<string>
 
-/** Standard: `resizeImage` aus `lib/image-utils` (WebP, mittig quadratisch), erst beim Gebrauch geladen. */
-const defaultResize: ResizeImage = async (file, maxSize) => {
+/**
+ * Standard: `resizeImage` aus `lib/image-utils` (WebP, mittig quadratisch),
+ * erst beim Gebrauch geladen. Auch ein SVG wird gerastert: Der Vertrag ist
+ * das Quadrat mit 512 px (Codex R6).
+ */
+export const defaultAvatarResize: ResizeImage = async (file, maxSize) => {
   const { resizeImage } = await import("../../../lib/image-utils")
-  return resizeImage(file, maxSize, 0.85)
+  return resizeImage(file, maxSize, 0.85, { rasterizeSvg: true })
 }
 
 export interface AvatarFieldProps {
@@ -36,7 +40,7 @@ export interface AvatarFieldProps {
   resize?: ResizeImage
 }
 
-export function AvatarField({ label, value, onChange, disabled, resize = defaultResize }: AvatarFieldProps) {
+export function AvatarField({ label, value, onChange, disabled, resize = defaultAvatarResize }: AvatarFieldProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
