@@ -116,6 +116,8 @@ interface ContentTypeConfig {
 
 **App-Realisierung des Map-Picks (Referenz-App, nicht Widget-Sache):** Damit der Speichern-Pfad den Modulwechsel übersteht, liegen Editor + `ContentComposer` app-weit über dem Modul-Outlet (Composer-Host). Das geteilte Content-Panel ([01-app-composition.md → Overlay-Flächen](../01-app-composition.md)) bleibt beim Modulwechsel offen; auf kompakten Screens (Drawer) tritt es während des Pickens beiseite und kommt per „Fertig" zurück, auf Desktop bleibt die Sidebar sichtbar (kein Extra-Schritt, direkt „Erstellen"). „Abbrechen" stellt die vorherige Position wieder her und kehrt ins Ursprungsmodul zurück. Das Widget selbst kennt nur `onPickOnMap` und den injizierten Geocoder.
 
+**Ort-Items (B4, S4b):** Führt der Typ eine Kante zu einem Ort, bietet dasselbe Feld Ort-Items an ([Widget-Paare](#widget-paare), Regel 5): Die Vorschlagsliste zeigt passende Ort-Items des Formular-Space oben, sofort und als Chip, darunter die Adressen des Geocoders. Ein gewähltes Ort-Item steht als Chip statt der Eingabe; ✕ nimmt es zurück. Beim Karten-Pick (b) nimmt ein Klick auf einen Marker, der ein solches Ort-Item ist, dieses Item; jeder andere Klick setzt die Position.
+
 **Daten-Vertrag (geschriebene Felder):**
 
 - `data.position` MUSS ein GeoJSON `Point` sein (`pointFromLatLng(lat, lng)` aus `lib/geo`), konform zu [place/v1](../schemas/vocab/place/v1/schema.json). Beide Eingabewege (a) und (b) schreiben in dasselbe Feld.
@@ -722,6 +724,9 @@ Regeln:
 2. Beschriftungen kommen über die Intl-Schicht (DE/EN), nicht aus dem Widget.
 3. `blocks` heißt in allen Typen von beiden Enden gleich: „Braucht" (eingehend) und „Ermöglicht" (ausgehend).
 4. Ein Record ist nie eine Karte. Er wird über das Item gelesen, das er berührt.
+5. **Ein Ort-Feld (B4).** Das Ort-Feld trägt ein Ort-Item **oder** Adresse und Position, nie beides. Führt der Typ eine eingebettete, ausgehende Item-Kante der Meta-Box, deren Gegenstelle laut Manifest ein Ort ist (beim Event `locatedAt`), gehört sie dem Ort-Feld: Sie hat keine eigene Meta-Zeile und kein eigenes Formularfeld. Ein gewähltes Ort-Item schreibt die Kante und entfernt Adresse und Position; eine gewählte Adresse oder ein freier Punkt auf der Karte entfernt die Kante. Lesend steht das Ort-Item als Chip in der Ort-Zeile, sonst die Adresse als Text mit dem Sprung „Karte", wenn es Koordinaten gibt. Ein nicht auflösbares Ort-Item erscheint nicht; steht dann eine Adresse da, gilt sie. Die Karte des Items nennt den Namen des Ort-Items.
+6. **Medien (B5)** stehen im Slot `content` nach der Beschreibung, für jeden Typ, der `data.media` trägt (der Composer lässt Medien überall zuschalten). Bilder bilden eine Reihe; ein Klick öffnet die Lightbox, Pfeiltasten blättern, Escape schließt. Andere Dateien stehen als Link (nur http/https). Eine Bildadresse ist nur http(s), `blob:`, `data:image/…` oder ein Pfad der eigenen Auslieferung; andere erscheinen nicht.
+7. **Avatar (B11)** steht im Slot `head` vor dem Titel, wenn der Typ ein `avatar`-Feld mit `pos: "head"` führt. Die Schreibform verkleinert das gewählte Bild auf 512 px (quadratisch) und speichert die Bildadresse im Feld; für die Adresse gilt dieselbe Einschränkung wie für Medien.
 
 ### Modi
 

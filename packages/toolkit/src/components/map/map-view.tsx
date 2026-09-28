@@ -223,6 +223,29 @@ export function applyMapViewPick(
   if (!isCompact) confirmPick()
 }
 
+/**
+ * Ein Marker während des Picks (B4, S4b): Nimmt das Feld das Item als
+ * Ort-Item, ist der Pick damit gesetzt (auf dem Telefon wartet „Übernehmen");
+ * sonst zählt die Position des Markers wie ein freier Punkt.
+ */
+export function applyMapViewItemPick(
+  item: Item,
+  isCompact: boolean,
+  pickItem: (item: Item) => boolean,
+  updatePick: (position: { lat: number; lng: number }) => void,
+  setPickPosition: (position: { lat: number; lng: number }) => void,
+  confirmPick: () => void,
+): void {
+  const position = latLngFromPoint(item.data.position)
+  if (pickItem(item)) {
+    if (position) setPickPosition(position)
+    if (!isCompact) confirmPick()
+    return
+  }
+  if (!position) return
+  applyMapViewPick(position, isCompact, updatePick, setPickPosition, confirmPick)
+}
+
 /** FilterBar and text-search own the same marker input as the rendered module. */
 export function filterMapViewItems(items: readonly Item[], filter: FilterBarValue, search: string): Item[] {
   // Die Karte laedt selbst (`loads: "module"`) und filtert darum selbst —
@@ -337,7 +360,7 @@ function MapViewInner({
    */
   const lauf = useRef(0)
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)
-  const { isPicking, updatePick, confirmPick, cancelPick } = useLocationPick()
+  const { isPicking, updatePick, pickItem, confirmPick, cancelPick } = useLocationPick()
   const accumulated = useRef(new Map<string, Item>())
   const accumulatedKey = useRef<string | number>(inventoryKey)
   const [inventory, setInventory] = useState<Item[]>([])
@@ -438,14 +461,12 @@ function MapViewInner({
   const handleClick = useCallback((item: Item) => {
     if (item.id === PICK_MARKER_ID) return
     if (isPicking) {
-      const position = latLngFromPoint(item.data.position)
-      if (!position) return
-      applyMapViewPick(position, isCompact, updatePick, setPickPosition, confirmPick)
+      applyMapViewItemPick(item, isCompact, pickItem, updatePick, setPickPosition, confirmPick)
       return
     }
     if (viewportMode === "bbox-module") markerClick.current = item.id
     onItemClick?.(item)
-  }, [confirmPick, isCompact, isPicking, onItemClick, updatePick, viewportMode])
+  }, [confirmPick, isCompact, isPicking, onItemClick, pickItem, updatePick, viewportMode])
   /** Beendet eine laufende Ortung und raeumt Punkt und Kreis weg. */
   const beendeOrtung = useCallback(() => {
     if (ortungsId.current !== null) {

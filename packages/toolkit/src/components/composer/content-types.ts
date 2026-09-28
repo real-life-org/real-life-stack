@@ -1,7 +1,7 @@
 import { getTypeManifest, relationAffordanceKey } from "@real-life-stack/data-interface"
 
 import { resolveTypePresentation } from "../preview/type-presentation"
-import { otherKindOf } from "../preview/use-item-edges"
+import { locationEdge, otherKindOf } from "../preview/use-item-edges"
 import {
   composerWidgetsFromRegister,
   hasRegisterLists,
@@ -115,6 +115,9 @@ function ausFeldliste(
   // Item-Kanten (C3): je eingebettete Kante der Meta-Box ein Feld, die
   // Gegenstelle aus dem Manifest (06, Verhältnis zu Relations, Regel 2).
   // Eingehend („Braucht") schreibt das Formular am anderen Item.
+  // Die Ort-Kante (B4, Event → Ort) schreibt das Ort-Feld, nicht ein eigenes
+  // Verknüpfungsfeld: EIN Feld für Ort-Item oder Adresse (S4b).
+  const ortKante = locationEdge(typeId, fields, edges)
   const itemRelations = edges.filter(isFormItemEdge).map((e) => {
     const targetType = otherKindOf(typeId, e)
     return {
@@ -123,6 +126,7 @@ function ausFeldliste(
       ...(e.add ? { placeholder: e.add } : {}),
       ...(targetType && targetType !== "item" ? { targetType } : {}),
       ...(e.itemRole === "to" ? { incoming: true as const } : {}),
+      ...(e === ortKante ? { location: true as const } : {}),
     }
   })
   // Felder mit Item-Verweis (B15), die im Formular stehen.
@@ -134,7 +138,7 @@ function ausFeldliste(
   const status = fields.find((x) => x.widget === "status" && x.options && x.options.length > 0)
   const body = fields.find((x) => x.widget === "text" && x.pos === "content")
   return {
-    defaultWidgets: composerWidgetsFromRegister(fields, edges),
+    defaultWidgets: composerWidgetsFromRegister(fields, ortKante ? edges.filter((e) => e !== ortKante) : edges),
     ...(peopleRelations.length > 0 ? { peopleRelations } : {}),
     // Ton der Pille: tone der Option, sonst ihre Rolle, sonst die Typfarbe (B6).
     ...(status ? { statusOptions: status.options!.map((o) => ({ id: o.id, label: o.label, tone: optionTone("status", o) })) } : {}),

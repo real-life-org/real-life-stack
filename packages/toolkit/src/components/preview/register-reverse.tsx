@@ -80,10 +80,28 @@ function EdgeLists({ item, edges }: { item: Item; edges: readonly EdgeEntry[] })
             }
             return true
           })
+        // Sortierung nach einem data-Feld, aufsteigend (Regel 10: „kommende
+        // Events" nach Beginn); ohne Wert ans Ende, sonst stabil.
+        const sortKey = edge.list?.sort
+        if (sortKey) entries.sort((a, b) => compareField(a, b, sortKey))
         return <ReverseList key={`${edge.predicate}:${edge.itemRole}`} id={`${edge.predicate}:${edge.itemRole}`} item={item} label={edge.label} entries={entries} />
       })}
     </>
   )
+}
+
+function compareField(a: Item, b: Item, key: string): number {
+  const va = (a.data as Record<string, unknown> | undefined)?.[key]
+  const vb = (b.data as Record<string, unknown> | undefined)?.[key]
+  const ha = typeof va === "string" || typeof va === "number"
+  const hb = typeof vb === "string" || typeof vb === "number"
+  if (!ha || !hb) return ha === hb ? 0 : ha ? -1 : 1
+  if (typeof va === "number" && typeof vb === "number") return va - vb
+  // Zeitpunkte mit verschiedenem Versatz vergleicht nur die Zeit, nicht der Text.
+  const ta = Date.parse(String(va))
+  const tb = Date.parse(String(vb))
+  if (Number.isFinite(ta) && Number.isFinite(tb)) return ta - tb
+  return String(va).localeCompare(String(vb))
 }
 
 function ReverseList({

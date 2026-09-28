@@ -25,6 +25,12 @@ export interface ItemRelationFieldConfig {
    * Schreibrecht an diesem Item.
    */
   incoming?: true
+  /**
+   * Die Kante gehört dem Ort-Feld (B4, S4b): Das Ort-Widget schreibt sie
+   * (Ort-Item gewählt) oder leert sie (Adresse gewählt); kein eigenes
+   * Verknüpfungsfeld. Datenschlüssel wie jede Item-Kante.
+   */
+  location?: true
 }
 
 /** Eine Änderung an eingehenden Kanten: an welchen Items die Kante dazukommt oder entfällt (Item-Ids). */

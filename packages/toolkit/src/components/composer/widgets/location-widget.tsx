@@ -1,15 +1,32 @@
 "use client"
 
 import * as React from "react"
+import type { Item } from "@real-life-stack/data-interface"
 import { Loader2, MapPin } from "lucide-react"
 import { Input } from "@/components/primitives/input"
 import { Button } from "@/components/primitives/button"
 import { cn } from "@/lib/utils"
 import type { Geocoder, GeocodeResult } from "@/lib/geocode"
+import { ItemRefChip, MissingRefText } from "../../preview/item-ref-chip"
+import { itemTitle } from "../item-relations"
 
 interface LocationData {
   address?: string
   position?: { lat: number; lng: number }
+}
+
+/**
+ * Ort-Items im Ort-Feld (B4, S4b): EIN Feld, das entweder ein Ort-Item oder
+ * eine Adresse trägt. Nur, wenn der Typ eine Kante zu einem Ort führt (beim
+ * Event `locatedAt`).
+ */
+export interface LocationPlaces {
+  /** Das gewählte Ort-Item: das Target und, wenn auflösbar, das Item. */
+  selected: { target: string; item?: Item } | null
+  /** Wählbare Ort-Items (Formular-Space). */
+  candidates: readonly Item[]
+  /** Ein Ort-Item wählen, oder mit `null` die Wahl zurücknehmen. */
+  onSelect: (item: Item | null) => void
 }
 
 interface LocationWidgetProps {
@@ -28,10 +45,27 @@ interface LocationWidgetProps {
    * parent (the composer's `updateMany`); this widget only triggers it.
    */
   onPickOnMap?: () => void
+  /**
+   * Ort-Items (B4): Die Autovervollständigung zeigt passende Ort-Items oben,
+   * darunter die Adressen des Geocoders. Ist eins gewählt, steht es als Chip
+   * statt der Eingabe; ✕ nimmt es zurück.
+   */
+  places?: LocationPlaces
 }
 
 const GEOCODE_DEBOUNCE_MS = 500
 const GEOCODE_MIN_CHARS = 3
+/** Höchstens so viele Ort-Items stehen über den Adressen. */
+const MAX_PLACE_OPTIONS = 5
+
+type Option = { kind: "place"; item: Item } | { kind: "address"; result: GeocodeResult }
+
+/** Ort-Items, deren Titel die Eingabe enthält, in der Reihenfolge der Kandidaten. */
+function matchingPlaces(candidates: readonly Item[], query: string): Item[] {
+  const q = query.trim().toLocaleLowerCase("de")
+  if (!q) return []
+  return candidates.filter((c) => itemTitle(c).toLocaleLowerCase("de").includes(q)).slice(0, MAX_PLACE_OPTIONS)
+}
 
 export function LocationWidget({
   value,
@@ -39,6 +73,7 @@ export function LocationWidget({
   label,
   geocode,
   onPickOnMap,
+  places,
 }: LocationWidgetProps) {
   const address = value.address ?? ""
 
@@ -49,7 +84,7 @@ export function LocationWidget({
   const [userQuery, setUserQuery] = React.useState<string | null>(null)
   const [results, setResults] = React.useState<GeocodeResult[]>([])
   const [loading, setLoading] = React.useState(false)
-  const [open, setOpen] = React.useState(false)
+  const [listOpen, setListOpen] = React.useState(false)
   const [activeIndex, setActiveIndex] = React.useState(-1)
   const [failed, setFailed] = React.useState(false)
   const blurTimer = React.useRef<number | null>(null)
@@ -63,7 +98,6 @@ export function LocationWidget({
     const q = userQuery.trim()
     if (q.length < GEOCODE_MIN_CHARS) {
       setResults([])
-      setOpen(false)
       setActiveIndex(-1)
       setFailed(false)
       return
@@ -76,14 +110,11 @@ export function LocationWidget({
         .then((hits) => {
           if (controller.signal.aborted) return
           setResults(hits)
-          setOpen(hits.length > 0)
-          setActiveIndex(-1)
           setFailed(false)
         })
         .catch((err: unknown) => {
           if (controller.signal.aborted || (err as { name?: string })?.name === "AbortError") return
           setResults([])
-          setOpen(false)
           setFailed(true)
         })
         .finally(() => {
@@ -107,124 +138,188 @@ export function LocationWidget({
     [],
   )
 
+  // Ort-Items oben (sofort, ohne Geocoder), darunter die Adressen.
+  const placeOptions = places && userQuery !== null ? matchingPlaces(places.candidates, userQuery) : []
+  const options: Option[] = [
+    ...placeOptions.map((item): Option => ({ kind: "place", item })),
+    ...results.map((result): Option => ({ kind: "address", result })),
+  ]
+  const open = listOpen && options.length > 0
+  // Ändert sich die Liste, darf der Index nicht über ihr Ende zeigen.
+  const active = activeIndex < options.length ? activeIndex : -1
+
   const closeSoon = () => {
     if (blurTimer.current) window.clearTimeout(blurTimer.current)
     // Delay so a mouse click on a suggestion registers before the list closes.
-    blurTimer.current = window.setTimeout(() => setOpen(false), 120)
+    blurTimer.current = window.setTimeout(() => setListOpen(false), 120)
   }
 
-  const selectResult = (r: GeocodeResult) => {
-    onChange({ ...value, address: r.label, position: { lat: r.lat, lng: r.lng } })
+  const reset = () => {
     setUserQuery(null) // not a user query → no re-search
     setResults([])
-    setOpen(false)
+    setListOpen(false)
     setActiveIndex(-1)
   }
 
+  const selectOption = (option: Option) => {
+    if (option.kind === "place") {
+      places?.onSelect(option.item)
+    } else {
+      const r = option.result
+      onChange({ ...value, address: r.label, position: { lat: r.lat, lng: r.lng } })
+    }
+    reset()
+  }
+
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (results.length === 0) return
+    if (e.key === "Escape") {
+      setListOpen(false)
+      setActiveIndex(-1)
+      return
+    }
+    if (options.length === 0) return
     if (e.key === "ArrowDown") {
       e.preventDefault()
-      setOpen(true)
-      setActiveIndex((i) => (i + 1) % results.length)
+      setListOpen(true)
+      setActiveIndex((i) => (i + 1) % options.length)
     } else if (e.key === "ArrowUp") {
       e.preventDefault()
-      setOpen(true)
-      setActiveIndex((i) => (i <= 0 ? results.length - 1 : i - 1))
-    } else if (e.key === "Enter" && open && activeIndex >= 0) {
+      setListOpen(true)
+      setActiveIndex((i) => (i <= 0 ? options.length - 1 : i - 1))
+    } else if (e.key === "Enter" && open && active >= 0) {
       e.preventDefault()
-      selectResult(results[activeIndex])
-    } else if (e.key === "Escape") {
-      setOpen(false)
-      setActiveIndex(-1)
+      selectOption(options[active]!)
     }
   }
+
+  const selected = places?.selected ?? null
 
   return (
     <div className="space-y-2">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Input
-            value={address}
-            onChange={(e) => {
-              onChange({ ...value, address: e.target.value })
-              setUserQuery(e.target.value)
-            }}
-            onFocus={() => {
-              if (results.length > 0) setOpen(true)
-            }}
-            onBlur={closeSoon}
-            onKeyDown={onInputKeyDown}
-            placeholder="Adresse eingeben..."
-            className="text-sm"
-            autoComplete="off"
-            role="combobox"
-            aria-expanded={open}
-            aria-controls={listId}
-            aria-autocomplete="list"
-            aria-activedescendant={
-              open && activeIndex >= 0 ? `${listId}-opt-${activeIndex}` : undefined
-            }
-          />
-          {loading && (
-            <Loader2 className="absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
-          )}
-          {open && results.length > 0 && (
-            <ul
-              id={listId}
-              role="listbox"
-              className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border bg-popover text-sm shadow-md"
+          {selected ? (
+            // Ein Ort-Item statt der Adresse: der Chip in seiner Typfarbe, ✕
+            // nimmt ihn zurück; dann ist das Feld wieder eine Eingabe.
+            <div
+              data-place-chip={selected.item?.id ?? selected.target}
+              className="flex min-h-9 items-center rounded-md border bg-background px-2 py-1"
             >
-              {results.map((r, i) => (
-                <li
-                  key={`${r.lat},${r.lng},${i}`}
-                  id={`${listId}-opt-${i}`}
-                  role="option"
-                  aria-selected={i === activeIndex}
-                >
+              {selected.item ? (
+                <ItemRefChip item={selected.item} inert onRemove={() => places!.onSelect(null)} />
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5">
+                  <MissingRefText text="nicht verfügbarer Ort" />
                   <button
                     type="button"
-                    // Keep the input focused so onBlur does not close the list
-                    // before the click lands.
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => selectResult(r)}
-                    onMouseEnter={() => setActiveIndex(i)}
-                    className={cn(
-                      "block w-full px-2 py-1.5 text-left hover:bg-accent",
-                      i === activeIndex && "bg-accent",
-                    )}
+                    aria-label="Nicht verfügbaren Ort entfernen"
+                    onClick={() => places!.onSelect(null)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    {r.label}
-                    {/* Die lange Form nur, wenn sie mehr sagt: Zwei
-                        gleichnamige Strassen sind sonst nicht zu
-                        unterscheiden — gespeichert wird trotzdem die kurze. */}
-                    {r.detail && r.detail !== r.label && (
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {r.detail}
-                      </span>
-                    )}
+                    ✕
                   </button>
-                </li>
-              ))}
-            </ul>
+                </span>
+              )}
+            </div>
+          ) : (
+            <>
+              <Input
+                value={address}
+                onChange={(e) => {
+                  onChange({ ...value, address: e.target.value })
+                  setUserQuery(e.target.value)
+                  setListOpen(true)
+                  setActiveIndex(-1)
+                }}
+                onFocus={() => {
+                  if (options.length > 0) setListOpen(true)
+                }}
+                onBlur={closeSoon}
+                onKeyDown={onInputKeyDown}
+                placeholder={places ? "Ort oder Adresse eingeben..." : "Adresse eingeben..."}
+                className="text-sm"
+                autoComplete="off"
+                role="combobox"
+                aria-expanded={open}
+                aria-controls={listId}
+                aria-autocomplete="list"
+                aria-activedescendant={open && active >= 0 ? `${listId}-opt-${active}` : undefined}
+              />
+              {loading && (
+                <Loader2 className="absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+              )}
+              {open && (
+                <ul
+                  id={listId}
+                  role="listbox"
+                  className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover text-sm shadow-md"
+                >
+                  {options.map((option, i) => {
+                    const id = `${listId}-opt-${i}`
+                    const common = {
+                      type: "button" as const,
+                      // Keep the input focused so onBlur does not close the list
+                      // before the click lands.
+                      onMouseDown: (e: React.MouseEvent) => e.preventDefault(),
+                      onClick: () => selectOption(option),
+                      onMouseEnter: () => setActiveIndex(i),
+                      className: cn("block w-full px-2 py-1.5 text-left hover:bg-accent", i === active && "bg-accent"),
+                    }
+                    if (option.kind === "place") {
+                      return (
+                        <li key={`place:${option.item.id}`} id={id} role="option" aria-selected={i === active} data-place-option={option.item.id}>
+                          <button {...common}>
+                            <ItemRefChip item={option.item} inert />
+                          </button>
+                        </li>
+                      )
+                    }
+                    const r = option.result
+                    // Der erste Adresstreffer nach den Ort-Items trennt sich
+                    // mit einer Linie ab: oben Items, unten Adressen.
+                    const first = i === placeOptions.length && placeOptions.length > 0
+                    return (
+                      <li
+                        key={`${r.lat},${r.lng},${i}`}
+                        id={id}
+                        role="option"
+                        aria-selected={i === active}
+                        data-address-option
+                        className={cn(first && "border-t")}
+                      >
+                        <button {...common}>
+                          {r.label}
+                          {/* Die lange Form nur, wenn sie mehr sagt: Zwei
+                              gleichnamige Strassen sind sonst nicht zu
+                              unterscheiden — gespeichert wird trotzdem die kurze. */}
+                          {r.detail && r.detail !== r.label && (
+                            <span className="block truncate text-xs text-muted-foreground">{r.detail}</span>
+                          )}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </>
           )}
         </div>
         {onPickOnMap && (
           <Button
             type="button"
-            variant={value.position ? "default" : "outline"}
+            variant={value.position || selected ? "default" : "outline"}
             size="icon"
             onClick={onPickOnMap}
             className="h-9 w-9 shrink-0"
-            aria-label={value.position ? "Position auf Karte ändern" : "Position auf Karte wählen"}
-            title={value.position ? "Position auf Karte ändern" : "Position auf Karte wählen"}
+            aria-label={value.position || selected ? "Position auf Karte ändern" : "Position auf Karte wählen"}
+            title={value.position || selected ? "Position auf Karte ändern" : "Position auf Karte wählen"}
           >
             <MapPin className="h-4 w-4" />
           </Button>
         )}
       </div>
-      {failed && !loading && (
+      {failed && !loading && !selected && (
         <p className="px-1 text-[11px] text-muted-foreground">
           Adresssuche gerade nicht verfügbar.
         </p>

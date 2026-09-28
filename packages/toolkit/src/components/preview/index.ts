@@ -66,5 +66,6 @@ export {
   type ListRowDecoration,
 } from "./list-queries"
 export { RegisterReverse } from "./register-reverse"
+export { RegisterMedia, RegisterHeadAvatar } from "./register-content"
 export { ItemRefChip, isItemDone, type ItemRefChipProps } from "./item-ref-chip"
 export { RegisterMeta, RegisterPeopleStack, type RegisterMetaProps } from "./register-meta"

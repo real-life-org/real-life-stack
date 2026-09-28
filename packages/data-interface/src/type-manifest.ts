@@ -221,12 +221,20 @@ export const TOOLKIT_TYPE_MANIFEST = [
     // attendees link via `invited`, never `assignedTo`. Eine Zusage ist ein
     // eigener Record von der Person zum Event (08 → Teilnahme am Event):
     // `attends`, gerichtet, Claim-Profil `authorial` (claims.ts).
+    // S4b: Das Event liegt an einem Ort-Item (`locatedAt`, eingebettet,
+    // 0..1; item-types.ts, EventRelations). Das Ort-Widget (B4) schreibt es.
     relations: [
       { predicate: "invited", itemRole: "from", otherKind: "person" },
       { predicate: "attends", itemRole: "to", otherKind: "person" },
+      { predicate: "locatedAt", itemRole: "from", otherKind: "place" },
     ],
   },
-  { id: "place", vocabularies: [VOCAB_PLACE] },
+  {
+    id: "place",
+    vocabularies: [VOCAB_PLACE],
+    // Die Events am Ort, eingehend („Findet hier statt", S4b).
+    relations: [{ predicate: "locatedAt", itemRole: "to", otherKind: "event" }],
+  },
   {
     id: "task",
     vocabularies: [VOCAB_TASK],
@@ -264,6 +272,11 @@ export const TOOLKIT_TYPE_MANIFEST = [
  * - `partOf` (Aufgabe → Projekt, „Teil von"): eingebettet an der Aufgabe.
  *   Dasselbe Prädikat führt die Netzwerk-App als Record (Person → Projekt);
  *   gleiche Richtung, anderer Mechanismus (08, Regel 9).
+ * - `locatedAt` (Event → Ort, „Findet hier statt" am Ort): eingebettet am
+ *   Event, 0..1, gesetzt vom Autor des Events (08, Regel 9). Die Netzwerk-App
+ *   führt `locatedAt` als Record für Projekt → Ort und Event → Ort als Record
+ *   `takesPlaceAt` (netzwerk-app.md); gleiche Richtung, eigene Prädikate
+ *   ihres Katalogs, keine Migration.
  */
 export const TOOLKIT_RELATION_PREDICATES = [
   { predicate: "assignedTo", symmetric: false },
@@ -272,6 +285,7 @@ export const TOOLKIT_RELATION_PREDICATES = [
   { predicate: "votesOn", symmetric: false },
   { predicate: "blocks", symmetric: false },
   { predicate: "partOf", symmetric: false },
+  { predicate: "locatedAt", symmetric: false },
 ] as const satisfies readonly RelationPredicateDefinition[]
 
 /** Toolkit type ids, derived from the manifest — never maintained as a list. */

@@ -30,9 +30,14 @@ import { useFieldLink } from "../navigation/field-navigation"
 export interface ItemMetaRowProps {
   item: Item
   className?: string
+  /**
+   * Der Ort als Item (B4, S4b: Event → Ort-Item): sein Name statt der
+   * Adresse, ein Klick öffnet es. Ohne Angabe die Adresse des Items.
+   */
+  placeItem?: { title: string; open: (() => void) | null }
 }
 
-export function ItemMetaRow({ item, className }: ItemMetaRowProps) {
+export function ItemMetaRow({ item, className, placeItem }: ItemMetaRowProps) {
   const data = item.data as Record<string, unknown>
   const start = typeof data.start === "string" ? data.start : undefined
   const end = typeof data.end === "string" ? data.end : undefined
@@ -55,7 +60,7 @@ export function ItemMetaRow({ item, className }: ItemMetaRowProps) {
   // dort nicht zeigen.
   const zumOrt = data.position ? ortsziel : null
 
-  if (!start && !place) return null
+  if (!start && !place && !placeItem) return null
 
   return (
     <div className={cn("flex flex-wrap gap-3 text-xs text-muted-foreground", className)}>
@@ -64,10 +69,16 @@ export function ItemMetaRow({ item, className }: ItemMetaRowProps) {
           {formatEventRange(start, end)}
         </MetaWert>
       )}
-      {place && (
-        <MetaWert icon={<MapPin className="h-3 w-3" />} onClick={zumOrt}>
-          {place}
+      {placeItem ? (
+        <MetaWert icon={<MapPin className="h-3 w-3" />} onClick={placeItem.open}>
+          {placeItem.title}
         </MetaWert>
+      ) : (
+        place && (
+          <MetaWert icon={<MapPin className="h-3 w-3" />} onClick={zumOrt}>
+            {place}
+          </MetaWert>
+        )
       )}
     </div>
   )

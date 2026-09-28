@@ -22,7 +22,7 @@ import {
 
 import { useItemsUnion } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
-import type { EdgeEntry } from "./field-register"
+import type { EdgeEntry, FieldEntry } from "./field-register"
 
 /** Was am anderen Ende einer Kante steht, aus dem Manifest (06, Regel 1). */
 export function otherKindOf(itemType: string | readonly string[], edge: Pick<EdgeEntry, "predicate" | "itemRole">): string | undefined {
@@ -69,6 +69,25 @@ export interface EdgeTarget {
   item: Item
   /** Qualifier-Wert an der Kante (`meta[qualifier.key]`), falls deklariert. */
   qualifier?: string
+}
+
+/**
+ * Die Kante, die das Ort-Feld (B4) eines Typs schreibt und liest: EIN Feld,
+ * das entweder ein Ort-Item oder Adresse und Position trägt
+ * (shared-components, Widget-Paare B4). Das ist die eingebettete, ausgehende
+ * Item-Kante der Meta-Box, deren Gegenstelle laut Manifest ein Ort ist —
+ * beim Event `locatedAt`. Nur, wenn der Typ ein Ort-Feld in der Meta-Box
+ * führt; sonst `undefined`, und die Kante ist eine Item-Kante wie jede andere.
+ */
+export function locationEdge(
+  itemType: string | readonly string[],
+  fields: readonly FieldEntry[] | undefined,
+  edges: readonly EdgeEntry[] | undefined,
+): EdgeEntry | undefined {
+  if (!(fields ?? []).some((f) => f.widget === "location" && f.pos === "meta")) return undefined
+  return (edges ?? []).find(
+    (e) => e.widget === "item-relation" && e.storage === "embedded" && e.itemRole === "from" && e.pos === "meta" && otherKindOf(itemType, e) === "place",
+  )
 }
 
 /** Kanten, deren Ziele diese Datei auflöst: eingebettete Item-Kanten. */

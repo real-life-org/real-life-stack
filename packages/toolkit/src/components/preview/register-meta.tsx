@@ -16,7 +16,8 @@ import { chipValues, contactHref, contactKind, formatNumber, optionTone, parseNu
 import { ToneDot, toneSoftClass } from "./value-tone"
 import { useFittingTags } from "./use-fitting-tags"
 import { ItemRefValue, ItemRelationChips, LabeledChips, itemRefId } from "./item-relation-row"
-import { isItemEdge, useItemEdges, type EdgeTarget } from "./use-item-edges"
+import { isItemEdge, locationEdge, useItemEdges, type EdgeTarget } from "./use-item-edges"
+import { ItemRefChip } from "./item-ref-chip"
 import type { PeopleLineEntry } from "./people-line"
 import { PeopleLineRow } from "./people-line-row"
 import { usePeopleLines } from "./use-people-line"
@@ -32,8 +33,9 @@ import { usePeopleLines } from "./use-people-line"
  * eine einzige Zeile rendert die Komponente `null`, damit die Box entfällt.
  * Verzweigt wird über das Widget des Eintrags, nie über den Typ des Items.
  *
- * Stand S4a: Lesen können `people` (eingebettete Kanten und Record-Kanten in
- * EINER Menschen-Zeile, mit Qualifier), `date`, `location`, Item-Kanten
+ * Stand S4b: Lesen können `people` (eingebettete Kanten und Record-Kanten in
+ * EINER Menschen-Zeile, mit Qualifier), `date`, `location` (Ort-Item als Chip
+ * oder Adresse mit Sprung „Karte"; die Ort-Kante steht in dieser Zeile), Item-Kanten
  * (`item-relation`, C3: eingebettet, ausgehend und eingehend), Felder mit
  * Item-Verweis (`item-ref`, B15) — diese nur, wenn keine Liste des Typs sie
  * abdeckt (`covers`) — und die einfachen Wert-Widgets: `status` (B6) und
@@ -71,10 +73,15 @@ export function RegisterMeta({ item, fields, edges, lists, typeTone, className }
   // stehen an deren Stelle (shared-components, Detail-Anatomie, Regel 5).
   const itemEdges = useItemEdges(item, edges)
   const covered = new Set((lists ?? []).flatMap((list) => list.covers ?? []))
+  // Die Ort-Kante (B4) steht in der Zeile des Ort-Felds, nicht als eigene.
+  const ortKante = locationEdge(item.type, fields, edges)
+  const ort = ortKante ? itemEdges.get(ortKante)?.[0] : undefined
 
   // Zahlenfelder mit gleicher Beschriftung stehen in EINER Zeile (B7).
   const rows = groupNumberFields(
-    metaRowOrder(fields, edges).map((row) => ({ widget: row.entry.widget, label: row.entry.label, row })),
+    metaRowOrder(fields, edges)
+      .filter((row) => row.entry !== ortKante)
+      .map((row) => ({ widget: row.entry.widget, label: row.entry.label, row })),
   )
     .map((group): MetaRow | NumberRow =>
       group.length > 1 ? { kind: "numbers", entries: group.map((g) => g.row.entry as FieldEntry) } : group[0]!.row,
@@ -87,6 +94,7 @@ export function RegisterMeta({ item, fields, edges, lists, typeTone, className }
         return peopleFor(row.entry).length > 0
       }
       if (row.entry.widget === "item-ref") return !covered.has(row.entry.key) && itemRefId(item, row.entry) !== null
+      if (row.entry.widget === "location" && ort) return true
       return hasFieldValue(row.entry, item)
     })
   if (rows.length === 0) return null
@@ -102,7 +110,7 @@ export function RegisterMeta({ item, fields, edges, lists, typeTone, className }
             <PeopleRow key={rowKey(row)} edge={row.entry} entries={peopleFor(row.entry)} resolveUser={resolveUser} resolveName={resolveName} currentUserId={currentUser?.id} />
           )
         ) : (
-          <MetaRowView key={rowKey(row)} row={row} item={item} typeTone={typeTone} />
+          <MetaRowView key={rowKey(row)} row={row} item={item} typeTone={typeTone} place={row.entry.widget === "location" ? ort : undefined} />
         ),
       )}
     </div>
@@ -202,7 +210,7 @@ function numberOf(value: unknown): number | undefined {
   return n === undefined || Number.isNaN(n) ? undefined : n
 }
 
-function MetaRowView({ row, item, typeTone }: { row: MetaRow & { kind: "field" }; item: Item; typeTone?: string }) {
+function MetaRowView({ row, item, typeTone, place }: { row: MetaRow & { kind: "field" }; item: Item; typeTone?: string; place?: EdgeTarget }) {
   const field = row.entry
   const value = data(item)[field.key]
   switch (field.widget) {
@@ -238,7 +246,7 @@ function MetaRowView({ row, item, typeTone }: { row: MetaRow & { kind: "field" }
       </Row>
     )
   }
-  return <LocationRow item={item} field={row.entry} />
+  return <LocationRow item={item} field={row.entry} place={place} />
 }
 
 function Row({ id, icon, label, children }: { id: string; icon: ReactNode; label?: string; children: ReactNode }) {
@@ -292,16 +300,39 @@ function DateRow({ item, field }: { item: Item; field: FieldEntry }) {
   )
 }
 
-/** Ort (B4, Lesen): Adresse als Text mit Sprung auf die Karte, wenn es Koordinaten gibt. */
-function LocationRow({ item, field }: { item: Item; field: FieldEntry }) {
+/**
+ * Ort (B4, Lesen): ein Ort-Item als Chip in seiner Typfarbe (öffnet es in
+ * derselben Panel-Instanz), sonst die Adresse als Text mit dem Sprung „Karte",
+ * wenn es Koordinaten gibt. Ein Ort-Item, das sich nicht auflösen lässt,
+ * erscheint nicht (08, Regel 8); dann steht die Adresse, falls da.
+ */
+function LocationRow({ item, field, place }: { item: Item; field: FieldEntry; place?: EdgeTarget }) {
   const ortsziel = useFieldLink("position", item)
-  const place = placeText(item, field)
+  const text = placeText(item, field)
   // Die Karte braucht Koordinaten; ein nur benannter Ort bleibt Text.
   const zumOrt = data(item).position ? ortsziel : null
-  if (!place) return null
+  if (!place && !text) return null
   return (
-    <Row id={field.key} icon={<MapPin className="h-3.5 w-3.5" />} label={field.label}>
-      <Sprung onClick={zumOrt}>{place}</Sprung>
+    <Row id={field.key} icon={<MapPin className="h-3.5 w-3.5" />} label={field.label ?? "Ort"}>
+      {place ? (
+        <ItemRefChip item={place.item} />
+      ) : (
+        <>
+          <span className="min-w-0 break-words">{text}</span>
+          {zumOrt && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                zumOrt()
+              }}
+              className="shrink-0 rounded-sm text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            >
+              Karte
+            </button>
+          )}
+        </>
+      )}
     </Row>
   )
 }
