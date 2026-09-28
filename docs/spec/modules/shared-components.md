@@ -794,15 +794,16 @@ Regeln:
 
 **Status:** Normativer Vertrag (S4b, 28.09.2026). Asynchrone Arbeit darf nie einen Stand beschreiben, für den sie nicht begonnen wurde.
 
-Ein Formular hat einen **Stand**: den Space des Formulars, den Typ und die Lebensdauer des Formulars. Jedes Feld hat dazu seine eigene Lebensdauer. Die **Epoche** zählt diesen Stand.
+Ein Formular hat einen **Stand**: den Space des Formulars, den Typ und die Lebensdauer des Formulars. Jedes Feld hat dazu seine eigene Lebensdauer und seinen Zustand „gesperrt oder fest“. Die **Epoche** zählt diesen Stand.
 
 Regeln:
 
 1. **Asynchron heißt: mit Epoche.** Jedes asynchrone Ergebnis im Formular, etwa Geocoding, Rückwärtssuche, Rückrufe des Karten- und Modul-Picks, Verkleinern oder Hochladen eines Bilds, Suche und Vorschläge, merkt sich beim Start die Epoche. Es wird nur angewendet, wenn sie beim Eintreffen noch dieselbe ist. Sonst wird es ohne Schreiben verworfen.
-2. **Was die Epoche erhöht.** Ein Wechsel des Formular-Space, ein Wechsel des Typs, der Abbau des Felds und der Abbau des Formulars erhöhen die Epoche. Beginnt ein Feld dieselbe Arbeit neu (eine neue Suche, eine neue Bildwahl, ein neuer Pick) oder nimmt es sie zurück (Entfernen), verliert die vorige Arbeit dieser Art ihre Gültigkeit.
-3. **Der aktuelle Stand, nicht der beim Start.** Ein gültiges Ergebnis prüft und schreibt gegen den Stand beim Eintreffen: den aktuellen Wert des Felds, die aktuellen Kandidaten und die aktuellen Rechte.
-4. **Ein Baustein.** Widgets implementieren das nicht selbst. Sie nutzen den Epochen-Baustein des Toolkits (`useFieldEpoch`, `FormEpochProvider`). Eigene Zähler, Lebendig-Flags und Refs auf den letzten Stand sind dafür nicht vorgesehen.
-5. **Auch außerhalb des Formulars.** Eine Selbstaktion (C2) liest vor dem Schreiben frisch ([06, Regel 9](../06-schema-composition.md#feld--und-kantenregister)). Ihr Stand ist das Item und der geöffnete Space. Wechselt einer davon, bevor das frische Lesen eintrifft, schreibt sie nichts und meldet den Grund.
+2. **Die Epoche ist ein Zähler.** Sie steigt monoton und wird nie aus Werten berechnet. Jede Änderung erhöht sie: ein Wechsel des Formular-Space, ein Wechsel des Typs, der Abbau des Felds oder Formulars und das Sperren oder Festsetzen des Felds. Ein Hin- und Rückwechsel (Space G → H → G) erhöht sie zweimal; alte Arbeit bleibt ungültig. Beginnt ein Feld dieselbe Arbeit neu (eine neue Suche, eine neue Bildwahl, ein neuer Pick) oder nimmt es sie zurück (Entfernen), verliert die vorige Arbeit dieser Art ihre Gültigkeit.
+3. **Der aktuelle Stand, nicht der beim Start.** Ein gültiges Ergebnis prüft und schreibt gegen den Stand beim Eintreffen: den aktuellen Wert des Felds, den aktuellen Rückruf, die aktuellen Kandidaten und die aktuellen Rechte. Ein Feld, das inzwischen gesperrt oder fest ist, nimmt keine Ergebnisse mehr an.
+4. **Warte-Zustände gehören zur Arbeit.** Ob eine Arbeit läuft, fertig oder verworfen ist, führt der Baustein. Ein Spinner oder ein gesperrter Knopf („beschäftigt") liest diesen Zustand. Widgets führen keine eigenen Busy-Flags. Ein verworfenes Ergebnis beendet auch seinen Warte-Zustand.
+5. **Ein Baustein.** Widgets implementieren das nicht selbst. Sie nutzen den Epochen-Baustein des Toolkits (`useFieldEpoch`, `useEpochBusy`, `FormEpochProvider`). Eigene Zähler, Lebendig-Flags und Refs auf den letzten Stand sind dafür nicht vorgesehen.
+6. **Auch außerhalb des Formulars.** Eine Selbstaktion (C2) liest vor dem Schreiben frisch ([06, Regel 9](../06-schema-composition.md#feld--und-kantenregister)). Ihr Stand ist das Item und der geöffnete Space. Jeder Wechsel des geöffneten Space erhöht ihre Epoche, auch nachdem die Anzeige abgebaut ist. Bis dahin laufende Arbeit schreibt nichts und meldet den Grund.
 
 ## Hooks
 
