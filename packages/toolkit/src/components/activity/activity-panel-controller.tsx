@@ -12,6 +12,7 @@ import { useMarkNotificationsSeen, useNotifications } from "../../hooks/use-noti
 import { useModulePanel } from "../module-panel/module-panel"
 import { ActivityPanel } from "./activity-panel"
 import { NotificationCenter, type NotificationCandidate } from "./notification-center"
+import { isLocalItemTarget, targetItemId } from "../../lib/item-targets"
 
 export interface ActivityPanelControllerProps {
   /** Ist die Glocke offen? Der Zustand gehört der Shell, das Panel dem Controller. */
@@ -97,7 +98,7 @@ function ActivityLogContent({ onOpenTarget }: { onOpenTarget: (entry: ActivityEn
     if (entry.targetType === "reaction") {
       const reaction = itemById.get(entry.targetId)
       const target = reaction?.relations?.find((relation) => relation.predicate === "reactsTo")?.target
-      const parentId = target?.startsWith("item:") ? target.slice("item:".length) : undefined
+      const parentId = isLocalItemTarget(target) ? (targetItemId(target) ?? undefined) : undefined
       return parentId && itemById.has(parentId) ? parentId : undefined
     }
     return itemById.has(entry.targetId) ? entry.targetId : undefined

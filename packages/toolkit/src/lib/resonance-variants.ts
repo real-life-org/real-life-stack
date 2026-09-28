@@ -1,4 +1,5 @@
 import type { Item } from "@real-life-stack/data-interface"
+import { isLocalItemTarget, targetItemId } from "./item-targets"
 
 /**
  * Varianten im Resonanzmodul (docs/spec/modules/resonance.md → Varianten).
@@ -12,7 +13,8 @@ import type { Item } from "@real-life-stack/data-interface"
 export function variantOfId(item: Item): string | null {
   const raw = item.data?.variantOf
   if (typeof raw !== "string" || raw.length === 0) return null
-  const id = raw.startsWith("item:") ? raw.slice("item:".length) : raw
+  // Ein lokales Target über den Auflöser; eine bloße Id (ohne Präfix) wird geduldet.
+  const id = isLocalItemTarget(raw) ? (targetItemId(raw) ?? "") : raw.includes(":") ? "" : raw
   return id.length > 0 ? id : null
 }
 

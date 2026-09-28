@@ -1,7 +1,7 @@
 import { normalizeItemType, type Item } from "@real-life-stack/data-interface"
 
 import { resolveTypePresentation } from "../components/preview/type-presentation"
-import { targetItemId } from "../components/preview/use-item-edges"
+import { targetItemId } from "./item-targets"
 
 /**
  * Grund im Tooltip der festen Space-Anzeige (shared-components → Space des

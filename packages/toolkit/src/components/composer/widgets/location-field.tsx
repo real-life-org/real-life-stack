@@ -1,11 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { hasItemType, type Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life-stack/data-interface"
 
 import { latLngFromPoint, pointFromLatLng, type GeoJSONPoint } from "@/lib/geo"
 import type { Geocoder, ReverseGeocoder } from "@/lib/geocode"
-import { targetItemId, targetPointsTo } from "../../preview/use-item-edges"
+import { resolveTarget } from "../../../lib/item-targets"
+import { useFieldEpoch } from "../../../lib/form-epoch"
 import { itemRelationDataKey, type ItemRelationFieldConfig } from "../item-relations"
 import { useCandidates } from "./item-relation-widget"
 import { LocationWidget, type LocationPlaces } from "./location-widget"
@@ -67,26 +68,16 @@ function WithPlaces(props: LocationFieldProps & { placeField: ItemRelationFieldC
   const choosable = React.useMemo(() => candidates.filter((c) => c.id !== itemId), [candidates, itemId])
   const targets = Array.isArray(data[key]) ? (data[key] as unknown[]).filter((t): t is string => typeof t === "string" && t !== "") : []
   const target = targets[0]
-  const selectedItem = target
-    ? all.find((c) => targetItemId(target) === c.id && (!spaceOf || targetPointsTo(target, c, spaceId ?? null, spaceOf)))
-    : undefined
-  // Nimmt das Feld dieses Item als Ort? Typ der Gegenstelle, Space des
-  // Formulars, nicht das Item selbst — wie Suche und Modul-Pick der Item-Kanten.
-  const accepts = React.useCallback(
-    (item: Item) =>
-      item.id !== itemId &&
-      (!placeField.targetType || hasItemType(item, placeField.targetType)) &&
-      choosable.some((c) => c.id === item.id),
-    [choosable, itemId, placeField.targetType],
-  )
-  const choose = React.useCallback(
-    (item: Item | null) => {
-      // EIN Ort: Item ODER Adresse. Ein Ort-Item leert Adresse und Position.
-      if (item) updateMany({ [key]: [`item:${item.id}`], address: undefined, position: undefined, locationName: undefined })
-      else updateMany({ [key]: [] })
-    },
-    [key, updateMany],
-  )
+  // Das gewählte Ort-Item bestimmt der Auflöser (06, Verhältnis zu Relations, Regel 6).
+  const selectedItem = target ? resolveTarget(target, all, { carrierSpace: spaceId ?? null, spaceOf, otherKind: placeField.targetType }) : undefined
+  // Nimmt das Feld dieses Item als Ort? Nur ein wählbarer Kandidat: Typ der
+  // Gegenstelle und Space des Formulars prüft schon die Kandidatenmenge.
+  const accepts = (item: Item) => choosable.some((c) => c.id === item.id)
+  const choose = (item: Item | null) => {
+    // EIN Ort: Item ODER Adresse. Ein Ort-Item leert Adresse und Position.
+    if (item) updateMany({ [key]: [`item:${item.id}`], address: undefined, position: undefined, locationName: undefined })
+    else updateMany({ [key]: [] })
+  }
   const places: LocationPlaces = {
     selected: target ? { target, ...(selectedItem ? { item: selectedItem } : {}) } : null,
     candidates: choosable,
@@ -119,34 +110,17 @@ function LocationCore({
   accepts?: (item: Item) => boolean
   choose?: (item: Item | null) => void
 }) {
-  // Bricht die vorige Rückwärtssuche ab: bei neuer Wahl auf der Karte und bei
-  // jeder anderen Ortswahl — eine späte Adresse darf ein danach gewähltes
-  // Ort-Item nicht wieder zur Adresse machen (Codex R1/2).
-  const reverseAbortRef = React.useRef<AbortController | null>(null)
-  const cancelReverse = () => reverseAbortRef.current?.abort()
-  // Wird das Feld abgebaut (etwa beim Typwechsel), zählt seine laufende
-  // Rückwärtssuche nicht mehr (Codex R3/1).
-  // Auch die Rückrufe des Karten-Picks gelten nur, solange das Feld steht
-  // (Codex R4/1): ein abgebautes Feld nimmt keinen Marker und schreibt nichts.
-  const alive = React.useRef(true)
-  React.useEffect(() => {
-    alive.current = true
-    return () => {
-      alive.current = false
-      reverseAbortRef.current?.abort()
-    }
-  }, [])
-  // Der Karten-Pick läuft über Modulwechsel hinweg; sein Rückruf liest den
-  // AKTUELLEN Stand (Kandidaten des Formular-Space, Kante), nicht den beim
-  // Start (Codex R1/1).
-  const latest = React.useRef({ accepts, choose, spaceId })
-  latest.current = { accepts, choose, spaceId }
+  // Die Epoche des Felds (shared-components → Formular-Epoche): Pick-Rückrufe
+  // und Rückwärtssuche gelten nur für den Stand, für den sie begannen, und
+  // prüfen und schreiben gegen den Stand beim Eintreffen.
+  const epoch = useFieldEpoch({ accepts, choose }, { scope: [spaceId ?? null] })
   // Eine Adresse oder ein Punkt ersetzt ein gewähltes Ort-Item.
   const clearPlace = placeKey ? { [placeKey]: [] } : {}
   const wrappedPlaces: LocationPlaces | undefined = places && {
     ...places,
     onSelect: (item) => {
-      cancelReverse()
+      // Eine neue Ortswahl: eine laufende Rückwärtssuche gilt nicht mehr.
+      epoch.invalidate("reverse")
       places.onSelect(item)
     },
   }
@@ -157,7 +131,7 @@ function LocationCore({
         position: data.position ? latLngFromPoint(data.position) ?? undefined : undefined,
       }}
       onChange={(v) => {
-        if (v.position) cancelReverse()
+        if (v.position) epoch.invalidate("reverse")
         updateMany({
           address: v.address || undefined,
           position: v.position ? pointFromLatLng(v.position.lat, v.position.lng) : undefined,
@@ -170,52 +144,48 @@ function LocationCore({
       onPickOnMap={
         requestMapPick
           ? () => {
-              // Der ganze Ortszustand vor dem Pick, für „Abbrechen" (Codex R1/3).
+              // Der ganze Ortszustand vor dem Pick, für „Abbrechen".
               const original = {
                 position: data.position,
                 address: data.address,
                 locationName: data.locationName,
                 ...(placeKey ? { [placeKey]: data[placeKey] } : {}),
               }
-              // Ein Ort-Item ist space-lokal (04): Wechselt der Formular-Space
-              // während des Picks, kommt es beim Abbrechen nicht zurück (Codex R2/1).
-              const startSpace = spaceId
+              const pick = epoch.begin("pick")
               requestMapPick({
                 onPick: (pos) => {
-                  if (!alive.current) return
-                  updateMany({ position: pointFromLatLng(pos.lat, pos.lng), ...clearPlace })
-                  // Reverse-geocode (aborting the previous one) to fill the address.
-                  cancelReverse()
-                  if (reverseGeocode) {
-                    const controller = new AbortController()
-                    reverseAbortRef.current = controller
-                    reverseGeocode(pos, { signal: controller.signal })
+                  pick.apply(() => {
+                    updateMany({ position: pointFromLatLng(pos.lat, pos.lng), ...clearPlace })
+                    if (!reverseGeocode) return
+                    const reverse = epoch.begin("reverse")
+                    reverseGeocode(pos, { signal: reverse.signal })
                       .then((result) => {
-                        if (result && !controller.signal.aborted) updateMany({ address: result })
+                        if (result) reverse.apply(() => updateMany({ address: result }))
                       })
                       .catch(() => {})
-                  }
+                  })
                 },
                 // Marker = Ort-Item (B4): nur, wenn das Feld Ort-Items kennt
                 // und das Item eines ist, das es JETZT nehmen darf.
                 ...(accepts && choose
                   ? {
                       onPickItem: (item: Item) => {
-                        const now = latest.current
-                        if (!alive.current || !now.accepts || !now.choose || !now.accepts(item)) return false
-                        cancelReverse()
-                        now.choose(item)
-                        return true
+                        let taken = false
+                        pick.apply((now) => {
+                          if (!now.accepts || !now.choose || !now.accepts(item)) return
+                          epoch.invalidate("reverse")
+                          now.choose(item)
+                          taken = true
+                        })
+                        return taken
                       },
                     }
                   : {}),
                 onCancel: () => {
-                  if (!alive.current) return
-                  // Abort a pending reverse-geocode so its late result can't
-                  // overwrite the restored address.
-                  cancelReverse()
-                  const sameSpace = latest.current.spaceId === startSpace
-                  updateMany(placeKey && !sameSpace ? { ...original, [placeKey]: [] } : original)
+                  pick.apply(() => {
+                    epoch.invalidate("reverse")
+                    updateMany(original)
+                  })
                 },
               })
             }

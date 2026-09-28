@@ -46,9 +46,9 @@ export function MapModule({ groupId, active = true }: ModuleViewProps) {
   const [bbox, setBbox] = useState<Bounds | undefined>()
   const { data: items, isLoading } = useItems(bbox ? { hasField: ["position"], bbox } : AWAITING_VIEWPORT_FILTER)
   // Ein Event an einem Ort-Item hat keine eigene Position: Die Karte liest
-  // sie vom Ort, abgeleitet und reaktiv (B4, S4b) — neben dem bbox-Inventar,
-  // nie darin, damit ein entfallener Ort sofort verschwindet.
-  const located = useLocatedItems(items)
+  // sie vom Ort, abgeleitet und reaktiv (B4, S4b); das Inventar der Karte
+  // ist eine Projektion aus Abfrage und Ableitung (map.md).
+  const derivedItems = useLocatedItems(items)
   const { itemId: focusedId, focusItem } = useItemFocus()
   const { data: focusedRaw } = useItem(active ? (focusedId ?? "") : "")
   const focusedItem = useItemWithPlacePosition(focusedRaw)
@@ -83,8 +83,7 @@ export function MapModule({ groupId, active = true }: ModuleViewProps) {
       activeItemId={activeItemId}
       isCompact={compact}
       draftItem={draftItem}
-      derivedItems={located.items}
-      unpositionedIds={located.unpositioned}
+      derivedItems={derivedItems}
       onItemClick={(item) => focusItem(item.id)}
       clustering={{}}
       resolveGroupColor={resolveItemGroupColor}

@@ -6,6 +6,7 @@ import {
 } from "@real-life-stack/data-interface"
 import { itemTitle } from "../../lib/item-text"
 import type { GraphEdge, GraphNode, GraphTypeDescriptor } from "./types"
+import { parseItemTarget } from "../../lib/item-targets"
 
 /**
  * Items und Beziehungen als Graph.
@@ -57,7 +58,7 @@ export const graphUserNodeId = (id: string): string => `user:${id}`
 
 /** Decode a namespaced graph node id back to kind + original id. */
 export function graphNodeRef(nodeId: string): { kind: "item" | "user"; id: string } | null {
-  if (nodeId.startsWith("item:")) return { kind: "item", id: nodeId.slice("item:".length) }
+  if (nodeId.startsWith("item:")) return { kind: "item", id: nodeId.slice("item:".length) } // targets: kein Target — Knoten-Id des Graphen (graphItemNodeId)
   if (nodeId.startsWith("user:")) return { kind: "user", id: nodeId.slice("user:".length) }
   return null
 }
@@ -76,10 +77,10 @@ function parseTarget(
   target: string,
 ): { kind: "item"; id: string; spaceId?: string } | { kind: "user"; id: string } | null {
   if (target.startsWith("global:")) return { kind: "user", id: target.slice("global:".length) }
-  if (target.startsWith("item:")) return { kind: "item", id: target.slice("item:".length) }
-  const cross = target.match(/^space:([^/]+)\/item:(.+)$/)
-  if (cross) return { kind: "item", id: cross[2], spaceId: cross[1] }
-  return null
+  // Item-Targets zerlegt nur der Auflöser (06, Verhältnis zu Relations, Regel 6).
+  const parsed = parseItemTarget(target)
+  if (!parsed) return null
+  return { kind: "item", id: parsed.itemId, ...(parsed.space !== undefined ? { spaceId: parsed.space } : {}) }
 }
 
 /**

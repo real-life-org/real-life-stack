@@ -42,7 +42,6 @@ import {
 } from "lucide-react"
 import {
   composeTypeManifest,
-  hasItemGroups,
   TOOLKIT_TYPE_LAYER,
   setTypeManifest as bindDataInterfaceManifest,
   relationAffordanceKey,
@@ -52,9 +51,7 @@ import {
 } from "@real-life-stack/data-interface"
 
 import { ItemMetaRow } from "./item-meta-row"
-import { locationEdge, targetItemId, targetPointsTo } from "./use-item-edges"
-import { useItem } from "../../hooks/use-items"
-import { useConnector } from "../../hooks/connector-context"
+import { placeLookupId, useItemPlace } from "./item-place"
 import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import {
   assertFollowUps,
@@ -297,29 +294,21 @@ const REGISTER_ACTIONS: ComponentType<ItemSlotProps> = function RegisterActionsS
 
 function EventPreview({ item }: ItemSlotProps) {
   // Liegt das Event an einem Ort-Item (B4), nennt die Karte dessen Namen.
-  const presentation = resolveTypePresentation(item.type)
-  const edge = locationEdge(item.type, presentation.fields, presentation.edges)
-  const target = edge ? item.relations?.find((r) => r.predicate === edge.predicate)?.target : undefined
-  return target ? <EventPreviewAtPlace item={item} target={target} /> : <ItemMetaRow item={item} />
+  return placeLookupId(item) ? <EventPreviewAtPlace item={item} /> : <ItemMetaRow item={item} />
 }
 
 /** Die Karte eines Events an einem Ort-Item: ein Abo auf genau dieses Item, nicht auf alle Orte. */
-function EventPreviewAtPlace({ item, target }: ItemSlotProps & { target: string }) {
-  const connector = useConnector()
+function EventPreviewAtPlace({ item }: ItemSlotProps) {
   const focus = useOptionalItemFocus()
-  const id = targetItemId(target)
-  const { data: place } = useItem(id ?? "")
-  // Space-lokal (04): Das Ziel muss dort liegen, wohin das Target zeigt.
-  const spaceOf = hasItemGroups(connector) ? (x: string) => connector.getItemGroupId(x) : undefined
-  const resolved = place && targetPointsTo(target, place, spaceOf ? spaceOf(item.id) : null, spaceOf) ? place : undefined
-  if (!resolved) return <ItemMetaRow item={item} />
-  const title = (resolved.data as Record<string, unknown>).title
+  const place = useItemPlace(item)
+  if (!place) return <ItemMetaRow item={item} />
+  const title = (place.data as Record<string, unknown>).title
   return (
     <ItemMetaRow
       item={item}
       placeItem={{
         title: typeof title === "string" && title.trim() !== "" ? title : "Ort",
-        open: focus ? () => focus.focusItem(resolved.id) : null,
+        open: focus ? () => focus.focusItem(place.id) : null,
       }}
     />
   )

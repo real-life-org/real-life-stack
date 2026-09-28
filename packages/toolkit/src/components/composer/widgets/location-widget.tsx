@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import type { Geocoder, GeocodeResult } from "@/lib/geocode"
 import { ItemRefChip, MissingRefText } from "../../preview/item-ref-chip"
 import { itemTitle } from "../item-relations"
+import { useFieldEpoch } from "../../../lib/form-epoch"
 
 interface LocationData {
   address?: string
@@ -90,9 +91,9 @@ export function LocationWidget({
   const [activeIndex, setActiveIndex] = React.useState(-1)
   const [failed, setFailed] = React.useState(false)
   const blurTimer = React.useRef<number | null>(null)
-  // Tracks which search owns the loading spinner, so an aborted older search
-  // can neither reset a newer one nor leave the spinner hanging.
-  const loadingControllerRef = React.useRef<AbortController | null>(null)
+  // Die Epoche des Felds (shared-components → Formular-Epoche): Nur die
+  // letzte Suche für den aktuellen Stand setzt Treffer und Spinner.
+  const epoch = useFieldEpoch()
   const listId = React.useId()
   // Fokus über den Wechsel Eingabe ↔ Chip hinweg (Codex R3/2): Nach der Wahl
   // eines Ort-Items steht der Fokus auf dessen ✕, nach dem Entfernen wieder in
@@ -109,33 +110,34 @@ export function LocationWidget({
       setFailed(false)
       return
     }
-    const controller = new AbortController()
     const timer = window.setTimeout(() => {
+      const search = epoch.begin("geocode")
       setLoading(true)
-      loadingControllerRef.current = controller
-      geocode(q, { signal: controller.signal })
+      geocode(q, { signal: search.signal })
         .then((hits) => {
-          if (controller.signal.aborted) return
-          setResults(hits)
-          setFailed(false)
+          search.apply(() => {
+            setResults(hits)
+            setFailed(false)
+          })
         })
         .catch((err: unknown) => {
-          if (controller.signal.aborted || (err as { name?: string })?.name === "AbortError") return
-          setResults([])
-          setFailed(true)
+          if ((err as { name?: string })?.name === "AbortError") return
+          search.apply(() => {
+            setResults([])
+            setFailed(true)
+          })
         })
         .finally(() => {
-          // Only the latest search clears the spinner: an aborted older search
-          // must not reset a newer one, and an abort with no successor must not
-          // leave it hanging.
-          if (loadingControllerRef.current === controller) setLoading(false)
+          search.apply(() => setLoading(false))
         })
     }, GEOCODE_DEBOUNCE_MS)
     return () => {
       window.clearTimeout(timer)
-      controller.abort()
+      // Eine überholte Suche gilt nicht mehr; ihr Spinner auch nicht.
+      epoch.invalidate("geocode")
+      setLoading(false)
     }
-  }, [userQuery, geocode])
+  }, [userQuery, geocode, epoch])
 
   // Clear a pending blur-close timer on unmount.
   React.useEffect(

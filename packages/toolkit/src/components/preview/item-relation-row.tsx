@@ -9,7 +9,8 @@ import type { FieldEntry } from "./field-register"
 import { ItemRefChip, MissingRefText } from "./item-ref-chip"
 import { hasItemGroups } from "@real-life-stack/data-interface"
 import { useConnector } from "../../hooks/connector-context"
-import { targetItemId, targetPointsTo, type EdgeTarget } from "./use-item-edges"
+import type { EdgeTarget } from "./use-item-edges"
+import { targetItemId, targetPointsTo } from "../../lib/item-targets"
 import { useFittingTags } from "./use-fitting-tags"
 
 /**
@@ -96,7 +97,7 @@ function ResolvedRef({ carrier, value, id, missing }: { carrier: Item; value: st
   const { data: target, isLoading } = useItem(id)
   // Space-lokal (04): Das Ziel muss dort liegen, wohin das Target zeigt.
   const spaceOf = hasItemGroups(connector) ? (x: string) => connector.getItemGroupId(x) : undefined
-  if (target && targetPointsTo(value, target, spaceOf ? spaceOf(carrier.id) : null, spaceOf)) return <ItemRefChip item={target} />
+  if (target && targetPointsTo(value, target, { carrierSpace: spaceOf ? spaceOf(carrier.id) : null, spaceOf })) return <ItemRefChip item={target} />
   if (!target && isLoading) return null
   return <MissingRefText text={missing} />
 }

@@ -49,17 +49,10 @@ export interface MapViewProps {
   draftItem?: Item | null
   isCompact?: boolean
   /**
-   * Items mit abgeleiteter Position (vom verknüpften Ort, B4/S4b). Sie gehen
-   * NICHT ins bbox-Inventar, sondern gelten nur, solange sie hier stehen:
-   * Entfällt die Ort-Kante, verschwindet der Marker sofort (Codex R9/2).
+   * Items mit abgeleiteter Position (vom verknüpften Ort, B4/S4b). Sie gehören
+   * zur Projektion wie `items` (map.md → Karten-Inventar als Projektion).
    */
   derivedItems?: readonly Item[]
-  /**
-   * Ids von Items, die laut Quelle gerade keine eigene Position tragen (sie
-   * liegen an einem Ort oder nirgends). Ein älterer Eintrag mit eigener
-   * Position im bbox-Inventar gilt dann nicht mehr (Codex R10/1).
-   */
-  unpositionedIds?: ReadonlySet<string>
 }
 
 function inBounds(item: Item, bounds: [number, number, number, number]) {
@@ -70,56 +63,16 @@ function inBounds(item: Item, bounds: [number, number, number, number]) {
 }
 
 /**
- * Reconcile map inventory according to the viewport owner's data contract.
- * Bbox pages are incremental, while a lens receives its complete marker set.
+ * Das Marker-Inventar als Projektion (map.md → Karten-Inventar als
+ * Projektion): die aktuelle Abfrage plus die abgeleiteten Positionen, sonst
+ * nichts — kein akkumulierter Cache, kein Eintrag, der eine Änderung seines
+ * Items oder seiner Kante überdauert. Ein Item der Abfrage gewinnt über eine
+ * abgeleitete Fassung.
  */
-export function reconcileMapInventory(
-  previous: ReadonlyMap<string, Item>,
-  items: readonly Item[],
-  itemsLoading: boolean,
-  bounds: [number, number, number, number] | null,
-  viewportMode: MapViewportMode,
-): Map<string, Item> {
-  if (viewportMode === "lens-auto-fit") return new Map(items.map((item) => [item.id, item]))
-
-  const next = new Map(previous)
-  if (bounds && !itemsLoading) {
-    const ids = new Set(items.map(({ id }) => id))
-    for (const [id, item] of next) if (!ids.has(id) && inBounds(item, bounds)) next.delete(id)
-  }
-  for (const item of items) next.set(item.id, item)
-  return next
-}
-
-/** A key change starts a new inventory but immediately reconciles the current props. */
-export function reconcileMapInventoryForKey(
-  previousKey: string | number,
-  inventoryKey: string | number,
-  previous: ReadonlyMap<string, Item>,
-  items: readonly Item[],
-  itemsLoading: boolean,
-  bounds: [number, number, number, number] | null,
-  viewportMode: MapViewportMode,
-): Map<string, Item> {
-  return reconcileMapInventory(previousKey === inventoryKey ? previous : new Map(), items, itemsLoading, bounds, viewportMode)
-}
-
-/**
- * Inventar plus abgeleitete Items (B4). Die abgeleitete Fassung gewinnt: Sie
- * kommt vom lebenden Item, das keine eigene Position hat. Einträge des
- * Inventars, die laut Quelle keine eigene Position mehr tragen
- * (`unpositioned`), entfallen — sonst bliebe ein Marker an einer alten
- * Position stehen, außerhalb des Ausschnitts (Codex R10/1). Abgeleitete
- * werden nie akkumuliert.
- */
-export function withDerivedItems(
-  inventory: readonly Item[],
-  derived: readonly Item[] | undefined,
-  unpositioned?: ReadonlySet<string>,
-): Item[] {
-  const derivedIds = new Set((derived ?? []).map((d) => d.id))
-  const kept = inventory.filter((i) => !derivedIds.has(i.id) && !unpositioned?.has(i.id))
-  return derived && derived.length > 0 ? [...kept, ...derived] : kept
+export function projectMapInventory(items: readonly Item[], derived?: readonly Item[]): Item[] {
+  if (!derived || derived.length === 0) return [...items]
+  const ids = new Set(items.map((i) => i.id))
+  return [...items, ...derived.filter((d) => !ids.has(d.id))]
 }
 
 /** The draft is a display-only overlay and never becomes part of the bbox inventory. */
@@ -341,7 +294,7 @@ export function MapView(props: MapViewProps) {
 function MapViewInner({
   items, itemsLoading, inventoryKey, focusedItem, createAdapter, initialView, viewportMode,
   onViewportBoundsChange, active = true, activeItemId, selectionFocusVisibleArea, onItemClick,
-  allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false, derivedItems, unpositionedIds,
+  allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false, derivedItems,
 }: MapViewProps) {
   const [adapter, setAdapter] = useState<MapAdapter | null>(null)
   const [mountError, setMountError] = useState(false)
@@ -391,9 +344,9 @@ function MapViewInner({
   const lauf = useRef(0)
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)
   const { isPicking, updatePick, pickItem, confirmPick, cancelPick } = useLocationPick()
-  const accumulated = useRef(new Map<string, Item>())
-  const accumulatedKey = useRef<string | number>(inventoryKey)
-  const [inventory, setInventory] = useState<Item[]>([])
+  // Die Projektion (kein Cache): aktuelle Abfrage plus abgeleitete Positionen.
+  const inventory = useMemo(() => projectMapInventory(items, derivedItems), [items, derivedItems])
+  const inventoryKeyRef = useRef<string | number>(inventoryKey)
   const bounds = useRef<[number, number, number, number] | null>(null)
   const markerClick = useRef<string | null>(null)
   const settledReveal = useRef<string | null>(null)
@@ -403,26 +356,12 @@ function MapViewInner({
   const revealOffset = useRef<[number, number] | null>(null)
   const panelEdges = usePanelEdges()
 
+  // Ein neuer Bestand (Space) beginnt ohne alten Ausschnitt.
   useEffect(() => {
-    const keyChanged = accumulatedKey.current !== inventoryKey
-    if (keyChanged) {
-      bounds.current = null
-    }
-    const next = reconcileMapInventoryForKey(accumulatedKey.current, inventoryKey, accumulated.current, items, itemsLoading, bounds.current, viewportMode)
-    accumulatedKey.current = inventoryKey
-    const changed = keyChanged || next.size !== accumulated.current.size || [...next].some(([id, item]) => accumulated.current.get(id) !== item)
-    accumulated.current = next
-    if (changed) setInventory([...next.values()])
-  }, [inventoryKey, items, itemsLoading, viewportMode])
-
-  // Ein Item, das laut Quelle keine eigene Position mehr trägt, verlässt das
-  // akkumulierte Inventar dauerhaft — nicht nur die Anzeige (Codex R11).
-  useEffect(() => {
-    if (!unpositionedIds || unpositionedIds.size === 0) return
-    let removed = false
-    for (const id of unpositionedIds) if (accumulated.current.delete(id)) removed = true
-    if (removed) setInventory([...accumulated.current.values()])
-  }, [unpositionedIds])
+    if (inventoryKeyRef.current === inventoryKey) return
+    inventoryKeyRef.current = inventoryKey
+    bounds.current = null
+  }, [inventoryKey])
 
   useEffect(() => {
     if (!adapter || viewportMode !== "bbox-module" || !onViewportBoundsChange) return
@@ -471,7 +410,7 @@ function MapViewInner({
     }
     // Geladen ist, was der Ausschnitt liefert, und was dort abgeleitet an
     // einem geladenen Ort liegt (B4; Codex R10/2).
-    const available = withDerivedItems(items, derivedItems, unpositionedIds)
+    const available = inventory
     if (available.some((item) => item.id === focusedItem.id)) {
       settledReveal.current = focusedItem.id
       revealOffset.current = offset
@@ -484,7 +423,7 @@ function MapViewInner({
       revealOffset.current = offset
       adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, MIN_REVEAL_ZOOM), ...insets, animate: true })
     }
-  }, [active, adapter, derivedItems, focusedItem, isCompact, items, itemsLoading, kameraKenntSeiten, panelEdges, unpositionedIds, viewportMode])
+  }, [active, adapter, focusedItem, inventory, isCompact, itemsLoading, kameraKenntSeiten, panelEdges, viewportMode])
   useEffect(() => {
     if (!adapter || !isPicking) return
     return adapter.observeClicks(({ position: [lng, lat] }) => {
@@ -493,8 +432,7 @@ function MapViewInner({
   }, [adapter, confirmPick, isCompact, isPicking, updatePick])
   useEffect(() => { if (!isPicking) setPickPosition(null) }, [isPicking])
 
-  const shownItems = useMemo(() => withDerivedItems(inventory, derivedItems, unpositionedIds), [derivedItems, inventory, unpositionedIds])
-  const filtered = useMemo(() => filterMapViewItems(shownItems, filter, search), [filter, shownItems, search])
+  const filtered = useMemo(() => filterMapViewItems(inventory, filter, search), [filter, inventory, search])
   const markerItems = useMemo(() => mapViewMarkerItems(filtered, draftItem, isPicking), [draftItem, filtered, isPicking])
   const lensItems = useMemo(() => pickPosition && isPicking ? [...markerItems, {
     id: PICK_MARKER_ID, type: "__pick__", createdAt: "", createdBy: "", data: { position: { type: "Point", coordinates: [pickPosition.lng, pickPosition.lat] }, color: PICK_MARKER_COLOR },

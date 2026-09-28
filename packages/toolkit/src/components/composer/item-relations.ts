@@ -1,4 +1,5 @@
 import type { Item, Relation } from "@real-life-stack/data-interface"
+import { isLocalItemTarget, targetItemId } from "../../lib/item-targets"
 
 /**
  * Item-Kanten im Composer (C3, Schreibform): Chips und eine `@`-Suche über
@@ -84,8 +85,8 @@ function itemIdsOf(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   const ids: string[] = []
   for (const target of value) {
-    if (typeof target !== "string" || !target.startsWith("item:")) continue
-    const id = target.slice("item:".length)
+    if (!isLocalItemTarget(target)) continue
+    const id = targetItemId(target)
     if (id && !ids.includes(id)) ids.push(id)
   }
   return ids

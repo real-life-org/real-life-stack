@@ -14,8 +14,6 @@ import {
   hasItemGroups,
   hasItemType,
   itemTypes,
-  parseLocalItemTarget,
-  parseQualifiedItemTarget,
   type Item,
   type ItemFilter,
 } from "@real-life-stack/data-interface"
@@ -23,6 +21,9 @@ import {
 import { useItemsUnion } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
 import type { EdgeEntry, FieldEntry } from "./field-register"
+import { resolveTarget, targetPointsTo, type SpaceOf } from "../../lib/item-targets"
+
+export type { SpaceOf } from "../../lib/item-targets"
 
 /** Was am anderen Ende einer Kante steht, aus dem Manifest (06, Regel 1). */
 export function otherKindOf(itemType: string | readonly string[], edge: Pick<EdgeEntry, "predicate" | "itemRole">): string | undefined {
@@ -40,29 +41,6 @@ export function otherKindOf(itemType: string | readonly string[], edge: Pick<Edg
  */
 export function targetFilter(otherKind: string | undefined): ItemFilter {
   return otherKind && otherKind !== "item" && getTypeManifest().has(otherKind) ? { type: otherKind } : {}
-}
-
-/** Space eines Items, wie der Connector ihn kennt (`null`: keiner). Ohne Gruppen-Capability fehlt die Funktion. */
-export type SpaceOf = (itemId: string) => string | null
-
-/**
- * Zeigt `target` — gesetzt von einem Träger im Space `carrierSpace` — auf
- * `candidate`? Target-Konventionen aus 04: `item:<id>` ist space-lokal, also
- * nur ein Item im Space des Trägers; `space:{id}/item:<id>` nur das Item in
- * genau diesem Space. Ohne Gruppen-Capability gibt es nur einen Bereich.
- */
-export function targetPointsTo(target: string, candidate: Item, carrierSpace: string | null, spaceOf?: SpaceOf): boolean {
-  const local = parseLocalItemTarget(target)
-  if (local !== null) return local === candidate.id && (!spaceOf || spaceOf(candidate.id) === carrierSpace)
-  const qualified = parseQualifiedItemTarget(target)
-  if (!qualified || qualified.itemId !== candidate.id) return false
-  // Ohne Space-Auskunft lässt sich ein Space-qualifiziertes Ziel nicht prüfen.
-  return !!spaceOf && spaceOf(candidate.id) === qualified.homeSpaceId
-}
-
-/** Die Item-Id eines Targets (`item:` oder `space:{id}/item:`), sonst null. */
-export function targetItemId(target: string): string | null {
-  return parseLocalItemTarget(target) ?? parseQualifiedItemTarget(target)?.itemId ?? null
 }
 
 export interface EdgeTarget {
@@ -152,11 +130,13 @@ export function edgeTargets(item: Item, edge: EdgeEntry, candidates: readonly It
   const seen = new Set<string>()
   const out: EdgeTarget[] = []
   if (edge.itemRole === "from") {
+    // Der Auflöser (06, Verhältnis zu Relations, Regel 6): Space nach 04,
+    // Typ der Gegenstelle über alle Klassen.
     const carrierSpace = spaceOf ? spaceOf(item.id) : null
     for (const relation of item.relations ?? []) {
       if (relation.predicate !== edge.predicate) continue
-      const target = candidates.find((c) => targetPointsTo(relation.target, c, carrierSpace, spaceOf))
-      if (!target || !fits(target) || target.id === item.id || seen.has(target.id)) continue
+      const target = resolveTarget(relation.target, candidates, { carrierSpace, spaceOf, otherKind: filter.type as string | undefined })
+      if (!target || target.id === item.id || seen.has(target.id)) continue
       seen.add(target.id)
       const qualifier = qualifierOf(relation.meta as Record<string, unknown> | undefined)
       out.push({ item: target, ...(qualifier ? { qualifier } : {}) })
@@ -167,7 +147,7 @@ export function edgeTargets(item: Item, edge: EdgeEntry, candidates: readonly It
     for (const candidate of candidates) {
       if (!fits(candidate) || candidate.id === item.id || seen.has(candidate.id)) continue
       const relation = (candidate.relations ?? []).find(
-        (r) => r.predicate === edge.predicate && targetPointsTo(r.target, item, spaceOf ? spaceOf(candidate.id) : null, spaceOf),
+        (r) => r.predicate === edge.predicate && targetPointsTo(r.target, item, { carrierSpace: spaceOf ? spaceOf(candidate.id) : null, spaceOf }),
       )
       if (!relation) continue
       seen.add(candidate.id)

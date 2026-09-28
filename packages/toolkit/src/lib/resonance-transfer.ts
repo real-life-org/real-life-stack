@@ -2,6 +2,7 @@ import type { Item, RelationRecord } from "@real-life-stack/data-interface"
 import { itemContentHash, votesFromRelationRecords } from "@real-life-stack/data-interface"
 import { variantOfId } from "./resonance-variants"
 import type { ResonancePopulation } from "./resonance-sort"
+import { isLocalItemTarget } from "./item-targets"
 
 /**
  * Import und Export des Resonanzmoduls (docs/spec/modules/resonance.md →
@@ -61,7 +62,7 @@ function validateEntry(raw: unknown, index: number, statementIds: ReadonlySet<st
     return { index, message: "„tags“ ist keine Liste von Texten" }
   }
   if (variantOf !== undefined) {
-    if (typeof variantOf !== "string" || !variantOf.startsWith("item:")) {
+    if (typeof variantOf !== "string" || !isLocalItemTarget(variantOf)) {
       return { index, message: "„variantOf“ muss die Form item:<id> haben" }
     }
     // Varianten-Regel 2: das Ziel ist ein Statement im selben Space.

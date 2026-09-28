@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react"
 import type { DataInterface, Item, Relation } from "@real-life-stack/data-interface"
-import { deriveContext, hasGroups, hasItemGroups, isWritable, parseLocalItemTarget, parseQualifiedItemTarget } from "@real-life-stack/data-interface"
+import { deriveContext, hasGroups, hasItemGroups, isWritable } from "@real-life-stack/data-interface"
+import { targetPointsTo } from "../lib/item-targets"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useConnector } from "./connector-context"
 import type { ContentComposerSubmitData } from "../components/composer/content-composer"
@@ -420,14 +421,11 @@ async function writeIncoming(
   const relations = source.relations ?? []
   // Wie die Leseform (04, Target-Konventionen): `item:<id>` ist space-lokal,
   // `space:{id}/item:<id>` zeigt auf genau diesen Space.
-  const pointsHere = (r: Relation) => {
-    if (r.predicate !== predicate) return false
-    if (parseLocalItemTarget(r.target) === item.id) return true
-    const qualified = parseQualifiedItemTarget(r.target)
-    // Nur bei bekanntem Space — wie die Leseform (targetPointsTo), sonst träfe
-    // es eine Kante in einen anderen Space (Codex R2/2).
-    return !!qualified && space !== null && qualified.itemId === item.id && qualified.homeSpaceId === space
-  }
+  // Der Auflöser (06, Verhältnis zu Relations, Regel 6): Das Item liegt im
+  // Space `space` (Quelle und Item sind dort); ein qualifiziertes Target nur
+  // bei bekanntem Space (Codex R2/2).
+  const spaceOf = space !== null ? (id: string) => (id === item.id ? space : null) : undefined
+  const pointsHere = (r: Relation) => r.predicate === predicate && targetPointsTo(r.target, item, { carrierSpace: space, spaceOf })
   if (add) {
     if (relations.some(pointsHere)) return
     await connector.updateItem(sourceId, { relations: [...relations, { predicate, target: `item:${item.id}` }] })

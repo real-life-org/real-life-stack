@@ -135,7 +135,7 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
     await act(async () => { mounted.root.unmount() })
   })
 
-  it("S4b/Codex R11: ein Eintrag ohne eigene Position verlässt das Inventar dauerhaft", async () => {
+  it("S4b/Codex R11 als Vertrag: was die Abfrage nicht mehr liefert, steht nicht mehr da (Projektion)", async () => {
     const live = new Set<ProbeAdapter>()
     const createAdapter = () => new ProbeAdapter(live)
     const alt: Item = { ...point("ev", [10, 50]), type: "event" }
@@ -144,10 +144,10 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
     const ids = () => adapter.markerSets.at(-1)!.map((m) => m.id).sort()
     expect(ids()).toEqual(["a", "ev"])
     // Das Event liegt jetzt an einem Ort (lebend ohne eigene Position).
-    await mounted.render({ items: [point("a")], unpositionedIds: new Set(["ev"]) })
+    await mounted.render({ items: [point("a")] })
     expect(ids()).toEqual(["a"])
-    // Danach entfällt die Id (Event gelöscht oder anderswo verortet): kein alter Marker.
-    await mounted.render({ items: [point("a")], unpositionedIds: new Set() })
+    // Auch später kommt kein alter Marker zurück.
+    await mounted.render({ items: [point("a")], derivedItems: [] })
     expect(ids()).toEqual(["a"])
     await act(async () => { mounted.root.unmount() })
   })

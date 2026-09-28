@@ -1,14 +1,16 @@
 "use client"
 
-import { useEffect, useId, useMemo, useRef, useState, startTransition } from "react"
+import { useEffect, useId, useMemo, useState, startTransition } from "react"
 import { hasGroups, hasGroupScope, hasItemGroups, isAuthenticatable, type DataInterface, type Item } from "@real-life-stack/data-interface"
 import { Lock, MousePointerClick } from "lucide-react"
 
 import { useOptionalConnector } from "../../../hooks/connector-context"
+import { useFieldEpoch } from "../../../lib/form-epoch"
 import { resolveItemPermissions } from "../../../hooks/use-item-permissions"
 import { cn } from "../../../lib/utils"
 import { ItemRefChip, MissingRefText } from "../../preview/item-ref-chip"
-import { targetFilter, targetItemId, targetPointsTo } from "../../preview/use-item-edges"
+import { targetFilter } from "../../preview/use-item-edges"
+import { isLocalItemTarget, targetItemId, targetPointsTo } from "../../../lib/item-targets"
 import { itemTitle } from "../item-relations"
 
 /**
@@ -143,12 +145,12 @@ export function ItemRelationWidget({
   const [pickError, setPickError] = useState<string | null>(null)
   // Gewählte Ziele gegen alle sichtbaren Items (ein space-qualifiziertes
   // bleibt nach einem Space-Wechsel gültig); gesucht wird nur im Formular-Space.
-  const resolve = (target: string) => all.find((c) => targetPointsTo(target, c, spaceId ?? null, spaceOf))
+  const resolve = (target: string) => all.find((c) => targetPointsTo(target, c, { carrierSpace: spaceId ?? null, spaceOf }))
   const [query, setQuery] = useState("")
   const [open, setOpen] = useState(false)
   const listId = useId()
 
-  const isChosen = (c: Item) => value.some((t) => targetPointsTo(t, c, spaceId ?? null, spaceOf))
+  const isChosen = (c: Item) => value.some((t) => targetPointsTo(t, c, { carrierSpace: spaceId ?? null, spaceOf }))
   const needle = query.replace(/^@/, "").trim().toLocaleLowerCase("de")
   const suggestions = open
     ? candidates
@@ -157,11 +159,13 @@ export function ItemRelationWidget({
         .slice(0, 6)
     : []
 
-  // Der Modul-Pick kommt asynchron: geprüft wird gegen den Stand beim Eintreffen.
-  const latest = useRef({ candidates, allCandidates, value, excludeId, spaceId, spaceOf, full: false, unavailable, onChange })
-  latest.current = { candidates, allCandidates, value, excludeId, spaceId, spaceOf, full: !!single && value.length > 0, unavailable, onChange }
-  const checkPick = (id: string): ItemPickResult => {
-    const now = latest.current
+  // Der Modul-Pick kommt asynchron (Formular-Epoche): Er gilt nur für den
+  // Stand, für den er begann, und prüft gegen den Stand beim Eintreffen.
+  const full = !!single && value.length > 0
+  const fieldState = { candidates, allCandidates, value, excludeId, spaceId, spaceOf, full, unavailable, onChange }
+  type FieldState = typeof fieldState
+  const epoch = useFieldEpoch(fieldState, { scope: [spaceId ?? null] })
+  const checkPick = (id: string, now: FieldState): ItemPickResult => {
     if (now.unavailable) return { ok: false, reason: now.unavailable }
     if (now.full) return { ok: false, reason: "Das Feld hat schon ein Ziel" }
     if (id === now.excludeId) return { ok: false, reason: "Ein Item verweist nicht auf sich selbst" }
@@ -170,32 +174,36 @@ export function ItemRelationWidget({
     if (!target) {
       return { ok: false, reason: targetType ? "Das Ziel ist nicht vom passenden Typ oder liegt nicht in diesem Space" : "Das Ziel liegt nicht in diesem Space" }
     }
-    if (now.value.some((t) => targetPointsTo(t, target, now.spaceId ?? null, now.spaceOf))) return { ok: false, reason: "Das Ziel ist schon gewählt" }
+    if (now.value.some((t) => targetPointsTo(t, target, { carrierSpace: now.spaceId ?? null, spaceOf: now.spaceOf }))) return { ok: false, reason: "Das Ziel ist schon gewählt" }
     return { ok: true }
   }
-  const onPick = (id: string): ItemPickResult => {
-    const result = checkPick(id)
-    if (result.ok) {
-      setPickError(null)
-      add(id)
-    } else setPickError(result.reason)
-    return result
+  const startPick = () => {
+    const pick = epoch.begin("pick")
+    requestItemPick?.({ predicate, targetType }, (id) => {
+      let result: ItemPickResult = { ok: false, reason: "Das Formular hat sich inzwischen geändert" }
+      pick.apply((now) => {
+        result = checkPick(id, now)
+        if (result.ok) {
+          setPickError(null)
+          addTo(id, now)
+        } else setPickError(result.reason)
+      })
+      return result
+    })
   }
 
-  // Gegen den aktuellen Stand: Ein asynchroner Pick darf zwischenzeitliche
-  // Änderungen nicht überschreiben.
-  const add = (id: string) => {
+  // Gegen den aktuellen Stand: ein Klick schreibt auf den Wert dieses Renders.
+  const addTo = (id: string, now: { value: readonly string[]; onChange: (next: string[]) => void }) => {
     const target = `item:${id}`
-    const { value: now, onChange: change } = latest.current
-    change(single ? [target] : now.includes(target) ? [...now] : [...now, target])
+    now.onChange(single ? [target] : now.value.includes(target) ? [...now.value] : [...now.value, target])
     setQuery("")
     setOpen(false)
   }
+  const add = (id: string) => addTo(id, { value, onChange })
   const locked = (target: string) => !!lockedTargets?.includes(target)
   const remove = (target: string) => {
     if (!locked(target)) onChange(value.filter((t) => t !== target))
   }
-  const full = single && value.length > 0
 
   return (
     <div className="flex flex-col gap-1.5" data-item-relation-field={predicate}>
@@ -262,7 +270,7 @@ export function ItemRelationWidget({
           {requestItemPick && !full && !unavailable && !needsSpace && !otherSpace && (
             <button
               type="button"
-              onClick={() => requestItemPick({ predicate, targetType }, onPick)}
+              onClick={startPick}
               className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <MousePointerClick className="h-3.5 w-3.5" aria-hidden />
@@ -357,7 +365,7 @@ export function IncomingRelationField({
         (c) =>
           c.id !== itemId &&
           (!spaceOf || spaceOf(c.id) === (spaceId ?? null)) &&
-          (c.relations ?? []).some((r) => r.predicate === predicate && targetPointsTo(r.target, self, spaceOf ? spaceOf(c.id) : null, spaceOf)),
+          (c.relations ?? []).some((r) => r.predicate === predicate && targetPointsTo(r.target, self, { carrierSpace: spaceOf ? spaceOf(c.id) : null, spaceOf })),
       )
     : []
   const live = sources.map((c) => `item:${c.id}`)
@@ -411,11 +419,11 @@ export function FixedItemRefField({ label, value, missing, spaceId }: { label: s
 /** Das Ziel muss dort liegen, wohin das Target zeigt (04); ohne Spaces gibt es nur einen Bereich. */
 function fitsSpace(connector: DataInterface | null, value: string, item: Item, spaceId: string | undefined): boolean {
   // Ohne Space-Auskunft: ein lokales Ziel nach Id, ein qualifiziertes nie (nicht prüfbar).
-  if (!connector || !hasItemGroups(connector)) return targetPointsTo(value, item, null)
+  if (!connector || !hasItemGroups(connector)) return targetPointsTo(value, item, { carrierSpace: null })
   // Ohne Space im Formular lässt sich ein lokales Ziel nicht gegenprüfen; es
   // stammt dann aus der Vorbelegung (Variante: Space des Ursprungs, fest).
-  if (!spaceId && value.startsWith("item:")) return targetItemId(value) === item.id
-  return targetPointsTo(value, item, spaceId ?? null, (id) => connector.getItemGroupId(id))
+  if (!spaceId && isLocalItemTarget(value)) return targetItemId(value) === item.id
+  return targetPointsTo(value, item, { carrierSpace: spaceId ?? null, spaceOf: (id) => connector.getItemGroupId(id) })
 }
 
 /** Die angemeldete Person, auch ohne Provider (dann keine). */

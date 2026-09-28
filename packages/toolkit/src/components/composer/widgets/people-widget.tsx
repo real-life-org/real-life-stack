@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useFieldEpoch } from "@/lib/form-epoch"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -61,6 +62,7 @@ export function PeopleWidget({
   placeholder,
   record,
 }: PeopleWidgetProps) {
+  const epoch = useFieldEpoch({ value })
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<PersonOption[]>([])
   const [showSuggestions, setShowSuggestions] = React.useState(false)
@@ -105,21 +107,20 @@ export function PeopleWidget({
           .map((s) => ({ id: s, name: s })),
       )
     } else if (typeof suggestions === "function") {
-      let cancelled = false
-      suggestions(query).then((results) => {
-        if (!cancelled) {
+      // Formular-Epoche: nur die letzte Suche für den aktuellen Stand, gefiltert gegen den aktuellen Wert.
+      const search = epoch.begin("suggest")
+      void suggestions(query).then((results) => {
+        search.apply((now) =>
           setFiltered(
             results
-              .filter((s) => !value.includes(s))
+              .filter((s) => !now.value.includes(s))
               .map((s) => ({ id: s, name: s })),
-          )
-        }
+          ),
+        )
       })
-      return () => {
-        cancelled = true
-      }
+      return () => epoch.invalidate("suggest")
     }
-  }, [query, options, suggestions, value])
+  }, [query, options, suggestions, value, epoch])
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

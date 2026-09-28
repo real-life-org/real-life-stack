@@ -12,8 +12,7 @@ import {
   mapViewRevealOptions,
   mapViewSeparationZoom,
   observeMapViewBounds,
-  reconcileMapInventory,
-  reconcileMapInventoryForKey,
+  projectMapInventory,
   mapViewProjection,
 } from "../src/components/map/map-view"
 import { mountMapLensAdapter } from "../src/components/lens/map-lens"
@@ -78,19 +77,14 @@ describe("MAP-ABSINK parity matrix — MapView module with fake-adapter probes",
     stop(); vi.useRealTimers()
   })
 
-  it("3: keeps bbox pages incremental but treats lens items as the complete authoritative inventory", () => {
+  it("3: das Inventar ist eine Projektion der aktuellen Abfrage (map.md → Karten-Inventar als Projektion), in bbox und Linse gleich", () => {
     const a = point("a", "place", [13.2, 52.2]); const b = point("b", "place", [20, 60])
-    let inventory = reconcileMapInventory(new Map(), [a, b], false, [13, 52, 14, 53], "bbox-module")
-    inventory = reconcileMapInventory(inventory, [], false, [13, 52, 14, 53], "bbox-module")
-    expect([...inventory.keys()]).toEqual(["b"])
-    expect([...reconcileMapInventory(new Map([[a.id, a]]), [], false, null, "lens-auto-fit").keys()]).toEqual([])
-
-    // A key-only transition enters the component's same reconcile path with the
-    // unchanged caller array, rather than waiting for a new items reference.
-    const sameItems = [point("next")]
-    inventory = reconcileMapInventoryForKey("space-a", "space-a", new Map([["old", point("old")]]), sameItems, false, null, "bbox-module")
-    inventory = reconcileMapInventoryForKey("space-a", "space-b", inventory, sameItems, false, null, "bbox-module")
-    expect([...inventory.keys()]).toEqual(["next"])
+    expect(projectMapInventory([a, b]).map((i) => i.id)).toEqual(["a", "b"])
+    // Was die aktuelle Abfrage nicht liefert, steht nicht da — kein akkumulierter Rest.
+    expect(projectMapInventory([])).toEqual([])
+    // Abgeleitete Positionen kommen dazu; ein Item der Abfrage gewinnt.
+    const derived = { ...point("a", "event", [1, 1]) }
+    expect(projectMapInventory([a], [derived, point("c", "event")]).map((i) => i.id)).toEqual(["a", "c"])
   })
 
   it("4: bringt die Modulflaeche mit und filtert dieselbe Marker-Eingabe", () => {

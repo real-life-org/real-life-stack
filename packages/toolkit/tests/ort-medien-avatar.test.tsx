@@ -529,9 +529,11 @@ describe("Codex R2", () => {
       host.querySelector<HTMLButtonElement>('button[aria-label^="Position auf Karte"]')!.click()
     })
     await act(async () => setSpace("anders"))
+    updateMany.mockClear()
+    // Formular-Epoche: Der Pick gehört zum alten Space und schreibt nichts
+    // mehr, auch kein Ort-Item des alten Space zurück.
     await act(async () => box.h!.onCancel!())
-    const restored = updateMany.mock.calls.at(-1)![0] as Record<string, unknown>
-    expect(restored[itemRelationDataKey("locatedAt")]).toEqual([])
+    expect(updateMany).not.toHaveBeenCalled()
   })
 
   it("kaputte Medien-Metadaten: kein Absturz, der Eintrag zählt mit bereinigten Werten oder gar nicht", async () => {

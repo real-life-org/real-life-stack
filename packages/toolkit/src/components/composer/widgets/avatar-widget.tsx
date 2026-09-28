@@ -5,6 +5,7 @@ import { Camera, ImagePlus, Loader2, X } from "lucide-react"
 
 import { Avatar, AvatarImage } from "@/components/primitives/avatar"
 import { safeImageSrc } from "@/lib/field-values"
+import { useFieldEpoch } from "@/lib/form-epoch"
 
 /**
  * Schreibform des Avatars (B11, S4b): Bild wählen, auf 512 px verkleinern
@@ -46,16 +47,10 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
   const [error, setError] = React.useState<string | null>(null)
   const src = safeImageSrc(value)
   const errorId = React.useId()
-  // Nur das Ergebnis der letzten Aktion zählt: Entfernen oder eine neue Wahl
-  // machen ein laufendes Verkleinern ungültig (Codex R2/3).
-  const generation = React.useRef(0)
-  // Ein abgebautes Feld übernimmt kein spätes Ergebnis mehr (Codex R5/1).
-  React.useEffect(
-    () => () => {
-      generation.current++
-    },
-    [],
-  )
+  // Die Epoche des Felds (shared-components → Formular-Epoche): Nur das
+  // Ergebnis der letzten Bildwahl zählt; Entfernen, Abbau, Space- oder
+  // Typwechsel machen ein laufendes Verkleinern ungültig.
+  const epoch = useFieldEpoch()
 
   const onFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -67,14 +62,14 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
     }
     setError(null)
     setBusy(true)
-    const mine = ++generation.current
+    const work = epoch.begin("image")
     try {
       const result = await resize(file, AVATAR_SIZE)
-      if (mine === generation.current) onChange(result)
+      work.apply(() => onChange(result))
     } catch {
-      if (mine === generation.current) setError("Bild konnte nicht verarbeitet werden.")
+      work.apply(() => setError("Bild konnte nicht verarbeitet werden."))
     } finally {
-      if (mine === generation.current) setBusy(false)
+      work.apply(() => setBusy(false))
     }
   }
 
@@ -129,7 +124,7 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
               type="button"
               aria-label={`${label} entfernen`}
               onClick={() => {
-                generation.current++
+                epoch.invalidate("image")
                 setBusy(false)
                 onChange("")
               }}

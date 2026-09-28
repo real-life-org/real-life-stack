@@ -6,7 +6,7 @@ import type { Item } from "@real-life-stack/data-interface"
 import { MockConnector } from "@real-life-stack/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
-import { reconcileMapInventory, withDerivedItems } from "../src/components/map/map-view"
+import { projectMapInventory } from "../src/components/map/map-view"
 import { locatedPositions, useItemWithPlacePosition, useLocatedItems, withPlacePosition } from "../src/components/map/place-position"
 
 /**
@@ -73,38 +73,17 @@ describe("withPlacePosition (rein)", () => {
     expect(withPlacePosition(b, places).data.position).toEqual(HALLE.data.position)
   })
 
-  it("Codex R9/2: abgeleitete Items gehen nie ins bbox-Inventar; ohne Kante verschwinden sie sofort", () => {
-    const bboxA: [number, number, number, number] = [13, 52, 14, 53]
-    const bboxB: [number, number, number, number] = [0, 0, 1, 1]
-    // Ausschnitt A: nur der Ort ist Inventar, das Event kommt abgeleitet dazu.
-    let inventory = reconcileMapInventory(new Map(), [HALLE], false, bboxA, "bbox-module")
-    const derivedA = locatedPositions([AM_ORT], [...inventory.values()])
-    expect(withDerivedItems([...inventory.values()], derivedA).map((i) => i.id)).toEqual(["pl-halle", "ev-ort"])
-    // Nach B schwenken: der Ort bleibt im Inventar (bbox-Aufbewahrung), das Event nicht.
-    inventory = reconcileMapInventory(inventory, [], false, bboxB, "bbox-module")
-    expect([...inventory.keys()]).toEqual(["pl-halle"])
-    // Kante entfernt: keine Ableitung mehr, kein Marker.
-    const ohneKante = { ...AM_ORT, relations: [] }
-    expect(withDerivedItems([...inventory.values()], locatedPositions([ohneKante], []))).toEqual([HALLE])
-  })
-
-  it("Codex R10/1: ein alter Eintrag mit eigener Position weicht der Ableitung, auch nachdem die Kante wieder entfällt", () => {
-    const bboxA: [number, number, number, number] = [9, 49, 11, 51]
-    const bboxB: [number, number, number, number] = [13, 52, 14, 53]
-    // In A mit eigener Position geladen.
-    const alt = item("ev-x", "event", { title: "X", position: point(10, 50) })
-    let inventory = reconcileMapInventory(new Map(), [alt], false, bboxA, "bbox-module")
-    // Nach B, dort am Ort umgestellt (lebend ohne eigene Position).
-    inventory = reconcileMapInventory(inventory, [HALLE], false, bboxB, "bbox-module")
+  it("Codex R9/2, R10, R11 als Vertrag: das Inventar ist eine Projektion aus Abfrage und Ableitung", () => {
+    // Ausschnitt A: der Ort ist in der Abfrage, das Event kommt abgeleitet dazu.
+    expect(projectMapInventory([HALLE], locatedPositions([AM_ORT], [HALLE])).map((i) => i.id)).toEqual(["pl-halle", "ev-ort"])
+    // Nach B: weder Ort noch Event (keine Akkumulation).
+    expect(projectMapInventory([], locatedPositions([AM_ORT], []))).toEqual([])
+    // Ein Event mit eigener Position bei A, dann an einen Ort in B umgestellt: nur die Ableitung.
     const lebend = item("ev-x", "event", { title: "X" }, [{ predicate: "locatedAt", target: "item:pl-halle" }])
-    const unpositioned = new Set([lebend.id])
-    const shown = withDerivedItems([...inventory.values()], locatedPositions([lebend], [HALLE]), unpositioned)
+    const shown = projectMapInventory([HALLE], locatedPositions([lebend], [HALLE]))
     expect(shown.find((i) => i.id === "ev-x")!.data.position).toEqual(HALLE.data.position)
-    expect(shown.filter((i) => i.id === "ev-x")).toHaveLength(1)
-    // Kante entfernt: weder Ableitung noch der alte Eintrag.
-    const ohne = { ...lebend, relations: [] }
-    const danach = withDerivedItems([...inventory.values()], locatedPositions([ohne], [HALLE]), unpositioned)
-    expect(danach.some((i) => i.id === "ev-x")).toBe(false)
+    // Kante entfernt: kein Marker, auch kein alter.
+    expect(projectMapInventory([HALLE], locatedPositions([{ ...lebend, relations: [] }], [HALLE])).map((i) => i.id)).toEqual(["pl-halle"])
   })
 
   it("locatedPositions: nur Items, deren Ort in der Menge liegt", () => {
@@ -145,7 +124,7 @@ describe("useLocatedItems (reaktiv)", () => {
     connector.setCurrentGroup("g")
     let result: Item[] = []
     function Spy({ loaded }: { loaded: Item[] }): ReactNode {
-      result = useLocatedItems(loaded).items
+      result = useLocatedItems(loaded)
       return null
     }
     const draw = async (loaded: Item[]) => {

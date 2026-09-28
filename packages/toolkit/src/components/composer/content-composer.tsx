@@ -31,6 +31,7 @@ import {
   toDateInputValue,
 } from "./date-widget-state"
 import { LocationField } from "./widgets/location-field"
+import { FormEpochProvider } from "@/lib/form-epoch"
 import { AvatarField } from "./widgets/avatar-widget"
 import type { Geocoder, ReverseGeocoder } from "@/lib/geocode"
 import { MediaWidget } from "./widgets/media-widget"
@@ -48,6 +49,7 @@ import { groupNumberFields } from "../preview/field-register"
 import { chipValues, type OptionTone } from "../../lib/field-values"
 import { FixedItemRefField, IncomingRelationField, ItemRelationWidget, type RequestItemPick } from "./widgets/item-relation-widget"
 import { incomingRemovedKey, itemRelationChoiceKeys, itemRelationDataKey, itemRelationDataKeys, type ItemRefFieldConfig, type ItemRelationFieldConfig } from "./item-relations"
+import { isLocalItemTarget } from "@/lib/item-targets"
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -475,7 +477,7 @@ export function withSpaceChange(d: WidgetData, patch: Partial<WidgetData>, refKe
   const next: WidgetData = { ...d, ...patch }
   const before = typeof d.group === "string" ? d.group : ""
   if (!("group" in patch) || !before || patch.group === before) return next
-  const local = (t: unknown) => typeof t === "string" && t.startsWith("item:")
+  const local = (t: unknown) => isLocalItemTarget(t)
   for (const [key, value] of Object.entries(next)) {
     if (key.startsWith("relation:") && Array.isArray(value)) next[key] = value.filter((t) => !local(t))
   }
@@ -1248,6 +1250,9 @@ export function ContentComposer({
   // ── Render ──
 
   return (
+    // Formular-Epoche (shared-components): Wechsel von Space oder Typ macht
+    // laufende asynchrone Arbeit aller Felder ungültig.
+    <FormEpochProvider scope={[formSpace ?? null, selectedType]}>
     <div className={cn("flex flex-col gap-4", className)}>
       {/* Kopf des Formulars: Typ und Space, kompakt als Auswahlfelder
           (shared-components, Edit-Regeln 2). Der Space steht oben, weil er
@@ -1730,6 +1735,7 @@ export function ContentComposer({
         </div>
       </div>}
     </div>
+    </FormEpochProvider>
   )
 }
 
