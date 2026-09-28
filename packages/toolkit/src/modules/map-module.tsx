@@ -8,7 +8,7 @@ import { useItemFocus } from "../hooks/use-item-focus"
 import { useIsCompact } from "../hooks/use-mobile"
 import { useModuleHost } from "../components/host/module-host"
 import { MapView } from "../components/map/map-view"
-import { useItemWithPlacePosition, useItemsWithPlacePositions } from "../components/map/place-position"
+import { useItemWithPlacePosition, useLocatedItems } from "../components/map/place-position"
 import type { MapAdapter } from "../components/map/adapter"
 import type { ModuleViewProps } from "../lib/module-register"
 
@@ -44,10 +44,11 @@ function useMapAdapterFactory(): (() => MapAdapter) | null {
 export function MapModule({ groupId, active = true }: ModuleViewProps) {
   const { entry, resolveItemGroupColor, activeItemId } = useModuleHost()
   const [bbox, setBbox] = useState<Bounds | undefined>()
-  const { data: loaded, isLoading } = useItems(bbox ? { hasField: ["position"], bbox } : AWAITING_VIEWPORT_FILTER)
+  const { data: items, isLoading } = useItems(bbox ? { hasField: ["position"], bbox } : AWAITING_VIEWPORT_FILTER)
   // Ein Event an einem Ort-Item hat keine eigene Position: Die Karte liest
-  // sie vom Ort, abgeleitet und reaktiv (B4, S4b).
-  const items = useItemsWithPlacePositions(loaded)
+  // sie vom Ort, abgeleitet und reaktiv (B4, S4b) — neben dem bbox-Inventar,
+  // nie darin, damit ein entfallener Ort sofort verschwindet.
+  const derivedItems = useLocatedItems(items)
   const { itemId: focusedId, focusItem } = useItemFocus()
   const { data: focusedRaw } = useItem(active ? (focusedId ?? "") : "")
   const focusedItem = useItemWithPlacePosition(focusedRaw)
@@ -82,6 +83,7 @@ export function MapModule({ groupId, active = true }: ModuleViewProps) {
       activeItemId={activeItemId}
       isCompact={compact}
       draftItem={draftItem}
+      derivedItems={derivedItems}
       onItemClick={(item) => focusItem(item.id)}
       clustering={{}}
       resolveGroupColor={resolveItemGroupColor}

@@ -6,7 +6,8 @@ import type { Item } from "@real-life-stack/data-interface"
 import { MockConnector } from "@real-life-stack/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
-import { locatedPositions, useItemWithPlacePosition, useItemsWithPlacePositions, withPlacePosition } from "../src/components/map/place-position"
+import { reconcileMapInventory, withDerivedItems } from "../src/components/map/map-view"
+import { locatedPositions, useItemWithPlacePosition, useLocatedItems, withPlacePosition } from "../src/components/map/place-position"
 
 /**
  * S4b, Antwort 2 von Anton: Die Karte liest die Position eines Events vom
@@ -64,6 +65,29 @@ describe("withPlacePosition (rein)", () => {
     expect(withPlacePosition(AM_ORT, places, spaceOf).data.position).toEqual(HALLE.data.position)
   })
 
+  it("Codex R9/1: die Ort-Kante gilt über alle Klassen, unabhängig von ihrer Reihenfolge", () => {
+    const places = new Map([[HALLE.id, HALLE]])
+    const a = { ...AM_ORT, type: ["post", "event"] } as unknown as Item
+    const b = { ...AM_ORT, type: ["event", "post"] } as unknown as Item
+    expect(withPlacePosition(a, places).data.position).toEqual(HALLE.data.position)
+    expect(withPlacePosition(b, places).data.position).toEqual(HALLE.data.position)
+  })
+
+  it("Codex R9/2: abgeleitete Items gehen nie ins bbox-Inventar; ohne Kante verschwinden sie sofort", () => {
+    const bboxA: [number, number, number, number] = [13, 52, 14, 53]
+    const bboxB: [number, number, number, number] = [0, 0, 1, 1]
+    // Ausschnitt A: nur der Ort ist Inventar, das Event kommt abgeleitet dazu.
+    let inventory = reconcileMapInventory(new Map(), [HALLE], false, bboxA, "bbox-module")
+    const derivedA = locatedPositions([AM_ORT], [...inventory.values()])
+    expect(withDerivedItems([...inventory.values()], derivedA).map((i) => i.id)).toEqual(["pl-halle", "ev-ort"])
+    // Nach B schwenken: der Ort bleibt im Inventar (bbox-Aufbewahrung), das Event nicht.
+    inventory = reconcileMapInventory(inventory, [], false, bboxB, "bbox-module")
+    expect([...inventory.keys()]).toEqual(["pl-halle"])
+    // Kante entfernt: keine Ableitung mehr, kein Marker.
+    const ohneKante = { ...AM_ORT, relations: [] }
+    expect(withDerivedItems([...inventory.values()], locatedPositions([ohneKante], []))).toEqual([HALLE])
+  })
+
   it("locatedPositions: nur Items, deren Ort in der Menge liegt", () => {
     const shown = locatedPositions([AM_ORT, EIGEN, WEG, POST], [HALLE])
     expect(shown.map((i) => i.id)).toEqual(["ev-ort"])
@@ -86,7 +110,7 @@ async function settle() {
   for (let i = 0; i < 5; i++) await act(async () => new Promise((r) => setTimeout(r, 10)))
 }
 
-describe("useItemsWithPlacePositions (reaktiv)", () => {
+describe("useLocatedItems (reaktiv)", () => {
   it("die geladenen Orte ziehen ihre Events mit; bewegt sich der Ort, folgt das Event", async () => {
     const connector = new MockConnector(
       {
@@ -102,7 +126,7 @@ describe("useItemsWithPlacePositions (reaktiv)", () => {
     connector.setCurrentGroup("g")
     let result: Item[] = []
     function Spy({ loaded }: { loaded: Item[] }): ReactNode {
-      result = useItemsWithPlacePositions(loaded)
+      result = useLocatedItems(loaded)
       return null
     }
     const draw = async (loaded: Item[]) => {
@@ -112,8 +136,8 @@ describe("useItemsWithPlacePositions (reaktiv)", () => {
       await settle()
     }
     await draw([HALLE])
-    expect(result.map((i) => i.id)).toEqual(["pl-halle", "ev-ort"])
-    expect(result[1]!.data.position).toEqual(point(13.4, 52.5))
+    expect(result.map((i) => i.id)).toEqual(["ev-ort"])
+    expect(result[0]!.data.position).toEqual(point(13.4, 52.5))
 
     const moved = { ...HALLE, data: { ...HALLE.data, position: point(11, 48) } }
     await draw([moved])

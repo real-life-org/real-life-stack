@@ -9,7 +9,7 @@
 // Verzweigt über die Ort-Kante des Registers (`locationEdge`), nie über den Typ.
 
 import { useMemo } from "react"
-import { getTypeManifest, hasItemGroups, hasItemType, type Item } from "@real-life-stack/data-interface"
+import { getTypeManifest, hasItemGroups, hasItemType, normalizeItemType, type Item } from "@real-life-stack/data-interface"
 
 import { useItem, useItems } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
@@ -17,10 +17,19 @@ import { resolveTypePresentation } from "../preview/type-presentation"
 import { locationEdge, otherKindOf, targetItemId, targetPointsTo, type SpaceOf } from "../preview/use-item-edges"
 import { latLngFromPoint } from "../../lib/geo"
 
-/** Die Ort-Kante des Typs eines Items, oder `undefined`. */
+/**
+ * Die Ort-Kante eines Items über ALLE seine Klassen, nicht nur die Vorlage
+ * (Spec 06, Klassen-Regeln 8/9; Codex R9/1): Die erste Klasse, deren Register
+ * ein Ort-Feld mit Ort-Kante führt.
+ */
 function placeEdgeOf(item: Item) {
-  const presentation = resolveTypePresentation(item.type)
-  return locationEdge(item.type, presentation.fields, presentation.edges)
+  for (const klasse of normalizeItemType(item.type)) {
+    const presentation = resolveTypePresentation(klasse)
+    if (presentation.generic) continue
+    const edge = locationEdge(klasse, presentation.fields, presentation.edges)
+    if (edge) return edge
+  }
+  return undefined
 }
 
 /** Das Target der Ort-Kante eines Items, oder `null`. */
@@ -48,7 +57,7 @@ function resolvePlace(item: Item, places: ReadonlyMap<string, Item>, spaceOf?: S
   const id = target ? targetItemId(target) : null
   const place = id ? places.get(id) : undefined
   if (!edge || !target || !place) return undefined
-  const kind = otherKindOf(item.type, edge)
+  const kind = otherKindOf(item.type as string, edge)
   if (kind && kind !== "item" && !hasItemType(place, kind)) return undefined
   return targetPointsTo(target, place, spaceOf ? spaceOf(item.id) : null, spaceOf) ? place : undefined
 }
@@ -89,19 +98,19 @@ export function typesWithPlaceEdge(): string[] {
 }
 
 /**
- * Die geladenen Items plus die Items, die an einem der geladenen Orte liegen,
- * mit der Position ihres Ortes. Liest die Kandidaten über ihre Typen (die mit
- * Ort-Kante) im geöffneten Space; reaktiv über die Orte und die Kandidaten.
+ * Die Items, die an einem der geladenen Orte liegen, mit der Position ihres
+ * Ortes — nur die abgeleiteten, nicht die geladenen. Liest die Kandidaten
+ * über ihre Typen (die mit Ort-Kante) im geöffneten Space; reaktiv über Orte
+ * und Kandidaten. Die Karte führt sie neben ihrem Inventar (`derivedItems`).
  */
-export function useItemsWithPlacePositions(loaded: readonly Item[]): Item[] {
+export function useLocatedItems(loaded: readonly Item[]): Item[] {
   const types = typesWithPlaceEdge()
   const filter = types.length > 0 ? { type: types } : { hasField: ["__rls_no_place_edge__"] }
   const { data: candidates } = useItems(filter)
   const spaceOf = useSpaceOf()
   return useMemo(() => {
     const ids = new Set(loaded.map((i) => i.id))
-    const derived = locatedPositions(candidates, loaded, spaceOf).filter((i) => !ids.has(i.id))
-    return derived.length > 0 ? [...loaded, ...derived] : [...loaded]
+    return locatedPositions(candidates, loaded, spaceOf).filter((i) => !ids.has(i.id))
   }, [loaded, candidates, spaceOf])
 }
 

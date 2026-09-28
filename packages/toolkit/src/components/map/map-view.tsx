@@ -48,6 +48,12 @@ export interface MapViewProps {
   /** A shell-owned composer draft is shown as a non-clickable marker when positioned. */
   draftItem?: Item | null
   isCompact?: boolean
+  /**
+   * Items mit abgeleiteter Position (vom verknüpften Ort, B4/S4b). Sie gehen
+   * NICHT ins bbox-Inventar, sondern gelten nur, solange sie hier stehen:
+   * Entfällt die Ort-Kante, verschwindet der Marker sofort (Codex R9/2).
+   */
+  derivedItems?: readonly Item[]
 }
 
 function inBounds(item: Item, bounds: [number, number, number, number]) {
@@ -90,6 +96,16 @@ export function reconcileMapInventoryForKey(
   viewportMode: MapViewportMode,
 ): Map<string, Item> {
   return reconcileMapInventory(previousKey === inventoryKey ? previous : new Map(), items, itemsLoading, bounds, viewportMode)
+}
+
+/**
+ * Inventar plus abgeleitete Items (B4): Ein Item, das das Inventar selbst
+ * führt, gewinnt; abgeleitete kommen nur dazu und werden nie akkumuliert.
+ */
+export function withDerivedItems(inventory: readonly Item[], derived: readonly Item[] | undefined): Item[] {
+  if (!derived || derived.length === 0) return [...inventory]
+  const ids = new Set(inventory.map((i) => i.id))
+  return [...inventory, ...derived.filter((d) => !ids.has(d.id))]
 }
 
 /** The draft is a display-only overlay and never becomes part of the bbox inventory. */
@@ -311,7 +327,7 @@ export function MapView(props: MapViewProps) {
 function MapViewInner({
   items, itemsLoading, inventoryKey, focusedItem, createAdapter, initialView, viewportMode,
   onViewportBoundsChange, active = true, activeItemId, selectionFocusVisibleArea, onItemClick,
-  allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false,
+  allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false, derivedItems,
 }: MapViewProps) {
   const [adapter, setAdapter] = useState<MapAdapter | null>(null)
   const [mountError, setMountError] = useState(false)
@@ -451,7 +467,7 @@ function MapViewInner({
   }, [adapter, confirmPick, isCompact, isPicking, updatePick])
   useEffect(() => { if (!isPicking) setPickPosition(null) }, [isPicking])
 
-  const filtered = useMemo(() => filterMapViewItems(inventory, filter, search), [filter, inventory, search])
+  const filtered = useMemo(() => filterMapViewItems(withDerivedItems(inventory, derivedItems), filter, search), [derivedItems, filter, inventory, search])
   const markerItems = useMemo(() => mapViewMarkerItems(filtered, draftItem, isPicking), [draftItem, filtered, isPicking])
   const lensItems = useMemo(() => pickPosition && isPicking ? [...markerItems, {
     id: PICK_MARKER_ID, type: "__pick__", createdAt: "", createdBy: "", data: { position: { type: "Point", coordinates: [pickPosition.lng, pickPosition.lat] }, color: PICK_MARKER_COLOR },
