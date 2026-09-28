@@ -7,6 +7,7 @@ import { ItemDetailBody } from "./item-detail-body"
 import { useItem } from "../../hooks/use-items"
 import { MemoryFocusProvider, useItemFocus } from "../../hooks/use-item-focus"
 import { StoryWorld } from "../../story-support/story-world"
+import { FieldNavigationProvider } from "../navigation/field-navigation"
 import { ContentComposer } from "../composer/content-composer"
 import { contentTypeFromRegister } from "../composer/content-types"
 import { AvatarField } from "../composer/widgets/avatar-widget"
@@ -106,11 +107,14 @@ const SEED = [MARKTHALLE, GARTEN, REPAIR, MARKT, PAST, ADDRESS_EVENT, POST]
 function Frame({ start }: { start: string }) {
   return (
     <StoryWorld seed={{ items: SEED }}>
-      <MemoryFocusProvider module="calendar" scope="garden">
-        <div className="w-[380px] overflow-hidden rounded-2xl border bg-background shadow-xl">
-          <Focused start={start} />
-        </div>
-      </MemoryFocusProvider>
+      {/* Der Sprung „Karte" braucht ein Ziel; in der Story führt er nirgendwohin. */}
+      <FieldNavigationProvider value={{ openField: () => () => undefined }}>
+        <MemoryFocusProvider module="calendar" scope="garden">
+          <div className="w-[380px] overflow-hidden rounded-2xl border bg-background shadow-xl">
+            <Focused start={start} />
+          </div>
+        </MemoryFocusProvider>
+      </FieldNavigationProvider>
     </StoryWorld>
   )
 }

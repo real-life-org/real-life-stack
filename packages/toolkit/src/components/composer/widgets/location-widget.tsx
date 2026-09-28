@@ -261,7 +261,7 @@ export function LocationWidget({
                 }}
                 onBlur={closeSoon}
                 onKeyDown={onInputKeyDown}
-                placeholder={places ? "Ort oder Adresse eingeben..." : "Adresse eingeben..."}
+                placeholder={places ? "Ort-Item oder Adresse" : "Adresse eingeben..."}
                 className="text-sm"
                 autoComplete="off"
                 role="combobox"

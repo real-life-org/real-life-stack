@@ -54,6 +54,8 @@ aus. Clustering wird ausschließlich als Adapter-Capability via
 
 Das Map Module liest Items im Current Space, die eine geografische Position tragen. Es ist damit **feldbasiert, nicht typbasiert**.
 
+**Abgeleitete Position (S4b).** Ein Item ohne eigene Position, dessen Ort-Feld auf ein Ort-Item zeigt (Ort-Kante des Registers, beim Event `locatedAt`, [shared-components → Widget-Paare](shared-components.md#widget-paare), Regel 5), erscheint an der Position dieses Ortes. Die Position wird beim Lesen abgeleitet und nie am Item gespeichert; bewegt sich der Ort, folgt das Item. Das Modul lädt dazu die Items der Typen mit Ort-Kante und zeigt die, deren Ort im geladenen Ausschnitt liegt. Liegen Ort und Event am selben Punkt, fasst die Cluster-Capability sie bis Zoom 14 zu einer Blase zusammen; darüber liegen beide Pins aufeinander und nur der obere ist anklickbar (offen, eigenes Issue).
+
 Typische map-fähige Item-Typen:
 
 ```text

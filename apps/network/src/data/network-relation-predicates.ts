@@ -15,6 +15,8 @@ export const NETWORK_RELATION_PREDICATES = [
   { predicate: "attends", symmetric: false },
   { predicate: "partOf", symmetric: false },
   { predicate: "connectedWith", symmetric: true },
+  // Event → Ort liegt seit S4b eingebettet am Event (`locatedAt`); das
+  // Prädikat bleibt für bestehende Records definiert.
   { predicate: "takesPlaceAt", symmetric: false },
   { predicate: "livesAt", symmetric: false },
   { predicate: "locatedAt", symmetric: false },

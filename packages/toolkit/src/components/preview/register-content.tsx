@@ -107,9 +107,11 @@ export function RegisterMedia({ item, fields }: { item: Item; fields?: readonly 
   return (
     <div className="flex flex-col gap-2">
       {images.length > 0 && (
+        // Ein Bild in voller Breite, zwei nebeneinander, ab drei in drei
+        // Spalten (Detail-Simulator: Bildreihe im Inhalt).
         <div
           data-media-row
-          className={cn("flex gap-2", images.length === 1 ? "" : "-mx-1 overflow-x-auto px-1 pb-1")}
+          className={cn("grid gap-2", images.length === 1 ? "grid-cols-1" : images.length === 2 ? "grid-cols-2" : "grid-cols-3")}
         >
           {images.map((image, index) => (
             <button
@@ -122,8 +124,8 @@ export function RegisterMedia({ item, fields }: { item: Item; fields?: readonly 
                 setOpen(index)
               }}
               className={cn(
-                "shrink-0 overflow-hidden rounded-md border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                images.length === 1 ? "max-h-80 w-full" : "h-24 w-24",
+                "overflow-hidden rounded-md border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                images.length === 1 ? "max-h-80" : "aspect-[4/3]",
               )}
             >
               <img

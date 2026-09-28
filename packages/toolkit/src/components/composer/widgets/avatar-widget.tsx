@@ -100,6 +100,19 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
             </button>
           )}
         </div>
+        {!src && !disabled && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => inputRef.current?.click()}
+              className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
+            >
+              Bild wählen
+            </button>
+            <span className="text-xs text-muted-foreground">wird auf {AVATAR_SIZE} px verkleinert</span>
+          </div>
+        )}
         {src && !disabled && (
           <div className="flex items-center gap-1">
             <button

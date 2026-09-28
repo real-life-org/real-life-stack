@@ -61,7 +61,7 @@ Relations** (`from`/`to`) im Relation-Item — eine Pointer-Syntax im Stack;
 | attends | Person → Event | Feld `tense: coming/currently/has-been` |
 | partOf | Person → Projekt | |
 | connectedWith | Projekt ↔ Event | |
-| takesPlaceAt | Event → Place | |
+| locatedAt | Event → Place | seit S4b eingebettet am Event (`item.relations`, 0..1), wie im Toolkit-Manifest; vorher Record `takesPlaceAt`, das im Katalog für bestehende Records bleibt |
 | livesAt | Person → Place | sensibel: engste Sichtbarkeit |
 | locatedAt | Projekt → Place | |
 

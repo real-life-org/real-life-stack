@@ -353,6 +353,8 @@ const GROUP: FieldEntry = { key: "group", widget: "group", pos: "badge" }
 // Der Ort: Das Location-Widget schreibt address, position und locationName
 // (shared-components, Location-Widget) — ein Feld, ein Widget.
 const ADDRESS: FieldEntry = { key: "address", widget: "location", pos: "meta", label: "Ort" }
+// Beschriftungen im Formular wie im Detail-Simulator: Event „Wo" (Ort-Item
+// oder Adresse), Ort „Adresse & Position".
 
 const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
   {
@@ -371,7 +373,7 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     label: "Event",
     composer: { submitLabel: "Erstellen" },
     badge: { icon: Calendar, className: "bg-blue-50 text-blue-700 border-blue-200" },
-    fields: [TITLE, DESCRIPTION, { key: "start", widget: "date", pos: "meta" }, ADDRESS, { key: "meetingLink", widget: "url", pos: "meta", label: "Link" }, GROUP, TAGS],
+    fields: [TITLE, DESCRIPTION, { key: "start", widget: "date", pos: "meta" }, { ...ADDRESS, label: "Wo" }, { key: "meetingLink", widget: "url", pos: "meta", label: "Link" }, GROUP, TAGS],
     // Eingeladene und Zusagen in EINER Menschen-Zeile (08 → Teilnahme am
     // Event, Regel 5): `invited` bleibt eingebettet, die Zusage ist ein
     // eigener Record von der Person zum Event (Entscheidung 22/23).
@@ -410,7 +412,7 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     label: "Ort",
     composer: { submitLabel: "Erstellen" },
     badge: { icon: MapPin, className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    fields: [TITLE, DESCRIPTION, ADDRESS, TAGS],
+    fields: [TITLE, DESCRIPTION, { ...ADDRESS, label: "Adresse & Position" }, TAGS],
     // Rückwärts-Liste (Regel 10, Entscheidung 15): alle kommenden Events an
     // diesem Ort, nach Beginn.
     edges: [

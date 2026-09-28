@@ -8,6 +8,7 @@ import { useItemFocus } from "../hooks/use-item-focus"
 import { useIsCompact } from "../hooks/use-mobile"
 import { useModuleHost } from "../components/host/module-host"
 import { MapView } from "../components/map/map-view"
+import { useItemWithPlacePosition, useItemsWithPlacePositions } from "../components/map/place-position"
 import type { MapAdapter } from "../components/map/adapter"
 import type { ModuleViewProps } from "../lib/module-register"
 
@@ -43,9 +44,13 @@ function useMapAdapterFactory(): (() => MapAdapter) | null {
 export function MapModule({ groupId, active = true }: ModuleViewProps) {
   const { entry, resolveItemGroupColor, activeItemId } = useModuleHost()
   const [bbox, setBbox] = useState<Bounds | undefined>()
-  const { data: items, isLoading } = useItems(bbox ? { hasField: ["position"], bbox } : AWAITING_VIEWPORT_FILTER)
+  const { data: loaded, isLoading } = useItems(bbox ? { hasField: ["position"], bbox } : AWAITING_VIEWPORT_FILTER)
+  // Ein Event an einem Ort-Item hat keine eigene Position: Die Karte liest
+  // sie vom Ort, abgeleitet und reaktiv (B4, S4b).
+  const items = useItemsWithPlacePositions(loaded)
   const { itemId: focusedId, focusItem } = useItemFocus()
-  const { data: focusedItem } = useItem(active ? (focusedId ?? "") : "")
+  const { data: focusedRaw } = useItem(active ? (focusedId ?? "") : "")
+  const focusedItem = useItemWithPlacePosition(focusedRaw)
   const compact = useIsCompact()
   const draftItem = useDraftItem()
   const createAdapter = useMapAdapterFactory()
