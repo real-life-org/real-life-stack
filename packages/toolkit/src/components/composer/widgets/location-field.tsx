@@ -97,6 +97,7 @@ function WithPlaces(props: LocationFieldProps & { placeField: ItemRelationFieldC
 
 function LocationCore({
   label,
+  spaceId,
   data,
   updateMany,
   geocode,
@@ -120,8 +121,8 @@ function LocationCore({
   // Der Karten-Pick läuft über Modulwechsel hinweg; sein Rückruf liest den
   // AKTUELLEN Stand (Kandidaten des Formular-Space, Kante), nicht den beim
   // Start (Codex R1/1).
-  const latest = React.useRef({ accepts, choose })
-  latest.current = { accepts, choose }
+  const latest = React.useRef({ accepts, choose, spaceId })
+  latest.current = { accepts, choose, spaceId }
   // Eine Adresse oder ein Punkt ersetzt ein gewähltes Ort-Item.
   const clearPlace = placeKey ? { [placeKey]: [] } : {}
   const wrappedPlaces: LocationPlaces | undefined = places && {
@@ -158,6 +159,9 @@ function LocationCore({
                 locationName: data.locationName,
                 ...(placeKey ? { [placeKey]: data[placeKey] } : {}),
               }
+              // Ein Ort-Item ist space-lokal (04): Wechselt der Formular-Space
+              // während des Picks, kommt es beim Abbrechen nicht zurück (Codex R2/1).
+              const startSpace = spaceId
               requestMapPick({
                 onPick: (pos) => {
                   updateMany({ position: pointFromLatLng(pos.lat, pos.lng), ...clearPlace })
@@ -190,7 +194,8 @@ function LocationCore({
                   // Abort a pending reverse-geocode so its late result can't
                   // overwrite the restored address.
                   cancelReverse()
-                  updateMany(original)
+                  const sameSpace = latest.current.spaceId === startSpace
+                  updateMany(placeKey && !sameSpace ? { ...original, [placeKey]: [] } : original)
                 },
               })
             }

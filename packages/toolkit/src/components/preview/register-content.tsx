@@ -41,17 +41,36 @@ function mediaFields(fields: readonly FieldEntry[] | undefined): FieldEntry[] {
   return own.length > 0 ? own : [SWITCHABLE_MEDIA]
 }
 
+/**
+ * Die Einträge an der Lesegrenze bereinigt (Codex R2/2): nur mit Adresse als
+ * Text; `name` und `type` nur als Text, sonst leer. Fremde oder kaputte Daten
+ * dürfen die Detailansicht nicht zum Absturz bringen.
+ */
 function mediaEntries(value: unknown): MediaEntry[] {
   if (!Array.isArray(value)) return []
-  return value.filter(
-    (m): m is MediaEntry => !!m && typeof m === "object" && typeof (m as MediaEntry).url === "string",
-  )
+  const out: MediaEntry[] = []
+  value.forEach((raw, index) => {
+    if (!raw || typeof raw !== "object") return
+    const m = raw as Record<string, unknown>
+    if (typeof m.url !== "string") return
+    out.push({
+      id: typeof m.id === "string" && m.id !== "" ? m.id : `media-${index}`,
+      name: typeof m.name === "string" ? m.name : "",
+      url: m.url,
+      ...(typeof m.type === "string" && m.type !== "" ? { type: m.type } : {}),
+    })
+  })
+  return out
 }
 
 const IMAGE_NAME = /\.(jpe?g|png|gif|webp|avif|svg)$/i
 
+/** Bild nach Typ, sonst nach der Endung des Namens oder der Adresse. */
 function isImage(entry: MediaEntry): boolean {
-  return entry.type ? entry.type.startsWith("image/") : IMAGE_NAME.test(entry.name ?? "")
+  if (entry.type) return entry.type.startsWith("image/")
+  if (entry.name) return IMAGE_NAME.test(entry.name)
+  const path = entry.url.split(/[?#]/)[0] ?? ""
+  return IMAGE_NAME.test(path) || entry.url.startsWith("data:image/")
 }
 
 /** Ein Bild der Reihe: die sichere Adresse, sonst nicht darstellbar. */

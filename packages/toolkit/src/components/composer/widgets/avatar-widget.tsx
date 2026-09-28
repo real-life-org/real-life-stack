@@ -42,6 +42,9 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
   const [error, setError] = React.useState<string | null>(null)
   const src = safeImageSrc(value)
   const errorId = React.useId()
+  // Nur das Ergebnis der letzten Aktion zählt: Entfernen oder eine neue Wahl
+  // machen ein laufendes Verkleinern ungültig (Codex R2/3).
+  const generation = React.useRef(0)
 
   const onFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -53,12 +56,14 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
     }
     setError(null)
     setBusy(true)
+    const mine = ++generation.current
     try {
-      onChange(await resize(file, AVATAR_SIZE))
+      const result = await resize(file, AVATAR_SIZE)
+      if (mine === generation.current) onChange(result)
     } catch {
-      setError("Bild konnte nicht verarbeitet werden.")
+      if (mine === generation.current) setError("Bild konnte nicht verarbeitet werden.")
     } finally {
-      setBusy(false)
+      if (mine === generation.current) setBusy(false)
     }
   }
 
@@ -99,7 +104,11 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
             <button
               type="button"
               aria-label={`${label} entfernen`}
-              onClick={() => onChange("")}
+              onClick={() => {
+                generation.current++
+                setBusy(false)
+                onChange("")
+              }}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <X className="h-3.5 w-3.5" />

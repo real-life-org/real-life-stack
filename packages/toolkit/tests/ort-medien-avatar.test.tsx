@@ -501,6 +501,73 @@ describe("B4 Formular: Codex R1", () => {
   })
 })
 
+describe("Codex R2", () => {
+  it("Abbrechen nach einem Space-Wechsel stellt kein Ort-Item des alten Space wieder her", async () => {
+    const box: { h: { onCancel?: () => void } | null } = { h: null }
+    const updateMany = vi.fn()
+    let setSpace!: (id: string) => void
+    const placeField = contentTypeFromRegister("event").itemRelations!.find((f) => f.location)
+    function Host(): ReactNode {
+      const [spaceId, set] = useState("g")
+      setSpace = set
+      return createElement(LocationField, {
+        label: "Ort",
+        data: { [itemRelationDataKey("locatedAt")]: ["item:pl-markt"] },
+        updateMany,
+        requestMapPick: (h: never) => {
+          box.h = h
+        },
+        placeField,
+        spaceId,
+      })
+    }
+    await render(createElement(Host))
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('button[aria-label^="Position auf Karte"]')!.click()
+    })
+    await act(async () => setSpace("anders"))
+    await act(async () => box.h!.onCancel!())
+    const restored = updateMany.mock.calls.at(-1)![0] as Record<string, unknown>
+    expect(restored[itemRelationDataKey("locatedAt")]).toEqual([])
+  })
+
+  it("kaputte Medien-Metadaten: kein Absturz, der Eintrag zählt mit bereinigten Werten oder gar nicht", async () => {
+    const Content = resolveTypePresentation("post").content!
+    const kaputt = item("post-k", "post", {
+      content: "x",
+      media: [
+        { id: "k1", name: 42, type: 42, url: "https://example.org/k.jpg" },
+        { id: "k2", name: { böse: true }, url: "https://example.org/k2.png" },
+        null,
+        "text",
+      ],
+    })
+    await render(createElement(Content, { item: kaputt }), [kaputt])
+    const imgs = [...host.querySelectorAll("[data-media-row] img")].map((i) => i.getAttribute("src"))
+    // Ohne lesbaren Typ und Namen entscheidet die Endung der Adresse.
+    expect(imgs).toEqual(["https://example.org/k.jpg", "https://example.org/k2.png"])
+    expect(host.querySelector("[data-media-file]")).toBeNull()
+  })
+
+  it("Avatar: Entfernen während des Verkleinerns gewinnt über das späte Ergebnis", async () => {
+    let resolve!: (v: string) => void
+    const resize = vi.fn(() => new Promise<string>((r) => (resolve = r)))
+    const onChange = vi.fn()
+    await render(createElement(AvatarField, { label: "Bild", value: DATA_URL, onChange, resize }), [])
+    const fileInput = host.querySelector<HTMLInputElement>('input[type="file"]')!
+    Object.defineProperty(fileInput, "files", { value: [new File(["x"], "neu.png", { type: "image/png" })] })
+    await act(async () => {
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }))
+    })
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[aria-label="Bild entfernen"]')!.click()
+    })
+    await act(async () => resolve("data:image/webp;base64,SPAET"))
+    await settle()
+    expect(onChange).toHaveBeenLastCalledWith("")
+  })
+})
+
 describe("Lightbox-Fokus und kommende Events", () => {
   it("nach Escape liegt der Fokus wieder auf dem Vorschaubild", async () => {
     const Content = resolveTypePresentation("post").content!
