@@ -662,6 +662,24 @@ describe("Codex R4", () => {
   })
 })
 
+describe("Codex R5", () => {
+  it("Avatar: ein abgebautes Feld übernimmt kein spätes Ergebnis", async () => {
+    let resolve!: (v: string) => void
+    const resize = vi.fn(() => new Promise<string>((r) => (resolve = r)))
+    const onChange = vi.fn()
+    await render(createElement(AvatarField, { label: "Bild", value: "", onChange, resize }), [])
+    const fileInput = host.querySelector<HTMLInputElement>('input[type="file"]')!
+    Object.defineProperty(fileInput, "files", { value: [new File(["x"], "alt.png", { type: "image/png" })] })
+    await act(async () => {
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }))
+    })
+    await act(async () => root.render(createElement("div")))
+    await act(async () => resolve("data:image/webp;base64,ALT"))
+    await settle()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+})
+
 type Handlers2 = { onPick: (p: { lat: number; lng: number }) => void; onPickItem?: (i: Item) => boolean; onCancel?: () => void }
 
 describe("Lightbox-Fokus und kommende Events", () => {
@@ -901,6 +919,9 @@ describe("sichere Bildadressen", () => {
     expect(safeImageSrc(" ")).toBeNull()
     expect(safeImageSrc("/personas/anna.png")).toBe("/personas/anna.png")
     expect(safeImageSrc("//fremd.example/a.png")).toBeNull()
+    expect(safeImageSrc("/\n/fremd.example/a.png")).toBeNull()
+    expect(safeImageSrc("/\t/fremd.example/a.png")).toBeNull()
+    expect(safeImageSrc("https://example.org/a b.png")).toBeNull()
     expect(safeImageSrc(42)).toBeNull()
   })
 })

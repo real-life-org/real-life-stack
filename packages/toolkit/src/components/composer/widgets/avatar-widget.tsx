@@ -45,6 +45,13 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
   // Nur das Ergebnis der letzten Aktion zählt: Entfernen oder eine neue Wahl
   // machen ein laufendes Verkleinern ungültig (Codex R2/3).
   const generation = React.useRef(0)
+  // Ein abgebautes Feld übernimmt kein spätes Ergebnis mehr (Codex R5/1).
+  React.useEffect(
+    () => () => {
+      generation.current++
+    },
+    [],
+  )
 
   const onFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]

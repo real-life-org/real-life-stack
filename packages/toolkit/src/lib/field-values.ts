@@ -70,6 +70,10 @@ export function safeImageSrc(value: unknown): string | null {
   if (typeof value !== "string") return null
   const v = value.trim()
   if (v === "") return null
+  // Kein Leerraum und keine Steuerzeichen innen: Browser entfernen sie beim
+  // Auflösen, und aus „/\n/fremd" würde „//fremd" (Codex R5/2).
+  // eslint-disable-next-line no-control-regex
+  if (/[\s\x00-\x1f\x7f]/.test(v)) return null
   if (DATA_IMAGE.test(v)) return v
   if (/^blob:https?:\/\//i.test(v)) return v
   if (/^\/(?![\/\\])/.test(v)) return v
