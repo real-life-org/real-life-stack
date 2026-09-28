@@ -69,21 +69,51 @@ function EdgeLists({ item, edges }: { item: Item; edges: readonly EdgeEntry[] })
   return (
     <>
       {edges.map((edge) => {
-        const now = new Date().toISOString()
+        const now = new Date()
         const entries = (targets.get(edge) ?? [])
           .map((t) => t.item)
           .filter((entry) => {
             if (edge.list?.filter === "open") return !isItemDone(entry)
-            if (edge.list?.filter === "upcoming") {
-              const start = (entry.data as Record<string, unknown> | undefined)?.start
-              return typeof start === "string" && start >= now.slice(0, start.length)
-            }
+            if (edge.list?.filter === "upcoming") return isUpcoming((entry.data as Record<string, unknown> | undefined)?.start, now)
             return true
           })
+        // Sortierung nach einem data-Feld, aufsteigend (Regel 10: „kommende
+        // Events" nach Beginn); ohne Wert ans Ende, sonst stabil.
+        const sortKey = edge.list?.sort
+        if (sortKey) entries.sort((a, b) => compareField(a, b, sortKey))
         return <ReverseList key={`${edge.predicate}:${edge.itemRole}`} id={`${edge.predicate}:${edge.itemRole}`} item={item} label={edge.label} entries={entries} />
       })}
     </>
   )
+}
+
+/**
+ * Beginnt es jetzt oder später? Zeitpunkte als Zeit, nicht als Text: „13:00+02:00"
+ * liegt vor „12:00Z" (Codex R1/5). Ein reines Datum gilt den ganzen Tag, in
+ * der Zone des Lesenden.
+ */
+export function isUpcoming(start: unknown, now: Date): boolean {
+  if (typeof start !== "string" || start === "") return false
+  if (/^\d{4}-\d{2}-\d{2}$/.test(start)) {
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+    return start >= today
+  }
+  const t = Date.parse(start)
+  return Number.isFinite(t) && t >= now.getTime()
+}
+
+function compareField(a: Item, b: Item, key: string): number {
+  const va = (a.data as Record<string, unknown> | undefined)?.[key]
+  const vb = (b.data as Record<string, unknown> | undefined)?.[key]
+  const ha = typeof va === "string" || typeof va === "number"
+  const hb = typeof vb === "string" || typeof vb === "number"
+  if (!ha || !hb) return ha === hb ? 0 : ha ? -1 : 1
+  if (typeof va === "number" && typeof vb === "number") return va - vb
+  // Zeitpunkte mit verschiedenem Versatz vergleicht nur die Zeit, nicht der Text.
+  const ta = Date.parse(String(va))
+  const tb = Date.parse(String(vb))
+  if (Number.isFinite(ta) && Number.isFinite(tb)) return ta - tb
+  return String(va).localeCompare(String(vb))
 }
 
 function ReverseList({

@@ -53,6 +53,40 @@ export function urlError(input: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Bildadressen (media B5, avatar B11)
+
+// Ein Bild im Browser: data:image mit Base64 oder Prozent-Kodierung, keine
+// Zeilenumbrüche, kein Leerraum davor.
+const DATA_IMAGE = /^data:image\/[a-z0-9.+-]+(;[a-z0-9=.+-]+)*,[^\s]*$/i
+
+/**
+ * Die Adresse eines Bilds zum Anzeigen, oder `null`: http(s), `blob:` (ein
+ * Bild, das diese Sitzung gerade gewählt hat), `data:image/…` (ein
+ * verkleinertes Bild im Item) und ein Pfad der eigenen Auslieferung
+ * (`/personas/anna.png`, aufgelöst über `resolveAssetUrl`). Nie
+ * `javascript:`, kein anderes `data:` und kein `//fremder-host`.
+ */
+export function safeImageSrc(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const v = value.trim()
+  if (v === "") return null
+  // Kein Leerraum und keine Steuerzeichen innen: Browser entfernen sie beim
+  // Auflösen, und aus „/\n/fremd" würde „//fremd" (Codex R5/2).
+  // eslint-disable-next-line no-control-regex
+  if (/[\s\x00-\x1f\x7f]/.test(v)) return null
+  if (DATA_IMAGE.test(v)) return v
+  if (/^blob:https?:\/\//i.test(v)) return v
+  if (/^\/(?![\/\\])/.test(v)) return v
+  if (!/^https?:\/\//i.test(v)) return null
+  try {
+    const url = new URL(v)
+    return url.protocol === "http:" || url.protocol === "https:" ? v : null
+  } catch {
+    return null
+  }
+}
+
+// ---------------------------------------------------------------------------
 // contact (B12)
 
 export type ContactKind = "phone" | "email"

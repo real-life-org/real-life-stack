@@ -180,16 +180,23 @@ export function buildDwebCampDomainItems(
     }
   }
 
+  // Event → Ort liegt eingebettet am Event (`locatedAt`, 0..1), wie im
+  // Toolkit-Manifest (S4b). Bis dahin ein Record `takesPlaceAt`; ohne
+  // Migration, weil der Seed bei jedem Start neu entsteht.
+  const placeIds = indexIds("place", schedule.venues.map(({ name }) => name))
   const events = graph.sessions.map(({ code, title, urls }) => {
     const id = requireId(eventIds, code, "session")
     const session = scheduleSessions.get(code)
     if (!session) throw new Error(`Missing schedule session: ${code}`)
-    return baseItem(
-      id,
-      "event",
-      { title, urls: [...urls], start: session.start, end: session.end },
-      tagsByEvent.get(id),
-    )
+    return {
+      ...baseItem(
+        id,
+        "event",
+        { title, urls: [...urls], start: session.start, end: session.end },
+        tagsByEvent.get(id),
+      ),
+      relations: [{ predicate: "locatedAt", target: `item:${requireId(placeIds, session.venue, "venue")}` }],
+    }
   })
 
   for (const code of scheduleSessions.keys()) {
@@ -274,7 +281,6 @@ function buildDwebCampSeedRelations(
   const eventIds = indexIds("event", graph.sessions.map(({ code }) => code))
   const personIds = indexIds("person", graph.persons)
   const projectIds = indexIds("project", graph.projects)
-  const placeIds = indexIds("place", schedule.venues.map(({ name }) => name))
   const scheduleSessions = indexScheduleSessions(schedule)
 
   const attends = graph.speaks.map(([person, sessionCode]): SeedRelation => ({
@@ -314,17 +320,12 @@ function buildDwebCampSeedRelations(
     fields: { contexts: [...contexts].sort() },
   }))
 
-  const takesPlaceAt = schedule.sessions.map(({ code, venue }): SeedRelation => ({
-    predicate: "takesPlaceAt",
-    from: `item:${requireId(eventIds, code, "session")}`,
-    to: `item:${requireId(placeIds, venue, "venue")}`,
-  }))
-
   for (const code of scheduleSessions.keys()) {
     if (!eventIds.has(code)) throw new Error(`Schedule session has no graph event: ${code}`)
   }
 
-  return [...attends, ...connectedWith, ...partOf, ...takesPlaceAt]
+  // Event → Ort ist kein Record mehr, sondern eingebettet am Event (locatedAt).
+  return [...attends, ...connectedWith, ...partOf]
 }
 
 async function buildRelationItem(relation: SeedRelation): Promise<Item> {

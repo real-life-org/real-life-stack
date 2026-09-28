@@ -48,6 +48,11 @@ export interface MapViewProps {
   /** A shell-owned composer draft is shown as a non-clickable marker when positioned. */
   draftItem?: Item | null
   isCompact?: boolean
+  /**
+   * Items mit abgeleiteter Position (vom verknüpften Ort, B4/S4b). Sie gehören
+   * zur Projektion wie `items` (map.md → Karten-Inventar als Projektion).
+   */
+  derivedItems?: readonly Item[]
 }
 
 function inBounds(item: Item, bounds: [number, number, number, number]) {
@@ -58,38 +63,16 @@ function inBounds(item: Item, bounds: [number, number, number, number]) {
 }
 
 /**
- * Reconcile map inventory according to the viewport owner's data contract.
- * Bbox pages are incremental, while a lens receives its complete marker set.
+ * Das Marker-Inventar als Projektion (map.md → Karten-Inventar als
+ * Projektion): die aktuelle Abfrage plus die abgeleiteten Positionen, sonst
+ * nichts — kein akkumulierter Cache, kein Eintrag, der eine Änderung seines
+ * Items oder seiner Kante überdauert. Ein Item der Abfrage gewinnt über eine
+ * abgeleitete Fassung.
  */
-export function reconcileMapInventory(
-  previous: ReadonlyMap<string, Item>,
-  items: readonly Item[],
-  itemsLoading: boolean,
-  bounds: [number, number, number, number] | null,
-  viewportMode: MapViewportMode,
-): Map<string, Item> {
-  if (viewportMode === "lens-auto-fit") return new Map(items.map((item) => [item.id, item]))
-
-  const next = new Map(previous)
-  if (bounds && !itemsLoading) {
-    const ids = new Set(items.map(({ id }) => id))
-    for (const [id, item] of next) if (!ids.has(id) && inBounds(item, bounds)) next.delete(id)
-  }
-  for (const item of items) next.set(item.id, item)
-  return next
-}
-
-/** A key change starts a new inventory but immediately reconciles the current props. */
-export function reconcileMapInventoryForKey(
-  previousKey: string | number,
-  inventoryKey: string | number,
-  previous: ReadonlyMap<string, Item>,
-  items: readonly Item[],
-  itemsLoading: boolean,
-  bounds: [number, number, number, number] | null,
-  viewportMode: MapViewportMode,
-): Map<string, Item> {
-  return reconcileMapInventory(previousKey === inventoryKey ? previous : new Map(), items, itemsLoading, bounds, viewportMode)
+export function projectMapInventory(items: readonly Item[], derived?: readonly Item[]): Item[] {
+  if (!derived || derived.length === 0) return [...items]
+  const ids = new Set(items.map((i) => i.id))
+  return [...items, ...derived.filter((d) => !ids.has(d.id))]
 }
 
 /** The draft is a display-only overlay and never becomes part of the bbox inventory. */
@@ -223,6 +206,29 @@ export function applyMapViewPick(
   if (!isCompact) confirmPick()
 }
 
+/**
+ * Ein Marker während des Picks (B4, S4b): Nimmt das Feld das Item als
+ * Ort-Item, ist der Pick damit gesetzt (auf dem Telefon wartet „Übernehmen");
+ * sonst zählt die Position des Markers wie ein freier Punkt.
+ */
+export function applyMapViewItemPick(
+  item: Item,
+  isCompact: boolean,
+  pickItem: (item: Item) => boolean,
+  updatePick: (position: { lat: number; lng: number }) => void,
+  setPickPosition: (position: { lat: number; lng: number }) => void,
+  confirmPick: () => void,
+): void {
+  const position = latLngFromPoint(item.data.position)
+  if (pickItem(item)) {
+    if (position) setPickPosition(position)
+    if (!isCompact) confirmPick()
+    return
+  }
+  if (!position) return
+  applyMapViewPick(position, isCompact, updatePick, setPickPosition, confirmPick)
+}
+
 /** FilterBar and text-search own the same marker input as the rendered module. */
 export function filterMapViewItems(items: readonly Item[], filter: FilterBarValue, search: string): Item[] {
   // Die Karte laedt selbst (`loads: "module"`) und filtert darum selbst —
@@ -288,7 +294,7 @@ export function MapView(props: MapViewProps) {
 function MapViewInner({
   items, itemsLoading, inventoryKey, focusedItem, createAdapter, initialView, viewportMode,
   onViewportBoundsChange, active = true, activeItemId, selectionFocusVisibleArea, onItemClick,
-  allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false,
+  allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false, derivedItems,
 }: MapViewProps) {
   const [adapter, setAdapter] = useState<MapAdapter | null>(null)
   const [mountError, setMountError] = useState(false)
@@ -337,10 +343,10 @@ function MapViewInner({
    */
   const lauf = useRef(0)
   const [pickPosition, setPickPosition] = useState<{ lat: number; lng: number } | null>(null)
-  const { isPicking, updatePick, confirmPick, cancelPick } = useLocationPick()
-  const accumulated = useRef(new Map<string, Item>())
-  const accumulatedKey = useRef<string | number>(inventoryKey)
-  const [inventory, setInventory] = useState<Item[]>([])
+  const { isPicking, updatePick, pickItem, confirmPick, cancelPick } = useLocationPick()
+  // Die Projektion (kein Cache): aktuelle Abfrage plus abgeleitete Positionen.
+  const inventory = useMemo(() => projectMapInventory(items, derivedItems), [items, derivedItems])
+  const inventoryKeyRef = useRef<string | number>(inventoryKey)
   const bounds = useRef<[number, number, number, number] | null>(null)
   const markerClick = useRef<string | null>(null)
   const settledReveal = useRef<string | null>(null)
@@ -350,17 +356,12 @@ function MapViewInner({
   const revealOffset = useRef<[number, number] | null>(null)
   const panelEdges = usePanelEdges()
 
+  // Ein neuer Bestand (Space) beginnt ohne alten Ausschnitt.
   useEffect(() => {
-    const keyChanged = accumulatedKey.current !== inventoryKey
-    if (keyChanged) {
-      bounds.current = null
-    }
-    const next = reconcileMapInventoryForKey(accumulatedKey.current, inventoryKey, accumulated.current, items, itemsLoading, bounds.current, viewportMode)
-    accumulatedKey.current = inventoryKey
-    const changed = keyChanged || next.size !== accumulated.current.size || [...next].some(([id, item]) => accumulated.current.get(id) !== item)
-    accumulated.current = next
-    if (changed) setInventory([...next.values()])
-  }, [inventoryKey, items, itemsLoading, viewportMode])
+    if (inventoryKeyRef.current === inventoryKey) return
+    inventoryKeyRef.current = inventoryKey
+    bounds.current = null
+  }, [inventoryKey])
 
   useEffect(() => {
     if (!adapter || viewportMode !== "bbox-module" || !onViewportBoundsChange) return
@@ -407,10 +408,13 @@ function MapViewInner({
       }
       return
     }
-    if (items.some((item) => item.id === focusedItem.id)) {
+    // Geladen ist, was der Ausschnitt liefert, und was dort abgeleitet an
+    // einem geladenen Ort liegt (B4; Codex R10/2).
+    const available = inventory
+    if (available.some((item) => item.id === focusedItem.id)) {
       settledReveal.current = focusedItem.id
       revealOffset.current = offset
-      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, mapViewSeparationZoom(focusedItem, items)), ...insets, animate: true })
+      adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, mapViewSeparationZoom(focusedItem, available)), ...insets, animate: true })
       return
     }
     if (bounds.current && inBounds(focusedItem, bounds.current)) return
@@ -419,7 +423,7 @@ function MapViewInner({
       revealOffset.current = offset
       adapter.focusOn([point.lng, point.lat], { zoom: Math.max(adapter.getView().zoom, MIN_REVEAL_ZOOM), ...insets, animate: true })
     }
-  }, [active, adapter, focusedItem, isCompact, items, itemsLoading, kameraKenntSeiten, panelEdges, viewportMode])
+  }, [active, adapter, focusedItem, inventory, isCompact, itemsLoading, kameraKenntSeiten, panelEdges, viewportMode])
   useEffect(() => {
     if (!adapter || !isPicking) return
     return adapter.observeClicks(({ position: [lng, lat] }) => {
@@ -438,14 +442,12 @@ function MapViewInner({
   const handleClick = useCallback((item: Item) => {
     if (item.id === PICK_MARKER_ID) return
     if (isPicking) {
-      const position = latLngFromPoint(item.data.position)
-      if (!position) return
-      applyMapViewPick(position, isCompact, updatePick, setPickPosition, confirmPick)
+      applyMapViewItemPick(item, isCompact, pickItem, updatePick, setPickPosition, confirmPick)
       return
     }
     if (viewportMode === "bbox-module") markerClick.current = item.id
     onItemClick?.(item)
-  }, [confirmPick, isCompact, isPicking, onItemClick, updatePick, viewportMode])
+  }, [confirmPick, isCompact, isPicking, onItemClick, pickItem, updatePick, viewportMode])
   /** Beendet eine laufende Ortung und raeumt Punkt und Kreis weg. */
   const beendeOrtung = useCallback(() => {
     if (ortungsId.current !== null) {

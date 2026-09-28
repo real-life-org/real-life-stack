@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useFieldEpoch } from "@/lib/form-epoch"
 import { X } from "lucide-react"
 import { cn, getTagColor } from "@/lib/utils"
 
@@ -23,6 +24,7 @@ export function TagsWidget({
   quickSuggestions,
   hint,
 }: TagsWidgetProps) {
+  const epoch = useFieldEpoch({ value })
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = React.useState(false)
@@ -43,17 +45,15 @@ export function TagsWidget({
         ),
       )
     } else if (typeof suggestions === "function") {
-      let cancelled = false
-      suggestions(query).then((results) => {
-        if (!cancelled) {
-          setFiltered(results.filter((s) => !value.includes(s)))
-        }
+      // Formular-Epoche: nur die letzte Suche für den aktuellen Stand, gefiltert gegen den aktuellen Wert.
+      const search = epoch.begin("suggest")
+      void suggestions(query).then((results) => {
+        search.apply((now) => setFiltered(results.filter((s) => !now.value.includes(s))))
+        search.finish()
       })
-      return () => {
-        cancelled = true
-      }
+      return () => epoch.invalidate("suggest")
     }
-  }, [query, suggestions, value])
+  }, [query, suggestions, value, epoch])
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

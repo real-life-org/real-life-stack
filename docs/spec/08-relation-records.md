@@ -115,8 +115,9 @@ Regeln:
    RelationRecords sein, wenn ihre Menge mit der Nutzung unbegrenzt wächst
    (jede neue Kante schriebe sonst das Trägeritem um) oder wenn sie einen
    anderen Autor als das Trägeritem haben. Feste Beziehungen DÜRFEN
-   ebenfalls als Records geführt werden (die Netzwerk-App tut das für alle
-   Relationsarten, auch `takesPlaceAt`).
+   ebenfalls als Records geführt werden (die Netzwerk-App tut das für ihre
+   übrigen Relationsarten; Event → Ort führt sie seit S4b eingebettet als
+   `locatedAt`, `takesPlaceAt` bleibt nur für bestehende Records).
 10. Relation-Items SOLLTEN das Vokabular `relation/v1` deklarieren
     (`@context`, s. [06-schema-composition.md](06-schema-composition.md));
     die Schema-Definition folgt in `schemas/vocab/relation/v1/` (validiert

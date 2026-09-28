@@ -160,6 +160,12 @@ jobs:
       - name: Module reference
         run: pnpm check:modules && pnpm test:modules
 
+      # Ein Auflöser für Kanten-Ziele (Spec 06, Verhältnis zu Relations,
+      # Regel 6): Im Toolkit zerlegt nur lib/item-targets.ts ein Target
+      # (scripts/targets). Fällt, wenn eine Fläche Targets selbst zerlegt.
+      - name: Target resolver
+        run: pnpm check:targets && pnpm test:targets
+
       # Das Beispiel aus dem Handbuch („Erste App bauen") baut gegen die
       # gebaute Form der Pakete — was die Seite zeigt, läuft auch.
       - name: First app (examples/first-app)

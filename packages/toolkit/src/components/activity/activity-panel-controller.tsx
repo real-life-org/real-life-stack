@@ -12,6 +12,8 @@ import { useMarkNotificationsSeen, useNotifications } from "../../hooks/use-noti
 import { useModulePanel } from "../module-panel/module-panel"
 import { ActivityPanel } from "./activity-panel"
 import { NotificationCenter, type NotificationCandidate } from "./notification-center"
+import { allSpacesScope, resolveTarget } from "../../lib/item-targets"
+import { useOptionalConnector } from "../../hooks/connector-context"
 
 export interface ActivityPanelControllerProps {
   /** Ist die Glocke offen? Der Zustand gehört der Shell, das Panel dem Controller. */
@@ -90,6 +92,7 @@ function ActivityLogContent({ onOpenTarget }: { onOpenTarget: (entry: ActivityEn
   const { data: members } = useMembers(currentGroup?.id ?? null)
   const { data: currentUser } = useOptionalCurrentUser()
   const itemById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
+  const connector = useOptionalConnector()
   // Eine Reaktion öffnet ihr ELTERN-Item — sie selbst hat keine Karte. Welche
   // Typen keine haben, sagt der Datenvertrag, keine Liste hier.
   const resolveOpenId = useCallback((entry: ActivityEntry) => {
@@ -97,11 +100,11 @@ function ActivityLogContent({ onOpenTarget }: { onOpenTarget: (entry: ActivityEn
     if (entry.targetType === "reaction") {
       const reaction = itemById.get(entry.targetId)
       const target = reaction?.relations?.find((relation) => relation.predicate === "reactsTo")?.target
-      const parentId = target?.startsWith("item:") ? target.slice("item:".length) : undefined
-      return parentId && itemById.has(parentId) ? parentId : undefined
+      // Aggregierte Ansicht: der Kontext „alle Spaces" (06, Verhältnis zu Relations, Regel 6).
+      return reaction ? resolveTarget(target, allSpacesScope(connector, reaction), itemById)?.id : undefined
     }
     return itemById.has(entry.targetId) ? entry.targetId : undefined
-  }, [itemById])
+  }, [connector, itemById])
   const isTargetOpenable = useCallback((entry: ActivityEntry) => resolveOpenId(entry) !== undefined, [resolveOpenId])
   const resolveActor = useCallback(
     (actorId: string) => members.find((member) => member.id === actorId) ?? (currentUser?.id === actorId ? currentUser : undefined),

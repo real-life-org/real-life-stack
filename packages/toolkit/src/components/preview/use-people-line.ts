@@ -25,6 +25,8 @@ import {
 } from "@real-life-stack/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
+import { useCurrentGroup } from "../../hooks/use-groups"
+import { useFieldEpoch, type EpochGuard } from "../../lib/form-epoch"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { resolveCanCreate, resolveItemPermissions } from "../../hooks/use-item-permissions"
 import { writeOwnStatement } from "../../lib/own-statement"
@@ -212,12 +214,49 @@ function sameItem(fresh: Item, shown: Item): boolean {
   return fresh.id === shown.id && fresh.createdBy === shown.createdBy && fresh.createdAt === shown.createdAt
 }
 
-/** Das angezeigte Item frisch aus dem geöffneten Space — oder ein Fehler mit Grund, nie ein anderes. */
-async function freshItem(connector: DataInterface, shown: Item): Promise<Item> {
+/** Grund, wenn Item oder geöffneter Space wechselten, während frisch gelesen wurde (Formular-Epoche, Regel 5). */
+export const VIEW_CHANGED = "Item oder Space haben inzwischen gewechselt – nichts gespeichert"
+
+/**
+ * Das angezeigte Item frisch aus dem geöffneten Space — oder ein Fehler mit
+ * Grund, nie ein anderes. `work` ist der Wächter der Epoche (Item und
+ * geöffneter Space, shared-components → Formular-Epoche, Regel 5): Wechselt
+ * einer davon, während gelesen wird, gilt das Ergebnis nicht.
+ */
+async function freshItem(connector: DataInterface, shown: Item, work: EpochGuard<unknown>): Promise<Item> {
   if (!inOpenSpace(connector, shown)) throw new Error(ITEM_ELSEWHERE)
   const fresh = await connector.getItem(shown.id)
+  assertCurrent(work)
   if (!fresh || !sameItem(fresh, shown)) throw new Error(ITEM_ELSEWHERE)
   return fresh
+}
+
+/**
+ * Vor JEDEM Schreiben und nach jedem Warten: gilt die Epoche noch? Sonst
+ * nichts schreiben (Formular-Epoche, Regel 5).
+ */
+function assertCurrent(work: EpochGuard<unknown>): void {
+  if (!work.valid()) throw new Error(VIEW_CHANGED)
+}
+
+/**
+ * Die Epoche einer Selbstaktion: Item und geöffneter Space. Der Abbau des
+ * Panels beendet sie nicht; Space-Wechsel meldet darum der Connector
+ * (`watch`), nicht nur der Render.
+ */
+function useActionEpoch(item: Item) {
+  const connector = useConnector()
+  const openSpace = useCurrentGroup()?.id ?? null
+  // Jeder Wechsel des geöffneten Space ist ein Zählerschritt (Regel 6) —
+  // gemeldet vom Connector, auch nachdem die Anzeige abgebaut ist.
+  const watch = useMemo(
+    () =>
+      hasGroups(connector)
+        ? (onChange: () => void) => connector.observeCurrentGroup().subscribe(() => onChange())
+        : undefined,
+    [connector],
+  )
+  return useFieldEpoch(undefined, { scope: [item.id, openSpace], lifetime: false, watch })
 }
 
 /**
@@ -265,6 +304,7 @@ function othersOnEmbeddedEdge(item: Item, edge: EdgeEntry, meId: string): boolea
  */
 export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusTransitions): SelfActionState {
   const connector = useConnector()
+  const epoch = useActionEpoch(item)
   const { data: me } = useOptionalCurrentUser()
   const meId = me?.id
   const isRecord = edge.storage === "record"
@@ -332,6 +372,8 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
     (value?: string, mode: "toggle" | "withdraw" = "toggle", guard?: (current: Item) => boolean) => {
       queued.current += 1
       setBusy(true)
+      // Die Epoche beim Klick (Item, geöffneter Space); das Frisch-Lesen gilt nur für sie.
+      const work = epoch.begin()
       const run = async () => {
         try {
           if (!available || !meId) return
@@ -348,17 +390,22 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
             if (isRecord) {
               // Die Bedingung gilt für das Trägeritem (etwa: noch offen); der
               // Record liegt daneben.
-              const carrier = guard || transitions ? await freshItem(connector, item) : null
+              const carrier = guard || transitions ? await freshItem(connector, item, work) : null
               if (guard && (!carrier || !guard(carrier))) written = false
               else if (transitions && carrier && isDone(carrier, transitions)) written = false
               else {
-                await writeOwnStatement(connector, item, { predicate: edge.predicate, from: `${PERSON}${meId}`, key: edge.qualifier!.key, value: typeof next === "string" ? next : null })
+                await writeOwnStatement(
+                  connector,
+                  item,
+                  { predicate: edge.predicate, from: `${PERSON}${meId}`, key: edge.qualifier!.key, value: typeof next === "string" ? next : null },
+                  { valid: work.valid, stale: () => new Error(VIEW_CHANGED) },
+                )
                 if (transitions && (current === undefined) !== (next === undefined)) {
-                  await applyRecordTransition(connector, item, edge, meId, next !== undefined, transitions)
+                  await applyRecordTransition(connector, item, edge, meId, next !== undefined, transitions, work)
                 }
               }
             } else {
-              written = await writeEmbedded(connector, item, edge, meId, next, guard, transitions)
+              written = await writeEmbedded(connector, item, edge, meId, next, guard, transitions, work)
             }
             if (!written) {
               // Nichts geschrieben: die Zeile folgt wieder dem geltenden Stand.
@@ -371,6 +418,7 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
             setError(err instanceof Error ? err.message : String(err))
           }
         } finally {
+          work.finish()
           queued.current -= 1
           if (queued.current === 0) {
             setBusy(false)
@@ -383,7 +431,7 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
       chain.current = next.catch(() => undefined)
       return next
     },
-    [available, connector, context, edge, isRecord, item, meId, transitions],
+    [available, connector, context, edge, epoch, isRecord, item, meId, transitions],
   )
 
   const withdraw = useCallback((guard?: (current: Item) => boolean) => act(undefined, "withdraw", guard), [act])
@@ -415,11 +463,12 @@ async function writeEmbedded(
   edge: EdgeEntry,
   meId: string,
   next: string | true | undefined,
-  guard?: (current: Item) => boolean,
-  transitions?: StatusTransitions,
+  guard: ((current: Item) => boolean) | undefined,
+  transitions: StatusTransitions | undefined,
+  work: EpochGuard<unknown>,
 ): Promise<boolean> {
   if (!isWritable(connector)) throw new Error("Dieser Speicher ist nur lesbar")
-  const current = await freshItem(connector, item)
+  const current = await freshItem(connector, item, work)
   // Die Bedingung gegen DENSELBEN Stand, aus dem die neuen Relationen entstehen.
   if (guard && !guard(current)) return false
   // Erledigt: keine Selbstaktion (nur Zustände, Anton zu #542).
@@ -437,6 +486,7 @@ async function writeEmbedded(
   if (next === undefined) {
     // Nichts zurückzunehmen: nicht schreiben (die Kante fehlt schon, #531).
     if (!wasOn) return false
+    assertCurrent(work)
     await connector.updateItem(item.id, { relations: others, ...statusPatch(false) })
     return true
   }
@@ -445,6 +495,7 @@ async function writeEmbedded(
   const mine = { predicate: edge.predicate, target, ...(Object.keys(meta).length > 0 ? { meta } : {}) }
   // An ihrer Stelle, damit die Reihenfolge der Kanten bleibt.
   const nextRelations = existing ? relations.map((r) => (r === existing ? mine : r)) : [...relations, mine]
+  assertCurrent(work)
   await connector.updateItem(item.id, { relations: nextRelations, ...statusPatch(true) })
   return true
 }
@@ -455,14 +506,16 @@ async function writeEmbedded(
  * Selbstaussage selbst braucht es nicht, Modi Regel 1). Wer nach dem Abgeben
  * noch an der Kante steht, entscheiden die geltenden Records (L1).
  */
-async function applyRecordTransition(connector: DataInterface, item: Item, edge: EdgeEntry, meId: string, joining: boolean, transitions: StatusTransitions): Promise<void> {
+async function applyRecordTransition(connector: DataInterface, item: Item, edge: EdgeEntry, meId: string, joining: boolean, transitions: StatusTransitions, work: EpochGuard<unknown>): Promise<void> {
   if (!isWritable(connector) || !resolveItemPermissions(connector, item, meId).canEdit) return
   if (!inOpenSpace(connector, item)) return
   const current = await connector.getItem(item.id)
+  assertCurrent(work)
   if (!current || !sameItem(current, item)) return
   const nobodyLeft = joining ? false : !(await othersOnRecordEdge(connector, current, edge, meId))
   const value = transitionStatus(current, transitions, joining, nobodyLeft)
   if (value === undefined) return
+  assertCurrent(work)
   await connector.updateItem(item.id, { data: { ...(current.data ?? {}), [transitions.field.key]: value } })
 }
 
@@ -496,6 +549,7 @@ export interface FollowUpState {
  */
 export function useFollowUps(item: Item, statusField: FieldEntry | undefined, defaultStatus?: string, edge?: EdgeEntry): FollowUpState {
   const connector = useConnector()
+  const epoch = useActionEpoch(item)
   const { data: me } = useOptionalCurrentUser()
   const meId = me?.id
   const available = useMemo(
@@ -511,6 +565,7 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
       if (value === undefined) return
       setBusy(true)
       setError(null)
+      const work = epoch.begin()
       try {
         // #531: gegen den GELTENDEN Stand entscheiden, nicht gegen den Render.
         // Bin ich nicht mehr an der Kante, oder hat der Status keine Rolle
@@ -519,18 +574,20 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
         // möglich (kein bedingtes Schreiben im DataInterface); Mitglieder
         // dürfen den Status ohnehin ändern.
         if (!meId) return
-        const current = await freshItem(connector, item)
+        const current = await freshItem(connector, item, work)
         const role = statusRole(statusField, (current.data as Record<string, unknown> | undefined)?.[statusField.key], defaultStatus)
         if (role !== "open" && role !== "active") return
         if (edge && !(await stillMine(connector, current, edge, meId))) return
+        assertCurrent(work)
         await connector.updateItem(item.id, { data: { ...(current.data ?? {}), [statusField.key]: value } })
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err))
       } finally {
+        work.finish()
         setBusy(false)
       }
     },
-    [available, connector, defaultStatus, edge, item, meId, statusField],
+    [available, connector, defaultStatus, edge, epoch, item, meId, statusField],
   )
   return { available, busy, error, run }
 }

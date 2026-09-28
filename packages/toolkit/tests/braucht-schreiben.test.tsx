@@ -102,7 +102,7 @@ describe("Register → Formular", () => {
       } as never,
       { mode: "edit", existingItem: KOMPOST },
     )!
-    expect(mapped.incoming).toEqual([{ predicate: "blocks", add: ["t-beet"], remove: ["t-karre"] }])
+    expect(mapped.incoming).toEqual([{ predicate: "blocks", add: ["item:t-beet"], remove: ["item:t-karre"] }])
     expect(mapped.data).not.toHaveProperty(itemRelationDataKey("blocks", true))
     expect(mapped.data).not.toHaveProperty(incomingRemovedKey("blocks"))
     expect(mapped.relations ?? []).not.toContainEqual(expect.objectContaining({ target: "item:t-beet" }))

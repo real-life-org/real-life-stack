@@ -39,10 +39,10 @@ describe("DWebCamp seed importer", () => {
     expect(dwebCampDomainItems.filter(({ type }) => type === "person")).toHaveLength(138)
     expect(dwebCampDomainItems.filter(({ type }) => type === "project")).toHaveLength(65)
     expect(dwebCampDomainItems).toHaveLength(312)
-    expect(relationItems).toHaveLength(497)
-    expect(relationRecords).toHaveLength(497)
-    expect(seedItems).toHaveLength(836)
-    expect(new Set(seedItems.map(({ id }) => id)).size).toBe(836)
+    expect(relationItems).toHaveLength(388)
+    expect(relationRecords).toHaveLength(388)
+    expect(seedItems).toHaveLength(727)
+    expect(new Set(seedItems.map(({ id }) => id)).size).toBe(727)
 
     expect(dwebCampItemId("event", "SJXE8X")).toBe("event-sjxe8x")
     expect(dwebCampItemId("person", "Václav Pavlín")).toBe("person-vaclav-pavlin")
@@ -76,10 +76,10 @@ describe("DWebCamp seed importer", () => {
 
     connector.setCurrentGroup("dwebcamp")
     const importedItems = await connector.getItems()
-    expect(importedItems).toHaveLength(836)
-    expect(new Set(importedItems.map(({ id }) => id)).size).toBe(836)
+    expect(importedItems).toHaveLength(727)
+    expect(new Set(importedItems.map(({ id }) => id)).size).toBe(727)
     expect(importedItems.filter(({ type }) => type !== "relation")).toHaveLength(339)
-    expect(importedItems.filter(({ type }) => type === "relation")).toHaveLength(497)
+    expect(importedItems.filter(({ type }) => type === "relation")).toHaveLength(388)
 
     connector.setCurrentGroup("my-network")
     expect(await connector.getItems()).toEqual([])
@@ -97,7 +97,11 @@ describe("DWebCamp seed importer", () => {
       expect(contexts).toEqual([...new Set(contexts as string[])].sort())
       expect(record.fields).not.toHaveProperty("context")
     }
-    expect(dwebCampDomainItems.every(({ relations }) => relations === undefined)).toBe(true)
+    // Einzige eingebettete Kante: Event → Ort (`locatedAt`, S4b).
+    for (const item of dwebCampDomainItems) {
+      if (item.type === "event") expect(item.relations?.map((r) => r.predicate)).toEqual(["locatedAt"])
+      else expect(item.relations).toBeUndefined()
+    }
 
     const adamAttends = relationRecords.find(({ id }) => (
       id === "rel-a51546e70eb70bec300eb5d67fa96c5a8fdee4adb7e61e7469b44226378b8117"

@@ -122,6 +122,36 @@ describe("MapView effect parity — mounted module with fake-adapter probes", ()
     await act(async () => { mounted.root.unmount() })
   })
 
+  it("S4b/Codex R10: ein abgeleitetes Event (Position vom Ort) wird fokussiert wie ein geladenes", async () => {
+    const live = new Set<ProbeAdapter>()
+    const createAdapter = () => new ProbeAdapter(live)
+    const ort = point("ort", [13.5, 52.6])
+    const event: Item = { ...point("ev", [13.5, 52.6]), type: "event" }
+    const mounted = await mountMap(createAdapter, { items: [ort], derivedItems: [event], focusedItem: event, activeItemId: event.id, onViewportBoundsChange: vi.fn() })
+    const adapter = [...live][0]!
+    expect(adapter.focusOn).toHaveBeenLastCalledWith([13.5, 52.6], expect.objectContaining({ animate: true, zoom: expect.any(Number) }))
+    // Der Marker des Events ist da.
+    expect(adapter.markerSets.at(-1)!.map((m) => m.id).sort()).toEqual(["ev", "ort"])
+    await act(async () => { mounted.root.unmount() })
+  })
+
+  it("S4b/Codex R11 als Vertrag: was die Abfrage nicht mehr liefert, steht nicht mehr da (Projektion)", async () => {
+    const live = new Set<ProbeAdapter>()
+    const createAdapter = () => new ProbeAdapter(live)
+    const alt: Item = { ...point("ev", [10, 50]), type: "event" }
+    const mounted = await mountMap(createAdapter, { items: [point("a"), alt] })
+    const adapter = [...live][0]!
+    const ids = () => adapter.markerSets.at(-1)!.map((m) => m.id).sort()
+    expect(ids()).toEqual(["a", "ev"])
+    // Das Event liegt jetzt an einem Ort (lebend ohne eigene Position).
+    await mounted.render({ items: [point("a")] })
+    expect(ids()).toEqual(["a"])
+    // Auch später kommt kein alter Marker zurück.
+    await mounted.render({ items: [point("a")], derivedItems: [] })
+    expect(ids()).toEqual(["a"])
+    await act(async () => { mounted.root.unmount() })
+  })
+
   it("lens deep-link centers the active marker without changing zoom", async () => {
     const live = new Set<ProbeAdapter>()
     const mounted = await mountMap(() => new ProbeAdapter(live), { viewportMode: "lens-auto-fit", activeItemId: "a" })

@@ -51,6 +51,8 @@ import {
 } from "@real-life-stack/data-interface"
 
 import { ItemMetaRow } from "./item-meta-row"
+import { placeTargetOf, useItemPlace } from "./item-place"
+import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import {
   assertFollowUps,
   assertJoins,
@@ -76,6 +78,7 @@ import { StatementVariantLine, familyListQuery } from "../resonance/statement-va
 import { registerListQuery } from "./list-queries"
 import { RegisterReverse, hasReverseLists } from "./register-reverse"
 import { RegisterCardRefs } from "./register-card-refs"
+import { RegisterHeadAvatar, RegisterMedia, hasHeadAvatar } from "./register-content"
 import { VoteBar } from "../resonance/vote-bar"
 import { MessageSquareQuote } from "lucide-react"
 
@@ -221,6 +224,17 @@ export interface ResolvedTypePresentation extends RegisterLists {
    * Typ welche führt (Spec 06, Regel 9).
    */
   actions?: ComponentType<ItemSlotProps>
+  /**
+   * Slot `head`: der Kopf-Avatar (B11), wo der Typ ein `avatar`-Feld im Kopf
+   * führt (S4b).
+   */
+  head?: ComponentType<ItemSlotProps>
+  /**
+   * Slot `content` nach der Beschreibung: die Bildreihe (B5). Für jeden Typ,
+   * weil der Composer Medien überall zuschalten lässt (Widget-Paare: wer
+   * schreibt, hat eine Leseform).
+   */
+  content: ComponentType<ItemSlotProps>
   footer?: ComponentType<ItemSlotProps>
   composer?: TypeComposerPresentation
   /** True when rendering generically: the type is unknown to the manifest OR
@@ -250,6 +264,18 @@ const REGISTER_DETAIL: ComponentType<ItemSlotProps> = function RegisterDetail({ 
   )
 }
 
+/** Slot `content` aus dem Register: Medien (B5) nach der Beschreibung. */
+const REGISTER_CONTENT: ComponentType<ItemSlotProps> = function RegisterContentSlot({ item }) {
+  const presentation = resolveTypePresentation(item.type)
+  return <RegisterMedia item={item} fields={presentation.fields} />
+}
+
+/** Slot `head` aus dem Register: der Kopf-Avatar (B11). */
+const REGISTER_HEAD: ComponentType<ItemSlotProps> = function RegisterHeadSlot({ item }) {
+  const presentation = resolveTypePresentation(item.type)
+  return <RegisterHeadAvatar item={item} fields={presentation.fields} />
+}
+
 /** Slot `reverse` aus dem Register: Rückwärts-Listen (Detail-Anatomie, Regel 8). */
 const REGISTER_REVERSE: ComponentType<ItemSlotProps> = function RegisterReverseSlot({ item }) {
   const presentation = resolveTypePresentation(item.type)
@@ -267,7 +293,25 @@ const REGISTER_ACTIONS: ComponentType<ItemSlotProps> = function RegisterActionsS
 }
 
 function EventPreview({ item }: ItemSlotProps) {
-  return <ItemMetaRow item={item} />
+  // Liegt das Event an einem Ort-Item (B4), nennt die Karte dessen Namen.
+  return placeTargetOf(item) ? <EventPreviewAtPlace item={item} /> : <ItemMetaRow item={item} />
+}
+
+/** Die Karte eines Events an einem Ort-Item: ein Abo auf genau dieses Item, nicht auf alle Orte. */
+function EventPreviewAtPlace({ item }: ItemSlotProps) {
+  const focus = useOptionalItemFocus()
+  const place = useItemPlace(item)
+  if (!place) return <ItemMetaRow item={item} />
+  const title = (place.data as Record<string, unknown>).title
+  return (
+    <ItemMetaRow
+      item={item}
+      placeItem={{
+        title: typeof title === "string" && title.trim() !== "" ? title : "Ort",
+        open: focus ? () => focus.focusItem(place.id) : null,
+      }}
+    />
+  )
 }
 
 const GENERIC_DETAIL: ComponentType<ItemSlotProps> = function GenericDetail({ item }) {
@@ -288,16 +332,18 @@ export const GENERIC_BADGE: TypeBadgeStyle = {
  *  preview slots are the previous getItemPreviewAdornments bodies. */
 // Feld- und Kantenlisten der Toolkit-Typen (Spec 06, Register je Typ). Nur
 // Kanten, die das Manifest deklariert (Regel 1): `partOf` und `blocks` seit S3
-// mit ihrer Relation-Typ-Definition (TOOLKIT_RELATION_PREDICATES); `locatedAt`
-// am Event folgt mit S4b (Kollision 7 aus #506). `meetingLink` ist seit S4a
-// ein url-Feld (B9).
+// mit ihrer Relation-Typ-Definition (TOOLKIT_RELATION_PREDICATES); seit S4b
+// `locatedAt` (Event → Ort), das das Ort-Feld (B4) schreibt und liest.
+// `meetingLink` ist seit S4a ein url-Feld (B9).
 const TITLE: FieldEntry = { key: "title", widget: "title", pos: "head" }
 const DESCRIPTION: FieldEntry = { key: "description", widget: "text", pos: "content", label: "Beschreibung" }
 const TAGS: FieldEntry = { key: "tags", widget: "tags", pos: "tags" }
 const GROUP: FieldEntry = { key: "group", widget: "group", pos: "badge" }
 // Der Ort: Das Location-Widget schreibt address, position und locationName
 // (shared-components, Location-Widget) — ein Feld, ein Widget.
-const ADDRESS: FieldEntry = { key: "address", widget: "location", pos: "meta" }
+const ADDRESS: FieldEntry = { key: "address", widget: "location", pos: "meta", label: "Ort" }
+// Beschriftungen im Formular wie im Detail-Simulator: Event „Wo" (Ort-Item
+// oder Adresse), Ort „Adresse & Position".
 
 const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
   {
@@ -316,7 +362,7 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     label: "Event",
     composer: { submitLabel: "Erstellen" },
     badge: { icon: Calendar, className: "bg-blue-50 text-blue-700 border-blue-200" },
-    fields: [TITLE, DESCRIPTION, { key: "start", widget: "date", pos: "meta" }, ADDRESS, { key: "meetingLink", widget: "url", pos: "meta", label: "Link" }, GROUP, TAGS],
+    fields: [TITLE, DESCRIPTION, { key: "start", widget: "date", pos: "meta" }, { ...ADDRESS, label: "Wo" }, { key: "meetingLink", widget: "url", pos: "meta", label: "Link" }, GROUP, TAGS],
     // Eingeladene und Zusagen in EINER Menschen-Zeile (08 → Teilnahme am
     // Event, Regel 5): `invited` bleibt eingebettet, die Zusage ist ein
     // eigener Record von der Person zum Event (Entscheidung 22/23).
@@ -343,6 +389,10 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
         // Eine Zeile mit den Eingeladenen, im Lesen wie im Formular.
         joins: "invited",
       },
+      // Der Ort als Item (S4b, B4): EIN Ort-Feld schreibt entweder diese
+      // Kante oder Adresse und Position. Die Kante gehört dem Ort-Feld und
+      // steht darum in dessen Zeile, nicht als eigene (locationEdge).
+      { predicate: "locatedAt", itemRole: "from", storage: "embedded", widget: "item-relation", pos: "meta", label: "Ort" },
     ],
     preview: EventPreview,
   },
@@ -351,7 +401,20 @@ const CORE_PRESENTATION: readonly TypePresentationEntry[] = [
     label: "Ort",
     composer: { submitLabel: "Erstellen" },
     badge: { icon: MapPin, className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    fields: [TITLE, DESCRIPTION, ADDRESS, TAGS],
+    fields: [TITLE, DESCRIPTION, { ...ADDRESS, label: "Adresse & Position" }, TAGS],
+    // Rückwärts-Liste (Regel 10, Entscheidung 15): alle kommenden Events an
+    // diesem Ort, nach Beginn.
+    edges: [
+      {
+        predicate: "locatedAt",
+        itemRole: "to",
+        storage: "embedded",
+        widget: "item-relation",
+        pos: "list",
+        label: "Findet hier statt",
+        list: { filter: "upcoming", sort: "start" },
+      },
+    ],
   },
   {
     id: "task",
@@ -816,7 +879,7 @@ export function resolveTypePresentation(typeId: string): ResolvedTypePresentatio
   const id = klassen.find((k) => darstellungen.has(k) && manifest.has(k)) ?? klassen[0] ?? typeId
   const entry = darstellungen.get(id)
   if (!entry || !manifest.has(id)) {
-    return { id, label: id, detail: GENERIC_DETAIL, generic: true }
+    return { id, label: id, detail: GENERIC_DETAIL, content: REGISTER_CONTENT, generic: true }
   }
   // Übergang (Regel 17): ein gesetztes `detail` gewinnt, dort, wo der Typ es
   // hinlegt (Standard: Meta-Box); sonst die Meta-Box aus dem Register; ein
@@ -829,6 +892,8 @@ export function resolveTypePresentation(typeId: string): ResolvedTypePresentatio
     detail: inReverse ? fromRegister : (entry.detail ?? fromRegister),
     ...(reverse ? { reverse } : {}),
     ...(actionEdges(entry.edges).length > 0 ? { actions: REGISTER_ACTIONS } : {}),
+    ...(hasHeadAvatar(entry.fields) ? { head: REGISTER_HEAD } : {}),
+    content: REGISTER_CONTENT,
     generic: false,
   }
 }

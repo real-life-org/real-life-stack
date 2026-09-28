@@ -1,7 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import type { Item } from "@real-life-stack/data-interface"
 
 export interface LatLng { lat: number; lng: number }
-export interface PickHandlers { onPick: (position: LatLng) => void; onCancel?: () => void }
+export interface PickHandlers {
+  onPick: (position: LatLng) => void
+  onCancel?: () => void
+  /**
+   * Ein Marker wurde gewählt (B4, S4b: Marker = Ort-Item). `true`, wenn das
+   * Feld ihn als Ort-Item nimmt; sonst zählt seine Position wie ein freier
+   * Punkt. Ohne Rückruf zählt immer die Position.
+   */
+  onPickItem?: (item: Item) => boolean
+}
 export interface LocationPickValue {
   isPicking: boolean
   /** `false`, wenn die Karte in diesem Space nicht erreichbar ist — dann beginnt kein Pick. */
@@ -9,6 +19,8 @@ export interface LocationPickValue {
   /** Ist die Karte in diesem Space erreichbar? Flaechen blenden den Pick sonst aus. */
   canPick: boolean
   updatePick: (position: LatLng) => void
+  /** Ein Marker während des Picks: `true`, wenn das Feld ihn als Item nimmt (B4). */
+  pickItem: (item: Item) => boolean
   confirmPick: () => void
   cancelPick: () => void
 }
@@ -18,6 +30,7 @@ const unavailablePick: LocationPickValue = {
   startPick: () => false,
   canPick: false,
   updatePick: () => undefined,
+  pickItem: () => false,
   confirmPick: () => undefined,
   cancelPick: () => undefined,
 }
@@ -61,6 +74,7 @@ export function LocationPickProvider({ children, navigateToModule, currentModule
     return true
   }, [])
   const updatePick = useCallback((position: LatLng) => handlers.current?.onPick(position), [])
+  const pickItem = useCallback((item: Item) => handlers.current?.onPickItem?.(item) ?? false, [])
   const confirmPick = useCallback(() => end(false, true), [end])
   const cancelPick = useCallback(() => end(true, true), [end])
   useEffect(() => {
@@ -68,7 +82,7 @@ export function LocationPickProvider({ children, navigateToModule, currentModule
     if (currentModule === "map") reachedMap.current = true
     else if (reachedMap.current) end(true, false)
   }, [currentModule, end, isPicking])
-  const value = useMemo(() => ({ isPicking, canPick: canOpenMap, startPick, updatePick, confirmPick, cancelPick }), [canOpenMap, cancelPick, confirmPick, isPicking, startPick, updatePick])
+  const value = useMemo(() => ({ isPicking, canPick: canOpenMap, startPick, updatePick, pickItem, confirmPick, cancelPick }), [canOpenMap, cancelPick, confirmPick, isPicking, pickItem, startPick, updatePick])
   return <LocationPickContext.Provider value={value}>{children}</LocationPickContext.Provider>
 }
 

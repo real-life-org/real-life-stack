@@ -29,10 +29,10 @@ beforeAll(async () => {
 })
 
 describe("P3-Vertrag B — Schedule-Seed", () => {
-  it("4b: 836 eindeutige Items (339 Domain + 497 Records); Bestand bleibt Teilmenge", () => {
-    expect(seedItems).toHaveLength(836)
-    expect(new Set(seedItems.map(({ id }) => id)).size).toBe(836)
-    expect(seedItems.filter(({ type }) => type === "relation")).toHaveLength(497)
+  it("4b: 727 eindeutige Items (339 Domain + 388 Records; Event → Ort eingebettet); Bestand bleibt Teilmenge", () => {
+    expect(seedItems).toHaveLength(727)
+    expect(new Set(seedItems.map(({ id }) => id)).size).toBe(727)
+    expect(seedItems.filter(({ type }) => type === "relation")).toHaveLength(388)
     const predicates = new Map<string, number>()
     for (const r of relationRecords) {
       predicates.set(r.predicate, (predicates.get(r.predicate) ?? 0) + 1)
@@ -40,7 +40,8 @@ describe("P3-Vertrag B — Schedule-Seed", () => {
     expect(predicates.get("attends")).toBe(192)
     expect(predicates.get("connectedWith")).toBe(97)
     expect(predicates.get("partOf")).toBe(99)
-    expect(predicates.get("takesPlaceAt")).toBe(109)
+    // Event → Ort liegt seit S4b eingebettet am Event (`locatedAt`, wie der Kern).
+    expect(predicates.has("takesPlaceAt")).toBe(false)
     // ID-Stabilität: bekannter P1b-Vektor bleibt byte-identisch
     expect(byId.has(
       "rel-5b412a2b673962f16ff89324a7a9cb84b90d5c412d10203e66f62f6dcdb00bbc",
@@ -59,26 +60,23 @@ describe("P3-Vertrag B — Schedule-Seed", () => {
     }
   })
 
-  it("4b: bijektiver Code-Join und genau eine takesPlaceAt-Kante je Event", () => {
+  it("4b: bijektiver Code-Join und genau eine eingebettete locatedAt-Kante je Event", () => {
     const scheduleIds = campSchedule.sessions.map(
       (s: { code: string }) => dwebCampItemId("event", s.code),
     )
     expect(new Set(scheduleIds).size).toBe(109)
     expect(new Set(events.map(({ id }) => id))).toEqual(new Set(scheduleIds))
 
-    const takesPlaceAt = relationRecords.filter(
-      ({ predicate }) => predicate === "takesPlaceAt",
-    )
-    const fromCounts = new Map<string, number>()
-    for (const record of takesPlaceAt) {
-      fromCounts.set(record.from, (fromCounts.get(record.from) ?? 0) + 1)
-      expect(record.from).toMatch(/^item:event-/)
-      expect(record.to).toMatch(/^item:place-/)
-      expect(byId.has(record.from.slice("item:".length))).toBe(true)
-      expect(byId.has(record.to.slice("item:".length))).toBe(true)
+    for (const event of events) {
+      const located = (event.relations ?? []).filter(({ predicate }) => predicate === "locatedAt")
+      expect(located, event.id).toHaveLength(1)
+      expect(event.relations ?? []).toHaveLength(1)
+      expect(located[0]!.target).toMatch(/^item:place-/)
+      expect(byId.get(located[0]!.target.slice("item:".length))?.type).toBe("place")
     }
-    expect(fromCounts.size).toBe(109)
-    for (const count of fromCounts.values()) expect(count).toBe(1)
+    const session = campSchedule.sessions[0] as { code: string; venue: string }
+    const first = byId.get(dwebCampItemId("event", session.code))!
+    expect(first.relations).toEqual([{ predicate: "locatedAt", target: `item:${dwebCampItemId("place", session.venue)}` }])
   })
 
   it("4b: 15 Places byte-genau aus camp-schedule.json, Point in [lng, lat]", () => {

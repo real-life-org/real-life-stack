@@ -69,6 +69,16 @@ export interface ItemDetailBodyProps {
    * mit; die Stimme (C4) steht hier mit Pills und Balken.
    */
   selfActions?: ReactNode
+  /**
+   * Slot `head`, vor dem Titel: der Kopf-Avatar (B11, S4b). Rendert der Slot
+   * `null`, steht der Titel allein.
+   */
+  headMedia?: ReactNode
+  /**
+   * Slot `content`, nach der Beschreibung: Medien (B5, S4b). `empty:hidden`
+   * wie bei der Meta-Box.
+   */
+  content?: ReactNode
   /** Slot `reverse`: Rückwärts-Listen aus dem Register (benannte Abfragen und eingehende Kanten, S3). */
   reverse?: ReactNode
   /**
@@ -100,6 +110,8 @@ export function ItemDetailBody({
   actions,
   meta,
   selfActions,
+  headMedia,
+  content,
   reverse,
   footer,
   note,
@@ -130,7 +142,16 @@ export function ItemDetailBody({
         </div>
       )}
 
-      {title && <h2 className="text-xl font-semibold leading-snug text-foreground">{title}</h2>}
+      {headMedia ? (
+        // Avatar und Titel in einer Zeile (Detail-Anatomie, Slot head). Ein
+        // Avatar-Slot ohne Bild rendert `null`; die Zeile trägt dann nur den Titel.
+        <div className="flex min-w-0 items-center gap-3">
+          {headMedia}
+          {title && <h2 className="min-w-0 text-xl font-semibold leading-snug text-foreground">{title}</h2>}
+        </div>
+      ) : (
+        title && <h2 className="text-xl font-semibold leading-snug text-foreground">{title}</h2>
+      )}
 
       {meta && (
         // Die Fakten stehen zusammen auf eigener Flaeche, statt als lose Zeilen
@@ -155,6 +176,12 @@ export function ItemDetailBody({
         // Der Composer schreibt Markdown, also wird ueberall Markdown
         // gerendert. Im Detail ungekuerzt — hier ist Platz.
         <MarkdownText className="text-sm text-foreground">{description}</MarkdownText>
+      )}
+
+      {content && (
+        <div data-slot="content" className="flex flex-col gap-2 empty:hidden">
+          {content}
+        </div>
       )}
 
       {reverse && (

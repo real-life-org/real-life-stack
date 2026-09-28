@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import type { Item } from "@real-life-stack/data-interface"
 import { Check, ChevronDown, CircleAlert, Globe, Home, Loader2, Lock, Trash2, X } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/primitives/tooltip"
@@ -16,7 +17,7 @@ import {
 } from "@/components/primitives/dropdown-menu"
 import { useIsCompact } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
-import { latLngFromPoint, pointFromLatLng, type GeoJSONPoint } from "@/lib/geo"
+import type { GeoJSONPoint } from "@/lib/geo"
 import { WidgetWrapper } from "./widgets/widget-wrapper"
 import { TitleWidget } from "./widgets/title-widget"
 import { TextWidget, WIDGET_ICONS, WIDGET_LABELS } from "./widgets/text-widget"
@@ -29,7 +30,9 @@ import {
   type DateWidgetToggles,
   toDateInputValue,
 } from "./date-widget-state"
-import { LocationWidget } from "./widgets/location-widget"
+import { LocationField } from "./widgets/location-field"
+import { FormEpochProvider } from "@/lib/form-epoch"
+import { AvatarField } from "./widgets/avatar-widget"
 import type { Geocoder, ReverseGeocoder } from "@/lib/geocode"
 import { MediaWidget } from "./widgets/media-widget"
 import { PeopleWidget, type PeopleWidgetRecord, type PersonOption } from "./widgets/people-widget"
@@ -46,6 +49,7 @@ import { groupNumberFields } from "../preview/field-register"
 import { chipValues, type OptionTone } from "../../lib/field-values"
 import { FixedItemRefField, IncomingRelationField, ItemRelationWidget, type RequestItemPick } from "./widgets/item-relation-widget"
 import { incomingRemovedKey, itemRelationChoiceKeys, itemRelationDataKey, itemRelationDataKeys, type ItemRefFieldConfig, type ItemRelationFieldConfig } from "./item-relations"
+import { survivesSpaceChange } from "@/lib/item-targets"
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -69,6 +73,8 @@ export type WidgetType =
   | "url"
   | "chips"
   | "contact"
+  /** Bild im Kopf (B11) aus dem Register — nie zum Zuschalten. */
+  | "avatar"
 
 export interface MediaFile {
   id: string
@@ -266,6 +272,8 @@ export interface ContentComposerProps {
   requestMapPick?: (handlers: {
     onPick: (pos: { lat: number; lng: number }) => void
     onCancel?: () => void
+    /** Marker = Ort-Item (B4): `true`, wenn das Ort-Feld das Item nimmt. */
+    onPickItem?: (item: Item) => boolean
   }) => void
   /** Address geocoder injected into the location widget (debounced suggestions). */
   geocode?: Geocoder
@@ -352,6 +360,7 @@ const DEFAULT_WIDGET_LABELS: Record<WidgetType, string> = {
   url: "Link",
   chips: "Liste",
   contact: "Kontakt",
+  avatar: "Bild",
   group: "Gruppe",
   title: "Titel",
   text: "Text",
@@ -468,7 +477,8 @@ export function withSpaceChange(d: WidgetData, patch: Partial<WidgetData>, refKe
   const next: WidgetData = { ...d, ...patch }
   const before = typeof d.group === "string" ? d.group : ""
   if (!("group" in patch) || !before || patch.group === before) return next
-  const local = (t: unknown) => typeof t === "string" && t.startsWith("item:")
+  // Der Auflöser sagt, was einen Space-Wechsel übersteht (04: `item:` ist space-lokal).
+  const local = (t: unknown) => !survivesSpaceChange(t)
   for (const [key, value] of Object.entries(next)) {
     if (key.startsWith("relation:") && Array.isArray(value)) next[key] = value.filter((t) => !local(t))
   }
@@ -484,6 +494,7 @@ export function withSpaceChange(d: WidgetData, patch: Partial<WidgetData>, refKe
  */
 const ANATOMY_RANK: Record<WidgetType, number> = {
   title: 0,
+  avatar: 0.5,
   text: 1,
   media: 2,
   people: 3,
@@ -502,7 +513,7 @@ const ANATOMY_RANK: Record<WidgetType, number> = {
 }
 
 /** Widgets, die nur das Register setzt: Sie stehen, wo der Typ sie führt, und sind nie zuschaltbar. */
-const REGISTER_ONLY_WIDGETS: ReadonlySet<string> = new Set(["item-relation", "item-ref", ...VALUE_WIDGETS])
+const REGISTER_ONLY_WIDGETS: ReadonlySet<string> = new Set(["item-relation", "item-ref", "avatar", ...VALUE_WIDGETS])
 
 /**
  * The built-in widgets in render order: those the type lists in
@@ -994,8 +1005,6 @@ export function ContentComposer({
   // „+ Beschreibung" aufgeklappt? Nur UI-Zustand; mit Inhalt ist sie immer offen.
   const [textOpen, setTextOpen] = React.useState(false)
   const [isPreviewing, setIsPreviewing] = React.useState(false)
-  // Aborts the previous reverse-geocode when the user re-picks on the map.
-  const reverseAbortRef = React.useRef<AbortController | null>(null)
 
   if (!currentConfig) return null
 
@@ -1115,7 +1124,7 @@ export function ContentComposer({
       w !== "title" &&
       w !== "text" &&
       !(w === "status" && !hasStatusOptions),
-  ) as Exclude<WidgetType, "item-relation" | "item-ref" | "number" | "select" | "url" | "chips" | "contact">[]
+  ) as Exclude<WidgetType, "item-relation" | "item-ref" | "number" | "select" | "url" | "chips" | "contact" | "avatar">[]
 
   // Get widget label
   const getWidgetLabel = (widgetId: string): string => {
@@ -1242,6 +1251,9 @@ export function ContentComposer({
   // ── Render ──
 
   return (
+    // Formular-Epoche (shared-components): Wechsel von Space oder Typ macht
+    // laufende asynchrone Arbeit aller Felder ungültig.
+    <FormEpochProvider scope={[formSpace ?? null, selectedType]}>
     <div className={cn("flex flex-col gap-4", className)}>
       {/* Kopf des Formulars: Typ und Space, kompakt als Auswahlfelder
           (shared-components, Edit-Regeln 2). Der Space steht oben, weil er
@@ -1318,6 +1330,21 @@ export function ContentComposer({
                       autoFocus={!data.title && !imDrawer}
                     />
                   )}
+                  {widgetId === "avatar" && (
+                    <div className="flex flex-col gap-4">
+                      {(currentConfig.valueFields ?? [])
+                        .filter((field) => field.widget === "avatar")
+                        .map((field) => (
+                          <AvatarField
+                            key={field.key}
+                            label={field.label}
+                            value={typeof data[field.key] === "string" ? (data[field.key] as string) : ""}
+                            onChange={(v) => updateData(field.key, v)}
+                            disabled={field.fixed}
+                          />
+                        ))}
+                    </div>
+                  )}
                   {widgetId === "text" && textCollapsed && (
                     <CollapsedText
                       label={widgetLabel}
@@ -1359,53 +1386,17 @@ export function ContentComposer({
                     />
                   )}
                   {widgetId === "location" && (
-                    <LocationWidget
-                      value={{
-                        address: data.address,
-                        position: data.position ? latLngFromPoint(data.position) ?? undefined : undefined,
-                      }}
-                      onChange={(v) => {
-                        updateMany({
-                          address: v.address || undefined,
-                          position: v.position
-                            ? pointFromLatLng(v.position.lat, v.position.lng)
-                            : undefined,
-                        })
-                      }}
+                    // EIN Ort-Feld (B4): Ort-Item ODER Adresse und Position.
+                    <LocationField
                       label={widgetLabel}
+                      data={data}
+                      updateMany={(patch) => updateMany(patch as Partial<WidgetData>)}
                       geocode={geocode}
-                      onPickOnMap={
-                        requestMapPick
-                          ? () => {
-                              const originalPosition = data.position
-                              const originalAddress = data.address
-                              requestMapPick({
-                                onPick: (pos) => {
-                                  updateMany({ position: pointFromLatLng(pos.lat, pos.lng) })
-                                  // Reverse-geocode (aborting the previous one) to fill the address.
-                                  if (reverseGeocode) {
-                                    reverseAbortRef.current?.abort()
-                                    const controller = new AbortController()
-                                    reverseAbortRef.current = controller
-                                    reverseGeocode(pos, { signal: controller.signal })
-                                      .then((label) => {
-                                        if (label && !controller.signal.aborted) {
-                                          updateMany({ address: label })
-                                        }
-                                      })
-                                      .catch(() => {})
-                                  }
-                                },
-                                onCancel: () => {
-                                  // Abort a pending reverse-geocode so its late
-                                  // result can't overwrite the restored address.
-                                  reverseAbortRef.current?.abort()
-                                  updateMany({ position: originalPosition, address: originalAddress })
-                                },
-                              })
-                            }
-                          : undefined
-                      }
+                      reverseGeocode={reverseGeocode}
+                      requestMapPick={requestMapPick}
+                      placeField={currentConfig.itemRelations?.find((f) => f.location)}
+                      spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined}
+                      itemId={itemId}
                     />
                   )}
                   {widgetId === "status" &&
@@ -1459,7 +1450,7 @@ export function ContentComposer({
                   )}
                   {widgetId === "item-relation" && (
                     <div className="flex flex-col gap-4">
-                      {(currentConfig.itemRelations ?? []).map((field) =>
+                      {(currentConfig.itemRelations ?? []).filter((field) => !field.location).map((field) =>
                         field.incoming ? (
                           // „Braucht": die Kante liegt am anderen Item (S3b).
                           <IncomingRelationField
@@ -1500,7 +1491,7 @@ export function ContentComposer({
                         const value = typeof data[field.key] === "string" ? (data[field.key] as string) : ""
                         if (field.fixed) {
                           // Fest: nur mit Wert sichtbar (06, Regel 14).
-                          return value ? <FixedItemRefField key={field.key} label={field.label} value={value} missing={field.missing} spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined} /> : null
+                          return value ? <FixedItemRefField key={field.key} label={field.label} value={value} missing={field.missing} targetType={field.targetType} spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined} /> : null
                         }
                         return (
                           <ItemRelationWidget
@@ -1520,7 +1511,7 @@ export function ContentComposer({
                   )}
                   {widgetId === firstValueWidget && (
                     <div className="flex flex-col gap-4">
-                      {groupNumberFields(currentConfig.valueFields ?? []).map((group) => {
+                      {groupNumberFields((currentConfig.valueFields ?? []).filter((v) => v.widget !== "avatar")).map((group) => {
                         const field = group[0]!
                         const text = typeof data[field.key] === "string" ? (data[field.key] as string) : ""
                         switch (field.widget) {
@@ -1745,6 +1736,7 @@ export function ContentComposer({
         </div>
       </div>}
     </div>
+    </FormEpochProvider>
   )
 }
 

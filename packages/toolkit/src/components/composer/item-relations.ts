@@ -1,4 +1,5 @@
 import type { Item, Relation } from "@real-life-stack/data-interface"
+import { isItemTarget, survivesSpaceChange } from "../../lib/item-targets"
 
 /**
  * Item-Kanten im Composer (C3, Schreibform): Chips und eine `@`-Suche über
@@ -25,9 +26,15 @@ export interface ItemRelationFieldConfig {
    * Schreibrecht an diesem Item.
    */
   incoming?: true
+  /**
+   * Die Kante gehört dem Ort-Feld (B4, S4b): Das Ort-Widget schreibt sie
+   * (Ort-Item gewählt) oder leert sie (Adresse gewählt); kein eigenes
+   * Verknüpfungsfeld. Datenschlüssel wie jede Item-Kante.
+   */
+  location?: true
 }
 
-/** Eine Änderung an eingehenden Kanten: an welchen Items die Kante dazukommt oder entfällt (Item-Ids). */
+/** Eine Änderung an eingehenden Kanten: an welchen Items die Kante dazukommt oder entfällt (lokale Targets `item:<id>`). */
 export interface IncomingEdgeChange {
   predicate: string
   add: string[]
@@ -73,16 +80,18 @@ export function itemRelationChoiceKeys(fields: readonly ItemRelationFieldConfig[
   return (fields ?? []).map((f) => itemRelationDataKey(f.predicate, f.incoming))
 }
 
-/** Die Item-Ids eines Werts aus `item:<id>`-Zielen, jede einmal. */
-function itemIdsOf(value: unknown): string[] {
+/**
+ * Die lokalen Item-Targets eines Werts (`item:<id>`), jedes einmal. Welches
+ * Item sie meinen, bestimmt beim Schreiben der Auflöser (use-item-editor).
+ */
+function localTargetsOf(value: unknown): string[] {
   if (!Array.isArray(value)) return []
-  const ids: string[] = []
+  const out: string[] = []
   for (const target of value) {
-    if (typeof target !== "string" || !target.startsWith("item:")) continue
-    const id = target.slice("item:".length)
-    if (id && !ids.includes(id)) ids.push(id)
+    if (typeof target !== "string" || !isItemTarget(target) || survivesSpaceChange(target)) continue
+    if (!out.includes(target)) out.push(target)
   }
-  return ids
+  return out
 }
 
 /**
@@ -97,8 +106,8 @@ export function incomingChangesFromWidgetData(
   const out: IncomingEdgeChange[] = []
   for (const field of fields ?? []) {
     if (!field.incoming) continue
-    const add = itemIdsOf(data[itemRelationDataKey(field.predicate, true)])
-    const remove = itemIdsOf(data[incomingRemovedKey(field.predicate)]).filter((id) => !add.includes(id))
+    const add = localTargetsOf(data[itemRelationDataKey(field.predicate, true)])
+    const remove = localTargetsOf(data[incomingRemovedKey(field.predicate)]).filter((id) => !add.includes(id))
     if (add.length > 0 || remove.length > 0) out.push({ predicate: field.predicate, add, remove })
   }
   return out

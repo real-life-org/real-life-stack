@@ -1,11 +1,17 @@
 /**
  * Resize and compress an image file to a square WebP data URL.
- * - SVGs are kept as-is (lossless, scalable)
+ * - SVGs are kept as-is (lossless, scalable), unless `rasterizeSvg` is set
+ *   (avatars: the 512 px square is the contract, B11)
  * - Raster images: center-crops to square, resizes to maxSize × maxSize, compresses as WebP
  */
-export function resizeImage(file: File, maxSize = 200, quality = 0.8): Promise<string> {
+export function resizeImage(
+  file: File,
+  maxSize = 200,
+  quality = 0.8,
+  options: { rasterizeSvg?: boolean } = {},
+): Promise<string> {
   // SVGs don't need rasterization — return as data URL directly
-  if (file.type === "image/svg+xml") {
+  if (file.type === "image/svg+xml" && !options.rasterizeSvg) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => resolve(reader.result as string)
@@ -32,9 +38,12 @@ export function resizeImage(file: File, maxSize = 200, quality = 0.8): Promise<s
       }
 
       // Center-crop to square
-      const srcSize = Math.min(img.naturalWidth, img.naturalHeight)
-      const srcX = (img.naturalWidth - srcSize) / 2
-      const srcY = (img.naturalHeight - srcSize) / 2
+      // Ein SVG ohne eigene Größe meldet 0 × 0: dann gilt das Zielmaß.
+      const natW = img.naturalWidth || maxSize
+      const natH = img.naturalHeight || maxSize
+      const srcSize = Math.min(natW, natH)
+      const srcX = (natW - srcSize) / 2
+      const srcY = (natH - srcSize) / 2
 
       ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, maxSize, maxSize)
 

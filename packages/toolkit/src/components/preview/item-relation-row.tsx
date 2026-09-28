@@ -3,13 +3,11 @@
 import { useState, type ReactNode } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 
-import { useItem } from "../../hooks/use-items"
 import { cn } from "../../lib/utils"
 import type { FieldEntry } from "./field-register"
 import { ItemRefChip, MissingRefText } from "./item-ref-chip"
-import { hasItemGroups } from "@real-life-stack/data-interface"
-import { useConnector } from "../../hooks/connector-context"
-import { targetItemId, targetPointsTo, type EdgeTarget } from "./use-item-edges"
+import type { EdgeTarget } from "./use-item-edges"
+import { isItemTarget, useCarrierScope, useResolvedTarget } from "../../lib/item-targets"
 import { useFittingTags } from "./use-fitting-tags"
 
 /**
@@ -73,10 +71,9 @@ export function LabeledChips({ label, children }: { label?: string; children: Re
   )
 }
 
-/** Der Wert eines item-ref-Felds als Item-Id, oder null. */
-export function itemRefId(item: Item, field: FieldEntry): string | null {
-  const value = (item.data as Record<string, unknown> | undefined)?.[field.key]
-  return typeof value === "string" && value !== "" ? targetItemId(value) ?? null : null
+/** Hat das Item einen Wert im item-ref-Feld? */
+export function hasItemRef(item: Item, field: FieldEntry): boolean {
+  return isItemTarget((item.data as Record<string, unknown> | undefined)?.[field.key])
 }
 
 /**
@@ -85,18 +82,17 @@ export function itemRefId(item: Item, field: FieldEntry): string | null {
  * Regel 11). `null` ohne Wert.
  */
 export function ItemRefValue({ item, field }: { item: Item; field: FieldEntry }) {
-  const id = itemRefId(item, field)
-  if (!id) return null
+  if (!hasItemRef(item, field)) return null
   const value = (item.data as Record<string, unknown>)[field.key] as string
-  return <ResolvedRef carrier={item} value={value} id={id} missing={field.ref?.missing ?? "nicht verfügbar"} />
+  return <ResolvedRef carrier={item} value={value} missing={field.ref?.missing ?? "nicht verfügbar"} otherKind={field.ref?.type} />
 }
 
-function ResolvedRef({ carrier, value, id, missing }: { carrier: Item; value: string; id: string; missing: string }) {
-  const connector = useConnector()
-  const { data: target, isLoading } = useItem(id)
-  // Space-lokal (04): Das Ziel muss dort liegen, wohin das Target zeigt.
-  const spaceOf = hasItemGroups(connector) ? (x: string) => connector.getItemGroupId(x) : undefined
-  if (target && targetPointsTo(value, target, spaceOf ? spaceOf(carrier.id) : null, spaceOf)) return <ItemRefChip item={target} />
-  if (!target && isLoading) return null
+function ResolvedRef({ carrier, value, missing, otherKind }: { carrier: Item; value: string; missing: string; otherKind?: string }) {
+  // Der Auflöser (06, Verhältnis zu Relations, Regel 6): Space des Trägers,
+  // Typ des Ziels laut Register.
+  const scope = useCarrierScope(carrier, { otherKind })
+  const { item: target, loading } = useResolvedTarget(value, scope)
+  if (target) return <ItemRefChip item={target} />
+  if (loading) return null
   return <MissingRefText text={missing} />
 }

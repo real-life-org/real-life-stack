@@ -6,6 +6,8 @@ import {
 } from "@real-life-stack/data-interface"
 import { itemTitle } from "../../lib/item-text"
 import type { GraphEdge, GraphNode, GraphTypeDescriptor } from "./types"
+import { allSpacesScope, resolveTarget } from "../../lib/item-targets"
+import { otherKindOf, targetFilter } from "../preview/use-item-edges"
 
 /**
  * Items und Beziehungen als Graph.
@@ -57,7 +59,7 @@ export const graphUserNodeId = (id: string): string => `user:${id}`
 
 /** Decode a namespaced graph node id back to kind + original id. */
 export function graphNodeRef(nodeId: string): { kind: "item" | "user"; id: string } | null {
-  if (nodeId.startsWith("item:")) return { kind: "item", id: nodeId.slice("item:".length) }
+  if (nodeId.startsWith("item:")) return { kind: "item", id: nodeId.slice("item:".length) } // targets: kein Target — Knoten-Id des Graphen (graphItemNodeId)
   if (nodeId.startsWith("user:")) return { kind: "user", id: nodeId.slice("user:".length) }
   return null
 }
@@ -70,17 +72,6 @@ export interface GraphProjection {
 
 const label = (item: Item): string =>
   itemTitle(item)
-
-/** `item:x` / `space:s/item:x` → item id (+ claimed space); `global:u` → user id. */
-function parseTarget(
-  target: string,
-): { kind: "item"; id: string; spaceId?: string } | { kind: "user"; id: string } | null {
-  if (target.startsWith("global:")) return { kind: "user", id: target.slice("global:".length) }
-  if (target.startsWith("item:")) return { kind: "item", id: target.slice("item:".length) }
-  const cross = target.match(/^space:([^/]+)\/item:(.+)$/)
-  if (cross) return { kind: "item", id: cross[2], spaceId: cross[1] }
-  return null
-}
 
 /**
  * Pure projection: items + relation records + users → graph. Exported for
@@ -99,7 +90,6 @@ export function projectSpaceGraph(
 ): GraphProjection {
   const systemTypes = new Set<string>(SYSTEM_ITEM_TYPES)
   const cardItems = items.filter((item) => !systemTypes.has(item.type))
-  const itemIds = new Set(cardItems.map((item) => item.id))
   const usersById = new Map(users.map((user) => [user.id, user]))
 
   const nodes = new Map<string, GraphNode>()
@@ -113,40 +103,41 @@ export function projectSpaceGraph(
     usedTypes.add(item.type)
   }
 
-  /** Adds the person node lazily; returns null for unknown endpoints. */
-  const endpointNode = (target: string): string | null => {
-    const parsed = parseTarget(target)
-    if (!parsed) return null
-    if (parsed.kind === "item") {
-      if (!itemIds.has(parsed.id)) return null
-      // A space-qualified target claims a HOME for the item. Connect only when
-      // the connector confirms the local item really lives there — a local id
-      // that merely collides with a foreign item's id must not link. No
-      // resolver → unverifiable → drop, never guess.
-      if (parsed.spaceId !== undefined) {
-        if (opts?.resolveItemSpace?.(parsed.id) !== parsed.spaceId) return null
+  const itemsById = new Map(cardItems.map((item) => [item.id, item]))
+
+  /**
+   * Der Knoten am anderen Ende. Item-Ziele bestimmt der Auflöser (06,
+   * Verhältnis zu Relations, Regel 6): `item:` space-lokal zum Träger,
+   * `space:{id}/item:` genau dort, Typ der Gegenstelle laut Manifest.
+   * Personen (`global:`) legt die Funktion bei Bedarf als Knoten an.
+   */
+  const endpointNode = (target: string, carrier: Pick<Item, "id">, otherKind?: string): string | null => {
+    if (target.startsWith("global:")) {
+      const user = usersById.get(target.slice("global:".length))
+      if (!user) return null
+      const nodeId = graphUserNodeId(user.id)
+      if (!nodes.has(nodeId)) {
+        nodes.set(nodeId, {
+          id: nodeId,
+          label: user.displayName ?? user.id,
+          type: "person",
+          avatarUrl: typeof user.avatarUrl === "string" ? user.avatarUrl : undefined,
+        })
+        usedTypes.add("person")
       }
-      return graphItemNodeId(parsed.id)
+      return nodeId
     }
-    const user = usersById.get(parsed.id)
-    if (!user) return null
-    const nodeId = graphUserNodeId(user.id)
-    if (!nodes.has(nodeId)) {
-      nodes.set(nodeId, {
-        id: nodeId,
-        label: user.displayName ?? user.id,
-        type: "person",
-        avatarUrl: typeof user.avatarUrl === "string" ? user.avatarUrl : undefined,
-      })
-      usedTypes.add("person")
-    }
-    return nodeId
+    // Aggregierte Ansicht: Kontext „alle Spaces" (06, Verhältnis zu
+    // Relations, Regel 6) — die Space-Prüfung bleibt an.
+    const hit = resolveTarget(target, allSpacesScope(opts?.resolveItemSpace, carrier, { otherKind }), itemsById)
+    return hit ? graphItemNodeId(hit.id) : null
   }
 
   // Embedded relations (spec 04, forward): task --assignedTo--> person, …
   for (const item of cardItems) {
     for (const relation of item.relations ?? []) {
-      const other = endpointNode(relation.target)
+      const otherKind = targetFilter(otherKindOf(item.type, { predicate: relation.predicate, itemRole: "from" })).type as string | undefined
+      const other = endpointNode(relation.target, item, otherKind)
       if (!other) continue
       edges.push({
         id: `${item.id}|${relation.predicate}|${other}`,
@@ -159,8 +150,9 @@ export function projectSpaceGraph(
 
   // Relation records (spec 08): from --predicate--> to, as first-class edges.
   for (const record of records) {
-    const from = endpointNode(record.from)
-    const to = endpointNode(record.to)
+    // Die Endpunkte eines Records gelten vom Space des Records aus (08, Regel 7).
+    const from = endpointNode(record.from, record)
+    const to = endpointNode(record.to, record)
     if (!from || !to) continue
     edges.push({ id: record.id, sourceId: from, targetId: to, predicate: record.predicate })
   }

@@ -1,14 +1,16 @@
 "use client"
 
-import { useEffect, useId, useMemo, useRef, useState, startTransition } from "react"
+import { useEffect, useId, useMemo, useState, startTransition } from "react"
 import { hasGroups, hasGroupScope, hasItemGroups, isAuthenticatable, type DataInterface, type Item } from "@real-life-stack/data-interface"
 import { Lock, MousePointerClick } from "lucide-react"
 
 import { useOptionalConnector } from "../../../hooks/connector-context"
+import { useFieldEpoch } from "../../../lib/form-epoch"
 import { resolveItemPermissions } from "../../../hooks/use-item-permissions"
 import { cn } from "../../../lib/utils"
 import { ItemRefChip, MissingRefText } from "../../preview/item-ref-chip"
-import { targetFilter, targetItemId, targetPointsTo } from "../../preview/use-item-edges"
+import { targetFilter } from "../../preview/use-item-edges"
+import { resolveTarget, spaceScope, useResolvedTarget, type TargetScope } from "../../../lib/item-targets"
 import { itemTitle } from "../item-relations"
 
 /**
@@ -42,7 +44,10 @@ export type RequestItemPick = (request: { predicate: string; targetType?: string
  * ein anderer als der im Formularkopf, sagt das Feld es, statt still leer
  * zu bleiben (Space des Formulars, Regel 7).
  */
-export function useCandidates(targetType: string | undefined, spaceId: string | undefined): { items: Item[]; all: readonly Item[]; needsSpace: boolean; otherSpace: boolean; spaceOf?: (id: string) => string | null } {
+export function useCandidates(
+  targetType: string | undefined,
+  spaceId: string | undefined,
+): { items: Item[]; all: readonly Item[]; needsSpace: boolean; otherSpace: boolean; scope: TargetScope } {
   const connector = useOptionalConnector()
   const scoped = !!connector && !!spaceId && hasGroupScope(connector)
   const filterKey = JSON.stringify(targetFilter(targetType))
@@ -74,15 +79,18 @@ export function useCandidates(targetType: string | undefined, spaceId: string | 
     return observable.subscribe((next) => startTransition(() => setItems(next)))
   }, [observable])
   return useMemo(() => {
+    // Der Kontext des Formulars baut der Auflöser (06, Verhältnis zu
+    // Relations, Regel 6). Alles, was der Connector mit `group` liefert,
+    // liegt in diesem Space — auch wenn `getItemGroupId` eine Id in mehreren
+    // Spaces nicht auflöst.
     if (scoped) {
-      // Alles, was der Connector mit `group` liefert, liegt in diesem Space —
-      // auch wenn `getItemGroupId` eine Id in mehreren Spaces nicht auflöst.
       const ids = new Set(inScope.map((item) => item.id))
       const others = items.filter((item) => !ids.has(item.id))
-      const spaceOf = (id: string) => (ids.has(id) ? spaceId ?? null : connector && hasItemGroups(connector) ? connector.getItemGroupId(id) : null)
-      return { items: [...inScope], all: [...inScope, ...others], needsSpace: false, otherSpace: false, spaceOf }
+      const scope = spaceScope(connector, spaceId, { knownInSpace: ids, otherKind: targetType })
+      return { items: [...inScope], all: [...inScope, ...others], needsSpace: false, otherSpace: false, scope }
     }
-    return { ...inSpace(connector, items, spaceId), all: items, otherSpace: !!spaceId && openSpace !== null && openSpace !== spaceId }
+    const scope = spaceScope(connector, spaceId, { otherKind: targetType })
+    return { ...inSpace(connector, items, spaceId, scope), all: items, otherSpace: !!spaceId && openSpace !== null && openSpace !== spaceId, scope }
   }, [connector, items, inScope, spaceId, openSpace, scoped])
 }
 
@@ -90,11 +98,11 @@ export function useCandidates(targetType: string | undefined, spaceId: string | 
  * Mit Spaces nur die Items des Formular-Space; ohne gewählten Space keine —
  * ein `item:`-Target aus der Übersicht wäre in einem anderen Space falsch.
  */
-function inSpace(connector: DataInterface | null, items: readonly Item[], spaceId: string | undefined) {
+function inSpace(connector: DataInterface | null, items: readonly Item[], spaceId: string | undefined, scope: TargetScope) {
   if (!connector || !hasItemGroups(connector)) return { items: [...items], needsSpace: false }
-  const spaceOf = (id: string) => connector.getItemGroupId(id)
-  if (!spaceId) return { items: [], needsSpace: true, spaceOf }
-  return { items: items.filter((item) => spaceOf(item.id) === spaceId), needsSpace: false, spaceOf }
+  if (!spaceId) return { items: [], needsSpace: true }
+  // Im Formular-Space ist, worauf ein lokales Target von dort zeigen kann.
+  return { items: items.filter((item) => resolveTarget(`item:${item.id}`, scope, [item]) === item), needsSpace: false }
 }
 
 export interface ItemRelationWidgetProps {
@@ -135,7 +143,7 @@ export function ItemRelationWidget({
   canChoose,
   unavailable,
 }: ItemRelationWidgetProps) {
-  const { items: allCandidates, all, needsSpace, otherSpace, spaceOf } = useCandidates(targetType, spaceId)
+  const { items: allCandidates, all, needsSpace, otherSpace, scope } = useCandidates(targetType, spaceId)
   const candidates = canChoose ? allCandidates.filter(canChoose) : allCandidates
   const connector = useOptionalConnector()
   const groupName = useGroupName(connector, otherSpace ? spaceId : undefined)
@@ -143,12 +151,12 @@ export function ItemRelationWidget({
   const [pickError, setPickError] = useState<string | null>(null)
   // Gewählte Ziele gegen alle sichtbaren Items (ein space-qualifiziertes
   // bleibt nach einem Space-Wechsel gültig); gesucht wird nur im Formular-Space.
-  const resolve = (target: string) => all.find((c) => targetPointsTo(target, c, spaceId ?? null, spaceOf))
+  const resolve = (target: string) => resolveTarget(target, scope, all)
   const [query, setQuery] = useState("")
   const [open, setOpen] = useState(false)
   const listId = useId()
 
-  const isChosen = (c: Item) => value.some((t) => targetPointsTo(t, c, spaceId ?? null, spaceOf))
+  const isChosen = (c: Item) => value.some((t) => resolveTarget(t, scope, [c]) === c)
   const needle = query.replace(/^@/, "").trim().toLocaleLowerCase("de")
   const suggestions = open
     ? candidates
@@ -157,11 +165,13 @@ export function ItemRelationWidget({
         .slice(0, 6)
     : []
 
-  // Der Modul-Pick kommt asynchron: geprüft wird gegen den Stand beim Eintreffen.
-  const latest = useRef({ candidates, allCandidates, value, excludeId, spaceId, spaceOf, full: false, unavailable, onChange })
-  latest.current = { candidates, allCandidates, value, excludeId, spaceId, spaceOf, full: !!single && value.length > 0, unavailable, onChange }
-  const checkPick = (id: string): ItemPickResult => {
-    const now = latest.current
+  // Der Modul-Pick kommt asynchron (Formular-Epoche): Er gilt nur für den
+  // Stand, für den er begann, und prüft gegen den Stand beim Eintreffen.
+  const full = !!single && value.length > 0
+  const fieldState = { candidates, allCandidates, value, excludeId, scope, full, unavailable, onChange }
+  type FieldState = typeof fieldState
+  const epoch = useFieldEpoch(fieldState, { scope: [spaceId ?? null] })
+  const checkPick = (id: string, now: FieldState): ItemPickResult => {
     if (now.unavailable) return { ok: false, reason: now.unavailable }
     if (now.full) return { ok: false, reason: "Das Feld hat schon ein Ziel" }
     if (id === now.excludeId) return { ok: false, reason: "Ein Item verweist nicht auf sich selbst" }
@@ -170,32 +180,36 @@ export function ItemRelationWidget({
     if (!target) {
       return { ok: false, reason: targetType ? "Das Ziel ist nicht vom passenden Typ oder liegt nicht in diesem Space" : "Das Ziel liegt nicht in diesem Space" }
     }
-    if (now.value.some((t) => targetPointsTo(t, target, now.spaceId ?? null, now.spaceOf))) return { ok: false, reason: "Das Ziel ist schon gewählt" }
+    if (now.value.some((t) => resolveTarget(t, now.scope, [target]) === target)) return { ok: false, reason: "Das Ziel ist schon gewählt" }
     return { ok: true }
   }
-  const onPick = (id: string): ItemPickResult => {
-    const result = checkPick(id)
-    if (result.ok) {
-      setPickError(null)
-      add(id)
-    } else setPickError(result.reason)
-    return result
+  const startPick = () => {
+    const pick = epoch.begin("pick")
+    requestItemPick?.({ predicate, targetType }, (id) => {
+      let result: ItemPickResult = { ok: false, reason: "Das Formular hat sich inzwischen geändert" }
+      pick.apply((now) => {
+        result = checkPick(id, now)
+        if (result.ok) {
+          setPickError(null)
+          addTo(id, now)
+        } else setPickError(result.reason)
+      })
+      return result
+    })
   }
 
-  // Gegen den aktuellen Stand: Ein asynchroner Pick darf zwischenzeitliche
-  // Änderungen nicht überschreiben.
-  const add = (id: string) => {
+  // Gegen den aktuellen Stand: ein Klick schreibt auf den Wert dieses Renders.
+  const addTo = (id: string, now: { value: readonly string[]; onChange: (next: string[]) => void }) => {
     const target = `item:${id}`
-    const { value: now, onChange: change } = latest.current
-    change(single ? [target] : now.includes(target) ? [...now] : [...now, target])
+    now.onChange(single ? [target] : now.value.includes(target) ? [...now.value] : [...now.value, target])
     setQuery("")
     setOpen(false)
   }
+  const add = (id: string) => addTo(id, { value, onChange })
   const locked = (target: string) => !!lockedTargets?.includes(target)
   const remove = (target: string) => {
     if (!locked(target)) onChange(value.filter((t) => t !== target))
   }
-  const full = single && value.length > 0
 
   return (
     <div className="flex flex-col gap-1.5" data-item-relation-field={predicate}>
@@ -203,10 +217,9 @@ export function ItemRelationWidget({
       <div className="relative">
         <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border bg-background px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring/40">
           {value.map((target) => {
-            const id = targetItemId(target)
             const item = resolve(target)
             return (
-              <span key={target} data-relation-chip={id ?? target} className="inline-flex">
+              <span key={target} data-relation-chip={item?.id ?? target} className="inline-flex">
                 {item ? (
                   <ItemRefChip item={item} inert onRemove={locked(target) ? undefined : () => remove(target)} />
                 ) : (
@@ -262,7 +275,7 @@ export function ItemRelationWidget({
           {requestItemPick && !full && !unavailable && !needsSpace && !otherSpace && (
             <button
               type="button"
-              onClick={() => requestItemPick({ predicate, targetType }, onPick)}
+              onClick={startPick}
               className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <MousePointerClick className="h-3.5 w-3.5" aria-hidden />
@@ -346,18 +359,21 @@ export function IncomingRelationField({
 }: IncomingRelationFieldProps) {
   const connector = useOptionalConnector()
   const meId = useMeId(connector)
-  const { all, spaceOf } = useCandidates(targetType, spaceId)
+  const { all, scope } = useCandidates(targetType, spaceId)
   const openSpace = connector && hasGroups(connector) ? (connector.getCurrentGroup()?.id ?? null) : null
   const unavailable = connector && hasItemGroups(connector) && spaceId && openSpace !== spaceId ? INCOMING_OTHER_SPACE : undefined
   const canEdit = (item: Item) => !!connector && resolveItemPermissions(connector, item, meId).canEdit
   // Die Quellen: Items im Formular-Space, deren Kante auf dieses Item zeigt.
-  const self = itemId ? ({ id: itemId } as Item) : null
+  const self = itemId ? ({ id: itemId, type: "" } as unknown as Item) : null
+  // Das Item selbst liegt im Formular-Space; seine Typprüfung entfällt (es ist das Ziel, nicht die Gegenstelle).
+  const selfScope = spaceScope(connector, spaceId, itemId ? { knownInSpace: new Set([itemId]) } : {})
   const sources = self
     ? all.filter(
         (c) =>
           c.id !== itemId &&
-          (!spaceOf || spaceOf(c.id) === (spaceId ?? null)) &&
-          (c.relations ?? []).some((r) => r.predicate === predicate && targetPointsTo(r.target, self, spaceOf ? spaceOf(c.id) : null, spaceOf)),
+          // Die Quelle liegt im Formular-Space, ihre Kante zeigt von dort auf dieses Item (Auflöser).
+          resolveTarget(`item:${c.id}`, scope, [c]) === c &&
+          (c.relations ?? []).some((r) => r.predicate === predicate && resolveTarget(r.target, selfScope, [self]) === self),
       )
     : []
   const live = sources.map((c) => `item:${c.id}`)
@@ -387,35 +403,22 @@ export function IncomingRelationField({
  * Feste Anzeige eines Felds mit Item-Verweis im Formular (06, Regel 14;
  * Edit-Regeln 9): sichtbar, nicht bearbeitbar, mit Schloss.
  */
-export function FixedItemRefField({ label, value, missing, spaceId }: { label: string; value: string; missing: string; spaceId?: string }) {
+export function FixedItemRefField({ label, value, missing, spaceId, targetType }: { label: string; value: string; missing: string; spaceId?: string; targetType?: string }) {
   const connector = useOptionalConnector()
-  const id = targetItemId(value)
-  const [item, setItem] = useState<Item | null>(null)
-  useEffect(() => {
-    if (!connector || !id) return
-    const observable = connector.observeItem(id)
-    setItem(observable.current)
-    return observable.subscribe((next) => setItem(next))
-  }, [connector, id])
+  // Der Auflöser im Kontext des Formular-Space; ohne Space im Formular stammt
+  // der Wert aus der Vorbelegung (Variante: Space des Ursprungs, fest) und
+  // gilt im einen Bereich der Vorbelegung.
+  const scope = spaceScope(connector, spaceId, { otherKind: targetType })
+  const { item } = useResolvedTarget(value, scope)
   return (
     <div className="flex flex-col gap-1.5" data-fixed-ref>
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       <div className={cn("flex min-h-10 items-center justify-between gap-2 rounded-md border bg-muted/50 px-2 py-1.5")}>
-        {item && fitsSpace(connector, value, item, spaceId) ? <ItemRefChip item={item} inert /> : <MissingRefText text={missing} />}
+        {item ? <ItemRefChip item={item} inert /> : <MissingRefText text={missing} />}
         <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label="nicht änderbar" />
       </div>
     </div>
   )
-}
-
-/** Das Ziel muss dort liegen, wohin das Target zeigt (04); ohne Spaces gibt es nur einen Bereich. */
-function fitsSpace(connector: DataInterface | null, value: string, item: Item, spaceId: string | undefined): boolean {
-  // Ohne Space-Auskunft: ein lokales Ziel nach Id, ein qualifiziertes nie (nicht prüfbar).
-  if (!connector || !hasItemGroups(connector)) return targetPointsTo(value, item, null)
-  // Ohne Space im Formular lässt sich ein lokales Ziel nicht gegenprüfen; es
-  // stammt dann aus der Vorbelegung (Variante: Space des Ursprungs, fest).
-  if (!spaceId && value.startsWith("item:")) return targetItemId(value) === item.id
-  return targetPointsTo(value, item, spaceId ?? null, (id) => connector.getItemGroupId(id))
 }
 
 /** Die angemeldete Person, auch ohne Provider (dann keine). */

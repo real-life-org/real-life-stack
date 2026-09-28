@@ -34,7 +34,7 @@ Die Karte rendert **full-bleed** — sie füllt den Space randlos, ohne zentrier
 ## Toolkit MapView und MapLens
 
 `MapView` aus `@real-life-stack/toolkit` ist das vollständige, props-getriebene
-Space-Modul. Es besitzt die lokale FilterBar, bbox-Inventar-Akkumulation,
+Space-Modul. Es besitzt die lokale FilterBar, das Marker-Inventar als Projektion der bbox-Abfrage (siehe Datenmodell),
 Location-Pick-UI, Mount-Recovery und das Create-Gate. Die App bleibt Eigentümerin
 der bbox-Abfrage, URL-/Panel-Selektion und Composer-Callback.
 
@@ -53,6 +53,10 @@ aus. Clustering wird ausschließlich als Adapter-Capability via
 ## Datenmodell
 
 Das Map Module liest Items im Current Space, die eine geografische Position tragen. Es ist damit **feldbasiert, nicht typbasiert**.
+
+**Abgeleitete Position (S4b).** Ein Item ohne eigene Position, dessen Ort-Feld auf ein Ort-Item zeigt, erscheint an der Position dieses Ortes. Gemeint ist die Ort-Kante des Registers, beim Event `locatedAt` ([shared-components → Widget-Paare](shared-components.md#widget-paare), Regel 5); das Ziel bestimmt der Auflöser für Kanten-Ziele ([06 → Verhältnis zu Relations](../06-schema-composition.md#verhältnis-zu-relations), Regel 6). Die Position wird beim Lesen abgeleitet und nie am Item gespeichert. Bewegt sich der Ort, folgt das Item. Liegen Ort und Event am selben Punkt, fasst die Cluster-Capability sie bis Zoom 14 zu einer Blase zusammen. Darüber liegen beide Pins aufeinander, und nur der obere ist anklickbar (offen, eigenes Issue).
+
+**Karten-Inventar als Projektion (S4b).** Was die Karte zeigt, ist eine Funktion der aktuellen Abfrage (Ausschnitt, Filter) plus der abgeleiteten Positionen. Es ist kein akkumulierter Cache. Ein Marker steht genau dann da, wenn das Item in der aktuellen Abfrage liegt oder eine abgeleitete Position in ihr hat. Ändert sich ein Item oder eine Kante, gilt der neue Stand beim nächsten Zeichnen; einen alten Eintrag, der das überdauert, gibt es nicht. Puffert eine spätere Fassung, etwa gegen Flackern beim Nachladen, MUSS sie jeden Eintrag bei jeder Änderung seines Items oder seiner Kanten verwerfen.
 
 Typische map-fähige Item-Typen:
 

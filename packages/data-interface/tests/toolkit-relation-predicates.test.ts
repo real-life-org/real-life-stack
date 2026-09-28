@@ -24,6 +24,26 @@ describe("Toolkit-Manifest: Kanten der Aufgabe (S3)", () => {
   })
 })
 
+// S4b: Das Event liegt an einem Ort (`locatedAt`, eingebettet, 0..1, Event →
+// Ort); der Ort liest es eingehend („Findet hier statt"). Die Netzwerk-App
+// führt Event → Ort als Record `takesPlaceAt`; das bleibt ihr Katalog.
+describe("Toolkit-Manifest: Event am Ort (S4b)", () => {
+  const manifest = composeTypeManifest([TOOLKIT_TYPE_LAYER])
+  const has = (type: string, predicate: string, itemRole: string, otherKind: string) =>
+    (manifest.get(type)?.relations ?? []).some((r) => r.predicate === predicate && r.itemRole === itemRole && r.otherKind === otherKind)
+
+  it("event → place ausgehend, place ← event eingehend", () => {
+    expect(has("event", "locatedAt", "from", "place")).toBe(true)
+    expect(has("place", "locatedAt", "to", "event")).toBe(true)
+  })
+
+  it("locatedAt ist gerichtet definiert; takesPlaceAt ist kein Toolkit-Prädikat", () => {
+    const byPredicate = new Map(TOOLKIT_RELATION_PREDICATES.map((d) => [d.predicate as string, d]))
+    expect(byPredicate.get("locatedAt")?.symmetric).toBe(false)
+    expect(byPredicate.has("takesPlaceAt")).toBe(false)
+  })
+})
+
 describe("Relation-Typ-Definitionen des Toolkits", () => {
   const byPredicate = new Map(TOOLKIT_RELATION_PREDICATES.map((d) => [d.predicate, d]))
 

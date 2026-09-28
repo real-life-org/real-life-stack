@@ -1,6 +1,7 @@
 // Wert-Felder im Formular (S4a): number (B7), select (B8), url (B9), chips
 // (B10), contact (B12) — abgeleitet aus dem Feldregister, abgebildet auf
-// `item.data[key]`.
+// `item.data[key]`. Seit S4b auch avatar (B11): ein Bild im Kopf des
+// Formulars, gespeichert als sichere Bildadresse.
 //
 // Spec: docs/spec/06-schema-composition.md → „Feld- und Kantenregister",
 // Regel 16 (ContentTypeConfig wird abgeleitet); docs/spec/modules/
@@ -16,10 +17,11 @@ import {
   normalizeUrl,
   numberError,
   parseNumberInput,
+  safeImageSrc,
   urlError,
 } from "../../lib/field-values"
 
-export type ValueWidgetId = "number" | "select" | "url" | "chips" | "contact" | "status"
+export type ValueWidgetId = "number" | "select" | "url" | "chips" | "contact" | "status" | "avatar"
 
 /** Wert-Widgets, die nur das Register setzt (nie zum Zuschalten). Status ist zuschaltbar und steht darum nicht hier. */
 export const VALUE_WIDGETS: ReadonlySet<string> = new Set<ValueWidgetId>(["number", "select", "url", "chips", "contact"])
@@ -49,7 +51,9 @@ export function valueFieldsFromRegister(fields: readonly FieldEntry[]): ValueFie
   return fields
     // Status (B6) steht mit, damit das Formular die Register-Reihenfolge hält;
     // geschrieben wird er wie bisher über `statusOptions`.
-    .filter((x) => ORDERED_VALUE_WIDGETS.has(x.widget) && (x.widget !== "status" || !!x.options?.length) && x.edit !== false && x.pos !== "module" && x.pos !== "system")
+    // Der Avatar (B11) steht im Kopf des Formulars, nicht bei den Werten;
+    // abgebildet wird er wie sie.
+    .filter((x) => (ORDERED_VALUE_WIDGETS.has(x.widget) || x.widget === "avatar") && (x.widget !== "status" || !!x.options?.length) && x.edit !== false && x.pos !== "module" && x.pos !== "system")
     .map((x) => ({
       key: x.key,
       widget: x.widget as ValueWidgetId,
@@ -117,6 +121,11 @@ export function valueFieldToData(field: ValueFieldConfig, value: unknown): unkno
     case "status": {
       if (typeof value !== "string" || value === "") return undefined
       return value
+    }
+    case "avatar": {
+      // Nur eine sichere Bildadresse (B11); Unsicheres lässt den alten Wert stehen.
+      if (typeof value !== "string" || value.trim() === "") return undefined
+      return safeImageSrc(value)
     }
   }
 }

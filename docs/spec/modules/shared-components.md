@@ -116,6 +116,8 @@ interface ContentTypeConfig {
 
 **App-Realisierung des Map-Picks (Referenz-App, nicht Widget-Sache):** Damit der Speichern-Pfad den Modulwechsel übersteht, liegen Editor + `ContentComposer` app-weit über dem Modul-Outlet (Composer-Host). Das geteilte Content-Panel ([01-app-composition.md → Overlay-Flächen](../01-app-composition.md)) bleibt beim Modulwechsel offen; auf kompakten Screens (Drawer) tritt es während des Pickens beiseite und kommt per „Fertig" zurück, auf Desktop bleibt die Sidebar sichtbar (kein Extra-Schritt, direkt „Erstellen"). „Abbrechen" stellt die vorherige Position wieder her und kehrt ins Ursprungsmodul zurück. Das Widget selbst kennt nur `onPickOnMap` und den injizierten Geocoder.
 
+**Ort-Items (B4, S4b):** Führt der Typ eine Kante zu einem Ort, bietet dasselbe Feld Ort-Items an ([Widget-Paare](#widget-paare), Regel 5): Die Vorschlagsliste zeigt passende Ort-Items des Formular-Space oben, sofort und als Chip, darunter die Adressen des Geocoders. Ein gewähltes Ort-Item steht als Chip statt der Eingabe; ✕ nimmt es zurück. Beim Karten-Pick (b) nimmt ein Klick auf einen Marker, der ein solches Ort-Item ist, dieses Item; jeder andere Klick setzt die Position.
+
 **Daten-Vertrag (geschriebene Felder):**
 
 - `data.position` MUSS ein GeoJSON `Point` sein (`pointFromLatLng(lat, lng)` aus `lib/geo`), konform zu [place/v1](../schemas/vocab/place/v1/schema.json). Beide Eingabewege (a) und (b) schreiben in dasselbe Feld.
@@ -722,6 +724,9 @@ Regeln:
 2. Beschriftungen kommen über die Intl-Schicht (DE/EN), nicht aus dem Widget.
 3. `blocks` heißt in allen Typen von beiden Enden gleich: „Braucht" (eingehend) und „Ermöglicht" (ausgehend).
 4. Ein Record ist nie eine Karte. Er wird über das Item gelesen, das er berührt.
+5. **Ein Ort-Feld (B4).** Das Ort-Feld trägt ein Ort-Item **oder** Adresse und Position, nie beides. Führt der Typ eine eingebettete, ausgehende Item-Kante der Meta-Box, deren Gegenstelle laut Manifest ein Ort ist (beim Event `locatedAt`), gehört sie dem Ort-Feld: Sie hat keine eigene Meta-Zeile und kein eigenes Formularfeld. Ein gewähltes Ort-Item schreibt die Kante und entfernt Adresse und Position; eine gewählte Adresse oder ein freier Punkt auf der Karte entfernt die Kante. Lesend steht das Ort-Item als Chip in der Ort-Zeile, sonst die Adresse als Text mit dem Sprung „Karte", wenn es Koordinaten gibt. Ein nicht auflösbares Ort-Item erscheint nicht; steht dann eine Adresse da, gilt sie. Die Karte des Items nennt den Namen des Ort-Items.
+6. **Medien (B5)** stehen im Slot `content` nach der Beschreibung, für jeden Typ, der `data.media` trägt (der Composer lässt Medien überall zuschalten). Bilder bilden eine Reihe; ein Klick öffnet die Lightbox, Pfeiltasten blättern, Escape schließt. Andere Dateien stehen als Link (nur http/https). Eine Bildadresse ist nur http(s), `blob:`, `data:image/…` oder ein Pfad der eigenen Auslieferung; andere erscheinen nicht.
+7. **Avatar (B11)** steht im Slot `head` vor dem Titel, wenn der Typ ein `avatar`-Feld mit `pos: "head"` führt. Die Schreibform verkleinert das gewählte Bild auf 512 px (quadratisch) und speichert die Bildadresse im Feld; für die Adresse gilt dieselbe Einschränkung wie für Medien.
 
 ### Modi
 
@@ -784,6 +789,21 @@ Regeln:
 6. **Anlegen in einem Schritt.** Das Formular legt ein neues Item mit `createItem(item, { group })` direkt im Formular-Space an ([02 → Anlegen in einem bestimmten Space](../02-data-interface.md#anlegen-in-einem-bestimmten-space)), nie durch Anlegen und Verschieben. Ohne `hasGroupScope()` bietet es beim Erstellen nur den Space an, in dem der Connector ohne `group` anlegt. Beim Bearbeiten verschiebt ein Wechsel des Space das Item (`moveItemToGroup`).
 7. **Kein Vortäuschen.** Kann der Connector nicht im Formular-Space lesen (`hasGroupScope()` fehlt) und ist dieser nicht der geöffnete Space, sagt die Suche das, statt leer zu bleiben oder Items des geöffneten Space anzubieten. Dasselbe gilt für Personen- und Tag-Vorschläge.
 8. **Pflicht nur beim Anlegen.** Hat der Connector Spaces und ist beim Erstellen keiner gesetzt, ist das Feld markiert und Speichern gesperrt. `composer.groupRequired` gilt nur beim Erstellen. Beim Bearbeiten ist der Space nie Pflicht: Ein Item ohne bekannten Space bleibt speicherbar.
+
+### Formular-Epoche
+
+**Status:** Normativer Vertrag (S4b, 28.09.2026). Asynchrone Arbeit darf nie einen Stand beschreiben, für den sie nicht begonnen wurde.
+
+Ein Formular hat einen **Stand**: den Space des Formulars, den Typ und die Lebensdauer des Formulars. Jedes Feld hat dazu seine eigene Lebensdauer und seinen Zustand „gesperrt oder fest“. Die **Epoche** zählt diesen Stand.
+
+Regeln:
+
+1. **Asynchron heißt: mit Epoche.** Jedes asynchrone Ergebnis im Formular, etwa Geocoding, Rückwärtssuche, Rückrufe des Karten- und Modul-Picks, Verkleinern oder Hochladen eines Bilds, Suche und Vorschläge, merkt sich beim Start die Epoche. Es wird nur angewendet, wenn sie beim Eintreffen noch dieselbe ist. Sonst wird es ohne Schreiben verworfen.
+2. **Die Epoche ist ein Zähler.** Sie steigt monoton und wird nie aus Werten berechnet. Jede Änderung erhöht sie: ein Wechsel des Formular-Space, ein Wechsel des Typs, der Abbau des Felds oder Formulars und das Sperren oder Festsetzen des Felds. Ein Hin- und Rückwechsel (Space G → H → G) erhöht sie zweimal; alte Arbeit bleibt ungültig. Beginnt ein Feld dieselbe Arbeit neu (eine neue Suche, eine neue Bildwahl, ein neuer Pick) oder nimmt es sie zurück (Entfernen), verliert die vorige Arbeit dieser Art ihre Gültigkeit.
+3. **Der aktuelle Stand, nicht der beim Start.** Ein gültiges Ergebnis prüft und schreibt gegen den Stand beim Eintreffen: den aktuellen Wert des Felds, den aktuellen Rückruf, die aktuellen Kandidaten und die aktuellen Rechte. Ein Feld, das inzwischen gesperrt oder fest ist, nimmt keine Ergebnisse mehr an.
+4. **Warte-Zustände gehören zur Arbeit.** Ob eine Arbeit läuft, fertig oder verworfen ist, führt der Baustein. Ein Spinner oder ein gesperrter Knopf („beschäftigt") liest diesen Zustand. Widgets führen keine eigenen Busy-Flags. Ein verworfenes Ergebnis beendet auch seinen Warte-Zustand.
+5. **Ein Baustein.** Widgets implementieren das nicht selbst. Sie nutzen den Epochen-Baustein des Toolkits (`useFieldEpoch`, `useEpochBusy`, `FormEpochProvider`). Eigene Zähler, Lebendig-Flags und Refs auf den letzten Stand sind dafür nicht vorgesehen.
+6. **Auch außerhalb des Formulars.** Eine Selbstaktion (C2) liest vor dem Schreiben frisch ([06, Regel 9](../06-schema-composition.md#feld--und-kantenregister)). Ihr Stand ist das Item und der geöffnete Space. Jeder Wechsel des geöffneten Space erhöht ihre Epoche, auch nachdem die Anzeige abgebaut ist. Bis dahin laufende Arbeit schreibt nichts und meldet den Grund.
 
 ## Hooks
 

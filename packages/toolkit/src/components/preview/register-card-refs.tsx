@@ -3,7 +3,7 @@
 import type { Item } from "@real-life-stack/data-interface"
 
 import type { FieldEntry } from "./field-register"
-import { ItemRefValue, itemRefId } from "./item-relation-row"
+import { ItemRefValue, hasItemRef } from "./item-relation-row"
 
 /**
  * Felder mit Item-Verweis auf der Karte (B15): „Variante von [Chip]", auf der
@@ -11,7 +11,7 @@ import { ItemRefValue, itemRefId } from "./item-relation-row"
  * shared-components, Detail-Anatomie Regel 9). `null` ohne Wert.
  */
 export function RegisterCardRefs({ item, fields }: { item: Item; fields?: readonly FieldEntry[] }) {
-  const refs = (fields ?? []).filter((f) => f.widget === "item-ref" && itemRefId(item, f) !== null)
+  const refs = (fields ?? []).filter((f) => f.widget === "item-ref" && hasItemRef(item, f))
   if (refs.length === 0) return null
   return (
     <div className="flex min-w-0 flex-col gap-1">

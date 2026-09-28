@@ -8,6 +8,7 @@ import { useItemFocus } from "../hooks/use-item-focus"
 import { useIsCompact } from "../hooks/use-mobile"
 import { useModuleHost } from "../components/host/module-host"
 import { MapView } from "../components/map/map-view"
+import { useItemWithPlacePosition, useLocatedItems } from "../components/map/place-position"
 import type { MapAdapter } from "../components/map/adapter"
 import type { ModuleViewProps } from "../lib/module-register"
 
@@ -44,8 +45,13 @@ export function MapModule({ groupId, active = true }: ModuleViewProps) {
   const { entry, resolveItemGroupColor, activeItemId } = useModuleHost()
   const [bbox, setBbox] = useState<Bounds | undefined>()
   const { data: items, isLoading } = useItems(bbox ? { hasField: ["position"], bbox } : AWAITING_VIEWPORT_FILTER)
+  // Ein Event an einem Ort-Item hat keine eigene Position: Die Karte liest
+  // sie vom Ort, abgeleitet und reaktiv (B4, S4b); das Inventar der Karte
+  // ist eine Projektion aus Abfrage und Ableitung (map.md).
+  const derivedItems = useLocatedItems(items)
   const { itemId: focusedId, focusItem } = useItemFocus()
-  const { data: focusedItem } = useItem(active ? (focusedId ?? "") : "")
+  const { data: focusedRaw } = useItem(active ? (focusedId ?? "") : "")
+  const focusedItem = useItemWithPlacePosition(focusedRaw)
   const compact = useIsCompact()
   const draftItem = useDraftItem()
   const createAdapter = useMapAdapterFactory()
@@ -77,6 +83,7 @@ export function MapModule({ groupId, active = true }: ModuleViewProps) {
       activeItemId={activeItemId}
       isCompact={compact}
       draftItem={draftItem}
+      derivedItems={derivedItems}
       onItemClick={(item) => focusItem(item.id)}
       clustering={{}}
       resolveGroupColor={resolveItemGroupColor}
