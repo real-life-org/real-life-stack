@@ -621,6 +621,49 @@ describe("Codex R3", () => {
   })
 })
 
+describe("Codex R4", () => {
+  it("ein abgebautes Ort-Feld nimmt keinen Marker und schreibt nichts mehr", async () => {
+    const box: { h: Handlers2 | null } = { h: null }
+    const updateMany = vi.fn()
+    await render(
+      createElement(LocationField, {
+        label: "Ort",
+        data: {},
+        updateMany,
+        requestMapPick: (h: never) => {
+          box.h = h
+        },
+        placeField: contentTypeFromRegister("event").itemRelations!.find((f) => f.location),
+        spaceId: "g",
+      }),
+    )
+    await settle()
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('button[aria-label^="Position auf Karte"]')!.click()
+    })
+    await act(async () => root.render(createElement("div")))
+    updateMany.mockClear()
+    expect(box.h!.onPickItem!(MARKTHALLE)).toBe(false)
+    box.h!.onPick({ lat: 1, lng: 2 })
+    box.h!.onCancel!()
+    expect(updateMany).not.toHaveBeenCalled()
+  })
+
+  it("ohne Space im Formular sagt das Feld, warum keine Ort-Items kommen", async () => {
+    await render(
+      createElement(LocationField, {
+        label: "Ort",
+        data: {},
+        updateMany: () => undefined,
+        placeField: contentTypeFromRegister("event").itemRelations!.find((f) => f.location),
+      }),
+    )
+    expect(host.querySelector("[data-places-unavailable]")?.textContent).toContain("Adressen gehen immer")
+  })
+})
+
+type Handlers2 = { onPick: (p: { lat: number; lng: number }) => void; onPickItem?: (i: Item) => boolean; onCancel?: () => void }
+
 describe("Lightbox-Fokus und kommende Events", () => {
   it("nach Escape liegt der Fokus wieder auf dem Vorschaubild", async () => {
     const Content = resolveTypePresentation("post").content!

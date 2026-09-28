@@ -63,7 +63,7 @@ export function LocationField(props: LocationFieldProps) {
 function WithPlaces(props: LocationFieldProps & { placeField: ItemRelationFieldConfig }) {
   const { placeField, spaceId, itemId, data, updateMany } = props
   const key = itemRelationDataKey(placeField.predicate)
-  const { items: candidates, all, spaceOf } = useCandidates(placeField.targetType, spaceId)
+  const { items: candidates, all, spaceOf, needsSpace, otherSpace } = useCandidates(placeField.targetType, spaceId)
   const choosable = React.useMemo(() => candidates.filter((c) => c.id !== itemId), [candidates, itemId])
   const targets = Array.isArray(data[key]) ? (data[key] as unknown[]).filter((t): t is string => typeof t === "string" && t !== "") : []
   const target = targets[0]
@@ -91,6 +91,12 @@ function WithPlaces(props: LocationFieldProps & { placeField: ItemRelationFieldC
     selected: target ? { target, ...(selectedItem ? { item: selectedItem } : {}) } : null,
     candidates: choosable,
     onSelect: choose,
+    // Warum keine Ort-Items kommen (Space des Formulars, Regel 7); Adressen gehen immer.
+    ...(needsSpace
+      ? { unavailable: "Ort-Items erst nach Wahl eines Space – Adressen gehen immer" }
+      : otherSpace
+        ? { unavailable: "Ort-Items sucht dieser Speicher nur im geöffneten Space – Adressen gehen immer" }
+        : {}),
   }
   return <LocationCore {...props} places={places} placeKey={key} accepts={accepts} choose={choose} />
 }
@@ -120,7 +126,16 @@ function LocationCore({
   const cancelReverse = () => reverseAbortRef.current?.abort()
   // Wird das Feld abgebaut (etwa beim Typwechsel), zählt seine laufende
   // Rückwärtssuche nicht mehr (Codex R3/1).
-  React.useEffect(() => () => reverseAbortRef.current?.abort(), [])
+  // Auch die Rückrufe des Karten-Picks gelten nur, solange das Feld steht
+  // (Codex R4/1): ein abgebautes Feld nimmt keinen Marker und schreibt nichts.
+  const alive = React.useRef(true)
+  React.useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+      reverseAbortRef.current?.abort()
+    }
+  }, [])
   // Der Karten-Pick läuft über Modulwechsel hinweg; sein Rückruf liest den
   // AKTUELLEN Stand (Kandidaten des Formular-Space, Kante), nicht den beim
   // Start (Codex R1/1).
@@ -167,6 +182,7 @@ function LocationCore({
               const startSpace = spaceId
               requestMapPick({
                 onPick: (pos) => {
+                  if (!alive.current) return
                   updateMany({ position: pointFromLatLng(pos.lat, pos.lng), ...clearPlace })
                   // Reverse-geocode (aborting the previous one) to fill the address.
                   cancelReverse()
@@ -186,7 +202,7 @@ function LocationCore({
                   ? {
                       onPickItem: (item: Item) => {
                         const now = latest.current
-                        if (!now.accepts || !now.choose || !now.accepts(item)) return false
+                        if (!alive.current || !now.accepts || !now.choose || !now.accepts(item)) return false
                         cancelReverse()
                         now.choose(item)
                         return true
@@ -194,6 +210,7 @@ function LocationCore({
                     }
                   : {}),
                 onCancel: () => {
+                  if (!alive.current) return
                   // Abort a pending reverse-geocode so its late result can't
                   // overwrite the restored address.
                   cancelReverse()

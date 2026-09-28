@@ -27,6 +27,8 @@ export interface LocationPlaces {
   candidates: readonly Item[]
   /** Ein Ort-Item wählen, oder mit `null` die Wahl zurücknehmen. */
   onSelect: (item: Item | null) => void
+  /** Warum gerade keine Ort-Items angeboten werden; steht klein unter dem Feld. */
+  unavailable?: string
 }
 
 interface LocationWidgetProps {
@@ -341,6 +343,11 @@ export function LocationWidget({
           </Button>
         )}
       </div>
+      {places?.unavailable && !selected && (
+        <p data-places-unavailable className="px-1 text-[11px] text-muted-foreground">
+          {places.unavailable}
+        </p>
+      )}
       {failed && !loading && !selected && (
         <p className="px-1 text-[11px] text-muted-foreground">
           Adresssuche gerade nicht verfügbar.
