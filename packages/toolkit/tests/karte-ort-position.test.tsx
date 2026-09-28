@@ -6,7 +6,7 @@ import type { Item } from "@real-life-stack/data-interface"
 import { MockConnector } from "@real-life-stack/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
-import { locatedPositions, useItemsWithPlacePositions, withPlacePosition } from "../src/components/map/place-position"
+import { locatedPositions, useItemWithPlacePosition, useItemsWithPlacePositions, withPlacePosition } from "../src/components/map/place-position"
 
 /**
  * S4b, Antwort 2 von Anton: Die Karte liest die Position eines Events vom
@@ -46,6 +46,22 @@ describe("withPlacePosition (rein)", () => {
     expect(withPlacePosition(EIGEN, places)).toBe(EIGEN)
     expect(withPlacePosition(WEG, places)).toBe(WEG)
     expect(withPlacePosition(POST, places)).toBe(POST)
+  })
+
+  it("Codex R8: nur ein Ort des richtigen Typs im richtigen Space", () => {
+    const places = new Map([[HALLE.id, HALLE]])
+    const spaceOf = (id: string) => (id === "pl-halle" ? "g" : id === "ev-fremd" ? "anders" : "g")
+    // Space-qualifiziert auf einen anderen Space: kein Treffer.
+    const qualifiziert = item("ev-q", "event", { title: "Q" }, [{ predicate: "locatedAt", target: "space:anders/item:pl-halle" }])
+    expect(withPlacePosition(qualifiziert, places, spaceOf).data.position).toBeUndefined()
+    // Lokales Target aus einem anderen Space: kein Treffer.
+    const fremd = item("ev-fremd", "event", { title: "F" }, [{ predicate: "locatedAt", target: "item:pl-halle" }])
+    expect(withPlacePosition(fremd, places, spaceOf).data.position).toBeUndefined()
+    // Gleiche Id, falscher Typ: kein Treffer.
+    const aufgabe = item("pl-halle", "task", { title: "T", position: point(1, 1) })
+    expect(withPlacePosition(AM_ORT, new Map([[aufgabe.id, aufgabe]])).data.position).toBeUndefined()
+    // Richtig: gleicher Space.
+    expect(withPlacePosition(AM_ORT, places, spaceOf).data.position).toEqual(HALLE.data.position)
   })
 
   it("locatedPositions: nur Items, deren Ort in der Menge liegt", () => {
@@ -104,5 +120,35 @@ describe("useItemsWithPlacePositions (reaktiv)", () => {
     expect(result.find((i) => i.id === "ev-ort")!.data.position).toEqual(point(11, 48))
     // Das gespeicherte Event trägt keine Position.
     expect((await connector.getItem("ev-ort"))!.data.position).toBeUndefined()
+  })
+
+  it("Fokus: folgt dem Ort, wenn er im Connector bewegt wird", async () => {
+    const connector = new MockConnector(
+      {
+        items: [HALLE, AM_ORT],
+        groups: [{ id: "g", name: "G", data: {} }],
+        users: [{ id: ME, displayName: "Ich" }],
+        groupMembers: { g: [ME] },
+        groupItems: { g: [HALLE.id, AM_ORT.id] },
+      } as never,
+      { allowFixtureAuthors: true },
+    )
+    await connector.init()
+    connector.setCurrentGroup("g")
+    let focused: Item | null | undefined
+    function Spy(): ReactNode {
+      focused = useItemWithPlacePosition(AM_ORT)
+      return null
+    }
+    await act(async () => {
+      root.render(createElement(ConnectorProvider, { connector: connector as never }, createElement(Spy)))
+    })
+    await settle()
+    expect(focused!.data.position).toEqual(point(13.4, 52.5))
+    await act(async () => {
+      await connector.updateItem(HALLE.id, { data: { ...HALLE.data, position: point(9, 49) } })
+    })
+    await settle()
+    expect(focused!.data.position).toEqual(point(9, 49))
   })
 })
