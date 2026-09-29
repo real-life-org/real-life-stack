@@ -136,8 +136,13 @@ export function usePeopleFormStates(
       if (!recordEdge || !recordEdge.qualifier) continue
       const key = recordEdge.qualifier.key
       const allowed = new Set(recordEdge.qualifier.values.map((v) => v.id))
+      // Ein fehlender Wert gilt als Standard (Spec 06, Regel 7), auch wenn ihn
+      // die Schicht eines Moduls setzt (Regel 20); ein unbekannter bleibt ohne.
+      const fallbackValue = recordEdge.qualifier.default
       const valueOf = (record: RelationRecord | undefined) => {
-        const value = record?.fields?.[key]
+        if (!record) return undefined
+        const value = record.fields?.[key]
+        if (value === undefined || value === null || value === "") return fallbackValue
         return typeof value === "string" && allowed.has(value) ? value : undefined
       }
       const own = records.filter((record) => record.predicate === recordEdge.predicate && record.to === to)
@@ -283,8 +288,10 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
     const self = `${PERSON}${meId}`
     if (isRecord) {
       const own = records.find((record) => record.createdBy === meId && record.from === self)
-      const value = own?.fields?.[edge.qualifier?.key ?? ""]
-      if (typeof value !== "string") return undefined
+      if (!own) return undefined
+      const value = own.fields?.[edge.qualifier?.key ?? ""]
+      // Ein fehlender Wert gilt als Standard (Regel 7), sonst ist die Aussage ohne Wert.
+      if (typeof value !== "string") return withValues ? edge.qualifier?.default : undefined
       return withValues ? value : true
     }
     const relation = (item.relations ?? []).find((r) => r.predicate === edge.predicate && r.target === self)

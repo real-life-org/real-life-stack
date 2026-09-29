@@ -665,9 +665,11 @@ function composePresentation(): Map<string, TypePresentationEntry> {
   }
   // Welche Selbstaktionen schon ersetzt sind, je Typ und Kante (Regel 20: einmal).
   const overridden = new Map<string, string>()
-  // Welche Schicht welchen Qualifier-Wert deklariert, je Typ, Kante und Wert;
-  // unter `<Typ>|<Kante>|default` die Schicht, die den Standard setzt.
+  // Welche Schicht welchen Qualifier-Wert deklariert, je Typ, Kante und Wert.
   const valueOwners = new Map<string, string>()
+  // Welche Schicht den Standard einer Kante setzt, je Typ und Kante — eine
+  // eigene Map, damit eine Wert-Id „default" nicht mit ihm zusammenfällt.
+  const defaultOwners = new Map<string, string>()
   // Pass 2: extensions — additive only (spec: Erweiterungsfragment). Sorted
   // by layer name: the lists are ordered, and the composed view must not
   // depend on registration order (Spec 06, Erweiterung und Merge).
@@ -699,7 +701,7 @@ function composePresentation(): Map<string, TypePresentationEntry> {
         widgets[key] = widget
       }
       Object.assign(base, uniteRegisterLists(base, frag, frag.id, name))
-      if (frag.qualifierValues?.length) addQualifierValues(base, frag.qualifierValues, name, valueOwners)
+      if (frag.qualifierValues?.length) addQualifierValues(base, frag.qualifierValues, name, valueOwners, defaultOwners)
     }
   }
   // Pass 3: Selbstaktionen der Schichten (Regel 20) — erst nachdem alle
@@ -783,6 +785,7 @@ function addQualifierValues(
   entries: readonly QualifierValuesEntry[],
   layerName: string,
   owners: Map<string, string>,
+  defaultOwners: Map<string, string>,
 ): void {
   const fail = (message: string): never => {
     throw new Error(`Typ-Register [${layerName}]: ${message} an "${base.id}" (Spec 06, Feld- und Kantenregister, Regel 20).`)
@@ -804,7 +807,7 @@ function addQualifierValues(
       }
       return { ...edge, qualifier: { ...edge.qualifier, values } }
     })
-    if (entry.default !== undefined) setQualifierDefault(base, entry, toolkitEdge!, layerName, owners, fail)
+    if (entry.default !== undefined) setQualifierDefault(base, entry, toolkitEdge!, layerName, defaultOwners, fail)
   }
 }
 
@@ -829,7 +832,7 @@ function setQualifierDefault(
   if (toolkitEdge.qualifier?.default !== undefined) {
     fail(`Standard "${entry.default}" an ${where}: den Standard setzt bereits der Kern ("${toolkitEdge.qualifier.default}")`)
   }
-  const slot = `${base.id}|${key}|default`
+  const slot = `${base.id}|${key}`
   const owner = owners.get(slot)
   if (owner) fail(`Standard "${entry.default}" an ${where}: den Standard setzt bereits Schicht "${owner}"`)
   const own = new Set([

@@ -85,6 +85,10 @@ function EdgeLists({ item, edges }: { item: Item; edges: readonly EdgeEntry[] })
           })
         const trailingField = listField(item, edge, edge.list?.trailing)
         const groupField = listField(item, edge, edge.list?.group)
+        // Die Typfarbe einer Option ohne Ton (Regel 21) in der Zwischenüberschrift:
+        // die des Typs, aus dessen Register das Feld kommt (`otherKind`).
+        const kind = groupField ? otherKindOf(item.type, edge) : undefined
+        const groupTypeTone = kind ? (resolveTypePresentation(kind).badge ?? GENERIC_BADGE).className : undefined
         return (
           <ReverseList
             key={`${edge.predicate}:${edge.itemRole}`}
@@ -94,6 +98,7 @@ function EdgeLists({ item, edges }: { item: Item; edges: readonly EdgeEntry[] })
             entries={entries}
             decorate={trailingField ? (entry) => ({ trailing: <ListTrailingValue field={trailingField} entry={entry} /> }) : undefined}
             groupField={groupField}
+            groupTypeTone={groupTypeTone}
           />
         )
       })}
@@ -149,6 +154,7 @@ function ReverseList({
   note,
   noteDetail,
   groupField,
+  groupTypeTone,
 }: {
   id: string
   item: Item
@@ -160,6 +166,8 @@ function ReverseList({
   noteDetail?: string
   /** `list.group`: gliedert die Einträge nach dem Wert dieses Felds (Regel 22). */
   groupField?: FieldEntry
+  /** Typfarbe für eine Option ohne Ton in der Zwischenüberschrift (Regel 21). */
+  groupTypeTone?: string
 }) {
   const others = entries.filter((e) => e.id !== item.id)
   // Gegliedert wird, was nach dem Filter bleibt; die Reihenfolge in der Gruppe
@@ -210,7 +218,7 @@ function ReverseList({
       {groups ? (
         <div className="flex flex-col gap-2.5">
           {groups.map((group) => (
-            <ListGroupSection key={group.key ?? ""} group={group} field={groupField!}>
+            <ListGroupSection key={group.key ?? ""} group={group} field={groupField!} typeTone={groupTypeTone}>
               {rows(group.entries)}
             </ListGroupSection>
           ))}
@@ -227,12 +235,12 @@ function ReverseList({
  * Leseform und der Anzahl, darunter ihre Zeilen. Gruppen kappen nicht und
  * klappen nicht zu.
  */
-function ListGroupSection({ group, field, children }: { group: ListGroup; field: FieldEntry; children: ReactNode }) {
+function ListGroupSection({ group, field, typeTone, children }: { group: ListGroup; field: FieldEntry; typeTone?: string; children: ReactNode }) {
   const tone = group.value === undefined ? undefined : valueTone(field, group.value)
   return (
     <section data-list-group={group.key ?? ""} aria-label={group.heading} className="flex flex-col gap-1.5">
       <h4 data-list-group-heading className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-        {tone && <ToneDot tone={tone} />}
+        {tone && <ToneDot tone={tone} typeTone={typeTone} />}
         <span className="min-w-0 truncate">{group.heading}</span>{" "}
         <span className="font-normal tabular-nums">{group.entries.length}</span>
       </h4>

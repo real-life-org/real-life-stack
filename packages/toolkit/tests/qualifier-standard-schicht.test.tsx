@@ -216,3 +216,90 @@ describe("Formular, Leseform und Pills lesen den Standard der Schicht (Regel 7)"
     })
   })
 })
+
+describe("Codex Runde 1", () => {
+  it("Befund 2: ein Qualifier-Wert mit der Id „default“ ist als Standard erlaubt (kein reservierter Name)", () => {
+    registerTypePresentation("app", { extensions: [values({ values: [{ id: "default", label: "Standard" }], default: "default" })] })
+    expect(assigned()?.qualifier?.default).toBe("default")
+    resetTypePresentationForTests()
+    // Auch wenn eine andere Schicht den Wert „default“ bringt und diese den Standard aus eigenen Werten setzt.
+    registerTypePresentation("a", { extensions: [values({ values: [{ id: "default", label: "Standard" }] })] })
+    registerTypePresentation("b", { extensions: [values({ values: [{ id: "leads", label: "leitet" }], default: "leads" })] })
+    expect(assigned()?.qualifier?.default).toBe("leads")
+  })
+
+  describe("Befund 3: Record-Kanten lesen den Standard ebenfalls", () => {
+    let host: HTMLDivElement
+    let root: Root
+    let connector: MockConnector
+
+    beforeEach(() => {
+      host = document.createElement("div")
+      document.body.appendChild(host)
+      root = createRoot(host)
+    })
+    afterEach(async () => {
+      await act(async () => root.unmount())
+      host.remove()
+    })
+
+    const EVENT: Item = { id: "e1", type: "event", createdBy: TIMO, createdAt: "2026-09-20T10:00:00.000Z", data: { title: "Ernten", start: "2099-07-19T16:00:00.000Z" } }
+    const attendsWithoutRole = (createdBy: string, subject: string): Item => ({
+      id: `rel-${subject}`,
+      type: "relation",
+      createdBy,
+      createdAt: "2026-09-27T10:00:00.000Z",
+      data: { predicate: "attends", tense: "coming" },
+      relations: [
+        { predicate: "from", target: `global:${subject}` },
+        { predicate: "to", target: "item:e1" },
+      ],
+    })
+
+    async function render(node: ReactNode, extra: Item[]) {
+      const items = [EVENT, ...extra]
+      connector = new MockConnector(
+        {
+          items,
+          groups: [{ id: "g", name: "Garten", data: {} }],
+          users: [{ id: ME, displayName: "Ich" }, { id: TIMO, displayName: "Timo" }],
+          groupMembers: { g: [ME, TIMO] },
+          groupItems: { g: items.map((i) => i.id) },
+        } as never,
+      )
+      await connector.init()
+      connector.setCurrentGroup("g")
+      await act(async () => {
+        root.render(createElement(ConnectorProvider, { connector: connector as never }, node))
+      })
+      for (let round = 0; round < 5; round++) {
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        })
+      }
+    }
+
+    const goingDefault = () =>
+      registerTypePresentation("app", { extensions: [{ id: "event", qualifierValues: [{ predicate: "attends", itemRole: "to", values: [], default: "going" }] }] })
+
+    it("Pills: mein Record ohne role gilt als Standard („Zugesagt“ gedrückt)", async () => {
+      goingDefault()
+      const Actions = resolveTypePresentation("event").actions!
+      await render(createElement(Actions, { item: EVENT }), [attendsWithoutRole(ME, ME)])
+      const pill = [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Zugesagt")
+      expect(pill?.getAttribute("aria-pressed")).toBe("true")
+    })
+
+    it("Formular: ein Record ohne role steht mit dem Standard im Personenfeld", async () => {
+      goingDefault()
+      const { usePeopleFormStates } = await import("../src/components/preview/use-people-line")
+      let seen: Record<string, { live: Record<string, { state: string }> }> = {}
+      function Probe(): ReactNode {
+        seen = usePeopleFormStates(EVENT, resolveTypePresentation("event").edges, "g") as never
+        return null
+      }
+      await render(createElement(Probe), [attendsWithoutRole(TIMO, TIMO)])
+      expect(seen.invited?.live[TIMO]?.state).toBe("going")
+    })
+  })
+})

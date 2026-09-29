@@ -56,6 +56,7 @@ const CARD_FIELDS: readonly FieldEntry[] = [
       { id: "done", label: "Fertig", role: "done" },
     ],
   },
+  { key: "kind", widget: "select", pos: "meta", label: "Art", options: [{ id: "a", label: "Aussaat" }, { id: "b", label: "Bau" }] },
   { key: "note", widget: "text", pos: "content" },
   { key: "secret", widget: "number", pos: "system" },
 ]
@@ -74,7 +75,7 @@ const listEdge = (list: EdgeEntry["list"], extra: Partial<EdgeEntry> = {}): Edge
 function setup(list: EdgeEntry["list"], extra: Partial<EdgeEntry> = {}) {
   setTypeManifest(MANIFEST)
   registerTypePresentation("app", {
-    definitions: [{ id: "card", label: "Karte", fields: CARD_FIELDS }],
+    definitions: [{ id: "card", label: "Karte", fields: CARD_FIELDS, badge: { icon: () => null, className: "bg-orange-50 text-orange-700 border-orange-200" } }],
     extensions: [{ id: "project", edges: [listEdge(list, extra)] }],
   })
 }
@@ -218,7 +219,7 @@ describe("Gruppen (list.group)", () => {
     expect(host.textContent).not.toContain("Dran")
   })
 
-  it("die Einträge bleiben innerhalb einer Gruppe in ihrer Reihenfolge (sort ordnet in der Gruppe)", async () => {
+  it("die Gliederung behält die Reihenfolge der Einträge in jeder Gruppe (darauf setzt sort aus #545 auf; die Semantik von sort legt #572 nicht fest)", async () => {
     setup({ group: "stage" })
     await render([card("x1", { stage: 1 }), card("y2", { stage: 2 }), card("x2", { stage: 1 }), card("x3", { stage: 1 })])
     expect(groups()[0]?.rows).toEqual(["x1", "x2", "x3"])
@@ -271,5 +272,16 @@ describe("Zusatz (list.trailing)", () => {
     await render([card("a", { state: "open", stage: 3 }), card("b", { state: "doing", stage: 1 })])
     expect(groups().map((g) => g.heading)).toEqual(["Offen 1", "Dran 1"])
     expect(trailingOf("a")?.textContent).toContain("3")
+  })
+})
+
+describe("Codex Runde 1", () => {
+  it("Befund 4: eine select-Option ohne Ton trägt in Zwischenüberschrift und Zusatz die Typfarbe des Eintrags (Regel 21)", async () => {
+    setup({ group: "kind", trailing: "kind" })
+    await render([card("a", { kind: "a" })])
+    const dot = host.querySelector("[data-list-group-heading] [data-tone-dot]")
+    expect(dot?.getAttribute("data-tone")).toBe("type")
+    expect(dot?.className).toContain("text-orange-700")
+    expect(trailingOf("a")?.querySelector("[data-tone-dot]")?.className).toContain("text-orange-700")
   })
 })
