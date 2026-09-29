@@ -19,25 +19,36 @@ import { useConnector } from "./connector-context"
 export function useResolvedUsers(ids: readonly string[]): ReadonlyMap<string, User> {
   const connector = useConnector()
   const [resolved, setResolved] = useState<ReadonlyMap<string, User>>(new Map())
-  const pending = useRef(new Set<string>())
+  // Laufende Anfragen gehören dem Connector, nicht dem einzelnen Effect: Eine
+  // Antwort gilt, solange die Komponente steht und der Connector derselbe ist.
+  // Vorher verwarf das Aufräumen eines Effects die Antwort, während die Id als
+  // „laufend" stehen blieb — bei A → B → A kam der Name nie an (Codex-Review
+  // Runde 1 zu #569, auch unter StrictMode).
+  const pending = useRef({ connector, ids: new Set<string>() })
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
 
   useEffect(() => {
     if (!isAuthenticatable(connector)) return
-    let cancelled = false
+    if (pending.current.connector !== connector) pending.current = { connector, ids: new Set() }
+    const laufend = pending.current.ids
     for (const id of ids) {
-      if (resolved.has(id) || pending.current.has(id)) continue
-      pending.current.add(id)
+      if (resolved.has(id) || laufend.has(id)) continue
+      laufend.add(id)
       void connector.getUser(id).then((user) => {
-        pending.current.delete(id)
-        if (cancelled || !user || !user.displayName || user.displayName === id) return
+        laufend.delete(id)
+        if (!mounted.current || pending.current.connector !== connector) return
+        if (!user || !user.displayName || user.displayName === id) return
         setResolved((current) => {
           const next = new Map(current)
           next.set(id, user)
           return next
         })
-      }).catch(() => pending.current.delete(id))
+      }).catch(() => laufend.delete(id))
     }
-    return () => { cancelled = true }
   }, [connector, ids, resolved])
 
   return resolved

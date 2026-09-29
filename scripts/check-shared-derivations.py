@@ -42,6 +42,11 @@ ERLAUBT = {
     # geteilten Filter anwenden.
     "packages/toolkit/src/components/layout/module-surface-scope.tsx",
     "packages/toolkit/src/hooks/use-filterable-items.ts",
+    # Seit dem 29.09.2026 (real-life-stack#558) ist `useModuleFilteredItems`
+    # oeffentlich — fuer eine Flaeche AUSSERHALB des Modul-Hosts. Der Waechter
+    # kann sie am Quelltext nicht von einem Modul unterscheiden; eine solche
+    # Flaeche in diesem Repo wird darum hier namentlich eingetragen, und das
+    # Review sieht die Zeile. Heute gibt es keine.
 }
 
 REGELN = [
