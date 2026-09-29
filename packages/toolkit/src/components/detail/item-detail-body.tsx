@@ -39,7 +39,11 @@ import { PanelHeaderActions } from "../layout/panel-header-actions"
  */
 export interface ItemDetailBodyProps {
   item: Item
-  /** Urheber, schon aufgeloest. `undefined` → nur die rohe Id als Name. */
+  /**
+   * Urheber, schon aufgeloest. `undefined` → „Unbekannt" als Name, nie die
+   * rohe Id (eine DID liest niemand, real-life-stack#562); das Profil oeffnet
+   * weiter ueber `createdBy`.
+   */
   author?: User
   /** Typ-Badge, Scope-Badge — steht ganz oben, links neben den Aktionen. */
   headerAdornment?: ReactNode
@@ -82,6 +86,9 @@ export interface ItemDetailBodyProps {
   className?: string
 }
 
+/** Name eines Autors, den niemand aufloest (real-life-stack#562). */
+const UNKNOWN_AUTHOR = "Unbekannt"
+
 function getInitials(name: string): string {
   if (!name) return "?"
   return name
@@ -110,7 +117,7 @@ export function ItemDetailBody({
   const description = itemText(item) ?? ""
   const tags = useItemTags(item)
 
-  const authorName = author?.displayName ?? item.createdBy
+  const authorName = author?.displayName || UNKNOWN_AUTHOR
   const authorId = author?.id ?? item.createdBy
   const resolveName = useUserNameResolver()
   const editedTitle = editedLabel(item, resolveName)

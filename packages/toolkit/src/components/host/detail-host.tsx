@@ -1,10 +1,11 @@
 "use client"
 
-import { createContext, useContext, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react"
 import type { Item, User } from "@real-life-stack/data-interface"
 
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { useMembers } from "../../hooks/use-groups"
+import { useResolvedUsers } from "../../hooks/use-resolved-users"
 import { useItemFocus } from "../../hooks/use-item-focus"
 import type { ItemDetailEditConfig } from "../../hooks/use-item-detail-edit"
 import { moduleIds } from "../../lib/module-register"
@@ -164,7 +165,13 @@ export function ItemDetailRead({ item, actions, groupId }: { item: Item; actions
   const resolveUser = (userId: string): User | undefined =>
     members.find((member) => member.id === userId) ?? (currentUser?.id === userId ? currentUser : undefined)
 
-  const author = resolveUser(item.createdBy)
+  const memberAuthor = resolveUser(item.createdBy)
+  // Rueckfall fuer einen Autor, der kein Mitglied ist (real-life-stack#562):
+  // der Connector loest ihn auf, wenn er kann (`getUser`, async). Sonst sagt
+  // die Leseansicht „Unbekannt", nie die rohe DID.
+  const lookup = useMemo(() => (memberAuthor ? [] : [item.createdBy]), [memberAuthor, item.createdBy])
+  const fetched = useResolvedUsers(lookup)
+  const author = memberAuthor ?? fetched.get(item.createdBy)
   const presentation = resolveTypePresentation(item.type)
 
   return (

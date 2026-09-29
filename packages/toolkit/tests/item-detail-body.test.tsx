@@ -154,8 +154,11 @@ describe("ItemDetailBody: die Ordnung der Detailansicht", () => {
     expect(html).toContain("bearbeitet")
   })
 
-  it("zeigt den Urheber auch ohne aufgelösten Nutzer", () => {
-    expect(markup({ author: undefined })).toContain("u1")
+  // real-life-stack#562: ohne aufgelösten Nutzer „Unbekannt", nie die rohe Id.
+  it("nennt einen nicht aufgelösten Urheber „Unbekannt“ statt seiner Id", () => {
+    const html = markup({ author: undefined, item: item({ createdBy: "did:key:z6MkRoh" }) })
+    expect(html).toContain("Erstellt von <span class=\"text-foreground\">Unbekannt</span>")
+    expect(html).not.toContain("Erstellt von <span class=\"text-foreground\">did:key:z6MkRoh")
   })
 
   it("ordnet die Slots der Detail-Anatomie: meta → actions → content → reverse → tags → bar → note", () => {
