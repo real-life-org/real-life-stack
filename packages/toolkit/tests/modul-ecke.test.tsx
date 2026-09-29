@@ -157,4 +157,3 @@ describe("Das Scroll-Polster der Container-Module", () => {
     expect(innen().className).toContain("pb-[calc(var(--module-controls-block)+1rem)]")
   })
 })
-
