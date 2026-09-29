@@ -126,4 +126,11 @@ describe("Die gemeldete Hoehe der Ecke", () => {
     expect(frame().className).toContain("[--module-controls-inset:calc(5.25rem+env(safe-area-inset-bottom))]")
     expect(frame().className).toContain("md:[--module-controls-inset:1rem]")
   })
+
+  it("nimmt bei einer ueberlagerten Flaeche ohne Kartenecke den normalen Rand", () => {
+    // Graph: overlay, aber ohne `clearsTopLeft` — vorher `p-4`, also 1rem.
+    rendere(createElement(ModuleFrame, { moduleId: "graph" }, "GRAPH"))
+    expect(frame().className).toContain("[--module-controls-inset:1rem]")
+    expect(frame().className).not.toContain("5.25rem")
+  })
 })
