@@ -8,7 +8,14 @@ import { cn } from "../../lib/utils"
 import { useOptionalModuleHead } from "./module-frame"
 
 export interface ModuleToolbarProps {
-  /** Modul-eigene Abschnitte in der Filterkarte (Ort, Zuweisung). */
+  /**
+   * Modul-eigene Abschnitte in der Filterkarte (Ort, Zuweisung).
+   *
+   * Wie `chipsExtra` nur uebergeben, wenn es etwas zu zeigen gibt: Ohne
+   * Filter-Besitzer ueber der Flaeche gibt es keine Filterkarte, und ein
+   * uebergebener Abschnitt wird als verloren gemeldet (rls#570) — ein leeres
+   * Fragment laesst sich von aussen nicht von einem vollen unterscheiden.
+   */
   drawerExtra?: ReactNode
   /**
    * Modul-eigene Chips in der Chip-Zeile des Kopfes.

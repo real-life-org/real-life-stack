@@ -96,6 +96,20 @@ describe("Der Modulkopf ohne Filter-Besitzer", () => {
     expect(warnungen()).toEqual([])
   })
 
+  it("verschwindet wieder, wenn das Modul seine Aktionen zurueckzieht", () => {
+    const baum = (mitAktion: boolean) =>
+      createElement(
+        ModuleFrame,
+        { moduleId: "feed" },
+        createElement(ModuleToolbar, { trailingActions: mitAktion ? heute() : undefined }),
+      )
+    rendere(baum(true))
+    expect(kopf()!.hasAttribute("hidden")).toBe(false)
+    rendere(baum(false))
+    expect(kopf()!.hasAttribute("hidden")).toBe(true)
+    expect(aktionen()!.childNodes.length).toBe(0)
+  })
+
   it("zeichnet die eigenen Chips des Moduls", () => {
     rendere(
       createElement(
