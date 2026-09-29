@@ -177,6 +177,13 @@ export interface QualifierValuesEntry {
   predicate: string
   itemRole: RelationRole
   values: readonly FieldOption[]
+  /**
+   * Der Standardwert der Kante (Regeln 7 und 20): als dieser Wert gilt ein
+   * fehlender Qualifier im zusammengesetzten Register der App. Ein Wert des
+   * Kerns oder derselben Schicht; je Kante höchstens eine Quelle, und nennt
+   * der Kern einen, setzt ihn keine Schicht. Die Leseform zeigt ihn nicht.
+   */
+  default?: string
 }
 
 /** Additively fills fields an existing presentation left unset
@@ -646,7 +653,8 @@ function composePresentation(): Map<string, TypePresentationEntry> {
   }
   // Welche Selbstaktionen schon ersetzt sind, je Typ und Kante (Regel 20: einmal).
   const overridden = new Map<string, string>()
-  // Welche Schicht welchen Qualifier-Wert deklariert, je Typ, Kante und Wert.
+  // Welche Schicht welchen Qualifier-Wert deklariert, je Typ, Kante und Wert;
+  // unter `<Typ>|<Kante>|default` die Schicht, die den Standard setzt.
   const valueOwners = new Map<string, string>()
   // Pass 2: extensions — additive only (spec: Erweiterungsfragment). Sorted
   // by layer name: the lists are ordered, and the composed view must not
@@ -783,7 +791,49 @@ function addQualifierValues(
       }
       return { ...edge, qualifier: { ...edge.qualifier, values } }
     })
+    if (entry.default !== undefined) setQualifierDefault(base, entry, toolkitEdge!, layerName, owners, fail)
   }
+}
+
+/**
+ * Regel 20, Standardwert: Eine Schicht nennt mit ihren Werten `default` für
+ * die Kante. Er MUSS ein Wert des Kerns oder DERSELBEN Schicht sein (so hängt
+ * das Register nicht von der Reihenfolge der Schichten ab, wie bei den
+ * Pills). Je Kante höchstens eine Quelle: Nennt ihn der Kern, setzt ihn keine
+ * Schicht; zwei Schichten sind ein Konflikt, auch mit demselben Wert
+ * (Erweiterung und Merge, Punkt 2: ein Skalar).
+ */
+function setQualifierDefault(
+  base: TypePresentationEntry,
+  entry: QualifierValuesEntry,
+  toolkitEdge: EdgeEntry,
+  layerName: string,
+  owners: Map<string, string>,
+  fail: (message: string) => never,
+): void {
+  const key = edgeKey(entry)
+  const where = `(${entry.predicate}, ${entry.itemRole})`
+  if (toolkitEdge.qualifier?.default !== undefined) {
+    fail(`Standard "${entry.default}" an ${where}: den Standard setzt bereits der Kern ("${toolkitEdge.qualifier.default}")`)
+  }
+  const slot = `${base.id}|${key}|default`
+  const owner = owners.get(slot)
+  if (owner) fail(`Standard "${entry.default}" an ${where}: den Standard setzt bereits Schicht "${owner}"`)
+  const own = new Set([
+    ...(toolkitEdge.qualifier?.values ?? []).map((v) => v.id),
+    ...(layers.get(layerName)?.extensions ?? [])
+      .filter((f) => f.id === base.id)
+      .flatMap((f) => f.qualifierValues ?? [])
+      .filter((q) => edgeKey(q) === key)
+      .flatMap((q) => q.values.map((v) => v.id)),
+  ])
+  if (!own.has(entry.default!)) {
+    fail(`Standard "${entry.default}" an ${where} ist weder ein Wert des Kerns noch einer derselben Schicht`)
+  }
+  owners.set(slot, layerName)
+  base.edges = (base.edges ?? []).map((edge) =>
+    edgeKey(edge) === key && edge.qualifier ? { ...edge, qualifier: { ...edge.qualifier, default: entry.default } } : edge,
+  )
 }
 
 function assertNoParallelComposerSource(entry: TypePresentationEntry): void {
