@@ -5,6 +5,7 @@ import { ItemDetailRead } from "../host/detail-host"
 import { useItem } from "../../hooks/use-items"
 import { MemoryFocusProvider, useItemFocus } from "../../hooks/use-item-focus"
 import { StoryWorld } from "../../story-support/story-world"
+import { WithExampleCardLayer } from "../../story-support/example-card-layer"
 
 /**
  * **Links, lists and follow-up actions** in the detail view (spec
@@ -24,6 +25,12 @@ import { StoryWorld } from "../../story-support/story-world"
  * - **Versions (statement):** the named list `family` („Fassungen N") with
  *   „Ausgang"/„Variante", „diese" and a small vote bar; „+ Variante" in the
  *   list head. On the card, „Variante von" is a chip (B15).
+ * - **Grouped list with a value on the right (rule 22):** a list over an
+ *   incoming edge may show one field of the row item on the right
+ *   (`list.trailing`) and group its entries by a field (`list.group`): a
+ *   subheading with the value and its count per group, options in register
+ *   order, numbers ascending, „Ohne Angabe" last. The list head keeps the
+ *   total. Example layer: cards of a project (`card`, not a toolkit type).
  *
  * Everything is live against the mock connector.
  */
@@ -112,4 +119,42 @@ export const Versions: Story = {
 /** A single version: the list has nothing besides the item — the action stands alone. */
 export const SingleVersion: Story = {
   render: () => <Frame start={ORIGIN.id} seed={[ORIGIN]} />,
+}
+
+const BOARD: Item = { id: "projekt-karabirrdt", type: "project", createdAt: at(1), createdBy: "mira", data: { title: "Karabirrdt-Brett" } }
+const CARDS: Item[] = [
+  ["Zwiebeln setzen", 1, "done"],
+  ["Beet 3 mulchen", 2, "doing"],
+  ["Samen tauschen", 1, "open"],
+  ["Regentonne anschließen", 3, "open"],
+  ["Kompost sieben", 2, "open"],
+  ["Weidenzaun flechten", undefined, "open"],
+  ["Werkzeugliste", undefined, undefined],
+].map(([title, stage, state], i) => ({
+  id: `karte-${i}`,
+  type: "card",
+  createdAt: at(2 + i),
+  createdBy: "mira",
+  data: { title, ...(stage !== undefined ? { stage } : {}), ...(state !== undefined ? { state } : {}) },
+  relations: [{ predicate: "partOf", target: `item:${BOARD.id}` }],
+}))
+
+/** Cards grouped by stage („Stufe 1", „Stufe 2", …, „Ohne Angabe" last), their state on the right in its tone. */
+export const GroupedList: Story = {
+  tags: ["!autodocs"],
+  render: () => (
+    <WithExampleCardLayer list={{ group: "stage", trailing: "state" }}>
+      <Frame start={BOARD.id} seed={[BOARD, ...CARDS]} />
+    </WithExampleCardLayer>
+  ),
+}
+
+/** The same cards grouped by state (register order: Offen · Dran · Fertig), the stage on the right. */
+export const GroupedByState: Story = {
+  tags: ["!autodocs"],
+  render: () => (
+    <WithExampleCardLayer list={{ group: "state", trailing: "stage" }}>
+      <Frame start={BOARD.id} seed={[BOARD, ...CARDS]} />
+    </WithExampleCardLayer>
+  ),
 }

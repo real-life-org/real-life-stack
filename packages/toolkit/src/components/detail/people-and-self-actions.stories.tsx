@@ -160,6 +160,32 @@ export const TaskWithModuleLayer: Story = {
   ),
 }
 
+/**
+ * The example layer with a default (spec 06, rules 7 and 20): an edge without
+ * a value counts as `can`. The row keeps saying „Jonas“ (the default needs no
+ * word), and my state reads „✓ Kann“ although my edge carries no `role`.
+ */
+const WITH_DEFAULT = {
+  ...EXAMPLE_LEARNING_LAYER,
+  qualifierValues: [{ ...EXAMPLE_LEARNING_LAYER.qualifierValues![0]!, default: "can" }],
+}
+
+function WithDefaultLayer({ children }: { children: ReactNode }) {
+  registerTypePresentation("beispiel", { extensions: [WITH_DEFAULT] })
+  useEffect(() => () => registerTypePresentation("beispiel", {}), [])
+  return <>{children}</>
+}
+
+/** Task with a module layer that sets a default: „Lea lernt · Jonas · Mira“, my pill „✓ Kann“ pressed. */
+export const TaskWithLayerDefault: Story = {
+  tags: ["!autodocs"],
+  render: () => (
+    <WithDefaultLayer>
+      <Frame item={{ ...LEARNS_TASK, id: "task-standard", relations: [...(LEARNS_TASK.relations ?? []), { predicate: "assignedTo", target: "global:mira" }] }} seed={[]} />
+    </WithDefaultLayer>
+  ),
+}
+
 const STATEMENT: Item = {
   id: "statement-garten",
   type: "statement",

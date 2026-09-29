@@ -74,6 +74,7 @@ import { RegisterActions, actionEdges } from "./register-actions"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
 import { StatementVariantLine, familyListQuery } from "../resonance/statement-variants"
 import { registerListQuery } from "./list-queries"
+import { listFieldProblem } from "./list-groups"
 import { RegisterReverse, hasReverseLists } from "./register-reverse"
 import { RegisterCardRefs } from "./register-card-refs"
 import { VoteBar } from "../resonance/vote-bar"
@@ -545,8 +546,19 @@ export function setTypeManifest(next: ComposedTypeManifest): void {
   }
   // Dasselbe Manifest für Hinweise und Filter in data-interface: Wer im
   // Toolkit bindet, bindet einmal (Spec 06, Regel 1 — eine Identitätsquelle).
-  bindDataInterfaceManifest(next)
+  // Die Zusammensetzung liest das Manifest (Regel 22: `otherKind`): neu
+  // zusammensetzen und prüfen, bevor irgendetwas gebunden wird.
+  const previous = manifest
   manifest = next
+  composedCache = null
+  try {
+    composePresentation()
+  } catch (err) {
+    manifest = previous
+    composedCache = null
+    throw err
+  }
+  bindDataInterfaceManifest(next)
 }
 
 /** Every relationWidgets key MUST name an edge the manifest declares for the
@@ -705,6 +717,7 @@ function composePresentation(): Map<string, TypePresentationEntry> {
     assertNoParallelComposerSource(entry)
     assertJoins(entry.id, entry.edges)
     assertFollowUps(entry.id, entry.fields, entry.edges)
+    assertListFields(entry, composed)
   }
   composedCache = composed
   return composed
@@ -834,6 +847,31 @@ function setQualifierDefault(
   base.edges = (base.edges ?? []).map((edge) =>
     edgeKey(edge) === key && edge.qualifier ? { ...edge, qualifier: { ...edge.qualifier, default: entry.default } } : edge,
   )
+}
+
+/**
+ * Regel 22: `list.trailing` und `list.group` nennen ein Feld, das im
+ * zusammengesetzten Register des Typs am anderen Endpunkt besteht
+ * (`otherKind` der Manifest-Kante), mit Widget status, select oder number und
+ * nicht `pos: "system"`. Geprüft nach dem Vereinigen, weil das Feld aus einer
+ * anderen Schicht kommen darf; nachgerüstet werden beide nicht (die Kante ist
+ * ein Schlüssel, ihr Umdefinieren ein Konflikt).
+ */
+function assertListFields(entry: TypePresentationEntry, composed: ReadonlyMap<string, TypePresentationEntry>): void {
+  for (const edge of entry.edges ?? []) {
+    for (const slot of ["trailing", "group"] as const) {
+      const key = edge.list?.[slot]
+      if (key === undefined) continue
+      const otherKind = manifest.get(entry.id)?.relations?.find((r) => relationAffordanceKey(r) === edgeKey(edge))?.otherKind
+      const field = otherKind ? composed.get(otherKind)?.fields?.find((f) => f.key === key) : undefined
+      const problem = listFieldProblem(field)
+      if (problem) {
+        throw new Error(
+          `Typ-Register: Kante (${edge.predicate}, ${edge.itemRole}) an "${entry.id}" nennt in list.${slot} das Feld "${key}" ${problem} (Typ am anderen Endpunkt: "${otherKind ?? "?"}"; Spec 06, Feld- und Kantenregister, Regel 22).`,
+        )
+      }
+    }
+  }
 }
 
 function assertNoParallelComposerSource(entry: TypePresentationEntry): void {
