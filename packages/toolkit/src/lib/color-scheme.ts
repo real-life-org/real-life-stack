@@ -90,19 +90,25 @@ export const STORAGE_KEY_THEME = "rls-theme"
  * dass jemand das je gewählt hätte.
  */
 export function storedColorScheme(storageKey = STORAGE_KEY_THEME): ColorScheme | null {
+  // Zuerst die Wahl dieser Seite, die nicht gespeichert werden konnte: Sie ist
+  // jünger als alles, was im Speicher steht (rls#574).
+  const unspeicherbar = unspeicherbareWahl.get(storageKey)
+  if (unspeicherbar) return unspeicherbar
   try {
     const wert = window.localStorage.getItem(storageKey)
-    if (wert === "dark" || wert === "light") return wert
+    return wert === "dark" || wert === "light" ? wert : null
   } catch {
     // In privaten Fenstern kann schon der Zugriff werfen.
+    return null
   }
-  return unspeicherbareWahl.get(storageKey) ?? null
 }
 
 /**
  * Eine Wahl, die der Speicher nicht nehmen wollte (gesperrt, voll), gilt
- * trotzdem bis zum Neuladen. Sonst holte der nächste Systemwechsel das Schema
- * zurück, obwohl gerade bewusst gewählt worden war.
+ * trotzdem bis zum Neuladen, und zwar VOR einem älteren Speicherwert. Sonst
+ * holte der nächste Systemwechsel das Schema zurück, obwohl gerade bewusst
+ * gewählt worden war, oder ein neu eingehängter Knopf sprang auf die alte
+ * Wahl. Ein erfolgreiches Schreiben entfernt sie; ab dann gilt der Speicher.
  */
 const unspeicherbareWahl = new Map<string, ColorScheme>()
 

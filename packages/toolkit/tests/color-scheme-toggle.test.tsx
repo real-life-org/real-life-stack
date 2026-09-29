@@ -19,6 +19,8 @@ import {
   applyInitialColorScheme,
   followSystemColorScheme,
   initialDarkMode,
+  rememberColorScheme,
+  storedColorScheme,
   STORAGE_KEY_THEME,
 } from "../src/lib/color-scheme"
 
@@ -221,6 +223,63 @@ describe("ColorSchemeToggle", () => {
     await act(async () => { system.set(true) })
     await act(async () => { system.set(false) })
     expect(istDunkel()).toBe(true)
+  })
+
+  // Codex R2 / rls#574: Liefert der Speicher noch eine alte Wahl, während das
+  // Schreiben der neuen scheitert, gewann die alte — beim erneuten Einhängen
+  // und bei einer zweiten Instanz sprang das Dokument zurück.
+  describe("nicht speicherbare Wahl vor altem Speicherwert", () => {
+    function alterWertUndVollerSpeicher(key: string) {
+      vi.stubGlobal("localStorage", {
+        getItem(k: string) { return k === key ? "light" : null },
+        setItem() { throw new Error("voll") },
+      })
+    }
+
+    it("gilt beim erneuten Einhängen", async () => {
+      stubSystem(false)
+      alterWertUndVollerSpeicher("alt-1")
+      await mount({ storageKey: "alt-1" })
+      await klick() // dunkel gewählt, Schreiben scheitert, Speicher sagt weiter "light"
+      expect(istDunkel()).toBe(true)
+      act(() => root.unmount())
+      root = createRoot(host)
+      await mount({ storageKey: "alt-1" })
+      expect(istDunkel()).toBe(true)
+      expect(initialDarkMode("alt-1")).toBe(true)
+    })
+
+    it("gilt für eine zweite Instanz", async () => {
+      stubSystem(false)
+      alterWertUndVollerSpeicher("alt-2")
+      await mount({ storageKey: "alt-2" })
+      await klick()
+      const zweiter = document.createElement("div")
+      document.body.appendChild(zweiter)
+      const zweiteWurzel = createRoot(zweiter)
+      await act(async () => { zweiteWurzel.render(<ColorSchemeToggle storageKey="alt-2" />) })
+      expect(istDunkel()).toBe(true)
+      expect(zweiter.querySelector("button")?.getAttribute("aria-label")).toBe("Helles Design")
+      act(() => zweiteWurzel.unmount())
+      zweiter.remove()
+    })
+
+    it("fällt weg, sobald Schreiben wieder klappt — dann gilt der Speicher", () => {
+      stubSystem(false)
+      const speicher = new Map<string, string>([["alt-3", "light"]])
+      let voll = true
+      vi.stubGlobal("localStorage", {
+        getItem: (k: string) => speicher.get(k) ?? null,
+        setItem: (k: string, v: string) => { if (voll) throw new Error("voll"); speicher.set(k, v) },
+      })
+      rememberColorScheme(true, "alt-3")
+      expect(storedColorScheme("alt-3")).toBe("dark")
+      voll = false
+      rememberColorScheme(false, "alt-3")
+      expect(storedColorScheme("alt-3")).toBe("light")
+      speicher.set("alt-3", "dark") // etwa aus einem anderen Tab
+      expect(storedColorScheme("alt-3")).toBe("dark")
+    })
   })
 
   // Codex R1: Ohne `type="button"` sendet der Knopf ein umgebendes Formular ab.
