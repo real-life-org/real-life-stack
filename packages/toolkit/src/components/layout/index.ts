@@ -3,7 +3,6 @@ export { PanelSafeArea, type PanelSafeAreaProps } from "./panel-safe-area"
 export { ModuleToolbar, type ModuleToolbarProps } from "./module-toolbar"
 export {
   ModuleFrame,
-  ModuleControls,
   moduleContainerClass,
   moduleBleedContentClass,
   resolveModuleLayout,

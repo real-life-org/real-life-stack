@@ -136,8 +136,11 @@ export function useModuleContentClass(): string {
 
 /**
  * Die Slots, in die ein Modul seine Steuerung reicht: rechts NEBEN der Suche
- * (eigene Knoepfe), darunter die Chip-Zeile, und die schwebende Ecke UNTEN
- * LINKS (Filter-Pille).
+ * (eigene Knoepfe), darunter die Chip-Zeile, und die Filterkarte.
+ *
+ * Die schwebende Ecke UNTEN LINKS ist KEIN Slot: Sie gehoert der Filter-Pille,
+ * gegenueber steht der Erstellen-Knopf (rls#567). Knoepfe eines Moduls gehen
+ * in den Kopf (Spec 01, Regel 2).
  *
  * Die Suche selbst ist KEIN Slot — sie gehoert der Flaeche und wird von ihr
  * gerendert (Anton, 19.09.2026).
@@ -162,8 +165,6 @@ interface ModuleHeadValue {
   chipsElement: HTMLElement | null
   /** Eigene Abschnitte des Moduls in der Filterkarte. */
   drawerElement: HTMLElement | null
-  /** Die schwebende Ecke unten links. */
-  controlsElement: HTMLElement | null
   /**
    * Hat die FLAECHE einen Filter-Besitzer ueber sich?
    *
@@ -260,7 +261,6 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
   const [actionsElement, setActionsElement] = useState<HTMLElement | null>(null)
   const [chipsElement, setChipsElement] = useState<HTMLElement | null>(null)
   const [drawerElement, setDrawerElement] = useState<HTMLElement | null>(null)
-  const [controlsElement, setControlsElement] = useState<HTMLElement | null>(null)
   const [leisten, setLeisten] = useState(0)
   // Zaehler, kein Schalter: Sonst bliebe der Versatz stehen, wenn das Modul
   // mit den Knoepfen verschwindet.
@@ -277,7 +277,6 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
       actionsElement,
       chipsElement,
       drawerElement,
-      controlsElement,
       anmelden() {
         setLeisten((n) => n + 1)
         return () => setLeisten((n) => n - 1)
@@ -287,7 +286,7 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
         return () => setObenLinks((n) => n - 1)
       },
     }),
-    [hatSuche, kopfElement, actionsElement, chipsElement, drawerElement, controlsElement],
+    [hatSuche, kopfElement, actionsElement, chipsElement, drawerElement],
   )
 
   // Tags und Typen des Space: eine Ableitung fuer alle Module (Spec 01,
@@ -335,7 +334,7 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
     </div>
   )
   const controlsSlot = (
-    <div data-module-controls ref={setControlsElement}>
+    <div data-module-controls>
       {hatSuche && (
         <FilterPill
           availableTags={vokabular.tags}
@@ -355,7 +354,14 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
     return (
       <ModuleLayoutContext.Provider value={layout}>
       <ModuleHeadContext.Provider value={kopf}>
-        <div data-module-frame className="relative h-full w-full">
+        <div
+          data-module-frame
+          className={cn(
+            "relative h-full w-full",
+            ECKE_ZEILE,
+            raeumtObenLinks ? ECKE_UEBER_BOTTOM_NAV : ECKE_RAND,
+          )}
+        >
           {children}
           <PanelSafeArea
             className={cn("z-20 flex items-start p-4", raeumtObenLinks && "pl-16")}
@@ -378,9 +384,7 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
               {kopfSlot()}
             </div>
           </PanelSafeArea>
-          <ModuleControls className={cn(raeumtObenLinks && "pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-4")}>
-            {controlsSlot}
-          </ModuleControls>
+          <SchwebendeEcke>{controlsSlot}</SchwebendeEcke>
         </div>
       </ModuleHeadContext.Provider>
       </ModuleLayoutContext.Provider>
@@ -392,7 +396,7 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
     <ModuleHeadContext.Provider value={kopf}>
       {/* `relative`: Die schwebende Ecke unten links misst sich an der
           Modulflaeche, nicht am Fenster (Board, Abschnitt „Positionen"). */}
-      <div data-module-frame className="relative flex h-full min-h-0 flex-col">
+      <div data-module-frame className={cn("relative flex h-full min-h-0 flex-col", ECKE_ZEILE, ECKE_GRUNDLINIE)}>
         <div
           data-module-head
           hidden={!hatKopf}
@@ -428,21 +432,54 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
             weicht dem Panel aus (PanelSafeArea) und liegt ueber dem Inhalt,
             statt ihm eine Zeile wegzunehmen. Unten polstert sie so weit wie
             der Erstellen-Knopf gegenueber. */}
-        {/* Dieselbe Grundlinie wie der Plusknopf (5.25rem + Schutzzone ueber
-            der Bottom-Nav): die Shell polstert schon 5rem, also nur noch 0.25rem.
-            Mit p-4 stand der Filter 12px hoeher als der Plusknopf. Ab md gibt es
-            keine Bottom-Nav, dort gilt wieder der normale Rand. */}
-        <ModuleControls className="pb-1 md:pb-4">{controlsSlot}</ModuleControls>
+        <SchwebendeEcke>{controlsSlot}</SchwebendeEcke>
       </div>
     </ModuleHeadContext.Provider>
     </ModuleLayoutContext.Provider>
   )
 }
 
-export interface ModuleControlsProps {
-  children: ReactNode
-  className?: string
-}
+/*
+ * Die Ecke unten links und die Hoehe, die sie belegt (rls#567).
+ *
+ * Der Frame meldet sie als `--module-controls-block` an seiner Wurzel
+ * (`[data-module-frame]`): Abstand vom unteren Rand der Flaeche bis zur
+ * Oberkante der Zeile aus Filter-Pille und Erstellen-Knopf. Wer eine Flaeche
+ * einpasst oder unten polstert, liest diese Variable, statt zu schaetzen.
+ *
+ * Die Angabe setzt sich aus zwei Variablen zusammen, und das Polster der Ecke
+ * liest dieselbe: Zwei Zahlen fuer eine Sache liefen auseinander.
+ *
+ *   - `--module-controls-inset` — Abstand der Zeile zum unteren Rand
+ *   - `--module-controls-row` — Hoehe der Zeile, also ihres hoechsten
+ *     Bewohners. Unter md der Erstellen-Knopf (`CreateFab` h-13 = 52px; die
+ *     Pille 44px + Rand), ab md die Pille (48px + 2px Rand = 50px; der Knopf
+ *     48px). Gemessen in der Reference-App, Telefon 390 und Desktop 1440.
+ *
+ * Literale Klassen, keine zusammengesetzten: Tailwind findet nur, was
+ * woertlich im Quelltext steht.
+ */
+const ECKE_ZEILE =
+  "[--module-controls-row:3.25rem] md:[--module-controls-row:calc(3rem+2px)] " +
+  "[--module-controls-block:calc(var(--module-controls-inset)+var(--module-controls-row))]"
+
+/**
+ * Ohne Ueberlagerung: dieselbe Grundlinie wie der Erstellen-Knopf (5.25rem +
+ * Schutzzone ueber der Bottom-Nav). Die Shell polstert schon 5rem, also nur
+ * noch 0.25rem; mit 1rem stand der Filter 12px hoeher als der Plusknopf. Ab md
+ * gibt es keine Bottom-Nav, dort gilt der normale Rand.
+ */
+const ECKE_GRUNDLINIE = "[--module-controls-inset:0.25rem] md:[--module-controls-inset:1rem]"
+
+/**
+ * Karte (`clearsTopLeft`): Ihre Flaeche reicht unter die Bottom-Nav, die Ecke
+ * traegt den ganzen Abstand selbst.
+ */
+const ECKE_UEBER_BOTTOM_NAV =
+  "[--module-controls-inset:calc(5.25rem+env(safe-area-inset-bottom))] md:[--module-controls-inset:1rem]"
+
+/** Uebrige ueberlagerte Flaechen: der normale Rand. */
+const ECKE_RAND = "[--module-controls-inset:1rem]"
 
 /**
  * Die schwebende Ecke unten links einer Modulflaeche — Heimat der
@@ -450,11 +487,17 @@ export interface ModuleControlsProps {
  *
  * Sie liegt in einer `PanelSafeArea`, damit sie wie jedes schwebende
  * Bedienelement dem offenen Panel ausweicht (Spec 01 → Content-Bereich,
- * Pflicht 2). Ueberlagerte Module (Karte, Graph) setzen sie selbst, weil ihre
- * Flaeche der Inhalt ist und sie ohnehin schon eine Schutzzone fuehren.
+ * Pflicht 2).
+ *
+ * **Intern seit rls#567.** Bis dahin war sie als `ModuleControls` exportiert,
+ * und jeder Aufruf legte eine EIGENE Schutzzone an: Wer darin Knoepfe
+ * einhaengte, stapelte sie auf die Pille. Die Ecke gehoert jetzt der Pille und
+ * dem Erstellen-Knopf gegenueber; Knoepfe eines Moduls gehen ueber
+ * `ModuleToolbar.trailingActions` in den Kopf (Spec 01, Regel 2), eigene
+ * Filter-Abschnitte ueber `drawerExtra` in die Filterkarte.
  */
-export function ModuleControls({ children, className }: ModuleControlsProps) {
+function SchwebendeEcke({ children }: { children: ReactNode }) {
   return (
-    <PanelSafeArea className={cn("z-30 flex items-end p-4", className)}>{children}</PanelSafeArea>
+    <PanelSafeArea className="z-30 flex items-end px-4 pt-4 pb-(--module-controls-inset)">{children}</PanelSafeArea>
   )
 }
