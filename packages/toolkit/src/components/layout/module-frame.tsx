@@ -422,9 +422,20 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
             className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]"
           >
             {/* Oben polstert der Kopf, wenn es einen gibt — sonst der Inhalt
-                selbst; unten immer, sonst endet die Seite mit der letzten
-                Karte (am Desktop ohne untere Navigation sichtbar). */}
-            <div className={cn(geometrie, hatKopf ? "pb-4" : "py-4")}>{children}</div>
+                selbst. Unten reicht das Polster ueber die schwebende Zeile aus
+                Pille und Erstellen-Knopf hinaus, plus der uebliche Abstand:
+                Mit festen 16px lag die letzte Karte auf dem Telefon unter
+                beiden (Anton, 29.09.2026). Die Hoehe liest es aus der
+                gemeldeten Angabe, nicht aus einer eigenen Zahl (rls#567). */}
+            <div
+              className={cn(
+                geometrie,
+                !hatKopf && "pt-4",
+                "pb-[calc(var(--module-controls-block)+1rem)]",
+              )}
+            >
+              {children}
+            </div>
           </div>
         )}
 

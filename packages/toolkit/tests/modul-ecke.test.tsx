@@ -134,3 +134,27 @@ describe("Die gemeldete Hoehe der Ecke", () => {
     expect(frame().className).not.toContain("5.25rem")
   })
 })
+
+/**
+ * Auf dem Telefon lag die letzte Karte eines Container-Moduls unter Pille und
+ * Erstellen-Knopf: Der Scrollbereich endete mit 16px Polster, die Zeile
+ * darueber belegt 56px (gemessen in der Reference-App, Kanban und Feed: letzte
+ * Karte endet bei 748px, Pille beginnt bei 714px). Das Polster liest jetzt die
+ * gemeldete Hoehe, plus denselben Abstand wie zuvor.
+ */
+describe("Das Scroll-Polster der Container-Module", () => {
+  const innen = () => host.querySelector("[data-module-scroll]")!.firstElementChild as HTMLElement
+
+  it("reicht unten ueber die Zeile aus Pille und Erstellen-Knopf hinaus", () => {
+    rendere(createElement(ModuleFrame, { moduleId: "kanban" }, "BRETT"))
+    expect(innen().className).toContain("pb-[calc(var(--module-controls-block)+1rem)]")
+    expect(innen().className).not.toMatch(/(^|\s)pb-4(\s|$)/)
+  })
+
+  it("gilt auch ohne Kopf, oben bleibt es beim normalen Polster", () => {
+    act(() => root.render(createElement(ModuleFrame, { moduleId: "feed" }, "INHALT")))
+    expect(innen().className).toContain("pt-4")
+    expect(innen().className).toContain("pb-[calc(var(--module-controls-block)+1rem)]")
+  })
+})
+
