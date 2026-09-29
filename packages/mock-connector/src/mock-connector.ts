@@ -239,7 +239,7 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
   }
 
   async createGroup(name: string, data?: Record<string, unknown>): Promise<Group> {
-    const group: Group = { id: `group-${Date.now()}`, name, data }
+    const group: Group = { id: crypto.randomUUID(), name, data }
     this.groups.push(group)
     this.groupMembers[group.id] = this.currentUser ? [this.currentUser.id] : []
     this.notifyGroupObservers()

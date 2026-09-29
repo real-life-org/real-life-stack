@@ -405,10 +405,15 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
   }
 
   async createGroup(name: string, data?: Record<string, unknown>): Promise<Group> {
-    const group: Group = { id: `group-${Date.now()}`, name, data }
-    this.groups.push(group)
+    // A random id, never a timestamp: two spaces created in the same
+    // millisecond would share one id and the second's membership would
+    // replace the first's (rls#575).
+    const group: Group = { id: crypto.randomUUID(), name, data }
     const creator = this.currentUser?.id
-    await this.commitMembers((members) => ({ ...members, [group.id]: creator ? [creator] : [] }))
+    await this.commitGroups((groups, members) => ({
+      groups: [...groups, group],
+      members: { ...members, [group.id]: creator ? [creator] : [] },
+    }))
     this.notifyGroupObservers()
     await this.persist()
     this.broadcast({ type: "groups-changed" })
@@ -422,9 +427,10 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
     // `data` is a shallow PATCH (null removes), never a replacement — see the
     // GroupManager contract (rls#234). The patch is applied INSIDE the store
     // transaction against the COMMITTED group, not against this instance's
-    // possibly stale RAM copy: `persist()` writes `groups` wholesale, so a
-    // second tab patching another field would otherwise revert ours (rls#244).
+    // possibly stale RAM copy: a second tab patching another field would
+    // otherwise revert ours (rls#244).
     let committed: Group | undefined
+    let committedGroups: Group[] | undefined
     await updateStoredValue<StoredState>("state", (stored) => {
       const base = stored ?? this.createStoredState()
       const groups = base.groups.map((candidate) => {
@@ -436,34 +442,28 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
         }
         return committed
       })
+      committedGroups = groups
       return { ...base, groups }
     }, this.store)
 
-    // Only after the commit: adopt the merged result locally, so the RAM copy
-    // reflects the store's truth (including the other writer's fields).
-    if (committed) {
-      const merged = committed
-      this.groups = this.groups.map((candidate) => (candidate.id === id ? merged : candidate))
-      if (this.currentGroup?.id === id) {
-        this.currentGroup = merged
-        this.currentGroupObs.set(merged)
-      }
-    }
+    // Only after the commit: adopt the stored list locally, so the RAM copy
+    // reflects the store's truth (including the other writer's fields and
+    // spaces).
+    if (committedGroups) this.adoptGroups(committedGroups)
     this.notifyGroupObservers()
     this.broadcast({ type: "groups-changed" })
     return committed ?? this.groups.find((g) => g.id === id)!
   }
 
   async deleteGroup(id: string): Promise<void> {
-    this.groups = this.groups.filter((g) => g.id !== id)
-    await this.commitMembers(({ [id]: _removed, ...members }) => members)
-    if (this.currentGroup?.id === id) {
-      this.currentGroup = this.groups[0] ?? null
-      this.currentGroupObs.set(this.currentGroup)
-    }
+    await this.commitGroups((groups, { [id]: _removed, ...members }) => ({
+      groups: groups.filter((g) => g.id !== id),
+      members,
+    }))
     this.notifyGroupObservers()
     // Overview activity is the union of currently accessible spaces.
     this.notifyActivityObservers()
+    // Stores the shared current space (it may have fallen back above).
     await this.persist()
     this.broadcast({ type: "groups-changed" })
   }
@@ -507,6 +507,41 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
     }, this.store)
     if (committed) this.groupMembers = committed
     this.notifyMemberObservers()
+  }
+
+  /**
+   * A change to the space list (and its memberships) as ONE atomic operation
+   * on the stored state, never a write-back of this instance's copy: another
+   * tab may just have created, renamed or deleted a space (rls#575, like
+   * rls#244 for patches). The result is adopted.
+   */
+  private async commitGroups(
+    change: (groups: Group[], members: Record<string, string[]>) => { groups: Group[]; members: Record<string, string[]> },
+  ): Promise<void> {
+    let committed: { groups: Group[]; members: Record<string, string[]> } | undefined
+    await updateStoredValue<StoredState>("state", (stored) => {
+      const base = stored ?? this.createStoredState()
+      committed = change([...base.groups], { ...base.groupMembers })
+      return { ...base, groups: committed.groups, groupMembers: committed.members }
+    }, this.store)
+    if (!committed) return
+    this.groupMembers = committed.members
+    this.adoptGroups(committed.groups)
+  }
+
+  /**
+   * Take the stored space list as this instance's; the current space follows
+   * its stored version, or falls back to the first space when it is gone.
+   */
+  private adoptGroups(groups: Group[]): void {
+    this.groups = groups
+    const currentId = this.currentGroup?.id
+    if (currentId === undefined) return
+    const current = groups.find((g) => g.id === currentId) ?? groups[0] ?? null
+    if (current !== this.currentGroup) {
+      this.currentGroup = current
+      this.currentGroupObs.set(current)
+    }
   }
 
   async inviteMember(groupId: string, userId: string): Promise<void> {
@@ -1143,6 +1178,10 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
             // person or a removal.
             users: stored.users,
             groupMembers: stored.groupMembers,
+            // Spaces likewise (createGroup, updateGroup, deleteGroup commit
+            // atomically): a stale list would drop another tab's new space
+            // or bring back a deleted one (rls#575).
+            groups: stored.groups,
             // Per tab the login is the tab's own; the shared one stays as stored.
             ...(this.identityMode === "per-tab"
               ? { currentUserId: stored.currentUserId, currentGroupId: stored.currentGroupId }
