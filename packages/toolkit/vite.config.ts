@@ -2,6 +2,19 @@ import { defineConfig } from 'vite'
 import { resolve } from 'path'
 import dts from 'vite-plugin-dts'
 import tailwindcss from '@tailwindcss/vite'
+import pkg from './package.json' with { type: 'json' }
+
+// Workspace packages the toolkit depends on at runtime (`workspace:*` in
+// `dependencies`). They stay external — imported, never copied into the
+// toolkit bundle. A bundled copy of data-interface gave the toolkit its own
+// module state: `setTypeManifest` bound only the copy, and
+// `getTypeManifest()` from `@real-life-stack/data-interface` never saw the
+// app layer (real-life-stack#555, checked by scripts/packages/toolkit-dist.test.mjs).
+const workspaceDependencies = Object.entries(pkg.dependencies)
+  .filter(([, range]) => range.startsWith('workspace:'))
+  .map(([name]) => name)
+const isWorkspaceDependency = (id: string) =>
+  workspaceDependencies.some((name) => id === name || id.startsWith(`${name}/`))
 
 export default defineConfig({
   plugins: [
@@ -38,7 +51,9 @@ export default defineConfig({
       // dependency loaded dynamically by the map adapter; bundling it here
       // would defeat the optional-peer/lazy-load intent and bloat the toolkit
       // output for consumers that never use the map.
-      external: ['react', 'react-dom', 'react/jsx-runtime', 'leaflet', 'maplibre-gl', 'react-router-dom'],
+      external: (id) =>
+        ['react', 'react-dom', 'react/jsx-runtime', 'leaflet', 'maplibre-gl', 'react-router-dom'].includes(id) ||
+        isWorkspaceDependency(id),
       onwarn(warning, warn) {
         // Suppress "use client" directive warnings from shadcn/ui + Radix UI
         if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return
