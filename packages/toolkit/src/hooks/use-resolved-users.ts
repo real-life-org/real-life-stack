@@ -2,6 +2,18 @@ import { useEffect, useRef, useState } from "react"
 import { isAuthenticatable, type DataInterface, type User } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
+interface Aufloesung {
+  connector: DataInterface
+  users: ReadonlyMap<string, User>
+}
+
+interface Anfragen {
+  connector: DataInterface
+  laufend: Set<string>
+}
+
+const LEER: ReadonlyMap<string, User> = new Map()
+
 /**
  * For which ids do I know a name?
  *
@@ -16,18 +28,6 @@ import { useConnector } from "./connector-context"
  * @see story rls-foundations-hooks--people
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
-interface Aufloesung {
-  connector: DataInterface
-  users: ReadonlyMap<string, User>
-}
-
-interface Anfragen {
-  connector: DataInterface
-  laufend: Set<string>
-}
-
-const LEER: ReadonlyMap<string, User> = new Map()
-
 export function useResolvedUsers(ids: readonly string[]): ReadonlyMap<string, User> {
   const connector = useConnector()
   // Vertrag (Codex-Review Runden 1 und 2 zu #569): Ergebnisse und laufende
