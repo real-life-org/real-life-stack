@@ -451,8 +451,11 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
     // spaces).
     if (committedGroups) this.adoptGroups(committedGroups)
     this.notifyGroupObservers()
+    // Another tab deleted the space after our existence check: the stored
+    // list (now adopted) no longer has it.
+    if (!committed) throw new Error(`Group not found: ${id}`)
     this.broadcast({ type: "groups-changed" })
-    return committed ?? this.groups.find((g) => g.id === id)!
+    return committed
   }
 
   async deleteGroup(id: string): Promise<void> {
@@ -538,10 +541,14 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
     const currentId = this.currentGroup?.id
     if (currentId === undefined) return
     const current = groups.find((g) => g.id === currentId) ?? groups[0] ?? null
-    if (current !== this.currentGroup) {
-      this.currentGroup = current
-      this.currentGroupObs.set(current)
-    }
+    if (current === this.currentGroup) return
+    this.currentGroup = current
+    this.currentGroupObs.set(current)
+    if (current?.id === currentId) return
+    // The scope changed: item and activity views follow it, like setCurrentGroup.
+    this.rememberTabGroup(current?.id ?? null)
+    this.notifyObservers()
+    this.notifyActivityObservers()
   }
 
   async inviteMember(groupId: string, userId: string): Promise<void> {

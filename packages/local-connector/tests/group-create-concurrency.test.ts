@@ -134,4 +134,43 @@ describe("LocalConnector — Groups über Instanzen (rls#575, Befund 2)", () => 
     const fresh = await makeConnector()
     expect((await fresh.getGroups()).find((group) => group.id === "g1")?.name).toBe("Gemeinschaftsgarten")
   })
+
+  it("updateGroup auf eine anderswo gelöschte Group lehnt ab, statt undefined zu liefern", async () => {
+    const a = await makeConnector()
+    const b = await makeConnector()
+
+    await a.deleteGroup("g1")
+
+    await expect(b.updateGroup("g1", { name: "Neu" })).rejects.toThrow("Group not found: g1")
+    expect(await storedGroupIds()).toEqual([])
+    expect(await b.getGroups()).toEqual([])
+  })
+
+  it("fällt die aktuelle Group weg, folgen die Item-Beobachter der neuen aktuellen Group", async () => {
+    const twoSpaces = () => ({
+      items: [
+        { id: "i1", type: "task", createdAt: "2026-09-29T00:00:00.000Z", createdBy: "u1", data: { title: "Eins" } },
+        { id: "i2", type: "task", createdAt: "2026-09-29T00:00:00.000Z", createdBy: "u1", data: { title: "Zwei" } },
+      ],
+      groups: [{ id: "g1", name: "Garten" }, { id: "g2", name: "Küche" }],
+      users: [{ id: "u1", displayName: "Anton" }],
+      groupMembers: { g1: ["u1"], g2: ["u1"] },
+      groupItems: { g1: ["i1"], g2: ["i2"] },
+    })
+    const a = new LocalConnector(twoSpaces())
+    await a.init()
+    const b = new LocalConnector(twoSpaces())
+    await b.init()
+    expect(b.getCurrentGroup()?.id).toBe("g1")
+    const observed = b.observe({})
+    await Promise.resolve()
+    expect(observed.current.map((item) => item.id)).toEqual(["i1"])
+
+    await a.deleteGroup("g1")
+    await b.updateGroup("g2", { name: "Große Küche" }) // übernimmt die gespeicherte Liste ohne g1
+    await Promise.resolve()
+
+    expect(b.getCurrentGroup()?.id).toBe("g2")
+    expect(observed.current.map((item) => item.id)).toEqual(["i2"])
+  })
 })
