@@ -658,10 +658,10 @@ interface AppSpaceSectionContext {
 Regeln:
 
 1. App-Abschnitte stehen nach den eigenen Bereichen. Eine `id`, die schon vergeben ist, MUSS verworfen und gemeldet werden.
-2. `patchData` ist der einzige Schreibweg eines App-Abschnitts. Er schreibt `Group.data` **flach** als Merge-Patch über `updateGroup` ([04 → Space-Metadaten](../04-items-relations-groups-spaces.md#space-metadaten), Regeln 2 und 3; `null` löscht). Ein verschachtelter Namensraum (`Group.data.<app>.<feld>`) wäre bei Tiefe 1 ein einziger Wert, und zwei Abschnitte überschrieben sich gegenseitig (rls#234).
+2. `patchData` ist der einzige Schreibweg eines App-Abschnitts. Er schreibt `Group.data` **flach** als Merge-Patch über `updateGroup` ([04 → Space-Metadaten](../04-items-relations-groups-spaces.md#space-metadaten), Regeln 2 und 3; `null` löscht). Ein verschachtelter Namensraum (`Group.data.<app>.<feld>`) wäre bei Tiefe 1 ein einziger Wert, und zwei Abschnitte überschrieben sich gegenseitig (rls#234). Patches MÜSSEN nacheinander in Aufrufreihenfolge geschrieben werden; ein gescheiterter Patch nimmt nur sich selbst aus dem angezeigten Stand.
 3. Die App wählt eindeutige Feldnamen. Das Toolkit erzwingt kein Präfix. Name, Bild, Mitglieder, Module und Aussehen gehören dem Dialog; ein App-Abschnitt SOLL sie nicht schreiben.
 4. `initialSection` gilt bei jedem Öffnen. Gibt es den Bereich noch nicht (das Adminrecht lädt noch), steht der erste Bereich da, bis er erscheint.
-5. Jeder App-Abschnitt steht in einer eigenen Fehlergrenze; ein Fehler darin lässt Menü und Dialog bedienbar.
+5. Jeder App-Abschnitt steht in einer eigenen Fehlergrenze; ein Fehler darin lässt Menü und Dialog bedienbar. Wirft `visible`, fällt nur dieser Abschnitt weg.
 6. Auf schmalen Schirmen bricht die Bereichsleiste um. Kein Eintrag DARF nur durch seitliches Scrollen erreichbar sein.
 
 **Code:** `packages/toolkit/src/components/layout/group-dialog.tsx`.

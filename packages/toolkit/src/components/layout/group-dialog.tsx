@@ -255,37 +255,31 @@ export function validAppSections(sections: readonly AppSpaceSection[]): AppSpace
   return valid
 }
 
-/** Schreibstand der App-Patches: je Schluessel der Wert und welcher Patch ihn schrieb. */
-export type DataOverlay = Readonly<Record<string, { value: unknown; seq: number }>>
-
-/** Legt einen Patch in Aufrufreihenfolge ueber den Schreibstand. */
-export function overlayDataPatch(overlay: DataOverlay, patch: Record<string, unknown>, seq: number): DataOverlay {
-  const next: Record<string, { value: unknown; seq: number }> = { ...overlay }
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === undefined) continue
-    next[key] = { value, seq }
+/**
+ * Ob ein App-Abschnitt sichtbar ist. `visible` ist App-Code und laeuft beim
+ * Rendern des ganzen Dialogs; wirft er, faellt nur dieser Abschnitt weg
+ * (gemeldet), nicht der Dialog.
+ */
+export function appSectionVisible(section: AppSpaceSection, isAdmin: boolean): boolean {
+  if (!section.visible) return true
+  try {
+    return section.visible({ isAdmin })
+  } catch (err) {
+    console.error(`GroupDialog: visible() des App-Abschnitts "${section.id}" ist fehlgeschlagen — ausgeblendet.`, err)
+    return false
   }
-  return next
 }
 
 /**
- * Nimmt einen fehlgeschlagenen Patch zurueck — aber nur die Schluessel, die
- * kein spaeterer Patch schon wieder geschrieben hat. Sonst loeschte das
- * Scheitern eines alten Aufrufs die neuere Eingabe.
+ * Der Schreibstand eines App-Abschnitts: der Stand vom Oeffnen, darueber die
+ * Patches der Reihe nach (bestaetigte zuerst, dann wartende). Merge-Patch
+ * der Tiefe 1, `null` loescht — wie der Connector (Spec 04, Regel 3).
  */
-export function rollbackDataPatch(overlay: DataOverlay, patch: Record<string, unknown>, seq: number): DataOverlay {
-  const next: Record<string, { value: unknown; seq: number }> = { ...overlay }
-  for (const key of Object.keys(patch)) {
-    if (next[key]?.seq === seq) delete next[key]
-  }
-  return next
-}
-
-/** Der Stand vom Oeffnen mit dem Schreibstand darueber (Merge-Patch, `null` loescht). */
-export function viewGroupData(base: Record<string, unknown> | undefined, overlay: DataOverlay): Record<string, unknown> {
-  const patch: Record<string, unknown> = {}
-  for (const [key, entry] of Object.entries(overlay)) patch[key] = entry.value
-  return applyGroupDataPatch(base, patch)
+export function viewGroupData(
+  base: Record<string, unknown> | undefined,
+  patches: readonly Record<string, unknown>[],
+): Record<string, unknown> {
+  return patches.reduce<Record<string, unknown>>((data, patch) => applyGroupDataPatch(data, patch), { ...base })
 }
 
 /** Ab wie vielen Mitgliedern die Liste ein Suchfeld bekommt. */
@@ -548,22 +542,32 @@ export function GroupDialog({
     setValidApp(validAppSections(appSections ?? []))
   }
   const visibleAppSections = isEdit
-    ? validApp.filter((a) => a.visible?.({ isAdmin: isCurrentUserAdmin }) ?? true)
+    ? validApp.filter((a) => appSectionVisible(a, isCurrentUserAdmin))
     : []
   const sections: { id: string; label: string; icon: LucideIcon }[] = [...ownSections, ...visibleAppSections]
   const activeSection = resolveConfigSection(requestedSection, sections)
   const activeAppSection = visibleAppSections.find((a) => a.id === activeSection)
 
-  // Schreibstand der App-Abschnitte ueber dem Stand vom Oeffnen. Neuer
-  // Snapshot (anderer Space oder neu geoeffnet) = neuer Ausgangspunkt.
-  const [overlay, setOverlay] = useState<DataOverlay>({})
+  // Schreibstand der App-Abschnitte ueber dem Stand vom Oeffnen:
+  // `confirmed` = gespeicherte Patches (zusammengefasst, `null` bleibt als
+  // Loeschung stehen), `pendingPatches` = noch nicht gespeicherte, in
+  // Aufrufreihenfolge. Ein neuer Snapshot enthaelt das Gespeicherte schon;
+  // wartende Patches desselben Space bleiben darueber liegen.
+  const [confirmed, setConfirmed] = useState<Record<string, unknown>>({})
+  const [pendingPatches, setPendingPatches] = useState<{ seq: number; groupId: string; patch: Record<string, unknown> }[]>([])
   const [overlayBase, setOverlayBase] = useState(isEdit ? mode.group : null)
   const currentBase = isEdit ? mode.group : null
   if (currentBase !== overlayBase) {
     setOverlayBase(currentBase)
-    setOverlay({})
+    setConfirmed({})
+    setPendingPatches((p) => p.filter((e) => e.groupId === currentBase?.id))
   }
   const patchSeqRef = useRef(0)
+  // Eine Schreibkette: Patches gehen nacheinander in Aufrufreihenfolge an den
+  // Connector. Parallel abgeschickt, koennte ein aelterer Patch nach einem
+  // neueren ankommen — die Anzeige zeigte dann die letzte Eingabe, gespeichert
+  // bliebe die vorletzte.
+  const patchChainRef = useRef<Promise<unknown>>(Promise.resolve())
   const [appError, setAppError] = useState<string | null>(null)
   /** Suche in der Mitgliederliste (Entwurf 3a). */
   const [memberSearch, setMemberSearch] = useState("")
@@ -790,16 +794,26 @@ export function GroupDialog({
     if (current.type !== "edit") return Promise.reject(new Error("Kein Space zum Bearbeiten"))
     const target = current.group.id
     const seq = ++patchSeqRef.current
-    setOverlay((o) => overlayDataPatch(o, patch, seq))
+    const drop = () => setPendingPatches((p) => p.filter((e) => e.seq !== seq))
+    setPendingPatches((p) => [...p, { seq, groupId: target, patch }])
     setAppError(null)
-    return onUpdateGroupRef.current(target, { data: patch }).catch((err: unknown) => {
-      setOverlay((o) => rollbackDataPatch(o, patch, seq))
-      const now = modeRef.current
-      if (now.type === "edit" && now.group.id === target) {
-        setAppError(err instanceof Error ? err.message : "Konnte nicht gespeichert werden")
-      }
-      throw err
-    })
+    const write = patchChainRef.current.then(() => onUpdateGroupRef.current(target, { data: patch }))
+    patchChainRef.current = write.catch(() => {})
+    return write.then(
+      () => {
+        const now = modeRef.current
+        if (now.type === "edit" && now.group.id === target) setConfirmed((c) => ({ ...c, ...patch }))
+        drop()
+      },
+      (err: unknown) => {
+        drop()
+        const now = modeRef.current
+        if (now.type === "edit" && now.group.id === target) {
+          setAppError(err instanceof Error ? err.message : "Konnte nicht gespeichert werden")
+        }
+        throw err
+      },
+    )
   }, [])
 
   const handleOpenChange = useCallback(
@@ -1685,7 +1699,13 @@ export function GroupDialog({
             <ErrorBoundary key={activeAppSection.id} label={activeAppSection.label} resetKeys={[mode.group.id]}>
               <AppSectionHost
                 section={activeAppSection}
-                group={{ ...mode.group, data: viewGroupData(mode.group.data, overlay) }}
+                group={{
+                  ...mode.group,
+                  data: viewGroupData(mode.group.data, [
+                    confirmed,
+                    ...pendingPatches.filter((e) => e.groupId === mode.group.id).map((e) => e.patch),
+                  ]),
+                }}
                 canEdit={isCurrentUserAdmin}
                 patchData={patchAppData}
               />

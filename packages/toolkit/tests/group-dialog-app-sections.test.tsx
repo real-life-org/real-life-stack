@@ -17,8 +17,6 @@ vi.mock("../src/hooks/use-groups", () => ({
 
 const {
   GroupDialog,
-  overlayDataPatch,
-  rollbackDataPatch,
   viewGroupData,
 } = await import("../src/components/layout/group-dialog")
 import type { AppSpaceSection, AppSpaceSectionContext } from "../src/components/layout/group-dialog"
@@ -133,6 +131,46 @@ describe("GroupDialog: App-Abschnitte", () => {
     expect(document.body.textContent).toContain("Relay nicht erreichbar")
   })
 
+  it("behaelt nach einem gescheiterten Folge-Patch den zuvor gespeicherten Stand", async () => {
+    let fail = false
+    onUpdateGroup = vi.fn(async () => { if (fail) throw new Error("weg") })
+    renderDialog({ initialSection: "traum" })
+    await act(async () => { await lastCtx!.patchData({ dream: "A" }) })
+    fail = true
+    await act(async () => { await lastCtx!.patchData({ dream: "B" }).catch(() => {}) })
+    expect(document.querySelector("[data-testid='traum']")?.textContent).toBe("Traum: A")
+    fail = false
+    await act(async () => { await lastCtx!.patchData({ dream: null }) })
+    fail = true
+    await act(async () => { await lastCtx!.patchData({ dream: "C" }).catch(() => {}) })
+    expect(document.querySelector("[data-testid='traum']")?.textContent, "gespeicherte Loeschung bleibt").toBe("Traum: —")
+  })
+
+  it("schreibt Patches nacheinander in Aufrufreihenfolge, nie parallel", async () => {
+    const pending: { patch: unknown; resolve: () => void }[] = []
+    onUpdateGroup = vi.fn((_id: string, updates: { data: unknown }) => new Promise<void>((resolve) => { pending.push({ patch: updates.data, resolve }) }))
+    renderDialog({ initialSection: "traum" })
+    let a!: Promise<void>, b!: Promise<void>
+    act(() => { a = lastCtx!.patchData({ dream: "A" }); b = lastCtx!.patchData({ dream: "B", horizon: "H" }) })
+    await act(async () => { await Promise.resolve() })
+    expect(pending.map((p) => p.patch), "B wartet, bis A gespeichert ist").toEqual([{ dream: "A" }])
+    expect(document.querySelector("[data-testid='traum']")?.textContent, "Anzeige zeigt die letzte Eingabe").toBe("Traum: B")
+    await act(async () => { pending[0].resolve(); await a })
+    await act(async () => { await Promise.resolve() })
+    expect(pending.map((p) => p.patch)).toEqual([{ dream: "A" }, { dream: "B", horizon: "H" }])
+    await act(async () => { pending[1].resolve(); await b })
+    expect(document.querySelector("[data-testid='traum']")?.textContent).toBe("Traum: B")
+  })
+
+  it("blendet einen Abschnitt aus, dessen visible wirft, der Dialog bleibt stehen", () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {})
+    renderDialog({ appSections: [traum(), { id: "kaputt", label: "Kaputt", icon: Download, visible: () => { throw new Error("visible kaputt") }, render: () => "x" }] })
+    expect(menuEntry("Traum")).toBeTruthy()
+    expect(menuEntry("Kaputt")).toBeUndefined()
+    expect(err).toHaveBeenCalled()
+    err.mockRestore()
+  })
+
   it("oeffnet mit initialSection direkt im App-Abschnitt, auch beim naechsten Oeffnen", () => {
     renderDialog({ initialSection: "traum" })
     expect(region()?.getAttribute("aria-label")).toBe("Traum")
@@ -226,27 +264,15 @@ describe("GroupDialog: App-Abschnitte", () => {
   })
 })
 
-/**
- * Die Ueberlagerung des Schreibstands: in Aufrufreihenfolge (die Absicht der
- * Nutzerin), ein Fehlschlag nimmt nur die Schluessel zurueck, die kein
- * spaeterer Patch schon wieder geschrieben hat.
- */
-describe("Ueberlagerung der App-Patches", () => {
-  it("legt Patches in Aufrufreihenfolge ueber den Stand vom Oeffnen", () => {
-    let o = overlayDataPatch({}, { dream: "A" }, 1)
-    o = overlayDataPatch(o, { dream: "B", horizon: "H" }, 2)
-    expect(viewGroupData({ dream: "alt", modules: ["feed"] }, o)).toEqual({ dream: "B", horizon: "H", modules: ["feed"] })
+/** Der Schreibstand: Stand vom Oeffnen, darueber Patches der Reihe nach (Merge-Patch, `null` loescht). */
+describe("Ansicht des Schreibstands", () => {
+  it("legt Patches der Reihe nach ueber den Stand vom Oeffnen", () => {
+    expect(viewGroupData({ dream: "alt", modules: ["feed"] }, [{ dream: "A" }, { dream: "B", horizon: "H" }]))
+      .toEqual({ dream: "B", horizon: "H", modules: ["feed"] })
   })
 
-  it("null loescht den Schluessel in der Ansicht", () => {
-    const o = overlayDataPatch({}, { dream: null }, 1)
-    expect(viewGroupData({ dream: "alt", x: 1 }, o)).toEqual({ x: 1 })
-  })
-
-  it("ein Fehlschlag nimmt nur zurueck, was kein spaeterer Patch ueberschrieben hat", () => {
-    let o = overlayDataPatch({}, { dream: "A", horizon: "H1" }, 1)
-    o = overlayDataPatch(o, { dream: "B" }, 2)
-    o = rollbackDataPatch(o, { dream: "A", horizon: "H1" }, 1)
-    expect(viewGroupData({ dream: "alt", horizon: "H0" }, o)).toEqual({ dream: "B", horizon: "H0" })
+  it("null loescht den Schluessel in der Ansicht, ein spaeterer Wert setzt ihn wieder", () => {
+    expect(viewGroupData({ dream: "alt", x: 1 }, [{ dream: null }])).toEqual({ x: 1 })
+    expect(viewGroupData({ dream: "alt" }, [{ dream: null }, { dream: "neu" }])).toEqual({ dream: "neu" })
   })
 })

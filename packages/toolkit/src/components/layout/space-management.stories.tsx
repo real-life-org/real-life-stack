@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Download, Sparkles } from "lucide-react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { ContactInfo, Group } from "@real-life-stack/data-interface"
+import { applyGroupDataPatch, type ContactInfo, type Group } from "@real-life-stack/data-interface"
 import { GroupDialog, type AppSpaceSection, type GroupDialogMode } from "./group-dialog"
 import { SpaceThemePanel } from "./space-theme-panel"
 import { Button } from "../primitives/button"
@@ -161,7 +161,8 @@ export const AppSections: Story = {
           initialSection="dream"
           onCreateGroup={async () => {}}
           onUpdateGroup={async (_id, updates) => {
-            if (updates.data) setGroup((g) => ({ ...g, data: { ...g.data, ...updates.data } }))
+            // Wie jeder Connector: Merge-Patch, `null` loescht (Spec 04, Regel 3).
+            if (updates.data) setGroup((g) => ({ ...g, data: applyGroupDataPatch(g.data, updates.data!) }))
           }}
           onDeleteGroup={async () => setOpen(false)}
           onInviteMember={async () => {}}
