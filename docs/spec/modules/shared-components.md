@@ -634,6 +634,38 @@ interface ModulePanelEntry { kind: ModulePanelKind; content: ReactNode; onClose?
 
 **Code:** `packages/toolkit/src/components/module-panel/`.
 
+### `GroupDialog`: App-Abschnitte
+
+Der Space-Dialog ist der eine Ort für alles, was zu einem Space gehört. Eine App trägt eigene Abschnitte dort ein, statt einen zweiten Dialog für denselben Space zu bauen ([01 → Overlay-Flächen](../01-app-composition.md), Regel 5).
+
+```ts
+interface AppSpaceSection {
+  id: string                                  // eindeutig; members/invite/theme/modules sind vergeben
+  label: string
+  icon: LucideIcon
+  visible?: (who: { isAdmin: boolean }) => boolean
+  render: (ctx: AppSpaceSectionContext) => ReactNode
+}
+interface AppSpaceSectionContext {
+  group: Group                                // Stand vom Öffnen + eigener Schreibstand
+  canEdit: boolean                            // eigener Nutzer ist Admin
+  patchData: (patch: Record<string, unknown>) => Promise<void>
+}
+// GroupDialogProps: appSections?, appSectionsTitle?, initialSection?
+// AppFrameProps:    spaceSections?, spaceSectionsTitle?
+```
+
+Regeln:
+
+1. App-Abschnitte stehen nach den eigenen Bereichen. Eine `id`, die schon vergeben ist, MUSS verworfen und gemeldet werden.
+2. `patchData` ist der einzige Schreibweg eines App-Abschnitts. Er schreibt `Group.data` **flach** als Merge-Patch über `updateGroup` ([04 → Space-Metadaten](../04-items-relations-groups-spaces.md#space-metadaten), Regeln 2 und 3; `null` löscht). Ein verschachtelter Namensraum (`Group.data.<app>.<feld>`) wäre bei Tiefe 1 ein einziger Wert, und zwei Abschnitte überschrieben sich gegenseitig (rls#234).
+3. Die App wählt eindeutige Feldnamen. Das Toolkit erzwingt kein Präfix. Name, Bild, Mitglieder, Module und Aussehen gehören dem Dialog; ein App-Abschnitt SOLL sie nicht schreiben.
+4. `initialSection` gilt bei jedem Öffnen. Gibt es den Bereich noch nicht (das Adminrecht lädt noch), steht der erste Bereich da, bis er erscheint.
+5. Jeder App-Abschnitt steht in einer eigenen Fehlergrenze; ein Fehler darin lässt Menü und Dialog bedienbar.
+6. Auf schmalen Schirmen bricht die Bereichsleiste um. Kein Eintrag DARF nur durch seitliches Scrollen erreichbar sein.
+
+**Code:** `packages/toolkit/src/components/layout/group-dialog.tsx`.
+
 ## Item-Detail aus dem Register
 
 **Status:** Normativer Entwurf (S0, 26.09.2026). Die Umsetzung folgt in S1–S6; bis dahin weicht `ItemDetailBody` hiervon ab. Gilt für `ItemDetailBody`, `ItemDetailView`, `ItemDetailPanel` und den `ContentComposer` im Edit-Modus. Die Inhalte kommen aus dem Feld- und Kantenregister ([06 → Feld- und Kantenregister](../06-schema-composition.md#feld--und-kantenregister)); die Flächen verzweigen nicht nach `type`.

@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MockConnector } from "@real-life-stack/mock-connector"
 import type { DataInterface } from "@real-life-stack/data-interface"
+import { Sparkles } from "lucide-react"
 
 import { AppFrame, type FrameRouting } from "../src/components/frame/app-frame"
 import { useCreate } from "../src/components/host/create-host"
@@ -112,6 +113,23 @@ describe("AppFrame", () => {
     document.documentElement.classList.remove("dark")
     document.documentElement.removeAttribute("data-theme")
     localStorage.clear()
+  })
+
+  it("reicht App-Abschnitte an den Space-Dialog durch (rls#551)", async () => {
+    const spaceSections = [{ id: "traum", label: "Traum", icon: Sparkles, render: () => createElement("p", { "data-testid": "traum" }, "Traum-Flaeche") }]
+    await rendere(createElement(AppFrame, { routing: routing(), spaceSections, spaceSectionsTitle: "Karabirrdt" }))
+    const switcher = host.querySelector("[data-slot='dropdown-menu-trigger'], [aria-haspopup='menu']") as HTMLElement
+    await act(async () => {
+      switcher.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 }))
+      switcher.click()
+    })
+    const bearbeiten = document.querySelector("[aria-label='Gartenprojekt bearbeiten']") as HTMLElement
+    await act(async () => { bearbeiten.click() })
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
+    const traum = [...document.querySelectorAll("nav button")].find((b) => b.textContent?.startsWith("Traum")) as HTMLElement
+    expect(traum, "App-Abschnitt im Menue").toBeTruthy()
+    await act(async () => { traum.click() })
+    expect(document.querySelector("[data-testid='traum']")?.textContent).toBe("Traum-Flaeche")
   })
 
   it("rendert App-Eigenes in der Kopfzeile und im Baum", async () => {

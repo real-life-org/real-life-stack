@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from "react"
+import { Fragment, useState, useCallback, useEffect, useRef, type ReactNode } from "react"
 import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, RotateCcw, SlidersHorizontal, Check as CheckIcon, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
-import type { Group, ContactInfo } from "@real-life-stack/data-interface"
+import { applyGroupDataPatch, type Group, type ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
 import { cn, getReadableTextColor, getSpacePrimaryColor, resolveAssetUrl, SPACE_COLOR_SWATCHES } from "../../lib/utils"
@@ -19,6 +19,7 @@ import { Input } from "../primitives/input"
 import { Label } from "../primitives/label"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Skeleton } from "../primitives/skeleton"
+import { ErrorBoundary } from "../primitives/error-boundary"
 
 function getInitials(name: string): string {
   return name
@@ -184,11 +185,107 @@ export function filterInvitableContacts<T extends { id: string; name?: string }>
  * verschwinden — der Dialog zeigte dann den Inhalt eines Eintrags an, den es
  * nicht mehr gibt. Der Rueckfall ist der erste Bereich.
  */
-export function resolveConfigSection(
-  requested: SpaceConfigSectionId,
-  sections: readonly SpaceConfigSection[],
-): SpaceConfigSectionId {
-  return sections.some((s) => s.id === requested) ? requested : sections[0].id
+export function resolveConfigSection<Id extends string>(
+  requested: string,
+  sections: readonly { id: Id }[],
+): Id {
+  const hit = sections.find((s) => s.id === requested)
+  return hit ? hit.id : sections[0].id
+}
+
+// --- App-Abschnitte (rls#551) ---
+
+/**
+ * Was ein App-Abschnitt zum Rendern bekommt.
+ *
+ * `patchData` ist der EINZIGE Schreibweg: ein flacher Merge-Patch auf
+ * `Group.data` (Spec 04, Space-Metadaten, Regeln 2 und 3; `null` loescht).
+ * Name, Bild, Mitglieder, Module und Aussehen bleiben beim Dialog.
+ */
+export interface AppSpaceSectionContext {
+  /**
+   * Der Space mit dem eigenen Schreibstand dieser Dialog-Sitzung: der Stand
+   * vom Oeffnen, darueber die Patches aus `patchData`. Ein Abschnitt, der
+   * beim Bereichswechsel abgebaut wird, liest beim Zurueckkehren so, was er
+   * selbst geschrieben hat, statt den Stand vom Oeffnen.
+   */
+  group: Group
+  /** Ob der eigene Nutzer den Space einstellen darf (Admin). */
+  canEdit: boolean
+  /**
+   * Schreibt `patch` flach nach `Group.data`. Loest auf, wenn der Connector
+   * gespeichert hat; bei einem Fehler wird der Patch aus dem Schreibstand
+   * zurueckgenommen, der Dialog meldet ihn, und die Ablehnung kommt zurueck.
+   */
+  patchData: (patch: Record<string, unknown>) => Promise<void>
+}
+
+/** Ein Abschnitt, den eine App in den Space-Dialog eintraegt. */
+export interface AppSpaceSection {
+  /** Eindeutig im Dialog; die Ids der eigenen Bereiche sind vergeben. */
+  id: string
+  label: string
+  icon: LucideIcon
+  /** Ohne Angabe sichtbar. `isAdmin` steht beim Oeffnen noch nicht fest. */
+  visible?: (who: { isAdmin: boolean }) => boolean
+  render: (ctx: AppSpaceSectionContext) => ReactNode
+}
+
+const OWN_SECTION_IDS: readonly SpaceConfigSectionId[] = ["members", "modules", "invite", "theme"]
+
+/**
+ * Die gueltigen App-Abschnitte: eine Id, die einen eigenen Bereich oder
+ * einen frueheren App-Abschnitt verdeckt, faellt heraus und wird gemeldet.
+ * Stumm uebernehmen hiesse, dass `initialSection` und das Menue je nach
+ * Reihenfolge einen anderen Eintrag meinen.
+ */
+export function validAppSections(sections: readonly AppSpaceSection[]): AppSpaceSection[] {
+  const seen = new Set<string>(OWN_SECTION_IDS)
+  const valid: AppSpaceSection[] = []
+  for (const section of sections) {
+    if (seen.has(section.id)) {
+      console.error(
+        `GroupDialog: App-Abschnitt "${section.id}" verworfen — die Id ist schon vergeben (eigener Bereich oder doppelt).`,
+      )
+      continue
+    }
+    seen.add(section.id)
+    valid.push(section)
+  }
+  return valid
+}
+
+/** Schreibstand der App-Patches: je Schluessel der Wert und welcher Patch ihn schrieb. */
+export type DataOverlay = Readonly<Record<string, { value: unknown; seq: number }>>
+
+/** Legt einen Patch in Aufrufreihenfolge ueber den Schreibstand. */
+export function overlayDataPatch(overlay: DataOverlay, patch: Record<string, unknown>, seq: number): DataOverlay {
+  const next: Record<string, { value: unknown; seq: number }> = { ...overlay }
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) continue
+    next[key] = { value, seq }
+  }
+  return next
+}
+
+/**
+ * Nimmt einen fehlgeschlagenen Patch zurueck — aber nur die Schluessel, die
+ * kein spaeterer Patch schon wieder geschrieben hat. Sonst loeschte das
+ * Scheitern eines alten Aufrufs die neuere Eingabe.
+ */
+export function rollbackDataPatch(overlay: DataOverlay, patch: Record<string, unknown>, seq: number): DataOverlay {
+  const next: Record<string, { value: unknown; seq: number }> = { ...overlay }
+  for (const key of Object.keys(patch)) {
+    if (next[key]?.seq === seq) delete next[key]
+  }
+  return next
+}
+
+/** Der Stand vom Oeffnen mit dem Schreibstand darueber (Merge-Patch, `null` loescht). */
+export function viewGroupData(base: Record<string, unknown> | undefined, overlay: DataOverlay): Record<string, unknown> {
+  const patch: Record<string, unknown> = {}
+  for (const [key, entry] of Object.entries(overlay)) patch[key] = entry.value
+  return applyGroupDataPatch(base, patch)
 }
 
 /** Ab wie vielen Mitgliedern die Liste ein Suchfeld bekommt. */
@@ -321,6 +418,15 @@ function MemberGroupLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Ruft `render` eines App-Abschnitts INNERHALB der Fehlergrenze auf. Direkt
+ * im Dialog aufgerufen, liefe ein Fehler der render-Funktion selbst an der
+ * Grenze vorbei und risse den ganzen Dialog mit.
+ */
+function AppSectionHost({ section, ...ctx }: AppSpaceSectionContext & { section: AppSpaceSection }) {
+  return <>{section.render(ctx)}</>
+}
+
 // --- Types ---
 
 export type GroupDialogMode =
@@ -345,6 +451,21 @@ export interface GroupDialogProps {
   onDeleteGroup: (id: string) => Promise<void>
   onInviteMember?: (groupId: string, userId: string) => Promise<void>
   onRemoveMember?: (groupId: string, userId: string) => Promise<void>
+  /**
+   * Abschnitte der App, nach den eigenen Bereichen (rls#551). Sie schreiben
+   * nur ueber `patchData` nach `Group.data`; einen zweiten Dialog fuer
+   * denselben Space braucht es dann nicht (Spec 01, Overlay-Regel 5).
+   * Nur im Bearbeiten-Modus.
+   */
+  appSections?: AppSpaceSection[]
+  /** Ueberschrift ueber den App-Abschnitten im Menue, z. B. der App-Name. */
+  appSectionsTitle?: string
+  /**
+   * In welchem Bereich der Dialog oeffnet — eigener Bereich oder Id eines
+   * App-Abschnitts. Gilt bei jedem Oeffnen; gibt es den Bereich (noch)
+   * nicht, steht der erste da, bis er erscheint.
+   */
+  initialSection?: string
 }
 
 // --- Component ---
@@ -361,6 +482,9 @@ export function GroupDialog({
   onDeleteGroup,
   onInviteMember,
   onRemoveMember,
+  appSections,
+  appSectionsTitle,
+  initialSection,
 }: GroupDialogProps) {
   const isEdit = mode.type === "edit"
   const groupId = isEdit ? mode.group.id : "__none__"
@@ -403,13 +527,44 @@ export function GroupDialog({
   // Das gewaehlte Fach. `tabs` haengt an isCurrentUserAdmin, das aus den
   // Mitgliedern abgeleitet wird und beim Oeffnen noch nicht feststeht — daher
   // laeuft die Auswahl durch resolveConfigTab, statt roh an Radix zu gehen.
-  const [requestedSection, setRequestedSection] = useState<SpaceConfigSectionId>("members")
-  const sections = spaceConfigSections({
+  const [requestedSection, setRequestedSection] = useState<string>(initialSection ?? "members")
+  // Bei jedem Oeffnen gilt `initialSection` neu. Der Dialog bleibt zwischen
+  // zwei Aufrufen montiert; ohne das oeffnete er im zuletzt gewaehlten
+  // Bereich, auch wenn die App gezielt in ihren Abschnitt springen will.
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setRequestedSection(initialSection ?? "members")
+  }
+  const ownSections = spaceConfigSections({
     isAdmin: isCurrentUserAdmin,
     canInvite: Boolean(onInviteMember),
     canTheme: isCurrentUserAdmin,
   })
+  const [appSectionsInput, setAppSectionsInput] = useState(appSections)
+  const [validApp, setValidApp] = useState(() => validAppSections(appSections ?? []))
+  if (appSections !== appSectionsInput) {
+    setAppSectionsInput(appSections)
+    setValidApp(validAppSections(appSections ?? []))
+  }
+  const visibleAppSections = isEdit
+    ? validApp.filter((a) => a.visible?.({ isAdmin: isCurrentUserAdmin }) ?? true)
+    : []
+  const sections: { id: string; label: string; icon: LucideIcon }[] = [...ownSections, ...visibleAppSections]
   const activeSection = resolveConfigSection(requestedSection, sections)
+  const activeAppSection = visibleAppSections.find((a) => a.id === activeSection)
+
+  // Schreibstand der App-Abschnitte ueber dem Stand vom Oeffnen. Neuer
+  // Snapshot (anderer Space oder neu geoeffnet) = neuer Ausgangspunkt.
+  const [overlay, setOverlay] = useState<DataOverlay>({})
+  const [overlayBase, setOverlayBase] = useState(isEdit ? mode.group : null)
+  const currentBase = isEdit ? mode.group : null
+  if (currentBase !== overlayBase) {
+    setOverlayBase(currentBase)
+    setOverlay({})
+  }
+  const patchSeqRef = useRef(0)
+  const [appError, setAppError] = useState<string | null>(null)
   /** Suche in der Mitgliederliste (Entwurf 3a). */
   const [memberSearch, setMemberSearch] = useState("")
   /** Suche in der Kontaktliste des Bereichs "Einladen" (Entwurf 4a). */
@@ -624,6 +779,29 @@ export function GroupDialog({
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [inviteErrors, setInviteErrors] = useState<Map<string, string>>(new Map())
 
+  /**
+   * Der Schreibweg der App-Abschnitte: flach nach `Group.data` (Spec 04,
+   * Regel 3). Der Patch liegt sofort im Schreibstand — in Aufrufreihenfolge,
+   * also in der Reihenfolge der Eingaben; scheitert er, nimmt der Dialog nur
+   * zurueck, was kein spaeterer Aufruf schon ueberschrieben hat.
+   */
+  const patchAppData = useCallback((patch: Record<string, unknown>): Promise<void> => {
+    const current = modeRef.current
+    if (current.type !== "edit") return Promise.reject(new Error("Kein Space zum Bearbeiten"))
+    const target = current.group.id
+    const seq = ++patchSeqRef.current
+    setOverlay((o) => overlayDataPatch(o, patch, seq))
+    setAppError(null)
+    return onUpdateGroupRef.current(target, { data: patch }).catch((err: unknown) => {
+      setOverlay((o) => rollbackDataPatch(o, patch, seq))
+      const now = modeRef.current
+      if (now.type === "edit" && now.group.id === target) {
+        setAppError(err instanceof Error ? err.message : "Konnte nicht gespeichert werden")
+      }
+      throw err
+    })
+  }, [])
+
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
@@ -631,6 +809,7 @@ export function GroupDialog({
         setError(null)
         setModuleError(null)
         setColorError(null)
+        setAppError(null)
         setInvitingId(null)
         setInvitedIds(new Set())
         setInviteErrors(new Map())
@@ -852,7 +1031,7 @@ export function GroupDialog({
   }
 
   /** Zahlen am Menue — die Suche aendert sie nicht, sie zaehlen den Bestand. */
-  const sectionCounts: Record<SpaceConfigSectionId, number | undefined> = {
+  const sectionCounts: Partial<Record<string, number | undefined>> = {
     members: members.length || undefined,
     modules: visibleModules.length || undefined,
     invite: undefined,
@@ -1051,14 +1230,24 @@ export function GroupDialog({
               aria-label="Bereiche"
               className="shrink-0 border-b bg-muted/50 p-2.5 sm:w-[190px] sm:border-b-0 sm:border-r dark:bg-muted/20"
             >
-              <div className="flex gap-1 overflow-x-auto sm:flex-col sm:gap-0.5 sm:overflow-visible">
-                {sections.map((section) => {
+              {/* Auf dem Telefon bricht die Leiste um, statt seitlich zu
+                  scrollen: schon mit vier Eintraegen war der letzte
+                  abgeschnitten, und mit App-Abschnitten waeren es mehr
+                  (rls#551). Kein Eintrag darf nur durch Wischen erreichbar sein. */}
+              <div data-section-list className="flex flex-wrap gap-1 sm:flex-col sm:flex-nowrap sm:gap-0.5">
+                {sections.map((section, index) => {
                   const Icon = section.icon
+                  const firstApp = visibleAppSections.length > 0 && index === ownSections.length
                   const active = section.id === activeSection
                   const count = sectionCounts[section.id]
                   return (
+                    <Fragment key={section.id}>
+                    {firstApp && appSectionsTitle && (
+                      <p className="hidden px-2.5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:block">
+                        {appSectionsTitle}
+                      </p>
+                    )}
                     <button
-                      key={section.id}
                       type="button"
                       aria-current={active ? "page" : undefined}
                       onClick={() => setRequestedSection(section.id)}
@@ -1083,6 +1272,7 @@ export function GroupDialog({
                         </span>
                       )}
                     </button>
+                    </Fragment>
                   )
                 })}
               </div>
@@ -1489,6 +1679,18 @@ export function GroupDialog({
               )}
             </>
           )}
+          {activeAppSection && isEdit && (
+            // Je Abschnitt eine eigene Instanz: `render` darf Hooks nutzen,
+            // und zwei Abschnitte teilten sonst deren Zustand.
+            <ErrorBoundary key={activeAppSection.id} label={activeAppSection.label} resetKeys={[mode.group.id]}>
+              <AppSectionHost
+                section={activeAppSection}
+                group={{ ...mode.group, data: viewGroupData(mode.group.data, overlay) }}
+                canEdit={isCurrentUserAdmin}
+                patchData={patchAppData}
+              />
+            </ErrorBoundary>
+          )}
           </div>
         </div>
 
@@ -1502,6 +1704,9 @@ export function GroupDialog({
         )}
         {colorError && (
           <p className="text-xs text-destructive px-6 pb-2">{colorError}</p>
+        )}
+        {appError && (
+          <p className="text-xs text-destructive px-6 pb-2">{appError}</p>
         )}
         {error && (
           <p className="text-xs text-destructive px-6 pb-2">{error}</p>

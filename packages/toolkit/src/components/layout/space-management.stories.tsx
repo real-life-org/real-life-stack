@@ -1,7 +1,8 @@
 import { useState } from "react"
+import { Download, Sparkles } from "lucide-react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import type { ContactInfo, Group } from "@real-life-stack/data-interface"
-import { GroupDialog, type GroupDialogMode } from "./group-dialog"
+import { GroupDialog, type AppSpaceSection, type GroupDialogMode } from "./group-dialog"
 import { SpaceThemePanel } from "./space-theme-panel"
 import { Button } from "../primitives/button"
 import { STORY_SEED, StoryWorld } from "../../story-support/story-world"
@@ -93,6 +94,78 @@ export const Look: Story = {
             onUpdateGroup={(_id, updates) => setGroup((g) => ({ ...g, data: { ...g.data, ...updates.data } }))}
           />
         </div>
+      </div>
+    )
+  },
+}
+
+/**
+ * Sections of the app itself. An app adds what belongs to a space (here the
+ * dream of a community garden and a data export) to the same dialog instead
+ * of building a second one next to the switcher. A section writes only
+ * through `patchData`: a flat merge patch on `group.data`, `null` deletes.
+ * Field names are the app's choice and must be unique; the toolkit enforces
+ * no prefix. On a phone the section bar wraps, so no entry is cut off.
+ */
+const TRAUM: AppSpaceSection = {
+  id: "dream",
+  label: "Traum",
+  icon: Sparkles,
+  render: function Dream({ group, canEdit, patchData }) {
+    const [text, setText] = useState(String(group.data?.dream ?? ""))
+    return (
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-muted-foreground" htmlFor="dream">Traum</label>
+        <textarea
+          id="dream"
+          className="min-h-28 w-full rounded-lg border bg-card p-2.5 text-sm"
+          value={text}
+          readOnly={!canEdit}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={() => { if (text !== (group.data?.dream ?? "")) void patchData({ dream: text || null }).catch(() => {}) }}
+        />
+        <p className="text-xs text-muted-foreground">Gespeichert in <code>group.data.dream</code>.</p>
+      </div>
+    )
+  },
+}
+const EXPORT: AppSpaceSection = {
+  id: "export",
+  label: "Daten",
+  icon: Download,
+  visible: ({ isAdmin }) => isAdmin,
+  render: () => (
+    <div className="space-y-2 text-sm">
+      <p>Space als JSON sichern oder aus einer Datei übernehmen.</p>
+      <Button size="sm" variant="outline">Exportieren</Button>
+    </div>
+  ),
+}
+
+export const AppSections: Story = {
+  name: "App sections",
+  render: function Render() {
+    const [group, setGroup] = useState<Group>({ ...GARTEN, data: { ...GARTEN.data, dream: "Ein Garten, in dem jede Nachbarin ernten darf." } })
+    const [open, setOpen] = useState(true)
+    return (
+      <div className="min-h-screen bg-background p-8">
+        <Button onClick={() => setOpen(true)}>Dialog öffnen</Button>
+        <GroupDialog
+          open={open}
+          onOpenChange={setOpen}
+          mode={{ type: "edit", group }}
+          currentUserId="mira"
+          contacts={KONTAKTE}
+          appSections={[TRAUM, EXPORT]}
+          appSectionsTitle="Karabirrdt"
+          initialSection="dream"
+          onCreateGroup={async () => {}}
+          onUpdateGroup={async (_id, updates) => {
+            if (updates.data) setGroup((g) => ({ ...g, data: { ...g.data, ...updates.data } }))
+          }}
+          onDeleteGroup={async () => setOpen(false)}
+          onInviteMember={async () => {}}
+        />
       </div>
     )
   },

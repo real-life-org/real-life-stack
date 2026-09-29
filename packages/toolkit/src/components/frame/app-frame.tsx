@@ -33,7 +33,7 @@ import { ModuleOutlet } from "../host/module-outlet"
 import { AppShell, AppShellMain } from "../layout/app-shell"
 import { ColorSchemeToggle } from "../layout/color-scheme-toggle"
 import { BottomNav } from "../layout/bottom-nav"
-import { GroupDialog, type GroupDialogMode } from "../layout/group-dialog"
+import { GroupDialog, type AppSpaceSection, type GroupDialogMode } from "../layout/group-dialog"
 import { ModuleTabs, type Module } from "../layout/module-tabs"
 import { Navbar, NavbarCenter, NavbarEnd, NavbarStart } from "../layout/navbar"
 import { SpaceThemeCard } from "../layout/space-theme-panel"
@@ -93,6 +93,10 @@ export interface AppFrameProps {
   children?: ReactNode
   /** Welcher Stand laeuft (Version, Commit, Kanal) — stille Zeile im Nutzer-Menue. */
   build?: BuildInfo
+  /** Abschnitte der App im Space-Dialog (rls#551), nach den eigenen Bereichen. */
+  spaceSections?: AppSpaceSection[]
+  /** Ueberschrift ueber diesen Abschnitten, z. B. der App-Name. */
+  spaceSectionsTitle?: string
 }
 
 /**
@@ -177,7 +181,7 @@ function useMemoryOverlay(): NonNullable<FrameRouting["overlay"]> {
  * die eine Zeile der App fuer die Karte) und alles, was einen Router braucht
  * (`RoutedAppFrame` in `/router` legt es um diesen Rahmen).
  */
-export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAccessContent, children, build }: AppFrameProps) {
+export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAccessContent, children, build, spaceSections, spaceSectionsTitle }: AppFrameProps) {
   const { groups, workspaces, activeWorkspace, activeModule, modules, urlSpaceId, handleWorkspaceChange, handleModuleChange, goTo, goHome } = routing
   const connector = useConnector()
   const { data: currentUser } = useOptionalCurrentUser()
@@ -380,6 +384,8 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
           open={groupDialogOpen}
           onOpenChange={setGroupDialogOpen}
           mode={groupDialogMode}
+          appSections={spaceSections}
+          appSectionsTitle={spaceSectionsTitle}
           currentUserId={currentUser?.id}
           contacts={allContacts}
           onCreateGroup={async (name) => {
