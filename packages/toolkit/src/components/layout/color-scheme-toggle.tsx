@@ -33,9 +33,13 @@ export interface ColorSchemeToggleProps {
  * - Ohne Wahl folgt er der Systemvorgabe, auch wenn sie sich später ändert.
  *   Das bloße Anzeigen schreibt nichts fest.
  *
- * Das Symbol zeigt, was gerade gilt, und liest dafür die Klasse, nicht einen
- * eigenen Zustand: Setzt eine andere Stelle das Schema (der Start, die
- * Storybook-Leiste), zeigt der Knopf trotzdem das Richtige.
+ * Symbol und Beschriftung nennen das Ziel (im Dunkeln die Sonne, „Helles
+ * Design“). Beide leiten sich aus der Klasse ab, nicht aus einem eigenen
+ * Zustand: Setzt eine andere Stelle das Schema (der Start, die
+ * Storybook-Leiste), stimmt der Knopf trotzdem.
+ *
+ * Ein Dokument hat ein Schema: Mehrere Knöpfe in einer Seite nehmen denselben
+ * `storageKey`, sonst setzt jeder beim Einhängen seine eigene Wahl durch.
  *
  * Gegen das Aufblitzen beim Laden hilft er nicht, er steht erst nach dem
  * ersten Render. Dafür ruft die App vorher `applyInitialColorScheme()` auf.
@@ -62,6 +66,7 @@ export function ColorSchemeToggle({ storageKey = STORAGE_KEY_THEME, className }:
 
   return (
     <Button
+      type="button"
       variant="ghost"
       size="icon"
       onClick={umschalten}

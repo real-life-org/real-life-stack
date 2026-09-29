@@ -8,9 +8,12 @@
  * That read lives here once instead of being re-sniffed per component.
  *
  * Die Klasse ist das EINZIGE Signal, an dem sich Bestandteile ausrichten;
- * `prefers-color-scheme` ist kein zweites. Gelesen wird die Systemvorgabe nur
- * einmal, beim Start, um die Klasse zu setzen (`initialDarkMode` unten) — und
- * genau deshalb folgen Oberfläche und Karte danach gemeinsam derselben Klasse.
+ * `prefers-color-scheme` ist kein zweites. Gelesen wird die Systemvorgabe nur,
+ * um die Klasse zu setzen: beim Start (`initialDarkMode` unten) und, solange
+ * nichts gewählt ist, bei jedem Systemwechsel (`followSystemColorScheme`) —
+ * und genau deshalb folgen Oberfläche und Karte gemeinsam derselben Klasse.
+ * `data-theme` setzt `applyColorScheme` mit, als Ausgabe für Stylesheets;
+ * gelesen wird es hier nicht.
  *
  * (Bis 19.09.2026 stand hier, die Hülle setze die Klasse NICHT aus der
  * Systemvorgabe. Das stimmte nicht mehr: `applyInitialColorScheme` tut es seit
@@ -89,12 +92,19 @@ export const STORAGE_KEY_THEME = "rls-theme"
 export function storedColorScheme(storageKey = STORAGE_KEY_THEME): ColorScheme | null {
   try {
     const wert = window.localStorage.getItem(storageKey)
-    return wert === "dark" || wert === "light" ? wert : null
+    if (wert === "dark" || wert === "light") return wert
   } catch {
     // In privaten Fenstern kann schon der Zugriff werfen.
-    return null
   }
+  return unspeicherbareWahl.get(storageKey) ?? null
 }
+
+/**
+ * Eine Wahl, die der Speicher nicht nehmen wollte (gesperrt, voll), gilt
+ * trotzdem bis zum Neuladen. Sonst holte der nächste Systemwechsel das Schema
+ * zurück, obwohl gerade bewusst gewählt worden war.
+ */
+const unspeicherbareWahl = new Map<string, ColorScheme>()
 
 /**
  * LIEST nur. Schreibt bewusst nichts: Würde der Startwert die Systemvorgabe
@@ -172,9 +182,13 @@ export function followSystemColorScheme(storageKey = STORAGE_KEY_THEME): () => v
  * aufrufen, nie beim Start.
  */
 export function rememberColorScheme(isDark: boolean, storageKey = STORAGE_KEY_THEME): void {
+  const wahl: ColorScheme = isDark ? "dark" : "light"
   try {
-    window.localStorage.setItem(storageKey, isDark ? "dark" : "light")
+    window.localStorage.setItem(storageKey, wahl)
+    unspeicherbareWahl.delete(storageKey)
   } catch {
-    // Nicht speicherbar — kein Grund, das Umschalten selbst scheitern zu lassen.
+    // Nicht speicherbar — kein Grund, das Umschalten selbst scheitern zu
+    // lassen. Die Wahl gilt dann bis zum Neuladen aus dem Arbeitsspeicher.
+    unspeicherbareWahl.set(storageKey, wahl)
   }
 }

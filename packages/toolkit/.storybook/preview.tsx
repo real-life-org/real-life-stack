@@ -43,12 +43,13 @@ function useSchema(dark: boolean) {
     // Beide Signale wie in der App (`applyColorScheme`): sonst zeigte eine Story
     // mit dem Umschalter data-theme="light" unter der dunklen Klasse.
     wurzel.setAttribute('data-theme', dark ? 'dark' : 'light')
-    wurzel.style.colorScheme = dark ? 'dark' : 'light'
+    // Kein `style.colorScheme` inline: Das stach die `.dark { color-scheme: dark }`
+    // der Tokens aus, und nach einem Klick auf den Umschalter malte der Browser
+    // Scrollleisten und Formularfelder weiter im alten Schema (Codex zu #573).
     document.body.style.background = 'var(--background)'
     return () => {
       wurzel.classList.remove('dark')
       wurzel.removeAttribute('data-theme')
-      wurzel.style.colorScheme = ''
     }
   }, [dark])
 }

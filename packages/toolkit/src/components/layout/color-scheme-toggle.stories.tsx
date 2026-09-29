@@ -17,6 +17,10 @@ import { STORY_ME, STORY_SEED, StoryWorld } from '../../story-support/story-worl
  * app does not build its own. The icon reads the class, so it stays right when
  * something else sets the scheme (the app start, this toolbar).
  *
+ * Here the toolbar sets the starting scheme (it runs after the button has
+ * mounted), so the first-visit behaviour — following the system — is not what
+ * you see on load; the button takes over from the first click.
+ *
  * The stories remember their choice under their own storage key
  * (`rls-theme-story`), so a click here is not carried into the instance-wide
  * key that apps on the same origin read.

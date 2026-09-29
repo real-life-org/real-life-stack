@@ -195,6 +195,46 @@ describe("ColorSchemeToggle", () => {
     expect(istDunkel()).toBe(true)
   })
 
+  // Codex R1: Die Wahl hing nur am Speicher. Bei gesperrtem Speicher holte
+  // der nächste Systemwechsel das Schema zurück, obwohl gewählt worden war.
+  it("hält die Wahl auch bei gesperrtem Speicher gegen einen Systemwechsel", async () => {
+    const system = stubSystem(false)
+    vi.stubGlobal("localStorage", {
+      getItem() { throw new Error("gesperrt") },
+      setItem() { throw new Error("gesperrt") },
+    })
+    await mount({ storageKey: "gesperrt-1" })
+    await klick() // dunkel gewählt, nicht speicherbar
+    await act(async () => { system.set(true) })
+    await act(async () => { system.set(false) })
+    expect(istDunkel()).toBe(true)
+  })
+
+  it("hält die Wahl, wenn Schreiben scheitert, Lesen aber geht", async () => {
+    const system = stubSystem(false)
+    vi.stubGlobal("localStorage", {
+      getItem() { return null },
+      setItem() { throw new Error("voll") },
+    })
+    await mount({ storageKey: "gesperrt-2" })
+    await klick()
+    await act(async () => { system.set(true) })
+    await act(async () => { system.set(false) })
+    expect(istDunkel()).toBe(true)
+  })
+
+  // Codex R1: Ohne `type="button"` sendet der Knopf ein umgebendes Formular ab.
+  it("sendet kein umgebendes Formular ab", async () => {
+    stubSystem(false)
+    const abgesendet = vi.fn((e: Event) => e.preventDefault())
+    await act(async () => {
+      root.render(<form onSubmit={(e) => abgesendet(e.nativeEvent)}><ColorSchemeToggle /></form>)
+    })
+    await klick()
+    expect(abgesendet).not.toHaveBeenCalled()
+    expect(knopf().getAttribute("type")).toBe("button")
+  })
+
   it("meldet sich beim Abbau vom System ab", async () => {
     const system = stubSystem(false)
     await mount()
