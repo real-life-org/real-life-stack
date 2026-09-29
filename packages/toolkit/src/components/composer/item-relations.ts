@@ -50,6 +50,12 @@ export interface ItemRefFieldConfig {
  * hinzugefügten Quellen (`item:<id>`); die entfernten unter
  * {@link incomingRemovedKey}. Beide beginnen mit `relation:`, damit ein
  * Space-Wechsel ihre space-lokalen Ziele mit leert (withSpaceChange).
+ *
+ * Öffentlich (real-life-stack#564), damit Anlegen eine Kante vorbelegen
+ * kann und das Formular sie schon zeigt, nicht erst beim Speichern: Die
+ * Werte sind Ziele wie in `Item.relations` (`item:<id>`), etwa
+ * `startCreate("task", { [itemRelationDataKey("partOf")]: ["item:p1"] })`
+ * oder `initialData` am Composer. Das Feld muss der Typ im Register führen.
  */
 export const itemRelationDataKey = (predicate: string, incoming?: boolean): string =>
   incoming ? `relation:in:${predicate}` : `relation:${predicate}`

@@ -26,6 +26,7 @@ export {
   type PeopleField,
   type PeopleRelationSource,
 } from "./people-relations"
+export { itemRelationDataKey } from "./item-relations"
 export {
   ComposerFullscreenShell,
   type ComposerFullscreenShellProps,
