@@ -142,7 +142,7 @@ export function usePeopleFormStates(
       const valueOf = (record: RelationRecord | undefined) => {
         if (!record) return undefined
         const value = record.fields?.[key]
-        if (value === undefined || value === null || value === "") return fallbackValue
+        if (isMissingQualifier(value)) return fallbackValue
         return typeof value === "string" && allowed.has(value) ? value : undefined
       }
       const own = records.filter((record) => record.predicate === recordEdge.predicate && record.to === to)
@@ -203,6 +203,11 @@ export interface StatusTransitions {
 }
 
 const PERSON = "global:"
+
+/** Fehlt ein Qualifier-Wert (fehlend, `null`, leer)? Nur dann gilt der Standard (Spec 06, Regel 7). */
+function isMissingQualifier(value: unknown): boolean {
+  return value === undefined || value === null || value === ""
+}
 
 /** Grund, wenn der geöffnete Space unter der Id des Items ein anderes (oder keins) liefert. */
 export const ITEM_ELSEWHERE = "Dieses Item liegt nicht im geöffneten Space – dort bearbeiten"
@@ -290,15 +295,20 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
       const own = records.find((record) => record.createdBy === meId && record.from === self)
       if (!own) return undefined
       const value = own.fields?.[edge.qualifier?.key ?? ""]
-      // Ein fehlender Wert gilt als Standard (Regel 7), sonst ist die Aussage ohne Wert.
-      if (typeof value !== "string") return withValues ? edge.qualifier?.default : undefined
+      // Nur ein FEHLENDER Wert gilt als Standard (Regel 7); ein vorhandener
+      // unbekannter bleibt ohne Zustand.
+      if (isMissingQualifier(value)) return withValues ? edge.qualifier?.default : undefined
+      if (typeof value !== "string") return undefined
       return withValues ? value : true
     }
     const relation = (item.relations ?? []).find((r) => r.predicate === edge.predicate && r.target === self)
     if (!relation) return undefined
     if (!withValues) return true
     const value = edge.qualifier ? relation.meta?.[edge.qualifier.key] : undefined
-    return typeof value === "string" ? value : (edge.qualifier?.default ?? true)
+    if (typeof value === "string" && value !== "") return value
+    // Fehlend: der Standard, sonst stehe ich einfach an der Kante; ein
+    // vorhandener unbekannter Wert ist nie der Standard (Regel 7).
+    return isMissingQualifier(value) ? (edge.qualifier?.default ?? true) : true
   }, [edge, isRecord, item.relations, meId, records, withValues])
 
   const others = useMemo(() => {

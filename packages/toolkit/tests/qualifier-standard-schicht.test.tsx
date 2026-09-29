@@ -208,6 +208,13 @@ describe("Formular, Leseform und Pills lesen den Standard der Schicht (Regel 7)"
       expect(pill("Will lernen")?.getAttribute("aria-pressed")).toBe("false")
     })
 
+    it("Codex Runde 2: eine eingebettete Kante mit unbekanntem Wert (role: 42) gilt nicht als Standard", async () => {
+      registerTypePresentation("beispiel", { extensions: [WITH_DEFAULT] })
+      await render([{ predicate: "assignedTo", target: `global:${ME}`, meta: { role: 42 } }])
+      expect(pill("Kann")).toBeUndefined()
+      expect(pill("Kann ich")?.getAttribute("aria-pressed")).toBe("false")
+    })
+
     it("ohne Standard zeigt dieselbe Kante den allgemeinen Zustand statt einer gedrückten Pill", async () => {
       registerTypePresentation("beispiel", { extensions: [EXAMPLE_LEARNING_LAYER] })
       await render([{ predicate: "assignedTo", target: `global:${ME}` }])
@@ -288,6 +295,15 @@ describe("Codex Runde 1", () => {
       await render(createElement(Actions, { item: EVENT }), [attendsWithoutRole(ME, ME)])
       const pill = [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Zugesagt")
       expect(pill?.getAttribute("aria-pressed")).toBe("true")
+    })
+
+    it("Codex Runde 2: ein vorhandener unbekannter Wert (role: 42) wird nicht zum Standard", async () => {
+      goingDefault()
+      const Actions = resolveTypePresentation("event").actions!
+      const unknown = { ...attendsWithoutRole(ME, ME), data: { predicate: "attends", tense: "coming", role: 42 } }
+      await render(createElement(Actions, { item: EVENT }), [unknown])
+      const pill = [...host.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Zugesagt")
+      expect(pill?.getAttribute("aria-pressed")).not.toBe("true")
     })
 
     it("Formular: ein Record ohne role steht mit dem Standard im Personenfeld", async () => {
