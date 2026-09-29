@@ -10,7 +10,7 @@ import { useActivity } from "../../hooks/use-activity"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { useContacts } from "../../hooks/use-contacts"
 import { DraftItemProvider } from "../../hooks/use-draft-item"
-import { useCreateGroup, useCurrentGroup, useDeleteGroup, useInviteMember, useRemoveMember, useUpdateGroup } from "../../hooks/use-groups"
+import { useCreateGroup, useCurrentGroup, useDeleteGroup, useGroups, useInviteMember, useRemoveMember, useUpdateGroup } from "../../hooks/use-groups"
 import { useInitialSync } from "../../hooks/use-initial-sync"
 import { useItemFocus } from "../../hooks/use-item-focus"
 import { useItems } from "../../hooks/use-items"
@@ -198,7 +198,20 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
   const { activeContacts, pendingContacts, contacts: allContacts, isLoading: contactsLoading, addContact, activateContact, removeContact, updateContactName, supportsContacts } = useContacts()
   const verification = useVerification()
   const [groupDialogOpen, setGroupDialogOpen] = useState(false)
-  const [groupDialogMode, setGroupDialogMode] = useState<GroupDialogMode>({ type: "create" })
+  const [groupDialogTarget, setGroupDialogMode] = useState<GroupDialogMode>({ type: "create" })
+  // Der offene Dialog bekommt die Group LIVE aus dem Connector, nicht die
+  // beim Oeffnen eingefrorene Referenz: der Dialog haelt keinen eigenen
+  // Schreibstand (rls#551), gespeicherte Aenderungen — eigene wie die eines
+  // anderen Geraets — muessen also ueber diesen Weg ankommen. Faellt die
+  // Group aus der Liste (verlassen, geloescht), bleibt der letzte Stand.
+  const { data: liveGroups } = useGroups()
+  const liveDialogGroup = groupDialogTarget.type === "edit"
+    ? liveGroups.find((g) => g.id === groupDialogTarget.group.id) ?? groupDialogTarget.group
+    : null
+  const groupDialogMode = useMemo<GroupDialogMode>(
+    () => (liveDialogGroup ? { type: "edit", group: liveDialogGroup } : { type: "create" }),
+    [liveDialogGroup],
+  )
   const openCreateDialog = useCallback(() => { setGroupDialogMode({ type: "create" }); setGroupDialogOpen(true) }, [])
   const openEditDialog = useCallback((workspace: Workspace) => {
     if (workspace.scope === "overview") return

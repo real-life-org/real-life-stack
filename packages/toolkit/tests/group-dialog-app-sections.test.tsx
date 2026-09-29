@@ -15,10 +15,7 @@ vi.mock("../src/hooks/use-groups", () => ({
   useMembers: () => ({ data: currentMembers, isLoading: false }),
 }))
 
-const {
-  GroupDialog,
-  viewGroupData,
-} = await import("../src/components/layout/group-dialog")
+const { GroupDialog } = await import("../src/components/layout/group-dialog")
 import type { AppSpaceSection, AppSpaceSectionContext } from "../src/components/layout/group-dialog"
 
 const ME = "did:key:zME"
@@ -111,55 +108,76 @@ describe("GroupDialog: App-Abschnitte", () => {
     expect(onUpdateGroup).toHaveBeenCalledWith("g1", { data: { dream: "Neu", horizon: null } })
   })
 
-  it("zeigt den eigenen Schreibstand auch nach einem Bereichswechsel", async () => {
+  it("gibt die Zusage des Aufrufers zurueck: patchData loest erst auf, wenn onUpdateGroup gespeichert hat", async () => {
+    let resolve!: () => void
+    onUpdateGroup = vi.fn(() => new Promise<void>((r) => { resolve = r }))
+    renderDialog({ initialSection: "traum" })
+    let done = false
+    act(() => { void lastCtx!.patchData({ dream: "Neu" }).then(() => { done = true }) })
+    await act(async () => { await Promise.resolve() })
+    expect(done).toBe(false)
+    await act(async () => { resolve(); await Promise.resolve() })
+    expect(done).toBe(true)
+  })
+
+  it("zeigt Group.data so, wie der Aufrufer es liefert: eine bestaetigte Aenderung erscheint ueber ihn", async () => {
     renderDialog({ initialSection: "traum" })
     await act(async () => { await lastCtx!.patchData({ dream: "Neu" }) })
-    act(() => { menuEntry("Mitglieder")!.click() })
-    act(() => { menuEntry("Traum")!.click() })
-    // `mode.group` ist der Stand vom Oeffnen; ohne Ueberlagerung kaeme hier
-    // wieder der alte Traum zurueck.
+    expect(document.querySelector("[data-testid='traum']")?.textContent, "kein eigener Schreibstand").toBe("Traum: Ein Garten fuer alle")
+    renderDialog({ initialSection: "traum", mode: { type: "edit", group: { ...GROUP, data: { ...GROUP.data, dream: "Neu" } } } })
     expect(document.querySelector("[data-testid='traum']")?.textContent).toBe("Traum: Neu")
   })
 
-  it("nimmt einen fehlgeschlagenen Patch zurueck, meldet ihn und reicht die Ablehnung weiter", async () => {
+  it("laesst bei einem gescheiterten Patch den Stand des Aufrufers stehen, meldet ihn im Abschnitt und reicht die Ablehnung weiter", async () => {
     onUpdateGroup = vi.fn(async () => { throw new Error("Relay nicht erreichbar") })
     renderDialog({ initialSection: "traum" })
     let rejected: unknown = null
     await act(async () => { await lastCtx!.patchData({ dream: "Neu" }).catch((e) => { rejected = e }) })
     expect((rejected as Error | null)?.message).toBe("Relay nicht erreichbar")
     expect(document.querySelector("[data-testid='traum']")?.textContent).toBe("Traum: Ein Garten fuer alle")
-    expect(document.body.textContent).toContain("Relay nicht erreichbar")
+    expect(region()?.textContent, "Meldung steht im Abschnitt").toContain("Relay nicht erreichbar")
   })
 
-  it("behaelt nach einem gescheiterten Folge-Patch den zuvor gespeicherten Stand", async () => {
-    let fail = false
+  it("nimmt die Meldung weg, sobald ein spaeterer Patch dieselben Schluessel schreibt — nicht bei anderen", async () => {
+    let fail = true
     onUpdateGroup = vi.fn(async () => { if (fail) throw new Error("weg") })
     renderDialog({ initialSection: "traum" })
-    await act(async () => { await lastCtx!.patchData({ dream: "A" }) })
-    fail = true
-    await act(async () => { await lastCtx!.patchData({ dream: "B" }).catch(() => {}) })
-    expect(document.querySelector("[data-testid='traum']")?.textContent).toBe("Traum: A")
+    await act(async () => { await lastCtx!.patchData({ dream: "A" }).catch(() => {}) })
     fail = false
-    await act(async () => { await lastCtx!.patchData({ dream: null }) })
-    fail = true
-    await act(async () => { await lastCtx!.patchData({ dream: "C" }).catch(() => {}) })
-    expect(document.querySelector("[data-testid='traum']")?.textContent, "gespeicherte Loeschung bleibt").toBe("Traum: —")
+    await act(async () => { await lastCtx!.patchData({ horizon: "H" }) })
+    expect(region()?.textContent, "anderer Schluessel: Meldung bleibt").toContain("weg")
+    await act(async () => { await lastCtx!.patchData({ dream: "B" }) })
+    expect(region()?.textContent).not.toContain("weg")
   })
 
-  it("schreibt Patches nacheinander in Aufrufreihenfolge, nie parallel", async () => {
-    const pending: { patch: unknown; resolve: () => void }[] = []
-    onUpdateGroup = vi.fn((_id: string, updates: { data: unknown }) => new Promise<void>((resolve) => { pending.push({ patch: updates.data, resolve }) }))
-    renderDialog({ initialSection: "traum" })
-    let a!: Promise<void>, b!: Promise<void>
-    act(() => { a = lastCtx!.patchData({ dream: "A" }); b = lastCtx!.patchData({ dream: "B", horizon: "H" }) })
-    await act(async () => { await Promise.resolve() })
-    expect(pending.map((p) => p.patch), "B wartet, bis A gespeichert ist").toEqual([{ dream: "A" }])
-    expect(document.querySelector("[data-testid='traum']")?.textContent, "Anzeige zeigt die letzte Eingabe").toBe("Traum: B")
-    await act(async () => { pending[0].resolve(); await a })
-    await act(async () => { await Promise.resolve() })
-    expect(pending.map((p) => p.patch)).toEqual([{ dream: "A" }, { dream: "B", horizon: "H" }])
-    await act(async () => { pending[1].resolve(); await b })
-    expect(document.querySelector("[data-testid='traum']")?.textContent).toBe("Traum: B")
+  it("verliert bei einer neuen Objektreferenz desselben Space nichts", () => {
+    function Zaehler({ ctx }: { ctx: AppSpaceSectionContext }) {
+      const [n, setN] = useState(0)
+      return createElement("button", { "data-testid": "z", onClick: () => setN(n + 1) }, `${n}:${String(ctx.group.data?.dream)}`)
+    }
+    const section = traum({ render: (ctx) => createElement(Zaehler, { ctx }) })
+    renderDialog({ appSections: [section], initialSection: "traum" })
+    act(() => { (document.querySelector("[data-testid='z']") as HTMLButtonElement).click() })
+    renderDialog({ appSections: [section], initialSection: "traum", mode: { type: "edit", group: { ...GROUP, data: { ...GROUP.data } } } })
+    expect(document.querySelector("[data-testid='z']")?.textContent).toBe("1:Ein Garten fuer alle")
+    expect(region()?.getAttribute("aria-label")).toBe("Traum")
+  })
+
+  it("uebernimmt Name und Bild aus einer neuen Group des Aufrufers in den offenen Dialog", () => {
+    renderDialog()
+    renderDialog({ mode: { type: "edit", group: { ...GROUP, name: "Karabirrdt Nord", data: { ...GROUP.data, image: "data:image/png;base64,AAAA" } } } })
+    expect((document.querySelector("[role=dialog] input:not([type=file])") as HTMLInputElement).value).toBe("Karabirrdt Nord")
+    expect(document.querySelector("[role=dialog] img")?.getAttribute("src")).toBe("data:image/png;base64,AAAA")
+  })
+
+  it("ueberschreibt einen Namen nicht, den man gerade tippt", () => {
+    renderDialog()
+    const input = document.querySelector("[role=dialog] input:not([type=file])") as HTMLInputElement
+    act(() => { input.focus() })
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!
+    act(() => { setter.call(input, "Mein Entwurf"); input.dispatchEvent(new Event("input", { bubbles: true })) })
+    renderDialog({ mode: { type: "edit", group: { ...GROUP, name: "Von aussen" } } })
+    expect((document.querySelector("[role=dialog] input:not([type=file])") as HTMLInputElement).value).toBe("Mein Entwurf")
   })
 
   it("blendet einen Abschnitt aus, dessen visible wirft, der Dialog bleibt stehen", () => {
@@ -261,18 +279,5 @@ describe("GroupDialog: App-Abschnitte", () => {
     renderDialog({ appSections: [traum({ render: () => createElement(Zaehler) })], initialSection: "traum" })
     act(() => { (document.querySelector("[data-testid='z']") as HTMLButtonElement).click() })
     expect(document.querySelector("[data-testid='z']")?.textContent).toBe("1")
-  })
-})
-
-/** Der Schreibstand: Stand vom Oeffnen, darueber Patches der Reihe nach (Merge-Patch, `null` loescht). */
-describe("Ansicht des Schreibstands", () => {
-  it("legt Patches der Reihe nach ueber den Stand vom Oeffnen", () => {
-    expect(viewGroupData({ dream: "alt", modules: ["feed"] }, [{ dream: "A" }, { dream: "B", horizon: "H" }]))
-      .toEqual({ dream: "B", horizon: "H", modules: ["feed"] })
-  })
-
-  it("null loescht den Schluessel in der Ansicht, ein spaeterer Wert setzt ihn wieder", () => {
-    expect(viewGroupData({ dream: "alt", x: 1 }, [{ dream: null }])).toEqual({ x: 1 })
-    expect(viewGroupData({ dream: "alt" }, [{ dream: null }, { dream: "neu" }])).toEqual({ dream: "neu" })
   })
 })

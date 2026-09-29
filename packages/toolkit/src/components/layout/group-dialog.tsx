@@ -1,7 +1,7 @@
 import { Fragment, useState, useCallback, useEffect, useRef, type ReactNode } from "react"
 import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, RotateCcw, SlidersHorizontal, Check as CheckIcon, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
-import { applyGroupDataPatch, type Group, type ContactInfo } from "@real-life-stack/data-interface"
+import type { Group, ContactInfo } from "@real-life-stack/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
 import { cn, getReadableTextColor, getSpacePrimaryColor, resolveAssetUrl, SPACE_COLOR_SWATCHES } from "../../lib/utils"
@@ -204,18 +204,18 @@ export function resolveConfigSection<Id extends string>(
  */
 export interface AppSpaceSectionContext {
   /**
-   * Der Space mit dem eigenen Schreibstand dieser Dialog-Sitzung: der Stand
-   * vom Oeffnen, darueber die Patches aus `patchData`. Ein Abschnitt, der
-   * beim Bereichswechsel abgebaut wird, liest beim Zurueckkehren so, was er
-   * selbst geschrieben hat, statt den Stand vom Oeffnen.
+   * Der Space, wie der Aufrufer ihn liefert (`mode.group`). Der Dialog haelt
+   * keinen eigenen Schreibstand: eine gespeicherte Aenderung erscheint, wenn
+   * der Aufrufer die Group neu liefert — `AppFrame` tut das live aus dem
+   * Connector.
    */
   group: Group
   /** Ob der eigene Nutzer den Space einstellen darf (Admin). */
   canEdit: boolean
   /**
-   * Schreibt `patch` flach nach `Group.data`. Loest auf, wenn der Connector
-   * gespeichert hat; bei einem Fehler wird der Patch aus dem Schreibstand
-   * zurueckgenommen, der Dialog meldet ihn, und die Ablehnung kommt zurueck.
+   * Schreibt `patch` flach nach `Group.data` ueber `onUpdateGroup` und gibt
+   * dessen Zusage zurueck. Scheitert sie, meldet der Dialog den Fehler im
+   * Abschnitt, bis ein spaeterer Patch dieselben Schluessel speichert.
    */
   patchData: (patch: Record<string, unknown>) => Promise<void>
 }
@@ -268,18 +268,6 @@ export function appSectionVisible(section: AppSpaceSection, isAdmin: boolean): b
     console.error(`GroupDialog: visible() des App-Abschnitts "${section.id}" ist fehlgeschlagen — ausgeblendet.`, err)
     return false
   }
-}
-
-/**
- * Der Schreibstand eines App-Abschnitts: der Stand vom Oeffnen, darueber die
- * Patches der Reihe nach (bestaetigte zuerst, dann wartende). Merge-Patch
- * der Tiefe 1, `null` loescht — wie der Connector (Spec 04, Regel 3).
- */
-export function viewGroupData(
-  base: Record<string, unknown> | undefined,
-  patches: readonly Record<string, unknown>[],
-): Record<string, unknown> {
-  return patches.reduce<Record<string, unknown>>((data, patch) => applyGroupDataPatch(data, patch), { ...base })
 }
 
 /** Ab wie vielen Mitgliedern die Liste ein Suchfeld bekommt. */
@@ -449,7 +437,8 @@ export interface GroupDialogProps {
    * Abschnitte der App, nach den eigenen Bereichen (rls#551). Sie schreiben
    * nur ueber `patchData` nach `Group.data`; einen zweiten Dialog fuer
    * denselben Space braucht es dann nicht (Spec 01, Overlay-Regel 5).
-   * Nur im Bearbeiten-Modus.
+   * Nur im Bearbeiten-Modus. Der Dialog haelt keinen eigenen Schreibstand:
+   * der Aufrufer liefert `mode.group` nach dem Speichern neu (live).
    */
   appSections?: AppSpaceSection[]
   /** Ueberschrift ueber den App-Abschnitten im Menue, z. B. der App-Name. */
@@ -500,6 +489,21 @@ export function GroupDialog({
   const [groupImage, setGroupImage] = useState(() =>
     isEdit ? (mode.group.data?.image as string | undefined) ?? "" : ""
   )
+  // Name und Bild folgen einer neuen Group des Aufrufers (live aus dem
+  // Connector, z. B. ein anderes Geraet benennt um) — aber nur, solange man
+  // sie hier nicht selbst geaendert hat: ein angefangener Name bleibt stehen.
+  const liveName = isEdit ? mode.group.name : ""
+  const liveImage = isEdit ? (mode.group.data?.image as string | undefined) ?? "" : ""
+  const [syncedName, setSyncedName] = useState(liveName)
+  const [syncedImage, setSyncedImage] = useState(liveImage)
+  if (liveName !== syncedName) {
+    setSyncedName(liveName)
+    if (name === syncedName) setName(liveName)
+  }
+  if (liveImage !== syncedImage) {
+    setSyncedImage(liveImage)
+    if (groupImage === syncedImage) setGroupImage(liveImage)
+  }
 
   // Module state
   const [activeModules, setActiveModules] = useState<string[]>(() =>
@@ -548,27 +552,8 @@ export function GroupDialog({
   const activeSection = resolveConfigSection(requestedSection, sections)
   const activeAppSection = visibleAppSections.find((a) => a.id === activeSection)
 
-  // Schreibstand der App-Abschnitte ueber dem Stand vom Oeffnen:
-  // `confirmed` = gespeicherte Patches (zusammengefasst, `null` bleibt als
-  // Loeschung stehen), `pendingPatches` = noch nicht gespeicherte, in
-  // Aufrufreihenfolge. Ein neuer Snapshot enthaelt das Gespeicherte schon;
-  // wartende Patches desselben Space bleiben darueber liegen.
-  const [confirmed, setConfirmed] = useState<Record<string, unknown>>({})
-  const [pendingPatches, setPendingPatches] = useState<{ seq: number; groupId: string; patch: Record<string, unknown> }[]>([])
-  const [overlayBase, setOverlayBase] = useState(isEdit ? mode.group : null)
-  const currentBase = isEdit ? mode.group : null
-  if (currentBase !== overlayBase) {
-    setOverlayBase(currentBase)
-    setConfirmed({})
-    setPendingPatches((p) => p.filter((e) => e.groupId === currentBase?.id))
-  }
-  const patchSeqRef = useRef(0)
-  // Eine Schreibkette: Patches gehen nacheinander in Aufrufreihenfolge an den
-  // Connector. Parallel abgeschickt, koennte ein aelterer Patch nach einem
-  // neueren ankommen — die Anzeige zeigte dann die letzte Eingabe, gespeichert
-  // bliebe die vorletzte.
-  const patchChainRef = useRef<Promise<unknown>>(Promise.resolve())
-  const [appError, setAppError] = useState<string | null>(null)
+  /** Fehler eines App-Patches — gilt fuer seinen Abschnitt und seine Schluessel. */
+  const [appError, setAppError] = useState<{ sectionId: string; message: string; keys: string[] } | null>(null)
   /** Suche in der Mitgliederliste (Entwurf 3a). */
   const [memberSearch, setMemberSearch] = useState("")
   /** Suche in der Kontaktliste des Bereichs "Einladen" (Entwurf 4a). */
@@ -785,32 +770,25 @@ export function GroupDialog({
 
   /**
    * Der Schreibweg der App-Abschnitte: flach nach `Group.data` (Spec 04,
-   * Regel 3). Der Patch liegt sofort im Schreibstand — in Aufrufreihenfolge,
-   * also in der Reihenfolge der Eingaben; scheitert er, nimmt der Dialog nur
-   * zurueck, was kein spaeterer Aufruf schon ueberschrieben hat.
+   * Regel 3), die Zusage des Aufrufers unveraendert zurueck. Einen eigenen
+   * Schreibstand haelt der Dialog nicht — angezeigt wird, was der Aufrufer
+   * liefert, damit Dialog und Connector nie zwei Wahrheiten haben.
    */
-  const patchAppData = useCallback((patch: Record<string, unknown>): Promise<void> => {
+  const patchAppData = useCallback((sectionId: string, patch: Record<string, unknown>): Promise<void> => {
     const current = modeRef.current
     if (current.type !== "edit") return Promise.reject(new Error("Kein Space zum Bearbeiten"))
-    const target = current.group.id
-    const seq = ++patchSeqRef.current
-    const drop = () => setPendingPatches((p) => p.filter((e) => e.seq !== seq))
-    setPendingPatches((p) => [...p, { seq, groupId: target, patch }])
-    setAppError(null)
-    const write = patchChainRef.current.then(() => onUpdateGroupRef.current(target, { data: patch }))
-    patchChainRef.current = write.catch(() => {})
-    return write.then(
+    return onUpdateGroupRef.current(current.group.id, { data: patch }).then(
       () => {
-        const now = modeRef.current
-        if (now.type === "edit" && now.group.id === target) setConfirmed((c) => ({ ...c, ...patch }))
-        drop()
+        // Die Meldung geht erst, wenn dieselben Schluessel gespeichert sind;
+        // ein Patch auf ein anderes Feld beantwortet den Fehler nicht.
+        setAppError((e) => (e && e.keys.every((k) => k in patch) ? null : e))
       },
       (err: unknown) => {
-        drop()
-        const now = modeRef.current
-        if (now.type === "edit" && now.group.id === target) {
-          setAppError(err instanceof Error ? err.message : "Konnte nicht gespeichert werden")
-        }
+        setAppError({
+          sectionId,
+          message: err instanceof Error ? err.message : "Konnte nicht gespeichert werden",
+          keys: Object.keys(patch),
+        })
         throw err
       },
     )
@@ -1699,16 +1677,13 @@ export function GroupDialog({
             <ErrorBoundary key={activeAppSection.id} label={activeAppSection.label} resetKeys={[mode.group.id]}>
               <AppSectionHost
                 section={activeAppSection}
-                group={{
-                  ...mode.group,
-                  data: viewGroupData(mode.group.data, [
-                    confirmed,
-                    ...pendingPatches.filter((e) => e.groupId === mode.group.id).map((e) => e.patch),
-                  ]),
-                }}
+                group={mode.group}
                 canEdit={isCurrentUserAdmin}
-                patchData={patchAppData}
+                patchData={(patch) => patchAppData(activeAppSection.id, patch)}
               />
+              {appError?.sectionId === activeAppSection.id && (
+                <p role="alert" className="mt-3 text-xs text-destructive">{appError.message}</p>
+              )}
             </ErrorBoundary>
           )}
           </div>
@@ -1724,9 +1699,6 @@ export function GroupDialog({
         )}
         {colorError && (
           <p className="text-xs text-destructive px-6 pb-2">{colorError}</p>
-        )}
-        {appError && (
-          <p className="text-xs text-destructive px-6 pb-2">{appError}</p>
         )}
         {error && (
           <p className="text-xs text-destructive px-6 pb-2">{error}</p>
