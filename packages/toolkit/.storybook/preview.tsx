@@ -40,10 +40,14 @@ function useSchema(dark: boolean) {
   React.useEffect(() => {
     const wurzel = document.documentElement
     wurzel.classList.toggle('dark', dark)
+    // Beide Signale wie in der App (`applyColorScheme`): sonst zeigte eine Story
+    // mit dem Umschalter data-theme="light" unter der dunklen Klasse.
+    wurzel.setAttribute('data-theme', dark ? 'dark' : 'light')
     wurzel.style.colorScheme = dark ? 'dark' : 'light'
     document.body.style.background = 'var(--background)'
     return () => {
       wurzel.classList.remove('dark')
+      wurzel.removeAttribute('data-theme')
       wurzel.style.colorScheme = ''
     }
   }, [dark])

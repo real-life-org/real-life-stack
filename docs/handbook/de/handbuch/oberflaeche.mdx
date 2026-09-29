@@ -9,6 +9,7 @@ sources:
   - docs/spec/04-items-relations-groups-spaces.md
   - packages/toolkit/src/handbook/garden.tsx
   - packages/toolkit/src/components/frame/app-frame.tsx
+  - packages/toolkit/src/components/layout/color-scheme-toggle.tsx
   - packages/toolkit/src/components/layout/module-surface-scope.tsx
 stories:
   - rls-app-00-community-garden--garden
@@ -26,6 +27,8 @@ Probier es am Garten aus: Öffne das Erntefest, wechsle in den Kalender, dann au
 ## Der Rahmen
 
 Der Rahmen (`AppFrame`, in einer App mit Router `RoutedAppFrame`) ist überall gleich: links der Space-Wechsler, in der Mitte die Tabs der Module, rechts Benachrichtigungen und das Nutzer-Menü; darunter die Fläche des aktiven Moduls und das eine geteilte Panel für Detail, Erstellen und Verlauf. Eine App baut ihn nicht, sie stellt ihn (Spec 01, „Was bei der App bleibt“). Deshalb sieht jede App auf dem Stack an dieser Stelle gleich aus, und deshalb kann das Storybook denselben Rahmen zeigen wie die Apps.
+
+Hell und dunkel entscheidet der Mensch, nicht der Space. Der Knopf dafür rechts in der Kopfzeile ist `ColorSchemeToggle` aus dem Toolkit. Er setzt die Klasse `dark` und `data-theme` am Wurzelelement, merkt eine Wahl je Browser und folgt ohne Wahl der Systemeinstellung, auch wenn die sich später ändert. Damit schon Anmeldung und Ladezeit im richtigen Schema stehen, ruft die App vor allem anderen `applyInitialColorScheme()` auf. Das Stück, bevor ihr Skript läuft, deckt nur ein Skript im `<head>` der App ab.
 
 Der Rahmen hält den **Fokus**: welcher Space, welches Modul, welches Item offen ist, ob es bearbeitet wird. In einer App mit Router steht das in der Adresse (`/{space}/{modul}/{item}`), in einer Story im Speicher, mit demselben Vertrag. Zurück im Browser schließt das Detail, ein Link auf die Adresse öffnet es.
 

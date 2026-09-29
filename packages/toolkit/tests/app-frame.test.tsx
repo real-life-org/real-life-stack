@@ -100,6 +100,20 @@ describe("AppFrame", () => {
     expect(goHome).toHaveBeenCalledTimes(1)
   })
 
+  it("traegt den Umschalter hell/dunkel aus dem Toolkit — beide Signale (rls#568)", async () => {
+    localStorage.clear()
+    document.documentElement.classList.remove("dark")
+    await rendere(createElement(AppFrame, { routing: routing() }))
+    const schalter = host.querySelector("[aria-label='Dunkles Design']") as HTMLButtonElement
+    expect(schalter, "Umschalter in der Kopfzeile").toBeTruthy()
+    await act(async () => { schalter.click() })
+    expect(document.documentElement.classList.contains("dark")).toBe(true)
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark")
+    document.documentElement.classList.remove("dark")
+    document.documentElement.removeAttribute("data-theme")
+    localStorage.clear()
+  })
+
   it("rendert App-Eigenes in der Kopfzeile und im Baum", async () => {
     await rendere(createElement(AppFrame, { routing: routing(), navbarEnd: createElement("span", { "data-testid": "relay" }, "Relay") }, createElement("div", { "data-testid": "eigen" }, "Eigenes")))
     expect(host.querySelector("[data-testid='relay']")).toBeTruthy()

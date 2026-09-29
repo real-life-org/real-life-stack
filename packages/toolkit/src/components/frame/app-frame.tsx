@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { Moon, Plus, Sun } from "lucide-react"
+import { Plus } from "lucide-react"
 import type { Group, Item } from "@real-life-stack/data-interface"
 import { hasGroups, hasEncounterVerification, isAuthenticatable, moduleHintsFor } from "@real-life-stack/data-interface"
 
@@ -18,7 +18,6 @@ import { useNotifications } from "../../hooks/use-notifications"
 import { OpenProfileProvider } from "../../hooks/use-open-profile"
 import { UnsavedChangesProvider } from "../../hooks/use-unsaved-changes"
 import { useVerification } from "../../hooks/use-verification"
-import { initialDarkMode, rememberColorScheme } from "../../lib/color-scheme"
 import { findModulePresenting, getModule, modulePresentsItem } from "../../lib/module-register"
 import { notificationTarget } from "../../lib/notification-target"
 import { ActivityBell } from "../activity/activity-bell"
@@ -32,6 +31,7 @@ import { CreateHostProvider, CreateSheetController } from "../host/create-host"
 import { DetailHostController, DetailHostProvider } from "../host/detail-host"
 import { ModuleOutlet } from "../host/module-outlet"
 import { AppShell, AppShellMain } from "../layout/app-shell"
+import { ColorSchemeToggle } from "../layout/color-scheme-toggle"
 import { BottomNav } from "../layout/bottom-nav"
 import { GroupDialog, type GroupDialogMode } from "../layout/group-dialog"
 import { ModuleTabs, type Module } from "../layout/module-tabs"
@@ -227,11 +227,6 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
     return () => clearTimeout(t)
   }, [overlay.top])
 
-  // --- Erscheinungsbild ---------------------------------------------------
-  const [isDark, setIsDark] = useState(initialDarkMode)
-  useEffect(() => { document.documentElement.classList.toggle("dark", isDark) }, [isDark])
-  const toggleTheme = () => { const naechster = !isDark; setIsDark(naechster); rememberColorScheme(naechster) }
-
   // --- Verlauf und Benachrichtigungen --------------------------------------
   const [drawerHeight, setDrawerHeight] = useState(0)
   const [activityOpen, setActivityOpen] = useState(false)
@@ -339,9 +334,7 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
             {notifications.supported
               ? <NotificationBell open={activityOpen} count={notifications.badgeCount} onOpenChange={setActivityOpen} />
               : activity.supported && <ActivityBell open={activityOpen} onOpenChange={setActivityOpen} />}
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9" aria-label={isDark ? "Helles Design" : "Dunkles Design"}>
-              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
+            <ColorSchemeToggle />
             {currentUser && (
               // Die Eintraege folgen den Faehigkeiten des Connectors, nicht der App.
               <UserMenu

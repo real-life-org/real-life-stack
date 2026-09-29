@@ -18,6 +18,8 @@ export {
   storedColorScheme,
   initialDarkMode,
   applyInitialColorScheme,
+  applyColorScheme,
+  followSystemColorScheme,
   rememberColorScheme,
 } from "./lib/color-scheme"
 export {

@@ -48,6 +48,12 @@ const router = createBrowserRouter(
 // verbindet sich mit falschen Diensten. Die eingebauten VITE_-Werte sind
 // Stufe 2 der Vorrangkette und bleiben fuer bestehende Builds wirksam.
 async function start() {
+  // Erscheinungsbild zuerst, noch vor dem Laden der Konfiguration: Anmeldung
+  // und Onboarding liegen VOR der App-Shell und blieben sonst hell, und
+  // waehrend `config.json` unterwegs ist, stuende die Seite hell da, egal was
+  // System oder eine frueher getroffene Wahl sagen.
+  applyInitialColorScheme()
+
   const config = await loadRuntimeConfig({
     baseUrl: basename,
     // Die App kennt ihre Connector-Ids (siehe createConnector in App.tsx).
@@ -63,10 +69,6 @@ async function start() {
     },
   })
   applyBranding(config.branding)
-  // Erscheinungsbild ebenfalls vor dem ersten Render: Anmeldung und Onboarding
-  // liegen VOR der App-Shell und blieben sonst hell, egal was System oder eine
-  // frueher getroffene Wahl sagen.
-  applyInitialColorScheme()
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

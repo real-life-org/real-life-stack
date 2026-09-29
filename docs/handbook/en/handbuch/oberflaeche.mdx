@@ -2,7 +2,7 @@
 title: From space to item
 description: The interface as three levels — frame, space, item — and why an event does not belong to the calendar.
 translationOf: docs/handbook/de/handbuch/oberflaeche.mdx
-sourceHash: c6e52ecfc21aa3081d8c0a4b5d24fb9c6c93b1bf9565d8db3332f23ecee8bd76
+sourceHash: 00b53c81fb4e2bce49040b81099f3ac4423079de0a8b7a36243704bfc44dad5e
 group: verstehen
 sidebar:
   order: 5
@@ -11,6 +11,7 @@ sources:
   - docs/spec/04-items-relations-groups-spaces.md
   - packages/toolkit/src/handbook/garden.tsx
   - packages/toolkit/src/components/frame/app-frame.tsx
+  - packages/toolkit/src/components/layout/color-scheme-toggle.tsx
   - packages/toolkit/src/components/layout/module-surface-scope.tsx
 stories:
   - rls-app-00-community-garden--garden
@@ -28,6 +29,8 @@ Try it in the garden: open the harvest festival, switch to the calendar, then to
 ## The frame
 
 The frame (`AppFrame`, in an app with a router `RoutedAppFrame`) is the same everywhere: the space switcher on the left, the module tabs in the middle, notifications and the user menu on the right; below it the surface of the active module and the one shared panel for detail, create and history. An app does not build it, it provides it (spec 01, "what stays with the app"). That is why every app on the stack looks the same at this point, and why Storybook can show the same frame as the apps.
+
+Light or dark is up to the person, not the space. The button for it on the right of the header is `ColorSchemeToggle` from the toolkit. It sets the `dark` class and `data-theme` on the root element, remembers a choice per browser and, without one, follows the system setting, also when that changes later. So that sign-in and loading already show the right scheme, the app calls `applyInitialColorScheme()` before anything else. The moment before its script runs is only covered by a script in the app's `<head>`.
 
 The frame holds the **focus**: which space, which module, which item is open, whether it is being edited. In an app with a router this lives in the address (`/{space}/{module}/{item}`), in a story in memory, with the same contract. Back in the browser closes the detail, a link to the address opens it.
 

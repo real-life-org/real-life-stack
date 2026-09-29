@@ -104,18 +104,67 @@ export function storedColorScheme(storageKey = STORAGE_KEY_THEME): ColorScheme |
 export function initialDarkMode(storageKey = STORAGE_KEY_THEME): boolean {
   const wahl = storedColorScheme(storageKey)
   if (wahl) return wahl === "dark"
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
+  // Ohne `matchMedia` (ältere Einbettungen, Testumgebungen) gibt es keine
+  // Systemvorgabe zu lesen — dann hell, statt beim Start zu werfen.
+  if (typeof window.matchMedia !== "function") return false
+  return window.matchMedia(SYSTEM_DARK).matches
+}
+
+const SYSTEM_DARK = "(prefers-color-scheme: dark)"
+
+/**
+ * Setzt BEIDE Signale am Wurzelelement: die `dark`-Klasse und `data-theme`.
+ *
+ * Die Klasse ist das Signal, an dem sich das Toolkit ausrichtet (Tailwind,
+ * Karte, siehe oben). `data-theme` führt dasselbe für Stylesheets, die sich an
+ * das Attribut hängen — etwa Tokens nach dem Muster
+ * `:root[data-theme="dark"]` und `@media (prefers-color-scheme: dark) {
+ * :root:not([data-theme="light"]) }`. Nur mit der Medienabfrage wäre eine
+ * bewusste Wahl dort wirkungslos; nur mit der Klasse bliebe dieselbe Wahl dort
+ * unsichtbar. Darum immer beide zusammen, nie eines allein.
+ */
+export function applyColorScheme(scheme: ColorScheme): void {
+  const wurzel = document.documentElement
+  wurzel.classList.toggle(DARK_CLASS, scheme === "dark")
+  wurzel.setAttribute("data-theme", scheme)
 }
 
 /**
- * Setzt die `dark`-Klasse am Wurzelelement.
+ * Setzt beide Signale (`dark`-Klasse und `data-theme`) nach Wahl oder
+ * Systemvorgabe.
  *
  * Vor dem ersten Render aufrufen, nicht erst in einer Komponente: Anmeldung
  * und Onboarding liegen vor der App-Hülle und blieben sonst hell, egal was
- * System oder Wahl sagen.
+ * System oder Wahl sagen. Und vor jedem `await` beim Start (etwa dem Laden
+ * der Instanz-Konfiguration): Bis dahin steht die Seite sonst hell da.
+ *
+ * Was ein Modul-Skript nicht verhindern kann: das Stück zwischen dem ersten
+ * Malen der HTML-Seite und seiner Ausführung. Das schließt nur ein Skript im
+ * `<head>` der App, das dieselbe Wahl liest, bevor der Body steht.
  */
 export function applyInitialColorScheme(storageKey = STORAGE_KEY_THEME): void {
-  document.documentElement.classList.toggle(DARK_CLASS, initialDarkMode(storageKey))
+  applyColorScheme(initialDarkMode(storageKey) ? "dark" : "light")
+}
+
+/**
+ * Folgt einem Wechsel der Systemvorgabe, solange keine Wahl gespeichert ist.
+ * Gibt die Abmeldung zurück.
+ *
+ * Gefragt wird bei JEDEM Wechsel neu, nicht einmal beim Anmelden: Eine Wahl,
+ * die inzwischen getroffen wurde (auch in einem anderen Tab), sticht die
+ * Systemvorgabe ab diesem Moment. Schreibt nichts — die Systemvorgabe wird
+ * dadurch nicht zur Wahl.
+ */
+export function followSystemColorScheme(storageKey = STORAGE_KEY_THEME): () => void {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return () => {}
+  const abfrage = window.matchMedia(SYSTEM_DARK)
+  if (typeof abfrage?.addEventListener !== "function") return () => {}
+  const beiWechsel = (ereignis: { matches: boolean }) => {
+    if (storedColorScheme(storageKey)) return
+    applyColorScheme(ereignis.matches ? "dark" : "light")
+  }
+  abfrage.addEventListener("change", beiWechsel)
+  return () => abfrage.removeEventListener("change", beiWechsel)
 }
 
 /**
