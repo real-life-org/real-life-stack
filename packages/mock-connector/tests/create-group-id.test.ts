@@ -4,7 +4,7 @@ import { MockConnector } from "../src/mock-connector.js"
 describe("MockConnector — Group-Id (rls#575)", () => {
   afterEach(() => vi.restoreAllMocks())
 
-  it("zwei Groups in derselben Millisekunde bekommen verschiedene Ids und eigene Mitglieder", async () => {
+  it("zwei Groups in derselben Millisekunde bekommen verschiedene UUIDs und je einen eigenen Eintrag", async () => {
     const connector = new MockConnector()
     await connector.init()
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000)
