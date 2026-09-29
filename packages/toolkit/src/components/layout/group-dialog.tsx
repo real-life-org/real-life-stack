@@ -409,6 +409,25 @@ function AppSectionHost({ section, ...ctx }: AppSpaceSectionContext & { section:
   return <>{section.render(ctx)}</>
 }
 
+const sameList = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((v, i) => v === b[i])
+
+/**
+ * Laesst einen lokalen Zustand des Dialogs dem gelieferten Wert folgen.
+ *
+ * Der Aufrufer liefert die Group live (rls#551, `AppFrame` aus dem Connector).
+ * Aendert sich der gelieferte Wert, zieht der lokale nach — aber nur, wenn er
+ * noch dem zuletzt gelieferten entspricht: was man hier gerade selbst
+ * geaendert hat, ueberschreibt ein fremder Stand nicht.
+ */
+function useFollowLive<T>(live: T, local: T, setLocal: (value: T) => void, equals: (a: T, b: T) => boolean = Object.is) {
+  const [synced, setSynced] = useState(live)
+  if (!equals(live, synced)) {
+    setSynced(live)
+    if (equals(local, synced)) setLocal(live)
+  }
+}
+
 // --- Types ---
 
 export type GroupDialogMode =
@@ -492,23 +511,14 @@ export function GroupDialog({
   // Name und Bild folgen einer neuen Group des Aufrufers (live aus dem
   // Connector, z. B. ein anderes Geraet benennt um) — aber nur, solange man
   // sie hier nicht selbst geaendert hat: ein angefangener Name bleibt stehen.
-  const liveName = isEdit ? mode.group.name : ""
-  const liveImage = isEdit ? (mode.group.data?.image as string | undefined) ?? "" : ""
-  const [syncedName, setSyncedName] = useState(liveName)
-  const [syncedImage, setSyncedImage] = useState(liveImage)
-  if (liveName !== syncedName) {
-    setSyncedName(liveName)
-    if (name === syncedName) setName(liveName)
-  }
-  if (liveImage !== syncedImage) {
-    setSyncedImage(liveImage)
-    if (groupImage === syncedImage) setGroupImage(liveImage)
-  }
+  useFollowLive(isEdit ? mode.group.name : "", name, setName)
+  useFollowLive(isEdit ? (mode.group.data?.image as string | undefined) ?? "" : "", groupImage, setGroupImage)
 
   // Module state
-  const [activeModules, setActiveModules] = useState<string[]>(() =>
-    isEdit ? (mode.group.data?.modules as string[] | undefined) ?? defaults() : defaults()
-  )
+  const liveModulesOf = (m: GroupDialogMode): string[] =>
+    m.type === "edit" ? (m.group.data?.modules as string[] | undefined) ?? defaults() : defaults()
+  const [activeModules, setActiveModules] = useState<string[]>(() => liveModulesOf(mode))
+  useFollowLive(liveModulesOf(mode), activeModules, setActiveModules, sameList)
 
   // Module-save errors get their OWN state: sharing the dialog-wide `error`
   // state made ownership ambiguous — a successful module save could only
@@ -552,8 +562,11 @@ export function GroupDialog({
   const activeSection = resolveConfigSection(requestedSection, sections)
   const activeAppSection = visibleAppSections.find((a) => a.id === activeSection)
 
-  /** Fehler eines App-Patches — gilt fuer seinen Abschnitt und seine Schluessel. */
-  const [appError, setAppError] = useState<{ sectionId: string; message: string; keys: string[] } | null>(null)
+  /**
+   * Offene Fehler der App-Patches, JE SCHLUESSEL: ein zweiter Fehler oder ein
+   * Erfolg auf einem anderen Feld beantwortet den ersten nicht.
+   */
+  const [appErrors, setAppErrors] = useState<Readonly<Record<string, { sectionId: string; message: string }>>>({})
   /** Suche in der Mitgliederliste (Entwurf 3a). */
   const [memberSearch, setMemberSearch] = useState("")
   /** Suche in der Kontaktliste des Bereichs "Einladen" (Entwurf 4a). */
@@ -570,6 +583,8 @@ export function GroupDialog({
   modeRef.current = mode
   const onUpdateGroupRef = useRef(onUpdateGroup)
   onUpdateGroupRef.current = onUpdateGroup
+  /** Der gelieferte Modulstand beim letzten bestaetigten Speichern. */
+  const modulesLiveAtSaveRef = useRef<string[]>(liveModulesOf(mode))
   const saveModulesRef = useRef<((modules: string[]) => void) | null>(null)
   if (!saveModulesRef.current) {
     saveModulesRef.current = createLatestWinsSaver<string[]>(
@@ -583,27 +598,34 @@ export function GroupDialog({
         // list would suggest the reorder stuck when it didn't. The saver's
         // lastSaved beats the prop: after "A saved, B failed" the group prop
         // may still show the state before A (store round-trip in flight).
-        const current = modeRef.current
-        setActiveModules(
-          lastSaved ??
-            (current.type === "edit"
-              ? ((current.group.data?.modules as string[] | undefined) ?? defaults())
-              : defaults()),
-        )
+        // Hat der Aufrufer seit dem letzten bestaetigten Speichern aber einen
+        // NEUEN Stand geliefert (live, rls#551), ist der aktueller als das
+        // eigene lastSaved — sonst loeschte die Ruecknahme ein fremd
+        // ergaenztes Modul.
+        const live = liveModulesOf(modeRef.current)
+        const liveMoved = !sameList(live, modulesLiveAtSaveRef.current)
+        setActiveModules(liveMoved ? live : lastSaved ?? live)
         setModuleError(err instanceof Error ? err.message : "Module konnten nicht gespeichert werden")
       },
-      () => setModuleError(null),
+      () => {
+        modulesLiveAtSaveRef.current = liveModulesOf(modeRef.current)
+        setModuleError(null)
+      },
     )
   }
 
   // Die gewaehlte Primaerfarbe liegt lokal, aus demselben Grund wie Name,
-  // Bild und Modulliste: `mode.group` ist ein SNAPSHOT vom Oeffnen, den die
-  // App nicht nachfuehrt, solange der Dialog steht. Direkt daraus gelesen
-  // bewegte sich der Haken nach einem Klick nicht — gespeichert wurde, aber
-  // es sah aus, als sei nichts passiert.
-  const [primaryColorChoice, setPrimaryColorChoice] = useState<string | null>(() =>
-    mode.type === "edit" ? ((mode.group.data?.primaryColor as string | undefined) ?? null) : null,
-  )
+  // Bild und Modulliste: nicht jeder Aufrufer fuehrt `mode.group` nach,
+  // solange der Dialog steht. Direkt daraus gelesen bewegte sich der Haken
+  // nach einem Klick nicht — gespeichert wurde, aber es sah aus, als sei
+  // nichts passiert. Liefert der Aufrufer live (AppFrame), folgt der lokale
+  // Wert ueber `useFollowLive`.
+  const livePrimaryOf = (m: GroupDialogMode): string | null =>
+    m.type === "edit" ? ((m.group.data?.primaryColor as string | undefined) ?? null) : null
+  const [primaryColorChoice, setPrimaryColorChoice] = useState<string | null>(() => livePrimaryOf(mode))
+  useFollowLive(livePrimaryOf(mode), primaryColorChoice, setPrimaryColorChoice)
+  /** Die gelieferte Farbe beim letzten bestaetigten Speichern. */
+  const colorLiveAtSaveRef = useRef<string | null>(livePrimaryOf(mode))
   /**
    * Das Ziel haengt am WERT, nicht am Zeitpunkt der Ausfuehrung. Der Saver
    * lebt so lange wie der Dialog; ein eingereihter Vorgang laeuft erst, wenn
@@ -647,15 +669,19 @@ export function GroupDialog({
         if (current.type === "edit" && failed.groupId === current.group.id) {
           // Zurueck auf den zuletzt BESTAETIGTEN Wert — ein Haken auf einer
           // Farbe, die nie ankam, behauptet eine Aenderung, die es nicht gibt.
+          // Ein seither gelieferter Stand (live) ist aktueller als lastSaved.
+          const live = livePrimaryOf(current)
+          const liveMoved = live !== colorLiveAtSaveRef.current
           setPrimaryColorChoice(
-            lastSaved?.groupId === current.group.id
-              ? lastSaved.hex
-              : ((current.group.data?.primaryColor as string | undefined) ?? null),
+            !liveMoved && lastSaved?.groupId === current.group.id ? lastSaved.hex : live,
           )
         }
         setColorError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden")
       },
-      () => setColorError(null),
+      () => {
+        colorLiveAtSaveRef.current = livePrimaryOf(modeRef.current)
+        setColorError(null)
+      },
     )
   }
   /**
@@ -671,6 +697,8 @@ export function GroupDialog({
   const [surfacesChoice, setSurfacesChoice] = useState<Surfaces | null>(() =>
     mode.type === "edit" ? readSurfaces(mode.group.data?.surfaces) : null,
   )
+  useFollowLive(isEdit ? readRadius(mode.group.data?.radius) : null, radiusChoice, setRadiusChoice)
+  useFollowLive(isEdit ? readSurfaces(mode.group.data?.surfaces) : null, surfacesChoice, setSurfacesChoice)
   const saveLayoutRef = useRef<((v: { groupId: string; patch: Record<string, unknown> }) => void) | null>(null)
   if (!saveLayoutRef.current) {
     saveLayoutRef.current = createLatestWinsSaver<{ groupId: string; patch: Record<string, unknown> }>(
@@ -779,15 +807,19 @@ export function GroupDialog({
     if (current.type !== "edit") return Promise.reject(new Error("Kein Space zum Bearbeiten"))
     return onUpdateGroupRef.current(current.group.id, { data: patch }).then(
       () => {
-        // Die Meldung geht erst, wenn dieselben Schluessel gespeichert sind;
-        // ein Patch auf ein anderes Feld beantwortet den Fehler nicht.
-        setAppError((e) => (e && e.keys.every((k) => k in patch) ? null : e))
+        // Erledigt sind genau die Schluessel, die dieser Patch gespeichert hat.
+        setAppErrors((errors) => {
+          const next = { ...errors }
+          for (const key of Object.keys(patch)) delete next[key]
+          return next
+        })
       },
       (err: unknown) => {
-        setAppError({
-          sectionId,
-          message: err instanceof Error ? err.message : "Konnte nicht gespeichert werden",
-          keys: Object.keys(patch),
+        const message = err instanceof Error ? err.message : "Konnte nicht gespeichert werden"
+        setAppErrors((errors) => {
+          const next = { ...errors }
+          for (const key of Object.keys(patch)) next[key] = { sectionId, message }
+          return next
         })
         throw err
       },
@@ -801,7 +833,7 @@ export function GroupDialog({
         setError(null)
         setModuleError(null)
         setColorError(null)
-        setAppError(null)
+        setAppErrors({})
         setInvitingId(null)
         setInvitedIds(new Set())
         setInviteErrors(new Map())
@@ -1681,9 +1713,9 @@ export function GroupDialog({
                 canEdit={isCurrentUserAdmin}
                 patchData={(patch) => patchAppData(activeAppSection.id, patch)}
               />
-              {appError?.sectionId === activeAppSection.id && (
-                <p role="alert" className="mt-3 text-xs text-destructive">{appError.message}</p>
-              )}
+              {[...new Set(Object.values(appErrors).filter((e) => e.sectionId === activeAppSection.id).map((e) => e.message))].map((message) => (
+                <p key={message} role="alert" className="mt-3 text-xs text-destructive">{message}</p>
+              ))}
             </ErrorBoundary>
           )}
           </div>

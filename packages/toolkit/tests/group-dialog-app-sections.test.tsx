@@ -150,6 +150,55 @@ describe("GroupDialog: App-Abschnitte", () => {
     expect(region()?.textContent).not.toContain("weg")
   })
 
+  it("haelt Fehler je Schluessel: ein zweiter Fehler oder ein Erfolg auf einem anderen Feld loescht die erste Meldung nicht", async () => {
+    const failing = new Set(["dream", "horizon"])
+    onUpdateGroup = vi.fn(async (_id: string, u: { data: Record<string, unknown> }) => {
+      if (Object.keys(u.data).some((k) => failing.has(k))) throw new Error(`${Object.keys(u.data)[0]} weg`)
+    })
+    let exportCtx: AppSpaceSectionContext | null = null
+    const exportSection: AppSpaceSection = { id: "export", label: "Export", icon: Download, render: (ctx) => { exportCtx = ctx; return "Export" } }
+    renderDialog({ appSections: [traum(), exportSection], initialSection: "traum" })
+    await act(async () => { await lastCtx!.patchData({ dream: "A" }).catch(() => {}) })
+    act(() => { menuEntry("Export")!.click() })
+    await act(async () => { await exportCtx!.patchData({ horizon: "H" }).catch(() => {}) })
+    failing.delete("horizon")
+    await act(async () => { await exportCtx!.patchData({ horizon: "H" }) })
+    expect(region()?.textContent).not.toContain("horizon weg")
+    act(() => { menuEntry("Traum")!.click() })
+    expect(region()?.textContent, "dream ist weiter ungespeichert").toContain("dream weg")
+  })
+
+  it("fuehrt Module aus einer neuen Group nach: eine lokale Sortierung schreibt das fremd ergaenzte Modul mit", async () => {
+    renderDialog({ initialSection: "modules", mode: { type: "edit", group: { ...GROUP, data: { modules: ["feed", "map"] } } } })
+    renderDialog({ initialSection: "modules", mode: { type: "edit", group: { ...GROUP, data: { modules: ["feed", "map", "kanban"] } } } })
+    const runter = document.querySelector("[aria-label='Feed nach unten']") as HTMLButtonElement
+    await act(async () => { runter.click(); await new Promise((r) => setTimeout(r, 0)) })
+    const last = onUpdateGroup.mock.calls.at(-1) as [string, { data: { modules: string[] } }]
+    expect(last[1].data.modules).toEqual(["map", "feed", "kanban"])
+  })
+
+  it("fuehrt Rundung und Farbe aus einer neuen Group nach", () => {
+    renderDialog({ initialSection: "theme", mode: { type: "edit", group: { ...GROUP, data: { radius: "small", primaryColor: "#2563eb" } } } })
+    renderDialog({ initialSection: "theme", mode: { type: "edit", group: { ...GROUP, data: { radius: "large", primaryColor: "#e84b1c" } } } })
+    expect(document.querySelector("[aria-label='Rundung large']")?.getAttribute("aria-checked")).toBe("true")
+    expect((document.querySelector("[role=dialog]") as HTMLElement).style.getPropertyValue("--primary")).toBe("#e84b1c")
+  })
+
+  it("nimmt einen gescheiterten Modul-Patch auf den inzwischen gelieferten Stand zurueck, nicht auf den eigenen aelteren", async () => {
+    let fail = false
+    onUpdateGroup = vi.fn(async () => { if (fail) throw new Error("weg") })
+    renderDialog({ initialSection: "modules", mode: { type: "edit", group: { ...GROUP, data: { modules: ["feed", "map"] } } } })
+    await act(async () => { (document.querySelector("[aria-label='Feed nach unten']") as HTMLButtonElement).click(); await new Promise((r) => setTimeout(r, 0)) })
+    // Eigene Sortierung gespeichert und vom Aufrufer geliefert; danach kommt
+    // ein fremder Stand an.
+    renderDialog({ initialSection: "modules", mode: { type: "edit", group: { ...GROUP, data: { modules: ["map", "feed"] } } } })
+    renderDialog({ initialSection: "modules", mode: { type: "edit", group: { ...GROUP, data: { modules: ["map", "feed", "kanban"] } } } })
+    fail = true
+    await act(async () => { (document.querySelector("[aria-label='Karte nach unten']") as HTMLButtonElement).click(); await new Promise((r) => setTimeout(r, 0)) })
+    const order = [...document.querySelectorAll("[aria-label$=' nach oben']")].map((b) => b.getAttribute("aria-label")!.replace(" nach oben", ""))
+    expect(order, "zurueck auf den gelieferten Stand mit Kanban").toEqual(["Karte", "Feed", "Kanban"])
+  })
+
   it("verliert bei einer neuen Objektreferenz desselben Space nichts", () => {
     function Zaehler({ ctx }: { ctx: AppSpaceSectionContext }) {
       const [n, setN] = useState(0)
