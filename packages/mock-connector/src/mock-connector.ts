@@ -108,7 +108,6 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
   private relatedObservables = new Map<string, ReturnType<typeof createObservable<Item[]>>>()
   private relatedObservableParams = new Map<string, { itemId: string; predicate?: string; options?: RelatedItemsOptions }>()
   private relationStore: RelationRecordCapable & RelationRecordWriterCapable
-  private nextItemId = 100
   private activityByScope = new Map<string, Map<string, ActivityEntry>>()
   private activityObservables = new Map<string, ReturnType<typeof createObservable<ActivityEntry[]>>>()
   private scopedActivityObservables = new Map<string, ReturnType<typeof createObservable<ScopedActivityEntry[]>>>()
@@ -869,11 +868,13 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
     return this.findVisibleItemLocation(id)?.item
   }
 
+  /** Random, never counted: two sessions on the same seed would otherwise
+      hand out the same `item-<n>` and overwrite each other (#561). */
   private allocateItemId(scopeId: string | null, type: string): string {
     const items = this.getScopeItems(scopeId, true)
     let id: string
     do {
-      id = `item-${this.nextItemId++}`
+      id = crypto.randomUUID()
     } while (
       items.has(id)
       || (type === "feature" ? this.hasItemOutsideScope(scopeId, id) : this.hasGlobalFeature(id))

@@ -71,17 +71,39 @@ describe("MockConnector item IDs", () => {
     expect(await connector.getItems()).toEqual([created])
   })
 
+  it("generates random ids, so two sessions on the same seed never hand out the same id", async () => {
+    // real-life-stack#561: a per-session counter gave two browsers on the
+    // same board the same `item-<n>`, and they overwrote each other.
+    const first = new MockConnector(seed(), { allowFixtureAuthors: true })
+    const second = new MockConnector(seed(), { allowFixtureAuthors: true })
+    first.setCurrentGroup("group-a")
+    second.setCurrentGroup("group-a")
+
+    const a = await first.createItem({ type: "note", createdBy: "did:example:user", data: {} })
+    const b = await second.createItem({ type: "note", createdBy: "did:example:user", data: {} })
+
+    expect(a.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    expect(b.id).not.toBe(a.id)
+  })
+
   it("skips collisions when allocating generated IDs", async () => {
-    const connector = new MockConnector(seed([item("item-100", "reserved")]), { allowFixtureAuthors: true })
+    const connector = new MockConnector(seed([item("reserved-id", "reserved")]), { allowFixtureAuthors: true })
     connector.setCurrentGroup("group-a")
+    const uuid = vi.spyOn(crypto, "randomUUID")
+      .mockReturnValueOnce("reserved-id" as ReturnType<typeof crypto.randomUUID>)
+      .mockReturnValueOnce("fresh-id" as ReturnType<typeof crypto.randomUUID>)
 
-    const created = await connector.createItem({
-      type: "note",
-      createdBy: "did:example:user",
-      data: { title: "generated" },
-    })
+    try {
+      const created = await connector.createItem({
+        type: "note",
+        createdBy: "did:example:user",
+        data: { title: "generated" },
+      })
 
-    expect(created.id).toBe("item-101")
+      expect(created.id).toBe("fresh-id")
+    } finally {
+      uuid.mockRestore()
+    }
   })
 
   it("removes group mappings before a deterministic ID is recreated elsewhere", async () => {
@@ -206,16 +228,23 @@ describe("MockConnector item IDs", () => {
   })
 
   it("avoids local IDs when allocating IDs for global features", async () => {
-    const connector = new MockConnector(seed([item("item-100", "local")]), { allowFixtureAuthors: true })
+    const connector = new MockConnector(seed([item("local-id", "local")]), { allowFixtureAuthors: true })
     connector.setCurrentGroup("group-b")
+    const uuid = vi.spyOn(crypto, "randomUUID")
+      .mockReturnValueOnce("local-id" as ReturnType<typeof crypto.randomUUID>)
+      .mockReturnValueOnce("fresh-id" as ReturnType<typeof crypto.randomUUID>)
 
-    const feature = await connector.createItem({
-      type: "feature",
-      createdBy: "did:example:user",
-      data: {},
-    })
+    try {
+      const feature = await connector.createItem({
+        type: "feature",
+        createdBy: "did:example:user",
+        data: {},
+      })
 
-    expect(feature.id).toBe("item-101")
+      expect(feature.id).toBe("fresh-id")
+    } finally {
+      uuid.mockRestore()
+    }
   })
 
   it("does not promote a duplicated space-local ID into the global feature scope", async () => {
