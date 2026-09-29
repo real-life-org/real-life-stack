@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { isAuthenticatable, type User } from "@real-life-stack/data-interface"
+import { isAuthenticatable, type DataInterface, type User } from "@real-life-stack/data-interface"
 import { useConnector } from "./connector-context"
 
 /**
@@ -16,15 +16,30 @@ import { useConnector } from "./connector-context"
  * @see story rls-foundations-hooks--people
  * @see spec docs/spec/04-items-relations-groups-spaces.md
  */
+interface Aufloesung {
+  connector: DataInterface
+  users: ReadonlyMap<string, User>
+}
+
+interface Anfragen {
+  connector: DataInterface
+  laufend: Set<string>
+}
+
+const LEER: ReadonlyMap<string, User> = new Map()
+
 export function useResolvedUsers(ids: readonly string[]): ReadonlyMap<string, User> {
   const connector = useConnector()
-  const [resolved, setResolved] = useState<ReadonlyMap<string, User>>(new Map())
-  // Laufende Anfragen gehören dem Connector, nicht dem einzelnen Effect: Eine
-  // Antwort gilt, solange die Komponente steht und der Connector derselbe ist.
-  // Vorher verwarf das Aufräumen eines Effects die Antwort, während die Id als
-  // „laufend" stehen blieb — bei A → B → A kam der Name nie an (Codex-Review
-  // Runde 1 zu #569, auch unter StrictMode).
-  const pending = useRef({ connector, ids: new Set<string>() })
+  // Vertrag (Codex-Review Runden 1 und 2 zu #569): Ergebnisse und laufende
+  // Anfragen gehören genau EINEM Connector. Jeder Wechsel — auch zu einem ohne
+  // Auth — legt einen neuen Anfragebehälter an; eine Antwort zählt nur, wenn
+  // ihr Behälter noch der aktuelle ist und die Komponente steht. Ergebnisse
+  // eines anderen Connectors werden nie gezeigt. Das Aufräumen eines Effects
+  // verwirft dagegen nichts: Sonst blieb bei A → B → A (oder unter StrictMode)
+  // eine Id „laufend", und ihr Name kam nie an.
+  const [aufloesung, setAufloesung] = useState<Aufloesung>({ connector, users: LEER })
+  const resolved = aufloesung.connector === connector ? aufloesung.users : LEER
+  const anfragen = useRef<Anfragen>({ connector, laufend: new Set() })
   const mounted = useRef(true)
   useEffect(() => {
     mounted.current = true
@@ -32,22 +47,22 @@ export function useResolvedUsers(ids: readonly string[]): ReadonlyMap<string, Us
   }, [])
 
   useEffect(() => {
+    if (anfragen.current.connector !== connector) anfragen.current = { connector, laufend: new Set() }
     if (!isAuthenticatable(connector)) return
-    if (pending.current.connector !== connector) pending.current = { connector, ids: new Set() }
-    const laufend = pending.current.ids
+    const behaelter = anfragen.current
     for (const id of ids) {
-      if (resolved.has(id) || laufend.has(id)) continue
-      laufend.add(id)
+      if (resolved.has(id) || behaelter.laufend.has(id)) continue
+      behaelter.laufend.add(id)
       void connector.getUser(id).then((user) => {
-        laufend.delete(id)
-        if (!mounted.current || pending.current.connector !== connector) return
+        behaelter.laufend.delete(id)
+        if (!mounted.current || anfragen.current !== behaelter) return
         if (!user || !user.displayName || user.displayName === id) return
-        setResolved((current) => {
-          const next = new Map(current)
-          next.set(id, user)
-          return next
+        setAufloesung((current) => {
+          const users = new Map(current.connector === connector ? current.users : LEER)
+          users.set(id, user)
+          return { connector, users }
         })
-      }).catch(() => laufend.delete(id))
+      }).catch(() => behaelter.laufend.delete(id))
     }
   }, [connector, ids, resolved])
 
