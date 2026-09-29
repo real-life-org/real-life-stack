@@ -143,11 +143,32 @@ describe("LocalConnector — Groups über Instanzen (rls#575, Befund 2)", () => 
 
     await expect(b.updateGroup("g1", { name: "Neu" })).rejects.toThrow("Group not found: g1")
     expect(await storedGroupIds()).toEqual([])
-    expect(await b.getGroups()).toEqual([])
   })
 
-  it("fällt die aktuelle Group weg, folgen die Item-Beobachter der neuen aktuellen Group", async () => {
-    const twoSpaces = () => ({
+  it("eine fremde Änderung kommt NICHT über den eigenen Commit in den Arbeitsspeicher", async () => {
+    const a = await makeConnector()
+    const b = await makeConnector()
+
+    const fromA = await a.createGroup("Von A")
+    await a.updateGroup("g1", { name: "Gemeinschaftsgarten" })
+    const fromB = await b.createGroup("Von B")
+    await b.updateGroup(fromB.id, { name: "Von B, umbenannt" })
+
+    // Im Store steht alles (Transaktion gegen die gespeicherte Liste) …
+    expect(await storedGroupIds()).toEqual(["g1", fromA.id, fromB.id].sort())
+    // … b's Arbeitsspeicher kennt aber nur die eigene Änderung. Fremde
+    // Änderungen kommen über handleBroadcast (rls#582), nicht über den Commit.
+    const inB = await b.getGroups()
+    expect(inB.map((group) => group.id)).toEqual(["g1", fromB.id])
+    expect(inB.find((group) => group.id === "g1")?.name).toBe("Garten")
+  })
+})
+
+describe("LocalConnector — Löschen der aktuellen Group (rls#575)", () => {
+  beforeEach(() => backing.clear())
+
+  it("wechselt auf die nächste Group und meldet die Items genau einmal", async () => {
+    const connector = new LocalConnector({
       items: [
         { id: "i1", type: "task", createdAt: "2026-09-29T00:00:00.000Z", createdBy: "u1", data: { title: "Eins" } },
         { id: "i2", type: "task", createdAt: "2026-09-29T00:00:00.000Z", createdBy: "u1", data: { title: "Zwei" } },
@@ -157,20 +178,17 @@ describe("LocalConnector — Groups über Instanzen (rls#575, Befund 2)", () => 
       groupMembers: { g1: ["u1"], g2: ["u1"] },
       groupItems: { g1: ["i1"], g2: ["i2"] },
     })
-    const a = new LocalConnector(twoSpaces())
-    await a.init()
-    const b = new LocalConnector(twoSpaces())
-    await b.init()
-    expect(b.getCurrentGroup()?.id).toBe("g1")
-    const observed = b.observe({})
-    await Promise.resolve()
+    await connector.init()
+    const observed = connector.observe({})
+    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(observed.current.map((item) => item.id)).toEqual(["i1"])
+    const seen: string[][] = []
+    observed.subscribe((items) => seen.push(items.map((item) => item.id)))
 
-    await a.deleteGroup("g1")
-    await b.updateGroup("g2", { name: "Große Küche" }) // übernimmt die gespeicherte Liste ohne g1
-    await Promise.resolve()
+    await connector.deleteGroup("g1")
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(b.getCurrentGroup()?.id).toBe("g2")
-    expect(observed.current.map((item) => item.id)).toEqual(["i2"])
+    expect(connector.getCurrentGroup()?.id).toBe("g2")
+    expect(seen).toEqual([["i2"]])
   })
 })

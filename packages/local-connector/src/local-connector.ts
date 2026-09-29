@@ -410,10 +410,10 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
     // replace the first's (rls#575).
     const group: Group = { id: crypto.randomUUID(), name, data }
     const creator = this.currentUser?.id
-    await this.commitGroups((groups, members) => ({
-      groups: [...groups, group],
-      members: { ...members, [group.id]: creator ? [creator] : [] },
-    }))
+    await this.commitGroups(
+      (groups) => [...groups, group],
+      (members) => ({ ...members, [group.id]: creator ? [creator] : [] }),
+    )
     this.notifyGroupObservers()
     await this.persist()
     this.broadcast({ type: "groups-changed" })
@@ -430,7 +430,6 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
     // possibly stale RAM copy: a second tab patching another field would
     // otherwise revert ours (rls#244).
     let committed: Group | undefined
-    let committedGroups: Group[] | undefined
     await updateStoredValue<StoredState>("state", (stored) => {
       const base = stored ?? this.createStoredState()
       const groups = base.groups.map((candidate) => {
@@ -442,31 +441,41 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
         }
         return committed
       })
-      committedGroups = groups
       return { ...base, groups }
     }, this.store)
 
-    // Only after the commit: adopt the stored list locally, so the RAM copy
-    // reflects the store's truth (including the other writer's fields and
-    // spaces).
-    if (committedGroups) this.adoptGroups(committedGroups)
-    this.notifyGroupObservers()
-    // Another tab deleted the space after our existence check: the stored
-    // list (now adopted) no longer has it.
+    // Another tab deleted the space after our existence check: nothing was
+    // written. That deletion reaches this instance via handleBroadcast.
     if (!committed) throw new Error(`Group not found: ${id}`)
+
+    // Only after the commit: adopt the merged result locally (including the
+    // other writer's fields of THIS group). Other spaces stay as they are in
+    // RAM — foreign changes arrive via handleBroadcast, not via our commit.
+    const merged = committed
+    this.groups = this.groups.map((candidate) => (candidate.id === id ? merged : candidate))
+    if (this.currentGroup?.id === id) {
+      this.currentGroup = merged
+      this.currentGroupObs.set(merged)
+    }
+    this.notifyGroupObservers()
     this.broadcast({ type: "groups-changed" })
-    return committed
+    return merged
   }
 
   async deleteGroup(id: string): Promise<void> {
-    await this.commitGroups((groups, { [id]: _removed, ...members }) => ({
-      groups: groups.filter((g) => g.id !== id),
-      members,
-    }))
+    await this.commitGroups(
+      (groups) => groups.filter((g) => g.id !== id),
+      ({ [id]: _removed, ...members }) => members,
+    )
+    if (this.currentGroup?.id === id) {
+      this.currentGroup = this.groups[0] ?? null
+      this.currentGroupObs.set(this.currentGroup)
+      this.rememberTabGroup(this.currentGroup?.id ?? null)
+    }
     this.notifyGroupObservers()
     // Overview activity is the union of currently accessible spaces.
     this.notifyActivityObservers()
-    // Stores the shared current space (it may have fallen back above).
+    // Stores the shared current space and notifies the item observers once.
     await this.persist()
     this.broadcast({ type: "groups-changed" })
   }
@@ -516,39 +525,22 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
    * A change to the space list (and its memberships) as ONE atomic operation
    * on the stored state, never a write-back of this instance's copy: another
    * tab may just have created, renamed or deleted a space (rls#575, like
-   * rls#244 for patches). The result is adopted.
+   * rls#244 for patches). This instance applies only ITS change to its RAM
+   * list; foreign changes arrive via handleBroadcast. Memberships are adopted
+   * as committed, like {@link commitMembers}.
    */
   private async commitGroups(
-    change: (groups: Group[], members: Record<string, string[]>) => { groups: Group[]; members: Record<string, string[]> },
+    changeGroups: (groups: Group[]) => Group[],
+    changeMembers: (members: Record<string, string[]>) => Record<string, string[]>,
   ): Promise<void> {
-    let committed: { groups: Group[]; members: Record<string, string[]> } | undefined
+    let committedMembers: Record<string, string[]> | undefined
     await updateStoredValue<StoredState>("state", (stored) => {
       const base = stored ?? this.createStoredState()
-      committed = change([...base.groups], { ...base.groupMembers })
-      return { ...base, groups: committed.groups, groupMembers: committed.members }
+      committedMembers = changeMembers({ ...base.groupMembers })
+      return { ...base, groups: changeGroups([...base.groups]), groupMembers: committedMembers }
     }, this.store)
-    if (!committed) return
-    this.groupMembers = committed.members
-    this.adoptGroups(committed.groups)
-  }
-
-  /**
-   * Take the stored space list as this instance's; the current space follows
-   * its stored version, or falls back to the first space when it is gone.
-   */
-  private adoptGroups(groups: Group[]): void {
-    this.groups = groups
-    const currentId = this.currentGroup?.id
-    if (currentId === undefined) return
-    const current = groups.find((g) => g.id === currentId) ?? groups[0] ?? null
-    if (current === this.currentGroup) return
-    this.currentGroup = current
-    this.currentGroupObs.set(current)
-    if (current?.id === currentId) return
-    // The scope changed: item and activity views follow it, like setCurrentGroup.
-    this.rememberTabGroup(current?.id ?? null)
-    this.notifyObservers()
-    this.notifyActivityObservers()
+    this.groups = changeGroups([...this.groups])
+    if (committedMembers) this.groupMembers = committedMembers
   }
 
   async inviteMember(groupId: string, userId: string): Promise<void> {
