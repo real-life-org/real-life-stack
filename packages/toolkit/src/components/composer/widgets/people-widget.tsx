@@ -3,6 +3,7 @@
 import * as React from "react"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { isMissingQualifier } from "../../preview/field-register"
 
 export interface PersonOption {
   id: string
@@ -26,8 +27,8 @@ interface PeopleWidgetProps {
    */
   qualifier?: { key: string; values: readonly { id: string; label: string }[]; default?: string }
   /** Qualifier je Person-Id. */
-  qualifiers?: Record<string, string>
-  onQualifiersChange?: (next: Record<string, string>) => void
+  qualifiers?: Record<string, unknown>
+  onQualifiersChange?: (next: Record<string, unknown>) => void
   /** Beschriftung des leeren Eingabefelds („Einladen…", „Zuweisen…"). */
   placeholder?: string
   /**
@@ -192,13 +193,16 @@ export function PeopleWidget({
     : value
 
   // Ohne Wert gilt der default (Spec 06, Regel 7).
-  const qualifierOf = (id: string) => qualifier?.values.find((v) => v.id === (qualifiers?.[id] ?? qualifier.default))
+  // Nur ein fehlender Wert gilt als Standard; ein unbekannter (auch kein
+  // String) bleibt stehen und hat keinen Zustandstext.
+  const currentOf = (id: string) => (isMissingQualifier(qualifiers?.[id]) ? qualifier?.default : qualifiers?.[id])
+  const qualifierOf = (id: string) => qualifier?.values.find((v) => v.id === currentOf(id))
 
   // Im Kreis der erlaubten Werte; ohne Wert (und ohne default) zum ersten.
   // Der default wird nie ausdrücklich geschrieben: zurück auf ihn heißt kein Wert.
   const cycleQualifier = (id: string) => {
     if (!qualifier || !onQualifiersChange || qualifier.values.length === 0) return
-    const index = qualifier.values.findIndex((v) => v.id === (qualifiers?.[id] ?? qualifier.default))
+    const index = qualifier.values.findIndex((v) => v.id === currentOf(id))
     const next = qualifier.values[(index + 1) % qualifier.values.length]!
     const { [id]: _previous, ...rest } = qualifiers ?? {}
     onQualifiersChange(next.id === qualifier.default ? rest : { ...rest, [id]: next.id })

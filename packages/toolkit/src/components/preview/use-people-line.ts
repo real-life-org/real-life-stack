@@ -29,7 +29,7 @@ import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { resolveCanCreate, resolveItemPermissions } from "../../hooks/use-item-permissions"
 import { writeOwnStatement } from "../../lib/own-statement"
 import { useVerifiedRelationRecords } from "../../hooks/use-votes"
-import { firstOptionWithRole, statusRole, type EdgeEntry, type FieldEntry } from "./field-register"
+import { firstOptionWithRole, isMissingQualifier, statusRole, type EdgeEntry, type FieldEntry } from "./field-register"
 import { peopleLine, peopleLineGroups, recordPeopleEdges, type PeopleLineEntry } from "./people-line"
 
 const NO_RECORDS: RelationRecord[] = []
@@ -204,10 +204,7 @@ export interface StatusTransitions {
 
 const PERSON = "global:"
 
-/** Fehlt ein Qualifier-Wert (fehlend, `null`, leer)? Nur dann gilt der Standard (Spec 06, Regel 7). */
-function isMissingQualifier(value: unknown): boolean {
-  return value === undefined || value === null || value === ""
-}
+
 
 /** Grund, wenn der geöffnete Space unter der Id des Items ein anderes (oder keins) liefert. */
 export const ITEM_ELSEWHERE = "Dieses Item liegt nicht im geöffneten Space – dort bearbeiten"

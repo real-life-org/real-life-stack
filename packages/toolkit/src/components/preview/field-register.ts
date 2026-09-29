@@ -185,6 +185,11 @@ export function assertFollowUps(typeId: string, fields: readonly FieldEntry[] = 
   }
 }
 
+/** Fehlt ein Qualifier-Wert (fehlend, `null`, leer)? Nur dann gilt der Standard (Spec 06, Regel 7). */
+export function isMissingQualifier(value: unknown): boolean {
+  return value === undefined || value === null || value === ""
+}
+
 /** Die erste Option einer Rolle in Register-Reihenfolge (Regel 18), oder undefined. */
 export function firstOptionWithRole(field: FieldEntry | undefined, role: StatusRole): string | undefined {
   return field?.options?.find((o) => o.role === role)?.id

@@ -319,3 +319,57 @@ describe("Codex Runde 1", () => {
     })
   })
 })
+
+describe("Anton zu Runde 3: das Formular bewahrt unbekannte Qualifier-Werte, der Standard gilt nur bei fehlendem Wert", () => {
+  const relations: Item["relations"] = [
+    { predicate: "assignedTo", target: "global:anna" },
+    { predicate: "assignedTo", target: "global:timo", meta: { role: 42 } },
+    { predicate: "assignedTo", target: "global:lena", meta: { role: "foo" } },
+    { predicate: "assignedTo", target: "global:jonas", meta: { role: "learns" } },
+    { predicate: "assignedTo", target: "global:mira", meta: { role: "" } },
+  ]
+
+  async function roundTrip() {
+    const { peopleRelationsFromWidgetData, peopleRelationsToWidgetData } = await import("../src/components/composer/people-relations")
+    const config = contentTypeFromRegister("task")
+    const data = peopleRelationsToWidgetData(config, relations)
+    return { data, saved: peopleRelationsFromWidgetData(config, data as Record<string, unknown>, relations) }
+  }
+
+  for (const [name, register] of [
+    ["Schicht-Standard", () => registerTypePresentation("beispiel", { extensions: [WITH_DEFAULT] })],
+    ["Kern-Standard", () => {
+      registerTypePresentation("beispiel", { extensions: [EXAMPLE_LEARNING_LAYER] })
+      // Der Kern setzt heute an assignedTo keinen Standard; für diesen Fall wie ein Kern-Standard im zusammengesetzten Register.
+      const qualifier = resolveTypePresentation("task").edges!.find((e) => e.predicate === "assignedTo")!.qualifier as { default?: string }
+      qualifier.default = "can"
+    }],
+  ] as const) {
+    it(`${name}: unbekannte Werte (auch Nicht-Strings) stehen in den Formulardaten und bleiben beim Speichern erhalten; fehlend und leer = Standard`, async () => {
+      register()
+      const { data, saved } = await roundTrip()
+      expect(data["people#qualifier"]).toEqual({ timo: 42, lena: "foo", jonas: "learns" })
+      const byTarget = Object.fromEntries((saved ?? []).map((r) => [r.target, r.meta?.role]))
+      expect(byTarget).toEqual({ "global:anna": undefined, "global:timo": 42, "global:lena": "foo", "global:jonas": "learns", "global:mira": undefined })
+    })
+  }
+
+  it("das Personenfeld zeigt bei einem unbekannten Wert nicht den Standard („kann“), bei fehlendem schon", async () => {
+    registerTypePresentation("beispiel", { extensions: [WITH_DEFAULT] })
+    const { PeopleWidget } = await import("../src/components/composer/widgets/people-widget")
+    const people = contentTypeFromRegister("task").peopleRelations!.find((p) => p.predicate === "assignedTo")!
+    const host = document.createElement("div")
+    const root = createRoot(host)
+    await act(async () => {
+      root.render(createElement(PeopleWidget as never, {
+        value: ["anna", "timo"], onChange: () => {}, label: "Zugewiesen",
+        options: [{ id: "anna", name: "Anna" }, { id: "timo", name: "Timo" }],
+        qualifier: people.qualifier, qualifiers: { timo: 42 }, onQualifiersChange: () => {},
+      }))
+    })
+    const toggle = (name: string) => [...host.querySelectorAll("[data-qualifier-toggle]")].find((b) => b.getAttribute("aria-label")?.startsWith(name))
+    expect(toggle("Anna")?.textContent).toBe("kann")
+    expect(toggle("Timo")?.textContent).not.toBe("kann")
+    await act(async () => root.unmount())
+  })
+})
