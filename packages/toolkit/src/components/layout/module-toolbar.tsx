@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, type ReactNode } from "react"
+import { useEffect, useRef, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 
+import { useOptionalSharedFilter } from "../filter/filter-store"
 import { cn } from "../../lib/utils"
 import { useOptionalModuleHead } from "./module-frame"
 
@@ -81,6 +82,21 @@ export function ModuleToolbar({
     return raeumeObenLinks?.()
   }, [raeumeObenLinks, clearsTopLeft])
 
+  // Beitraege ohne Ziel werden gezeichnet oder gemeldet, nie still verworfen
+  // (rls#570). Die Aktionen und eigenen Chips zeichnet der Kopf auch ohne
+  // Filter-Besitzer; zwei Faelle bleiben, die nur eine Meldung retten kann.
+  const siehtBesitzer = !!useOptionalSharedFilter()
+  const hatDrawerExtra = !!drawerExtra
+  const ohneBesitzer = !!kopf && !kopf.hatFilterBesitzer
+  const gemeldet = useRef(false)
+  useEffect(() => {
+    if (!ohneBesitzer || gemeldet.current) return
+    const meldung = warnungOhneBesitzer({ fehlverschachtelt: siehtBesitzer, drawerExtra: hatDrawerExtra })
+    if (!meldung) return
+    gemeldet.current = true
+    console.warn(meldung)
+  }, [ohneBesitzer, siehtBesitzer, hatDrawerExtra])
+
   if (kopf) {
     return (
       <>
@@ -100,4 +116,43 @@ export function ModuleToolbar({
       {drawerExtra}
     </div>
   )
+}
+
+const ABHILFE =
+  "Abhilfe: FilterScope außerhalb von ModuleFrame setzen, um Leiste UND Inhalt herum " +
+  "(oder ModuleSurfaceScope, das beides mitbringt)."
+
+/**
+ * Der Text der Warnung, wenn die Flaeche keinen Filter-Besitzer hat — `null`,
+ * wenn es nichts zu melden gibt.
+ *
+ * Zwei Faelle:
+ *
+ *   - **Fehlverschachtelt.** Das Modul sieht einen Besitzer, die Flaeche
+ *     nicht: Ein `FilterScope` steht innerhalb des `ModuleFrame` (so im
+ *     Karabirrdt). Der Kopf zeichnet die Aktionen zwar, aber Suche, Chips und
+ *     Pille fehlen, und niemand merkt warum.
+ *   - **`drawerExtra` ohne Ziel.** Ohne Besitzer gibt es keine Pille und damit
+ *     keine Filterkarte; der Abschnitt haette keinen Ort.
+ *
+ * Ein nackter Frame ohne Besitzer, dessen Modul nur Aktionen oder Chips
+ * reicht, ist KEIN Fall: Das ist der Test- und Story-Fall aus Spec 01,
+ * Regel 4, und alles, was er beitraegt, steht.
+ */
+function warnungOhneBesitzer(fall: { fehlverschachtelt: boolean; drawerExtra: boolean }): string | null {
+  if (fall.fehlverschachtelt) {
+    return (
+      "[rls] ModuleToolbar: Das Modul hat einen Filter-Besitzer, seine ModuleFrame nicht — " +
+      "Suche, aktive Filter und Filter-Pille fehlen. " +
+      ABHILFE
+    )
+  }
+  if (fall.drawerExtra) {
+    return (
+      "[rls] ModuleToolbar: drawerExtra hat kein Ziel — ohne Filter-Besitzer über der " +
+      "ModuleFrame gibt es keine Filterkarte. " +
+      ABHILFE
+    )
+  }
+  return null
 }

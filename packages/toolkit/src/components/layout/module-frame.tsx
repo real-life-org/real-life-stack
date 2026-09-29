@@ -164,6 +164,15 @@ interface ModuleHeadValue {
   drawerElement: HTMLElement | null
   /** Die schwebende Ecke unten links. */
   controlsElement: HTMLElement | null
+  /**
+   * Hat die FLAECHE einen Filter-Besitzer ueber sich?
+   *
+   * Nicht dasselbe wie „sieht das Modul einen": Steht ein `FilterScope`
+   * innerhalb des Frames, hat das Modul einen und die Flaeche keinen — dann
+   * fehlen Suche, Chips und Pille, und die `ModuleToolbar` meldet die
+   * Fehlverschachtelung (rls#570).
+   */
+  hatFilterBesitzer: boolean
   /** Meldet einen Kopf-Beitrag an; die Rueckgabe meldet ihn wieder ab. */
   anmelden(): () => void
   /**
@@ -256,8 +265,14 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
   // Zaehler, kein Schalter: Sonst bliebe der Versatz stehen, wenn das Modul
   // mit den Knoepfen verschwindet.
   const [obenLinks, setObenLinks] = useState(0)
+  // Der Kopf steht, sobald es die Suche gibt — sie zieht sich ausnahmslos
+  // durch alle Module (Anton, 19.09.2026). Ohne Filter-Besitzer rendert die
+  // Suche nichts; dann entscheiden wieder allein die Beitraege der Module, ob
+  // der Kopf ueberhaupt eine Zeile bekommt (Spec 01, Regel 4).
+  const hatSuche = !!useOptionalSharedFilter()
   const kopf = useMemo<ModuleHeadValue>(
     () => ({
+      hatFilterBesitzer: hatSuche,
       element: kopfElement,
       actionsElement,
       chipsElement,
@@ -272,14 +287,9 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
         return () => setObenLinks((n) => n - 1)
       },
     }),
-    [kopfElement, actionsElement, chipsElement, drawerElement, controlsElement],
+    [hatSuche, kopfElement, actionsElement, chipsElement, drawerElement, controlsElement],
   )
 
-  // Der Kopf steht, sobald es die Suche gibt — sie zieht sich ausnahmslos
-  // durch alle Module (Anton, 19.09.2026). Ohne Filter-Besitzer rendert die
-  // Suche nichts; dann entscheiden wieder allein die Beitraege der Module, ob
-  // der Kopf ueberhaupt eine Zeile bekommt (Spec 01, Regel 4).
-  const hatSuche = !!useOptionalSharedFilter()
   // Tags und Typen des Space: eine Ableitung fuer alle Module (Spec 01,
   // Regel 2a). Vorher leitete sie jedes Modul selbst ab, siebenmal fuer Tags
   // und viermal fuer Typen, mit auseinanderlaufenden Ergebnissen.
@@ -287,18 +297,27 @@ export function ModuleFrame({ moduleId, searchLabel, fallbackItems, children, ..
   const hatKopf = hatSuche || leisten > 0
   const raeumtObenLinks = obenLinks > 0
 
+  // Der Platz fuer die Steuerelemente des Moduls (`trailingActions`). Er
+  // haengt NICHT an der Suche: Mit Besitzer steht er rechts neben ihr, ohne
+  // allein (rls#570, Spec 01, Regel 3).
+  const aktionsPlatz = (
+    <div
+      data-module-head-actions
+      ref={setActionsElement}
+      className="ml-auto flex shrink-0 items-center gap-2 empty:hidden"
+    />
+  )
   const kopfSlot = (klasse?: string) => (
     <div data-module-head-content className={cn("flex flex-col gap-2", klasse)}>
-      <ModuleSearchBar
-        searchLabel={searchLabel}
-        trailing={
-          <div
-            data-module-head-actions
-            ref={setActionsElement}
-            className="ml-auto flex shrink-0 items-center gap-2 empty:hidden"
-          />
-        }
-      />
+      {hatSuche ? (
+        <ModuleSearchBar searchLabel={searchLabel} trailing={aktionsPlatz} />
+      ) : (
+        // Ohne Besitzer gibt es keine Suche, der Platz fuer die Aktionen des
+        // Moduls steht trotzdem: rechtsbuendig in einer eigenen Zeile. Er war
+        // bis rls#570 das `trailing` der Suche und verschwand mit ihr — die
+        // Aktionen gingen still verloren, der Kopf blieb angemeldet und leer.
+        <div className="flex items-center gap-2 has-[>:empty]:hidden">{aktionsPlatz}</div>
+      )}
       <div data-module-head-slot ref={setKopfElement}>
         {/* Die Chips lesen den geteilten Filter — ohne Besitzer gibt es sie
             nicht, genau wie die Suche. Der Platz des Moduls bleibt trotzdem

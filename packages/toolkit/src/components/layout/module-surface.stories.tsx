@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { Calendar, Map as MapIcon, Newspaper } from "lucide-react"
+import { Calendar, Layers, Map as MapIcon, Newspaper, Settings2 } from "lucide-react"
 import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
 import { AppShell, AppShellMain } from "./app-shell"
 import { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"
@@ -11,6 +11,7 @@ import { BottomNav } from "./bottom-nav"
 import { ModuleFrame } from "./module-frame"
 import { ModuleToolbar } from "./module-toolbar"
 import { FilterProvider } from "../filter/filter-store"
+import { Button } from "../primitives/button"
 import { FieldNavigationProvider } from "../navigation/field-navigation"
 import { CalendarView } from "../calendar/calendar-view"
 import { MapView } from "../map/map-view"
@@ -261,4 +262,44 @@ export const Default: Story = { name: "Wide" }
 export const Narrow: Story = {
   name: "Narrow",
   parameters: { viewport: { defaultViewport: "mobile1" } },
+}
+
+/**
+ * A bare `ModuleFrame` WITHOUT a filter owner above it — a test, a story, an
+ * embedded view. There is no search and no filter pill, because nobody holds
+ * the filter. What the module hands in still stands: its actions sit alone,
+ * right-aligned, in the header (real-life-stack#570; before, they vanished
+ * silently).
+ *
+ * If a `FilterScope` sits INSIDE the frame instead of around it, the module
+ * sees an owner and the frame does not. The toolbar then warns in the console
+ * and names the fix: put the `FilterScope` outside the `ModuleFrame`.
+ */
+export const WithoutFilterOwner: Story = {
+  name: "Without a filter owner",
+  render: () => (
+    <div className="h-[420px] bg-background text-foreground">
+      <ModuleFrame moduleId="feed" maxWidth="max-w-2xl">
+        <ModuleToolbar
+          trailingActions={
+            <>
+              <Button variant="outline" size="icon" aria-label="Ebenen">
+                <Layers className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" aria-label="Einstellungen">
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </>
+          }
+        />
+        <div className="flex flex-col gap-3">
+          {["Beete gießen", "Kompost umsetzen", "Saatgut tauschen"].map((titel) => (
+            <div key={titel} className="rounded-lg border bg-card p-4 text-sm text-card-foreground">
+              {titel}
+            </div>
+          ))}
+        </div>
+      </ModuleFrame>
+    </div>
+  ),
 }
