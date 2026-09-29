@@ -6,6 +6,21 @@
       "title": "Read items",
       "hooks": [
         {
+          "name": "useSurfaceItems",
+          "signature": "",
+          "question": "The items of this surface, filtered as its head shows.",
+          "answers": "`Item[]`",
+          "without": "throws on render — without `ModuleSurfaceScope`",
+          "stories": [
+            "rls-foundations-hooks--surfaces"
+          ],
+          "specs": [
+            "docs/spec/01-app-composition.md"
+          ],
+          "source": "packages/toolkit/src/components/layout/module-surface-scope.tsx",
+          "line": 41
+        },
+        {
           "name": "useActivity",
           "signature": "limit?",
           "question": "What happened in this space recently?",
@@ -34,6 +49,21 @@
           ],
           "source": "packages/toolkit/src/hooks/use-draft-item.tsx",
           "line": 119
+        },
+        {
+          "name": "useModuleFilteredItems",
+          "signature": "items",
+          "question": "Exactly what the toolbar in the module head promises: filter plus search text.",
+          "answers": "`Item[]`",
+          "without": "value — the items unchanged, without `FilterProvider`",
+          "stories": [
+            "rls-foundations-hooks--surfaces"
+          ],
+          "specs": [
+            "docs/spec/01-app-composition.md"
+          ],
+          "source": "packages/toolkit/src/hooks/use-filterable-items.ts",
+          "line": 106
         },
         {
           "name": "useItems",

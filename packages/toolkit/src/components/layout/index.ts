@@ -10,7 +10,7 @@ export {
   type ModuleFrameProps,
   type ModuleLayout,
 } from "./module-frame"
-export { ModuleSurfaceScope, type ModuleSurfaceScopeProps } from "./module-surface-scope"
+export { ModuleSurfaceScope, useSurfaceItems, type ModuleSurfaceScopeProps } from "./module-surface-scope"
 export { PanelHeaderActions, PanelHeaderSlotContext, type PanelHeaderActionsProps } from "./panel-header-actions"
 export { readPanelEdges, type PanelEdges } from "./panel-edges"
 export { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"

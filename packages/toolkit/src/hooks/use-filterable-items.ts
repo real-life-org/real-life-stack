@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import type { Item } from "@real-life-stack/data-interface"
-import { useOptionalSharedFilter, useSharedFilter } from "../components/filter/filter-store"
+import { useOptionalSharedFilter } from "../components/filter/filter-store"
 import type { FilterBarValue } from "../components/filter/types"
 
 /**
@@ -85,33 +85,25 @@ export function applyItemSearch(items: readonly Item[], search: string): Item[] 
 /**
  * Exactly what the toolbar in the module head promises: filter plus search text.
  *
- * Die Items eines Moduls, gefiltert wie die Steuerleiste im Kopf es anzeigt:
- * geteilte Tag-/Typ-Auswahl plus geteilter Suchtext.
+ * Die Items einer Fläche, gefiltert wie die Steuerleiste im Kopf es anzeigt:
+ * geteilte Tag-/Typ-Auswahl plus geteilter Suchtext. Der Modul-Host und
+ * `ModuleSurfaceScope` wenden ihn so an; ein Modul unter dem Host bekommt
+ * seine Items schon gefiltert und ruft ihn nicht selbst (Anton, 21.09.2026:
+ * „ein Modul darf da gar nichts falsch machen koennen").
  *
- * Module wenden damit genau das an, was der Nutzer im Kopf sieht — statt je
- * eine eigene Reihenfolge aus Filter und Suche zu bauen.
+ * Öffentlich für die Fläche AUSSERHALB des Hosts (real-life-stack#558): eine
+ * App-eigene Ansicht wie das Karabirrdt-Brett, die den geteilten Filter sonst
+ * aus `useSharedFilter`, `applyFilterBarValue` und `applyItemSearch` selbst
+ * zusammensetzen müsste. Ohne `FilterProvider` besitzt niemand einen Filter,
+ * dann kommen die Items unverändert zurück.
  *
  * @answers `Item[]`
- * @without throws on render — without `FilterProvider`
+ * @without value — the items unchanged, without `FilterProvider`
  * @group read
- * @see story rls-foundations-hooks--read
- * @see spec docs/spec/02-data-interface.md
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function useModuleFilteredItems(items: readonly Item[]): Item[] {
-  const { value, searchText } = useSharedFilter()
-  const gefiltert = useFilterableItems(items, value)
-  return useMemo(() => applyItemSearch(gefiltert, searchText), [gefiltert, searchText])
-}
-
-/**
- * Wie {@link useModuleFilteredItems}, aber ohne Besitzer des Filters
- * unveraendert: fuer die zwei Stellen, die Items fuer eine Flaeche HERSTELLEN
- * — den Modul-Host und `ModuleSurfaceScope`. Seit dem 21.09.2026 wenden nur
- * sie den geteilten Filter an; ein Modul bekommt seine Items gefiltert und
- * kann nichts vergessen (Anton: „ein Modul darf da gar nichts falsch machen
- * koennen").
- */
-export function useSurfaceFilteredItems(items: readonly Item[]): Item[] {
   const filter = useOptionalSharedFilter()
   const value = filter?.value ?? LEER
   const searchText = filter?.searchText ?? ""
@@ -120,4 +112,3 @@ export function useSurfaceFilteredItems(items: readonly Item[]): Item[] {
 }
 
 const LEER: FilterBarValue = { tags: [], types: [] }
-

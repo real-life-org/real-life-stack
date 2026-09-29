@@ -3,7 +3,7 @@
 import { createContext, useContext, type ReactNode } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 
-import { useSurfaceFilteredItems } from "../../hooks/use-filterable-items"
+import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
 import { FilterScope } from "../filter/filter-store"
 import { ModuleFrame, useOptionalModuleHead, type ModuleLayout } from "./module-frame"
 
@@ -22,10 +22,21 @@ export interface ModuleSurfaceScopeProps extends Partial<ModuleLayout> {
 const SurfaceItemsContext = createContext<Item[] | null>(null)
 
 /**
+ * The items of this surface, filtered as its head shows.
+ *
  * Die Items dieser Flaeche, gefiltert wie der Kopf es anzeigt. Eine Lens
  * liest sie hier, statt den Filter selbst anzuwenden — dann kann sie ihn
  * nicht vergessen (Anton, 21.09.2026: die freistehende Liste suchte ins
  * Leere, weil nur das Modul darueber filterte).
+ *
+ * Auch ausserhalb des Modul-Hosts (real-life-stack#558): Eine App-eigene
+ * Flaeche setzt `<ModuleSurfaceScope items={…}>` und liest darin diesen Hook.
+ *
+ * @answers `Item[]`
+ * @without throws on render — without `ModuleSurfaceScope`
+ * @group read
+ * @see story rls-foundations-hooks--surfaces
+ * @see spec docs/spec/01-app-composition.md
  */
 export function useSurfaceItems(): Item[] {
   const items = useContext(SurfaceItemsContext)
@@ -34,7 +45,7 @@ export function useSurfaceItems(): Item[] {
 }
 
 function SurfaceItems({ items, children }: { items: readonly Item[]; children: ReactNode }) {
-  const gefiltert = useSurfaceFilteredItems(items)
+  const gefiltert = useModuleFilteredItems(items)
   return <SurfaceItemsContext.Provider value={gefiltert}>{children}</SurfaceItemsContext.Provider>
 }
 

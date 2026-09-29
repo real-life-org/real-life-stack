@@ -19,7 +19,7 @@ import { useResolvedUsers } from "../../hooks/use-resolved-users"
 import { useGroups, useMembers, usePersonalGroupId } from "../../hooks/use-groups"
 import { useItemDetailEdit } from "../../hooks/use-item-detail-edit"
 import { useItemPresentation } from "../../hooks/use-item-presentation"
-import { useSurfaceFilteredItems } from "../../hooks/use-filterable-items"
+import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
 import { useItemsUnionWithDraft } from "../../hooks/use-items"
 import { useGroupVocabulary } from "../../hooks/use-group-vocabulary"
 import type { ModuleEntry } from "../../lib/module-register"
@@ -164,7 +164,7 @@ function LoadedItems({ entry, filters, children }: { entry: ModuleEntry; filters
   const { data: geladen, isLoading } = useItemsUnionWithDraft(filters)
   // Der geteilte Filter (Suche, Tags, Typen) ist HIER angewendet: Ein Modul
   // bekommt genau das, was der Kopf anzeigt, und kann nichts vergessen.
-  const gefiltert = useSurfaceFilteredItems(geladen)
+  const gefiltert = useModuleFilteredItems(geladen)
   // Ein aggregierendes Modul (ohne `presents`: Feed, Liste, Graph) sieht,
   // was als eigene Karte steht — Kommentare, Reaktionen und Relationen
   // werden ueber ihr Item gelesen (Spec 06, Modul-Konsequenzen). Vorher

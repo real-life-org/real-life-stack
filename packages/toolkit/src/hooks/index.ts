@@ -48,6 +48,7 @@ export {
   type ItemEditorPayload,
 } from "./use-item-editor"
 export {
+  useModuleFilteredItems,
   applyFilterBarValue,
   applyItemSearch,
 } from "./use-filterable-items"

@@ -2,7 +2,7 @@
 title: From space to item
 description: The interface as three levels — frame, space, item — and why an event does not belong to the calendar.
 translationOf: docs/handbook/de/handbuch/oberflaeche.mdx
-sourceHash: 92c65faa025e7454ac06f930ba6a73d85927a25457bed240b5233018b89369e0
+sourceHash: c6e52ecfc21aa3081d8c0a4b5d24fb9c6c93b1bf9565d8db3332f23ecee8bd76
 group: verstehen
 sidebar:
   order: 5
@@ -11,6 +11,7 @@ sources:
   - docs/spec/04-items-relations-groups-spaces.md
   - packages/toolkit/src/handbook/garden.tsx
   - packages/toolkit/src/components/frame/app-frame.tsx
+  - packages/toolkit/src/components/layout/module-surface-scope.tsx
 stories:
   - rls-app-00-community-garden--garden
   - rls-app-05-focus-panel-create--panel
@@ -35,6 +36,8 @@ The frame holds the **focus**: which space, which module, which item is open, wh
 A space is the working context: a group (`Group` in the data model) with members, items and the list of its modules in tab order. The space chooses from the register what it shows; it does not extend it (spec 01). A space "Community garden" can carry calendar, map and list, a space "Open workshop" only the list. The personal space is a space like any other, just with one member.
 
 What all modules of a space share belongs to the surface, not to the module: the search, the vocabulary of tags and types, the filter card, the chips. That is why a filter survives switching modules, and why no module offers a selection of its own that another one does not know (spec 01, rule 2a).
+
+A surface that is not a module under the host, such as a board of the app's own, filters the same way without assembling the filter itself: wrapped in `<ModuleSurfaceScope items={…}>` it reads `useSurfaceItems()`; without that wrapper, `useModuleFilteredItems(items)` returns its list filtered by search, tags and types.
 
 ## The item, shown twice
 
