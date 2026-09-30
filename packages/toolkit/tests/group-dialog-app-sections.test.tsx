@@ -279,6 +279,18 @@ describe("GroupDialog: App-Abschnitte", () => {
     expect(document.querySelector("[role=dialog] img")?.getAttribute("src")).toBe("data:image/png;base64,AAAA")
   })
 
+  it("Vertrag Regel 3: ein ungespeicherter Name bleibt nach einem Fehler mit Meldung stehen (kein Rueckfall)", async () => {
+    onUpdateGroup = vi.fn(async (_id: string, u: { name?: string }) => { if (u.name !== undefined) throw new Error("Umbenennen ging schief") })
+    renderDialog()
+    const input = document.querySelector("[role=dialog] input:not([type=file])") as HTMLInputElement
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!
+    act(() => { input.focus(); setter.call(input, "Nicht gespeichert"); input.dispatchEvent(new Event("input", { bubbles: true })) })
+    await act(async () => { input.blur(); await new Promise((r) => setTimeout(r, 0)) })
+    expect(onUpdateGroup).toHaveBeenCalledWith("g1", { name: "Nicht gespeichert" })
+    expect((document.querySelector("[role=dialog] input:not([type=file])") as HTMLInputElement).value).toBe("Nicht gespeichert")
+    expect(document.body.textContent).toContain("Umbenennen ging schief")
+  })
+
   it("ueberschreibt einen Namen nicht, den man gerade tippt", () => {
     renderDialog()
     const input = document.querySelector("[role=dialog] input:not([type=file])") as HTMLInputElement
