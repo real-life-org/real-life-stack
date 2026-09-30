@@ -289,6 +289,14 @@ describe("GroupDialog: App-Abschnitte", () => {
     expect(onUpdateGroup).toHaveBeenCalledWith("g1", { name: "Nicht gespeichert" })
     expect((document.querySelector("[role=dialog] input:not([type=file])") as HTMLInputElement).value).toBe("Nicht gespeichert")
     expect(document.body.textContent).toContain("Umbenennen ging schief")
+    // ... und laesst sich erneut speichern: der naechste Blur schreibt wieder,
+    // die Meldung geht.
+    onUpdateGroup.mockImplementation(async () => {})
+    const again = document.querySelector("[role=dialog] input:not([type=file])") as HTMLInputElement
+    act(() => { again.focus() })
+    await act(async () => { again.blur(); await new Promise((r) => setTimeout(r, 0)) })
+    expect(onUpdateGroup).toHaveBeenLastCalledWith("g1", { name: "Nicht gespeichert" })
+    expect(document.body.textContent).not.toContain("Umbenennen ging schief")
   })
 
   it("ueberschreibt einen Namen nicht, den man gerade tippt", () => {
