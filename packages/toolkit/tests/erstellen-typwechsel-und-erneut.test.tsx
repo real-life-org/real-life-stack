@@ -7,6 +7,7 @@ import { MockConnector } from "@real-life-stack/mock-connector"
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { ItemComposer } from "../src/components/composer/item-composer"
 import { mapComposerSubmission, pickContentTypes } from "../src/components/composer/content-types"
+import { textOhneAvatar } from "./support/text-ohne-avatar"
 
 /**
  * #522: Beim Typwechsel im Erstellen (Beitrag → Event) trägt das Feld „Wer“
@@ -50,7 +51,7 @@ afterEach(async () => {
 })
 
 const settle = async () => { for (let i = 0; i < 6; i++) await act(async () => { await new Promise((r) => setTimeout(r, 10)) }) }
-const button = (text: string) => [...document.body.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === text)
+const button = (text: string) => [...document.body.querySelectorAll<HTMLButtonElement>("button")].find((b) => textOhneAvatar(b) === text)
 const toggle = (name: string) => [...host.querySelectorAll<HTMLButtonElement>("[data-qualifier-toggle]")].find((b) => b.getAttribute("aria-label")?.startsWith(name))
 
 async function renderComposer(initialContentType: string) {

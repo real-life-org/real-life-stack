@@ -13,6 +13,7 @@ import { withCreateGroup, withEditGroup, withGroupOptions, GROUP_FIXED_NO_SCOPE 
 import { itemHasBindings, ITEM_BINDINGS_REASON } from "../src/lib/item-bindings"
 import { ItemDetailView } from "../src/components/detail/item-detail-view"
 import { setTypeManifest } from "../src/components/preview/type-presentation"
+import { textOhneAvatar } from "./support/text-ohne-avatar"
 
 /**
  * S3b PR A: Space des Formulars (shared-components → Space des Formulars,
@@ -351,7 +352,7 @@ describe("Codex R1/2+3: Erneut nach teilweisem Anlegen in einem anderen Space", 
       contentTypes: withGroupOptions(pickContentTypes("event"), [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], "g"),
       initialContentType: "event", mapper: mapComposerSubmission, initialData: { group: "h" }, onDone, onCancel: () => {},
     }))
-    const button = (text: string) => [...document.body.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === text)
+    const button = (text: string) => [...document.body.querySelectorAll<HTMLButtonElement>("button")].find((b) => textOhneAvatar(b) === text)
     const title = host.querySelector<HTMLInputElement>('input[type="text"], input:not([type])')!
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(title, "Hoffest")
