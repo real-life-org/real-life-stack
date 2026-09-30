@@ -420,11 +420,18 @@ const sameList = (a: readonly string[], b: readonly string[]) =>
  * noch dem zuletzt gelieferten entspricht: was man hier gerade selbst
  * geaendert hat, ueberschreibt ein fremder Stand nicht.
  */
-function useFollowLive<T>(live: T, local: T, setLocal: (value: T) => void, equals: (a: T, b: T) => boolean = Object.is) {
+function useFollowLive<T>(
+  live: T,
+  local: T,
+  setLocal: (value: T) => void,
+  equals: (a: T, b: T) => boolean = Object.is,
+  onLiveChange?: () => void,
+) {
   const [synced, setSynced] = useState(live)
   if (!equals(live, synced)) {
     setSynced(live)
     if (equals(local, synced)) setLocal(live)
+    onLiveChange?.()
   }
 }
 
@@ -512,7 +519,22 @@ export function GroupDialog({
   // Connector, z. B. ein anderes Geraet benennt um) — aber nur, solange man
   // sie hier nicht selbst geaendert hat: ein angefangener Name bleibt stehen.
   useFollowLive(isEdit ? mode.group.name : "", name, setName)
-  useFollowLive(isEdit ? (mode.group.data?.image as string | undefined) ?? "" : "", groupImage, setGroupImage)
+  /**
+   * Laufende Nummer der Farbabsicht. Jede bewusste Wahl, jedes Entfernen des
+   * Bildes und jede Bildaenderung von aussen zaehlt hoch; eine Farb-Ermittlung
+   * aus dem Bild, die erst danach fertig wird, erkennt daran, dass sie
+   * ueberholt ist.
+   */
+  const colorRequestRef = useRef(0)
+  useFollowLive(
+    isEdit ? (mode.group.data?.image as string | undefined) ?? "" : "",
+    groupImage,
+    setGroupImage,
+    Object.is,
+    () => { colorRequestRef.current++ },
+  )
+  const groupImageRef = useRef(groupImage)
+  groupImageRef.current = groupImage
 
   // Module state
   const liveModulesOf = (m: GroupDialogMode): string[] =>
@@ -583,8 +605,6 @@ export function GroupDialog({
   modeRef.current = mode
   const onUpdateGroupRef = useRef(onUpdateGroup)
   onUpdateGroupRef.current = onUpdateGroup
-  /** Der gelieferte Modulstand beim letzten bestaetigten Speichern. */
-  const modulesLiveAtSaveRef = useRef<string[]>(liveModulesOf(mode))
   const saveModulesRef = useRef<((modules: string[]) => void) | null>(null)
   if (!saveModulesRef.current) {
     saveModulesRef.current = createLatestWinsSaver<string[]>(
@@ -593,24 +613,18 @@ export function GroupDialog({
         if (current.type !== "edit") return Promise.resolve()
         return onUpdateGroupRef.current(current.group.id, { data: { modules } })
       },
-      (err, _failed, lastSaved) => {
-        // Roll the UI back to the last CONFIRMED order — a silently divergent
-        // list would suggest the reorder stuck when it didn't. The saver's
-        // lastSaved beats the prop: after "A saved, B failed" the group prop
-        // may still show the state before A (store round-trip in flight).
-        // Hat der Aufrufer seit dem letzten bestaetigten Speichern aber einen
-        // NEUEN Stand geliefert (live, rls#551), ist der aktueller als das
-        // eigene lastSaved — sonst loeschte die Ruecknahme ein fremd
-        // ergaenztes Modul.
-        const live = liveModulesOf(modeRef.current)
-        const liveMoved = !sameList(live, modulesLiveAtSaveRef.current)
-        setActiveModules(liveMoved ? live : lastSaved ?? live)
+      (err) => {
+        // Zurueck auf den GELIEFERTEN Stand — eine still abweichende Liste
+        // behauptete eine Sortierung, die nicht gespeichert ist. Nicht auf das
+        // eigene zuletzt Gespeicherte: die gelieferte Group ist massgeblich,
+        // und der Aufrufer liefert nach dem Speichern neu (shared-components,
+        // GroupDialog, Regel 3). Ein eigenes lastSaved gegen einen live
+        // gelieferten Stand abzuwaegen, hat zweimal einen veralteten Stand
+        // hergestellt (Codex-Runden 3 und 4 zu rls#551).
+        setActiveModules(liveModulesOf(modeRef.current))
         setModuleError(err instanceof Error ? err.message : "Module konnten nicht gespeichert werden")
       },
-      () => {
-        modulesLiveAtSaveRef.current = liveModulesOf(modeRef.current)
-        setModuleError(null)
-      },
+      () => setModuleError(null),
     )
   }
 
@@ -624,8 +638,7 @@ export function GroupDialog({
     m.type === "edit" ? ((m.group.data?.primaryColor as string | undefined) ?? null) : null
   const [primaryColorChoice, setPrimaryColorChoice] = useState<string | null>(() => livePrimaryOf(mode))
   useFollowLive(livePrimaryOf(mode), primaryColorChoice, setPrimaryColorChoice)
-  /** Die gelieferte Farbe beim letzten bestaetigten Speichern. */
-  const colorLiveAtSaveRef = useRef<string | null>(livePrimaryOf(mode))
+
   /**
    * Das Ziel haengt am WERT, nicht am Zeitpunkt der Ausfuehrung. Der Saver
    * lebt so lange wie der Dialog; ein eingereihter Vorgang laeuft erst, wenn
@@ -633,12 +646,6 @@ export function GroupDialog({
    * in den Space, der inzwischen offen ist — ein fremder Space bekaeme still
    * die Farbe, die man dem vorigen zugedacht hatte.
    */
-  /**
-   * Laufende Nummer der Farbabsicht. Jede bewusste Wahl und jedes Entfernen
-   * des Bildes zaehlt hoch; ein Zuruecksetzen, dessen Bildfarbe erst danach
-   * eintrifft, erkennt daran, dass es ueberholt ist.
-   */
-  const colorRequestRef = useRef(0)
 
   /**
    * Die EINE Stelle, an der die angezeigte Farbe umgesetzt wird.
@@ -662,26 +669,19 @@ export function GroupDialog({
         // Minimaler PATCH: `null` loescht den Schluessel und stellt damit den
         // Rueckfall her (Spec 04 Regel 3), ohne image/modules zu beruehren.
         onUpdateGroupRef.current(target, { data: { primaryColor: hex } }),
-      (err, failed, lastSaved) => {
+      (err, failed) => {
         const current = modeRef.current
         // Ein Fehlschlag fuer einen anderen Space darf die Anzeige des
         // gerade offenen nicht anfassen — gemeldet wird er trotzdem.
         if (current.type === "edit" && failed.groupId === current.group.id) {
-          // Zurueck auf den zuletzt BESTAETIGTEN Wert — ein Haken auf einer
-          // Farbe, die nie ankam, behauptet eine Aenderung, die es nicht gibt.
-          // Ein seither gelieferter Stand (live) ist aktueller als lastSaved.
-          const live = livePrimaryOf(current)
-          const liveMoved = live !== colorLiveAtSaveRef.current
-          setPrimaryColorChoice(
-            !liveMoved && lastSaved?.groupId === current.group.id ? lastSaved.hex : live,
-          )
+          // Zurueck auf den GELIEFERTEN Wert — ein Haken auf einer Farbe, die
+          // nie ankam, behauptet eine Aenderung, die es nicht gibt. Wie bei
+          // den Modulen: die gelieferte Group ist massgeblich (Regel 3).
+          setPrimaryColorChoice(livePrimaryOf(current))
         }
         setColorError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden")
       },
-      () => {
-        colorLiveAtSaveRef.current = livePrimaryOf(modeRef.current)
-        setColorError(null)
-      },
+      () => setColorError(null),
     )
   }
   /**
@@ -1045,12 +1045,18 @@ export function GroupDialog({
     // ist das Ergebnis ueberholt und DARF sie nicht ueberschreiben — sonst
     // sprang die Farbe Augenblicke nach dem Klick von selbst zurueck.
     const ticket = ++colorRequestRef.current
+    const source = groupImage
+    const target = mode.group.id
     const { dominantColor } = await import("../../lib/image-utils")
     // Liefert ein graustufiges Bild keine Farbe, bleibt der Id-Rueckfall.
     // Auch hier der aufgeloeste Pfad: sonst laedt die Farbextraktion unter
     // einem Unterpfad nichts und faellt still auf die Id-Farbe zurueck.
-    const derived = await dominantColor(resolveAssetUrl(groupImage) ?? groupImage).catch(() => null)
+    const derived = await dominantColor(resolveAssetUrl(source) ?? source).catch(() => null)
     if (ticket !== colorRequestRef.current) return
+    // Nur schreiben, wenn Bild und Space noch dieselben sind — sonst gehoerte
+    // die Farbe zu einem Bild, das es hier nicht mehr gibt.
+    const now = modeRef.current
+    if (now.type !== "edit" || now.group.id !== target || groupImageRef.current !== source) return
     applyPrimaryColor(derived)
   }
 

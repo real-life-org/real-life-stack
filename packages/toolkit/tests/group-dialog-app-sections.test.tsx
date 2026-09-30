@@ -15,6 +15,13 @@ vi.mock("../src/hooks/use-groups", () => ({
   useMembers: () => ({ data: currentMembers, isLoading: false }),
 }))
 
+/** Farb-Ermittlung aus dem Bild, von Hand aufgeloest. */
+const extractions: { src: string; resolve: (hex: string | null) => void }[] = []
+vi.mock("../src/lib/image-utils", () => ({
+  dominantColor: (src: string) => new Promise<string | null>((resolve) => { extractions.push({ src, resolve }) }),
+  resizeImage: async () => "data:image/png;base64,AAAA",
+}))
+
 const { GroupDialog } = await import("../src/components/layout/group-dialog")
 import type { AppSpaceSection, AppSpaceSectionContext } from "../src/components/layout/group-dialog"
 
@@ -197,6 +204,59 @@ describe("GroupDialog: App-Abschnitte", () => {
     await act(async () => { (document.querySelector("[aria-label='Karte nach unten']") as HTMLButtonElement).click(); await new Promise((r) => setTimeout(r, 0)) })
     const order = [...document.querySelectorAll("[aria-label$=' nach oben']")].map((b) => b.getAttribute("aria-label")!.replace(" nach oben", ""))
     expect(order, "zurueck auf den gelieferten Stand mit Kanban").toEqual(["Karte", "Feed", "Kanban"])
+  })
+
+  it("nimmt eine gescheiterte Sortierung auf den gelieferten Stand zurueck, auch wenn der wieder dem Ausgang gleicht", async () => {
+    let fail = false
+    onUpdateGroup = vi.fn(async () => { if (fail) throw new Error("weg") })
+    const at = (modules: string[]) => ({ initialSection: "modules", mode: { type: "edit", group: { ...GROUP, data: { modules } } } })
+    renderDialog(at(["feed", "map"]))
+    await act(async () => { (document.querySelector("[aria-label='Feed nach unten']") as HTMLButtonElement).click(); await new Promise((r) => setTimeout(r, 0)) })
+    renderDialog(at(["map", "feed"]))
+    renderDialog(at(["feed", "map"])) // ein anderes Geraet stellt zurueck
+    fail = true
+    await act(async () => { (document.querySelector("[aria-label='Feed nach unten']") as HTMLButtonElement).click(); await new Promise((r) => setTimeout(r, 0)) })
+    const order = [...document.querySelectorAll("[aria-label$=' nach oben']")].map((b) => b.getAttribute("aria-label")!.replace(" nach oben", ""))
+    expect(order).toEqual(["Feed", "Karte"])
+  })
+
+  it("faellt bei eingefrorener Group nach einem Fehler auf den gelieferten Stand zurueck, nicht auf das zuletzt Gespeicherte", async () => {
+    let fail = false
+    onUpdateGroup = vi.fn(async () => { if (fail) throw new Error("weg") })
+    renderDialog({ initialSection: "modules", mode: { type: "edit", group: { ...GROUP, data: { modules: ["feed", "map"] } } } })
+    await act(async () => { (document.querySelector("[aria-label='Feed nach unten']") as HTMLButtonElement).click(); await new Promise((r) => setTimeout(r, 0)) })
+    fail = true
+    await act(async () => { (document.querySelector("[aria-label='Feed nach oben']") as HTMLButtonElement).click(); await new Promise((r) => setTimeout(r, 0)) })
+    const order = [...document.querySelectorAll("[aria-label$=' nach oben']")].map((b) => b.getAttribute("aria-label")!.replace(" nach oben", ""))
+    expect(order, "Regel 3: der Aufrufer liefert neu, bis dahin gilt sein Stand").toEqual(["Feed", "Karte"])
+  })
+
+  it("nimmt eine gescheiterte Farbe auf den gelieferten Stand zurueck, nicht auf die zuletzt gespeicherte", async () => {
+    let fail = false
+    onUpdateGroup = vi.fn(async () => { if (fail) throw new Error("weg") })
+    renderDialog({ initialSection: "theme", mode: { type: "edit", group: { ...GROUP, data: { primaryColor: "#2563eb" } } } })
+    const swatches = [...document.querySelectorAll<HTMLButtonElement>('button[aria-label^="Primärfarbe #"]')]
+    const [a, b] = swatches.filter((el) => el.getAttribute("aria-label") !== "Primärfarbe #2563eb")
+    await act(async () => { a.click(); await new Promise((r) => setTimeout(r, 0)) })
+    fail = true
+    await act(async () => { b.click(); await new Promise((r) => setTimeout(r, 0)) })
+    expect((document.querySelector("[role=dialog]") as HTMLElement).style.getPropertyValue("--primary")).toBe("#2563eb")
+  })
+
+  it("schreibt keine Bildfarbe mehr, wenn das Bild inzwischen von aussen geaendert wurde", async () => {
+    extractions.length = 0
+    const withImage = { ...GROUP, data: { image: "data:image/png;base64,ALT", primaryColor: "#111111" } }
+    renderDialog({ initialSection: "theme", mode: { type: "edit", group: withImage } })
+    const reset = [...document.querySelectorAll("button")].find((el) => el.textContent?.includes("Zurücksetzen")) as HTMLButtonElement
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
+    const before = extractions.length
+    await act(async () => { reset.click(); await new Promise((r) => setTimeout(r, 20)) })
+    const pending = extractions.slice(before).filter((e) => e.src.includes("ALT"))
+    expect(pending.length, "Zuruecksetzen ermittelt die Farbe aus dem Bild").toBeGreaterThan(0)
+    renderDialog({ initialSection: "theme", mode: { type: "edit", group: { ...GROUP, data: { image: "", primaryColor: "#222222" } } } })
+    await act(async () => { for (const e of pending) e.resolve("#aaaaaa"); await new Promise((r) => setTimeout(r, 0)) })
+    const colorWrites = onUpdateGroup.mock.calls.map((c) => (c[1] as { data?: Record<string, unknown> }).data?.primaryColor).filter((v) => v !== undefined)
+    expect(colorWrites).not.toContain("#aaaaaa")
   })
 
   it("verliert bei einer neuen Objektreferenz desselben Space nichts", () => {
