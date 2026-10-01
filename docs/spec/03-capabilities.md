@@ -27,7 +27,7 @@ if (isWritable(connector)) {
 | Capability | Type Guard | Verantwortung |
 |---|---|---|
 | `ItemWriter` | `isWritable()` | Items erstellen, aktualisieren und löschen |
-| `ConditionalWriteCapable` | `hasConditionalWrite()` | ein Ändern ablehnen, wenn ein erwartetes Feld sich seit dem Lesen geändert hat ([02 → Ändern eines Items](02-data-interface.md#stufe-2-konflikte-erkennen)) |
+| `ConditionalWriteCapable` | `hasConditionalWrite()` | optional: ein `patchItem` ablehnen, wenn ein erwartetes Feld sich seit dem Lesen geändert hat; WoT/Yjs meldet es nicht ([02 → Ändern eines Items](02-data-interface.md#stufe-2-konflikte-erkennen)) |
 | `RelationCapable` | `hasRelations()` | Related Items lesen und beobachten |
 | `GroupManager` | `hasGroups()` | Groups/Spaces, Current Group, Mitglieder und Einladungen verwalten |
 | `Authenticatable` | `isAuthenticatable()` | Current User, Auth State, Auth Methods und Login/Logout |
