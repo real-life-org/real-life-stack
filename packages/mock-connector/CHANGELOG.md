@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.2.2...mock-connector-v0.2.3) (2026-10-01)
+
+
+### Bug Fixes
+
+* **local-connector:** Group-Id per randomUUID, Space-Liste nur atomar im Store ([#575](https://github.com/real-life-org/real-life-stack/issues/575)) ([#577](https://github.com/real-life-org/real-life-stack/issues/577)) ([0a24b0c](https://github.com/real-life-org/real-life-stack/commit/0a24b0c34cbad9ac999c43e5874ddc7bd161a79b))
+* Stack-Fixes Paket A aus dem Karabirrdt-Umzug ([#569](https://github.com/real-life-org/real-life-stack/issues/569)) ([196e9f2](https://github.com/real-life-org/real-life-stack/commit/196e9f239154cf73610bf810424f2d3b858550d4))
+
 ## [0.2.2](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.2.1...mock-connector-v0.2.2) (2026-09-28)
 
 

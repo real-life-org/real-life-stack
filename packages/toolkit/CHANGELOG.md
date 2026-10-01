@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.4.0](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.3.0...toolkit-v0.4.0) (2026-10-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* **toolkit:** `ModuleControls` / `ModuleControlsProps` entfallen aus dem oeffentlichen Export; `useOptionalModuleHead()` liefert kein `controlsElement` mehr. Knoepfe stattdessen als `trailingActions`.
+
+### Features
+
+* **toolkit:** ColorSchemeToggle als Baustein ([#568](https://github.com/real-life-org/real-life-stack/issues/568)) ([#573](https://github.com/real-life-org/real-life-stack/issues/573)) ([bb8487b](https://github.com/real-life-org/real-life-stack/commit/bb8487b15d764396f3d46ace4f8aa58347817224))
+* **toolkit:** GroupDialog nimmt App-Abschnitte auf ([#551](https://github.com/real-life-org/real-life-stack/issues/551)) ([#579](https://github.com/real-life-org/real-life-stack/issues/579)) ([87ea640](https://github.com/real-life-org/real-life-stack/commit/87ea6408e02c2d2666fb6a8974edf8e17ee58200))
+* **toolkit:** Standardwert eines Qualifiers aus der Schicht, Zusatz und Gruppen in Rückwärts-Listen ([#556](https://github.com/real-life-org/real-life-stack/issues/556), [#557](https://github.com/real-life-org/real-life-stack/issues/557)) ([#580](https://github.com/real-life-org/real-life-stack/issues/580)) ([ab98304](https://github.com/real-life-org/real-life-stack/commit/ab98304c96155e32acf5d3182f19c51ac45b17aa))
+
+
+### Bug Fixes
+
+* Stack-Fixes Paket A aus dem Karabirrdt-Umzug ([#569](https://github.com/real-life-org/real-life-stack/issues/569)) ([196e9f2](https://github.com/real-life-org/real-life-stack/commit/196e9f239154cf73610bf810424f2d3b858550d4))
+* **toolkit:** Container-Module polstern unten mit --module-controls-block ([#585](https://github.com/real-life-org/real-life-stack/issues/585)) ([4a408be](https://github.com/real-life-org/real-life-stack/commit/4a408be4f7d569b790f68347e5d30b80ae2ca44d))
+* **toolkit:** Ecke unten links gehört Pille und Erstellen, Frame meldet ihre Höhe ([#567](https://github.com/real-life-org/real-life-stack/issues/567)) ([#581](https://github.com/real-life-org/real-life-stack/issues/581)) ([3009374](https://github.com/real-life-org/real-life-stack/commit/300937451998ad127f1dbd9c04e3cfb6ebf1db84))
+* **toolkit:** ModuleFrame zeichnet Modul-Aktionen auch ohne Filter-Besitzer ([#570](https://github.com/real-life-org/real-life-stack/issues/570)) ([#578](https://github.com/real-life-org/real-life-stack/issues/578)) ([57b9e30](https://github.com/real-life-org/real-life-stack/commit/57b9e3086b85fe66ea71031c8bf775332304c012))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @real-life-stack/mock-connector bumped to 0.2.3
+
 ## [0.3.0](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.2.1...toolkit-v0.3.0) (2026-09-28)
 
 

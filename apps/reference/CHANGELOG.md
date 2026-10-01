@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.5.1](https://github.com/real-life-org/real-life-stack/compare/app-v0.5.0...app-v0.5.1) (2026-10-01)
+
+
+### Features
+
+* **toolkit:** ColorSchemeToggle als Baustein ([#568](https://github.com/real-life-org/real-life-stack/issues/568)) ([#573](https://github.com/real-life-org/real-life-stack/issues/573)) ([bb8487b](https://github.com/real-life-org/real-life-stack/commit/bb8487b15d764396f3d46ace4f8aa58347817224))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life-stack/local-connector bumped to 0.3.1
+    * @real-life-stack/mock-connector bumped to 0.2.3
+    * @real-life-stack/toolkit bumped to 0.4.0
+    * @real-life-stack/wot-connector bumped to 0.2.3
+
 ## [0.5.0](https://github.com/real-life-org/real-life-stack/compare/app-v0.4.1...app-v0.5.0) (2026-09-28)
 
 

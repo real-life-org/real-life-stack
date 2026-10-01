@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/real-life-org/real-life-stack/compare/local-connector-v0.3.0...local-connector-v0.3.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* **local-connector:** Group-Id per randomUUID, Space-Liste nur atomar im Store ([#575](https://github.com/real-life-org/real-life-stack/issues/575)) ([#577](https://github.com/real-life-org/real-life-stack/issues/577)) ([0a24b0c](https://github.com/real-life-org/real-life-stack/commit/0a24b0c34cbad9ac999c43e5874ddc7bd161a79b))
+
 ## [0.3.0](https://github.com/real-life-org/real-life-stack/compare/local-connector-v0.2.1...local-connector-v0.3.0) (2026-09-28)
 
 
