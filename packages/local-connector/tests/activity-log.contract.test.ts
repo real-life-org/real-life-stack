@@ -91,7 +91,10 @@ describe("LocalConnector activity-log contract", () => {
     expect(foreign.current).toBeNull()
   })
 
-  it("2. retains 500 deterministic entries locally and pruning writes no extra log entry", async () => {
+  // Workload test (501 persisted writes): ~0.8 s alone, the 5 s default timed
+  // out under the parallel turbo run. The workload is the contract — same
+  // explicit budget as test 14.
+  it("2. retains 500 deterministic entries locally and pruning writes no extra log entry", { timeout: 60_000 }, async () => {
     const connector = await ready()
     const ids = Array.from({ length: 501 }, (_, i) => `entry-${String(i).padStart(3, "0")}`)
     const uuid = vi.spyOn(crypto, "randomUUID").mockImplementation(() => ids.shift()!)
