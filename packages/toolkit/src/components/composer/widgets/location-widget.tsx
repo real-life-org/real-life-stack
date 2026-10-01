@@ -9,11 +9,19 @@ import { cn } from "@/lib/utils"
 import type { Geocoder, GeocodeResult } from "@/lib/geocode"
 import { ItemRefChip, MissingRefText } from "../../preview/item-ref-chip"
 import { itemTitle } from "../item-relations"
-import { useEpochBusy, useFieldEpoch } from "../../../lib/form-epoch"
+import type { FieldAccess } from "../../../lib/form-state"
+import { pointFromLatLng } from "../../../lib/geo"
+import type { LocationValue } from "../form-fields"
+import { FieldNotice } from "./field-notice"
 
-interface LocationData {
-  address?: string
-  position?: { lat: number; lng: number }
+/**
+ * Der Prüfstand des Ort-Felds beim Eintreffen eines Karten-Picks
+ * (Formularzustand, Regel 3): Ist ein Marker ein Ort-Item, und darf das
+ * Feld es JETZT nehmen?
+ */
+export interface LocationChecks {
+  isPlace: (item: Item) => boolean
+  accepts: (item: Item) => boolean
 }
 
 /**
@@ -33,8 +41,11 @@ export interface LocationPlaces {
 }
 
 interface LocationWidgetProps {
-  value: LocationData
-  onChange: (value: LocationData) => void
+  /**
+   * Der Feldzugang des Ort-Felds (Formularzustand): Wert, Schreibweg für
+   * Eingaben und die Arbeit „Adresssuche" (Hintergrund).
+   */
+  field: FieldAccess<LocationValue, LocationChecks | undefined>
   label: string
   /**
    * Optional address geocoder. When provided, typing an address shows
@@ -44,8 +55,8 @@ interface LocationWidgetProps {
   geocode?: Geocoder
   /**
    * When provided, shows a compact "pick on map" button next to the address
-   * input. The app-level picker writes the chosen position back through the
-   * parent (the composer's `updateMany`); this widget only triggers it.
+   * input. The pick itself is a work of the field (LocationField); this
+   * widget only triggers it.
    */
   onPickOnMap?: () => void
   /**
@@ -71,13 +82,13 @@ function matchingPlaces(candidates: readonly Item[], query: string): Item[] {
 }
 
 export function LocationWidget({
-  value,
-  onChange,
+  field,
   label,
   geocode,
   onPickOnMap,
   places,
 }: LocationWidgetProps) {
+  const value = field.value
   const address = value.address ?? ""
 
   // Geocoding is driven by what the user actually *types*, not by every
@@ -90,10 +101,10 @@ export function LocationWidget({
   const [activeIndex, setActiveIndex] = React.useState(-1)
   const [failed, setFailed] = React.useState(false)
   const blurTimer = React.useRef<number | null>(null)
-  // Die Epoche des Felds (shared-components → Formular-Epoche): Nur die
-  // letzte Suche für den aktuellen Stand setzt Treffer und Spinner.
-  const epoch = useFieldEpoch()
-  const loading = useEpochBusy(epoch, "geocode")
+  // Die Adresssuche ist Hintergrundarbeit des Felds (Formularzustand,
+  // Regel 10): Nur die letzte Suche für den aktuellen Stand setzt Treffer;
+  // den Spinner liest das Widget aus dem Warte-Zustand des Formulars.
+  const loading = field.busy("geocode")
   const listId = React.useId()
   // Fokus über den Wechsel Eingabe ↔ Chip hinweg (Codex R3/2): Nach der Wahl
   // eines Ort-Items steht der Fokus auf dessen ✕, nach dem Entfernen wieder in
@@ -110,14 +121,14 @@ export function LocationWidget({
       setFailed(false)
       return
     }
-    // Der Wächter entsteht beim Einplanen: Ein Wechsel von Space oder Typ
-    // während der Wartezeit macht schon den Start ungültig.
-    const planned = epoch.begin("geocode-plan")
+    // Die Arbeit beginnt beim Einplanen: Ein Wechsel von Space oder Typ
+    // während der Wartezeit verwirft schon den Start.
+    const planned = field.begin("geocode-plan", "background", "Adresssuche")
     const timer = window.setTimeout(() => {
       if (!planned.valid()) return
       planned.finish()
-      // Die Suche selbst: ihren Warte-Zustand (Spinner) führt der Baustein.
-      const search = epoch.begin("geocode")
+      // Die Suche selbst: ihren Warte-Zustand (Spinner) führt der Formularzustand.
+      const search = field.begin("geocode", "background", "Adresssuche")
       geocode(q, { signal: search.signal })
         .then((hits) => {
           search.apply(() => {
@@ -137,10 +148,13 @@ export function LocationWidget({
     return () => {
       window.clearTimeout(timer)
       // Eine überholte Suche gilt nicht mehr; ihr Warte-Zustand endet mit ihr.
-      epoch.invalidate("geocode-plan")
-      epoch.invalidate("geocode")
+      field.cancel("geocode-plan")
+      field.cancel("geocode")
     }
-  }, [userQuery, geocode, epoch])
+    // Der Feldzugang ist je Render neu; Start und Verwerfen gehören dem
+    // Formularzustand und sind nicht an einen Render gebunden.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userQuery, geocode])
 
   // Clear a pending blur-close timer on unmount.
   React.useEffect(
@@ -179,7 +193,9 @@ export function LocationWidget({
       places?.onSelect(option.item)
     } else {
       const r = option.result
-      onChange({ ...value, address: r.label, position: { lat: r.lat, lng: r.lng } })
+      // Eine gewählte Adresse ersetzt ein Ort-Item und eine laufende Rückwärtssuche.
+      field.cancel("reverse")
+      field.set({ ...value, address: r.label, position: pointFromLatLng(r.lat, r.lng), place: [] })
     }
     reset()
   }
@@ -256,7 +272,7 @@ export function LocationWidget({
               <Input
                 value={address}
                 onChange={(e) => {
-                  onChange({ ...value, address: e.target.value })
+                  field.set({ ...value, address: e.target.value })
                   setUserQuery(e.target.value)
                   setListOpen(true)
                   setActiveIndex(-1)
@@ -353,6 +369,7 @@ export function LocationWidget({
           {places.unavailable}
         </p>
       )}
+      {field.notice && <FieldNotice text={field.notice} onDismiss={field.dismissNotice} />}
       {failed && !loading && !selected && (
         <p className="px-1 text-[11px] text-muted-foreground">
           Adresssuche gerade nicht verfügbar.

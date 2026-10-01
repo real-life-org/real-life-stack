@@ -31,7 +31,9 @@ import {
   toDateInputValue,
 } from "./date-widget-state"
 import { LocationField } from "./widgets/location-field"
-import { FormEpochProvider } from "@/lib/form-epoch"
+import { useFormState, type FieldAccess } from "@/lib/form-state"
+import { asString, asStrings, incomingField, itemRefField, locationField, peopleField, scalarField } from "./form-fields"
+import { FieldNotice } from "./widgets/field-notice"
 import { AvatarField } from "./widgets/avatar-widget"
 import type { Geocoder, ReverseGeocoder } from "@/lib/geocode"
 import { MediaWidget } from "./widgets/media-widget"
@@ -886,7 +888,22 @@ export function ContentComposer({
   const resolvedInitialType =
     mode || initialContentType || contentTypes[0]?.id || ""
 
-  const [selectedType, setSelectedType] = React.useState(resolvedInitialType)
+  // Der Formularzustand (shared-components → Formularzustand): der einzige
+  // Besitzer der Werte, des Typs, der Epoche, der Warte-Zustände und der
+  // Hinweise. Widgets erhalten daraus je einen Feldzugang, nie einen Setter.
+  const contentTypesRef = React.useRef(contentTypes)
+  contentTypesRef.current = contentTypes
+  const refKeysRef = React.useRef(refKeysOf(contentTypes))
+  const form = useFormState<WidgetData>(() => ({
+    data: { ...DEFAULT_DATA, ...initialData },
+    type: resolvedInitialType,
+    spaceOf: (d) => (typeof d.group === "string" && d.group !== "" ? d.group : undefined),
+    // Ein Space-Wechsel nimmt im selben Zustand die space-lokalen Ziele heraus.
+    normalize: (d, patch) => withSpaceChange(d, patch as Partial<WidgetData>, refKeysRef.current),
+    typeLabel: (type) => contentTypesRef.current.find((t) => t.id === type)?.label ?? type,
+  }))
+  const selectedType = form.getType()
+  const setSelectedType = (type: string) => form.setType(type)
 
   // Current content type config (Achtung: nur eine Ableitung, kein Hook — der
   // Abbruch bei fehlendem Typ steht weiter unten, nach allen Hooks).
@@ -904,10 +921,7 @@ export function ContentComposer({
     ...(currentConfig?.valueFields ?? []).filter((v) => v.widget !== "status").map((v) => v.key),
   ]
 
-  const [data, setData] = React.useState<WidgetData>(() => ({
-    ...DEFAULT_DATA,
-    ...initialData,
-  }))
+  const data = form.getData()
   // Start with the widgets the item already has a value for, so editing reveals
   // its set fields (a task's date/place) instead of hiding them behind toggles.
   const [manualWidgets, setManualWidgets] = React.useState<Set<string>>(
@@ -921,7 +935,6 @@ export function ContentComposer({
   // already-entered content intact.
   const peopleKeysRef = React.useRef(peopleKeys)
   const relationKeysRef = React.useRef(relationKeys)
-  const refKeysRef = React.useRef(refKeysOf(contentTypes))
   React.useEffect(() => {
     peopleKeysRef.current = peopleKeys
     relationKeysRef.current = relationKeys
@@ -931,7 +944,7 @@ export function ContentComposer({
     if (!apiRef) return
     apiRef.current = {
       patchData: (patch) => {
-        setData((d) => withSpaceChange(d, patch, refKeysRef.current))
+        form.patch(patch)
         // Reveal any widget the patch gives a value to, so a field prefilled
         // after mount (e.g. a position handed back from the map picker) isn't
         // stuck hidden behind a "+" toggle. manualWidgets is seeded only from
@@ -955,7 +968,7 @@ export function ContentComposer({
   // Bearbeiten gibt allein der Space des Items vor, sonst verschöbe Speichern.
   const onlySpace = !isEditMode && currentConfig?.groupOptions?.length === 1 ? currentConfig.groupOptions[0]!.id : undefined
   React.useEffect(() => {
-    if (onlySpace && !data.group) setData((d) => (d.group ? d : { ...d, group: onlySpace }))
+    if (onlySpace && !data.group) form.update((d) => (d.group ? d : { ...d, group: onlySpace }))
   }, [onlySpace, data.group])
   // Der Formular-Space (shared-components → Space des Formulars): EINE
   // Quelle, `data.group`. Suche, Vorschläge, Prüfung und Speichern lesen ihn
@@ -1015,17 +1028,17 @@ export function ContentComposer({
       prevTypeRef.current = selectedType
       // Apply default status/group when switching type
       if (currentConfig.defaultStatus && !data.status) {
-        setData((d) => ({ ...d, status: currentConfig.defaultStatus }))
+        form.update((d) => ({ ...d, status: currentConfig.defaultStatus }))
       }
       if (currentConfig.defaultGroup && !data.group) {
-        setData((d) => ({ ...d, group: currentConfig.defaultGroup }))
+        form.update((d) => ({ ...d, group: currentConfig.defaultGroup }))
       }
     }
   }, [selectedType, currentConfig, data.status, data.group])
 
   // Set defaults on mount
   React.useEffect(() => {
-    setData((d) => {
+    form.update((d) => {
       const newStatus = d.status || currentConfig.defaultStatus || ""
       const newGroup = d.group || currentConfig.defaultGroup || ""
       if (newStatus === d.status && newGroup === d.group) return d
@@ -1107,6 +1120,9 @@ export function ContentComposer({
     activeWidgets.add("group")
   }
 
+  // Die Kante, die das Ort-Feld schreibt (B4), wenn der Typ eine führt.
+  const placeField = currentConfig.itemRelations?.find((f) => f.location)
+
   // Render order: the type's widgets in its own order, the rest at their
   // place in the form. The space is rendered in the form head, not here.
   const renderOrder = widgetRenderOrder(currentConfig.defaultWidgets).filter((w) => w !== "group")
@@ -1135,17 +1151,10 @@ export function ContentComposer({
     )
   }
 
-  // Update a specific data field
-  const updateData = <K extends keyof WidgetData>(
-    key: K,
-    value: WidgetData[K],
-  ) => {
-    setData((d) => withSpaceChange(d, { [key]: value } as Partial<WidgetData>, refKeysOf(contentTypes)))
-  }
-
-  // Multi-field patch (used by widgets that map to several spec fields)
-  const updateMany = (patch: Partial<WidgetData>) => {
-    setData((d) => withSpaceChange(d, patch, refKeysOf(contentTypes)))
+  // Schreiben des Composers selbst (Kopf, @-Erwähnung, #Tag) — nie an Widgets
+  // gegeben; Widgets schreiben nur über ihren Feldzugang.
+  const updateData = <K extends keyof WidgetData>(key: K, value: WidgetData[K]) => {
+    form.patch({ [key]: value })
   }
 
   // Toggle a manual widget
@@ -1251,9 +1260,6 @@ export function ContentComposer({
   // ── Render ──
 
   return (
-    // Formular-Epoche (shared-components): Wechsel von Space oder Typ macht
-    // laufende asynchrone Arbeit aller Felder ungültig.
-    <FormEpochProvider scope={[formSpace ?? null, selectedType]}>
     <div className={cn("flex flex-col gap-4", className)}>
       {/* Kopf des Formulars: Typ und Space, kompakt als Auswahlfelder
           (shared-components, Edit-Regeln 2). Der Space steht oben, weil er
@@ -1277,6 +1283,10 @@ export function ContentComposer({
       />
 
       {submitError && <SaveErrorBanner reason={submitError.reason} onRetry={() => void handleSubmit()} busy={submitting} />}
+      {/* Nicht übernommene Ergebnisse von Feldern, die es im aktuellen Typ nicht gibt (Formularzustand, Regel 10). */}
+      {form.formNotices().map((notice) => (
+        <FieldNotice key={notice.id} text={notice.text} onDismiss={notice.dismiss} />
+      ))}
       {/* Ohne Space wird nichts angelegt — auch nicht per liveUpdate (#538). Sichtbar, sobald es etwas zu speichern gäbe. */}
       {spaceMissing && hasContent && (
         <p data-space-required role="status" className="text-xs text-destructive">
@@ -1284,7 +1294,9 @@ export function ContentComposer({
         </p>
       )}
 
-      {/* Preview or Edit mode */}
+      {/* Preview or Edit mode. Die Vorschau baut keine Felder ab: Laufende
+          Arbeit bleibt (Formularzustand, Regel 8). */}
+      {isPreviewing && form.keepFields()}
       {isPreviewing ? (
         <div
           className="min-h-[200px] rounded-md border p-4"
@@ -1301,17 +1313,21 @@ export function ContentComposer({
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          {/* Render widgets in the type's order (register), then the rest */}
+          {/* Render widgets in the type's order (register), then the rest.
+              Nur aktive Felder bekommen einen Feldzugang: Ein Feld, das nicht
+              dasteht, gibt es für den Formularzustand nicht (Regeln 8, 10). */}
           {renderOrder.map((widgetId) => {
             const isActive = activeWidgets.has(widgetId)
+            if (!isActive) return null
             const isDefault = defaultWidgets.has(widgetId)
             const widgetLabel = getWidgetLabel(widgetId)
+            const text = (key: string, label: string, locked?: boolean) => form.field<string>(key, scalarField(key, label, asString, { locked }))
 
             return (
-              <WidgetWrapper key={widgetId} visible={isActive}>
+              <WidgetWrapper key={widgetId} visible>
                 <div className="relative">
                   {/* Remove button for non-default widgets */}
-                  {!isDefault && isActive && (
+                  {!isDefault && (
                     <button
                       type="button"
                       onClick={() => toggleWidget(widgetId)}
@@ -1323,25 +1339,16 @@ export function ContentComposer({
                   )}
                   {/* Widget content. Der Space (`group`) steht im Kopf. */}
                   {widgetId === "title" && (
-                    <TitleWidget
-                      value={data.title || ""}
-                      onChange={(v) => updateData("title", v)}
-                      label={widgetLabel}
-                      autoFocus={!data.title && !imDrawer}
-                    />
+                    <SyncField field={text("title", widgetLabel)}>
+                      {(f) => <TitleWidget value={f.value} onChange={f.set} label={widgetLabel} autoFocus={!data.title && !imDrawer} />}
+                    </SyncField>
                   )}
                   {widgetId === "avatar" && (
                     <div className="flex flex-col gap-4">
                       {(currentConfig.valueFields ?? [])
                         .filter((field) => field.widget === "avatar")
                         .map((field) => (
-                          <AvatarField
-                            key={field.key}
-                            label={field.label}
-                            value={typeof data[field.key] === "string" ? (data[field.key] as string) : ""}
-                            onChange={(v) => updateData(field.key, v)}
-                            disabled={field.fixed}
-                          />
+                          <AvatarField key={field.key} label={field.label} field={text(field.key, field.label, field.fixed)} />
                         ))}
                     </div>
                   )}
@@ -1354,48 +1361,60 @@ export function ContentComposer({
                     />
                   )}
                   {widgetId === "text" && !textCollapsed && (
-                    <TextWidget
-                      value={data.text || ""}
-                      onChange={(v) => updateData("text", v)}
-                      label={widgetLabel}
-                      availableWidgets={toggleableWidgets}
-                      onToggleWidget={toggleWidget}
-                      onMention={handleMention}
-                      onHashtag={handleHashtag}
-                      autoFocus={!activeWidgets.has("title") && !imDrawer}
-                    />
+                    <SyncField field={text("text", widgetLabel)}>
+                      {(f) => (
+                        <TextWidget
+                          value={f.value}
+                          onChange={f.set}
+                          label={widgetLabel}
+                          availableWidgets={toggleableWidgets}
+                          onToggleWidget={toggleWidget}
+                          onMention={handleMention}
+                          onHashtag={handleHashtag}
+                          autoFocus={!activeWidgets.has("title") && !imDrawer}
+                        />
+                      )}
+                    </SyncField>
                   )}
                   {widgetId === "media" && (
-                    <MediaWidget
-                      value={data.media || []}
-                      onChange={(v) => updateData("media", v)}
-                      label={widgetLabel}
-                    />
+                    <SyncField field={form.field<MediaFile[]>("media", scalarField("media", widgetLabel, (raw) => (Array.isArray(raw) ? (raw as MediaFile[]) : [])))}>
+                      {(f) => <MediaWidget value={f.value} onChange={f.set} label={widgetLabel} />}
+                    </SyncField>
                   )}
                   {widgetId === "date" && (
-                    <DateWidget
-                      value={dateWidgetValue(data, dateToggles)}
-                      onChange={(v) => {
-                        // Remember which sub-fields are open *before* writing the
-                        // data: opening "Enddatum" produces no value yet, and a
-                        // purely data-derived toggle would close it again.
-                        setDateToggles(dateWidgetToggles(v))
-                        updateMany(dateWidgetPatch(v))
-                      }}
-                      label={widgetLabel}
-                    />
+                    <SyncField
+                      field={form.field<DateRange>("date", {
+                        label: widgetLabel,
+                        keys: ["start", "end", "rrule"],
+                        read: (d) => dateWidgetValue(d as WidgetData, dateToggles),
+                        write: (v) => dateWidgetPatch(v),
+                      })}
+                    >
+                      {(f) => (
+                        <DateWidget
+                          value={f.value}
+                          onChange={(v) => {
+                            // Remember which sub-fields are open *before* writing the
+                            // data: opening "Enddatum" produces no value yet, and a
+                            // purely data-derived toggle would close it again.
+                            setDateToggles(dateWidgetToggles(v))
+                            f.set(v)
+                          }}
+                          label={widgetLabel}
+                        />
+                      )}
+                    </SyncField>
                   )}
                   {widgetId === "location" && (
                     // EIN Ort-Feld (B4): Ort-Item ODER Adresse und Position.
                     <LocationField
                       label={widgetLabel}
-                      data={data}
-                      updateMany={(patch) => updateMany(patch as Partial<WidgetData>)}
+                      field={form.field("location", locationField(widgetLabel, placeField ? itemRelationDataKey(placeField.predicate) : undefined))}
                       geocode={geocode}
                       reverseGeocode={reverseGeocode}
                       requestMapPick={requestMapPick}
-                      placeField={currentConfig.itemRelations?.find((f) => f.location)}
-                      spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined}
+                      placeField={placeField}
+                      spaceId={formSpace}
                       itemId={itemId}
                     />
                   )}
@@ -1403,21 +1422,31 @@ export function ContentComposer({
                     !statusInValues &&
                     currentConfig.statusOptions &&
                     currentConfig.statusOptions.length > 0 && (
-                      <StatusWidget
-                        value={data.status || ""}
-                        onChange={(v) => updateData("status", v)}
-                        label={widgetLabel}
-                        options={currentConfig.statusOptions}
-                        typeTone={typeBadgeStyle(currentConfig).className}
-                      />
+                      <SyncField field={text("status", widgetLabel)}>
+                        {(f) => (
+                          <StatusWidget
+                            value={f.value}
+                            onChange={f.set}
+                            label={widgetLabel}
+                            options={currentConfig.statusOptions!}
+                            typeTone={typeBadgeStyle(currentConfig).className}
+                          />
+                        )}
+                      </SyncField>
                     )}
                   {widgetId === "people" && (
                     <div className="flex flex-col gap-4">
                       {peopleFields.map((field) => (
                         <PeopleWidget
                           key={field.dataKey}
-                          value={(data[field.dataKey] as string[] | undefined) || []}
-                          onChange={(v) => updateData(field.dataKey, v)}
+                          field={form.field(
+                            field.dataKey,
+                            peopleField(field.label, {
+                              people: field.dataKey,
+                              qualifiers: peopleQualifierKey(field.dataKey),
+                              changes: peopleStatementKey(field.dataKey),
+                            }),
+                          )}
                           // `resolvePeopleFields` hat `widgetLabels.people` für
                           // die Einzahl-Kurzform schon eingesetzt; deklarierte
                           // `peopleRelations`-Labels gewinnen.
@@ -1432,18 +1461,10 @@ export function ContentComposer({
                                   base: field.record.base,
                                   values: field.record.values,
                                   live: peopleStates[field.predicate].live,
-                                  changes: (data[peopleStatementKey(field.dataKey)] as Record<string, string | null> | undefined) ?? {},
-                                  onChangesChange: (next: Record<string, string | null>) => updateData(peopleStatementKey(field.dataKey), next),
                                 },
                               }
                             : {})}
-                          {...(field.qualifier
-                            ? {
-                                qualifier: field.qualifier,
-                                qualifiers: (data[peopleQualifierKey(field.dataKey)] as Record<string, string> | undefined) ?? {},
-                                onQualifiersChange: (next: Record<string, string>) => updateData(peopleQualifierKey(field.dataKey), next),
-                              }
-                            : {})}
+                          {...(field.qualifier ? { qualifier: field.qualifier } : {})}
                         />
                       ))}
                     </div>
@@ -1460,27 +1481,25 @@ export function ContentComposer({
                             targetType={field.targetType}
                             placeholder={field.placeholder}
                             itemId={itemId}
-                            spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined}
-                            added={(data[itemRelationDataKey(field.predicate, true)] as string[] | undefined) ?? []}
-                            removed={(data[incomingRemovedKey(field.predicate)] as string[] | undefined) ?? []}
-                            onChange={(added, removed) =>
-                              updateMany({ [itemRelationDataKey(field.predicate, true)]: added, [incomingRemovedKey(field.predicate)]: removed } as Partial<WidgetData>)
-                            }
+                            spaceId={formSpace}
+                            field={form.field(
+                              itemRelationDataKey(field.predicate, true),
+                              incomingField(field.label, { added: itemRelationDataKey(field.predicate, true), removed: incomingRemovedKey(field.predicate) }),
+                            )}
                             requestItemPick={requestItemPick}
                           />
                         ) : (
-                        <ItemRelationWidget
-                          key={field.predicate}
-                          label={field.label}
-                          predicate={field.predicate}
-                          targetType={field.targetType}
-                          placeholder={field.placeholder}
-                          value={(data[itemRelationDataKey(field.predicate)] as string[] | undefined) ?? []}
-                          onChange={(v) => updateData(itemRelationDataKey(field.predicate), v)}
-                          excludeId={itemId}
-                          spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined}
-                          requestItemPick={requestItemPick}
-                        />
+                          <ItemRelationWidget
+                            key={field.predicate}
+                            label={field.label}
+                            predicate={field.predicate}
+                            targetType={field.targetType}
+                            placeholder={field.placeholder}
+                            field={form.field(itemRelationDataKey(field.predicate), scalarField(itemRelationDataKey(field.predicate), field.label, asStrings))}
+                            excludeId={itemId}
+                            spaceId={formSpace}
+                            requestItemPick={requestItemPick}
+                          />
                         ),
                       )}
                     </div>
@@ -1491,7 +1510,7 @@ export function ContentComposer({
                         const value = typeof data[field.key] === "string" ? (data[field.key] as string) : ""
                         if (field.fixed) {
                           // Fest: nur mit Wert sichtbar (06, Regel 14).
-                          return value ? <FixedItemRefField key={field.key} label={field.label} value={value} missing={field.missing} targetType={field.targetType} spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined} /> : null
+                          return value ? <FixedItemRefField key={field.key} label={field.label} value={value} missing={field.missing} targetType={field.targetType} spaceId={formSpace} /> : null
                         }
                         return (
                           <ItemRelationWidget
@@ -1500,10 +1519,9 @@ export function ContentComposer({
                             label={field.label}
                             predicate={field.key}
                             targetType={field.targetType}
-                            value={value ? [value] : []}
-                            onChange={(v) => updateData(field.key, v[0] ?? "")}
+                            field={form.field(field.key, itemRefField(field.key, field.label))}
                             excludeId={itemId}
-                            spaceId={typeof data.group === "string" && data.group !== "" ? data.group : undefined}
+                            spaceId={formSpace}
                           />
                         )
                       })}
@@ -1513,76 +1531,77 @@ export function ContentComposer({
                     <div className="flex flex-col gap-4">
                       {groupNumberFields((currentConfig.valueFields ?? []).filter((v) => v.widget !== "avatar")).map((group) => {
                         const field = group[0]!
-                        const text = typeof data[field.key] === "string" ? (data[field.key] as string) : ""
                         switch (field.widget) {
-                          case "number":
+                          case "number": {
+                            // Je Zahl ein Feld mit seinem Schlüssel; die Gruppe ist nur die Anzeige.
+                            const fields = new Map(group.map((g) => [g.key, text(g.key, g.label, g.fixed)] as const))
                             return (
                               <NumberGroupField
                                 key={field.key}
                                 label={field.label}
                                 fields={group}
-                                values={data as Record<string, unknown>}
+                                values={Object.fromEntries([...fields].map(([key, f]) => [key, f.value]))}
                                 errors={valueErrors}
-                                onChange={(key, v) => updateData(key, v)}
+                                onChange={(key, v) => fields.get(key)?.set(v)}
                               />
                             )
+                          }
                           case "status":
                             return currentConfig.statusOptions?.length ? (
-                              <StatusWidget
-                                key={field.key}
-                                value={data.status || ""}
-                                onChange={(v) => updateData("status", v)}
-                                label={getWidgetLabel("status")}
-                                options={currentConfig.statusOptions}
-                                typeTone={typeBadgeStyle(currentConfig).className}
-                              />
+                              <SyncField key={field.key} field={text("status", getWidgetLabel("status"))}>
+                                {(f) => (
+                                  <StatusWidget
+                                    value={f.value}
+                                    onChange={f.set}
+                                    label={getWidgetLabel("status")}
+                                    options={currentConfig.statusOptions!}
+                                    typeTone={typeBadgeStyle(currentConfig).className}
+                                  />
+                                )}
+                              </SyncField>
                             ) : null
                           case "select":
                             return (
-                              <OptionField
-                                key={field.key}
-                                label={field.label}
-                                options={field.options ?? []}
-                                value={text}
-                                onChange={(v) => updateData(field.key, v)}
-                                allowClear
-                                disabled={field.fixed}
-                                typeTone={typeBadgeStyle(currentConfig).className}
-                              />
+                              <SyncField key={field.key} field={text(field.key, field.label, field.fixed)}>
+                                {(f) => (
+                                  <OptionField
+                                    label={field.label}
+                                    options={field.options ?? []}
+                                    value={f.value}
+                                    onChange={f.set}
+                                    allowClear
+                                    disabled={f.locked}
+                                    typeTone={typeBadgeStyle(currentConfig).className}
+                                  />
+                                )}
+                              </SyncField>
                             )
                           case "url":
                             return (
-                              <UrlField
-                                key={field.key}
-                                label={field.label}
-                                value={text}
-                                onChange={(v) => updateData(field.key, v)}
-                                error={valueErrors[field.key] ?? null}
-                                disabled={field.fixed}
-                              />
+                              <SyncField key={field.key} field={text(field.key, field.label, field.fixed)}>
+                                {(f) => <UrlField label={field.label} value={f.value} onChange={f.set} error={valueErrors[field.key] ?? null} disabled={f.locked} />}
+                              </SyncField>
                             )
                           case "chips":
                             return (
-                              <ChipsField
-                                key={field.key}
-                                label={field.label}
-                                value={chipValues(data[field.key])}
-                                onChange={(v) => updateData(field.key, v)}
-                                suggestions={chipSuggestions(field)}
-                                disabled={field.fixed}
-                              />
+                              <SyncField key={field.key} field={form.field<string[]>(field.key, scalarField(field.key, field.label, chipValues, { locked: field.fixed }))}>
+                                {(f) => <ChipsField label={field.label} value={f.value} onChange={f.set} suggestions={chipSuggestions(field)} disabled={f.locked} />}
+                              </SyncField>
                             )
                           case "contact":
                             return (
-                              <ContactField
-                                key={field.key}
-                                label={field.label}
-                                value={text}
-                                onChange={(v) => updateData(field.key, v)}
-                                error={valueErrors[field.key] ?? null}
-                                visibility={contactVisibility}
-                                disabled={field.fixed}
-                              />
+                              <SyncField key={field.key} field={text(field.key, field.label, field.fixed)}>
+                                {(f) => (
+                                  <ContactField
+                                    label={field.label}
+                                    value={f.value}
+                                    onChange={f.set}
+                                    error={valueErrors[field.key] ?? null}
+                                    visibility={contactVisibility}
+                                    disabled={f.locked}
+                                  />
+                                )}
+                              </SyncField>
                             )
                         }
                       })}
@@ -1590,8 +1609,7 @@ export function ContentComposer({
                   )}
                   {widgetId === "tags" && (
                     <TagsWidget
-                      value={data.tags || []}
-                      onChange={(v) => updateData("tags", v)}
+                      field={form.field("tags", scalarField("tags", widgetLabel, asStrings))}
                       label={widgetLabel}
                       suggestions={effectiveTagSuggestions}
                       quickSuggestions={effectiveTagQuick}
@@ -1606,12 +1624,14 @@ export function ContentComposer({
           {/* Custom widgets */}
           {customWidgets?.map((cw) => {
             const isActive = activeWidgets.has(cw.id)
+            if (!isActive) return null
             const isDefault = defaultWidgets.has(cw.id)
             const CustomComponent = cw.component
+            const label = currentConfig.widgetLabels?.[cw.id] || cw.label
             return (
-              <WidgetWrapper key={cw.id} visible={isActive}>
+              <WidgetWrapper key={cw.id} visible>
                 <div className="relative">
-                  {!isDefault && isActive && (
+                  {!isDefault && (
                     <button
                       type="button"
                       onClick={() => {
@@ -1627,19 +1647,17 @@ export function ContentComposer({
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
-                  <CustomComponent
-                    value={data[cw.id]}
-                    onChange={(v) => updateData(cw.id, v)}
-                    label={
-                      currentConfig.widgetLabels?.[cw.id] || cw.label
-                    }
-                  />
+                  {/* Ein eigenes Widget schreibt genau seinen Schlüssel, über den Schreibweg seines Felds. */}
+                  <SyncField field={form.field<unknown>(cw.id, scalarField(cw.id, label, (raw) => raw))}>
+                    {(f) => <CustomComponent value={f.value} onChange={f.set} label={label} />}
+                  </SyncField>
                 </div>
               </WidgetWrapper>
             )
           })}
         </div>
       )}
+
 
       {/* Footer: actions (hidden in liveUpdate mode) */}
       {!liveUpdate && <div
@@ -1736,8 +1754,12 @@ export function ContentComposer({
         </div>
       </div>}
     </div>
-    </FormEpochProvider>
   )
+}
+
+/** Bindet ein Widget ohne eigene Arbeit an seinen Feldzugang: Wert und Schreibweg für Eingaben. */
+function SyncField<V, C>({ field, children }: { field: FieldAccess<V, C>; children: (field: FieldAccess<V, C>) => React.ReactNode }) {
+  return <>{children(field)}</>
 }
 
 // ── Default Preview ──────────────────────────────────────────────────────

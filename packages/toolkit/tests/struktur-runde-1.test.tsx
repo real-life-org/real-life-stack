@@ -7,7 +7,8 @@ import { MockConnector } from "@real-life-stack/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { useItem } from "../src/hooks/use-items"
-import { FormEpochProvider } from "../src/lib/form-epoch"
+import { asString, locationField, scalarField, type LocationValue } from "../src/components/composer/form-fields"
+import { FormHost } from "./support/form-host"
 import { resolveTypePresentation } from "../src/components/preview/type-presentation"
 import { LocationWidget } from "../src/components/composer/widgets/location-widget"
 import { AvatarField } from "../src/components/composer/widgets/avatar-widget"
@@ -121,7 +122,7 @@ describe("Klasse A: Debounce und Beschäftigt-Zustand gehören zur Epoche", () =
     function Form(): ReactNode {
       const [space, set] = useState("g")
       setSpace = set
-      return createElement(FormEpochProvider, { scope: [space] }, createElement(LocationWidget, { label: "Ort", value: {}, onChange: () => undefined, geocode }))
+      return createElement(FormHost<LocationValue, never>, { def: locationField("Ort"), space, render: (field) => createElement(LocationWidget, { label: "Ort", field, geocode }) })
     }
     await act(async () => root.render(createElement(Form)))
     const input = host.querySelector<HTMLInputElement>('input[role="combobox"]')!
@@ -135,7 +136,7 @@ describe("Klasse A: Debounce und Beschäftigt-Zustand gehören zur Epoche", () =
     expect(host.querySelector('[role="option"]')).toBeNull()
   })
 
-  it("Avatar: Space-Wechsel während des Verkleinerns — das Feld ist wieder frei, das Ergebnis verworfen", async () => {
+  it("Avatar: Space-Wechsel während des Verkleinerns — Nutzerarbeit läuft weiter und wird übernommen (Regel 10)", async () => {
     let finish!: (v: string) => void
     const resize = vi.fn(() => new Promise<string>((r) => (finish = r)))
     const onChange = vi.fn()
@@ -143,7 +144,12 @@ describe("Klasse A: Debounce und Beschäftigt-Zustand gehören zur Epoche", () =
     function Form(): ReactNode {
       const [space, set] = useState("g")
       setSpace = set
-      return createElement(FormEpochProvider, { scope: [space] }, createElement(AvatarField, { label: "Bild", value: "", onChange, resize }))
+      return createElement(FormHost<string>, {
+        def: scalarField("bild", "Bild", asString),
+        space,
+        onValue: onChange,
+        render: (field) => createElement(AvatarField, { label: "Bild", field, resize }),
+      })
     }
     await act(async () => root.render(createElement(Form)))
     const file = host.querySelector<HTMLInputElement>('input[type="file"]')!
@@ -151,11 +157,12 @@ describe("Klasse A: Debounce und Beschäftigt-Zustand gehören zur Epoche", () =
     await act(async () => file.dispatchEvent(new Event("change", { bubbles: true })))
     expect(host.querySelector<HTMLButtonElement>('[aria-label="Bild hochladen"]')!.disabled).toBe(true)
     await act(async () => setSpace("h"))
-    expect(host.querySelector<HTMLButtonElement>('[aria-label="Bild hochladen"]')!.disabled).toBe(false)
-    await act(async () => finish("data:image/webp;base64,ALT"))
+    // Die gewählte Datei ist Nutzerabsicht: Das Feld bleibt beschäftigt.
+    expect(host.querySelector<HTMLButtonElement>('[aria-label="Bild hochladen"]')!.disabled).toBe(true)
+    await act(async () => finish("data:image/webp;base64,NEU"))
     await settle()
-    expect(onChange).not.toHaveBeenCalled()
-    expect(host.querySelector<HTMLButtonElement>('[aria-label="Bild hochladen"]')!.disabled).toBe(false)
+    expect(onChange).toHaveBeenLastCalledWith("data:image/webp;base64,NEU")
+    expect(host.querySelector("[data-field-notice]")).toBeNull()
   })
 })
 

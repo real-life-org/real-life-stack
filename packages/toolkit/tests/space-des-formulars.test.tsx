@@ -7,7 +7,7 @@ import { MockConnector } from "@real-life-stack/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { ItemComposer } from "../src/components/composer/item-composer"
-import { ItemRelationWidget } from "../src/components/composer/widgets/item-relation-widget"
+import { relationHost } from "./support/form-host"
 import { contentTypeFromRegister, mapComposerSubmission } from "../src/components/composer/content-types"
 import { withCreateGroup, withEditGroup, withGroupOptions, GROUP_FIXED_NO_SCOPE } from "../src/components/composer/composer-mapping"
 import { itemHasBindings, ITEM_BINDINGS_REASON } from "../src/lib/item-bindings"
@@ -106,7 +106,7 @@ afterEach(async () => {
 describe("#529: Suche im Formular-Space ohne App-Wechsel (Regel 3, 02 → group)", () => {
   it("sucht im Formular-Space, während ein anderer geöffnet ist, und wechselt ihn nicht", async () => {
     connector.setCurrentGroup("g")
-    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {}, spaceId: "h" }))
+    await render(relationHost({ label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], spaceId: "h" }))
     expect(host.querySelector("[data-other-space]")).toBeNull()
     expect(await type("")).toEqual(["Im Hof"])
     expect(connector.getCurrentGroup()?.id).toBe("g")
@@ -115,9 +115,9 @@ describe("#529: Suche im Formular-Space ohne App-Wechsel (Regel 3, 02 → group)
   it("der Modul-Pick prüft gegen den Formular-Space, nicht den geöffneten", async () => {
     connector.setCurrentGroup("g")
     let onPick: ((id: string) => { ok: boolean }) | undefined
-    await render(createElement(ItemRelationWidget, {
-      label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {}, spaceId: "h",
-      requestItemPick: (_r, cb) => { onPick = cb },
+    await render(relationHost({
+      label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], spaceId: "h",
+      requestItemPick: (_r: unknown, cb: (id: string) => { ok: boolean }) => { onPick = cb },
     }))
     await act(async () => [...host.querySelectorAll("button")].find((b) => b.textContent?.includes("Im Modul wählen"))!.click())
     let hof: { ok: boolean } | undefined
@@ -130,7 +130,7 @@ describe("#529: Suche im Formular-Space ohne App-Wechsel (Regel 3, 02 → group)
 
   it("ohne GroupScopeCapable sagt das Feld, dass es dort nicht suchen kann (Regel 7)", async () => {
     connector.setCurrentGroup("g")
-    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {}, spaceId: "h" }), withoutScope(connector))
+    await render(relationHost({ label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], spaceId: "h" }), withoutScope(connector))
     const field = host.querySelector("[data-item-relation-field]")
     expect(field?.querySelector("input")).toBeNull()
     expect(field?.querySelector("[data-other-space]")?.textContent).toContain("Hof")

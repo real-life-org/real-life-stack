@@ -3,8 +3,18 @@ import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { LocationWidget } from "../src/components/composer/widgets/location-widget"
-import type { GeocodeResult } from "../src/lib/geocode"
+import { LocationWidget, type LocationChecks } from "../src/components/composer/widgets/location-widget"
+import { locationField, type LocationValue } from "../src/components/composer/form-fields"
+import type { Geocoder, GeocodeResult } from "../src/lib/geocode"
+import { FormHost } from "./support/form-host"
+
+/** Das Adressfeld mit seinem Feldzugang, wie der Composer es baut. */
+const ort = (onChange: (v: LocationValue) => void, geocode: Geocoder) =>
+  createElement(FormHost<LocationValue, LocationChecks | undefined>, {
+    def: locationField("Ort"),
+    onValue: onChange,
+    render: (field) => createElement(LocationWidget, { field, label: "Ort", geocode }),
+  })
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -60,11 +70,7 @@ describe("Der Adress-Vorschlag", () => {
     const onChange = vi.fn()
     act(() => {
       root.render(
-        createElement(LocationWidget, {
-          value: { address: "" },
-          onChange,
-          geocode: async () => treffer,
-        }),
+        ort(onChange, async () => treffer),
       )
     })
     await tippe(onChange, treffer)
@@ -78,11 +84,7 @@ describe("Der Adress-Vorschlag", () => {
     const onChange = vi.fn()
     act(() => {
       root.render(
-        createElement(LocationWidget, {
-          value: { address: "" },
-          onChange,
-          geocode: async () => treffer,
-        }),
+        ort(onChange, async () => treffer),
       )
     })
     await tippe(onChange, treffer)
@@ -102,11 +104,7 @@ describe("Der Adress-Vorschlag", () => {
     const eigen: GeocodeResult[] = [{ label: "Markthalle Neun", lat: 52.5, lng: 13.4 }]
     act(() => {
       root.render(
-        createElement(LocationWidget, {
-          value: { address: "" },
-          onChange,
-          geocode: async () => eigen,
-        }),
+        ort(onChange, async () => eigen),
       )
     })
     await tippe(onChange, eigen)
@@ -123,11 +121,7 @@ describe("Der Adress-Vorschlag", () => {
     ]
     act(() => {
       root.render(
-        createElement(LocationWidget, {
-          value: { address: "" },
-          onChange,
-          geocode: async () => gleich,
-        }),
+        ort(onChange, async () => gleich),
       )
     })
     await tippe(onChange, gleich)

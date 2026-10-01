@@ -3,7 +3,8 @@ import { act, createElement, useState, type ReactNode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { FormEpochProvider } from "../src/lib/form-epoch"
+import { asString, locationField, scalarField, type LocationValue } from "../src/components/composer/form-fields"
+import { FormHost } from "./support/form-host"
 import { LocationWidget } from "../src/components/composer/widgets/location-widget"
 import { AvatarField } from "../src/components/composer/widgets/avatar-widget"
 
@@ -37,7 +38,7 @@ describe("Geocoding-Spinner", () => {
     function Form(): ReactNode {
       const [space, set] = useState("g")
       setSpace = set
-      return createElement(FormEpochProvider, { scope: [space] }, createElement(LocationWidget, { label: "Ort", value: {}, onChange: () => undefined, geocode }))
+      return createElement(FormHost<LocationValue, never>, { def: locationField("Ort"), space, render: (field) => createElement(LocationWidget, { label: "Ort", field, geocode }) })
     }
     await act(async () => root.render(createElement(Form)))
     const input = host.querySelector<HTMLInputElement>('input[role="combobox"]')!
@@ -58,11 +59,14 @@ describe("Geocoding-Spinner", () => {
 })
 
 describe("Avatar", () => {
-  it("während des Verkleinerns gesperrt: das Ergebnis wird nicht geschrieben", async () => {
+  const bild = scalarField("bild", "Bild", asString)
+
+  it("während des Verkleinerns gesperrt: das Ergebnis wird nicht geschrieben, der Grund steht am Feld", async () => {
     let finish!: (v: string) => void
     const resize = vi.fn(() => new Promise<string>((r) => (finish = r)))
     const onChange = vi.fn()
-    const draw = (disabled: boolean) => act(async () => root.render(createElement(AvatarField, { label: "Bild", value: "", onChange, resize, disabled })))
+    const draw = (locked: boolean) =>
+      act(async () => root.render(createElement(FormHost<string>, { def: bild, locked, onValue: onChange, render: (field) => createElement(AvatarField, { label: "Bild", field, resize }) })))
     await draw(false)
     const file = host.querySelector<HTMLInputElement>('input[type="file"]')!
     Object.defineProperty(file, "files", { value: [new File(["x"], "a.png", { type: "image/png" })] })
@@ -71,18 +75,29 @@ describe("Avatar", () => {
     await act(async () => finish("data:image/webp;base64,SPAET"))
     await settle()
     expect(onChange).not.toHaveBeenCalled()
+    expect(host.querySelector("[data-field-notice]")?.textContent).toContain("Bild nicht übernommen: Das Feld ist gesperrt")
   })
 
-  it("der aktuelle Rückruf schreibt, nicht der beim Start", async () => {
+  it("der Schreibweg des Formulars JETZT schreibt, nicht ein beim Start eingefangener", async () => {
     let finish!: (v: string) => void
     const resize = vi.fn(() => new Promise<string>((r) => (finish = r)))
     const alt = vi.fn()
     const neu = vi.fn()
-    await act(async () => root.render(createElement(AvatarField, { label: "Bild", value: "", onChange: alt, resize })))
+    // Dasselbe Feld, beim Eintreffen mit einer anderen Definition (anderer Schreibweg).
+    const def = (onWrite: (v: string) => void) => ({
+      ...bild,
+      write: (v: string) => {
+        onWrite(v)
+        return { bild: v }
+      },
+    })
+    const draw = (onWrite: (v: string) => void) =>
+      act(async () => root.render(createElement(FormHost<string>, { def: def(onWrite), render: (field) => createElement(AvatarField, { label: "Bild", field, resize }) })))
+    await draw(alt)
     const file = host.querySelector<HTMLInputElement>('input[type="file"]')!
     Object.defineProperty(file, "files", { value: [new File(["x"], "a.png", { type: "image/png" })] })
     await act(async () => file.dispatchEvent(new Event("change", { bubbles: true })))
-    await act(async () => root.render(createElement(AvatarField, { label: "Bild", value: "", onChange: neu, resize })))
+    await draw(neu)
     await act(async () => finish("data:image/webp;base64,NEU"))
     await settle()
     expect(alt).not.toHaveBeenCalled()

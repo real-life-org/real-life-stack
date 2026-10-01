@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { useState } from "react"
 import type { Item } from "@real-life-stack/data-interface"
 
 import { ItemDetailRead } from "../host/detail-host"
@@ -11,6 +10,8 @@ import { FieldNavigationProvider } from "../navigation/field-navigation"
 import { ContentComposer } from "../composer/content-composer"
 import { contentTypeFromRegister } from "../composer/content-types"
 import { AvatarField } from "../composer/widgets/avatar-widget"
+import { asString, scalarField } from "../composer/form-fields"
+import { useFormState } from "../../lib/form-state"
 import { RegisterHeadAvatar } from "../preview/register-content"
 import type { Geocoder } from "../../lib/geocode"
 
@@ -165,10 +166,11 @@ export const HeadAvatar: Story = {
 /** Avatar field in the form: pick an image, it is shrunk to 512 px; „Entfernen" clears it. */
 export const AvatarForm: Story = {
   render: function AvatarFormStory() {
-    const [value, setValue] = useState(AVATAR)
+    // Wie im Composer: Der Formularzustand besitzt den Wert, das Feld bekommt seinen Zugang.
+    const form = useFormState(() => ({ data: { avatarUrl: AVATAR }, type: "card", spaceOf: () => undefined }))
     return (
       <div className="w-[380px] rounded-2xl border bg-background p-4 shadow-xl">
-        <AvatarField label="Bild" value={value} onChange={setValue} />
+        <AvatarField label="Bild" field={form.field("avatarUrl", scalarField("avatarUrl", "Bild", asString))} />
       </div>
     )
   },

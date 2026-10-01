@@ -26,7 +26,7 @@ import {
 
 import { useConnector } from "../../hooks/connector-context"
 import { useCurrentGroup } from "../../hooks/use-groups"
-import { useFieldEpoch, type EpochGuard } from "../../lib/form-epoch"
+import { useActionState, type ActionWork } from "../../lib/form-state"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { resolveCanCreate, resolveItemPermissions } from "../../hooks/use-item-permissions"
 import { writeOwnStatement } from "../../lib/own-statement"
@@ -223,7 +223,7 @@ export const VIEW_CHANGED = "Item oder Space haben inzwischen gewechselt – nic
  * geöffneter Space, shared-components → Formular-Epoche, Regel 5): Wechselt
  * einer davon, während gelesen wird, gilt das Ergebnis nicht.
  */
-async function freshItem(connector: DataInterface, shown: Item, work: EpochGuard<unknown>): Promise<Item> {
+async function freshItem(connector: DataInterface, shown: Item, work: ActionWork): Promise<Item> {
   if (!inOpenSpace(connector, shown)) throw new Error(ITEM_ELSEWHERE)
   const fresh = await connector.getItem(shown.id)
   assertCurrent(work)
@@ -235,16 +235,19 @@ async function freshItem(connector: DataInterface, shown: Item, work: EpochGuard
  * Vor JEDEM Schreiben und nach jedem Warten: gilt die Epoche noch? Sonst
  * nichts schreiben (Formular-Epoche, Regel 5).
  */
-function assertCurrent(work: EpochGuard<unknown>): void {
+function assertCurrent(work: ActionWork): void {
   if (!work.valid()) throw new Error(VIEW_CHANGED)
 }
 
 /**
- * Die Epoche einer Selbstaktion: Item und geöffneter Space. Der Abbau des
- * Panels beendet sie nicht; Space-Wechsel meldet darum der Connector
- * (`watch`), nicht nur der Render.
+ * Der Aktionszustand einer Selbstaktion (shared-components →
+ * Formularzustand, Regel 9): Epoche (Item und geöffneter Space),
+ * Warte-Zustand und das Abonnement auf den geöffneten Space. Das Abonnement
+ * besteht, solange eine Aktion läuft — auch nach dem Abbau der Anzeige,
+ * nicht länger. Ein Space-Wechsel beendet „beschäftigt" sofort, auch wenn
+ * ein Lesen hängt.
  */
-function useActionEpoch(item: Item) {
+function useAction(item: Item) {
   const connector = useConnector()
   const openSpace = useCurrentGroup()?.id ?? null
   // Jeder Wechsel des geöffneten Space ist ein Zählerschritt (Regel 6) —
@@ -252,11 +255,16 @@ function useActionEpoch(item: Item) {
   const watch = useMemo(
     () =>
       hasGroups(connector)
-        ? (onChange: () => void) => connector.observeCurrentGroup().subscribe(() => onChange())
+        ? (onChange: () => void) => {
+            const at = connector.getCurrentGroup()?.id ?? null
+            return connector.observeCurrentGroup().subscribe((group) => {
+              if ((group?.id ?? null) !== at) onChange()
+            })
+          }
         : undefined,
     [connector],
   )
-  return useFieldEpoch(undefined, { scope: [item.id, openSpace], lifetime: false, watch })
+  return useActionState([item.id, openSpace], watch)
 }
 
 /**
@@ -304,7 +312,7 @@ function othersOnEmbeddedEdge(item: Item, edge: EdgeEntry, meId: string): boolea
  */
 export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusTransitions): SelfActionState {
   const connector = useConnector()
-  const epoch = useActionEpoch(item)
+  const action = useAction(item)
   const { data: me } = useOptionalCurrentUser()
   const meId = me?.id
   const isRecord = edge.storage === "record"
@@ -367,13 +375,14 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
   const [error, setError] = useState<string | null>(null)
 
   const chain = useRef<Promise<void>>(Promise.resolve())
-  const [busy, setBusy] = useState(false)
+  // „Beschäftigt" liest nur den Aktionszustand (Regel 9); die Warteschlange
+  // unten ordnet nur die Schreibvorgänge.
+  const begin = action.begin
   const act = useCallback(
     (value?: string, mode: "toggle" | "withdraw" = "toggle", guard?: (current: Item) => boolean) => {
       queued.current += 1
-      setBusy(true)
       // Die Epoche beim Klick (Item, geöffneter Space); das Frisch-Lesen gilt nur für sie.
-      const work = epoch.begin()
+      const work = begin()
       const run = async () => {
         try {
           if (!available || !meId) return
@@ -421,7 +430,6 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
           work.finish()
           queued.current -= 1
           if (queued.current === 0) {
-            setBusy(false)
             intent.current = null
             setPending((p) => (p ? { ...p, settledAt: sourceRef.current } : p))
           }
@@ -431,11 +439,11 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
       chain.current = next.catch(() => undefined)
       return next
     },
-    [available, connector, context, edge, epoch, isRecord, item, meId, transitions],
+    [available, begin, connector, context, edge, isRecord, item, meId, transitions],
   )
 
   const withdraw = useCallback((guard?: (current: Item) => boolean) => act(undefined, "withdraw", guard), [act])
-  return { available, mine, others, act: (value?: string) => act(value), withdraw, busy, error }
+  return { available, mine, others, act: (value?: string) => act(value), withdraw, busy: action.busy, error }
 }
 
 /**
@@ -465,7 +473,7 @@ async function writeEmbedded(
   next: string | true | undefined,
   guard: ((current: Item) => boolean) | undefined,
   transitions: StatusTransitions | undefined,
-  work: EpochGuard<unknown>,
+  work: ActionWork,
 ): Promise<boolean> {
   if (!isWritable(connector)) throw new Error("Dieser Speicher ist nur lesbar")
   const current = await freshItem(connector, item, work)
@@ -506,7 +514,7 @@ async function writeEmbedded(
  * Selbstaussage selbst braucht es nicht, Modi Regel 1). Wer nach dem Abgeben
  * noch an der Kante steht, entscheiden die geltenden Records (L1).
  */
-async function applyRecordTransition(connector: DataInterface, item: Item, edge: EdgeEntry, meId: string, joining: boolean, transitions: StatusTransitions, work: EpochGuard<unknown>): Promise<void> {
+async function applyRecordTransition(connector: DataInterface, item: Item, edge: EdgeEntry, meId: string, joining: boolean, transitions: StatusTransitions, work: ActionWork): Promise<void> {
   if (!isWritable(connector) || !resolveItemPermissions(connector, item, meId).canEdit) return
   if (!inOpenSpace(connector, item)) return
   const current = await connector.getItem(item.id)
@@ -549,23 +557,22 @@ export interface FollowUpState {
  */
 export function useFollowUps(item: Item, statusField: FieldEntry | undefined, defaultStatus?: string, edge?: EdgeEntry): FollowUpState {
   const connector = useConnector()
-  const epoch = useActionEpoch(item)
+  const action = useAction(item)
+  const begin = action.begin
   const { data: me } = useOptionalCurrentUser()
   const meId = me?.id
   const available = useMemo(
     () => !!statusField && !!meId && isWritable(connector) && resolveItemPermissions(connector, item, meId).canEdit,
     [connector, item, meId, statusField],
   )
-  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const run = useCallback(
     async (id: "complete") => {
       if (!available || !statusField || !isWritable(connector)) return
       const value = id === "complete" ? firstOptionWithRole(statusField, "done") : undefined
       if (value === undefined) return
-      setBusy(true)
       setError(null)
-      const work = epoch.begin()
+      const work = begin()
       try {
         // #531: gegen den GELTENDEN Stand entscheiden, nicht gegen den Render.
         // Bin ich nicht mehr an der Kante, oder hat der Status keine Rolle
@@ -584,12 +591,11 @@ export function useFollowUps(item: Item, statusField: FieldEntry | undefined, de
         setError(err instanceof Error ? err.message : String(err))
       } finally {
         work.finish()
-        setBusy(false)
       }
     },
-    [available, connector, defaultStatus, edge, epoch, item, meId, statusField],
+    [available, begin, connector, defaultStatus, edge, item, meId, statusField],
   )
-  return { available, busy, error, run }
+  return { available, busy: action.busy, error, run }
 }
 
 /** Stehe ich (noch) an der Kante? Eingebettet am Item, als Record über den RelationStore. */

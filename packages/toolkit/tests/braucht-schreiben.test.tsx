@@ -9,7 +9,7 @@ import { ConnectorProvider } from "../src/hooks/connector-context"
 import { useItemEditor } from "../src/hooks/use-item-editor"
 import { contentTypeFromRegister, mapComposerSubmission, itemToComposerData } from "../src/components/composer/content-types"
 import { incomingRemovedKey, itemRelationDataKey } from "../src/components/composer/item-relations"
-import { IncomingRelationField } from "../src/components/composer/widgets/item-relation-widget"
+import { incomingHost } from "./support/form-host"
 
 /**
  * S3b PR B: „Braucht" im Formular schreibbar. Die eingehende Kante `blocks`
@@ -111,22 +111,7 @@ describe("Register → Formular", () => {
 
 describe("Widget: IncomingRelationField", () => {
   function Harness({ itemId, spaceId, onValue }: { itemId?: string; spaceId: string; onValue: (added: string[], removed: string[]) => void }) {
-    const [added, setAdded] = useState<string[]>([])
-    const [removed, setRemoved] = useState<string[]>([])
-    return createElement(IncomingRelationField, {
-      label: "Braucht",
-      predicate: "blocks",
-      targetType: "task",
-      itemId,
-      spaceId,
-      added,
-      removed,
-      onChange: (a: string[], r: string[]) => {
-        setAdded(a)
-        setRemoved(r)
-        onValue(a, r)
-      },
-    })
+    return incomingHost({ label: "Braucht", predicate: "blocks", targetType: "task", itemId, spaceId, onValue })
   }
 
   const chips = () => [...host.querySelectorAll("[data-relation-chip]")].map((c) => c.getAttribute("data-relation-chip"))
@@ -265,10 +250,7 @@ describe("Codex Runde 1", () => {
   it("Befund 4: außerhalb des geöffneten Space sind bestehende Quellen fest (ohne ✕)", async () => {
     await setup(undefined, "h")
     await render(
-      createElement(IncomingRelationField, {
-        label: "Braucht", predicate: "blocks", targetType: "task", itemId: "t-kompost", spaceId: "g",
-        added: [], removed: [], onChange: () => {},
-      }),
+      incomingHost({ label: "Braucht", predicate: "blocks", targetType: "task", itemId: "t-kompost", spaceId: "g" }),
     )
     expect(host.querySelector("[data-incoming-unavailable]")).toBeTruthy()
     expect(host.querySelectorAll('[data-relation-chip] button[aria-label$="entfernen"]').length).toBe(0)

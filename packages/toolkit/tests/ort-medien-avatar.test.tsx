@@ -23,9 +23,50 @@ import { contentTypeFromRegister, itemToComposerData, mapComposerSubmission } fr
 import { ContentComposer, type ContentComposerSubmitData } from "../src/components/composer/content-composer"
 import { itemRelationDataKey } from "../src/components/composer/item-relations"
 import { valueFieldToData, valueFieldsFromRegister } from "../src/components/composer/value-fields"
-import { LocationWidget } from "../src/components/composer/widgets/location-widget"
+import { LocationWidget, type LocationChecks, type LocationPlaces } from "../src/components/composer/widgets/location-widget"
 import { LocationField } from "../src/components/composer/widgets/location-field"
-import { AvatarField, defaultAvatarResize } from "../src/components/composer/widgets/avatar-widget"
+import { AvatarField, defaultAvatarResize, type ResizeImage } from "../src/components/composer/widgets/avatar-widget"
+import { asString, locationField, scalarField, type LocationValue } from "../src/components/composer/form-fields"
+import type { Geocoder, ReverseGeocoder } from "../src/lib/geocode"
+import { FormHost } from "./support/form-host"
+
+/** Das Avatar-Feld mit seinem Feldzugang, wie der Composer es baut. */
+const avatar = (opts: { value?: string; onChange?: (v: string) => void; resize: ResizeImage }) =>
+  createElement(FormHost<string>, {
+    def: scalarField("bild", "Bild", asString),
+    data: { bild: opts.value ?? "" },
+    onValue: opts.onChange,
+    render: (field) => createElement(AvatarField, { label: "Bild", field, resize: opts.resize }),
+  })
+
+const PLACE_FIELD = () => contentTypeFromRegister("event").itemRelations!.find((f) => f.location)
+
+/** Das Ort-Feld mit seinem Feldzugang; `places: false` ohne Ort-Kante. */
+function ortFeld(opts: {
+  data?: Record<string, unknown>
+  space?: string
+  onValue?: (v: LocationValue) => void
+  requestMapPick?: unknown
+  reverseGeocode?: unknown
+  places?: boolean
+}) {
+  const placeField = opts.places === false ? undefined : PLACE_FIELD()
+  return createElement(FormHost<LocationValue, LocationChecks | undefined>, {
+    def: locationField("Ort", placeField ? itemRelationDataKey(placeField.predicate) : undefined),
+    data: opts.data,
+    space: opts.space,
+    onValue: opts.onValue,
+    render: (field) =>
+      createElement(LocationField, {
+        label: "Ort",
+        field,
+        placeField,
+        spaceId: opts.space || undefined,
+        requestMapPick: opts.requestMapPick as never,
+        reverseGeocode: opts.reverseGeocode as ReverseGeocoder | undefined,
+      }),
+  })
+}
 
 const resizeSpy = vi.hoisted(() => vi.fn(async () => "data:image/webp;base64,RESIZED"))
 vi.mock("../src/lib/image-utils", async (orig) => ({ ...(await orig<object>()), resizeImage: resizeSpy }))
@@ -269,13 +310,12 @@ describe("B4 Abbildung", () => {
 // ---------------------------------------------------------------------------
 // B4: Schreiben (Widget)
 
-function LocationHarness(props: Partial<Parameters<typeof LocationWidget>[0]> & { onChange?: ReturnType<typeof vi.fn> }) {
-  return createElement(LocationWidget, {
-    label: "Ort",
-    value: {},
-    onChange: props.onChange ?? vi.fn(),
-    ...props,
-  } as never)
+function LocationHarness(props: { geocode?: Geocoder; places?: LocationPlaces; onChange?: (v: LocationValue) => void }) {
+  return createElement(FormHost<LocationValue, LocationChecks | undefined>, {
+    def: locationField("Ort"),
+    onValue: props.onChange,
+    render: (field) => createElement(LocationWidget, { label: "Ort", field, geocode: props.geocode, places: props.places }),
+  })
 }
 
 const input = () => host.querySelector<HTMLInputElement>('input[role="combobox"]')!
@@ -468,26 +508,21 @@ describe("B4 Formular: Codex R1", () => {
     expect(sub.data[itemRelationDataKey("locatedAt")] ?? []).toEqual([])
   })
 
-  it("der Pick prüft beim Klick die aktuellen Kandidaten: nach einem Space-Wechsel kein Ort aus dem alten Space", async () => {
+  it("der Pick prüft beim Klick die aktuellen Kandidaten: nach einem Space-Wechsel kein Ort aus dem alten Space — sichtbar abgelehnt (Regel 10)", async () => {
     const box: { h: Handlers | null } = { h: null }
-    const updateMany = vi.fn()
+    const onValue = vi.fn()
     let setSpace!: (id: string) => void
     function Host(): ReactNode {
       const [spaceId, set] = useState("g")
       setSpace = set
-      return field(spaceId)
-    }
-    const field = (spaceId: string) =>
-      createElement(LocationField, {
-        label: "Ort",
-        data: {},
-        updateMany,
+      return ortFeld({
+        space: spaceId,
+        onValue,
         requestMapPick: (h: Handlers) => {
           box.h = h
         },
-        placeField: contentTypeFromRegister("event").itemRelations!.find((f) => f.location),
-        spaceId,
       })
+    }
     await render(createElement(Host))
     await act(async () => {
       host.querySelector<HTMLButtonElement>('button[aria-label^="Position auf Karte"]')!.click()
@@ -495,33 +530,33 @@ describe("B4 Formular: Codex R1", () => {
     const h = box.h!
     await act(async () => setSpace("anders"))
     await settle()
-    let taken = true
+    let taken = false
     await act(async () => {
       taken = h.onPickItem!(MARKTHALLE)
     })
-    expect(taken).toBe(false)
-    expect(updateMany).not.toHaveBeenCalledWith(expect.objectContaining({ [itemRelationDataKey("locatedAt")]: ["item:pl-markt"] }))
+    // Ein Ort-Marker ist eine Nutzerhandlung: nicht still verworfen und nicht
+    // als freier Punkt umgedeutet, sondern mit Grund am Feld abgelehnt.
+    expect(taken).toBe(true)
+    expect(onValue).not.toHaveBeenCalledWith(expect.objectContaining({ place: ["item:pl-markt"] }))
+    expect(host.querySelector("[data-field-notice]")?.textContent).toContain("Ort nicht übernommen: liegt nicht im Space des Formulars")
   })
 })
 
 describe("Codex R2", () => {
   it("Abbrechen nach einem Space-Wechsel stellt kein Ort-Item des alten Space wieder her", async () => {
     const box: { h: { onCancel?: () => void } | null } = { h: null }
-    const updateMany = vi.fn()
+    const onValue = vi.fn()
     let setSpace!: (id: string) => void
-    const placeField = contentTypeFromRegister("event").itemRelations!.find((f) => f.location)
     function Host(): ReactNode {
       const [spaceId, set] = useState("g")
       setSpace = set
-      return createElement(LocationField, {
-        label: "Ort",
+      return ortFeld({
+        space: spaceId,
         data: { [itemRelationDataKey("locatedAt")]: ["item:pl-markt"] },
-        updateMany,
+        onValue,
         requestMapPick: (h: never) => {
           box.h = h
         },
-        placeField,
-        spaceId,
       })
     }
     await render(createElement(Host))
@@ -529,11 +564,11 @@ describe("Codex R2", () => {
       host.querySelector<HTMLButtonElement>('button[aria-label^="Position auf Karte"]')!.click()
     })
     await act(async () => setSpace("anders"))
-    updateMany.mockClear()
-    // Formular-Epoche: Der Pick gehört zum alten Space und schreibt nichts
-    // mehr, auch kein Ort-Item des alten Space zurück.
+    onValue.mockClear()
+    // Wiederherstellen geht über den Schreibweg für Eingaben vom Start des
+    // Picks (Regel 6): nach dem Space-Wechsel schreibt er nichts mehr.
     await act(async () => box.h!.onCancel!())
-    expect(updateMany).not.toHaveBeenCalled()
+    expect(onValue).not.toHaveBeenCalled()
   })
 
   it("kaputte Medien-Metadaten: kein Absturz, der Eintrag zählt mit bereinigten Werten oder gar nicht", async () => {
@@ -558,7 +593,7 @@ describe("Codex R2", () => {
     let resolve!: (v: string) => void
     const resize = vi.fn(() => new Promise<string>((r) => (resolve = r)))
     const onChange = vi.fn()
-    await render(createElement(AvatarField, { label: "Bild", value: DATA_URL, onChange, resize }), [])
+    await render(avatar({ value: DATA_URL, onChange, resize }), [])
     const fileInput = host.querySelector<HTMLInputElement>('input[type="file"]')!
     Object.defineProperty(fileInput, "files", { value: [new File(["x"], "neu.png", { type: "image/png" })] })
     await act(async () => {
@@ -577,10 +612,7 @@ describe("Codex R3", () => {
   it("Fokus: nach der Wahl per Tastatur auf dem ✕ des Chips, nach dem Entfernen in der Eingabe", async () => {
     function Host(): ReactNode {
       const [selected, setSelected] = useState<Item | null>(null)
-      return createElement(LocationWidget, {
-        label: "Ort",
-        value: {},
-        onChange: () => undefined,
+      return createElement(LocationHarness, {
         places: { selected: selected ? { target: `item:${selected.id}`, item: selected } : null, candidates: [MARKTHALLE], onSelect: setSelected },
       })
     }
@@ -606,11 +638,9 @@ describe("Codex R3", () => {
     })
     const box: { h: { onPick: (p: { lat: number; lng: number }) => void } | null } = { h: null }
     await render(
-      createElement(LocationField, {
-        label: "Ort",
-        data: {},
-        updateMany: () => undefined,
-        reverseGeocode: reverseGeocode as never,
+      ortFeld({
+        places: false,
+        reverseGeocode,
         requestMapPick: (h: never) => {
           box.h = h
         },
@@ -629,17 +659,14 @@ describe("Codex R3", () => {
 describe("Codex R4", () => {
   it("ein abgebautes Ort-Feld nimmt keinen Marker und schreibt nichts mehr", async () => {
     const box: { h: Handlers2 | null } = { h: null }
-    const updateMany = vi.fn()
+    const onValue = vi.fn()
     await render(
-      createElement(LocationField, {
-        label: "Ort",
-        data: {},
-        updateMany,
+      ortFeld({
+        space: "g",
+        onValue: onValue,
         requestMapPick: (h: never) => {
           box.h = h
         },
-        placeField: contentTypeFromRegister("event").itemRelations!.find((f) => f.location),
-        spaceId: "g",
       }),
     )
     await settle()
@@ -647,22 +674,15 @@ describe("Codex R4", () => {
       host.querySelector<HTMLButtonElement>('button[aria-label^="Position auf Karte"]')!.click()
     })
     await act(async () => root.render(createElement("div")))
-    updateMany.mockClear()
+    onValue.mockClear()
     expect(box.h!.onPickItem!(MARKTHALLE)).toBe(false)
     box.h!.onPick({ lat: 1, lng: 2 })
     box.h!.onCancel!()
-    expect(updateMany).not.toHaveBeenCalled()
+    expect(onValue).not.toHaveBeenCalled()
   })
 
   it("ohne Space im Formular sagt das Feld, warum keine Ort-Items kommen", async () => {
-    await render(
-      createElement(LocationField, {
-        label: "Ort",
-        data: {},
-        updateMany: () => undefined,
-        placeField: contentTypeFromRegister("event").itemRelations!.find((f) => f.location),
-      }),
-    )
+    await render(ortFeld({}))
     expect(host.querySelector("[data-places-unavailable]")?.textContent).toContain("Adressen gehen immer")
   })
 })
@@ -672,7 +692,7 @@ describe("Codex R5", () => {
     let resolve!: (v: string) => void
     const resize = vi.fn(() => new Promise<string>((r) => (resolve = r)))
     const onChange = vi.fn()
-    await render(createElement(AvatarField, { label: "Bild", value: "", onChange, resize }), [])
+    await render(avatar({ value: "", onChange, resize }), [])
     const fileInput = host.querySelector<HTMLInputElement>('input[type="file"]')!
     Object.defineProperty(fileInput, "files", { value: [new File(["x"], "alt.png", { type: "image/png" })] })
     await act(async () => {
@@ -889,7 +909,7 @@ describe("B11 avatar", () => {
   it("Upload: Resize auf 512 px, der Wert ist die verkleinerte Fassung; Entfernen leert", async () => {
     const resize = vi.fn(async () => DATA_URL)
     const onChange = vi.fn()
-    await render(createElement(AvatarField, { label: "Bild", value: "", onChange, resize }), [])
+    await render(avatar({ value: "", onChange, resize }), [])
     const file = new File(["x"], "foto.png", { type: "image/png" })
     const fileInput = host.querySelector<HTMLInputElement>('input[type="file"]')!
     Object.defineProperty(fileInput, "files", { value: [file] })
@@ -900,7 +920,7 @@ describe("B11 avatar", () => {
     expect(resize).toHaveBeenCalledWith(file, 512)
     expect(onChange).toHaveBeenCalledWith(DATA_URL)
 
-    await act(async () => root.render(createElement(AvatarField, { label: "Bild", value: DATA_URL, onChange, resize })))
+    await act(async () => root.render(avatar({ value: DATA_URL, onChange, resize })))
     await act(async () => {
       host.querySelector<HTMLButtonElement>('[aria-label="Bild entfernen"]')!.click()
     })
@@ -910,7 +930,7 @@ describe("B11 avatar", () => {
   it("kein Bild: Datei wird abgewiesen, ohne Resize", async () => {
     const resize = vi.fn(async () => DATA_URL)
     const onChange = vi.fn()
-    await render(createElement(AvatarField, { label: "Bild", value: "", onChange, resize }), [])
+    await render(avatar({ value: "", onChange, resize }), [])
     const fileInput = host.querySelector<HTMLInputElement>('input[type="file"]')!
     Object.defineProperty(fileInput, "files", { value: [new File(["x"], "a.pdf", { type: "application/pdf" })] })
     await act(async () => {

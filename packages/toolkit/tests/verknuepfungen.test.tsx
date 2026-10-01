@@ -10,6 +10,7 @@ import { MemoryFocusProvider, useItemFocus } from "../src/hooks/use-item-focus"
 import { resolveTypePresentation } from "../src/components/preview/type-presentation"
 import { edgeTargets } from "../src/components/preview/use-item-edges"
 import { scopesAcrossSpaces } from "../src/lib/item-targets"
+import { relationHost } from "./support/form-host"
 
 /**
  * S3, Teil B: Item-Kanten (C3) lesen. Spec: shared-components → „Item-Detail
@@ -230,13 +231,8 @@ describe("C3 schreiben: Formular der Aufgabe", () => {
   })
 
   it("Widget: @-Suche über Aufgaben des Space fügt hinzu, ✕ entfernt; das Item selbst wird nie angeboten", async () => {
-    const { ItemRelationWidget } = await import("../src/components/composer/widgets/item-relation-widget")
     let value: string[] = ["item:t-beet"]
-    const Harness = () => {
-      const [v, setV] = useState<string[]>(value)
-      value = v
-      return createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: v, onChange: setV, excludeId: "t-kompost", spaceId: "g" })
-    }
+    const Harness = () => relationHost({ label: "Ermöglicht", predicate: "blocks", targetType: "task", value, onChange: (v: string[]) => (value = v), excludeId: "t-kompost", spaceId: "g" })
     await render(createElement(Harness))
     const input = host.querySelector<HTMLInputElement>('[data-item-relation-field="blocks"] input')!
     await act(async () => {
@@ -340,8 +336,7 @@ describe("B15 item-ref und Rückwärts-Listen aus dem Register", () => {
 
 describe("Codex Runde 1", () => {
   it("Befund 2: ohne Space im Formular keine Suche über alle Spaces", async () => {
-    const { ItemRelationWidget } = await import("../src/components/composer/widgets/item-relation-widget")
-    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {} }))
+    await render(relationHost({ label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [] }))
     expect(host.querySelector("[data-needs-space]")?.textContent).toContain("Space")
     expect(host.querySelector('[data-item-relation-field="blocks"] input')).toBeNull()
   })
@@ -437,8 +432,7 @@ describe("Codex Runde 3", () => {
   })
 
   it("ein erhaltenes space-qualifiziertes Ziel erscheint nach dem Wechsel weiter als Chip", async () => {
-    const { ItemRelationWidget } = await import("../src/components/composer/widgets/item-relation-widget")
-    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: ["space:g/item:t-beet"], onChange: () => {}, spaceId: "h" }))
+    await render(relationHost({ label: "Ermöglicht", predicate: "blocks", targetType: "task", value: ["space:g/item:t-beet"], spaceId: "h" }))
     expect(host.querySelector('[data-relation-chip="t-beet"]')?.textContent).toContain("Beetplan")
   })
 })

@@ -1,13 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { useFieldEpoch } from "@/lib/form-epoch"
+import type { FieldAccess } from "@/lib/form-state"
 import { X } from "lucide-react"
 import { cn, getTagColor } from "@/lib/utils"
 
 interface TagsWidgetProps {
-  value: string[]
-  onChange: (value: string[]) => void
+  /** Der Feldzugang (shared-components → Formularzustand): Tags, Schreibweg, Vorschlagssuche. */
+  field: FieldAccess<string[]>
   label: string
   suggestions?: string[] | ((query: string) => Promise<string[]>)
   /** Quick-select suggestions shown as clickable chips below the input */
@@ -17,14 +17,13 @@ interface TagsWidgetProps {
 }
 
 export function TagsWidget({
-  value,
-  onChange,
+  field,
   label,
   suggestions,
   quickSuggestions,
   hint,
 }: TagsWidgetProps) {
-  const epoch = useFieldEpoch({ value })
+  const value = field.value
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = React.useState(false)
@@ -45,15 +44,18 @@ export function TagsWidget({
         ),
       )
     } else if (typeof suggestions === "function") {
-      // Formular-Epoche: nur die letzte Suche für den aktuellen Stand, gefiltert gegen den aktuellen Wert.
-      const search = epoch.begin("suggest")
+      // Hintergrundarbeit (Formularzustand, Regel 10): nur die letzte Suche
+      // für den aktuellen Stand, gefiltert gegen den Wert beim Eintreffen.
+      const search = field.begin("suggest", "background", "Tag-Vorschläge")
       void suggestions(query).then((results) => {
         search.apply((now) => setFiltered(results.filter((s) => !now.value.includes(s))))
         search.finish()
       })
-      return () => epoch.invalidate("suggest")
+      return () => field.cancel("suggest")
     }
-  }, [query, suggestions, value, epoch])
+    // Start und Verwerfen gehören dem Formularzustand, nicht dem Render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, suggestions, value])
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -71,14 +73,14 @@ export function TagsWidget({
   const addTag = (tag: string) => {
     const trimmed = tag.trim()
     if (trimmed && !value.includes(trimmed)) {
-      onChange([...value, trimmed])
+      field.set([...value, trimmed])
     }
     setQuery("")
     setShowSuggestions(false)
   }
 
   const removeTag = (tag: string) => {
-    onChange(value.filter((t) => t !== tag))
+    field.set(value.filter((t) => t !== tag))
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

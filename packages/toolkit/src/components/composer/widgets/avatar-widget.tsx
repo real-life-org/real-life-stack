@@ -5,7 +5,8 @@ import { Camera, ImagePlus, Loader2, X } from "lucide-react"
 
 import { Avatar, AvatarImage } from "@/components/primitives/avatar"
 import { safeImageSrc } from "@/lib/field-values"
-import { useEpochBusy, useFieldEpoch } from "@/lib/form-epoch"
+import { FieldNotice } from "./field-notice"
+import type { FieldAccess } from "@/lib/form-state"
 
 /**
  * Schreibform des Avatars (B11, S4b): Bild wählen, auf 512 px verkleinern
@@ -33,23 +34,25 @@ export const defaultAvatarResize: ResizeImage = async (file, maxSize) => {
 
 export interface AvatarFieldProps {
   label: string
-  /** Die gespeicherte Bildadresse, leer ohne Bild. */
-  value: string
-  onChange: (value: string) => void
-  disabled?: boolean
+  /**
+   * Der Feldzugang (shared-components → Formularzustand): Wert (die
+   * gespeicherte Bildadresse, leer ohne Bild), Sperre, Schreibweg und die
+   * Arbeit „Bild verkleinern".
+   */
+  field: FieldAccess<string>
   /** Zum Testen austauschbar; Standard verkleinert im Browser. */
   resize?: ResizeImage
 }
 
-export function AvatarField({ label, value, onChange, disabled, resize = defaultAvatarResize }: AvatarFieldProps) {
+export function AvatarField({ label, field, resize = defaultAvatarResize }: AvatarFieldProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
-  // Die Epoche des Felds (shared-components → Formular-Epoche): Nur das
-  // Ergebnis der letzten Bildwahl zählt; Entfernen, Abbau, Space- oder
-  // Typwechsel machen ein laufendes Verkleinern ungültig.
-  const epoch = useFieldEpoch({ onChange }, { locked: disabled })
-  // Beschäftigt ist das Feld, solange die laufende Bildwahl gilt: Wird sie
-  // ungültig (Entfernen, Abbau, Space- oder Typwechsel), ist es frei.
-  const busy = useEpochBusy(epoch, "image")
+  const value = field.value
+  const disabled = field.locked
+  // Das gewählte Bild ist Nutzerarbeit (Formularzustand, Regel 10): Ein
+  // Space- oder Typwechsel verwirft sie nicht; gibt es das Feld danach nicht,
+  // sagt das Formular es. Eine neue Bildwahl oder „Entfernen" nimmt sie zurück.
+  // Beschäftigt liest nur den Warte-Zustand des Formulars.
+  const busy = field.busy("image")
   const [error, setError] = React.useState<string | null>(null)
   const src = safeImageSrc(value)
   const errorId = React.useId()
@@ -63,13 +66,13 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
       return
     }
     setError(null)
-    const work = epoch.begin("image")
+    const work = field.begin("image", "user", "Bild")
     try {
       const result = await resize(file, AVATAR_SIZE)
-      // Gegen den aktuellen Rückruf; ein inzwischen gesperrtes Feld nimmt nichts an.
-      work.apply((now) => now.onChange(result))
+      // Über den Schreibweg des Formulars JETZT; ein gesperrtes Feld nimmt nichts an.
+      work.apply((now) => now.set(result))
     } catch {
-      work.apply(() => setError("Bild konnte nicht verarbeitet werden."))
+      if (work.valid()) setError("Bild konnte nicht verarbeitet werden.")
     } finally {
       work.finish()
     }
@@ -126,8 +129,8 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
               type="button"
               aria-label={`${label} entfernen`}
               onClick={() => {
-                epoch.invalidate("image")
-                onChange("")
+                field.cancel("image")
+                field.set("")
               }}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
@@ -143,6 +146,7 @@ export function AvatarField({ label, value, onChange, disabled, resize = default
           {error}
         </p>
       )}
+      {field.notice && <FieldNotice text={field.notice} onDismiss={field.dismissNotice} />}
     </div>
   )
 }

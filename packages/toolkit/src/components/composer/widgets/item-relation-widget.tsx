@@ -5,7 +5,9 @@ import { hasGroups, hasGroupScope, hasItemGroups, isAuthenticatable, type DataIn
 import { Lock, MousePointerClick } from "lucide-react"
 
 import { useOptionalConnector } from "../../../hooks/connector-context"
-import { useFieldEpoch } from "../../../lib/form-epoch"
+import type { FieldAccess, FieldWork } from "../../../lib/form-state"
+import type { IncomingValue } from "../form-fields"
+import { FieldNotice } from "./field-notice"
 import { resolveItemPermissions } from "../../../hooks/use-item-permissions"
 import { cn } from "../../../lib/utils"
 import { ItemRefChip, MissingRefText } from "../../preview/item-ref-chip"
@@ -105,11 +107,26 @@ function inSpace(connector: DataInterface | null, items: readonly Item[], spaceI
   return { items: items.filter((item) => resolveTarget(`item:${item.id}`, scope, [item]) === item), needsSpace: false }
 }
 
+/**
+ * Der Prüfstand eines Verknüpfungsfelds beim Eintreffen eines Modul-Picks
+ * (Formularzustand, Regel 3): die Kandidaten, Rechte und Grenzen JETZT.
+ */
+export interface RelationChecks {
+  candidates: readonly Item[]
+  allCandidates: readonly Item[]
+  excludeId: string | undefined
+  scope: TargetScope
+  unavailable: string | undefined
+}
+
 export interface ItemRelationWidgetProps {
   label: string
-  /** Targets (`item:<id>`), in Reihenfolge. */
-  value: readonly string[]
-  onChange: (next: string[]) => void
+  /**
+   * Der Feldzugang (shared-components → Formularzustand): die Targets
+   * (`item:<id>`) in Reihenfolge, der Schreibweg und die Arbeit
+   * „Modul-Pick".
+   */
+  field: FieldAccess<string[], RelationChecks>
   predicate: string
   targetType?: string
   placeholder?: string
@@ -130,8 +147,7 @@ export interface ItemRelationWidgetProps {
 
 export function ItemRelationWidget({
   label,
-  value,
-  onChange,
+  field,
   predicate,
   targetType,
   placeholder,
@@ -145,10 +161,10 @@ export function ItemRelationWidget({
 }: ItemRelationWidgetProps) {
   const { items: allCandidates, all, needsSpace, otherSpace, scope } = useCandidates(targetType, spaceId)
   const candidates = canChoose ? allCandidates.filter(canChoose) : allCandidates
+  const value = field.value
   const connector = useOptionalConnector()
   const groupName = useGroupName(connector, otherSpace ? spaceId : undefined)
   const spaceName = groupName ?? "diesem Space"
-  const [pickError, setPickError] = useState<string | null>(null)
   // Gewählte Ziele gegen alle sichtbaren Items (ein space-qualifiziertes
   // bleibt nach einem Space-Wechsel gültig); gesucht wird nur im Formular-Space.
   const resolve = (target: string) => resolveTarget(target, scope, all)
@@ -165,50 +181,56 @@ export function ItemRelationWidget({
         .slice(0, 6)
     : []
 
-  // Der Modul-Pick kommt asynchron (Formular-Epoche): Er gilt nur für den
-  // Stand, für den er begann, und prüft gegen den Stand beim Eintreffen.
   const full = !!single && value.length > 0
-  const fieldState = { candidates, allCandidates, value, excludeId, scope, full, unavailable, onChange }
-  type FieldState = typeof fieldState
-  const epoch = useFieldEpoch(fieldState, { scope: [spaceId ?? null] })
-  const checkPick = (id: string, now: FieldState): ItemPickResult => {
+  // Der Modul-Pick ist Nutzerarbeit (Formularzustand, Regeln 6 und 10): Er
+  // prüft beim Eintreffen gegen den Stand JETZT — Wert, Kandidaten, Rechte.
+  // Passt das Ziel nicht, steht der Grund am Feld und geht an das Modul.
+  field.track({ candidates, allCandidates, excludeId, scope, unavailable })
+  const checkPick = (id: string, current: readonly string[], now: RelationChecks | undefined): ItemPickResult => {
+    if (!now) return { ok: false, reason: "Das Feld ist nicht mehr da" }
     if (now.unavailable) return { ok: false, reason: now.unavailable }
-    if (now.full) return { ok: false, reason: "Das Feld hat schon ein Ziel" }
+    if (single && current.length > 0) return { ok: false, reason: "Das Feld hat schon ein Ziel" }
     if (id === now.excludeId) return { ok: false, reason: "Ein Item verweist nicht auf sich selbst" }
     const target = now.candidates.find((c) => c.id === id)
     if (!target && now.allCandidates.some((c) => c.id === id)) return { ok: false, reason: "Keine Schreibrechte an diesem Item" }
     if (!target) {
       return { ok: false, reason: targetType ? "Das Ziel ist nicht vom passenden Typ oder liegt nicht in diesem Space" : "Das Ziel liegt nicht in diesem Space" }
     }
-    if (now.value.some((t) => resolveTarget(t, now.scope, [target]) === target)) return { ok: false, reason: "Das Ziel ist schon gewählt" }
+    if (current.some((t) => resolveTarget(t, now.scope, [target]) === target)) return { ok: false, reason: "Das Ziel ist schon gewählt" }
     return { ok: true }
   }
   const startPick = () => {
-    const pick = epoch.begin("pick")
+    const pick: FieldWork<string[], RelationChecks> = field.begin("pick", "user", "Verknüpfung")
     requestItemPick?.({ predicate, targetType }, (id) => {
-      let result: ItemPickResult = { ok: false, reason: "Das Formular hat sich inzwischen geändert" }
-      pick.apply((now) => {
-        result = checkPick(id, now)
-        if (result.ok) {
-          setPickError(null)
-          addTo(id, now)
-        } else setPickError(result.reason)
+      let result: ItemPickResult = { ok: false, reason: "Das Formular nimmt die Wahl nicht mehr an" }
+      const ran = pick.apply((now) => {
+        result = checkPick(id, now.value, now.checks)
+        if (result.ok) now.set(added(now.value, id))
+        else now.refuse(result.reason)
       })
+      // Der Pick bleibt offen, bis ein neuer beginnt oder das Formular schließt:
+      // Ein Modul darf mehrere Ziele nacheinander wählen.
+      if (ran && result.ok) {
+        setQuery("")
+        setOpen(false)
+      }
       return result
     })
   }
 
-  // Gegen den aktuellen Stand: ein Klick schreibt auf den Wert dieses Renders.
-  const addTo = (id: string, now: { value: readonly string[]; onChange: (next: string[]) => void }) => {
+  // Ein Ziel dazu, gegen den Wert, auf den der Schreibweg trifft.
+  const added = (current: readonly string[], id: string): string[] => {
     const target = `item:${id}`
-    now.onChange(single ? [target] : now.value.includes(target) ? [...now.value] : [...now.value, target])
+    return single ? [target] : current.includes(target) ? [...current] : [...current, target]
+  }
+  const add = (id: string) => {
+    field.set(added(value, id))
     setQuery("")
     setOpen(false)
   }
-  const add = (id: string) => addTo(id, { value, onChange })
   const locked = (target: string) => !!lockedTargets?.includes(target)
   const remove = (target: string) => {
-    if (!locked(target)) onChange(value.filter((t) => t !== target))
+    if (!locked(target)) field.set(value.filter((t) => t !== target))
   }
 
   return (
@@ -283,10 +305,10 @@ export function ItemRelationWidget({
             </button>
           )}
         </div>
-        {pickError && (
-          <p role="alert" className="mt-1 text-xs text-destructive">
-            {pickError}
-          </p>
+        {field.notice && (
+          <div className="mt-1">
+            <FieldNotice text={field.notice} onDismiss={field.dismissNotice} />
+          </div>
         )}
         {suggestions.length > 0 && (
           <ul id={listId} role="listbox" className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-auto rounded-md border bg-popover p-1 shadow-md">
@@ -322,11 +344,11 @@ export interface IncomingRelationFieldProps {
   itemId?: string
   /** Space des Formulars (Kopf). */
   spaceId?: string
-  /** Hinzugefügte Quellen (`item:<id>`). */
-  added: readonly string[]
-  /** Entfernte Quellen (`item:<id>`). */
-  removed: readonly string[]
-  onChange: (added: string[], removed: string[]) => void
+  /**
+   * Der Feldzugang (Formularzustand): die hinzugefügten und entfernten
+   * Quellen (`item:<id>`) gegen die live gelesenen.
+   */
+  field: FieldAccess<IncomingValue, IncomingChecks>
   requestItemPick?: RequestItemPick
 }
 
@@ -352,9 +374,7 @@ export function IncomingRelationField({
   placeholder,
   itemId,
   spaceId,
-  added,
-  removed,
-  onChange,
+  field,
   requestItemPick,
 }: IncomingRelationFieldProps) {
   const connector = useOptionalConnector()
@@ -377,7 +397,6 @@ export function IncomingRelationField({
       )
     : []
   const live = sources.map((c) => `item:${c.id}`)
-  const value = [...live.filter((t) => !removed.includes(t)), ...added.filter((t) => !live.includes(t))]
   // Außerhalb des geöffneten Space ist keine Quelle schreibbar (Codex R1/4);
   // eigene, noch nicht gespeicherte Ergänzungen bleiben entfernbar.
   const lockedTargets = sources.filter((c) => unavailable || !canEdit(c)).map((c) => `item:${c.id}`)
@@ -387,8 +406,7 @@ export function IncomingRelationField({
       predicate={predicate}
       targetType={targetType}
       placeholder={placeholder}
-      value={value}
-      onChange={(next) => onChange(next.filter((t) => !live.includes(t)), live.filter((t) => !next.includes(t)))}
+      field={incomingAsTargets(field, live)}
       excludeId={itemId}
       spaceId={spaceId}
       lockedTargets={lockedTargets}
@@ -436,18 +454,66 @@ function useMeId(connector: DataInterface | null): string | undefined {
   return me?.id
 }
 
-/** Name eines Space für den Hinweis; ohne Treffer undefined. */
+/**
+ * Name eines Space für den Hinweis; ohne Treffer undefined. Liest die
+ * Gruppenliste des Connectors (beobachtet), keine eigene Anfrage.
+ */
 function useGroupName(connector: DataInterface | null, spaceId: string | undefined): string | undefined {
-  const [name, setName] = useState<string | undefined>()
+  const observable = useMemo(() => (connector && hasGroups(connector) ? connector.observeGroups() : null), [connector])
+  const [groups, setGroups] = useState(observable?.current ?? [])
   useEffect(() => {
-    if (!connector || !spaceId || !hasGroups(connector)) return
-    let alive = true
-    void connector.getGroups().then((groups) => {
-      if (alive) setName(groups.find((g) => g.id === spaceId)?.name)
-    })
-    return () => {
-      alive = false
-    }
-  }, [connector, spaceId])
-  return name
+    if (!observable) return
+    setGroups(observable.current)
+    return observable.subscribe((next) => startTransition(() => setGroups(next)))
+  }, [observable])
+  return spaceId ? groups.find((g) => g.id === spaceId)?.name : undefined
+}
+
+/** Der Prüfstand einer eingehenden Kante: der des Verknüpfungsfelds und die live gelesenen Quellen. */
+export type IncomingChecks = RelationChecks & { live: readonly string[] }
+
+/** Die gezeigten Targets: die live gelesenen ohne die entfernten, dazu die hinzugefügten. */
+function shownTargets(value: IncomingValue, live: readonly string[]): string[] {
+  return [...live.filter((t) => !value.removed.includes(t)), ...value.added.filter((t) => !live.includes(t))]
+}
+
+/** Zurück in Änderungen: hinzugefügt ist, was nicht live ist; entfernt, was live fehlt. */
+function asChanges(next: readonly string[], live: readonly string[]): IncomingValue {
+  return { added: next.filter((t) => !live.includes(t)), removed: live.filter((t) => !next.includes(t)) }
+}
+
+/**
+ * Der Feldzugang der eingehenden Kante, gesehen als Liste von Targets. Kein
+ * eigener Zustand: Lesen und Schreiben gehen an den Zugang des Formulars;
+ * beim Eintreffen eines Picks zählen die live gelesenen Quellen JETZT.
+ */
+function incomingAsTargets(field: FieldAccess<IncomingValue, IncomingChecks>, live: readonly string[]): FieldAccess<string[], RelationChecks> {
+  return {
+    value: shownTargets(field.value, live),
+    locked: field.locked,
+    notice: field.notice,
+    set: (next) => field.set(asChanges(next, live)),
+    begin: (channel, kind, what) => {
+      const work = field.begin(channel, kind, what)
+      return {
+        signal: work.signal,
+        valid: work.valid,
+        finish: work.finish,
+        apply: (fn) =>
+          work.apply((now) => {
+            const current = now.checks?.live ?? live
+            fn({
+              value: shownTargets(now.value, current),
+              checks: now.checks,
+              set: (next) => now.set(asChanges(next, current)),
+              refuse: now.refuse,
+            })
+          }),
+      }
+    },
+    cancel: field.cancel,
+    busy: field.busy,
+    track: (checks) => field.track({ ...checks, live }),
+    dismissNotice: field.dismissNotice,
+  }
 }

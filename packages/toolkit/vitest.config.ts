@@ -12,5 +12,12 @@ export default defineConfig({
   },
   test: {
     include: ["tests/**/*.test.{ts,tsx}"],
+    // Typtests (`*.test-d.ts`): laufen mit `vitest run` durch den Compiler —
+    // etwa der Vertrag „Widgets bekommen keinen rohen Setter" (Formularzustand).
+    typecheck: {
+      enabled: true,
+      include: ["tests/**/*.test-d.ts"],
+      tsconfig: "./tsconfig.typetest.json",
+    },
   },
 })

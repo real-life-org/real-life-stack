@@ -14,7 +14,7 @@ vi.mock("../src/components/host/create-host", async (importOriginal) => ({
 const { ItemDetailView } = await import("../src/components/detail/item-detail-view")
 const { contentTypeFromRegister, itemToComposerData, mapComposerSubmission, pickContentTypes } = await import("../src/components/composer/content-types")
 const { peopleStatementKey } = await import("../src/components/composer/people-relations")
-const { PeopleWidget } = await import("../src/components/composer/widgets/people-widget")
+const { peopleHost } = await import("./support/form-host")
 
 /**
  * Befund Anton zu #518: Das Event-Formular hat EIN Personenfeld „Wer“, das
@@ -85,7 +85,7 @@ describe("PeopleWidget mit Zuständen", () => {
     const host = document.createElement("div")
     const root = createRoot(host)
     await act(async () => {
-      root.render(createElement(PeopleWidget, {
+      root.render(peopleHost({
         value: [TIMO, LENA], onChange: () => {}, label: "Wer",
         options: [{ id: TIMO, name: "Timo" }, { id: LENA, name: "Lena" }],
         record: {
@@ -167,7 +167,7 @@ describe("Codex Runde 2: Anzeige nach dem Speichern, Entfernen", () => {
     const host = document.createElement("div")
     const root = createRoot(host)
     await act(async () => {
-      root.render(createElement(PeopleWidget, {
+      root.render(peopleHost({
         value, onChange: () => {}, label: "Wer",
         options: [{ id: TIMO, name: "Timo" }, { id: ME, name: "Ich" }],
         record: { ...RECORD_BASE, changes: {}, onChangesChange: () => {}, live: {}, ...record } as never,
@@ -207,7 +207,7 @@ describe("Codex Runde 3", () => {
   }
   function Harness({ live, value }: { live: Record<string, unknown>; value: string[] }) {
     const [changes, setChanges] = useState<Record<string, string | null>>({})
-    return createElement(PeopleWidget, {
+    return peopleHost({
       value, onChange: () => {}, label: "Wer", options: [{ id: TIMO, name: "Timo" }, { id: ME, name: "Ich" }],
       record: { ...RECORD, live: live as never, changes, onChangesChange: setChanges },
     })
@@ -232,7 +232,7 @@ describe("Codex Runde 3", () => {
     const onChangesChange = vi.fn()
     const host = document.createElement("div")
     const root = createRoot(host)
-    await act(async () => root.render(createElement(PeopleWidget, {
+    await act(async () => root.render(peopleHost({
       value: [], onChange: () => {}, label: "Wer", options: [{ id: TIMO, name: "Timo" }],
       record: { ...RECORD, live: { [TIMO]: { state: "declined", locked: true, mine: true } }, changes: {}, onChangesChange },
     })))

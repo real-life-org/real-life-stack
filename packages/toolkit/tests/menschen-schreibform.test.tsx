@@ -10,7 +10,7 @@ import {
   peopleRelationsToWidgetData,
   resolvePeopleFields,
 } from "../src/components/composer/people-relations"
-import { PeopleWidget } from "../src/components/composer/widgets/people-widget"
+import { peopleHost } from "./support/form-host"
 import { contentTypeFromRegister } from "../src/components/composer/content-types"
 import { EXAMPLE_LEARNING_LAYER } from "../src/story-support/example-learning-layer"
 import { createComposerMapping } from "../src/components/composer/composer-mapping"
@@ -111,7 +111,7 @@ describe("PeopleWidget: Antippen wechselt den Qualifier", () => {
     const root = createRoot(container)
     await act(async () => {
       root.render(
-        createElement(PeopleWidget, {
+        peopleHost({
           value: ["timo"],
           onChange: () => {},
           label: "Wer",
@@ -137,7 +137,7 @@ describe("PeopleWidget: Antippen wechselt den Qualifier", () => {
     const root = createRoot(container)
     await act(async () => {
       root.render(
-        createElement(PeopleWidget, {
+        peopleHost({
           value: [],
           onChange,
           label: "Wer",
@@ -224,7 +224,7 @@ describe("Qualifier mit default (Spec 06, Regel 7; S3b: assignedTo fehlend = can
     const root = createRoot(container)
     await act(async () => {
       root.render(
-        createElement(PeopleWidget, {
+        peopleHost({
           value: ["timo"],
           onChange,
           label: "Wer",
@@ -264,7 +264,7 @@ describe("Qualifier mit default: Hinzufügen", () => {
     const root = createRoot(container)
     await act(async () => {
       root.render(
-        createElement(PeopleWidget, {
+        peopleHost({
           value: [],
           onChange,
           label: "Wer",

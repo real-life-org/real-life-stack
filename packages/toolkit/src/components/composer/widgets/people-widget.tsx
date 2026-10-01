@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useFieldEpoch } from "@/lib/form-epoch"
+import type { FieldAccess } from "@/lib/form-state"
+import type { PeopleValue } from "../form-fields"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -11,8 +12,12 @@ export interface PersonOption {
 }
 
 interface PeopleWidgetProps {
-  value: string[]
-  onChange: (value: string[]) => void
+  /**
+   * Der Feldzugang (shared-components → Formularzustand): Personen,
+   * Qualifier je Person und Änderungen an Aussagen — die Schlüssel dieses
+   * Felds, mit einem Schreibweg und der Vorschlagssuche.
+   */
+  field: FieldAccess<PeopleValue>
   label: string
   /** Structured options: widget stores IDs, displays names */
   options?: PersonOption[]
@@ -26,9 +31,6 @@ interface PeopleWidgetProps {
    * wechselt zum nächsten Wert. Eine neue Person bekommt den ersten Wert.
    */
   qualifier?: { key: string; values: readonly { id: string; label: string }[]; default?: string }
-  /** Qualifier je Person-Id. */
-  qualifiers?: Record<string, string>
-  onQualifiersChange?: (next: Record<string, string>) => void
   /** Beschriftung des leeren Eingabefelds („Einladen…", „Zuweisen…"). */
   placeholder?: string
   /**
@@ -36,7 +38,8 @@ interface PeopleWidgetProps {
    * `attends`, 08 → Teilnahme am Event). Der Chip zeigt „Name · Zustand";
    * Antippen wechselt im Kreis Grundzustand → Werte. `live` ist der
    * geltende Zustand aus den Records (fest, wenn es die eigene Aussage einer
-   * anderen Person ist), `changes` die Änderungen dieses Formulars.
+   * anderen Person ist); die Änderungen dieses Formulars stehen im Feld
+   * (`field.value.changes`).
    */
   record?: PeopleWidgetRecord
 }
@@ -45,24 +48,21 @@ export interface PeopleWidgetRecord {
   base: { id: string; label: string }
   values: readonly { id: string; label: string }[]
   live: Record<string, { state: string; locked?: boolean; mine?: boolean; fallback?: string }>
-  changes: Record<string, string | null>
-  onChangesChange: (next: Record<string, string | null>) => void
 }
 
 export function PeopleWidget({
-  value,
-  onChange,
+  field,
   label,
   options,
   suggestions,
   quickSuggestions,
   qualifier,
-  qualifiers,
-  onQualifiersChange,
   placeholder,
   record,
 }: PeopleWidgetProps) {
-  const epoch = useFieldEpoch({ value })
+  const { people: value, qualifiers, changes } = field.value
+  // Ein Schreibweg für alle Schlüssel des Felds, gegen den Wert dieses Renders (Eingabe).
+  const write = (patch: Partial<PeopleValue>) => field.set({ ...field.value, ...patch })
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<PersonOption[]>([])
   const [showSuggestions, setShowSuggestions] = React.useState(false)
@@ -107,21 +107,24 @@ export function PeopleWidget({
           .map((s) => ({ id: s, name: s })),
       )
     } else if (typeof suggestions === "function") {
-      // Formular-Epoche: nur die letzte Suche für den aktuellen Stand, gefiltert gegen den aktuellen Wert.
-      const search = epoch.begin("suggest")
+      // Hintergrundarbeit (Formularzustand, Regel 10): nur die letzte Suche
+      // für den aktuellen Stand, gefiltert gegen den Wert beim Eintreffen.
+      const search = field.begin("suggest", "background", "Personen-Vorschläge")
       void suggestions(query).then((results) => {
         search.apply((now) =>
           setFiltered(
             results
-              .filter((s) => !now.value.includes(s))
+              .filter((s) => !now.value.people.includes(s))
               .map((s) => ({ id: s, name: s })),
           ),
         )
         search.finish()
       })
-      return () => epoch.invalidate("suggest")
+      return () => field.cancel("suggest")
     }
-  }, [query, options, suggestions, value, epoch])
+    // Start und Verwerfen gehören dem Formularzustand, nicht dem Render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, options, suggestions, value])
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -139,25 +142,25 @@ export function PeopleWidget({
   const addPerson = (id: string) => {
     const trimmed = id.trim()
     if (trimmed && !value.includes(trimmed)) {
-      onChange([...value, trimmed])
       // Mit default bleibt der Wert offen (fehlend = default, Spec 06 Regel 7).
       const first = qualifier && qualifier.default === undefined ? qualifier.values[0] : undefined
-      if (first && onQualifiersChange) onQualifiersChange({ ...(qualifiers ?? {}), [trimmed]: first.id })
+      write({ people: [...value, trimmed], ...(first ? { qualifiers: { ...qualifiers, [trimmed]: first.id } } : {}) })
     }
     setQuery("")
     setShowSuggestions(false)
   }
 
   const removePerson = (id: string) => {
-    onChange(value.filter((p) => p !== id))
+    const patch: Partial<PeopleValue> = { people: value.filter((p) => p !== id) }
     // Eine eigene Aussage über die Person geht mit (keine Aussage mehr).
-    if (record && (record.live[id]?.mine || (record.changes[id] ?? null) !== null)) {
-      record.onChangesChange({ ...record.changes, [id]: null })
+    if (record && (record.live[id]?.mine || (changes[id] ?? null) !== null)) {
+      patch.changes = { ...changes, [id]: null }
     }
-    if (qualifier && onQualifiersChange && qualifiers && id in qualifiers) {
+    if (qualifier && id in qualifiers) {
       const { [id]: _removed, ...rest } = qualifiers
-      onQualifiersChange(rest)
+      patch.qualifiers = rest
     }
+    write(patch)
   }
 
   // Zustände: Grundzustand, dann die Werte der Record-Kante.
@@ -168,7 +171,7 @@ export function PeopleWidget({
   const stateOf = (id: string) => {
     if (!record) return undefined
     const live = record.live[id]
-    const changed = record.changes[id]
+    const changed = changes[id]
     let stateId: string
     if (live?.locked) stateId = live.state
     else if (changed === undefined) stateId = live?.state ?? record.base.id
@@ -180,30 +183,30 @@ export function PeopleWidget({
   // eine verbleibende fremde Aussage darf den Kreis nicht festhalten.
   const cycleState = (id: string) => {
     if (!record || record.live[id]?.locked) return
-    const changed = record.changes[id]
+    const changed = changes[id]
     const selected = changed === undefined ? (record.live[id]?.state ?? record.base.id) : (changed ?? record.base.id)
     const index = states.findIndex((s) => s.id === selected)
     const next = states[(index + 1) % states.length]
-    record.onChangesChange({ ...record.changes, [id]: next.id })
+    write({ changes: { ...changes, [id]: next.id } })
   }
 
   // Wer eine geltende Aussage hat, steht im Feld, auch ohne Einladung —
   // außer das Formular nimmt die eigene Aussage gerade zurück.
   const shown = record
-    ? [...value, ...Object.keys(record.live).filter((id) => !value.includes(id) && (record.changes[id] !== null || !!record.live[id].fallback || !!record.live[id].locked))]
+    ? [...value, ...Object.keys(record.live).filter((id) => !value.includes(id) && (changes[id] !== null || !!record.live[id].fallback || !!record.live[id].locked))]
     : value
 
   // Ohne Wert gilt der default (Spec 06, Regel 7).
-  const qualifierOf = (id: string) => qualifier?.values.find((v) => v.id === (qualifiers?.[id] ?? qualifier.default))
+  const qualifierOf = (id: string) => qualifier?.values.find((v) => v.id === (qualifiers[id] ?? qualifier.default))
 
   // Im Kreis der erlaubten Werte; ohne Wert (und ohne default) zum ersten.
   // Der default wird nie ausdrücklich geschrieben: zurück auf ihn heißt kein Wert.
   const cycleQualifier = (id: string) => {
-    if (!qualifier || !onQualifiersChange || qualifier.values.length === 0) return
-    const index = qualifier.values.findIndex((v) => v.id === (qualifiers?.[id] ?? qualifier.default))
+    if (!qualifier || qualifier.values.length === 0) return
+    const index = qualifier.values.findIndex((v) => v.id === (qualifiers[id] ?? qualifier.default))
     const next = qualifier.values[(index + 1) % qualifier.values.length]!
-    const { [id]: _previous, ...rest } = qualifiers ?? {}
-    onQualifiersChange(next.id === qualifier.default ? rest : { ...rest, [id]: next.id })
+    const { [id]: _previous, ...rest } = qualifiers
+    write({ qualifiers: next.id === qualifier.default ? rest : { ...rest, [id]: next.id } })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

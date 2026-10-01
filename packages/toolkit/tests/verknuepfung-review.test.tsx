@@ -7,7 +7,7 @@ import { MockConnector } from "@real-life-stack/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { useItem } from "../src/hooks/use-items"
-import { ItemRelationWidget } from "../src/components/composer/widgets/item-relation-widget"
+import { relationHost } from "./support/form-host"
 import { resolveTypePresentation } from "../src/components/preview/type-presentation"
 
 /**
@@ -81,7 +81,7 @@ const GROUPS = { g: ["t-g", "x-post"], h: ["t-h"] }
 
 describe("#529: die Suche folgt dem Space im Formularkopf", () => {
   it("in der Übersicht (kein App-Space) findet die Suche die Aufgaben des Formular-Space", async () => {
-    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {}, spaceId: "h" }), [IN_G, IN_H, POST_G], GROUPS, null)
+    await render(relationHost({ label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], spaceId: "h" }), [IN_G, IN_H, POST_G], GROUPS, null)
     expect(await type("")).toEqual(["Im Hof"])
   })
 
@@ -89,26 +89,24 @@ describe("#529: die Suche folgt dem Space im Formularkopf", () => {
   // ein anderer geöffnet ist. Den Hinweis ohne die Zusage prüft
   // space-des-formulars.test.tsx.
   it("ist der Formular-Space nicht der geöffnete, sucht das Feld trotzdem dort (02 → group)", async () => {
-    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {}, spaceId: "h" }), [IN_G, IN_H, POST_G], GROUPS, "g")
+    await render(relationHost({ label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], spaceId: "h" }), [IN_G, IN_H, POST_G], GROUPS, "g")
     expect(host.querySelector("[data-other-space]")).toBeNull()
     expect(await type("")).toEqual(["Im Hof"])
   })
 
   it("im geöffneten Space findet sie dessen Aufgaben", async () => {
-    await render(createElement(ItemRelationWidget, { label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], onChange: () => {}, spaceId: "g" }), [IN_G, IN_H, POST_G], GROUPS, "g")
+    await render(relationHost({ label: "Ermöglicht", predicate: "blocks", targetType: "task", value: [], spaceId: "g" }), [IN_G, IN_H, POST_G], GROUPS, "g")
     expect(await type("")).toEqual(["Im Garten"])
   })
 })
 
 describe("#530: der Modul-Pick prüft wie die Suche und meldet Ablehnungen", () => {
   function Harness({ onResult, excludeId, initial = [] }: { onResult: (r: unknown) => void; excludeId?: string; initial?: string[] }) {
-    const [value, setValue] = useState<string[]>(initial)
     return createElement("div", null,
-      createElement(ItemRelationWidget, {
-        label: "Ermöglicht", predicate: "blocks", targetType: "task", value, onChange: setValue, spaceId: "g", excludeId,
-        requestItemPick: (_req, onPick) => { (globalThis as { __pick?: typeof onPick }).__pick = onPick },
+      relationHost({
+        label: "Ermöglicht", predicate: "blocks", targetType: "task", value: initial, output: true, spaceId: "g", excludeId,
+        requestItemPick: (_req: unknown, onPick: (id: string) => unknown) => { (globalThis as { __pick?: typeof onPick }).__pick = onPick },
       }),
-      createElement("output", { id: "value" }, value.join(",")),
     )
     void onResult
   }
@@ -138,7 +136,8 @@ describe("#530: der Modul-Pick prüft wie die Suche und meldet Ablehnungen", () 
       expect(result.reason, id).toBeTruthy()
     }
     expect(host.querySelector("#value")?.textContent).toBe("item:t-g")
-    expect(host.querySelector('[data-item-relation-field] [role="alert"]')?.textContent).toBeTruthy()
+    // Abgelehnt mit Grund, sichtbar am Feld (Formularzustand, Regel 10).
+    expect(host.querySelector("[data-item-relation-field] [data-field-notice]")?.textContent).toContain("Verknüpfung nicht übernommen:")
   })
 })
 
@@ -175,10 +174,8 @@ describe("Codex Runde 5", () => {
     const other = item("t-g2", "task", { title: "Zweite im Garten", status: "open" })
     let onPick: ((id: string) => unknown) | undefined
     function Harness() {
-      const [value, setValue] = useState<string[]>([])
       return createElement("div", null,
-        createElement(ItemRelationWidget, { label: "E", predicate: "blocks", targetType: "task", value, onChange: setValue, spaceId: "g", requestItemPick: (_r, cb) => { onPick = cb } }),
-        createElement("output", { id: "value" }, value.join(",")))
+        relationHost({ label: "E", predicate: "blocks", targetType: "task", value: [], output: true, spaceId: "g", requestItemPick: (_r: unknown, cb: (id: string) => unknown) => { onPick = cb } }))
     }
     await render(createElement(Harness), [IN_G, other], { g: ["t-g", "t-g2"] }, "g")
     await act(async () => [...host.querySelectorAll("button")].find((b) => b.textContent?.includes("Im Modul wählen"))!.click())
