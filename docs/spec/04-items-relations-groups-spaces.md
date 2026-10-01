@@ -140,6 +140,18 @@ Regeln:
 4. Netzwerke, Labels oder White-Label-Kontexte sind nicht automatisch Groups; sie können mehrere Groups oder Spaces umfassen.
 5. Group-Metadaten liegen in `Group.data` und müssen additiv erweiterbar bleiben.
 
+### Space einer Instanz und Kanten-Ziele
+
+**Status:** Normativer Entwurf (01.10.2026).
+
+Jede gelesene Instanz trägt ihren Space in `spaceId` ([02 → Space einer Instanz](02-data-interface.md#space-einer-instanz)). Die [Target-Konventionen](#target-konventionen) beziehen sich auf diese Angabe.
+
+Regeln:
+
+1. **Bezugs-Space des Trägers.** Ein `item:`-Target ist space-lokal zum **Bezugs-Space** seines Trägers. Das ist `spaceId` des Trägers; bei einem Mirror ist es sein `homeSpaceId` aus der Relation `mirrorOf` ([09, Invariante 10](09-mirror-bridge.md#invarianten)). Ist der Bezugs-Space `null`, hat ein `item:`-Target kein Ziel.
+2. **Ziel.** `item:x` meint die Instanz mit `id` x und demselben Bezugs-Space. `space:{id}/item:x` meint die Instanz mit `id` x im Space `{id}`; bei einem Mirror ist das sein `homeSpaceId`. Eine Instanz mit `spaceId: null` ist nie Ziel eines Targets.
+3. **Ansichten über mehrere Spaces.** Graph, Übersicht, Aktivität und jede andere Fläche, die Items mehrerer Spaces zeigt, bestimmen den Space von Träger und Ziel ausschließlich aus `spaceId` (Regel 1). Das gilt auch für den Kontext „alle Spaces“ des Auflösers für Kanten-Ziele ([06 → Verhältnis zu Relations](06-schema-composition.md#verhältnis-zu-relations)). Eine Space-Auskunft, die eine Fläche selbst zusammenstellt (aus angezeigten Items, Präsentation oder `getItemGroupId`), DARF dafür NICHT verwendet werden. Ein separat geladener Relation-Record bringt seinen Space selbst mit ([08](08-relation-records.md#relationrecord-als-item), Regel 11).
+
 ## Space-Metadaten
 
 Space-Metadaten (Name, Image, Modules) liegen gemäß Regel #5 in `Group.data` (Ausnahme `name`, top-level). `updateGroup` bildet den gesamten `data`-Patch auf die `_meta`-Map des Space ab (via `updateSpace`) und synct ihn darüber. Code-Referenz: `packages/wot-connector/src/wot-connector.ts` (`updateGroup`).

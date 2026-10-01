@@ -122,6 +122,14 @@ Regeln:
     die Schema-Definition folgt in `schemas/vocab/relation/v1/` (validiert
     u. a. genau einen `from`- und einen `to`-Eintrag, die ID-Regel und die
     reservierten Vertragsfelder `predicate`/`confirmationRef`/`claim`).
+11. **Space eines Records.** Ein RelationRecord trägt beim Lesen seinen
+    Space in `spaceId` wie jedes Item ([02 → Space einer Instanz](02-data-interface.md#space-einer-instanz)).
+    Der Wert ist der Space der Ablage, in der der Record liegt (Dokument,
+    Tabelle oder Zuordnung des Space), nicht der Space eines Endpunkts und
+    nicht der geöffnete Space. Dasselbe gilt für Kommentare und Reaktionen.
+    Der zusammengesetzte Schlüssel `(spaceId, id)` aus Regel 4 ist genau
+    diese Angabe. Endpunkte mit `item:` sind space-lokal zum Space des
+    Records ([04 → Space einer Instanz und Kanten-Ziele](04-items-relations-groups-spaces.md#space-einer-instanz-und-kanten-ziele)).
 
 ## RelationRecordCapable und RelationRecordWriterCapable (der „RelationStore")
 
