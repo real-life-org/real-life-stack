@@ -44,6 +44,8 @@ Leere Fakten hinterlassen keine leere Meta-Box: Ein Baustein bekommt für einen 
 
 Ein Datum ist lesend eine Zeitangabe mit Sprung in den Kalender und schreibend ein Datumsfeld. Beides gehört zu demselben Feld desselben Vokabulars; das Typ-Register hält Lese- und Schreibdarstellung zusammen, statt sie in zwei Komponenten zu trennen, die niemand gleichzeitig pflegt. Bearbeiten öffnet der Host in derselben Fläche (`?edit` im Fokus), mit dem Composer, der auch das Erstellen macht.
 
+Ein Widget im Composer schreibt nur über seinen **Feldzugang**. Dessen fünf Bausteine sind die Schnittstelle für neue Widgets: `value`/`set` für Eingaben, `run` für einmalige Arbeit, `query` für Vorschlagslisten, `subscribe` für Abonnements und `notice` für Hinweise. Das Formular besitzt die Lebensdauer, das Widget die Logik; ein neues Widget ändert das Formular nicht. Außerhalb des Formulars liefert `useStandaloneField` denselben Zugang (Spec: Geteilte Komponenten → Formularzustand).
+
 <Story id="rls-items-content-composer--edit-mode" title="Derselbe Composer für Erstellen und Bearbeiten, mit den Widgets des Typs" height={560} />
 
 ## Die Zustände gehören dazu

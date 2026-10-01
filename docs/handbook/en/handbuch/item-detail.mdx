@@ -2,7 +2,7 @@
 title: One detail view for all items
 description: The anatomy of the detail view, reading and writing as a pair, the states, and why a profile is not a second UI system.
 translationOf: docs/handbook/de/handbuch/item-detail.mdx
-sourceHash: 9a0cfbda19688734cf197680b71b351ff982e32c77ddad01367b11761c74a0c8
+sourceHash: 3de30028cbf2d75836b0530870ae5f9833abc115b8458b6e23b97df4a5ad6da2
 group: verstehen
 sidebar:
   order: 8
@@ -45,6 +45,8 @@ Empty facts leave no empty meta box: a building block receives `null` for an emp
 ## Reading and writing are a pair
 
 A date is, when reading, a point in time with a jump into the calendar and, when writing, a date field. Both belong to the same field of the same vocabulary; the type register keeps reading and writing rendering together instead of splitting them into two components that nobody maintains at the same time. The host opens editing in the same surface (`?edit` in the focus), with the composer that also does creating.
+
+A widget in the composer writes only through its **field access**. Its five building blocks are the interface for new widgets: `value`/`set` for input, `run` for one-off work, `query` for suggestion lists, `subscribe` for subscriptions and `notice` for hints. The form owns the lifetime, the widget owns the logic; a new widget does not change the form. Outside the form, `useStandaloneField` provides the same access (spec: Shared components → Formularzustand).
 
 <Story id="rls-items-content-composer--edit-mode" title="The same composer for create and edit, with the widgets of the type" height={560} />
 
