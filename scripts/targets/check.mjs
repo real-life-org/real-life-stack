@@ -2,7 +2,7 @@
 // pnpm check:targets — siehe lib.mjs.
 import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
-import { findings, inScope, RESOLVER } from "./lib.mjs"
+import { findings, formFindings, inScope, RESOLVER } from "./lib.mjs"
 
 const files = execFileSync("git", ["ls-files", "packages/toolkit/src"], { encoding: "utf8" })
   .split("\n")
@@ -16,8 +16,19 @@ for (const path of files) {
     console.error(`${path}:${f.line}: zerlegt ein Target außerhalb von ${RESOLVER}\n    ${f.text}`)
   }
 }
+let form = 0
+for (const path of files) {
+  for (const f of formFindings(path, readFileSync(path, "utf8"))) {
+    form++
+    console.error(`${path}:${f.line}: Formularzustand — ${f.text}`)
+  }
+}
+if (form > 0) {
+  console.error(`\n${form} Stelle(n). Widgets erreichen den Formularzustand nur über ihren Feldzugang (shared-components → Formularzustand).`)
+  process.exit(1)
+}
 if (count > 0) {
   console.error(`\n${count} Stelle(n). Das Ziel einer Kante bestimmt nur der Auflöser (resolveTarget, targetPointsTo, targetItemId aus lib/item-targets.ts; Spec 06, Verhältnis zu Relations, Regel 6).`)
   process.exit(1)
 }
-console.log(`Targets in Ordnung: ${files.length} Dateien, nur ${RESOLVER} zerlegt.`)
+console.log(`Targets in Ordnung: ${files.length} Dateien, nur ${RESOLVER} zerlegt. Formularzustand nur über Feldzugänge.`)

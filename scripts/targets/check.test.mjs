@@ -34,3 +34,18 @@ test("verbietet interne Helfer, abgeschaltete Prüfung und selbst gebaute Kontex
   const lines = findings("packages/toolkit/src/x.ts", src).map((f) => f.line)
   assert.deepEqual(lines.sort(), [1, 2, 3, 4])
 })
+
+test("Formularzustand: Widgets importieren nur Typen, kein roher Setter, kein Export", async () => {
+  const { formFindings, FORM_STATE } = await import("./lib.mjs")
+  const widget = "packages/toolkit/src/components/composer/widgets/x.tsx"
+  assert.deepEqual(formFindings(widget, 'import type { FieldAccess } from "../../../lib/form-state"'), [])
+  assert.deepEqual(formFindings(widget, 'import { type FieldAccess } from "@/lib/form-state"'), [])
+  assert.equal(formFindings(widget, 'import { useFormState, type FieldAccess } from "@/lib/form-state"').length, 1)
+  assert.equal(formFindings(widget, 'import { useActionState } from "../../lib/form-state"').length, 1)
+  assert.deepEqual(formFindings("packages/toolkit/src/components/composer/content-composer.tsx", 'import { useFormState } from "@/lib/form-state"'), [])
+  assert.equal(formFindings(widget, "const updateMany = (patch) => setData(patch)").length, 1)
+  assert.deepEqual(formFindings(widget, "// früher: updateMany"), [])
+  assert.equal(formFindings("packages/toolkit/src/index.ts", 'export * from "./lib/form-state"').length, 1)
+  assert.equal(formFindings("packages/toolkit/src/index.ts", 'export { useFormState } from "./lib/form-state"').length, 1)
+  assert.deepEqual(formFindings(FORM_STATE, "export function useFormState() {}"), [])
+})

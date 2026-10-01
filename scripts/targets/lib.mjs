@@ -86,3 +86,47 @@ export function inScope(path) {
     !path.includes("/story-support/")
   )
 }
+
+// ---------------------------------------------------------------------------
+// Wächter für den Formularzustand (shared-components → Formularzustand,
+// Prüfbar „Exporte"): Widgets erreichen ihn nur über den Feldzugang.
+//
+// - Die Bausteine (`FormState`, `useFormState`, `ActionState`,
+//   `useActionState`) importieren nur der Formularzustand selbst (der
+//   Composer) und der Aktionszustand (die Selbstaktion). Alle anderen —
+//   Widgets vorneweg — importieren aus `lib/form-state` nur Typen.
+// - `updateMany` (der rohe Setter von früher) gibt es nicht mehr.
+// - Kein Index des Pakets exportiert `lib/form-state`.
+
+export const FORM_STATE = "packages/toolkit/src/lib/form-state.tsx"
+
+/** Wer die Bausteine des Formular- und des Aktionszustands benutzen darf. */
+export const FORM_STATE_OWNERS = new Set([
+  "packages/toolkit/src/components/composer/content-composer.tsx",
+  "packages/toolkit/src/components/preview/use-people-line.ts",
+])
+
+/** Befunde zum Formularzustand in einer Datei: `[{ line, text }]`. */
+export function formFindings(path, source) {
+  if (path === FORM_STATE) return []
+  const out = []
+  const lines = source.split("\n")
+  const importRe = /import\s*(type\s*)?\{([^}]*)\}\s*from\s*["'][^"']*form-state["']/g
+  for (const m of source.matchAll(importRe)) {
+    const line = source.slice(0, m.index).split("\n").length
+    const values = m[1] ? [] : m[2].split(",").map((p) => p.trim()).filter((p) => p && !p.startsWith("type "))
+    if (values.length > 0 && !FORM_STATE_OWNERS.has(path)) {
+      out.push({ line, text: `Baustein des Formularzustands außerhalb von Formular- und Aktionszustand: ${values.join(", ")}` })
+    }
+  }
+  if (/export\s+(\*|\{[^}]*\})\s*from\s*["'][^"']*form-state["']/.test(source)) {
+    const line = lines.findIndex((l) => /export.*form-state/.test(l)) + 1
+    out.push({ line, text: "lib/form-state wird exportiert" })
+  }
+  lines.forEach((text, i) => {
+    const trimmed = text.trim()
+    if (trimmed.startsWith("//") || trimmed.startsWith("*")) return
+    if (/\bupdateMany\b/.test(text)) out.push({ line: i + 1, text: `roher Setter: ${trimmed}` })
+  })
+  return out
+}
