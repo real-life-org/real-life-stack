@@ -103,8 +103,12 @@ Regeln:
    `claim` (s. „Autorbindung: SignedClaims“) sind reserviert; neue
    Vertragsfelder kommen nur mit einer neuen Vokabular-Version
    (`relation/v2`), nie still in `v1`.
-7. Ein RelationRecord SOLLTE im selben Space liegen wie sein `from`-Ziel.
-   Endpunkte in anderen Spaces werden über `space:{id}/item:` adressiert.
+7. Ein RelationRecord liegt im Space des Items, auf das er sich bezieht:
+   im Space des `to`-Ziels, wenn `to` ein Item adressiert, sonst im Space
+   des `from`-Ziels. Er liegt nicht im Space von `from`, nur weil `from`
+   der Autor oder Träger ist (bei `attends` ist `from` eine Person mit
+   `global:`-Target). Endpunkte in anderen Spaces werden über
+   `space:{id}/item:` adressiert.
 8. Records mit nicht auflösbaren oder fehlerhaften Endpunkten (kein oder
    mehr als ein `from`-/`to`-Eintrag) MÜSSEN von Leseflächen ignoriert
    werden (kein Crash, keine Phantom-Knoten). Aufräumen ist eine explizite
