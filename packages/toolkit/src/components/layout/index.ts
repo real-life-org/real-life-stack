@@ -3,7 +3,6 @@ export { PanelSafeArea, type PanelSafeAreaProps } from "./panel-safe-area"
 export { ModuleToolbar, type ModuleToolbarProps } from "./module-toolbar"
 export {
   ModuleFrame,
-  ModuleControls,
   moduleContainerClass,
   moduleBleedContentClass,
   resolveModuleLayout,
@@ -31,4 +30,4 @@ export { GroupDialog } from "./group-dialog"
 export { SpaceThemePanel, SpaceThemeCard } from "./space-theme-panel"
 export { AccentGrid, RadiusTiles, SurfacesToggle, ThemeSectionLabel } from "./space-theme-controls"
 export type { SpaceThemePanelProps } from "./space-theme-panel"
-export type { GroupDialogMode, GroupDialogProps } from "./group-dialog"
+export type { AppSpaceSection, AppSpaceSectionContext, GroupDialogMode, GroupDialogProps } from "./group-dialog"

@@ -6,12 +6,15 @@ import type { Item } from "@real-life-stack/data-interface"
 
 import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import { cn } from "../../lib/utils"
-import type { EdgeEntry, ListEntry } from "./field-register"
+import { optionTone } from "../../lib/field-values"
+import type { EdgeEntry, FieldEntry, ListEntry } from "./field-register"
 import { isItemDone } from "./item-ref-chip"
 import { ItemPreview } from "./item-preview"
+import { groupListEntries, listFieldProblem, listFieldValue, listValueText, type ListGroup } from "./list-groups"
 import { resolveListQuery, type ListRowDecoration } from "./list-queries"
 import { GENERIC_BADGE, resolveTypePresentation } from "./type-presentation"
-import { isItemEdge, useItemEdges } from "./use-item-edges"
+import { isItemEdge, otherKindOf, useItemEdges } from "./use-item-edges"
+import { ToneDot, toneTextClass } from "./value-tone"
 
 /**
  * Slot `reverse`: die Rückwärts-Listen eines Items aus dem Register seines
@@ -80,9 +83,64 @@ function EdgeLists({ item, edges }: { item: Item; edges: readonly EdgeEntry[] })
             }
             return true
           })
-        return <ReverseList key={`${edge.predicate}:${edge.itemRole}`} id={`${edge.predicate}:${edge.itemRole}`} item={item} label={edge.label} entries={entries} />
+        const trailingField = listField(item, edge, edge.list?.trailing)
+        const groupField = listField(item, edge, edge.list?.group)
+        // Die Typfarbe einer Option ohne Ton (Regel 21) in der Zwischenüberschrift:
+        // die des Typs, aus dessen Register das Feld kommt (`otherKind`).
+        const kind = groupField ? otherKindOf(item.type, edge) : undefined
+        const groupTypeTone = kind ? (resolveTypePresentation(kind).badge ?? GENERIC_BADGE).className : undefined
+        return (
+          <ReverseList
+            key={`${edge.predicate}:${edge.itemRole}`}
+            id={`${edge.predicate}:${edge.itemRole}`}
+            item={item}
+            label={edge.label}
+            entries={entries}
+            decorate={trailingField ? (entry) => ({ trailing: <ListTrailingValue field={trailingField} entry={entry} /> }) : undefined}
+            groupField={groupField}
+            groupTypeTone={groupTypeTone}
+          />
+        )
       })}
     </>
+  )
+}
+
+/**
+ * Die Definition des Felds, das `list.trailing` oder `list.group` nennt: aus
+ * dem Register des Typs am anderen Endpunkt (`otherKind`, Regel 22). Die
+ * Zusammensetzung hat sie geprüft; fehlt sie trotzdem (etwa bei Kanten, die
+ * nicht aus dem Register kommen), entfällt Zusatz bzw. Gliederung.
+ */
+function listField(item: Item, edge: EdgeEntry, key: string | undefined): FieldEntry | undefined {
+  if (key === undefined) return undefined
+  const kind = otherKindOf(item.type, edge)
+  const field = kind ? resolveTypePresentation(kind).fields?.find((f) => f.key === key) : undefined
+  return listFieldProblem(field) ? undefined : field
+}
+
+/** Ton einer Option in der Leseform (Regel 21); eine Zahl hat keinen. */
+function valueTone(field: FieldEntry, value: string | number) {
+  return typeof value === "number" ? undefined : optionTone(field.widget, field.options?.find((o) => o.id === value))
+}
+
+/**
+ * Zusatz rechts in der Zeile (Regel 22): der Wert in der Leseform seines
+ * Widgets — eine Option als Wort in ihrem Ton, eine Zahl mit Einheit. Das
+ * Label ist nur zugänglicher Name. Ohne Wert steht dort nichts.
+ */
+function ListTrailingValue({ field, entry }: { field: FieldEntry; entry: Item }) {
+  const value = listFieldValue(field, entry)
+  if (value === undefined) return null
+  const text = listValueText(field, value)
+  const tone = valueTone(field, value)
+  const typeTone = (resolveTypePresentation(entry.type).badge ?? GENERIC_BADGE).className
+  return (
+    <span data-list-trailing={field.key} data-tone={tone} title={text} className="flex min-w-0 items-center justify-end gap-1 text-xs">
+      {field.label && <span className="sr-only">{`${field.label}: `}</span>}
+      {tone && <ToneDot tone={tone} typeTone={typeTone} />}
+      <span className={cn("min-w-0 truncate", tone ? toneTextClass(tone) : "tabular-nums text-muted-foreground")}>{text}</span>
+    </span>
   )
 }
 
@@ -95,6 +153,8 @@ function ReverseList({
   action,
   note,
   noteDetail,
+  groupField,
+  groupTypeTone,
 }: {
   id: string
   item: Item
@@ -104,8 +164,25 @@ function ReverseList({
   action?: { id: string; label: string; run: () => void }
   note?: ReactNode
   noteDetail?: string
+  /** `list.group`: gliedert die Einträge nach dem Wert dieses Felds (Regel 22). */
+  groupField?: FieldEntry
+  /** Typfarbe für eine Option ohne Ton in der Zwischenüberschrift (Regel 21). */
+  groupTypeTone?: string
 }) {
   const others = entries.filter((e) => e.id !== item.id)
+  // Gegliedert wird, was nach dem Filter bleibt; die Reihenfolge in der Gruppe
+  // ist die der Einträge (`sort`). Ohne jeden Wert entfällt die Gliederung.
+  const groups = groupField ? groupListEntries(entries, groupField) : null
+  const rows = (list: readonly Item[]) => (
+    <ul className="flex flex-col gap-1.5">
+      {list.map((entry) => (
+        // Der Klick gehört der Zeile, nicht der Karte darum herum.
+        <li key={entry.id} data-list-row={entry.id} onClick={(event) => event.stopPropagation()}>
+          <ReverseRow entry={entry} current={entry.id === item.id} decoration={decorate?.(entry)} />
+        </li>
+      ))}
+    </ul>
+  )
   const actionLink = action && <ListActionLink action={action} />
   const noteRow = note && (
     <div
@@ -138,14 +215,36 @@ function ReverseList({
         {!noteRow && actionLink}
       </div>
       {noteRow}
-      <ul className="flex flex-col gap-1.5">
-        {entries.map((entry) => (
-          // Der Klick gehört der Zeile, nicht der Karte darum herum.
-          <li key={entry.id} data-list-row={entry.id} onClick={(event) => event.stopPropagation()}>
-            <ReverseRow entry={entry} current={entry.id === item.id} decoration={decorate?.(entry)} />
-          </li>
-        ))}
-      </ul>
+      {groups ? (
+        <div className="flex flex-col gap-2.5">
+          {groups.map((group) => (
+            <ListGroupSection key={group.key ?? ""} group={group} field={groupField!} typeTone={groupTypeTone}>
+              {rows(group.entries)}
+            </ListGroupSection>
+          ))}
+        </div>
+      ) : (
+        rows(entries)
+      )}
+    </section>
+  )
+}
+
+/**
+ * Eine Gruppe der Liste (Regel 22): Zwischenüberschrift mit dem Wert in der
+ * Leseform und der Anzahl, darunter ihre Zeilen. Gruppen kappen nicht und
+ * klappen nicht zu.
+ */
+function ListGroupSection({ group, field, typeTone, children }: { group: ListGroup; field: FieldEntry; typeTone?: string; children: ReactNode }) {
+  const tone = group.value === undefined ? undefined : valueTone(field, group.value)
+  return (
+    <section data-list-group={group.key ?? ""} aria-label={group.heading} className="flex flex-col gap-1.5">
+      <h4 data-list-group-heading className="flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+        {tone && <ToneDot tone={tone} typeTone={typeTone} />}
+        <span className="min-w-0 truncate">{group.heading}</span>{" "}
+        <span className="font-normal tabular-nums">{group.entries.length}</span>
+      </h4>
+      {children}
     </section>
   )
 }

@@ -1,4 +1,5 @@
 import type { Relation } from "@real-life-stack/data-interface"
+import { isMissingQualifier } from "../preview/field-register"
 
 /**
  * Personen-Zuweisungen im Composer: ein Typ kann MEHRERE Personenfelder führen
@@ -204,7 +205,7 @@ export function peopleRelationsFromWidgetData(
         // Mit default heißt „kein Wert in der eingereichten Menge": default —
         // die Kante trägt dann keinen (fehlend = default, Spec 06 Regel 7). Ein
         // unbekannter Wert steht in der Menge und bleibt so unverändert.
-        else if (value === undefined && submitted && qualifier.default !== undefined) delete meta[qualifier.key]
+        else if (isMissingQualifier(value) && submitted && qualifier.default !== undefined) delete meta[qualifier.key]
       }
       return Object.keys(meta).length > 0 ? { predicate, target, meta } : { predicate, target }
     }),
@@ -224,18 +225,22 @@ function asRecord(value: unknown): Record<string, unknown> {
 export function peopleRelationsToWidgetData(
   config: PeopleRelationSource,
   relations: readonly Relation[] | undefined,
-): Record<string, string[] | Record<string, string>> {
-  const out: Record<string, string[] | Record<string, string>> = {}
+): Record<string, string[] | Record<string, unknown>> {
+  const out: Record<string, string[] | Record<string, unknown>> = {}
   for (const field of resolvePeopleFields(config)) {
     if (!field.predicate) continue
     const mine = (relations ?? []).filter((r) => r.predicate === field.predicate)
     const ids = mine.map((r) => r.target.replace(/^global:/, ""))
     if (ids.length > 0) out[field.dataKey] = ids
     if (field.qualifier) {
-      const values: Record<string, string> = {}
+      // Jeder vorhandene Wert geht ins Formular, auch ein unbekannter (auch
+      // kein String): er bleibt erhalten und steht ohne Zustandstext da. Nur
+      // ein fehlender (fehlend, null, leer) fehlt hier und gilt als Standard
+      // (Spec 06, Regel 7).
+      const values: Record<string, unknown> = {}
       for (const relation of mine) {
         const value = relation.meta?.[field.qualifier.key]
-        if (typeof value === "string") values[relation.target.replace(/^global:/, "")] = value
+        if (!isMissingQualifier(value)) values[relation.target.replace(/^global:/, "")] = value
       }
       if (Object.keys(values).length > 0) out[peopleQualifierKey(field.dataKey)] = values
     }

@@ -140,8 +140,20 @@ export interface EdgeEntry {
   qualifier?: { key: string; values: readonly FieldOption[]; default?: string }
   /** Selbstaktion (C2), siehe {@link SelfActionEntry}. */
   selfAction?: SelfActionEntry
-  /** Nur für `itemRole: "to"` (Rückwärts-Liste). */
-  list?: { filter?: "open" | "upcoming"; sort?: string }
+  /** Nur für `itemRole: "to"`, `pos: "list"` (Rückwärts-Liste, Regeln 10 und 22). */
+  list?: {
+    filter?: "open" | "upcoming"
+    sort?: string
+    /**
+     * `key` eines Felds des Zeilen-Items: sein Wert rechts in der Zeile, in
+     * der Leseform seines Widgets. Die Felddefinition kommt aus dem Register
+     * des Typs am anderen Endpunkt (`otherKind`); nur status, select, number,
+     * nicht `pos: "system"` (Regel 22).
+     */
+    trailing?: string
+    /** `key` eines Felds des Zeilen-Items: Gruppen nach seinem Wert (Regel 22), gleiche Bedingungen wie `trailing`. */
+    group?: string
+  }
   /** Nur `storage: "record"` (Regel 8). */
   count?: "one-per-subject" | "collect-accepted"
   /** Beschriftung des Hinzufügen-Felds im Formular (C1: „Einladen…", „Zuweisen…"). */
@@ -171,6 +183,11 @@ export function assertFollowUps(typeId: string, fields: readonly FieldEntry[] = 
       throw new Error(`Typ-Register: ${where} nennen "${followUps.field}", aber kein status-Feld mit einer Option der Rolle open und einer der Rolle done (Spec 06, Feld- und Kantenregister, Regel 9).`)
     }
   }
+}
+
+/** Fehlt ein Qualifier-Wert (fehlend, `null`, leer)? Nur dann gilt der Standard (Spec 06, Regel 7). */
+export function isMissingQualifier(value: unknown): boolean {
+  return value === undefined || value === null || value === ""
 }
 
 /** Die erste Option einer Rolle in Register-Reihenfolge (Regel 18), oder undefined. */
@@ -317,6 +334,10 @@ export function assertRegisterLists(
     // Regel 10: Rückwärts-Listen sind eingehende Kanten.
     if ((edge.pos === "list" || edge.list) && edge.itemRole !== "to") {
       fail(layer, typeId, `Kante (${edge.predicate}, ${edge.itemRole}) steht als list, ist aber nicht itemRole "to"`)
+    }
+    // Regel 22: Zusatz und Gruppen gehören zu einer Rückwärts-Liste.
+    if ((edge.list?.trailing !== undefined || edge.list?.group !== undefined) && edge.pos !== "list") {
+      fail(layer, typeId, `Kante (${edge.predicate}, ${edge.itemRole}) setzt list.trailing oder list.group, steht aber nicht als pos "list"`)
     }
   }
 

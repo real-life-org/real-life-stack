@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react"
+import { Fragment, useState, useCallback, useEffect, useRef, type ReactNode } from "react"
 import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, RotateCcw, SlidersHorizontal, Check as CheckIcon, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
 import type { Group, ContactInfo } from "@real-life-stack/data-interface"
@@ -19,6 +19,7 @@ import { Input } from "../primitives/input"
 import { Label } from "../primitives/label"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Skeleton } from "../primitives/skeleton"
+import { ErrorBoundary } from "../primitives/error-boundary"
 
 function getInitials(name: string): string {
   return name
@@ -184,11 +185,89 @@ export function filterInvitableContacts<T extends { id: string; name?: string }>
  * verschwinden — der Dialog zeigte dann den Inhalt eines Eintrags an, den es
  * nicht mehr gibt. Der Rueckfall ist der erste Bereich.
  */
-export function resolveConfigSection(
-  requested: SpaceConfigSectionId,
-  sections: readonly SpaceConfigSection[],
-): SpaceConfigSectionId {
-  return sections.some((s) => s.id === requested) ? requested : sections[0].id
+export function resolveConfigSection<Id extends string>(
+  requested: string,
+  sections: readonly { id: Id }[],
+): Id {
+  const hit = sections.find((s) => s.id === requested)
+  return hit ? hit.id : sections[0].id
+}
+
+// --- App-Abschnitte (rls#551) ---
+
+/**
+ * Was ein App-Abschnitt zum Rendern bekommt.
+ *
+ * `patchData` ist der EINZIGE Schreibweg: ein flacher Merge-Patch auf
+ * `Group.data` (Spec 04, Space-Metadaten, Regeln 2 und 3; `null` loescht).
+ * Name, Bild, Mitglieder, Module und Aussehen bleiben beim Dialog.
+ */
+export interface AppSpaceSectionContext {
+  /**
+   * Der Space, wie der Aufrufer ihn liefert (`mode.group`). Der Dialog haelt
+   * keinen eigenen Schreibstand: eine gespeicherte Aenderung erscheint, wenn
+   * der Aufrufer die Group neu liefert — `AppFrame` tut das live aus dem
+   * Connector.
+   */
+  group: Group
+  /** Ob der eigene Nutzer den Space einstellen darf (Admin). */
+  canEdit: boolean
+  /**
+   * Schreibt `patch` flach nach `Group.data` ueber `onUpdateGroup` und gibt
+   * dessen Zusage zurueck. Scheitert sie, meldet der Dialog den Fehler im
+   * Abschnitt, bis ein spaeterer Patch dieselben Schluessel speichert.
+   */
+  patchData: (patch: Record<string, unknown>) => Promise<void>
+}
+
+/** Ein Abschnitt, den eine App in den Space-Dialog eintraegt. */
+export interface AppSpaceSection {
+  /** Eindeutig im Dialog; die Ids der eigenen Bereiche sind vergeben. */
+  id: string
+  label: string
+  icon: LucideIcon
+  /** Ohne Angabe sichtbar. `isAdmin` steht beim Oeffnen noch nicht fest. */
+  visible?: (who: { isAdmin: boolean }) => boolean
+  render: (ctx: AppSpaceSectionContext) => ReactNode
+}
+
+const OWN_SECTION_IDS: readonly SpaceConfigSectionId[] = ["members", "modules", "invite", "theme"]
+
+/**
+ * Die gueltigen App-Abschnitte: eine Id, die einen eigenen Bereich oder
+ * einen frueheren App-Abschnitt verdeckt, faellt heraus und wird gemeldet.
+ * Stumm uebernehmen hiesse, dass `initialSection` und das Menue je nach
+ * Reihenfolge einen anderen Eintrag meinen.
+ */
+export function validAppSections(sections: readonly AppSpaceSection[]): AppSpaceSection[] {
+  const seen = new Set<string>(OWN_SECTION_IDS)
+  const valid: AppSpaceSection[] = []
+  for (const section of sections) {
+    if (seen.has(section.id)) {
+      console.error(
+        `GroupDialog: App-Abschnitt "${section.id}" verworfen — die Id ist schon vergeben (eigener Bereich oder doppelt).`,
+      )
+      continue
+    }
+    seen.add(section.id)
+    valid.push(section)
+  }
+  return valid
+}
+
+/**
+ * Ob ein App-Abschnitt sichtbar ist. `visible` ist App-Code und laeuft beim
+ * Rendern des ganzen Dialogs; wirft er, faellt nur dieser Abschnitt weg
+ * (gemeldet), nicht der Dialog.
+ */
+export function appSectionVisible(section: AppSpaceSection, isAdmin: boolean): boolean {
+  if (!section.visible) return true
+  try {
+    return section.visible({ isAdmin })
+  } catch (err) {
+    console.error(`GroupDialog: visible() des App-Abschnitts "${section.id}" ist fehlgeschlagen — ausgeblendet.`, err)
+    return false
+  }
 }
 
 /** Ab wie vielen Mitgliedern die Liste ein Suchfeld bekommt. */
@@ -321,6 +400,41 @@ function MemberGroupLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Ruft `render` eines App-Abschnitts INNERHALB der Fehlergrenze auf. Direkt
+ * im Dialog aufgerufen, liefe ein Fehler der render-Funktion selbst an der
+ * Grenze vorbei und risse den ganzen Dialog mit.
+ */
+function AppSectionHost({ section, ...ctx }: AppSpaceSectionContext & { section: AppSpaceSection }) {
+  return <>{section.render(ctx)}</>
+}
+
+const sameList = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((v, i) => v === b[i])
+
+/**
+ * Laesst einen lokalen Zustand des Dialogs dem gelieferten Wert folgen.
+ *
+ * Der Aufrufer liefert die Group live (rls#551, `AppFrame` aus dem Connector).
+ * Aendert sich der gelieferte Wert, zieht der lokale nach — aber nur, wenn er
+ * noch dem zuletzt gelieferten entspricht: was man hier gerade selbst
+ * geaendert hat, ueberschreibt ein fremder Stand nicht.
+ */
+function useFollowLive<T>(
+  live: T,
+  local: T,
+  setLocal: (value: T) => void,
+  equals: (a: T, b: T) => boolean = Object.is,
+  onLiveChange?: () => void,
+) {
+  const [synced, setSynced] = useState(live)
+  if (!equals(live, synced)) {
+    setSynced(live)
+    if (equals(local, synced)) setLocal(live)
+    onLiveChange?.()
+  }
+}
+
 // --- Types ---
 
 export type GroupDialogMode =
@@ -345,6 +459,22 @@ export interface GroupDialogProps {
   onDeleteGroup: (id: string) => Promise<void>
   onInviteMember?: (groupId: string, userId: string) => Promise<void>
   onRemoveMember?: (groupId: string, userId: string) => Promise<void>
+  /**
+   * Abschnitte der App, nach den eigenen Bereichen (rls#551). Sie schreiben
+   * nur ueber `patchData` nach `Group.data`; einen zweiten Dialog fuer
+   * denselben Space braucht es dann nicht (Spec 01, Overlay-Regel 5).
+   * Nur im Bearbeiten-Modus. Der Dialog haelt keinen eigenen Schreibstand:
+   * der Aufrufer liefert `mode.group` nach dem Speichern neu (live).
+   */
+  appSections?: AppSpaceSection[]
+  /** Ueberschrift ueber den App-Abschnitten im Menue, z. B. der App-Name. */
+  appSectionsTitle?: string
+  /**
+   * In welchem Bereich der Dialog oeffnet — eigener Bereich oder Id eines
+   * App-Abschnitts. Gilt bei jedem Oeffnen; gibt es den Bereich (noch)
+   * nicht, steht der erste da, bis er erscheint.
+   */
+  initialSection?: string
 }
 
 // --- Component ---
@@ -361,6 +491,9 @@ export function GroupDialog({
   onDeleteGroup,
   onInviteMember,
   onRemoveMember,
+  appSections,
+  appSectionsTitle,
+  initialSection,
 }: GroupDialogProps) {
   const isEdit = mode.type === "edit"
   const groupId = isEdit ? mode.group.id : "__none__"
@@ -382,11 +515,32 @@ export function GroupDialog({
   const [groupImage, setGroupImage] = useState(() =>
     isEdit ? (mode.group.data?.image as string | undefined) ?? "" : ""
   )
+  // Name und Bild folgen einer neuen Group des Aufrufers (live aus dem
+  // Connector, z. B. ein anderes Geraet benennt um) — aber nur, solange man
+  // sie hier nicht selbst geaendert hat: ein angefangener Name bleibt stehen.
+  useFollowLive(isEdit ? mode.group.name : "", name, setName)
+  /**
+   * Laufende Nummer der Farbabsicht. Jede bewusste Wahl, jedes Entfernen des
+   * Bildes und jede Bildaenderung von aussen zaehlt hoch; eine Farb-Ermittlung
+   * aus dem Bild, die erst danach fertig wird, erkennt daran, dass sie
+   * ueberholt ist.
+   */
+  const colorRequestRef = useRef(0)
+  useFollowLive(
+    isEdit ? (mode.group.data?.image as string | undefined) ?? "" : "",
+    groupImage,
+    setGroupImage,
+    Object.is,
+    () => { colorRequestRef.current++ },
+  )
+  const groupImageRef = useRef(groupImage)
+  groupImageRef.current = groupImage
 
   // Module state
-  const [activeModules, setActiveModules] = useState<string[]>(() =>
-    isEdit ? (mode.group.data?.modules as string[] | undefined) ?? defaults() : defaults()
-  )
+  const liveModulesOf = (m: GroupDialogMode): string[] =>
+    m.type === "edit" ? (m.group.data?.modules as string[] | undefined) ?? defaults() : defaults()
+  const [activeModules, setActiveModules] = useState<string[]>(() => liveModulesOf(mode))
+  useFollowLive(liveModulesOf(mode), activeModules, setActiveModules, sameList)
 
   // Module-save errors get their OWN state: sharing the dialog-wide `error`
   // state made ownership ambiguous — a successful module save could only
@@ -403,13 +557,38 @@ export function GroupDialog({
   // Das gewaehlte Fach. `tabs` haengt an isCurrentUserAdmin, das aus den
   // Mitgliedern abgeleitet wird und beim Oeffnen noch nicht feststeht — daher
   // laeuft die Auswahl durch resolveConfigTab, statt roh an Radix zu gehen.
-  const [requestedSection, setRequestedSection] = useState<SpaceConfigSectionId>("members")
-  const sections = spaceConfigSections({
+  const [requestedSection, setRequestedSection] = useState<string>(initialSection ?? "members")
+  // Bei jedem Oeffnen gilt `initialSection` neu. Der Dialog bleibt zwischen
+  // zwei Aufrufen montiert; ohne das oeffnete er im zuletzt gewaehlten
+  // Bereich, auch wenn die App gezielt in ihren Abschnitt springen will.
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setRequestedSection(initialSection ?? "members")
+  }
+  const ownSections = spaceConfigSections({
     isAdmin: isCurrentUserAdmin,
     canInvite: Boolean(onInviteMember),
     canTheme: isCurrentUserAdmin,
   })
+  const [appSectionsInput, setAppSectionsInput] = useState(appSections)
+  const [validApp, setValidApp] = useState(() => validAppSections(appSections ?? []))
+  if (appSections !== appSectionsInput) {
+    setAppSectionsInput(appSections)
+    setValidApp(validAppSections(appSections ?? []))
+  }
+  const visibleAppSections = isEdit
+    ? validApp.filter((a) => appSectionVisible(a, isCurrentUserAdmin))
+    : []
+  const sections: { id: string; label: string; icon: LucideIcon }[] = [...ownSections, ...visibleAppSections]
   const activeSection = resolveConfigSection(requestedSection, sections)
+  const activeAppSection = visibleAppSections.find((a) => a.id === activeSection)
+
+  /**
+   * Offene Fehler der App-Patches, JE SCHLUESSEL: ein zweiter Fehler oder ein
+   * Erfolg auf einem anderen Feld beantwortet den ersten nicht.
+   */
+  const [appErrors, setAppErrors] = useState<Readonly<Record<string, { sectionId: string; message: string }>>>({})
   /** Suche in der Mitgliederliste (Entwurf 3a). */
   const [memberSearch, setMemberSearch] = useState("")
   /** Suche in der Kontaktliste des Bereichs "Einladen" (Entwurf 4a). */
@@ -434,18 +613,15 @@ export function GroupDialog({
         if (current.type !== "edit") return Promise.resolve()
         return onUpdateGroupRef.current(current.group.id, { data: { modules } })
       },
-      (err, _failed, lastSaved) => {
-        // Roll the UI back to the last CONFIRMED order — a silently divergent
-        // list would suggest the reorder stuck when it didn't. The saver's
-        // lastSaved beats the prop: after "A saved, B failed" the group prop
-        // may still show the state before A (store round-trip in flight).
-        const current = modeRef.current
-        setActiveModules(
-          lastSaved ??
-            (current.type === "edit"
-              ? ((current.group.data?.modules as string[] | undefined) ?? defaults())
-              : defaults()),
-        )
+      (err) => {
+        // Zurueck auf den GELIEFERTEN Stand — eine still abweichende Liste
+        // behauptete eine Sortierung, die nicht gespeichert ist. Nicht auf das
+        // eigene zuletzt Gespeicherte: die gelieferte Group ist massgeblich,
+        // und der Aufrufer liefert nach dem Speichern neu (shared-components,
+        // GroupDialog, Regel 3). Ein eigenes lastSaved gegen einen live
+        // gelieferten Stand abzuwaegen, hat zweimal einen veralteten Stand
+        // hergestellt (Codex-Runden 3 und 4 zu rls#551).
+        setActiveModules(liveModulesOf(modeRef.current))
         setModuleError(err instanceof Error ? err.message : "Module konnten nicht gespeichert werden")
       },
       () => setModuleError(null),
@@ -453,13 +629,16 @@ export function GroupDialog({
   }
 
   // Die gewaehlte Primaerfarbe liegt lokal, aus demselben Grund wie Name,
-  // Bild und Modulliste: `mode.group` ist ein SNAPSHOT vom Oeffnen, den die
-  // App nicht nachfuehrt, solange der Dialog steht. Direkt daraus gelesen
-  // bewegte sich der Haken nach einem Klick nicht — gespeichert wurde, aber
-  // es sah aus, als sei nichts passiert.
-  const [primaryColorChoice, setPrimaryColorChoice] = useState<string | null>(() =>
-    mode.type === "edit" ? ((mode.group.data?.primaryColor as string | undefined) ?? null) : null,
-  )
+  // Bild und Modulliste: nicht jeder Aufrufer fuehrt `mode.group` nach,
+  // solange der Dialog steht. Direkt daraus gelesen bewegte sich der Haken
+  // nach einem Klick nicht — gespeichert wurde, aber es sah aus, als sei
+  // nichts passiert. Liefert der Aufrufer live (AppFrame), folgt der lokale
+  // Wert ueber `useFollowLive`.
+  const livePrimaryOf = (m: GroupDialogMode): string | null =>
+    m.type === "edit" ? ((m.group.data?.primaryColor as string | undefined) ?? null) : null
+  const [primaryColorChoice, setPrimaryColorChoice] = useState<string | null>(() => livePrimaryOf(mode))
+  useFollowLive(livePrimaryOf(mode), primaryColorChoice, setPrimaryColorChoice)
+
   /**
    * Das Ziel haengt am WERT, nicht am Zeitpunkt der Ausfuehrung. Der Saver
    * lebt so lange wie der Dialog; ein eingereihter Vorgang laeuft erst, wenn
@@ -467,12 +646,6 @@ export function GroupDialog({
    * in den Space, der inzwischen offen ist — ein fremder Space bekaeme still
    * die Farbe, die man dem vorigen zugedacht hatte.
    */
-  /**
-   * Laufende Nummer der Farbabsicht. Jede bewusste Wahl und jedes Entfernen
-   * des Bildes zaehlt hoch; ein Zuruecksetzen, dessen Bildfarbe erst danach
-   * eintrifft, erkennt daran, dass es ueberholt ist.
-   */
-  const colorRequestRef = useRef(0)
 
   /**
    * Die EINE Stelle, an der die angezeigte Farbe umgesetzt wird.
@@ -496,18 +669,15 @@ export function GroupDialog({
         // Minimaler PATCH: `null` loescht den Schluessel und stellt damit den
         // Rueckfall her (Spec 04 Regel 3), ohne image/modules zu beruehren.
         onUpdateGroupRef.current(target, { data: { primaryColor: hex } }),
-      (err, failed, lastSaved) => {
+      (err, failed) => {
         const current = modeRef.current
         // Ein Fehlschlag fuer einen anderen Space darf die Anzeige des
         // gerade offenen nicht anfassen — gemeldet wird er trotzdem.
         if (current.type === "edit" && failed.groupId === current.group.id) {
-          // Zurueck auf den zuletzt BESTAETIGTEN Wert — ein Haken auf einer
-          // Farbe, die nie ankam, behauptet eine Aenderung, die es nicht gibt.
-          setPrimaryColorChoice(
-            lastSaved?.groupId === current.group.id
-              ? lastSaved.hex
-              : ((current.group.data?.primaryColor as string | undefined) ?? null),
-          )
+          // Zurueck auf den GELIEFERTEN Wert — ein Haken auf einer Farbe, die
+          // nie ankam, behauptet eine Aenderung, die es nicht gibt. Wie bei
+          // den Modulen: die gelieferte Group ist massgeblich (Regel 3).
+          setPrimaryColorChoice(livePrimaryOf(current))
         }
         setColorError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden")
       },
@@ -527,6 +697,8 @@ export function GroupDialog({
   const [surfacesChoice, setSurfacesChoice] = useState<Surfaces | null>(() =>
     mode.type === "edit" ? readSurfaces(mode.group.data?.surfaces) : null,
   )
+  useFollowLive(isEdit ? readRadius(mode.group.data?.radius) : null, radiusChoice, setRadiusChoice)
+  useFollowLive(isEdit ? readSurfaces(mode.group.data?.surfaces) : null, surfacesChoice, setSurfacesChoice)
   const saveLayoutRef = useRef<((v: { groupId: string; patch: Record<string, unknown> }) => void) | null>(null)
   if (!saveLayoutRef.current) {
     saveLayoutRef.current = createLatestWinsSaver<{ groupId: string; patch: Record<string, unknown> }>(
@@ -624,6 +796,36 @@ export function GroupDialog({
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [inviteErrors, setInviteErrors] = useState<Map<string, string>>(new Map())
 
+  /**
+   * Der Schreibweg der App-Abschnitte: flach nach `Group.data` (Spec 04,
+   * Regel 3), die Zusage des Aufrufers unveraendert zurueck. Einen eigenen
+   * Schreibstand haelt der Dialog nicht — angezeigt wird, was der Aufrufer
+   * liefert, damit Dialog und Connector nie zwei Wahrheiten haben.
+   */
+  const patchAppData = useCallback((sectionId: string, patch: Record<string, unknown>): Promise<void> => {
+    const current = modeRef.current
+    if (current.type !== "edit") return Promise.reject(new Error("Kein Space zum Bearbeiten"))
+    return onUpdateGroupRef.current(current.group.id, { data: patch }).then(
+      () => {
+        // Erledigt sind genau die Schluessel, die dieser Patch gespeichert hat.
+        setAppErrors((errors) => {
+          const next = { ...errors }
+          for (const key of Object.keys(patch)) delete next[key]
+          return next
+        })
+      },
+      (err: unknown) => {
+        const message = err instanceof Error ? err.message : "Konnte nicht gespeichert werden"
+        setAppErrors((errors) => {
+          const next = { ...errors }
+          for (const key of Object.keys(patch)) next[key] = { sectionId, message }
+          return next
+        })
+        throw err
+      },
+    )
+  }, [])
+
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
@@ -631,6 +833,7 @@ export function GroupDialog({
         setError(null)
         setModuleError(null)
         setColorError(null)
+        setAppErrors({})
         setInvitingId(null)
         setInvitedIds(new Set())
         setInviteErrors(new Map())
@@ -842,17 +1045,23 @@ export function GroupDialog({
     // ist das Ergebnis ueberholt und DARF sie nicht ueberschreiben — sonst
     // sprang die Farbe Augenblicke nach dem Klick von selbst zurueck.
     const ticket = ++colorRequestRef.current
+    const source = groupImage
+    const target = mode.group.id
     const { dominantColor } = await import("../../lib/image-utils")
     // Liefert ein graustufiges Bild keine Farbe, bleibt der Id-Rueckfall.
     // Auch hier der aufgeloeste Pfad: sonst laedt die Farbextraktion unter
     // einem Unterpfad nichts und faellt still auf die Id-Farbe zurueck.
-    const derived = await dominantColor(resolveAssetUrl(groupImage) ?? groupImage).catch(() => null)
+    const derived = await dominantColor(resolveAssetUrl(source) ?? source).catch(() => null)
     if (ticket !== colorRequestRef.current) return
+    // Nur schreiben, wenn Bild und Space noch dieselben sind — sonst gehoerte
+    // die Farbe zu einem Bild, das es hier nicht mehr gibt.
+    const now = modeRef.current
+    if (now.type !== "edit" || now.group.id !== target || groupImageRef.current !== source) return
     applyPrimaryColor(derived)
   }
 
   /** Zahlen am Menue — die Suche aendert sie nicht, sie zaehlen den Bestand. */
-  const sectionCounts: Record<SpaceConfigSectionId, number | undefined> = {
+  const sectionCounts: Partial<Record<string, number | undefined>> = {
     members: members.length || undefined,
     modules: visibleModules.length || undefined,
     invite: undefined,
@@ -1051,14 +1260,24 @@ export function GroupDialog({
               aria-label="Bereiche"
               className="shrink-0 border-b bg-muted/50 p-2.5 sm:w-[190px] sm:border-b-0 sm:border-r dark:bg-muted/20"
             >
-              <div className="flex gap-1 overflow-x-auto sm:flex-col sm:gap-0.5 sm:overflow-visible">
-                {sections.map((section) => {
+              {/* Auf dem Telefon bricht die Leiste um, statt seitlich zu
+                  scrollen: schon mit vier Eintraegen war der letzte
+                  abgeschnitten, und mit App-Abschnitten waeren es mehr
+                  (rls#551). Kein Eintrag darf nur durch Wischen erreichbar sein. */}
+              <div data-section-list className="flex flex-wrap gap-1 sm:flex-col sm:flex-nowrap sm:gap-0.5">
+                {sections.map((section, index) => {
                   const Icon = section.icon
+                  const firstApp = visibleAppSections.length > 0 && index === ownSections.length
                   const active = section.id === activeSection
                   const count = sectionCounts[section.id]
                   return (
+                    <Fragment key={section.id}>
+                    {firstApp && appSectionsTitle && (
+                      <p className="hidden px-2.5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:block">
+                        {appSectionsTitle}
+                      </p>
+                    )}
                     <button
-                      key={section.id}
                       type="button"
                       aria-current={active ? "page" : undefined}
                       onClick={() => setRequestedSection(section.id)}
@@ -1083,6 +1302,7 @@ export function GroupDialog({
                         </span>
                       )}
                     </button>
+                    </Fragment>
                   )
                 })}
               </div>
@@ -1488,6 +1708,21 @@ export function GroupDialog({
                 </div>
               )}
             </>
+          )}
+          {activeAppSection && isEdit && (
+            // Je Abschnitt eine eigene Instanz: `render` darf Hooks nutzen,
+            // und zwei Abschnitte teilten sonst deren Zustand.
+            <ErrorBoundary key={activeAppSection.id} label={activeAppSection.label} resetKeys={[mode.group.id]}>
+              <AppSectionHost
+                section={activeAppSection}
+                group={mode.group}
+                canEdit={isCurrentUserAdmin}
+                patchData={(patch) => patchAppData(activeAppSection.id, patch)}
+              />
+              {[...new Set(Object.values(appErrors).filter((e) => e.sectionId === activeAppSection.id).map((e) => e.message))].map((message) => (
+                <p key={message} role="alert" className="mt-3 text-xs text-destructive">{message}</p>
+              ))}
+            </ErrorBoundary>
           )}
           </div>
         </div>

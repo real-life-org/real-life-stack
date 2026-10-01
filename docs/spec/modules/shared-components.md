@@ -634,6 +634,44 @@ interface ModulePanelEntry { kind: ModulePanelKind; content: ReactNode; onClose?
 
 **Code:** `packages/toolkit/src/components/module-panel/`.
 
+### `GroupDialog`: App-Abschnitte
+
+Der Space-Dialog ist der eine Ort für alles, was zu einem Space gehört. Eine App trägt eigene Abschnitte dort ein, statt einen zweiten Dialog für denselben Space zu bauen ([01 → Overlay-Flächen](../01-app-composition.md), Regel 5).
+
+```ts
+interface AppSpaceSection {
+  id: string                                  // eindeutig; members/invite/theme/modules sind vergeben
+  label: string
+  icon: LucideIcon
+  visible?: (who: { isAdmin: boolean }) => boolean
+  render: (ctx: AppSpaceSectionContext) => ReactNode
+}
+interface AppSpaceSectionContext {
+  group: Group                                // wie der Aufrufer sie liefert (mode.group)
+  canEdit: boolean                            // eigener Nutzer ist Admin
+  patchData: (patch: Record<string, unknown>) => Promise<void>
+}
+// GroupDialogProps: appSections?, appSectionsTitle?, initialSection?
+// AppFrameProps:    spaceSections?, spaceSectionsTitle?
+```
+
+Regeln:
+
+1. App-Abschnitte stehen nach den eigenen Bereichen. Eine `id`, die schon vergeben ist, MUSS verworfen und gemeldet werden.
+2. `patchData` ist der einzige Schreibweg eines App-Abschnitts. Er schreibt `Group.data` **flach** als Merge-Patch über `updateGroup` ([04 → Space-Metadaten](../04-items-relations-groups-spaces.md#space-metadaten), Regeln 2 und 3; `null` löscht). Ein verschachtelter Namensraum (`Group.data.<app>.<feld>`) wäre bei Tiefe 1 ein einziger Wert, und zwei Abschnitte überschrieben sich gegenseitig (rls#234).
+3. Der Dialog hält keinen eigenen Schreibstand. `group` ist die Group, wie der Aufrufer sie liefert; `patchData` gibt die Zusage von `onUpdateGroup` unverändert zurück. Der Aufrufer MUSS die Group nach dem Speichern neu liefern (`AppFrame` reicht sie live aus dem Connector durch, so kommen auch Änderungen anderer Geräte an). Die eigenen Felder des Dialogs (Name, Bild, Module, Aussehen) folgen einer neu gelieferten Group, solange man sie im Dialog nicht selbst geändert hat. Scheitert das Speichern, gilt je Schreibweg:
+   - **Modulliste, Farbwahl, Rundung, Flächen** (die Wahl in den Bereichen „Module“ und „Aussehen“): Die Anzeige fällt auf die **gelieferte** Group zurück, nie auf den zuletzt im Dialog gespeicherten Wert. Ein Aufrufer, der eine eingefrorene Group übergibt, sieht nach „A gespeichert, B gescheitert“ wieder den Stand vom Öffnen, bis er neu liefert.
+   - **Name:** kein Rückfall. Ein ungespeicherter Name bleibt mit Fehlermeldung im Feld stehen und lässt sich erneut speichern.
+   - **Bild hochladen oder entfernen:** kein Rückfall. Der lokal gesetzte Bildzustand bleibt stehen, auch ein entferntes Bild, und ebenso die dabei mitgeänderte Primärfarbe.
+
+   Ändert sich das Bild von außen, darf eine laufende Farbermittlung aus dem alten Bild nichts mehr schreiben. Ein gescheiterter App-Patch lässt den Stand stehen; die Meldung steht je Schlüssel im Abschnitt, bis ein späterer Patch diesen Schlüssel speichert.
+4. Die App wählt eindeutige Feldnamen. Das Toolkit erzwingt kein Präfix. Name, Bild, Mitglieder, Module und Aussehen gehören dem Dialog; ein App-Abschnitt SOLLTE sie nicht schreiben.
+5. `initialSection` gilt bei jedem Öffnen. Gibt es den Bereich noch nicht (das Adminrecht lädt noch), steht der erste Bereich da, bis er erscheint.
+6. Jeder App-Abschnitt steht in einer eigenen Fehlergrenze; ein Fehler darin lässt Menü und Dialog bedienbar. Wirft `visible`, fällt nur dieser Abschnitt weg.
+7. Auf schmalen Schirmen bricht die Bereichsleiste um. Kein Eintrag DARF nur durch seitliches Scrollen erreichbar sein.
+
+**Code:** `packages/toolkit/src/components/layout/group-dialog.tsx`.
+
 ## Item-Detail aus dem Register
 
 **Status:** Normativer Entwurf (S0, 26.09.2026). Die Umsetzung folgt in S1–S6; bis dahin weicht `ItemDetailBody` hiervon ab. Gilt für `ItemDetailBody`, `ItemDetailView`, `ItemDetailPanel` und den `ContentComposer` im Edit-Modus. Die Inhalte kommen aus dem Feld- und Kantenregister ([06 → Feld- und Kantenregister](../06-schema-composition.md#feld--und-kantenregister)); die Flächen verzweigen nicht nach `type`.

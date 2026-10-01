@@ -1449,8 +1449,8 @@ export function ContentComposer({
                           {...(field.qualifier
                             ? {
                                 qualifier: field.qualifier,
-                                qualifiers: (data[peopleQualifierKey(field.dataKey)] as Record<string, string> | undefined) ?? {},
-                                onQualifiersChange: (next: Record<string, string>) => updateData(peopleQualifierKey(field.dataKey), next),
+                                qualifiers: (data[peopleQualifierKey(field.dataKey)] as Record<string, unknown> | undefined) ?? {},
+                                onQualifiersChange: (next: Record<string, unknown>) => updateData(peopleQualifierKey(field.dataKey), next),
                               }
                             : {})}
                         />
