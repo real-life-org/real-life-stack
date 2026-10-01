@@ -40,6 +40,7 @@ if (isWritable(connector)) {
 | `EventListenerCapable` | `hasEventListener()` | eingehende Connector-Ereignisse abonnieren |
 | `ItemGroupCapable` | `hasItemGroups()` | Item-zu-Group-Zuordnung lesen oder verschieben |
 | `GroupScopeCapable` | `hasGroupScope()` | Items eines bestimmten Space lesen und in ihm anlegen, ohne ihn zu öffnen (`ItemFilter.group`, `createItem(item, { group })`, [02 → Lesen in einem bestimmten Space](02-data-interface.md#lesen-in-einem-bestimmten-space-group)) |
+| `ItemScopeCapable` | `hasItemScope()` | Ein einzelnes Item in einem bestimmten Space lesen und ändern, ohne ihn zu öffnen (`getItem(id, { group })`, `updateItem(id, updates, { group })`, [02 → Ein Item in einem bestimmten Space lesen und ändern](02-data-interface.md#ein-item-in-einem-bestimmten-space-lesen-und-ändern)); eigene Zusage, weil ältere Connectoren mit `groupScope` das Argument still übergehen |
 | `AuthorizationCapable` | `hasAuthorization()` | per-Resource-Autorisierung (UCAN/RLS) für Create/Edit/Delete |
 | `MirrorCapable` | `hasMirrors()` | Items in weitere Spaces freigeben und Freigaben beobachten/widerrufen ([09-mirror-bridge.md → §Capability-Vertrag](09-mirror-bridge.md)) |
 | `ActivityLogCapable` | `hasActivityLog()` | best-effort Änderungsverlauf eines Space lesen und beobachten |

@@ -1,6 +1,7 @@
 import type {
   CreateItemInput,
   CreateItemOptions,
+  ItemScopeOptions,
   GroupScopeCapable,
   FullConnector,
   Item,
@@ -592,8 +593,8 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
     return applyPagination(filtered, filter.limit, filter.offset)
   }
 
-  async getItem(id: string): Promise<Item | null> {
-    return this.getScopedItems().find((item) => item.id === id) ?? null
+  async getItem(id: string, options?: ItemScopeOptions): Promise<Item | null> {
+    return this.getScopedItems(options?.group).find((item) => item.id === id) ?? null
   }
 
   observe(filter: ItemFilter): Observable<Item[]> {
@@ -616,6 +617,9 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
 
   /** 02 → Lesen/Anlegen in einem bestimmten Space. */
   readonly groupScope = true as const
+
+  /** 02 → Ein Item in einem bestimmten Space lesen und ändern. */
+  readonly itemScope = true as const
 
   async createItem(item: CreateItemInput, options?: CreateItemOptions): Promise<Item> {
     const target = options?.group
@@ -694,8 +698,12 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
     return result
   }
 
-  async updateItem(id: string, updates: Partial<Item>): Promise<Item> {
+  async updateItem(id: string, updates: Partial<Item>, options?: ItemScopeOptions): Promise<Item> {
     const actor = this.requireCurrentUser().id
+    // Ändern in einem bestimmten Space (02): nur das Item dieser Id IN diesem
+    // Space; ein unbekannter lehnt ab, bevor etwas geschrieben ist.
+    const scope = options?.group
+    if (scope !== undefined && !this.groups.some((g) => g.id === scope)) throw new Error(`Space not found: ${scope}`)
     // Authoritative ingress binding also on UPDATE: createdBy is immutable
     // through the regular path (spec 08 — trusted requires it on EVERY
     // ingress); the marked fixture mode keeps the old behaviour.
@@ -712,7 +720,8 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
       const current = stored ?? this.createStoredState()
       const idx = current.items.findIndex((candidate) => candidate.id === id)
       if (idx === -1) throw new Error(`Item not found: ${id}`)
-      if (this.currentGroup && !(current.groupItems[this.currentGroup.id] ?? []).includes(id)) {
+      const inScope = scope ?? this.currentGroup?.id
+      if (inScope !== undefined && !(current.groupItems[inScope] ?? []).includes(id)) {
         throw new Error(`Item not found: ${id}`)
       }
       // Autorisierung INNERHALB der Transaktion, gegen den atomar gelesenen

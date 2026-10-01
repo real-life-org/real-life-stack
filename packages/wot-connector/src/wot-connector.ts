@@ -1,6 +1,7 @@
 import type {
   CreateItemInput,
   CreateItemOptions,
+  ItemScopeOptions,
   GroupScopeCapable,
   Item,
   ItemFilter,
@@ -1219,8 +1220,14 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
     return applyPagination(filtered, filter.limit, filter.offset)
   }
 
-  override async getItem(id: string): Promise<Item | null> {
+  override async getItem(id: string, options?: ItemScopeOptions): Promise<Item | null> {
     await this.handleReady
+    // Ein Item in einem bestimmten Space (02): nur dort, nie eins gleicher Id
+    // in einem anderen Space.
+    if (options?.group !== undefined) {
+      const inSpace = await this.itemsInSpace(options.group)
+      return inSpace.find((item) => item.id === id) ?? null
+    }
     if (this.currentGroupId === null && this.crossGroupIndex) {
       const entry = this.crossGroupIndex.getUniqueById(id)
       return entry?.item ?? null
@@ -1235,6 +1242,11 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
 
   /** 02 → Lesen/Anlegen in einem bestimmten Space. Am Prototyp, nicht als Instanzfeld: gilt auch für Instanzen ohne Konstruktor (Test-Harnesse). */
   get groupScope(): true {
+    return true
+  }
+
+  /** 02 → Ein Item in einem bestimmten Space lesen und ändern. Am Prototyp wie `groupScope`. */
+  get itemScope(): true {
     return true
   }
 
@@ -1467,8 +1479,10 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
     })
   }
 
-  override async updateItem(id: string, updates: Partial<Item>): Promise<Item> {
+  override async updateItem(id: string, updates: Partial<Item>, options?: ItemScopeOptions): Promise<Item> {
     await this.handleReady
+
+    if (options?.group !== undefined) return this.updateItemInSpace(id, updates, options.group)
 
     const handle = await this.resolveHandleForItem(id)
     const plan = await this.planItemUpdate(handle, id, updates)
@@ -1485,6 +1499,32 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
     const updated = await this.getItem(id)
     if (!updated) throw new Error(`Item ${id} disappeared after update`)
     return updated
+  }
+
+  /**
+   * Ändern in einem bestimmten Space (02): im Dokument dieses Space, ohne ihn
+   * zu öffnen. Liegt das Item nicht dort, lehnt es ab, bevor etwas
+   * geschrieben ist; es bleibt in seinem Space.
+   */
+  private async updateItemInSpace(id: string, updates: Partial<Item>, group: string): Promise<Item> {
+    if (!this.isKnownSpace(group)) throw new Error(`Space not found: ${group}`)
+    const useCurrent = group === this.currentGroupId && this.currentHandle !== null
+    if (!useCurrent && !this.replication) throw new Error("Not authenticated")
+    const handle = useCurrent ? this.currentHandle! : await this.replication!.openSpace<RlsSpaceDoc>(group)
+    try {
+      if (!handle.getDoc().items?.[id]) throw new Error(`Item ${id} not found in space ${group}`)
+      const plan = await this.planItemUpdate(handle, id, updates)
+      this.applyItemUpdate(handle, id, plan.updates, plan)
+      const stored = handle.getDoc().items?.[id]
+      if (!stored) throw new Error(`Item ${id} disappeared after update`)
+      const updated = deserializeItem(stored)
+      // Der CrossGroupIndex folgt nur Remote-Updates von selbst.
+      if (this.crossGroupIndex?.hasGroup(group)) this.crossGroupIndex.reindexGroup(group)
+      this.notifyAllObservers(true)
+      return updated
+    } finally {
+      if (!useCurrent) handle.close()
+    }
   }
 
   override async deleteItem(id: string): Promise<void> {

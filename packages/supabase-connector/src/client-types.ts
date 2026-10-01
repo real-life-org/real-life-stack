@@ -35,14 +35,16 @@ export interface DeleteChainLike extends PromiseLike<SupabaseResult<unknown>> {
   select(columns?: string): PromiseLike<SupabaseResult<Record<string, unknown>[]>>
 }
 
+/** Update-Kette: weitere `eq`-Filter (etwa `group_id` beim Ändern in einem Space), dann die Rückgabe. */
+export interface UpdateChainLike extends PromiseLike<SupabaseResult<unknown>> {
+  eq(column: string, value: unknown): UpdateChainLike
+  select(): { single(): PromiseLike<SupabaseResult<Record<string, unknown>>> }
+}
+
 export interface TableLike {
   select(columns?: string): FilterBuilderLike
   insert(row: Record<string, unknown>): { select(): { single(): PromiseLike<SupabaseResult<Record<string, unknown>>> } }
-  update(patch: Record<string, unknown>): {
-    eq(column: string, value: unknown): {
-      select(): { single(): PromiseLike<SupabaseResult<Record<string, unknown>>> }
-    } & PromiseLike<SupabaseResult<unknown>>
-  }
+  update(patch: Record<string, unknown>): { eq(column: string, value: unknown): UpdateChainLike }
   delete(): { eq(column: string, value: unknown): DeleteChainLike }
 }
 
