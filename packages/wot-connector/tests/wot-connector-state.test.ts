@@ -84,8 +84,6 @@ vi.mock("@real-life/wot-core", () => {
     TracedOutboxMessagingAdapter: EmptyAdapter,
     getMetrics: vi.fn(() => ({ setRelayStatus: vi.fn() })),
     getDefaultDisplayName: vi.fn((did: string) => did),
-    signEnvelope: vi.fn(async (envelope: unknown) => envelope),
-    verifyEnvelope: vi.fn(async () => true),
   }
 })
 
@@ -623,6 +621,8 @@ describe("WotConnector profile publish and contact refresh", () => {
     const fake = {
       storage: {
         getContacts: vi.fn(async () => [oldContact]),
+        // The contact-profile writer re-reads the contact inside its per-DID chain.
+        getContact: vi.fn(async (did: string) => yjsMockState.personalDoc.contacts[did] ?? null),
         updateContact,
       },
       graphCacheService: { refreshContactSummaries },
@@ -793,11 +793,6 @@ describe("WotConnector person/v1 item projection", () => {
 
 describe("WotConnector Yjs membership routing", () => {
   const source = readConnectorSource()
-  const legacyHandler = sliceMethod(
-    source,
-    "private async handleIncomingMessage",
-    "private async handleIncomingAttestation",
-  )
 
   it("uses addMember so the replication adapter owns outgoing ECIES invites", async () => {
     const addMember = vi.fn(async () => {})
@@ -883,9 +878,10 @@ describe("WotConnector Yjs membership routing", () => {
     })])
   })
 
-  it("subscribes to onSpaceInvite and has no Old-World space-invite envelope handler", () => {
+  it("subscribes to onSpaceInvite and has no Old-World envelope handler at all (wot#386)", () => {
     expect(source).toMatch(/replication\.onSpaceInvite\(/)
-    expect(legacyHandler).not.toMatch(/envelope\.type === "space-invite"/)
+    expect(source).not.toMatch(/handleIncomingMessage/)
+    expect(source).not.toMatch(/MessageEnvelope/)
   })
 })
 
