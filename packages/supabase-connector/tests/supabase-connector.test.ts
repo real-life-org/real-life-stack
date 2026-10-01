@@ -346,6 +346,39 @@ describe("SupabaseConnector — GroupScopeCapable (02 → Lesen/Anlegen in einem
     expect(client.tables.get("items")!.length).toBe(before)
   })
 
+  it("getItem und updateItem mit group treffen das Item in diesem Space, ohne den geöffneten zu wechseln", async () => {
+    const { client, connector, userId, groupA, groupB } = await world()
+    const inB = await connector.createItem({ type: "scope-update", createdBy: userId, data: { title: "alt" } }, { group: groupB.id })
+    expect((await connector.getItem(inB.id, { group: groupB.id }))?.data).toEqual({ title: "alt" })
+    expect(await connector.getItem(inB.id, { group: groupA.id })).toBeNull()
+    const updated = await connector.updateItem(inB.id, { data: { title: "neu" } }, { group: groupB.id })
+    expect(updated.data).toEqual({ title: "neu" })
+    expect(connector.getCurrentGroup()?.id).toBe(groupA.id)
+    // Kein Verschieben (Regel 4).
+    expect(client.tables.get("items")!.find((row) => row.id === inB.id)?.group_id).toBe(groupB.id)
+  })
+
+  it("mit group wird ein Item eines anderen Space weder gelesen noch geändert", async () => {
+    const { client, connector, userId, groupA, groupB } = await world()
+    const inA = await connector.createItem({ type: "scope-wrong", createdBy: userId, data: { title: "hier" } })
+    expect(await connector.getItem(inA.id, { group: groupB.id })).toBeNull()
+    await expect(connector.updateItem(inA.id, { data: { title: "falsch" } }, { group: groupB.id })).rejects.toThrow()
+    expect(client.tables.get("items")!.find((row) => row.id === inA.id)?.data).toEqual({ title: "hier" })
+    expect(connector.getCurrentGroup()?.id).toBe(groupA.id)
+  })
+
+  it("ein Space ohne Mitgliedschaft: getItem null, updateItem lehnt ab", async () => {
+    const { client, connector, userId } = await world()
+    client.tables.get("groups")!.push({ id: "fremd", name: "Fremd", data: {}, created_by: "user-other", created_at: new Date().toISOString() })
+    client.serviceRole = true
+    await client.from("items").insert({ id: "fremd-1", type: "x", data: { title: "fremd" }, created_by: "user-other", group_id: "fremd" }).select().single()
+    client.serviceRole = false
+    expect(await connector.getItem("fremd-1", { group: "fremd" })).toBeNull()
+    await expect(connector.updateItem("fremd-1", { data: { title: "falsch" } }, { group: "fremd" })).rejects.toThrow()
+    expect(client.tables.get("items")!.find((row) => row.id === "fremd-1")?.data).toEqual({ title: "fremd" })
+    void userId
+  })
+
   it("observe mit group folgt einem Mitgliedschaftswechsel (Codex R1/4)", async () => {
     const { connector, userId, groupB } = await world()
     await connector.createItem({ type: "scope-member", createdBy: userId, data: {} }, { group: groupB.id })

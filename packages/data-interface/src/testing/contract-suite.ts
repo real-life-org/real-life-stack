@@ -613,6 +613,57 @@ export function describeDataInterfaceContract(name: string, harness: ContractHar
         })
       })
 
+      it("getItem und updateItem mit group erreichen ein Item im anderen Space, ohne ihn zu öffnen", async () => {
+        await withConnector(async (context) => {
+          const { connector, currentUserId } = context
+          if (!hasGroupScope(connector)) return
+          const { open, other } = await spaces(context)
+          const type = unique("ct-scope-update")
+          const dort = await connector.createItem({ type, createdBy: currentUserId, data: { title: "alt" } }, { group: other })
+          expect((await connector.getItem(dort.id, { group: other }))?.data).toEqual({ title: "alt" })
+          expect(await connector.getItem(dort.id, { group: open })).toBeNull()
+          const updated = await connector.updateItem(dort.id, { data: { title: "neu" } }, { group: other })
+          expect(updated.data).toEqual({ title: "neu" })
+          // Der geöffnete Space bleibt, das Item bleibt in seinem Space (02, Regeln 4 und 5).
+          expect(openId(connector)).toBe(open)
+          expect((await connector.getItems({ type, group: other })).map(({ id, data }) => [id, data])).toEqual([[dort.id, { title: "neu" }]])
+          expect(await connector.getItems({ type, group: open })).toEqual([])
+          if (hasItemGroups(connector)) expect(connector.getItemGroupId(dort.id)).toBe(other)
+        })
+      })
+
+      it("updateItem mit group geht auch aus der Übersicht", async () => {
+        await withConnector(async (context) => {
+          const { connector, currentUserId } = context
+          if (!hasGroupScope(connector) || !hasGroups(connector)) return
+          const { other } = await spaces(context)
+          const type = unique("ct-scope-update-overview")
+          const dort = await connector.createItem({ type, createdBy: currentUserId, data: { title: "alt" } }, { group: other })
+          connector.setCurrentGroup(null)
+          await new Promise((resolve) => setTimeout(resolve, 0))
+          await connector.updateItem(dort.id, { data: { title: "neu" } }, { group: other })
+          expect((await connector.getItem(dort.id, { group: other }))?.data).toEqual({ title: "neu" })
+          expect(openId(connector)).toBeNull()
+        })
+      })
+
+      it("mit group wird ein Item in einem anderen Space weder gelesen noch geändert", async () => {
+        await withConnector(async (context) => {
+          const { connector, currentUserId } = context
+          if (!hasGroupScope(connector)) return
+          const { open, other } = await spaces(context)
+          const type = unique("ct-scope-update-wrong")
+          const hier = await connector.createItem({ type, createdBy: currentUserId, data: { title: "hier" } })
+          expect(await connector.getItem(hier.id, { group: other })).toBeNull()
+          await expect(connector.updateItem(hier.id, { data: { title: "falsch" } }, { group: other })).rejects.toThrow()
+          expect((await connector.getItem(hier.id, { group: open }))?.data).toEqual({ title: "hier" })
+          const kein = unique("kein-space")
+          expect(await connector.getItem(hier.id, { group: kein })).toBeNull()
+          await expect(connector.updateItem(hier.id, { data: { title: "falsch" } }, { group: kein })).rejects.toThrow()
+          expect((await connector.getItem(hier.id))?.data).toEqual({ title: "hier" })
+        })
+      })
+
       it("observe mit group meldet ein Anlegen in diesem Space, solange er nicht geöffnet ist", async () => {
         if (harness.observesGroupScopeLive === false) return
         await withConnector(async (context) => {

@@ -39,7 +39,7 @@ if (isWritable(connector)) {
 | `ProfileCapable` | `hasProfile()` | eigenes Profil, öffentliche Profile, Profil-Sync und Profil-Freigaben je Space (`observeProfileShares`, `acceptSpace`, `declineSpace`, `shareProfile`, `revokeProfileShare`; [12-profile.md](12-profile.md) Regel 14) |
 | `EventListenerCapable` | `hasEventListener()` | eingehende Connector-Ereignisse abonnieren |
 | `ItemGroupCapable` | `hasItemGroups()` | Item-zu-Group-Zuordnung lesen oder verschieben |
-| `GroupScopeCapable` | `hasGroupScope()` | Items eines bestimmten Space lesen und in ihm anlegen, ohne ihn zu öffnen (`ItemFilter.group`, `createItem(item, { group })`, [02 → Lesen in einem bestimmten Space](02-data-interface.md#lesen-in-einem-bestimmten-space-group)) |
+| `GroupScopeCapable` | `hasGroupScope()` | Items eines bestimmten Space lesen, in ihm anlegen und ändern, ohne ihn zu öffnen (`ItemFilter.group`, `createItem(item, { group })`, `getItem(id, { group })`, `updateItem(id, updates, { group })`, [02 → Lesen in einem bestimmten Space](02-data-interface.md#lesen-in-einem-bestimmten-space-group)) |
 | `AuthorizationCapable` | `hasAuthorization()` | per-Resource-Autorisierung (UCAN/RLS) für Create/Edit/Delete |
 | `MirrorCapable` | `hasMirrors()` | Items in weitere Spaces freigeben und Freigaben beobachten/widerrufen ([09-mirror-bridge.md → §Capability-Vertrag](09-mirror-bridge.md)) |
 | `ActivityLogCapable` | `hasActivityLog()` | best-effort Änderungsverlauf eines Space lesen und beobachten |

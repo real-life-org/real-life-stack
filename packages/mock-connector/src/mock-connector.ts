@@ -1,6 +1,7 @@
 import type {
   CreateItemInput,
   CreateItemOptions,
+  ItemScopeOptions,
   GroupScopeCapable,
   DefaultRelationStoreOptions,
   FullConnector,
@@ -365,8 +366,8 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
     return applyPagination(filtered, filter.limit, filter.offset)
   }
 
-  async getItem(id: string): Promise<Item | null> {
-    return this.findVisibleItem(id) ?? null
+  async getItem(id: string, options?: ItemScopeOptions): Promise<Item | null> {
+    return this.findVisibleItemLocation(id, options?.group)?.item ?? null
   }
 
   observe(filter: ItemFilter): Observable<Item[]> {
@@ -431,8 +432,12 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
     return newItem
   }
 
-  async updateItem(id: string, updates: Partial<Item>): Promise<Item> {
+  async updateItem(id: string, updates: Partial<Item>, options?: ItemScopeOptions): Promise<Item> {
     const actor = this.requireCurrentUser()
+    // Ändern in einem bestimmten Space (02): nur das Item dieser Id IN diesem
+    // Space; ein unbekannter lehnt ab, bevor etwas geschrieben ist.
+    const scope = options?.group
+    if (scope !== undefined && !this.groups.some((g) => g.id === scope)) throw new Error(`Space not found: ${scope}`)
     // Authoritative ingress binding also on UPDATE: createdBy is immutable
     // through the regular path (spec 08); fixture mode keeps old behaviour.
     if (!this.allowFixtureAuthors && "createdBy" in updates) {
@@ -440,7 +445,7 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
       updates = rest
     }
     // Session-bound, like createdBy — see the Item contract.
-    const existing = this.findVisibleItemLocation(id)
+    const existing = this.findVisibleItemLocation(id, scope)
     if (existing) {
       assertMayMutateAuthoredItem(existing.item, actor.id, "update")
       // Sonst laesst sich ein bearbeitbares Inhalts-Item in ein geschuetztes
@@ -448,7 +453,7 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
       assertAuthoredTypeUnchanged(existing.item, updates)
     }
     updates = withEditStamp(updates, actor.id)
-    const location = this.findVisibleItemLocation(id)
+    const location = this.findVisibleItemLocation(id, scope)
     if (!location) throw new Error(`Item not found: ${id}`)
     // Content of an authorial item is the author's alone and frozen once
     // someone else bound a reference to it (spec 08).
@@ -834,12 +839,15 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
     )
   }
 
-  private findVisibleItemLocation(id: string): {
+  private findVisibleItemLocation(id: string, group?: string): {
     scopeId: string | null
     items: Map<string, Item>
     item: Item
   } | null {
-    const activeGroupId = this.currentGroup?.id
+    // Mit `group` genau dieser Space (02 → Ein Item in einem bestimmten
+    // Space lesen und ändern), sonst der geöffnete.
+    if (group !== undefined && !this.groups.some((g) => g.id === group)) return null
+    const activeGroupId = group ?? this.currentGroup?.id
     if (activeGroupId) {
       const scopedItems = this.itemsByScope.get(activeGroupId)
       const scopedItem = scopedItems?.get(id)

@@ -6,6 +6,7 @@ import type {
   IncomingEvent,
   CreateItemInput,
   CreateItemOptions,
+  ItemScopeOptions,
   GroupScopeCapable,
   DataInterface,
   Group,
@@ -318,7 +319,14 @@ export class SupabaseConnector implements DataInterface, ItemWriter, GroupScopeC
     return results
   }
 
-  async getItem(id: string): Promise<Item | null> {
+  async getItem(id: string, options?: ItemScopeOptions): Promise<Item | null> {
+    // Ein Item in einem bestimmten Space (02): nur dort und nur als Mitglied.
+    const group = options?.group
+    if (group !== undefined) {
+      if (!(await this.isMemberOf(group))) return null
+      const row = await this.getItemRowUnscoped(id)
+      return row && row.group_id === group ? rowToItem(row) : null
+    }
     const row = await this.getItemRowUnscoped(id)
     if (!row) return null
     const scopeGroupId = this.currentReadScopeGroupId()
@@ -428,16 +436,23 @@ export class SupabaseConnector implements DataInterface, ItemWriter, GroupScopeC
     return created
   }
 
-  async updateItem(id: string, updates: Partial<Item>): Promise<Item> {
+  async updateItem(id: string, updates: Partial<Item>, options?: ItemScopeOptions): Promise<Item> {
+    // Ändern in einem bestimmten Space (02): nur das Item dieser Id IN diesem
+    // Space und nur als Mitglied; ein Item gleicher Id anderswo bleibt.
+    const group = options?.group
+    if (group !== undefined && !(await this.isMemberOf(group))) {
+      throw new Error(`[SupabaseConnector] updateItem: not a member of space ${group}`)
+    }
     // Identity fields are stripped client-side (fail closed) and immutable
     // server-side (trigger) — updates carry content only.
     const patch = itemUpdateToRowPatch(updates)
     if (Object.keys(patch).length === 0) {
-      const current = await this.getItem(id)
+      const current = await this.getItem(id, options)
       if (!current) throw new Error(`[SupabaseConnector] updateItem: item not found: ${id}`)
       return current
     }
-    const result = await this.client.from("items").update(patch).eq("id", id).select().single()
+    const query = this.client.from("items").update(patch).eq("id", id)
+    const result = await (group !== undefined ? query.eq("group_id", group) : query).select().single()
     const updated = rowToItem(throwOnError(result, "updateItem"))
     this.scheduleItemsRefresh()
     return updated

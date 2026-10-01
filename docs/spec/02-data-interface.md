@@ -176,8 +176,8 @@ Regeln:
 3. Items ohne Space, die ein Connector jedem Space zurechnet (etwa globale `feature`-Items), rechnet er mit `group` genauso zu wie im geöffneten Space.
 4. Eine Abfrage mit `group` DARF den geöffneten Space NICHT wechseln (`setCurrentGroup`) und keinen anderen App-Zustand ändern.
 5. `observe({ group, … })` MUSS Änderungen in diesem Space melden, auch solange er nicht geöffnet ist. `loaded` gilt wie in [Observable](#observable), Regel 3.
-6. `group` versteht nur ein Connector, der es zusagt: `GroupScopeCapable` mit Type Guard `hasGroupScope()` ([03](03-capabilities.md)). Dieselbe Zusage deckt das Anlegen in einem Space ([Anlegen in einem bestimmten Space](#anlegen-in-einem-bestimmten-space)). Ein Connector übergeht unbekannte Filterfelder; ohne die Zusage würde er die Items des geöffneten Space liefern, als wären es die des angefragten. Eine Fläche DARF `group` darum NICHT an einen Connector ohne `hasGroupScope()` geben. Sie zeigt stattdessen, dass sie in diesem Space nicht lesen kann ([shared-components → Space des Formulars](modules/shared-components.md#space-des-formulars)).
-7. `hasGroupScope()` und `hasItemGroups()` sind unabhängig. `ItemGroupCapable` beantwortet für ein bekanntes Item, in welchem Space es liegt, und verschiebt es; `GroupScopeCapable` liest die Items eines Space und legt in ihm an. Ein Connector mit `GroupManager` SOLLTE `GroupScopeCapable` erfüllen.
+6. `group` versteht nur ein Connector, der es zusagt: `GroupScopeCapable` mit Type Guard `hasGroupScope()` ([03](03-capabilities.md)). Dieselbe Zusage deckt das Anlegen in einem Space ([Anlegen in einem bestimmten Space](#anlegen-in-einem-bestimmten-space)) und das Lesen und Ändern eines einzelnen Items in einem Space ([Ein Item in einem bestimmten Space lesen und ändern](#ein-item-in-einem-bestimmten-space-lesen-und-ändern)). Ein Connector übergeht unbekannte Filterfelder; ohne die Zusage würde er die Items des geöffneten Space liefern, als wären es die des angefragten. Eine Fläche DARF `group` darum NICHT an einen Connector ohne `hasGroupScope()` geben. Sie zeigt stattdessen, dass sie in diesem Space nicht lesen kann ([shared-components → Space des Formulars](modules/shared-components.md#space-des-formulars)).
+7. `hasGroupScope()` und `hasItemGroups()` sind unabhängig. `ItemGroupCapable` beantwortet für ein bekanntes Item, in welchem Space es liegt, und verschiebt es; `GroupScopeCapable` liest, legt an und ändert in einem Space, ohne ihn zu öffnen. Ein Connector mit `GroupManager` SOLLTE `GroupScopeCapable` erfüllen.
 
 ### Anlegen in einem bestimmten Space
 
@@ -185,6 +185,8 @@ Regeln:
 interface GroupScopeCapable {
   readonly groupScope: true
   createItem(item: CreateItemInput, options?: { group?: string }): Promise<Item>
+  getItem(id: string, options?: { group?: string }): Promise<Item | null>
+  updateItem(id: string, updates: Partial<Item>, options?: { group?: string }): Promise<Item>
 }
 ```
 
@@ -197,6 +199,19 @@ Regeln:
 3. `group` ist eine Id wie in [Lesen in einem bestimmten Space](#lesen-in-einem-bestimmten-space-group), Regel 2. Ist der Space unbekannt oder darf der Nutzer dort nicht schreiben, lehnt der Connector mit einem Fehler ab und legt nirgends an.
 4. Das Anlegen mit `group` DARF den geöffneten Space NICHT wechseln.
 5. Eine Fläche DARF `options.group` nur an einen Connector mit `hasGroupScope()` geben. Ein Connector ohne Zusage übergeht das zweite Argument und legte das Item im falschen Space an.
+
+### Ein Item in einem bestimmten Space lesen und ändern
+
+`getItem(id)` und `ItemWriter.updateItem(id, updates)` erreichen ein Item im Scope des geöffneten Space, wie `getItems()` ohne `group`. `options.group` nennt den Space des Items ausdrücklich, etwa wenn ein Formular ein anderes Item in seinem Formular-Space mitschreibt ([shared-components → Space des Formulars](modules/shared-components.md#space-des-formulars)).
+
+Regeln:
+
+1. Mit `options.group` liest oder ändert der Connector das Item mit dieser Id im Space `group`. Das gilt unabhängig davon, welcher Space geöffnet ist und ob einer geöffnet ist.
+2. Liegt im Space `group` kein Item mit dieser Id, liefert `getItem` `null`, und `updateItem` lehnt mit einem Fehler ab, ohne etwas zu ändern. Ein Item mit derselben Id in einem anderen Space wird weder gelesen noch geändert.
+3. `group` ist eine Id wie in [Lesen in einem bestimmten Space](#lesen-in-einem-bestimmten-space-group), Regel 2. Ist der Space unbekannt oder nicht zugänglich, liefert `getItem` `null`, und `updateItem` lehnt ab.
+4. `updateItem` mit `group` verschiebt das Item nicht; es bleibt in `group`. Alle übrigen Regeln für `updateItem` gelten unverändert, etwa Autorschaft und Einfrieren ([08](08-relation-records.md#aussagen-einer-person-item-authorial)) und Berechtigungen.
+5. Lesen und Ändern mit `group` DÜRFEN den geöffneten Space NICHT wechseln.
+6. Eine Fläche DARF `options.group` nur an einen Connector mit `hasGroupScope()` geben. Ein Connector ohne Zusage übergeht das Argument und träfe ein Item im geöffneten Space.
 
 ## Nicht-Ziele
 
