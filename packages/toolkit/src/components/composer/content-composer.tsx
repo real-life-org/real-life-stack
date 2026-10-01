@@ -1175,9 +1175,10 @@ export function ContentComposer({
     if (!activeWidgets.has("people")) {
       setManualWidgets((prev) => new Set([...prev, "people"]))
     }
-    // @mention landet im ersten Personenfeld des Typs.
+    // @mention landet im ersten Personenfeld des Typs — gegen den Wert JETZT,
+    // nicht gegen den Render, in dem der Rückruf entstand.
     const key = peopleFields[0].dataKey
-    const current = (data[key] as string[] | undefined) || []
+    const current = asStrings(form.getData()[key])
     if (!current.includes(name)) {
       updateData(key, [...current, name])
     }
@@ -1188,8 +1189,9 @@ export function ContentComposer({
     if (!activeWidgets.has("tags")) {
       setManualWidgets((prev) => new Set([...prev, "tags"]))
     }
-    if (!data.tags?.includes(tag)) {
-      updateData("tags", [...(data.tags || []), tag])
+    const tags = asStrings(form.getData().tags)
+    if (!tags.includes(tag)) {
+      updateData("tags", [...tags, tag])
     }
   }
 

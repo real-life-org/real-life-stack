@@ -131,8 +131,9 @@ async function chooseImage() {
   const file = host.querySelector<HTMLInputElement>('input[type="file"]')!
   Object.defineProperty(file, "files", { value: [new File(["x"], "a.png", { type: "image/png" })], configurable: true })
   await act(async () => file.dispatchEvent(new Event("change", { bubbles: true })))
+  // Der Standard-Resize lädt image-utils erst beim Gebrauch (dynamischer Import): unter Last dauert das.
+  await vi.waitFor(() => expect(resize.fn).toHaveBeenCalled(), { timeout: 5000 })
   await settle()
-  expect(resize.fn).toHaveBeenCalled()
 }
 
 describe("Regel 10: Bild gewählt, dann Typwechsel während des Verkleinerns", () => {
