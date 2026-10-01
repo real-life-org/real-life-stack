@@ -391,6 +391,9 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
   /** 02 → Lesen/Anlegen in einem bestimmten Space. */
   readonly groupScope = true as const
 
+  /** 02 → Ein Item in einem bestimmten Space lesen und ändern. */
+  readonly itemScope = true as const
+
   async createItem(item: CreateItemInput, options?: CreateItemOptions): Promise<Item> {
     // Ein unbekannter Space lehnt ab, bevor irgendetwas angelegt ist (02,
     // Anlegen Regel 3).
@@ -455,6 +458,13 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
     updates = withEditStamp(updates, actor.id)
     const location = this.findVisibleItemLocation(id, scope)
     if (!location) throw new Error(`Item not found: ${id}`)
+    // Ein feature ist global: der Typwechsel hebt das Item aus seinem Space.
+    // Mit `group` verspricht das Update, nichts zu verschieben (02, Ein Item
+    // in einem bestimmten Space, Regel 4) — also ablehnen, bevor etwas
+    // geändert ist.
+    if (scope !== undefined && location.item.type !== "feature" && updates.type === "feature") {
+      throw new Error(`Cannot make item ${id} a feature within space ${scope}: it would leave the space`)
+    }
     // Content of an authorial item is the author's alone and frozen once
     // someone else bound a reference to it (spec 08).
     updates = authoredUpdateAuthoritative(location.item, updates, actor.id, isFrozen(location.item, location.items.values()))

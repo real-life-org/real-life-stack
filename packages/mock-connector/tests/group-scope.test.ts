@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { hasGroupScope } from "@real-life-stack/data-interface"
+import { hasGroupScope, hasItemScope } from "@real-life-stack/data-interface"
 import { MockConnector } from "../src/index"
 
 // 02 → Lesen/Anlegen in einem bestimmten Space. Die Fälle selbst stehen in
@@ -17,6 +17,20 @@ describe("MockConnector — GroupScopeCapable", () => {
 
   it("sagt group zu", () => {
     expect(hasGroupScope(connector())).toBe(true)
+  })
+
+  it("sagt Lesen und Ändern eines Items in einem Space zu (ItemScopeCapable)", () => {
+    expect(hasItemScope(connector())).toBe(true)
+  })
+
+  it("ein Update mit group macht kein feature daraus: es würde das Item ins Globale verschieben (02, Regel 4)", async () => {
+    const c = connector()
+    c.setCurrentGroup("a")
+    const task = await c.createItem({ type: "task", createdBy: "u", data: { title: "T" } }, { group: "b" })
+    await expect(c.updateItem(task.id, { type: "feature" }, { group: "b" })).rejects.toThrow()
+    expect(c.getItemGroupId(task.id)).toBe("b")
+    expect((await c.getItem(task.id, { group: "b" }))?.type).toBe("task")
+    expect((await c.getItems({ group: "a" })).map(({ id }) => id)).not.toContain(task.id)
   })
 
   it("rechnet globale feature-Items auch mit group jedem Space zu (Regel 3)", async () => {

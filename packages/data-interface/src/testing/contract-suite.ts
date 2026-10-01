@@ -21,6 +21,7 @@ import {
   deriveRelationRecordId,
   hasClaimVerification,
   hasGroupScope,
+  hasItemScope,
   hasGroups,
   hasItemGroups,
   hasRelationRecords,
@@ -616,7 +617,7 @@ export function describeDataInterfaceContract(name: string, harness: ContractHar
       it("getItem und updateItem mit group erreichen ein Item im anderen Space, ohne ihn zu öffnen", async () => {
         await withConnector(async (context) => {
           const { connector, currentUserId } = context
-          if (!hasGroupScope(connector)) return
+          if (!hasItemScope(connector) || !hasGroupScope(connector)) return
           const { open, other } = await spaces(context)
           const type = unique("ct-scope-update")
           const dort = await connector.createItem({ type, createdBy: currentUserId, data: { title: "alt" } }, { group: other })
@@ -635,7 +636,7 @@ export function describeDataInterfaceContract(name: string, harness: ContractHar
       it("updateItem mit group geht auch aus der Übersicht", async () => {
         await withConnector(async (context) => {
           const { connector, currentUserId } = context
-          if (!hasGroupScope(connector) || !hasGroups(connector)) return
+          if (!hasItemScope(connector) || !hasGroupScope(connector) || !hasGroups(connector)) return
           const { other } = await spaces(context)
           const type = unique("ct-scope-update-overview")
           const dort = await connector.createItem({ type, createdBy: currentUserId, data: { title: "alt" } }, { group: other })
@@ -650,7 +651,7 @@ export function describeDataInterfaceContract(name: string, harness: ContractHar
       it("mit group wird ein Item in einem anderen Space weder gelesen noch geändert", async () => {
         await withConnector(async (context) => {
           const { connector, currentUserId } = context
-          if (!hasGroupScope(connector)) return
+          if (!hasItemScope(connector)) return
           const { open, other } = await spaces(context)
           const type = unique("ct-scope-update-wrong")
           const hier = await connector.createItem({ type, createdBy: currentUserId, data: { title: "hier" } })

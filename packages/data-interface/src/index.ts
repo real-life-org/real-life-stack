@@ -878,26 +878,36 @@ export interface ItemGroupCapable {
   getPersonalGroupId?(): string | null
 }
 
-// --- Group Scope (Lesen, Anlegen und Ändern in einem bestimmten Space) ---
+// --- Group Scope (Lesen und Anlegen in einem bestimmten Space) ---
 
 /**
- * Items eines bestimmten Space lesen (`ItemFilter.group`), in ihm anlegen
- * (`createItem(item, { group })`) und ein einzelnes Item dort lesen und
- * ändern (`getItem(id, { group })`, `updateItem(id, updates, { group })`),
- * ohne ihn zu öffnen. Spec 02 → Lesen in einem bestimmten Space / Anlegen in
- * einem bestimmten Space / Ein Item in einem bestimmten Space lesen und
- * ändern; 03.
+ * Items eines bestimmten Space lesen (`ItemFilter.group`) und in ihm anlegen
+ * (`createItem(item, { group })`), ohne ihn zu öffnen. Spec 02 → Lesen in
+ * einem bestimmten Space / Anlegen in einem bestimmten Space; 03.
  *
  * Mit `options.group` legt der Connector das Item atomar unmittelbar in
  * diesem Space an — nie „anlegen, dann verschieben". Ein unbekannter oder
- * nicht beschreibbarer Space lehnt ab, ohne irgendwo anzulegen. Lesen und
- * Ändern mit `group` treffen nur das Item dieser Id IN diesem Space, nie
- * eins gleicher Id in einem anderen, und verschieben nichts. Unabhängig von
- * {@link ItemGroupCapable} (Regel 7).
+ * nicht beschreibbarer Space lehnt ab, ohne irgendwo anzulegen. Unabhängig
+ * von {@link ItemGroupCapable} (Regel 7).
  */
 export interface GroupScopeCapable {
   readonly groupScope: true
   createItem(item: CreateItemInput, options?: CreateItemOptions): Promise<Item>
+}
+
+/**
+ * Ein einzelnes Item in einem bestimmten Space lesen und ändern, ohne ihn zu
+ * öffnen (`getItem(id, { group })`, `updateItem(id, updates, { group })`).
+ * Spec 02 → Ein Item in einem bestimmten Space lesen und ändern; 03.
+ *
+ * Eine EIGENE Zusage, nicht Teil von {@link GroupScopeCapable}: Connectoren
+ * nach dem älteren Vertrag sagen `groupScope` zu, übergehen `{ group }` an
+ * `getItem`/`updateItem` aber still und träfen das Item im geöffneten Space.
+ * Mit `group` trifft der Connector nur das Item dieser Id IN diesem Space und
+ * verschiebt nichts; ein Update, das das Item verschieben würde, lehnt er ab.
+ */
+export interface ItemScopeCapable {
+  readonly itemScope: true
   getItem(id: string, options?: ItemScopeOptions): Promise<Item | null>
   updateItem(id: string, updates: Partial<Item>, options?: ItemScopeOptions): Promise<Item>
 }
@@ -1101,8 +1111,7 @@ export function hasItemGroups(c: DataInterface): c is DataInterface & ItemGroupC
 }
 
 /**
- * Sagt der Connector `ItemFilter.group`, `createItem(item, { group })` und
- * `getItem`/`updateItem` mit `{ group }` zu?
+ * Sagt der Connector `ItemFilter.group` und `createItem(item, { group })` zu?
  * Nur die ausdrückliche Zusage `groupScope === true` zählt: `createItem` hat
  * jeder Schreiber, und ein Connector ohne Zusage übergeht `group` still
  * (Spec 02, Regel 6).
@@ -1110,6 +1119,17 @@ export function hasItemGroups(c: DataInterface): c is DataInterface & ItemGroupC
 export function hasGroupScope(c: DataInterface): c is DataInterface & ItemWriter & GroupScopeCapable {
   const candidate = c as DataInterface & Partial<GroupScopeCapable>
   return candidate.groupScope === true && typeof candidate.createItem === "function"
+}
+
+/**
+ * Sagt der Connector `getItem`/`updateItem` mit `{ group }` zu? Nur die
+ * ausdrückliche Zusage `itemScope === true` zählt — `groupScope` allein
+ * nicht: ältere Connectoren mit dieser Zusage übergehen `{ group }` an
+ * Einzel-Items still (Spec 02, Ein Item in einem bestimmten Space, Regel 6).
+ */
+export function hasItemScope(c: DataInterface): c is DataInterface & ItemWriter & ItemScopeCapable {
+  const candidate = c as DataInterface & Partial<ItemScopeCapable>
+  return candidate.itemScope === true && typeof candidate.updateItem === "function"
 }
 
 /**

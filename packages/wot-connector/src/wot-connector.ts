@@ -1245,6 +1245,11 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
     return true
   }
 
+  /** 02 → Ein Item in einem bestimmten Space lesen und ändern. Am Prototyp wie `groupScope`. */
+  get itemScope(): true {
+    return true
+  }
+
   /**
    * Ist `group` ein Space, den dieser Nutzer liest und beschreibt? Die
    * Gruppen aus `getGroups()` und der persönliche Space (02, Lesen Regel 2).

@@ -407,6 +407,9 @@ export class SupabaseConnector implements DataInterface, ItemWriter, GroupScopeC
   /** 02 → Lesen/Anlegen in einem bestimmten Space. */
   readonly groupScope = true as const
 
+  /** 02 → Ein Item in einem bestimmten Space lesen und ändern. */
+  readonly itemScope = true as const
+
   async createItem(item: CreateItemInput, options?: CreateItemOptions): Promise<Item> {
     const target = options?.group
     if (target === undefined) return this.createItemInGroup(item, this.currentGroupId)

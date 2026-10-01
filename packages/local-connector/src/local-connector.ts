@@ -618,6 +618,9 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
   /** 02 → Lesen/Anlegen in einem bestimmten Space. */
   readonly groupScope = true as const
 
+  /** 02 → Ein Item in einem bestimmten Space lesen und ändern. */
+  readonly itemScope = true as const
+
   async createItem(item: CreateItemInput, options?: CreateItemOptions): Promise<Item> {
     const target = options?.group
     // Ein unbekannter Space lehnt ab, bevor irgendetwas angelegt ist (02,

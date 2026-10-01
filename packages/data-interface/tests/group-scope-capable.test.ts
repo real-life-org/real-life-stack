@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { DataInterface } from "../src/index.js"
-import { hasGroupScope, hasItemGroups } from "../src/index.js"
+import { hasGroupScope, hasItemGroups, hasItemScope } from "../src/index.js"
 
 // Spec 02 → Lesen/Anlegen in einem bestimmten Space; 03 → GroupScopeCapable.
 describe("GroupScopeCapable", () => {
@@ -39,5 +39,17 @@ describe("GroupScopeCapable", () => {
     const nurScope = stub({ groupScope: true, createItem: async () => ({}) })
     expect(hasGroupScope(nurScope)).toBe(true)
     expect(hasItemGroups(nurScope)).toBe(false)
+  })
+
+  it("hasItemScope verlangt eine eigene Zusage: groupScope allein reicht nicht (alte Connectoren)", () => {
+    // Ein Connector nach altem Vertrag: groupScope für Lesen/Anlegen, getItem
+    // und updateItem mit einem Argument. Er übergeht { group } still und
+    // änderte im geöffneten Space — er darf nicht als geeignet gelten.
+    const alt = stub({ groupScope: true, createItem: async () => ({}), updateItem: async () => ({}) })
+    expect(hasGroupScope(alt)).toBe(true)
+    expect(hasItemScope(alt)).toBe(false)
+    expect(hasItemScope(stub({ itemScope: "yes", updateItem: async () => ({}) }))).toBe(false)
+    expect(hasItemScope(stub({ itemScope: true }))).toBe(false)
+    expect(hasItemScope(stub({ itemScope: true, updateItem: async () => ({}) }))).toBe(true)
   })
 })
