@@ -198,6 +198,79 @@ Regeln:
 4. Das Anlegen mit `group` DARF den geöffneten Space NICHT wechseln.
 5. Eine Fläche DARF `options.group` nur an einen Connector mit `hasGroupScope()` geben. Ein Connector ohne Zusage übergeht das zweite Argument und legte das Item im falschen Space an.
 
+## Ändern eines Items
+
+**Status:** Normativer Entwurf (01.10.2026). Noch nicht umgesetzt; der Übergang steht unten.
+
+Mehrere Personen und Geräte ändern dasselbe Item: eine im Formular, eine andere mit einer Selbstaktion, eine dritte im Modul. Keine Änderung DARF eine andere still überschreiben, die sie nicht gesehen hat. Dafür gibt es drei Stufen. Jede baut auf der vorigen auf.
+
+### Stufe 1: Nur Geändertes schreiben
+
+```ts
+interface ItemPatch {
+  /** Merge-Patch der Tiefe 1 (RFC 7386): genannte Schlüssel setzen, `null` löscht. */
+  data?: Record<string, unknown>
+  /** Änderungen je Kante; eine Kante ist durch (predicate, target) bestimmt. */
+  relations?: { add?: Relation[]; remove?: Pick<Relation, "predicate" | "target">[] }
+  tags?: { add?: string[]; remove?: string[] }
+}
+
+interface ItemWriter {
+  updateItem(id: string, patch: ItemPatch, options?: UpdateItemOptions): Promise<Item>
+}
+```
+
+Regeln:
+
+1. **Ein Patch, kein Ersatz.** `updateItem` ändert nur, was der Patch nennt. Schlüssel von `data`, die der Patch nicht nennt, Kanten, die er weder hinzufügt noch entfernt, und Tags, die er nicht nennt, bleiben, wie sie im gespeicherten Stand sind, nicht wie sie der Schreiber gelesen hat.
+2. **`data`.** Der Connector führt `data` zusammen wie `Group.data` ([04 → Space-Metadaten](04-items-relations-groups-spaces.md#space-metadaten), Regel 3): Ein genannter Schlüssel ersetzt den gespeicherten Wert, `null` löscht ihn. Ein Wert, der selbst ein Objekt ist (etwa `position`), wird als Ganzes ersetzt.
+3. **Kanten.** `add` fügt eine Kante hinzu. Gibt es die Kante mit demselben `predicate` und `target` schon, ersetzt `add` ihr `meta`. `remove` entfernt sie; eine fehlende Kante zu entfernen ist kein Fehler. Kanten, die der Patch nicht nennt, bleiben.
+4. **Tags.** `add` und `remove` wirken je Tag. Ein vorhandenes Tag hinzuzufügen oder ein fehlendes zu entfernen ist kein Fehler.
+5. **Atomar.** Ein Patch wirkt ganz oder gar nicht. Das gilt auch, wenn er `data`, Kanten und Tags zugleich ändert (Selbstaktion: Kante und Status in einem `updateItem`, [06](06-schema-composition.md#feld--und-kantenregister), Regel 19).
+6. **Das Formular sendet nur Geändertes.** Das Formular merkt sich beim Öffnen den **Ausgangsstand** des Items. Beim Speichern sendet es nur Schlüssel, Kanten und Tags, die sich gegenüber dem Ausgangsstand geändert haben. Hat sich nichts geändert, schreibt es nicht.
+7. **Selbstaktionen senden nur ihre Kante und ihren Status.** Eine Selbstaktion schreibt ihre eigene Kante (`add` oder `remove`) und, wo eine Regel es verlangt, den Status-Schlüssel. Ganze `relations` oder ganze `data` sendet sie nicht.
+8. **Kein Space im Patch.** Ein Patch verschiebt kein Item. Den Space ändert nur `moveItemToGroup`.
+
+### Stufe 2: Konflikte erkennen
+
+```ts
+interface UpdateItemOptions {
+  /** Erwartete Werte der geänderten Felder, so wie der Schreiber sie gelesen hat. */
+  expect?: {
+    data?: Record<string, unknown>
+    /** Erwartetes `meta` einer Kante, deren `meta` der Patch ändert; `null` = Kante fehlt. */
+    relations?: { predicate: string; target: string; meta: Relation["meta"] | null }[]
+  }
+}
+
+interface ConditionalWriteCapable {
+  readonly conditionalWrite: true
+}
+```
+
+Regeln:
+
+1. **Der gelesene Stand reist mit.** Wer ein Feld ändert, das er vorher gelesen hat, SOLLTE dessen gelesenen Wert in `expect` mitgeben. Das Formular gibt für jeden geänderten Schlüssel den Wert aus dem Ausgangsstand mit, eine Selbstaktion den frisch gelesenen Wert des Status und ihrer Kante.
+2. **Ablehnen statt überschreiben.** Ein Connector mit `hasConditionalWrite()` MUSS vor dem Schreiben prüfen, ob jedes Feld in `expect` im gespeicherten Stand noch den erwarteten Wert hat (Vergleich der Werte nach RFC 8785). Weicht eines ab, lehnt er den ganzen Patch mit einem Konfliktfehler ab, der die abweichenden Felder und ihren gespeicherten Wert nennt. Prüfen und Schreiben sind ein Schritt; dazwischen DARF kein anderer Schreiber schreiben.
+3. **Hinzufügen und Entfernen von Kanten und Tags kollidieren nicht.** Sie sind idempotent und vertauschbar. Nur eine Änderung des `meta` einer Kante (etwa des Qualifiers) wird geprüft.
+4. **Nur melden, was gilt.** Ein Connector meldet `conditionalWrite` nur, wenn sein Vergleich gegen den Stand läuft, gegen den auch alle anderen Schreiber geprüft werden. Ein Connector, der Schreibvorgänge erst später mit anderen Geräten zusammenführt, prüft nur gegen seinen lokalen Stand; er DARF die Fähigkeit dann NICHT melden. Ohne die Fähigkeit übergeht der Connector `expect`, und eine Fläche DARF sich auf keine Ablehnung verlassen.
+
+### Stufe 3: Konflikte zeigen
+
+Regeln:
+
+1. **Das Formular beobachtet sein Item.** Solange ein Formular ein bestehendes Item bearbeitet, beobachtet es dieses Item (`observeItem`).
+2. **Fremde Änderungen sichtbar machen.** Ändert sich das gespeicherte Item gegenüber dem Ausgangsstand, zeigt das Formular, welche Felder betroffen sind und wer zuletzt geändert hat (`updatedBy`, `updatedAt` des Items; der Connector setzt sie bei jedem Ändern aus der Sitzung). Haben seit dem Ausgangsstand mehrere Personen geändert, nennt es nur die letzte.
+    - Ein Feld, das der Nutzer nicht geändert hat, zeigt den neuen Wert und einen Hinweis darauf. Der neue Wert wird Teil des Ausgangsstands.
+    - Ein Feld, das der Nutzer und jemand anderes geändert haben, ist ein **Konflikt**. Das Formular zeigt beide Werte. Der Nutzer übernimmt den fremden Wert oder behält seinen. Behält er seinen, wird der fremde Wert Ausgangsstand und `expect` dieses Felds.
+    - Speichern ist gesperrt, solange ein Konflikt nicht entschieden ist.
+3. **Abgelehnt heißt: zeigen.** Lehnt der Connector ein Speichern nach Stufe 2 ab, zeigt das Formular die genannten Felder als Konflikt nach Regel 2. Die Eingaben bleiben.
+4. **Gelöscht oder verschoben.** Wird das Item gelöscht oder in einen anderen Space verschoben, während das Formular offen ist, sagt das Formular das. Es speichert nicht in ein gelöschtes Item.
+
+### Übergang
+
+(1) Der Typ `ItemPatch` kommt dazu, und jeder Connector führt `data` nach Stufe 1 zusammen; geprüft in der geteilten Contract-Suite. (2) Formular, Selbstaktionen und Module senden Patches. (3) Connectoren mit serverseitigem Schreiben (Supabase) erfüllen `ConditionalWriteCapable`; Formular und Selbstaktionen geben `expect` mit. (4) Das Formular zeigt Konflikte nach Stufe 3.
+
 ## Nicht-Ziele
 
 `DataInterface` definiert bewusst nicht:
