@@ -81,8 +81,6 @@ import {
   TracedCompactStorageManager,
   getMetrics,
   getDefaultDisplayName,
-  signEnvelope,
-  verifyEnvelope,
 } from "@real-life/wot-core"
 import { HttpDiscoveryAdapter } from "@real-life/wot-core/adapters/discovery/http"
 import { WebSocketMessagingAdapter } from "@real-life/wot-core/adapters/messaging/websocket"
@@ -100,12 +98,12 @@ import {
   isDidcommMessage,
   parseQrChallenge,
   x25519MultibaseToPublicKeyBytes,
+  isRfc3339DateTime,
   derivePrivateSpaceGenesis,
 } from "@real-life/wot-core/protocol"
 import type {
   Attestation,
   SpaceInfo,
-  MessageEnvelope,
   IncomingSpaceInvite,
   PublicProfile,
   PublicIdentitySession,
@@ -194,6 +192,8 @@ import {
   sendAttestationInbox,
   sendAttestationReceipt,
 } from "./attestation-wire.js"
+import { sendProfileUpdateInbox } from "./profile-update-wire.js"
+import { applyContactNameSummary, applyContactProfile } from "./contact-profile-writer.js"
 import { InitialSyncTracker } from "./initial-sync-tracker.js"
 import { countMemberSpaces } from "./personal-doc-spaces.js"
 import { createCoalescedRunner, type CoalescedRunner } from "./coalesced-runner.js"
@@ -368,7 +368,6 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
   // QR-Challenge bleibt bewusst Session-Zustand (Port-Vertrag: "intentionally
   // not part of this port").
   private verificationWorkflow = new VerificationWorkflow({
-    crypto: this.protocolCrypto,
     stateStore: new IndexedDbVerificationStateStore({
       databaseName: () => identityDatabaseName("verificationState", this.identity.getDid()),
     }),
@@ -459,6 +458,7 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
   private workQueueCountUnsub: (() => void) | null = null
   private inboxAttestationUnsub: (() => void) | null = null
   private inboxReceiptUnsub: (() => void) | null = null
+  private inboxProfileUpdateUnsub: (() => void) | null = null
   private deliveryReceiptUnsub: (() => void) | null = null
   private spaceInviteUnsub: (() => void) | null = null
   private discoveryRetryCleanup: (() => void) | null = null
@@ -565,6 +565,7 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
     this.outboxCountUnsub?.()
     this.inboxAttestationUnsub?.()
     this.inboxReceiptUnsub?.()
+    this.inboxProfileUpdateUnsub?.()
     this.deliveryReceiptUnsub?.()
     this.spaceInviteUnsub?.()
     this.spaceInviteUnsub = null
@@ -726,6 +727,8 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
     this.inboxAttestationUnsub = null
     this.inboxReceiptUnsub?.()
     this.inboxReceiptUnsub = null
+    this.inboxProfileUpdateUnsub?.()
+    this.inboxProfileUpdateUnsub = null
     this.deliveryReceiptUnsub?.()
     this.deliveryReceiptUnsub = null
     this.spaceInviteUnsub?.()
@@ -2135,7 +2138,6 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
       flushPersonalDoc: flushYjsPersonalDoc,
       docLogStore: this.docLogStore,
       deviceId,
-      enableLogSync: true,
       catchUpRegistry: this.catchUpRegistry ?? undefined,
     })
     // Membership inbox ownership lives in the replication adapter. Subscribe
@@ -2158,15 +2160,15 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
     await this.pruneDeliveryCorrelations()
     await this.refreshSyncState()
 
-    // Transitional non-membership messages (currently profile-update) remain
-    // separate from inbox/1.0. Membership is owned by YjsReplicationAdapter.
-    this.outboxAdapter.onMessage(async (message: WireMessage) => {
-      if (!isDidcommMessage(message)) await this.handleIncomingMessage(message as MessageEnvelope)
-    })
-
     this.inboxAttestationUnsub = this.inboxReception.onAttestation((delivery) =>
       this.handleIncomingAttestation(delivery.vcJws, delivery.senderDid),
     )
+    // wot#386: Profiländerungen der Kontakte als inbox/1.0 profile-update — über
+    // die je Kontakt serialisierte Schreibstelle (nur Neueres, volles Profil).
+    this.inboxProfileUpdateUnsub = this.inboxReception.onProfileUpdate(async ({ profile, senderDid }) => {
+      if (!this.storage) throw new Error("Storage not ready")
+      await applyContactProfile(this.storage, senderDid, profile)
+    })
     this.inboxReceiptUnsub = this.inboxReception.onAttestationReceipt((receipt) =>
       this.handleIncomingAttestationReceipt(receipt.jti, receipt.senderDid),
     )
@@ -2342,7 +2344,7 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
       name,
       ...(doc.profile?.bio ? { bio: doc.profile.bio } : {}),
       ...(doc.profile?.avatar ? { avatar: doc.profile.avatar } : {}),
-      updatedAt: new Date().toISOString(),
+      updatedAt: this.profileChangedAt(),
     }
     const fingerprint = JSON.stringify({
       did,
@@ -2366,30 +2368,78 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
   }
 
   /** Notify all contacts about a profile change (fire-and-forget via relay) */
+  /**
+   * Profiländerung an alle Kontakte (wot#386): das Profil selbst, verschlüsselt
+   * als inbox/1.0 profile-update je Kontakt.
+   *
+   * - Schlüssel: zuerst der gespeicherte Key-Agreement-Key des Kontakts, damit
+   *   ein Offline-Versand die Outbox erreicht; nur ohne ihn die Discovery.
+   * - Zeitmarke: die Änderungszeit des Profils, nie die Sendezeit (Review #592).
+   * - Laufzeit-Grenze: Generation, Speicher und Messaging werden zu Beginn
+   *   erfasst; nach jedem Warten und bis zum Signieren/Senden geprüft — ein
+   *   Kontowechsel dazwischen sendet nichts (wie bei Attestationen).
+   */
   private async broadcastProfileUpdate(): Promise<void> {
-    if (!this.storage || !this.outboxAdapter) return
-    const did = this.identity.getDid()
+    const storage = this.storage
+    const messaging = this.outboxAdapter
+    if (!storage || !messaging) return
+    const generation = this.runtimeGeneration
+    const identity = this.identity
+    const isCurrent = () =>
+      this.isRuntimeCurrent(generation, undefined, storage) && this.outboxAdapter === messaging
+    const did = identity.getDid()
     const doc = getYjsPersonalDoc()
-    const name = doc.profile?.name ?? getDefaultDisplayName(did)
-
-    const avatar = doc.profile?.avatar ?? undefined
-    const sign = this.identity.sign.bind(this.identity)
-    const contacts = await this.storage.getContacts()
-    for (const contact of contacts) {
-      const envelope: MessageEnvelope = {
-        v: 1,
-        id: crypto.randomUUID(),
-        type: "profile-update",
-        fromDid: did,
-        toDid: contact.did,
-        createdAt: new Date().toISOString(),
-        encoding: "json",
-        payload: JSON.stringify({ did, name, ...(avatar ? { avatar } : {}) }),
-        signature: "",
-      }
-      await signEnvelope(envelope, sign)
-      this.outboxAdapter.send(envelope).catch(() => {})
+    const profile = {
+      name: doc.profile?.name ?? getDefaultDisplayName(did),
+      ...(doc.profile?.bio ? { bio: doc.profile.bio } : {}),
+      ...(doc.profile?.avatar ? { avatar: doc.profile.avatar } : {}),
+      updatedAt: this.profileChangedAt(),
     }
+    const contacts = await storage.getContacts()
+    if (!isCurrent()) return
+    await Promise.all(contacts.map(async (contact) => {
+      try {
+        const recipientKey = this.storedEncryptionKey(contact.publicKey)
+          ?? await this.resolveRecipientEncryptionKey(contact.did)
+        if (!isCurrent()) return
+        if (!recipientKey) {
+          console.warn("[WotConnector] profile-update not sent: no encryption key known for", contact.did.slice(0, 24))
+          return
+        }
+        await sendProfileUpdateInbox({
+          identity,
+          contactDid: contact.did,
+          profile,
+          recipientEncryptionPublicKey: recipientKey,
+          messaging,
+          crypto: this.protocolCrypto,
+          ensureCurrent: isCurrent,
+        })
+      } catch (error) {
+        console.debug("[WotConnector] profile-update not sent to", contact.did.slice(0, 24), error)
+      }
+    }))
+  }
+
+  /** Der gespeicherte Key-Agreement-Key eines Kontakts, falls er ein X25519-Multibase ist. */
+  private storedEncryptionKey(publicKey: string | undefined): Uint8Array | null {
+    if (!publicKey) return null
+    try {
+      return x25519MultibaseToPublicKeyBytes(publicKey)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Änderungszeit des eigenen Profils (PersonalDoc) — dieselbe Zeitmarke für
+   * Profil-Dienst und Inbox, sonst schlüge ein später erneut publiziertes,
+   * älteres Profil ein neueres beim Empfänger (Review #592). Ohne gültige
+   * gespeicherte Zeit (Altbestand) gilt jetzt.
+   */
+  private profileChangedAt(): string {
+    const stored = getYjsPersonalDoc().profile?.updatedAt
+    return isRfc3339DateTime(stored) ? stored : new Date().toISOString()
   }
 
   /**
@@ -2447,24 +2497,17 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
           })
         }
 
-        const nextName = profile?.name ?? summary?.name ?? contact.name
-        // A resolved profile is authoritative even when avatar/bio are absent:
-        // undefined clears stale PersonalDoc fields through YjsStorageAdapter.
-        const nextAvatar = profile ? profile.avatar : contact.avatar
-        const nextBio = profile ? profile.bio : contact.bio
-        const needsUpdate =
-          (contact.name || null) !== (nextName || null) ||
-          (contact.avatar || null) !== (nextAvatar || null) ||
-          (contact.bio || null) !== (nextBio || null)
-
-        if (needsUpdate && generation === this.contactProfileRefreshGeneration) {
-          await storage.updateContact({
-            ...contact,
-            name: nextName ?? undefined,
-            avatar: nextAvatar,
-            bio: nextBio,
-            updatedAt: new Date().toISOString(),
-          })
+        if (generation !== this.contactProfileRefreshGeneration) return
+        // wot#386 / Review #390: über die je Kontakt serialisierte Schreibstelle —
+        // sie liest den Kontakt neu (der Snapshot von vor dem Abruf darf ein
+        // inzwischen per Inbox eingetroffenes, neueres Profil nicht überschreiben)
+        // und übernimmt nur Neueres. Ein aufgelöstes Profil ist vollständig
+        // (fehlende avatar/bio werden entfernt); eine reine Namens-Zusammenfassung
+        // ändert nur den Namen.
+        if (profile) {
+          await applyContactProfile(storage, contact.did, profile)
+        } else if (summary?.name) {
+          await applyContactNameSummary(storage, contact.did, summary.name)
         }
       }))
     }
@@ -2540,7 +2583,7 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
         name,
         ...(doc.profile?.bio ? { bio: doc.profile.bio } : {}),
         ...(doc.profile?.avatar ? { avatar: doc.profile.avatar } : {}),
-        updatedAt: new Date().toISOString(),
+        updatedAt: this.profileChangedAt(),
       }
       return { profile }
     })
@@ -3618,34 +3661,6 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
     })
   }
 
-  private async handleIncomingMessage(envelope: MessageEnvelope): Promise<void> {
-    if (envelope.type === "profile-update") {
-      try {
-        // Verify signature — reject spoofed profile updates
-        const isValid = await verifyEnvelope(envelope)
-        if (!isValid) return
-
-        const payload = JSON.parse(envelope.payload)
-        if (payload.name && this.storage) {
-          const contacts = await this.storage.getContacts()
-          const contact = contacts.find((c: any) => c.did === envelope.fromDid)
-          if (contact) {
-            const needsUpdate =
-              (contact.name || null) !== (payload.name || null) ||
-              (contact.avatar || null) !== (payload.avatar || null)
-            if (needsUpdate) {
-              await this.storage.updateContact({
-                ...contact,
-                name: payload.name,
-                ...(payload.avatar ? { avatar: payload.avatar } : {}),
-              })
-            }
-          }
-        }
-      } catch { /* ignore */ }
-    }
-  }
-
   private async handleIncomingAttestation(vcJws: string, senderDid: string): Promise<void> {
     if (!this.storage) throw new Error("Storage not ready")
 
@@ -4450,6 +4465,7 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
     this.initialSync.end()
     this.inboxAttestationUnsub?.()
     this.inboxReceiptUnsub?.()
+    this.inboxProfileUpdateUnsub?.()
     this.deliveryReceiptUnsub?.()
     this.spaceInviteUnsub?.()
     this.outboxCountUnsub?.()
@@ -4459,6 +4475,7 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
     this.inboxReception?.stop()
     this.inboxAttestationUnsub = null
     this.inboxReceiptUnsub = null
+    this.inboxProfileUpdateUnsub = null
     this.deliveryReceiptUnsub = null
     this.spaceInviteUnsub = null
     this.outboxCountUnsub = null

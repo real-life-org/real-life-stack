@@ -19,12 +19,10 @@ export function createOutboxMessagingRuntime(options: {
   outboxStore: OutboxStore
   trace?: boolean
 }): OutboxMessagingRuntime {
-  const outbox = new OutboxMessagingAdapter(options.messaging, options.outboxStore, {
-    // Log-sync has its own durable retry authority and is NEVER queued by core.
-    // These legacy high-volume/fire-and-forget families also stay out of the
-    // generic outbox, matching the 0.3.0 demo composition root.
-    skipTypes: ["content", "profile-update", "personal-sync"],
-  })
+  // Log-sync has its own durable retry authority and is NEVER queued by core;
+  // everything else (the encrypted inbox family) is queued. The Old-World
+  // skipTypes are gone with the Old-World channel (wot#386).
+  const outbox = new OutboxMessagingAdapter(options.messaging, options.outboxStore)
   if (options.trace === false) return outbox
   return new TracedOutboxMessagingAdapter(outbox) as OutboxMessagingRuntime
 }
