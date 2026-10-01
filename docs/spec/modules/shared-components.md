@@ -802,8 +802,35 @@ Regeln:
 2. **Die Epoche ist ein Zähler.** Sie steigt monoton und wird nie aus Werten berechnet. Jede Änderung erhöht sie: ein Wechsel des Formular-Space, ein Wechsel des Typs, der Abbau des Felds oder Formulars und das Sperren oder Festsetzen des Felds. Ein Hin- und Rückwechsel (Space G → H → G) erhöht sie zweimal; alte Arbeit bleibt ungültig. Beginnt ein Feld dieselbe Arbeit neu (eine neue Suche, eine neue Bildwahl, ein neuer Pick) oder nimmt es sie zurück (Entfernen), verliert die vorige Arbeit dieser Art ihre Gültigkeit.
 3. **Der aktuelle Stand, nicht der beim Start.** Ein gültiges Ergebnis prüft und schreibt gegen den Stand beim Eintreffen: den aktuellen Wert des Felds, den aktuellen Rückruf, die aktuellen Kandidaten und die aktuellen Rechte. Ein Feld, das inzwischen gesperrt oder fest ist, nimmt keine Ergebnisse mehr an.
 4. **Warte-Zustände gehören zur Arbeit.** Ob eine Arbeit läuft, fertig oder verworfen ist, führt der Baustein. Ein Spinner oder ein gesperrter Knopf („beschäftigt") liest diesen Zustand. Widgets führen keine eigenen Busy-Flags. Ein verworfenes Ergebnis beendet auch seinen Warte-Zustand.
-5. **Ein Baustein.** Widgets implementieren das nicht selbst. Sie nutzen den Epochen-Baustein des Toolkits (`useFieldEpoch`, `useEpochBusy`, `FormEpochProvider`). Eigene Zähler, Lebendig-Flags und Refs auf den letzten Stand sind dafür nicht vorgesehen.
+5. **Ein Baustein.** Widgets implementieren das nicht selbst. Die Epoche gehört dem [Formularzustand](#formularzustand); Widgets erreichen sie nur über die Schreibwege, die er ihnen gibt. Eigene Zähler, Lebendig-Flags und Refs auf den letzten Stand sind dafür nicht vorgesehen.
 6. **Auch außerhalb des Formulars.** Eine Selbstaktion (C2) liest vor dem Schreiben frisch ([06, Regel 9](../06-schema-composition.md#feld--und-kantenregister)). Ihr Stand ist das Item und der geöffnete Space. Jeder Wechsel des geöffneten Space erhöht ihre Epoche, auch nachdem die Anzeige abgebaut ist. Bis dahin laufende Arbeit schreibt nichts und meldet den Grund.
+
+### Formularzustand
+
+**Status:** Normativer Entwurf (S4b, 01.10.2026). Schärft die [Formular-Epoche](#formular-epoche): Die Epoche ist kein Beiwagen neben rohen Settern, sondern gehört dem Zustand, der die Werte hält. Die Umsetzung wartet auf Freigabe.
+
+Der **Formularzustand** ist der Teil des `ContentComposer`, der die Werte eines Formulars hält. Ein **Schreibweg** ist eine Funktion, über die ein Widget einen Wert ändert. Eine **Arbeit** ist eine asynchrone Tätigkeit eines Felds (Suche, Rückwärtssuche, Bildwahl, Karten- oder Modul-Pick).
+
+Regeln:
+
+1. **Ein Besitzer.** Der Formularzustand ist der einzige Besitzer der Feldwerte, der Epoche, der Warte-Zustände und der Abonnements eines Formulars. Ein Widget DARF keinen dieser Zustände selbst führen: keine Kopie eines Werts als Quelle für spätere Schreibvorgänge, keinen eigenen Busy-Zustand, kein eigenes Abonnement für Arbeit des Formulars.
+2. **Keine rohen Setter.** Ein Widget erhält vom Composer genau einen **Feldzugang** und darüber nur an die Epoche gebundene Schreibwege. Einen Setter, der ungeprüft beliebige Schlüssel des Formulars schreibt (heute `updateMany`), erhält es nicht.
+3. **Was der Feldzugang enthält.** Er enthält den aktuellen Wert des Felds, ob das Feld gesperrt oder fest ist, einen Schreibweg für Eingaben, den Start einer Arbeit und den Warte-Zustand je Art der Arbeit. Der Schreibweg für Eingaben ist an die Epoche gebunden, in der das Widget ihn erhalten hat. Hat sie sich geändert, schreibt er nichts. Ein eingefangener alter Schreibweg kann also nie in einen neuen Stand schreiben.
+4. **Eine Arbeit hat drei Schritte.**
+    - **Start** merkt die Epoche und, mit Art, verwirft die vorige Arbeit derselben Art ([Formular-Epoche](#formular-epoche), Regel 2). Ab dem Start zeigt der Warte-Zustand dieser Art „läuft".
+    - **Anwenden** prüft beim Eintreffen die Epoche und die Sperre. Gelten beide, schreibt es über den Schreibweg des Formulars zu diesem Zeitpunkt, mit dem aktuellen Wert des Felds ([Formular-Epoche](#formular-epoche), Regel 3), nie über einen beim Start eingefangenen Rückruf. Sonst schreibt es nichts.
+    - **Beenden** geschieht durch Abschluss oder Verwerfen. Verwerfen geschieht ausdrücklich (Abbrechen, Entfernen) oder durch eine Änderung der Epoche. Es beendet sofort den Warte-Zustand und meldet alle Abonnements der Arbeit ab, ohne auf ein ausstehendes Ergebnis zu warten. Beenden ist idempotent: Eine Arbeit wird genau einmal aufgeräumt, gleich ob sie abgeschlossen, verworfen oder beides wird.
+5. **Ein Feld schreibt nur seine Schlüssel.** Ein Schreibweg schreibt nur die Datenschlüssel, die dem Feld laut Register gehören. Gehört eine Kante dem Feld (das Ort-Feld und `locatedAt`, [Widget-Paare](#widget-paare), Regel 5), gehört ihr Schlüssel dazu.
+6. **Rückrufe von außen laufen über dieselbe Arbeit.** Rückrufe, die außerhalb des Formulars registriert werden, etwa beim Karten-Pick (`startPick`, `onPick`, `onPickItem`, `onCancel`) und beim Modul-Pick, sind Arbeiten des Felds. Das Feld startet die Arbeit, bevor es die Rückrufe weitergibt; jeder Rückruf wendet über diese Arbeit an. Abbrechen des Picks verwirft die Arbeit. Das Wiederherstellen des vorigen Werts geht dabei über den Schreibweg für Eingaben. Ein Rückruf, den das Modul nach dem Verwerfen noch aufruft, schreibt nichts. Eine Folgearbeit (etwa die Rückwärtssuche nach einem Pick) ist eine eigene Arbeit, die im Rückruf startet.
+7. **Gesperrt oder fest heißt: nichts annehmen.** Ein gesperrtes oder festes Feld nimmt weder Eingaben noch Ergebnisse an. Wird ein Feld während einer Arbeit gesperrt oder festgesetzt, ist das eine Änderung der Epoche: Die Arbeit wird verworfen.
+8. **Abbau.** Der Abbau eines Felds verwirft seine Arbeiten, der Abbau des Formulars alle Arbeiten. Danach hält das Formular keine Abonnements mehr.
+9. **Die Selbstaktion hat einen Zustand derselben Art.** Für die Selbstaktion (C2, [Formular-Epoche](#formular-epoche), Regel 6) gilt dasselbe mit einem eigenen **Aktionszustand** an Stelle des Formularzustands: Er führt Epoche, Warte-Zustand und Abonnement auf den geöffneten Space, und die Anzeige liest „beschäftigt" nur daraus. Er überlebt den Abbau der Anzeige, bis die Arbeit abgeschlossen oder verworfen ist, nicht länger. Ein hängendes Lesen hält den Warte-Zustand nicht fest: Ein Space-Wechsel beendet ihn sofort.
+
+Prüfbar:
+
+- **Typ-Ebene.** Die Props, die der Composer einem Widget gibt, enthalten als Schreibweg nur den Feldzugang. Ein Typtest stellt sicher, dass kein Prop vom Typ eines rohen Setters (Datensatz rein, kein Ergebnis) dazukommt.
+- **Exporte.** Das Toolkit exportiert weder `updateMany` noch einen anderen Setter des Formularzustands, und die Bausteine der Epoche (`useFieldEpoch`, `useEpochBusy`) nur für den Formular- und den Aktionszustand, nicht für Widgets. Ein Prüfskript wie `check:targets` sichert das.
+- **Vertragstests.** Rückrufwechsel während Karten-Pick und Rückwärtssuche schreibt über den neuen Schreibweg. Ein Pick-Rückruf nach dem Abbrechen schreibt nichts. Ein Space-Wechsel bei hängendem Lesen beendet „beschäftigt" der Selbstaktion sofort. Nach Kanalersetzung, Verwerfen und Abbau stimmt die Zahl der Abonnements (unter StrictMode), auch für die Selbstaktion nach dem Abbau der Anzeige. Ein gesperrtes Feld nimmt weder Eingabe noch Ergebnis an.
 
 ## Hooks
 
