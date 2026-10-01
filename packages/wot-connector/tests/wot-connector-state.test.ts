@@ -18,7 +18,8 @@ import {
   type User,
 } from "@real-life-stack/data-interface"
 import type { SpaceInfo } from "@real-life/wot-core"
-import { derivePrivateSpaceGenesis } from "@real-life/wot-core/protocol"
+import { derivePrivateSpaceGenesis, x25519MultibaseToPublicKeyBytes } from "@real-life/wot-core/protocol"
+import { sendProfileUpdateInbox } from "../src/profile-update-wire.js"
 
 import { WotConnector } from "../src/wot-connector.js"
 import { InitialSyncTracker } from "../src/initial-sync-tracker.js"
@@ -93,6 +94,10 @@ vi.mock("@real-life/wot-core/protocol", async (importOriginal) => ({
   // Verhaltensgleich zum Core: Marker wird NUR aus dem VC-Typ-Array abgeleitet.
   isVerificationAttestation: (payload: { type?: unknown }) =>
     Array.isArray(payload?.type) && payload.type.includes("WotVerification"),
+}))
+
+vi.mock("../src/profile-update-wire.js", () => ({
+  sendProfileUpdateInbox: vi.fn(async () => {}),
 }))
 
 vi.mock("../src/identity-persistence.js", async (importOriginal) => ({
@@ -1716,5 +1721,100 @@ describe("Vertrag #147: eingehende Verifikation als durable Aktion bis zur UI-Ü
       expect(events2.filter((e) => e.type === "incoming-verification")).toHaveLength(1)
     })
     expect(localValues.has(`rls-wot-pending-verification-save:${did}`)).toBe(false)
+  })
+})
+
+// Review #592: der Profilversand an Kontakte (inbox/1.0 profile-update).
+describe("WotConnector profile-update broadcast (review #592)", () => {
+  const CONTACT = "did:key:bob"
+  const STORED_KEY = "z6LSstoredKeyAgreement"
+  const sendMock = vi.mocked(sendProfileUpdateInbox)
+  const toBytes = vi.mocked(x25519MultibaseToPublicKeyBytes)
+
+  beforeEach(() => {
+    sendMock.mockClear()
+    toBytes.mockImplementation((multibase: string) => {
+      if (multibase === STORED_KEY) return new Uint8Array([7, 7, 7])
+      throw new Error("not an X25519 multibase")
+    })
+    yjsMockState.personalDoc = {
+      profile: {
+        did: "did:key:alice", name: "Alice", bio: null, avatar: null,
+        createdAt: "2026-09-01T12:00:00.000Z", updatedAt: "2026-09-01T12:00:00.000Z",
+      },
+      contacts: {},
+    }
+  })
+
+  function fakeConnector(overrides: Record<string, unknown> = {}) {
+    const fake: Record<string, unknown> = {
+      identity: { getDid: () => "did:key:alice" },
+      storage: { getContacts: vi.fn(async () => [{ did: CONTACT, publicKey: STORED_KEY, status: "active" }]) },
+      outboxAdapter: { send: vi.fn() },
+      protocolCrypto: {},
+      runtimeGeneration: 1,
+      workQueue: null,
+      discovery: { resolveProfile: vi.fn(async () => { throw new Error("offline") }) },
+      ...overrides,
+    }
+    Object.setPrototypeOf(fake, WotConnector.prototype)
+    return fake
+  }
+
+  it("uses the contact's stored key-agreement key, so an offline send still reaches the outbox", async () => {
+    const fake = fakeConnector()
+    await (WotConnector.prototype as any).broadcastProfileUpdate.call(fake)
+
+    expect(sendMock).toHaveBeenCalledTimes(1)
+    expect(sendMock.mock.calls[0][0]).toMatchObject({
+      contactDid: CONTACT,
+      recipientEncryptionPublicKey: new Uint8Array([7, 7, 7]),
+    })
+  })
+
+  it("sends the canonical profile change time, not the send time", async () => {
+    const fake = fakeConnector()
+    await (WotConnector.prototype as any).broadcastProfileUpdate.call(fake)
+    expect(sendMock.mock.calls[0][0].profile.updatedAt).toBe("2026-09-01T12:00:00.000Z")
+  })
+
+  it("does not send an old profile after a runtime/identity switch during key resolution", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    const fake = fakeConnector({
+      storage: {
+        getContacts: vi.fn(async () => {
+          await gate
+          return [{ did: CONTACT, publicKey: STORED_KEY, status: "active" }]
+        }),
+      },
+    })
+    const run = (WotConnector.prototype as any).broadcastProfileUpdate.call(fake)
+    await Promise.resolve()
+    fake.runtimeGeneration = 2
+    fake.identity = { getDid: () => "did:key:someone-else" }
+    release()
+    await run
+
+    // Either nothing is sent, or the wire is handed a guard that already refuses.
+    expect(sendMock.mock.calls.filter(([o]) => o.ensureCurrent?.() !== false)).toHaveLength(0)
+  })
+
+  it("publishes and retries the profile with its canonical change time", async () => {
+    const publishProfile = vi.fn(async () => {})
+    let retryProfile: { updatedAt?: string } | undefined
+    const fake = fakeConnector({
+      discovery: {
+        publishProfile,
+        syncPending: vi.fn(async (_did: string, _identity: unknown, getData: () => Promise<{ profile?: { updatedAt?: string } }>) => {
+          retryProfile = (await getData()).profile
+        }),
+      },
+    })
+    await (WotConnector.prototype as any).publishProfile.call(fake)
+    await (WotConnector.prototype as any).syncDiscoveryPending.call(fake)
+
+    expect(publishProfile.mock.calls[0][0]).toMatchObject({ updatedAt: "2026-09-01T12:00:00.000Z" })
+    expect(retryProfile?.updatedAt).toBe("2026-09-01T12:00:00.000Z")
   })
 })

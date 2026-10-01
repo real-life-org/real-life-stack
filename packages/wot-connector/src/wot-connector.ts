@@ -98,6 +98,7 @@ import {
   isDidcommMessage,
   parseQrChallenge,
   x25519MultibaseToPublicKeyBytes,
+  isRfc3339DateTime,
   derivePrivateSpaceGenesis,
 } from "@real-life/wot-core/protocol"
 import type {
@@ -2343,7 +2344,7 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
       name,
       ...(doc.profile?.bio ? { bio: doc.profile.bio } : {}),
       ...(doc.profile?.avatar ? { avatar: doc.profile.avatar } : {}),
-      updatedAt: new Date().toISOString(),
+      updatedAt: this.profileChangedAt(),
     }
     const fingerprint = JSON.stringify({
       did,
@@ -2369,39 +2370,76 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
   /** Notify all contacts about a profile change (fire-and-forget via relay) */
   /**
    * Profiländerung an alle Kontakte (wot#386): das Profil selbst, verschlüsselt
-   * als inbox/1.0 profile-update je Kontakt. Pro Kontakt best-effort — wer
-   * keinen Encryption-Key veröffentlicht hat, bekommt nichts (kein
-   * Klartext-Fallback); offline Empfänger erreicht die Outbox später.
+   * als inbox/1.0 profile-update je Kontakt.
+   *
+   * - Schlüssel: zuerst der gespeicherte Key-Agreement-Key des Kontakts, damit
+   *   ein Offline-Versand die Outbox erreicht; nur ohne ihn die Discovery.
+   * - Zeitmarke: die Änderungszeit des Profils, nie die Sendezeit (Review #592).
+   * - Laufzeit-Grenze: Generation, Speicher und Messaging werden zu Beginn
+   *   erfasst; nach jedem Warten und bis zum Signieren/Senden geprüft — ein
+   *   Kontowechsel dazwischen sendet nichts (wie bei Attestationen).
    */
   private async broadcastProfileUpdate(): Promise<void> {
     const storage = this.storage
     const messaging = this.outboxAdapter
     if (!storage || !messaging) return
-    const did = this.identity.getDid()
+    const generation = this.runtimeGeneration
+    const identity = this.identity
+    const isCurrent = () =>
+      this.isRuntimeCurrent(generation, undefined, storage) && this.outboxAdapter === messaging
+    const did = identity.getDid()
     const doc = getYjsPersonalDoc()
     const profile = {
       name: doc.profile?.name ?? getDefaultDisplayName(did),
       ...(doc.profile?.bio ? { bio: doc.profile.bio } : {}),
       ...(doc.profile?.avatar ? { avatar: doc.profile.avatar } : {}),
-      updatedAt: doc.profile?.updatedAt ?? new Date().toISOString(),
+      updatedAt: this.profileChangedAt(),
     }
     const contacts = await storage.getContacts()
+    if (!isCurrent()) return
     await Promise.all(contacts.map(async (contact) => {
       try {
-        const recipientKey = await this.resolveRecipientEncryptionKey(contact.did)
-        if (!recipientKey) return
+        const recipientKey = this.storedEncryptionKey(contact.publicKey)
+          ?? await this.resolveRecipientEncryptionKey(contact.did)
+        if (!isCurrent()) return
+        if (!recipientKey) {
+          console.warn("[WotConnector] profile-update not sent: no encryption key known for", contact.did.slice(0, 24))
+          return
+        }
         await sendProfileUpdateInbox({
-          identity: this.identity,
+          identity,
           contactDid: contact.did,
           profile,
           recipientEncryptionPublicKey: recipientKey,
           messaging,
           crypto: this.protocolCrypto,
+          ensureCurrent: isCurrent,
         })
       } catch (error) {
         console.debug("[WotConnector] profile-update not sent to", contact.did.slice(0, 24), error)
       }
     }))
+  }
+
+  /** Der gespeicherte Key-Agreement-Key eines Kontakts, falls er ein X25519-Multibase ist. */
+  private storedEncryptionKey(publicKey: string | undefined): Uint8Array | null {
+    if (!publicKey) return null
+    try {
+      return x25519MultibaseToPublicKeyBytes(publicKey)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Änderungszeit des eigenen Profils (PersonalDoc) — dieselbe Zeitmarke für
+   * Profil-Dienst und Inbox, sonst schlüge ein später erneut publiziertes,
+   * älteres Profil ein neueres beim Empfänger (Review #592). Ohne gültige
+   * gespeicherte Zeit (Altbestand) gilt jetzt.
+   */
+  private profileChangedAt(): string {
+    const stored = getYjsPersonalDoc().profile?.updatedAt
+    return isRfc3339DateTime(stored) ? stored : new Date().toISOString()
   }
 
   /**
@@ -2545,7 +2583,7 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
         name,
         ...(doc.profile?.bio ? { bio: doc.profile.bio } : {}),
         ...(doc.profile?.avatar ? { avatar: doc.profile.avatar } : {}),
-        updatedAt: new Date().toISOString(),
+        updatedAt: this.profileChangedAt(),
       }
       return { profile }
     })

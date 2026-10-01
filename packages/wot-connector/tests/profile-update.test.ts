@@ -147,6 +147,14 @@ describe("contact profile writer", () => {
     expect(stored.bio).toBeUndefined()
   })
 
+  it("takes over offers and needs and clears the ones the sender removed (review #592)", async () => {
+    const store = contactStore(baseContact(ANNA, { offers: ["old"], needs: ["stale"], profileUpdatedAt: "2026-10-01T12:00:00Z" }))
+    expect(await applyContactProfile(store, ANNA, { name: "Anna", offers: ["new"], updatedAt: "2026-10-02T12:00:00Z" })).toBe(true)
+    const stored = store.contacts.get(ANNA)!
+    expect(stored.offers).toEqual(["new"])
+    expect(stored.needs).toBeUndefined()
+  })
+
   it("never lets an older or untimed profile replace a timestamped one", async () => {
     const store = contactStore(baseContact(ANNA, { name: "Anna neu", profileUpdatedAt: "2026-10-01T12:00:00Z" }))
     expect(await applyContactProfile(store, ANNA, { name: "alt", updatedAt: "2026-09-01T12:00:00Z" })).toBe(false)
