@@ -325,6 +325,16 @@ Aggregierende Sichten über mehrere Spaces zeigen je logischem Schlüssel
 `(homeSpaceId, itemId)` einen Eintrag: das Home, falls sichtbar, sonst
 die Mirror-Instanz mit der höchsten Version.
 
+**Space einer Mirror-Instanz:** Eine Mirror-Instanz trägt beim Lesen
+`spaceId` = `targetSpaceId`, den Space, in dem sie liegt
+([02 → Space einer Instanz](02-data-interface.md#space-einer-instanz)).
+Ihr Home steht weiter nur in `mirrorOf`. Bezugs-Space ihrer
+`item:`-Targets ist das Home (Invariante 10,
+[04 → Space einer Instanz und Kanten-Ziele](04-items-relations-groups-spaces.md#space-einer-instanz-und-kanten-ziele)).
+Damit ist das Tripel aus Invariante 1 vollständig an der Instanz
+ablesbar: `(spaceId, homeSpaceId, itemId)`; für ein Home-Item gilt
+`homeSpaceId = spaceId`.
+
 ## Capability-Vertrag
 
 `MirrorCapable` (Type Guard `hasMirrors()`). Alle Autor-Operationen
