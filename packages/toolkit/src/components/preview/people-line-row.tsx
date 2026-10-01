@@ -3,9 +3,8 @@
 import { useId, useState } from "react"
 import type { User } from "@real-life-stack/data-interface"
 
-import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
+import { PersonAvatar } from "./person-avatar"
 import { ProfileLink } from "../profile/profile-link"
-import { cn } from "../../lib/utils"
 import { summarizePeople, type PeopleLineEntry } from "./people-line"
 
 /**
@@ -24,27 +23,8 @@ export interface PeopleLineRowProps {
   currentUserId?: string
 }
 
-function initials(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((w) => w[0]!)
-      .join("")
-      .toUpperCase()
-      .slice(0, 2) || "?"
-  )
-}
-
-function PersonAvatar({ user, className }: { user: User; className?: string }) {
-  const name = user.displayName ?? user.id
-  // Der Name steht daneben; das Bild ist Schmuck.
-  return (
-    <Avatar data-avatar aria-hidden className={cn("h-[18px] w-[18px] shrink-0", className)}>
-      <AvatarImage src={user.avatarUrl} alt="" />
-      <AvatarFallback className="bg-muted text-[7px] font-bold">{initials(name)}</AvatarFallback>
-    </Avatar>
-  )
+function UserAvatar({ user, className }: { user: User; className?: string }) {
+  return <PersonAvatar name={user.displayName ?? user.id} avatarUrl={user.avatarUrl} className={className} />
 }
 
 /** Der Name des Profil-Links trägt, was der Chip zeigt: Qualifier und Sprecher. */
@@ -70,7 +50,7 @@ export function PeopleLineRow({ entries, resolveUser, resolveName, currentUserId
               <span key={group.label} data-people-summary={group.label} className="mr-1.5 inline-flex items-center gap-1.5 whitespace-nowrap">
                 <span className="flex -space-x-1.5">
                   {group.entries.map((entry) => (
-                    <PersonAvatar key={entry.userId} user={resolveUser(entry.userId)!} className="border-[1.5px] border-background" />
+                    <UserAvatar key={entry.userId} user={resolveUser(entry.userId)!} className="border-[1.5px] border-background" />
                   ))}
                 </span>
                 <span className="text-xs font-semibold text-foreground">{group.count}</span>
@@ -86,7 +66,7 @@ export function PeopleLineRow({ entries, resolveUser, resolveName, currentUserId
                     data-person={entry.userId}
                     className="inline-flex max-w-full items-center gap-1.5 rounded-full border bg-background py-0.5 pl-0.5 pr-2 text-xs font-medium text-foreground"
                   >
-                    <PersonAvatar user={user} />
+                    <UserAvatar user={user} />
                     <span className="truncate">{name}</span>
                     {entry.qualifier && <span className="font-normal text-muted-foreground"> {entry.qualifier.label}</span>}
                     {entry.speakerId && (
@@ -118,7 +98,7 @@ export function PeopleLineRow({ entries, resolveUser, resolveName, currentUserId
             const name = user.displayName ?? user.id
             return (
               <li key={entry.userId} data-person-all={entry.userId} className="flex min-w-0 items-center gap-2 text-xs">
-                <PersonAvatar user={user} />
+                <UserAvatar user={user} />
                 <span className="truncate font-medium text-foreground">{name}</span>
                 {entry.qualifier && <span className="text-muted-foreground"> {entry.qualifier.label}</span>}
                 {entry.speakerId && <span className="text-muted-foreground"> · eingetragen von {speaker(entry.speakerId)}</span>}
