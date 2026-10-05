@@ -1,7 +1,8 @@
-# Supabase self-hosted (schlank) — Timos NixOS-Server (Traefik, ghcr-Muster)
-# Domain: supabase.real-life-stack.de
-# Deploy: ~/apps/supabase/ → ./generate-secrets.sh → docker compose up -d
-#         → ./apply-migrations.sh   (RLS-Schema aus supabase/migrations/)
+# Supabase self-hosted (schlank) für den @real-life-stack/supabase-connector
+# Domain: SUPABASE_DOMAIN aus .env (generate-secrets.sh schreibt sie hinein)
+# Deploy: SUPABASE_DOMAIN=… SITE_URL=… ./generate-secrets.sh
+#         → docker compose up -d → ./apply-migrations.sh
+#         (RLS-Schema aus supabase/migrations/; Anleitung: README.md)
 #
 # Reduziert aus dem offiziellen supabase/docker-Setup (Apache-2.0): nur
 # db + auth (GoTrue) + rest (PostgREST) + realtime + kong. Kein Studio/
@@ -87,6 +88,12 @@ services:
       GOTRUE_RATE_LIMIT_ANONYMOUS_USERS: "300"
       # Kein SMTP konfiguriert — E-Mail-Signups werden direkt bestätigt.
       GOTRUE_MAILER_AUTOCONFIRM: "true"
+      # Links in Mails zeigen auf API_EXTERNAL_URL + Pfad. Kong reicht GoTrue
+      # unter /auth/v1/ durch; der GoTrue-Default /verify liefe ins Leere.
+      GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
 
   rest:
     container_name: supabase-rest
@@ -188,7 +195,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=supabase"
-      - "traefik.http.routers.supabase.rule=Host(`supabase.real-life-stack.de`)"
+      - "traefik.http.routers.supabase.rule=Host(`${SUPABASE_DOMAIN:?SUPABASE_DOMAIN fehlt in .env — siehe README}`)"
       - "traefik.http.routers.supabase.entrypoints=websecure"
       - "traefik.http.routers.supabase.tls.certresolver=letsencrypt"
       - "traefik.http.services.supabase.loadbalancer.server.port=8000"

@@ -2,7 +2,7 @@
 title: Run an instance
 description: From the local preview to running under your own domain — a finished image, your configuration and assets, no build.
 translationOf: docs/handbook/de/handbuch/instanz.mdx
-sourceHash: 9e1265b0085be42fa3e778df857f99202f10f62a18e56f66a32e66799e640683
+sourceHash: 0ea8ae7d6f35db7b72a1f58826a9363e330e5c927754b915826e219ad3b9a6f8
 group: loslegen
 sidebar:
   order: 1
@@ -70,7 +70,7 @@ The app instance serves only static files; the data lives where the connector po
 | `RLS_DEFAULT_CONNECTOR` | Data | Also needed |
 |---|---|---|
 | `wot` (default) | end-to-end encrypted in the Web of Trust | a relay; as long as there is a shared one, `wss://relay.web-of-trust.de` is preset, your own goes into `RLS_RELAY_URL` |
-| `supabase` | centrally in a Supabase backend | `RLS_SUPABASE_URL` and `RLS_SUPABASE_ANON_KEY`; a stack of your own after `deploy/supabase/` |
+| `supabase` | centrally in a Supabase backend | `RLS_SUPABASE_URL` and `RLS_SUPABASE_ANON_KEY`; a backend of your own, see [Run a Supabase backend](/en/handbuch/supabase/) |
 | `local` | only in this browser | nothing; for trying out, no multi-user operation |
 | `mock` | in memory, with sample data | nothing; demos only |
 

@@ -1,0 +1,120 @@
+---
+title: Run a Supabase backend
+description: Your own Supabase for instances using the supabase connector — set it up, connect it, check it, back it up.
+translationOf: docs/handbook/de/handbuch/supabase.mdx
+sourceHash: 5c70df63c6e1a97df1988c97e2ae45c7ec5f108aab231b4a8eedb193025a435d
+group: anleitungen
+sidebar:
+  order: 13
+sources:
+  - deploy/supabase/README.md
+  - deploy/supabase/docker-compose.yml
+  - deploy/supabase/generate-secrets.sh
+  - deploy/supabase/apply-migrations.sh
+  - deploy/supabase/smoke.sh
+  - supabase/migrations/0003_membership_rls.sql
+  - supabase/migrations/0010_explicit_dml_grants.sql
+  - supabase/migrations/0009_authored_items_creator_only.sql
+  - packages/supabase-connector/README.md
+---
+
+An [instance](/en/handbuch/instanz/) with `RLS_DEFAULT_CONNECTOR=supabase` reads and writes a Postgres database behind Supabase. The stack for it lives in the repo under `deploy/supabase/`. The data sits there in plain text with the operator. Who may read and write which row is decided by row-level security policies in the database, not by the app.
+
+## What the stack contains
+
+| Service | Job |
+|---|---|
+| `db` | Postgres 17 with the Supabase extensions |
+| `auth` | GoTrue: accounts, sign-in, JWTs |
+| `rest` | PostgREST: reading and writing over HTTP |
+| `realtime` | changes pushed live to the app (`postgres_changes`) |
+| `kong` | the single gate to the outside, checks the `apikey` |
+
+Studio, Analytics and Storage are not included. Versions are pinned. There is deliberately no automatic update, because a Postgres major upgrade without migration loses data.
+
+## Setting it up
+
+You need Docker with the Compose plugin, a running Traefik container named `traefik` with the entry point `websecure` and the resolver `letsencrypt`, and a DNS record for the API domain.
+
+```bash
+# from the repo root to the server
+scp -r deploy/supabase user@server:apps/
+scp -r supabase/migrations user@server:apps/supabase/
+
+# on the server
+cd apps/supabase
+SUPABASE_DOMAIN=supabase.example.org \
+SITE_URL=https://network.example.org \
+./generate-secrets.sh
+docker compose up -d
+./apply-migrations.sh
+./smoke.sh
+```
+
+`generate-secrets.sh` writes a `.env` with fresh keys (mode 600), connects Traefik to the `supabase` network and prints only the `ANON_KEY`. That key is public; it ships to every browser. `SERVICE_ROLE_KEY` and `JWT_SECRET` bypass every policy and never leave the server.
+
+`apply-migrations.sh` applies the schema from `supabase/migrations/` and remembers what it has already applied. `smoke.sh` checks the boundary through Kong: an entry with your own author goes through, one with someone else's author fails.
+
+## Connecting the app
+
+In the instance's `.env`:
+
+```dotenv
+RLS_DEFAULT_CONNECTOR=supabase
+RLS_SUPABASE_URL=https://supabase.example.org
+RLS_SUPABASE_ANON_KEY=<ANON_KEY from generate-secrets.sh>
+```
+
+Then `docker compose up -d` in the instance. The app shows the toolkit's sign-in screen.
+
+## Sign-in
+
+The connector offers three ways: email with password, sign-up with email and password, and an anonymous account for trying things out. Without SMTP, GoTrue confirms every sign-up immediately, so the email address is not verified and password reset by mail does not work. If you need that, set the `GOTRUE_SMTP_*` variables and `GOTRUE_MAILER_AUTOCONFIRM: "false"` in `docker-compose.yml`. The links in the mails already point to `/auth/v1/verify`, the path Kong passes on to GoTrue. If you want no anonymous accounts, set `GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"`.
+
+An account here is a Supabase UUID, not a DID. How sign-in works across connectors is described under [Identity and sign-in](/en/handbuch/identitaet/).
+
+## Who sees what
+
+- **Items without a space** are visible to every signed-in user of the instance.
+- **Items in a space** can be read and written only by its members. Relations, comments and reactions can be changed and deleted only by whoever wrote them.
+- **Spaces and member lists** are visible only to the creator and the members. Only members may invite.
+- **Profiles** are readable by everyone signed in, so you can find people when inviting.
+- **Contacts** are visible only to the two people on the edge.
+- **Without sign-in** the database returns nothing.
+
+The author of an entry comes from the session (`auth.uid()`), never from the data sent. An entry does not move between spaces, and deleting a space deletes its content.
+
+## Checking
+
+The live contract suite runs the same contract tests as for every connector, plus boundary tests for the policies. It creates accounts and leaves entries behind that signed-in users can see. So run it against a test instance of its own, not one that people use. Load `ANON_KEY` and `SERVICE_ROLE_KEY` from the test instance's `.env` into the shell, then:
+
+```bash
+SUPABASE_URL=https://supabase-test.example.org \
+SUPABASE_ANON_KEY="$ANON_KEY" \
+SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+pnpm --filter @real-life-stack/supabase-connector test
+```
+
+The suite needs the `SERVICE_ROLE_KEY` to create test data by other authors. Run it from a trusted machine.
+
+## Maintaining and backing up
+
+New migrations come with new versions of the stack in `supabase/migrations/`. Copy them to the server and run `./apply-migrations.sh` again. You put newer images into `docker-compose.yml` by hand, after a backup.
+
+The stack backs up nothing on its own. A logical backup with content and accounts:
+
+```bash
+docker exec supabase-db pg_dump -U supabase_admin -Fc postgres > rls-$(date +%F).dump
+```
+
+The `.env` belongs to it. Without the same `JWT_SECRET`, issued keys and sessions are invalid.
+
+To make new keys, move the `.env` aside (`mv .env .env.alt`) and run `generate-secrets.sh` again with `SUPABASE_DOMAIN` and `SITE_URL` from the old file. Afterwards all sessions are invalid, and the app needs the new `ANON_KEY`.
+
+## When something does not work
+
+- **`docker compose up` stops with "SUPABASE_DOMAIN fehlt":** Add the line `SUPABASE_DOMAIN=…` to `.env`.
+- **Traefik no longer routes:** If the Traefik container was recreated, it is no longer in the `supabase` network. Run `./generate-secrets.sh` again; it does not overwrite an existing `.env`.
+- **No certificate after a new DNS record:** Traefik does not retry a failed ACME challenge on its own. `docker restart traefik`.
+- **401 on a request without `apikey`:** That is intended. Kong only lets requests with a key through.
+- **GoTrue restarts in a loop with "must be owner of function uid":** The database was created without `db-init/97-auth-fn-owner.sql`. Delete the volume and set it up again while it holds no data yet.

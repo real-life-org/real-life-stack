@@ -1,0 +1,58 @@
+---
+title: Identität und Anmeldung
+description: Anmelden ist eine Fähigkeit des Connectors. Was der Vertrag festlegt und was die Connectoren daraus machen.
+group: verstehen
+sidebar:
+  order: 14
+sources:
+  - packages/data-interface/src/index.ts
+  - docs/spec/03-capabilities.md
+  - docs/spec/08-relation-records.md
+  - packages/supabase-connector/src/supabase-connector.ts
+  - packages/wot-connector/src/wot-connector.ts
+  - packages/toolkit/src/components/auth/auth-screen.tsx
+  - apps/reference/src/App.tsx
+---
+
+Module und Toolkit wissen nicht, wie sich jemand anmeldet. Sie fragen den Connector, ob er Anmeldung kann, welche Wege er anbietet und wer gerade angemeldet ist. Ob dahinter ein Schlüsselpaar im Browser steht oder ein Konto auf einem Server, entscheidet allein der Connector.
+
+## Der Vertrag
+
+```ts
+interface Authenticatable {
+  getCurrentUser(): Promise<User | null>
+  observeCurrentUser(): Observable<User | null>
+  getUser(id: string): Promise<User | null>
+  getAuthState(): Observable<AuthState>   // loading | unauthenticated | authenticated + user
+  getAuthMethods(): AuthMethod[]          // { method: string, label: string }
+  authenticate(method: string, credentials: unknown): Promise<User>
+  logout(): Promise<void>
+}
+```
+
+- **Die Fähigkeit ist optional.** `isAuthenticatable(connector)` prüft sie. Ein Connector, der nur liest, lässt sie weg.
+- **Methoden sind Namen, Zugangsdaten sind `unknown`.** Jeder Connector bringt seine Wege mit und legt selbst fest, was er dafür braucht. Ein neuer Weg ändert den Vertrag nicht.
+- **`User.id` ist undurchsichtig.** Im Web of Trust ist sie eine DID, bei Supabase eine UUID. Module vergleichen sie, sie lesen nichts aus ihr.
+- **Der Anmeldestatus ist ein Observable.** Läuft eine Sitzung ab oder meldet sich jemand in einem anderen Tab ab, schließt sich die App wieder.
+
+## Die Connectoren
+
+| Connector | Wege (`authenticate`) | Identität | Wer bürgt für den Autor |
+|---|---|---|---|
+| `wot` | `generate`, `create`, `mnemonic`, `unlock` | `did:key` aus zwölf Wörtern, Schlüssel im Gerät | die Signatur, jeder kann sie prüfen |
+| `supabase` | `email`, `email-signup`, `anonymous` | Supabase-UUID, Sitzung über supabase-js | der Server, über Row-Level-Security |
+| `local` | `local` | ein lokaler Nutzer je Browser oder Tab | niemand, nur zum Ausprobieren |
+| `mock` | `mock` | der erste Beispielnutzer | niemand, nur für Demos |
+
+In beiden echten Connectoren kommt der Autor eines Eintrags aus der Sitzung, nie aus den gesendeten Daten. Wie die App das in Knöpfe übersetzt, steht unter [Fähigkeit, Berechtigung, Herkunft](/handbuch/rechte/).
+
+## Wer den Anmeldebildschirm zeigt
+
+Die Referenz-App entscheidet in ihrem `AuthGate`:
+
+- **Web of Trust:** Der WoT-Connector bringt mit `DIDAuthScreen` einen eigenen Ablauf mit. Er erzeugt die Wörter, lässt sie sichern, setzt eine Passphrase und kann eine Identität wiederherstellen oder entsperren.
+- **Alle anderen:** Der `AuthScreen` aus dem Toolkit liest `getAuthMethods()` und zeigt die Wege, die er kennt: `email`, `email-signup` und `anonymous`.
+
+## Eine App, eine Identität
+
+Eine App hält genau einen Connector. Wer sich anmeldet, ist damit für die ganze App diese eine Identität, und alle Spaces der App liegen in derselben Quelle.

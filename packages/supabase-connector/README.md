@@ -31,8 +31,12 @@ pnpm dev
 ```
 
 Alternativ per URL-Param: `http://localhost:5173/?connector=supabase&dev`.
-v1 meldet sich automatisch anonym an (Session überlebt Reloads); ein echter
-Login-Screen (E-Mail/Passwort) ist Folgearbeit.
+Die App zeigt den Anmeldebildschirm des Toolkits (E-Mail, Registrierung,
+anonym); supabase-js hält die Session über Reloads.
+
+Für einen Server: `deploy/supabase/README.md`. Die Einordnung, auch der
+Anmeldung, steht im Handbuch unter „Ein Supabase-Backend betreiben“ und
+„Identität und Anmeldung“.
 
 ## Tests
 

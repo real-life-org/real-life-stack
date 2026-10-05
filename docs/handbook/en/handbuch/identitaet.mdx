@@ -1,0 +1,60 @@
+---
+title: Identity and sign-in
+description: Signing in is a capability of the connector. What the contract fixes and what the connectors make of it.
+translationOf: docs/handbook/de/handbuch/identitaet.mdx
+sourceHash: 51b0f261d7a68d05856369bde94a326d346fbdbba6bb0a699ff2610c0a55d28d
+group: verstehen
+sidebar:
+  order: 14
+sources:
+  - packages/data-interface/src/index.ts
+  - docs/spec/03-capabilities.md
+  - docs/spec/08-relation-records.md
+  - packages/supabase-connector/src/supabase-connector.ts
+  - packages/wot-connector/src/wot-connector.ts
+  - packages/toolkit/src/components/auth/auth-screen.tsx
+  - apps/reference/src/App.tsx
+---
+
+Modules and the toolkit do not know how anyone signs in. They ask the connector whether it can sign people in, which ways it offers and who is signed in right now. Whether a key pair in the browser or an account on a server stands behind that is up to the connector alone.
+
+## The contract
+
+```ts
+interface Authenticatable {
+  getCurrentUser(): Promise<User | null>
+  observeCurrentUser(): Observable<User | null>
+  getUser(id: string): Promise<User | null>
+  getAuthState(): Observable<AuthState>   // loading | unauthenticated | authenticated + user
+  getAuthMethods(): AuthMethod[]          // { method: string, label: string }
+  authenticate(method: string, credentials: unknown): Promise<User>
+  logout(): Promise<void>
+}
+```
+
+- **The capability is optional.** `isAuthenticatable(connector)` checks for it. A read-only connector leaves it out.
+- **Methods are names, credentials are `unknown`.** Every connector brings its own ways and decides what it needs for them. A new way does not change the contract.
+- **`User.id` is opaque.** In the Web of Trust it is a DID, with Supabase a UUID. Modules compare it; they read nothing out of it.
+- **The sign-in state is an observable.** If a session expires or someone signs out in another tab, the app closes again.
+
+## The connectors
+
+| Connector | Ways (`authenticate`) | Identity | Who vouches for the author |
+|---|---|---|---|
+| `wot` | `generate`, `create`, `mnemonic`, `unlock` | `did:key` from twelve words, key on the device | the signature, anyone can check it |
+| `supabase` | `email`, `email-signup`, `anonymous` | Supabase UUID, session via supabase-js | the server, through row-level security |
+| `local` | `local` | one local user per browser or tab | nobody, for trying things out only |
+| `mock` | `mock` | the first sample user | nobody, for demos only |
+
+In both real connectors the author of an entry comes from the session, never from the data sent. How the app turns that into buttons is described under [Capability, permission, origin](/en/handbuch/rechte/).
+
+## Who shows the sign-in screen
+
+The reference app decides in its `AuthGate`:
+
+- **Web of Trust:** The WoT connector brings its own flow, `DIDAuthScreen`. It generates the words, has them backed up, sets a passphrase and can restore or unlock an identity.
+- **All others:** The toolkit's `AuthScreen` reads `getAuthMethods()` and shows the ways it knows: `email`, `email-signup` and `anonymous`.
+
+## One app, one identity
+
+An app holds exactly one connector. Whoever signs in is that one identity for the whole app, and all spaces of the app live in the same source.
