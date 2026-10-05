@@ -1,7 +1,14 @@
 #!/bin/sh
 # Generates .env with fresh secrets for the Supabase stack (runs ON the
-# server, in ~/apps/supabase/). Idempotent: refuses to overwrite an existing
-# .env — a regenerated JWT_SECRET would invalidate every issued key/session.
+# server, in the directory that holds this script). Idempotent: refuses to
+# overwrite an existing .env — a regenerated JWT_SECRET would invalidate every
+# issued key/session.
+#
+# Required on first run (written into .env):
+#   SUPABASE_DOMAIN  the API domain, e.g. supabase.example.org
+#   SITE_URL         where the app runs, e.g. https://netzwerk.example.org
+#
+#   SUPABASE_DOMAIN=supabase.example.org SITE_URL=https://netzwerk.example.org ./generate-secrets.sh
 #
 # Also (idempotently) connects Traefik to the `supabase` network so the
 # Kong routing labels take effect.
@@ -16,6 +23,8 @@ if [ -f .env ]; then
   echo ".env existiert bereits — nichts überschrieben." >&2
   echo "Zum Rotieren: .env löschen (macht alle Keys/Sessions ungültig!) und neu ausführen." >&2
 else
+  : "${SUPABASE_DOMAIN:?SUPABASE_DOMAIN setzen, z. B. SUPABASE_DOMAIN=supabase.example.org}"
+  : "${SITE_URL:?SITE_URL setzen, z. B. SITE_URL=https://netzwerk.example.org}"
   # Everything random comes from the node container (NixOS root has no
   # guaranteed openssl): 4 secrets + 2 HS256-JWTs (anon/service_role,
   # 20 years — like the demo keys `supabase start` prints).
@@ -56,8 +65,9 @@ ANON_KEY=$ANON_KEY
 SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY
 REALTIME_DB_ENC_KEY=$REALTIME_DB_ENC_KEY
 SECRET_KEY_BASE=$SECRET_KEY_BASE
-API_EXTERNAL_URL=https://supabase.real-life-stack.de
-SITE_URL=http://localhost:5173
+SUPABASE_DOMAIN=$SUPABASE_DOMAIN
+API_EXTERNAL_URL=https://$SUPABASE_DOMAIN
+SITE_URL=$SITE_URL
 ADDITIONAL_REDIRECT_URLS=
 EOF
   echo ".env geschrieben (chmod 600)."

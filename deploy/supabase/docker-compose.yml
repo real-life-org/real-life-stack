@@ -1,7 +1,8 @@
-# Supabase self-hosted (schlank) — Timos NixOS-Server (Traefik, ghcr-Muster)
-# Domain: supabase.real-life-stack.de
-# Deploy: ~/apps/supabase/ → ./generate-secrets.sh → docker compose up -d
-#         → ./apply-migrations.sh   (RLS-Schema aus supabase/migrations/)
+# Supabase self-hosted (schlank) für den @real-life-stack/supabase-connector
+# Domain: SUPABASE_DOMAIN aus .env (generate-secrets.sh schreibt sie hinein)
+# Deploy: SUPABASE_DOMAIN=… SITE_URL=… ./generate-secrets.sh
+#         → docker compose up -d → ./apply-migrations.sh
+#         (RLS-Schema aus supabase/migrations/; Anleitung: README.md)
 #
 # Reduziert aus dem offiziellen supabase/docker-Setup (Apache-2.0): nur
 # db + auth (GoTrue) + rest (PostgREST) + realtime + kong. Kein Studio/
@@ -188,7 +189,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=supabase"
-      - "traefik.http.routers.supabase.rule=Host(`supabase.real-life-stack.de`)"
+      - "traefik.http.routers.supabase.rule=Host(`${SUPABASE_DOMAIN:?SUPABASE_DOMAIN fehlt in .env — siehe README}`)"
       - "traefik.http.routers.supabase.entrypoints=websecure"
       - "traefik.http.routers.supabase.tls.certresolver=letsencrypt"
       - "traefik.http.services.supabase.loadbalancer.server.port=8000"
