@@ -1,8 +1,8 @@
 ---
 title: Identity and sign-in
-description: Signing in is a capability of the connector. What the contract fixes, what the connectors make of it, and where one person is still two people in two worlds.
+description: Signing in is a capability of the connector. What the contract fixes and what the connectors make of it.
 translationOf: docs/handbook/de/handbuch/identitaet.mdx
-sourceHash: cb82634899fbb1d321fff8be9bfe7a0d108109f1905a720191960aab0b94249c
+sourceHash: 51b0f261d7a68d05856369bde94a326d346fbdbba6bb0a699ff2610c0a55d28d
 group: verstehen
 sidebar:
   order: 14
@@ -14,8 +14,6 @@ sources:
   - packages/wot-connector/src/wot-connector.ts
   - packages/toolkit/src/components/auth/auth-screen.tsx
   - apps/reference/src/App.tsx
-  - supabase/migrations/0001_rls_schema.sql
-  - supabase/migrations/0003_membership_rls.sql
 ---
 
 Modules and the toolkit do not know how anyone signs in. They ask the connector whether it can sign people in, which ways it offers and who is signed in right now. Whether a key pair in the browser or an account on a server stands behind that is up to the connector alone.
@@ -48,8 +46,6 @@ interface Authenticatable {
 | `local` | `local` | one local user per browser or tab | nobody, for trying things out only |
 | `mock` | `mock` | the first sample user | nobody, for demos only |
 
-The WoT connector lists only `did` as a display name in `getAuthMethods()`. Its `authenticate` does not know `did`, but the four steps from the table. So there the list does not describe the ways you can call.
-
 In both real connectors the author of an entry comes from the session, never from the data sent. How the app turns that into buttons is described under [Capability, permission, origin](/en/handbuch/rechte/).
 
 ## Who shows the sign-in screen
@@ -59,21 +55,6 @@ The reference app decides in its `AuthGate`:
 - **Web of Trust:** The WoT connector brings its own flow, `DIDAuthScreen`. It generates the words, has them backed up, sets a passphrase and can restore or unlock an identity.
 - **All others:** The toolkit's `AuthScreen` reads `getAuthMethods()` and shows the ways it knows: `email`, `email-signup` and `anonymous`.
 
-A connector with another way, such as signing in with a DID signature, finds no button for it in the `AuthScreen` today. The contract carries the way; the interface does not yet.
-
 ## One app, one identity
 
-An app holds exactly one connector. Whoever signs in is that one identity for the whole app. Spaces from different sources in one app, with the same person in both, do not exist yet. `MultiSource` is an interface in the `data-interface` package, but no app and no module calls it.
-
-## What sign-in with a DID on Supabase touches
-
-A person with a WoT identity is a second, unrelated person on Supabase today. Whoever changes that meets these places:
-
-- **Columns:** author, member, inviter and contact partners are `text` columns (`created_by`, `user_id`, `invited_by`, `requester`, `addressee`). They take a DID without rework.
-- **`auth.uid()`:** All policies compare against `auth.uid()::text`. The function reads the JWT's `sub` and casts it to a UUID. With a DID as `sub`, that cast fails.
-- **`profiles.id`:** The profile table is bound to `auth.users` by a UUID.
-- **Token checks:** PostgREST and Realtime accept any JWT signed with the instance's `JWT_SECRET`. GoTrue does not have to have issued it.
-- **Signing:** The WoT connector can sign arbitrary data with the DID's key (`sign`, `signJws`).
-- **Interface:** The `AuthScreen` needs a way for the new method, see above.
-
-How and in which order this is to be built is described in [issue #535](https://github.com/real-life-org/real-life-stack/issues/535) (stage 4 for sign-in, stage 5 for spaces from several sources in one app).
+An app holds exactly one connector. Whoever signs in is that one identity for the whole app, and all spaces of the app live in the same source.

@@ -21,7 +21,8 @@ cd "$(dirname "$0")"
 
 if [ -f .env ]; then
   echo ".env existiert bereits — nichts überschrieben." >&2
-  echo "Zum Rotieren: .env löschen (macht alle Keys/Sessions ungültig!) und neu ausführen." >&2
+  echo "Zum Rotieren (macht alle Keys/Sessions ungültig!): mv .env .env.alt, dann" >&2
+  echo "  SUPABASE_DOMAIN=<aus .env.alt> SITE_URL=<aus .env.alt> ./generate-secrets.sh" >&2
 else
   : "${SUPABASE_DOMAIN:?SUPABASE_DOMAIN setzen, z. B. SUPABASE_DOMAIN=supabase.example.org}"
   : "${SITE_URL:?SITE_URL setzen, z. B. SITE_URL=https://netzwerk.example.org}"

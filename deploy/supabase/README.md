@@ -52,13 +52,17 @@ Die App-Instanz (`deploy/app/`) zeigt dann mit `RLS_DEFAULT_CONNECTOR=supabase`,
   infrastructure-Repo verankern (offen).
 - **Secrets:** liegen nur in `.env` auf dem Server (600). Der ANON_KEY ist
   public by design (steht im Frontend-Bundle). SERVICE_ROLE_KEY und
-  JWT_SECRET niemals herausgeben; Key-Rotation = `.env` löschen +
-  `generate-secrets.sh` + `docker compose up -d` (invalidiert alle Sessions).
+  JWT_SECRET niemals herausgeben. Key-Rotation (invalidiert alle Sessions):
+  `mv .env .env.alt`, dann `generate-secrets.sh` mit `SUPABASE_DOMAIN` und
+  `SITE_URL` aus `.env.alt` aufrufen, eigene Ergänzungen aus `.env.alt`
+  übernehmen, `docker compose up -d`.
 - **GoTrue ohne SMTP:** `MAILER_AUTOCONFIRM=true` — E-Mail-Signups sind
   sofort bestätigt, die Adresse ist also nicht geprüft. Anonyme Logins sind
   aktiv. Wer Bestätigungsmails oder Passwort-Reset braucht, setzt in
   `docker-compose.yml` die `GOTRUE_SMTP_*`-Variablen und
-  `GOTRUE_MAILER_AUTOCONFIRM: "false"`; wer keine anonymen Konten will,
+  `GOTRUE_MAILER_AUTOCONFIRM: "false"`. Die Links in den Mails zeigen über
+  `GOTRUE_MAILER_URLPATHS_*` schon auf `/auth/v1/verify`, den Pfad, den
+  Kong an GoTrue durchreicht. Wer keine anonymen Konten will,
   `GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"`.
 - **Admin-Zugriff:** `docker exec -it supabase-db psql -U postgres` (kein
   Studio deployed).
@@ -66,7 +70,8 @@ Die App-Instanz (`deploy/app/`) zeigt dann mit `RLS_DEFAULT_CONNECTOR=supabase`,
 ## Sichtbarkeitsmodell (seit Migration 0003)
 
 - **items:** `group_id IS NULL` → instanzweit sichtbar; Gruppen-Items nur
-  für Mitglieder (lesen UND schreiben)
+  für Mitglieder (lesen UND schreiben). Ausnahme seit 0009: `relation`,
+  `comment` und `reaction` ändert und löscht nur ihr Autor.
 - **groups / group_members:** nur Creator + Mitglieder; **einladen dürfen
   nur Mitglieder** (der frühere Selbst-Beitritt Beliebiger ist zu)
 - **profiles:** instanzweit lesbar (Mitgliederauswahl beim Einladen)
@@ -86,10 +91,14 @@ curl -s "https://supabase.example.org/rest/v1/items?select=id&limit=1" \
 
 ## Live-Contract-Suite dagegen fahren
 
+Nur gegen eine Testinstanz: Die Suite legt Konten an und lässt Einträge
+zurück, die angemeldete Nutzer sehen. `ANON_KEY` und `SERVICE_ROLE_KEY` aus
+der `.env` der Testinstanz in die Shell holen, dann:
+
 ```bash
-SUPABASE_URL=https://supabase.example.org \
-SUPABASE_ANON_KEY=<anon key> \
-SUPABASE_SERVICE_ROLE_KEY=<service_role key aus .env auf dem Server> \
+SUPABASE_URL=https://supabase-test.example.org \
+SUPABASE_ANON_KEY="$ANON_KEY" \
+SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
 pnpm --filter @real-life-stack/supabase-connector test
 ```
 

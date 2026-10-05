@@ -1,8 +1,8 @@
 ---
 title: Run a Supabase backend
-description: Your own Supabase for instances using the supabase connector — set it up, connect it, check it, back it up, and what it cannot do yet.
+description: Your own Supabase for instances using the supabase connector — set it up, connect it, check it, back it up.
 translationOf: docs/handbook/de/handbuch/supabase.mdx
-sourceHash: 9e5c0e01b729281f3aa7af56d2a52b72f08a8a30baa65749ee21298add57aa4f
+sourceHash: 5c70df63c6e1a97df1988c97e2ae45c7ec5f108aab231b4a8eedb193025a435d
 group: anleitungen
 sidebar:
   order: 13
@@ -14,8 +14,8 @@ sources:
   - deploy/supabase/smoke.sh
   - supabase/migrations/0003_membership_rls.sql
   - supabase/migrations/0010_explicit_dml_grants.sql
+  - supabase/migrations/0009_authored_items_creator_only.sql
   - packages/supabase-connector/README.md
-  - packages/supabase-connector/src/supabase-connector.ts
 ---
 
 An [instance](/en/handbuch/instanz/) with `RLS_DEFAULT_CONNECTOR=supabase` reads and writes a Postgres database behind Supabase. The stack for it lives in the repo under `deploy/supabase/`. The data sits there in plain text with the operator. Who may read and write which row is decided by row-level security policies in the database, not by the app.
@@ -69,14 +69,14 @@ Then `docker compose up -d` in the instance. The app shows the toolkit's sign-in
 
 ## Sign-in
 
-The connector offers three ways: email with password, sign-up with email and password, and an anonymous account for trying things out. Without SMTP, GoTrue confirms every sign-up immediately, so the email address is not verified and password reset by mail does not work. If you need that, set the `GOTRUE_SMTP_*` variables and `GOTRUE_MAILER_AUTOCONFIRM: "false"` in `docker-compose.yml`. If you want no anonymous accounts, set `GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"`.
+The connector offers three ways: email with password, sign-up with email and password, and an anonymous account for trying things out. Without SMTP, GoTrue confirms every sign-up immediately, so the email address is not verified and password reset by mail does not work. If you need that, set the `GOTRUE_SMTP_*` variables and `GOTRUE_MAILER_AUTOCONFIRM: "false"` in `docker-compose.yml`. The links in the mails already point to `/auth/v1/verify`, the path Kong passes on to GoTrue. If you want no anonymous accounts, set `GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"`.
 
 An account here is a Supabase UUID, not a DID. How sign-in works across connectors is described under [Identity and sign-in](/en/handbuch/identitaet/).
 
 ## Who sees what
 
 - **Items without a space** are visible to every signed-in user of the instance.
-- **Items in a space** can be read and written only by its members.
+- **Items in a space** can be read and written only by its members. Relations, comments and reactions can be changed and deleted only by whoever wrote them.
 - **Spaces and member lists** are visible only to the creator and the members. Only members may invite.
 - **Profiles** are readable by everyone signed in, so you can find people when inviting.
 - **Contacts** are visible only to the two people on the edge.
@@ -86,12 +86,12 @@ The author of an entry comes from the session (`auth.uid()`), never from the dat
 
 ## Checking
 
-The live contract suite runs the same contract tests as for every connector, plus boundary tests for the policies, against your instance:
+The live contract suite runs the same contract tests as for every connector, plus boundary tests for the policies. It creates accounts and leaves entries behind that signed-in users can see. So run it against a test instance of its own, not one that people use. Load `ANON_KEY` and `SERVICE_ROLE_KEY` from the test instance's `.env` into the shell, then:
 
 ```bash
-SUPABASE_URL=https://supabase.example.org \
-SUPABASE_ANON_KEY=<anon key> \
-SUPABASE_SERVICE_ROLE_KEY=<service_role key from .env> \
+SUPABASE_URL=https://supabase-test.example.org \
+SUPABASE_ANON_KEY="$ANON_KEY" \
+SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
 pnpm --filter @real-life-stack/supabase-connector test
 ```
 
@@ -109,18 +109,7 @@ docker exec supabase-db pg_dump -U supabase_admin -Fc postgres > rls-$(date +%F)
 
 The `.env` belongs to it. Without the same `JWT_SECRET`, issued keys and sessions are invalid.
 
-## What is still missing
-
-| Gap | Consequence |
-|---|---|
-| reading without sign-in | no public map, no embedding via iframe |
-| file storage | avatars are data URLs in the profile, entries have no images |
-| sign-in with a DID | accounts are UUIDs, the same person here and in the Web of Trust is not the same |
-| activity and notifications | the app does not report what others have done |
-| accepting or declining an invitation | inviting adds directly |
-| working offline | Supabase spaces need a connection |
-
-The order in which these gaps are to be closed is in [issue #535](https://github.com/real-life-org/real-life-stack/issues/535).
+To make new keys, move the `.env` aside (`mv .env .env.alt`) and run `generate-secrets.sh` again with `SUPABASE_DOMAIN` and `SITE_URL` from the old file. Afterwards all sessions are invalid, and the app needs the new `ANON_KEY`.
 
 ## When something does not work
 

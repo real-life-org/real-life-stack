@@ -88,6 +88,12 @@ services:
       GOTRUE_RATE_LIMIT_ANONYMOUS_USERS: "300"
       # Kein SMTP konfiguriert — E-Mail-Signups werden direkt bestätigt.
       GOTRUE_MAILER_AUTOCONFIRM: "true"
+      # Links in Mails zeigen auf API_EXTERNAL_URL + Pfad. Kong reicht GoTrue
+      # unter /auth/v1/ durch; der GoTrue-Default /verify liefe ins Leere.
+      GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
 
   rest:
     container_name: supabase-rest

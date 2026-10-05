@@ -1,6 +1,6 @@
 ---
 title: Ein Supabase-Backend betreiben
-description: Ein eigenes Supabase für Instanzen mit dem Connector supabase — aufsetzen, anschließen, prüfen, sichern, und was es noch nicht kann.
+description: Ein eigenes Supabase für Instanzen mit dem Connector supabase — aufsetzen, anschließen, prüfen, sichern.
 group: anleitungen
 sidebar:
   order: 13
@@ -12,8 +12,8 @@ sources:
   - deploy/supabase/smoke.sh
   - supabase/migrations/0003_membership_rls.sql
   - supabase/migrations/0010_explicit_dml_grants.sql
+  - supabase/migrations/0009_authored_items_creator_only.sql
   - packages/supabase-connector/README.md
-  - packages/supabase-connector/src/supabase-connector.ts
 ---
 
 Eine [Instanz](/handbuch/instanz/) mit `RLS_DEFAULT_CONNECTOR=supabase` liest und schreibt in eine Postgres-Datenbank hinter Supabase. Den Stack dafür gibt es im Repo unter `deploy/supabase/`. Die Daten liegen dort im Klartext beim Betreiber. Wer welche Zeile lesen und schreiben darf, entscheiden Row-Level-Security-Policies in der Datenbank, nicht die App.
@@ -67,14 +67,14 @@ Dann `docker compose up -d` in der Instanz. Die App zeigt den Anmeldebildschirm 
 
 ## Anmeldung
 
-Der Connector bietet drei Wege: E-Mail mit Passwort, Registrierung mit E-Mail und Passwort, und ein anonymes Konto zum Ausprobieren. Ohne SMTP bestätigt GoTrue jede Registrierung sofort, die E-Mail-Adresse ist also nicht geprüft, und ein Passwort-Reset per Mail geht nicht. Wer das braucht, setzt in `docker-compose.yml` die `GOTRUE_SMTP_*`-Variablen und `GOTRUE_MAILER_AUTOCONFIRM: "false"`. Wer keine anonymen Konten will, setzt `GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"`.
+Der Connector bietet drei Wege: E-Mail mit Passwort, Registrierung mit E-Mail und Passwort, und ein anonymes Konto zum Ausprobieren. Ohne SMTP bestätigt GoTrue jede Registrierung sofort, die E-Mail-Adresse ist also nicht geprüft, und ein Passwort-Reset per Mail geht nicht. Wer das braucht, setzt in `docker-compose.yml` die `GOTRUE_SMTP_*`-Variablen und `GOTRUE_MAILER_AUTOCONFIRM: "false"`. Die Links in den Mails zeigen schon auf `/auth/v1/verify`, den Pfad, den Kong an GoTrue durchreicht. Wer keine anonymen Konten will, setzt `GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"`.
 
 Ein Konto ist hier eine Supabase-UUID, keine DID. Wie die Anmeldung über Connectoren hinweg gebaut ist, steht unter [Identität und Anmeldung](/handbuch/identitaet/).
 
 ## Wer was sieht
 
 - **Items ohne Space** sieht jeder angemeldete Nutzer der Instanz.
-- **Items in einem Space** lesen und schreiben nur dessen Mitglieder.
+- **Items in einem Space** lesen und schreiben nur dessen Mitglieder. Relationen, Kommentare und Reaktionen ändert und löscht nur, wer sie geschrieben hat.
 - **Spaces und Mitgliederlisten** sehen nur Ersteller und Mitglieder. Einladen dürfen nur Mitglieder.
 - **Profile** sind für alle Angemeldeten lesbar, damit man beim Einladen jemanden findet.
 - **Kontakte** sieht nur, wer an der Kante beteiligt ist.
@@ -84,12 +84,12 @@ Der Autor eines Eintrags kommt aus der Sitzung (`auth.uid()`), nie aus den gesen
 
 ## Prüfen
 
-Die Live-Contract-Suite fährt dieselben Vertragstests wie für jeden Connector, dazu Grenztests für die Policies, gegen eure Instanz:
+Die Live-Contract-Suite fährt dieselben Vertragstests wie für jeden Connector, dazu Grenztests für die Policies. Sie legt Konten an und lässt Einträge zurück, die angemeldete Nutzer sehen. Fahrt sie deshalb gegen eine eigene Testinstanz, nicht gegen eine, die Menschen benutzen. Holt `ANON_KEY` und `SERVICE_ROLE_KEY` aus der `.env` der Testinstanz in die Shell, dann:
 
 ```bash
-SUPABASE_URL=https://supabase.example.org \
-SUPABASE_ANON_KEY=<anon key> \
-SUPABASE_SERVICE_ROLE_KEY=<service_role key aus .env> \
+SUPABASE_URL=https://supabase-test.example.org \
+SUPABASE_ANON_KEY="$ANON_KEY" \
+SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
 pnpm --filter @real-life-stack/supabase-connector test
 ```
 
@@ -107,18 +107,7 @@ docker exec supabase-db pg_dump -U supabase_admin -Fc postgres > rls-$(date +%F)
 
 Die `.env` gehört dazu. Ohne dasselbe `JWT_SECRET` sind ausgegebene Schlüssel und Sitzungen ungültig.
 
-## Was noch fehlt
-
-| Lücke | Folge |
-|---|---|
-| Lesen ohne Anmeldung | keine öffentliche Karte, keine Einbettung per Iframe |
-| Dateispeicher | Avatare liegen als Data-URL im Profil, Bilder an Einträgen gibt es nicht |
-| Anmeldung mit DID | Konten sind UUIDs, dieselbe Person ist hier und im Web of Trust nicht dieselbe |
-| Aktivitäten und Benachrichtigungen | die App meldet nichts, was andere getan haben |
-| Einladung annehmen oder ablehnen | Einladen fügt direkt hinzu |
-| offline arbeiten | Supabase-Spaces brauchen eine Verbindung |
-
-Die Reihenfolge, in der diese Lücken geschlossen werden sollen, steht in [Issue #535](https://github.com/real-life-org/real-life-stack/issues/535).
+Neue Schlüssel macht ihr, indem ihr die `.env` beiseitelegt (`mv .env .env.alt`) und `generate-secrets.sh` mit `SUPABASE_DOMAIN` und `SITE_URL` aus der alten Datei erneut aufruft. Danach sind alle Sitzungen ungültig, und die App braucht den neuen `ANON_KEY`.
 
 ## Wenn etwas nicht funktioniert
 

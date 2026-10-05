@@ -1,6 +1,6 @@
 ---
 title: Identität und Anmeldung
-description: Anmelden ist eine Fähigkeit des Connectors. Was der Vertrag festlegt, was die Connectoren daraus machen, und wo eine Person heute in zwei Welten zwei Personen ist.
+description: Anmelden ist eine Fähigkeit des Connectors. Was der Vertrag festlegt und was die Connectoren daraus machen.
 group: verstehen
 sidebar:
   order: 14
@@ -12,8 +12,6 @@ sources:
   - packages/wot-connector/src/wot-connector.ts
   - packages/toolkit/src/components/auth/auth-screen.tsx
   - apps/reference/src/App.tsx
-  - supabase/migrations/0001_rls_schema.sql
-  - supabase/migrations/0003_membership_rls.sql
 ---
 
 Module und Toolkit wissen nicht, wie sich jemand anmeldet. Sie fragen den Connector, ob er Anmeldung kann, welche Wege er anbietet und wer gerade angemeldet ist. Ob dahinter ein Schlüsselpaar im Browser steht oder ein Konto auf einem Server, entscheidet allein der Connector.
@@ -46,8 +44,6 @@ interface Authenticatable {
 | `local` | `local` | ein lokaler Nutzer je Browser oder Tab | niemand, nur zum Ausprobieren |
 | `mock` | `mock` | der erste Beispielnutzer | niemand, nur für Demos |
 
-Der WoT-Connector nennt in `getAuthMethods()` nur `did` als Anzeigenamen. Sein `authenticate` kennt `did` nicht, sondern die vier Schritte aus der Tabelle. Die Liste beschreibt dort also nicht die aufrufbaren Wege.
-
 In beiden echten Connectoren kommt der Autor eines Eintrags aus der Sitzung, nie aus den gesendeten Daten. Wie die App das in Knöpfe übersetzt, steht unter [Fähigkeit, Berechtigung, Herkunft](/handbuch/rechte/).
 
 ## Wer den Anmeldebildschirm zeigt
@@ -57,21 +53,6 @@ Die Referenz-App entscheidet in ihrem `AuthGate`:
 - **Web of Trust:** Der WoT-Connector bringt mit `DIDAuthScreen` einen eigenen Ablauf mit. Er erzeugt die Wörter, lässt sie sichern, setzt eine Passphrase und kann eine Identität wiederherstellen oder entsperren.
 - **Alle anderen:** Der `AuthScreen` aus dem Toolkit liest `getAuthMethods()` und zeigt die Wege, die er kennt: `email`, `email-signup` und `anonymous`.
 
-Ein Connector mit einem anderen Weg, etwa einer Anmeldung per DID-Signatur, findet heute im `AuthScreen` keinen Knopf dafür. Der Vertrag trägt den Weg, die Oberfläche noch nicht.
-
 ## Eine App, eine Identität
 
-Eine App hält genau einen Connector. Wer sich anmeldet, ist damit für die ganze App diese eine Identität. Spaces aus verschiedenen Quellen in einer App, und dieselbe Person in beiden, gibt es noch nicht. `MultiSource` steht als Schnittstelle im Paket `data-interface`, aber keine App und kein Modul ruft sie auf.
-
-## Was eine Anmeldung per DID bei Supabase berührt
-
-Eine Person mit WoT-Identität ist bei Supabase heute eine zweite, fremde Person. Wer das ändert, trifft auf diese Stellen:
-
-- **Spalten:** Autor, Mitglied, Einladende und Kontaktpartner sind `text`-Spalten (`created_by`, `user_id`, `invited_by`, `requester`, `addressee`). Sie nehmen eine DID ohne Umbau auf.
-- **`auth.uid()`:** Alle Policies vergleichen mit `auth.uid()::text`. Die Funktion liest den `sub` des JWT und wandelt ihn in eine UUID um. Mit einer DID als `sub` schlägt diese Umwandlung fehl.
-- **`profiles.id`:** Die Profiltabelle ist über eine UUID an `auth.users` gebunden.
-- **Prüfung der Tokens:** PostgREST und Realtime nehmen jedes JWT an, das mit dem `JWT_SECRET` der Instanz signiert ist. GoTrue muss ein Token nicht ausgestellt haben.
-- **Signieren:** Der WoT-Connector kann beliebige Daten mit dem Schlüssel der DID signieren (`sign`, `signJws`).
-- **Oberfläche:** Der `AuthScreen` braucht einen Weg für die neue Methode, siehe oben.
-
-Wie und in welcher Reihenfolge das gebaut werden soll, beschreibt [Issue #535](https://github.com/real-life-org/real-life-stack/issues/535) (Etappe 4 für die Anmeldung, Etappe 5 für Spaces aus mehreren Quellen in einer App).
+Eine App hält genau einen Connector. Wer sich anmeldet, ist damit für die ganze App diese eine Identität, und alle Spaces der App liegen in derselben Quelle.
