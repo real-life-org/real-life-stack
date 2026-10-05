@@ -1,28 +1,45 @@
-# Supabase self-hosted — Timos NixOS-Server
+# Supabase self-hosted
 
 Schlanker Supabase-Stack für den `@real-life-stack/supabase-connector`
-(db + GoTrue + PostgREST + Realtime + Kong; kein Studio/Analytics/Storage).
-Reduziert aus dem offiziellen [supabase/docker](https://github.com/supabase/supabase/tree/master/docker)-Setup
-(Apache-2.0), Versionen gepinnt, kein Watchtower (DB-Major-Auto-Update wäre
-Datenverlust).
+(db + GoTrue + PostgREST + Realtime + Kong; kein Studio, kein Analytics, kein
+Storage). Reduziert aus dem offiziellen
+[supabase/docker](https://github.com/supabase/supabase/tree/master/docker)-Setup
+(Apache-2.0), Versionen gepinnt, kein Watchtower (ein automatisches
+Postgres-Major-Update wäre Datenverlust).
 
-- **Domain:** `supabase.real-life-stack.de` → A-Record auf `85.214.196.122`
-- **Server-Pfad:** `/home/timo/apps/supabase/`
-- **TLS:** Traefik/Let's Encrypt (Label auf dem Kong-Container)
+Die Anleitung mit Einordnung steht im Handbuch unter
+[Ein Supabase-Backend betreiben](../../docs/handbook/de/handbuch/supabase.mdx).
+
+## Voraussetzungen
+
+- Docker mit Compose-Plugin auf dem Server.
+- Ein laufender Traefik-Container namens `traefik` mit dem EntryPoint
+  `websecure` und dem Zertifikatsresolver `letsencrypt`.
+- Ein DNS-Eintrag für die API-Domain, z. B. `supabase.example.org`.
 
 ## Erst-Setup (einmalig)
 
 ```bash
 # 1. Dateien auf den Server (vom Repo-Root):
-scp -r deploy/supabase root@85.214.196.122:/home/timo/apps/
-scp -r supabase/migrations root@85.214.196.122:/home/timo/apps/supabase/
+scp -r deploy/supabase user@server:apps/
+scp -r supabase/migrations user@server:apps/supabase/
 
 # 2. Auf dem Server:
-cd /home/timo/apps/supabase
+cd apps/supabase
+SUPABASE_DOMAIN=supabase.example.org \
+SITE_URL=https://netzwerk.example.org \
 ./generate-secrets.sh        # .env (chmod 600) + Traefik ↔ supabase-Netz; gibt NUR den ANON_KEY aus
 docker compose up -d
-./apply-migrations.sh        # wartet auf GoTrue, wendet supabase/migrations/*.sql an (journaled)
+./apply-migrations.sh        # wartet auf GoTrue, wendet migrations/*.sql an (journaled)
+./smoke.sh                   # prüft die RLS-Grenze durch Kong
 ```
+
+`SUPABASE_DOMAIN` und `SITE_URL` landen in `.env`. Fehlt `SUPABASE_DOMAIN`
+dort, verweigert `docker compose` den Start mit einer Meldung.
+
+Die App-Instanz (`deploy/app/`) zeigt dann mit `RLS_DEFAULT_CONNECTOR=supabase`,
+`RLS_SUPABASE_URL=https://supabase.example.org` und dem ausgegebenen
+`RLS_SUPABASE_ANON_KEY` auf dieses Backend.
 
 ## Architektur-Notizen
 
@@ -38,7 +55,11 @@ docker compose up -d
   JWT_SECRET niemals herausgeben; Key-Rotation = `.env` löschen +
   `generate-secrets.sh` + `docker compose up -d` (invalidiert alle Sessions).
 - **GoTrue ohne SMTP:** `MAILER_AUTOCONFIRM=true` — E-Mail-Signups sind
-  sofort bestätigt. Anonyme Logins sind aktiv (Connector-v1).
+  sofort bestätigt, die Adresse ist also nicht geprüft. Anonyme Logins sind
+  aktiv. Wer Bestätigungsmails oder Passwort-Reset braucht, setzt in
+  `docker-compose.yml` die `GOTRUE_SMTP_*`-Variablen und
+  `GOTRUE_MAILER_AUTOCONFIRM: "false"`; wer keine anonymen Konten will,
+  `GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"`.
 - **Admin-Zugriff:** `docker exec -it supabase-db psql -U postgres` (kein
   Studio deployed).
 
@@ -56,9 +77,9 @@ docker compose up -d
 ## Smoke-Tests
 
 ```bash
-curl -s https://supabase.real-life-stack.de/auth/v1/health   # GoTrue-Version
+curl -s https://supabase.example.org/auth/v1/health   # GoTrue-Version
 # PostgREST mit anon key (aus generate-secrets.sh):
-curl -s "https://supabase.real-life-stack.de/rest/v1/items?select=id&limit=1" \
+curl -s "https://supabase.example.org/rest/v1/items?select=id&limit=1" \
   -H "apikey: $ANON_KEY" -H "Authorization: Bearer $ANON_KEY"
 # → [] oder 200 mit Daten; ohne apikey → 401 (Kong key-auth)
 ```
@@ -66,7 +87,7 @@ curl -s "https://supabase.real-life-stack.de/rest/v1/items?select=id&limit=1" \
 ## Live-Contract-Suite dagegen fahren
 
 ```bash
-SUPABASE_URL=https://supabase.real-life-stack.de \
+SUPABASE_URL=https://supabase.example.org \
 SUPABASE_ANON_KEY=<anon key> \
 SUPABASE_SERVICE_ROLE_KEY=<service_role key aus .env auf dem Server> \
 pnpm --filter @real-life-stack/supabase-connector test
@@ -88,6 +109,33 @@ pnpm --filter @real-life-stack/supabase-connector test
 ## Neue Migrationen ausrollen
 
 Neue Datei in `supabase/migrations/` → per scp in
-`/home/timo/apps/supabase/migrations/` → `./apply-migrations.sh` (skippt
+`apps/supabase/migrations/` auf dem Server → `./apply-migrations.sh` (skippt
 bereits angewendete Dateien über die Journal-Tabelle
 `schema_migrations_rls`, die nicht über die API erreichbar ist).
+
+## Sichern
+
+Der Stack sichert nichts von selbst. Die Daten liegen im Volume
+`supabase-db-data`. Ein logisches Backup mit Inhalten und Konten (Schema
+`auth`) zieht der Superuser des Images:
+
+```bash
+docker exec supabase-db pg_dump -U supabase_admin -Fc postgres > rls-$(date +%F).dump
+```
+
+Eine Wiederherstellung daraus ist noch nicht durchgespielt.
+
+Dazu gehört `.env`: Ohne `JWT_SECRET` sind wiederhergestellte Sessions und
+Schlüssel ungültig.
+
+## Instanz des Projekts
+
+| | |
+|---|---|
+| API-Domain | `supabase.real-life-stack.de` (A-Record auf `85.214.196.122`) |
+| Server-Pfad | `/home/timo/apps/supabase/` |
+| TLS | Traefik/Let's Encrypt (Label auf dem Kong-Container) |
+
+Diese Instanz entstand, bevor die Domain aus `.env` kam. Ihre `.env` braucht
+einmalig die Zeile `SUPABASE_DOMAIN=supabase.real-life-stack.de`, sonst
+startet `docker compose up -d` nicht mehr.
