@@ -1,21 +1,20 @@
 # Renovate im eigenen Haus: der Bot laeuft als Action auf GitHubs Runnern
 # unter unserem Account, nicht als gehostete App eines Dritten.
 #
-# Die uebliche Variante waere die Renovate-GitHub-App (Mend). Sie ist bequemer,
-# braucht dafuer aber dauerhaft Schreibrechte eines Fremden auf dieses Repo.
-# Hier laeuft stattdessen dasselbe Programm in unserem eigenen Workflow. Der
-# Preis: wir ziehen die Action-Version selbst nach und zahlen Actions-Minuten.
+# Der Lauf selbst (gepinnte Action-Version, Token-Fallback, Umgebung,
+# Concurrency) steht einmal fuer alle real-life-org-Repos im
+# wiederverwendbaren Workflow in meta:
+# https://github.com/real-life-org/meta/blob/main/.github/workflows/renovate.yml
+# Dort steht auch, warum die Action auf einen SHA gepinnt ist und warum KEIN
+# `configurationFile` gesetzt ist. Den SHA zieht Renovate in meta selbst nach.
 #
-# Was der Bot tut, steht NICHT hier, sondern in `renovate.json5` im
-# Wurzelverzeichnis. Renovate klont das Repo und liest sie von dort. Deshalb
-# ist unten bewusst KEIN `configurationFile` gesetzt: dieser Parameter meint
-# die GLOBALE Konfiguration des Laufs, nicht die des Repos, und wuerde die
-# Repo-Datei nicht ersetzen, sondern eine zweite Ebene aufmachen.
+# Was der Bot tut, steht in `renovate.json5` im Wurzelverzeichnis.
 name: Renovate
 
 on:
-  # Einmal taeglich frueh. Oefter bringt nichts: die wot-Pakete erscheinen
-  # nicht stuendlich, und jeder Lauf klont das Repo und fragt die Registry ab.
+  # Einmal taeglich frueh (UTC). Oefter bringt nichts: die WoT-Pakete
+  # erscheinen nicht stuendlich, und jeder Lauf klont das Repo und fragt die
+  # Registry ab.
   schedule:
     - cron: '17 4 * * *'
   # Fuer den ersten Lauf nach dem Merge und zum Nachschauen, ohne bis zum
@@ -23,92 +22,39 @@ on:
   workflow_dispatch:
 
 # Nur der Grundstock. Die Schreibrechte stehen im Job, und auch dort nur fuer
-# den Fallback unten — mit einem eigenen Token laeuft Renovate ueber DESSEN
-# Rechte, nicht ueber die des GITHUB_TOKEN.
+# den Fallback auf GITHUB_TOKEN — mit einem eigenen Token laeuft Renovate
+# ueber DESSEN Rechte.
 permissions:
   contents: read
 
-# Zwei Renovate-Laeufe auf demselben Repo wuerden sich um dieselben Branches
-# streiten. Der laufende darf zu Ende arbeiten, ein zweiter wartet.
-concurrency:
-  group: renovate
-  cancel-in-progress: false
-
 jobs:
   renovate:
-    runs-on: ubuntu-latest
+    # Ein wiederverwendbarer Workflow kann Rechte nur einschraenken, nie
+    # erweitern; was er braucht, muss der Aufrufer hier vergeben.
     permissions:
       contents: write
       pull-requests: write
       # Fuer das Dependency-Dashboard, das eine Issue ist.
       issues: write
-    steps:
-      # Renovate klont sich das Repo selbst; dieser Checkout dient allein dazu,
-      # dass die Action ihren Arbeitsbaum hat. `persist-credentials: false`
-      # wie in den anderen Workflows: die Git-Konfiguration soll kein Token
-      # tragen, das hier niemand braucht.
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      # Auf den Commit-SHA gepinnt, nicht auf einen Tag. Zwei Gruende: dieses
-      # Repo pflegt keine mitlaufenden Major-Tags (es gibt kein `v46`, nur
-      # `v46.3.1` und Geschwister — ein `@v46` laeuft in ein 404 und der
-      # Workflow startet gar nicht erst), und ein Tag laesst sich umhaengen,
-      # ein SHA nicht. Der Schritt hier bekommt einen Token mit
-      # Schreibrechten; was er ausfuehrt, soll fest stehen.
+    uses: real-life-org/meta/.github/workflows/renovate.yml@main
+    secrets:
+      # Eigener Token statt GITHUB_TOKEN — aus genau dem Grund, der in
+      # release-please.yml ausfuehrlich steht: GitHub startet fuer Ereignisse,
+      # die mit dem GITHUB_TOKEN ausgeloest werden, KEINE Workflows. Ein so
+      # erzeugter Bump-PR bekaeme weder `test` noch `pr-title`, und der
+      # fehlende Pflicht-Check blockiert den Merge dauerhaft. Fehlt das
+      # Secret, faellt meta auf GITHUB_TOKEN zurueck: PRs entstehen dann ohne
+      # Checks und muessen einmal von Hand angestupst werden (Titel aendern
+      # und zuruecksetzen).
       #
-      # Den SHA bewegt Renovate selbst — siehe die zweite packageRule in
-      # renovate.json5, die genau diese eine Action beobachtet. Von Hand
-      # nachziehen muesste man ihn sonst, und eine Handliste driftet lautlos.
-      - uses: renovatebot/github-action@6d26fcf0275dc65624cbc3d51fe78bc773f98321 # v46.3.6
-        with:
-          # Eigener Token statt GITHUB_TOKEN — aus genau dem Grund, der in
-          # release-please.yml ausfuehrlich steht: GitHub startet fuer
-          # Ereignisse, die mit dem GITHUB_TOKEN ausgeloest werden, KEINE
-          # Workflows. Ein so erzeugter Bump-PR bekaeme also weder `test` noch
-          # `pr-title` — und der fehlende Pflicht-Check blockiert den Merge
-          # dauerhaft. Ein Bump-PR, gegen den die Tests nie laufen, ist
-          # ausserdem wertlos: die ganze Uebung dient dem Nachweis, dass die
-          # neue Version bei uns gruen ist.
-          #
-          # Der Fallback haelt den Workflow lauffaehig, solange das Secret
-          # fehlt: dann entstehen PRs ohne Checks, die man einmal von Hand
-          # anstupsen muss (Titel aendern und zuruecksetzen), statt dass
-          # Renovate gar nicht laeuft.
-          #
-          # Noetige Rechte (fein granuliert, nur dieses Repo):
-          # Contents: read+write · Pull requests: read+write ·
-          # Issues: read+write · Workflows: read+write
-          #
-          # Bewusst OHNE `Dependabot alerts`: die Abfrage der
-          # Sicherheitsmeldungen ist in renovate.json5 abgeschaltet
-          # (`vulnerabilityAlerts`), weil sie bei unserer Filterung ohnehin nie
-          # zu einem PR fuehren wuerde. Wer sie will, braucht beides — das
-          # Recht UND die Konfiguration.
-          #
-          # Issues, weil `dependencyDashboard` in renovate.json5 auf true
-          # steht: das Dashboard ist eine Issue. Ohne das Recht scheitert
-          # Renovate genau daran — dieselbe Stolperstelle wie bei
-          # release-please, das seine Labels ebenfalls ueber die Issues-API
-          # fuehrt.
-          #
-          # Workflows, weil Renovate den SHA-Pin DIESER Datei selbst nachzieht
-          # (die zweite packageRule in renovate.json5). GitHub weist jeden
-          # Push zurueck, der `.github/workflows/` aendert, wenn dem Token das
-          # Recht fehlt — der Lauf scheitert dann erst beim Pushen, nicht beim
-          # Planen. Wer den Pin lieber von Hand bewegt, streicht die Regel und
-          # spart sich dieses Recht: es ist das maechtigste der vier, denn mit
-          # ihm kann der Bot jede CI-Datei umschreiben. Dagegen steht, dass
-          # seine Aenderungen als PR kommen und `master` geschuetzt ist.
-          token: ${{ secrets.RENOVATE_TOKEN || github.token }}
-        env:
-          # Ohne diese Zeile sucht Renovate sich seine Repos selbst zusammen
-          # (Autodiscover) und liefe ueber alles, worauf der Token Zugriff hat.
-          # Genau ein Repo, explizit benannt.
-          RENOVATE_REPOSITORIES: ${{ github.repository }}
-          RENOVATE_AUTODISCOVER: 'false'
-          # Der Bot tritt unter dem Token-Inhaber auf; Commits brauchen
-          # trotzdem eine Absenderadresse, sonst verweigert git sie.
-          RENOVATE_GIT_AUTHOR: 'Renovate <bot@renovateapp.com>'
-          LOG_LEVEL: info
+      # Noetige Rechte (fein granuliert, nur dieses Repo):
+      # Contents: read+write · Pull requests: read+write ·
+      # Issues: read+write · Workflows: read+write · Dependabot alerts: read
+      #
+      # Workflows, weil der monatliche Sammel-PR auch die GitHub Actions in
+      # `.github/workflows/` anhebt; ohne das Recht weist GitHub den Push
+      # zurueck. Dependabot alerts, weil die Sicherheits-PRs jetzt an sind
+      # und Renovate dann auch GitHubs Meldungen liest; ohne das Recht steht
+      # eine Warnung als "Repository Problems" dauerhaft oben im Dashboard.
+      # Die Begruendung zu beiden steht ausfuehrlich in meta.
+      RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
