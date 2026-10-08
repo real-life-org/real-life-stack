@@ -589,8 +589,8 @@ interface ContentComposerProps {
 ### Minimal (Feed-Post)
 
 ```tsx
-import { ContentComposer } from "@real-life-stack/toolkit"
-import { useCreateItem } from "@real-life-stack/toolkit"
+import { ContentComposer } from "@real-life/toolkit"
+import { useCreateItem } from "@real-life/toolkit"
 
 function Feed() {
   const createItem = useCreateItem()
@@ -615,8 +615,8 @@ function Feed() {
 ### Einzel-Typ-Modus: Task aus dem Kanban-Board
 
 ```tsx
-import { ContentComposer } from "@real-life-stack/toolkit"
-import { useCreateItem, useGroups, useMembers } from "@real-life-stack/toolkit"
+import { ContentComposer } from "@real-life/toolkit"
+import { useCreateItem, useGroups, useMembers } from "@real-life/toolkit"
 
 function KanbanCreateTask({ onClose, defaultGroupId }) {
   const createItem = useCreateItem()
@@ -664,7 +664,7 @@ function KanbanCreateTask({ onClose, defaultGroupId }) {
 ### Multi-Typ-Modus (mit Karten-Slot)
 
 ```tsx
-import { ContentComposer } from "@real-life-stack/toolkit"
+import { ContentComposer } from "@real-life/toolkit"
 import { MapPicker } from "./MapPicker" // App-eigene Karten-Komponente
 
 const contentTypes: ContentTypeConfig[] = [

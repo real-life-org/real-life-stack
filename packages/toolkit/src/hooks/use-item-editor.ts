@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
-import type { DataInterface, Item, Relation } from "@real-life-stack/data-interface"
-import { deriveContext, hasGroups, hasItemGroups, isWritable, parseLocalItemTarget, parseQualifiedItemTarget } from "@real-life-stack/data-interface"
+import type { DataInterface, Item, Relation } from "@real-life/data-interface"
+import { deriveContext, hasGroups, hasItemGroups, isWritable, parseLocalItemTarget, parseQualifiedItemTarget } from "@real-life/data-interface"
 import { useCreateItem, useUpdateItem, useDeleteItem } from "./use-mutations"
 import { useConnector } from "./connector-context"
 import type { ContentComposerSubmitData } from "../components/composer/content-composer"

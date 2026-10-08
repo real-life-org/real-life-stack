@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, startTransition } from "react"
-import type { Item, RelationRecord } from "@real-life-stack/data-interface"
-import { hasRelationRecords, isAuthorialItemType, isFrozenByRecords } from "@real-life-stack/data-interface"
+import type { Item, RelationRecord } from "@real-life/data-interface"
+import { hasRelationRecords, isAuthorialItemType, isFrozenByRecords } from "@real-life/data-interface"
 import { useOptionalConnector } from "./connector-context"
 
 const NO_RECORDS: RelationRecord[] = []

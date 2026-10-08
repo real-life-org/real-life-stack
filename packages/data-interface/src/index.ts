@@ -1,4 +1,4 @@
-// @real-life-stack/data-interface
+// @real-life/data-interface
 // Zentrale Typdefinitionen für das DataInterface (Connector-Schnittstelle)
 
 import { BaseConnector } from "./base-connector.js"

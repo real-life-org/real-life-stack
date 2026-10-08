@@ -18,7 +18,7 @@ type Bounds = [number, number, number, number]
  * Welche Karten-Engine das Modul benutzt. Die Engine ist ein optionaler Peer
  * (`maplibre-gl`, `leaflet`) und darf den Kern der Bibliothek nicht
  * betreten — darum stellt sie ein Provider aus dem jeweiligen Unterpfad:
- * `MapLibreAdapterProvider` aus `@real-life-stack/toolkit/maplibre`. Das ist
+ * `MapLibreAdapterProvider` aus `@real-life/toolkit/maplibre`. Das ist
  * die eine Zeile, die eine App fuer die Karte schreibt, und sie sagt nur,
  * WELCHE Engine — nicht, wie das Modul funktioniert.
  */
@@ -58,7 +58,7 @@ export function MapModule({ groupId, active = true }: ModuleViewProps) {
       <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
         <p className="text-lg font-medium text-foreground">Karte</p>
         <p className="text-sm text-muted-foreground mt-2">
-          Keine Karten-Engine gestellt. Eine App setzt <code>MapLibreAdapterProvider</code> aus <code>@real-life-stack/toolkit/maplibre</code> um ihre Shell.
+          Keine Karten-Engine gestellt. Eine App setzt <code>MapLibreAdapterProvider</code> aus <code>@real-life/toolkit/maplibre</code> um ihre Shell.
         </p>
       </div>
     )

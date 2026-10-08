@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react"
-import type { Item, User } from "@real-life-stack/data-interface"
+import type { Item, User } from "@real-life/data-interface"
 
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { useMembers } from "../../hooks/use-groups"

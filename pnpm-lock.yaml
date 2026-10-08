@@ -20,13 +20,13 @@ importers:
 
   apps/network:
     dependencies:
-      '@real-life-stack/data-interface':
+      '@real-life/data-interface':
         specifier: workspace:*
         version: link:../../packages/data-interface
-      '@real-life-stack/mock-connector':
+      '@real-life/mock-connector':
         specifier: workspace:*
         version: link:../../packages/mock-connector
-      '@real-life-stack/toolkit':
+      '@real-life/toolkit':
         specifier: workspace:*
         version: link:../../packages/toolkit
       lucide-react:
@@ -123,13 +123,13 @@ importers:
       '@radix-ui/react-visually-hidden':
         specifier: ^1.2.4
         version: 1.2.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@real-life-stack/data-interface':
+      '@real-life/data-interface':
         specifier: workspace:*
         version: link:../../packages/data-interface
-      '@real-life-stack/mock-connector':
+      '@real-life/mock-connector':
         specifier: workspace:*
         version: link:../../packages/mock-connector
-      '@real-life-stack/toolkit':
+      '@real-life/toolkit':
         specifier: workspace:*
         version: link:../../packages/toolkit
       '@use-gesture/react':
@@ -226,22 +226,22 @@ importers:
       '@capawesome/capacitor-live-update':
         specifier: ^8.2.1
         version: 8.2.1(@capacitor/core@8.2.0)
-      '@real-life-stack/data-interface':
+      '@real-life/data-interface':
         specifier: workspace:*
         version: link:../../packages/data-interface
-      '@real-life-stack/local-connector':
+      '@real-life/local-connector':
         specifier: workspace:*
         version: link:../../packages/local-connector
-      '@real-life-stack/mock-connector':
+      '@real-life/mock-connector':
         specifier: workspace:*
         version: link:../../packages/mock-connector
-      '@real-life-stack/supabase-connector':
+      '@real-life/supabase-connector':
         specifier: workspace:*
         version: link:../../packages/supabase-connector
-      '@real-life-stack/toolkit':
+      '@real-life/toolkit':
         specifier: workspace:*
         version: link:../../packages/toolkit
-      '@real-life-stack/wot-connector':
+      '@real-life/wot-connector':
         specifier: workspace:*
         version: link:../../packages/wot-connector
       leaflet:
@@ -327,15 +327,15 @@ importers:
 
   examples/first-app:
     dependencies:
-      '@real-life-stack/data-interface':
-        specifier: 0.3.0
-        version: 0.3.0
-      '@real-life-stack/mock-connector':
-        specifier: 0.2.0
-        version: 0.2.0
-      '@real-life-stack/toolkit':
-        specifier: 0.2.0
-        version: 0.2.0(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
+      '@real-life/data-interface':
+        specifier: npm:@real-life-stack/data-interface@0.3.0
+        version: '@real-life-stack/data-interface@0.3.0'
+      '@real-life/mock-connector':
+        specifier: npm:@real-life-stack/mock-connector@0.2.0
+        version: '@real-life-stack/mock-connector@0.2.0'
+      '@real-life/toolkit':
+        specifier: npm:@real-life-stack/toolkit@0.2.0
+        version: '@real-life-stack/toolkit@0.2.0(@floating-ui/dom@1.7.4)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)'
       maplibre-gl:
         specifier: ^5.24.0
         version: 5.24.0
@@ -394,7 +394,7 @@ importers:
 
   packages/local-connector:
     dependencies:
-      '@real-life-stack/data-interface':
+      '@real-life/data-interface':
         specifier: workspace:*
         version: link:../data-interface
       idb-keyval:
@@ -410,7 +410,7 @@ importers:
 
   packages/mock-connector:
     dependencies:
-      '@real-life-stack/data-interface':
+      '@real-life/data-interface':
         specifier: workspace:*
         version: link:../data-interface
     devDependencies:
@@ -423,7 +423,7 @@ importers:
 
   packages/supabase-connector:
     dependencies:
-      '@real-life-stack/data-interface':
+      '@real-life/data-interface':
         specifier: workspace:*
         version: link:../data-interface
       '@supabase/supabase-js':
@@ -466,7 +466,7 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@real-life-stack/data-interface':
+      '@real-life/data-interface':
         specifier: workspace:*
         version: link:../data-interface
       '@tanstack/react-virtual':
@@ -527,7 +527,7 @@ importers:
         specifier: ^3.4.0
         version: 3.4.0
     devDependencies:
-      '@real-life-stack/mock-connector':
+      '@real-life/mock-connector':
         specifier: workspace:*
         version: link:../mock-connector
       '@storybook/addon-docs':
@@ -596,15 +596,15 @@ importers:
 
   packages/wot-connector:
     dependencies:
-      '@real-life-stack/data-interface':
-        specifier: workspace:*
-        version: link:../data-interface
-      '@real-life-stack/toolkit':
-        specifier: workspace:*
-        version: link:../toolkit
       '@real-life/adapter-yjs':
         specifier: npm:@web_of_trust/adapter-yjs@^0.2.10
         version: '@web_of_trust/adapter-yjs@0.2.10(@web_of_trust/core@0.5.10(react@19.2.3))'
+      '@real-life/data-interface':
+        specifier: workspace:*
+        version: link:../data-interface
+      '@real-life/toolkit':
+        specifier: workspace:*
+        version: link:../toolkit
       '@real-life/wot-core':
         specifier: npm:@web_of_trust/core@^0.5.10
         version: '@web_of_trust/core@0.5.10(react@19.2.3)'
@@ -7871,7 +7871,7 @@ snapshots:
     dependencies:
       '@real-life-stack/data-interface': 0.3.0
 
-  '@real-life-stack/toolkit@0.2.0(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
+  '@real-life-stack/toolkit@0.2.0(@floating-ui/dom@1.7.4)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@radix-ui/colors': 3.0.0
       '@radix-ui/react-avatar': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)

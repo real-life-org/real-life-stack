@@ -1,6 +1,6 @@
 import { useState, useRef, type KeyboardEvent } from "react"
 import type { KanbanColumn } from "./kanban-board"
-import type { User, Group } from "@real-life-stack/data-interface"
+import type { User, Group } from "@real-life/data-interface"
 import { defaultColumns } from "./kanban-board"
 import { normalizeStatus } from "./reorder"
 import { Input } from "../primitives/input"

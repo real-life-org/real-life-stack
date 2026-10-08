@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { hasNotificationState } from "@real-life-stack/data-interface"
+import { hasNotificationState } from "@real-life/data-interface"
 import { MockConnector } from "../src/mock-connector.js"
 
 const seed = {

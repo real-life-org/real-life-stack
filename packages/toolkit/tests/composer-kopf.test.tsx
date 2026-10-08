@@ -2,7 +2,7 @@
 import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { composeTypeManifest, TOOLKIT_TYPE_LAYER } from "@real-life-stack/data-interface"
+import { composeTypeManifest, TOOLKIT_TYPE_LAYER } from "@real-life/data-interface"
 
 import { ContentComposer, type ContentComposerProps, type ContentTypeConfig } from "../src/components/composer/content-composer"
 import { pickContentTypes } from "../src/components/composer/content-types"

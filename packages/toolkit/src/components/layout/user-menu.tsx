@@ -1,6 +1,6 @@
 "use client"
 
-import type { User } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
 import { useState } from "react"
 import { formatBuild, type BuildInfo } from "../../lib/build-info"
 import { LogOut, QrCode, Settings, User as UserIcon, Users } from "lucide-react"

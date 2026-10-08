@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
-import { hasEncounterVerification } from "@real-life-stack/data-interface"
-import type { EncounterPeerInfo, VerificationChallenge } from "@real-life-stack/data-interface"
+import { hasEncounterVerification } from "@real-life/data-interface"
+import type { EncounterPeerInfo, VerificationChallenge } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 const NOOP_VERIFICATION = {

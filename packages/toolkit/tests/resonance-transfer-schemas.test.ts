@@ -4,8 +4,8 @@ import { fileURLToPath } from "url"
 import Ajv2020 from "ajv/dist/2020"
 import addFormats from "ajv-formats"
 import { describe, expect, it } from "vitest"
-import type { Item, RelationRecord } from "@real-life-stack/data-interface"
-import { itemContentHash } from "@real-life-stack/data-interface"
+import type { Item, RelationRecord } from "@real-life/data-interface"
+import { itemContentHash } from "@real-life/data-interface"
 import { buildExport, planImport } from "../src/lib/resonance-transfer"
 
 /**

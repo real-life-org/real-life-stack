@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useEffect, useMemo, useRef, type DragEvent, type ReactNode } from "react"
-import type { Item, User, Relation } from "@real-life-stack/data-interface"
+import type { Item, User, Relation } from "@real-life/data-interface"
 import { cn } from "../../lib/utils"
 import {
   focusActiveItemOnce,

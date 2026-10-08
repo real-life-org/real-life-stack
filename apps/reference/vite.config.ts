@@ -20,7 +20,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@real-life-stack/toolkit': toolkitSrc,
+      '@real-life/toolkit': toolkitSrc,
       '@': toolkitSrc,
     },
   },

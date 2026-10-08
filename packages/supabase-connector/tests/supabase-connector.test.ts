@@ -6,7 +6,7 @@ import {
   voteRecordInput,
   votesFromRelationRecords,
   VOTE_PREDICATE,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import { SupabaseConnector } from "../src/supabase-connector.js"
 import { FakeSupabaseClient } from "./fake-client.js"
 
@@ -376,7 +376,7 @@ describe("SupabaseConnector — GroupScopeCapable (02 → Lesen/Anlegen in einem
 describe("SupabaseConnector — ProfileCapable (WoT-Parität)", () => {
   it("hasProfile greift; updateMyProfile persistiert Name/Bio/Avatar und projiziert ein person-Item", async () => {
     const { connector, userId } = await makeConnector()
-    const { hasProfile } = await import("@real-life-stack/data-interface")
+    const { hasProfile } = await import("@real-life/data-interface")
     expect(hasProfile(connector)).toBe(true)
     await connector.updateMyProfile({ name: "Anton", bio: "Baut Netze", avatar: "data:image/png;base64,abc" })
     const profile = (await connector.getMyProfile())!
@@ -729,7 +729,7 @@ describe("SupabaseConnector — ContactManager (Anfrage → Bestätigung)", () =
   it("hasContacts greift; addContact stellt eine AUSGEHENDE pending-Anfrage", async () => {
     const { client, connector, userId } = await makeConnector()
     seedProfile(client, "user-berta", "Berta")
-    const { hasContacts } = await import("@real-life-stack/data-interface")
+    const { hasContacts } = await import("@real-life/data-interface")
     expect(hasContacts(connector)).toBe(true)
     const contact = await connector.addContact("user-berta")
     expect(contact).toMatchObject({ id: "user-berta", name: "Berta", status: "pending", direction: "outgoing" })
@@ -904,7 +904,7 @@ describe("SupabaseConnector — ContactManager (Anfrage → Bestätigung)", () =
     const { client, connector, userId } = await makeConnector()
     seedProfile(client, "user-carla", "Carla")
     client.tables.get("profiles")!.find((r) => r.id === "user-carla")!.avatar_url = "data:image/png;base64,c"
-    const { hasEventListener } = await import("@real-life-stack/data-interface")
+    const { hasEventListener } = await import("@real-life/data-interface")
     expect(hasEventListener(connector)).toBe(true)
     const events: unknown[] = []
     const unsubscribe = (connector as unknown as { onIncomingEvent(cb: (e: unknown) => void): () => void }).onIncomingEvent((event) => events.push(event))

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import type { Group } from "@real-life-stack/data-interface"
-import { hasGroups } from "@real-life-stack/data-interface"
+import type { Group } from "@real-life/data-interface"
+import { hasGroups } from "@real-life/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useColorScheme } from "../../hooks/use-color-scheme"

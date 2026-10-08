@@ -16,7 +16,7 @@ vi.stubGlobal("matchMedia", (query: string) => ({
   onchange: null,
   dispatchEvent: () => false,
 }))
-import type { DataInterface, Item, User } from "@real-life-stack/data-interface"
+import type { DataInterface, Item, User } from "@real-life/data-interface"
 import { ProfilePanelHost } from "./App"
 
 const ME: User = { id: "user-me", displayName: "Anton" }

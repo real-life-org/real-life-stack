@@ -1,6 +1,6 @@
 import { Store } from "lucide-react"
-import { itemTypes, registerModuleHint } from "@real-life-stack/data-interface"
-import { TOOLKIT_DEFINITION, composeModules, setModuleRegistry, type ModuleExtension } from "@real-life-stack/toolkit"
+import { itemTypes, registerModuleHint } from "@real-life/data-interface"
+import { TOOLKIT_DEFINITION, composeModules, setModuleRegistry, type ModuleExtension } from "@real-life/toolkit"
 
 import { MarketplaceModule } from "./modules/marketplace-module"
 

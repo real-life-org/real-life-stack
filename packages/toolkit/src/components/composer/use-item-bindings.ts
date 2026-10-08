@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useMemo, useState } from "react"
-import { hasGroupScope, type Item } from "@real-life-stack/data-interface"
+import { hasGroupScope, type Item } from "@real-life/data-interface"
 
 import { useOptionalConnector } from "../../hooks/connector-context"
 import { itemHasBindings } from "../../lib/item-bindings"

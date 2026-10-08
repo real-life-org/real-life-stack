@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { ArrowUpDown, MessageSquareQuote } from "lucide-react"
-import { VOTE_PREDICATE } from "@real-life-stack/data-interface"
+import { VOTE_PREDICATE } from "@real-life/data-interface"
 
 import { useItemFocus } from "../hooks/use-item-focus"
 import { useModuleFilter } from "../hooks/use-module-filter"

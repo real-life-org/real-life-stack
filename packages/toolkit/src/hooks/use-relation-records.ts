@@ -3,8 +3,8 @@ import type {
   Observable,
   RelationRecord,
   RelationRecordFilter,
-} from "@real-life-stack/data-interface"
-import { hasRelationRecords } from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
+import { hasRelationRecords } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 const EMPTY_RECORDS: RelationRecord[] = []

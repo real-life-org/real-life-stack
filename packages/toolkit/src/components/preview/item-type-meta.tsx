@@ -1,7 +1,7 @@
 "use client"
 
 import { createElement, type ReactNode } from "react"
-import { isProfileItem, isProject, isResource, type Item } from "@real-life-stack/data-interface"
+import { isProfileItem, isProject, isResource, type Item } from "@real-life/data-interface"
 import { BadgeCheck, Globe, Wrench } from "lucide-react"
 
 import { cn } from "../../lib/utils"

@@ -2,7 +2,7 @@
 import { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { AuthMethod, User } from "@real-life-stack/data-interface"
+import type { AuthMethod, User } from "@real-life/data-interface"
 import { AuthScreen } from "../src/components/auth/auth-screen"
 
 function makeConnector(methods: AuthMethod[], authenticate = vi.fn(async (): Promise<User> => ({ id: "u1" }))) {

@@ -27,7 +27,7 @@ import type {
   RelationRecordUpdate,
   RelationRecordWriterCapable,
   Source,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import {
   applyGroupDataPatch,
   withEditStamp,
@@ -49,8 +49,8 @@ import {
   findRelatedItems,
   canonicalItem,
   matchesFilter,
-} from "@real-life-stack/data-interface"
-import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
+} from "@real-life/data-interface"
+import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life/data-interface/demo-data"
 
 export interface MockConnectorSeed {
   items: Item[]

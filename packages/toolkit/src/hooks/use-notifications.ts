@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useReducer, useRef } from "react"
-import { EMPTY_NOTIFICATION_STATE, hasNotificationState, hasScopedActivityLog, type NotificationStatePatch } from "@real-life-stack/data-interface"
+import { EMPTY_NOTIFICATION_STATE, hasNotificationState, hasScopedActivityLog, type NotificationStatePatch } from "@real-life/data-interface"
 import { projectNotifications, unreadHighPriorityKeys } from "../components/activity/notification-center"
 import { useConnector } from "./connector-context"
 import { useGroups } from "./use-groups"

@@ -1,6 +1,6 @@
 # Supabase self-hosted
 
-Schlanker Supabase-Stack für den `@real-life-stack/supabase-connector`
+Schlanker Supabase-Stack für den `@real-life/supabase-connector`
 (db + GoTrue + PostgREST + Realtime + Kong; kein Studio, kein Analytics, kein
 Storage). Reduziert aus dem offiziellen
 [supabase/docker](https://github.com/supabase/supabase/tree/master/docker)-Setup
@@ -99,7 +99,7 @@ der `.env` der Testinstanz in die Shell holen, dann:
 SUPABASE_URL=https://supabase-test.example.org \
 SUPABASE_ANON_KEY="$ANON_KEY" \
 SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
-pnpm --filter @real-life-stack/supabase-connector test
+pnpm --filter @real-life/supabase-connector test
 ```
 
 ## Vertrag: Space-Zugehörigkeit und Gruppen-Löschung (seit 0007)

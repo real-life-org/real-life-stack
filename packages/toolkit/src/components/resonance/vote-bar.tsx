@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback } from "react"
-import type { VoteValue } from "@real-life-stack/data-interface"
+import type { VoteValue } from "@real-life/data-interface"
 import { cn } from "@/lib/utils"
 import { useVotes, useVoteUsers } from "@/hooks/use-votes"
 

@@ -1,5 +1,5 @@
-import type { Item } from "@real-life-stack/data-interface"
-import { normalizeItemType } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
+import { normalizeItemType } from "@real-life/data-interface"
 import type { ContentTypeConfig, GroupOption, WidgetData } from "./content-composer"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import {

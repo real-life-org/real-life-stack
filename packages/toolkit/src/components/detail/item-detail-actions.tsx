@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { MoreVertical, Pencil, Share2, Trash2 } from "lucide-react"
-import type { Item } from "@real-life-stack/data-interface"
-import { isWritable } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
+import { isWritable } from "@real-life/data-interface"
 import { Button } from "../primitives/button"
 import {
   DropdownMenu,

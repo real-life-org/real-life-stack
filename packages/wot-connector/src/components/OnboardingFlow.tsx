@@ -14,7 +14,7 @@ import {
   Input,
   Label,
   Separator,
-} from "@real-life-stack/toolkit"
+} from "@real-life/toolkit"
 import { Key, Shield, Sparkles, Check, AlertTriangle, User as UserIcon, Fingerprint } from "lucide-react"
 import type { WotConnector } from "../wot-connector.js"
 import { BiometricService } from "../biometric-service.js"

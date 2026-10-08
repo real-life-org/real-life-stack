@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { KanbanBoard } from "../src/components/kanban/kanban-board"
 

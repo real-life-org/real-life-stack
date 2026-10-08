@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Avatar, AvatarFallback, AvatarImage } from '@real-life-stack/toolkit';
+import { Avatar, AvatarFallback, AvatarImage } from '@real-life/toolkit';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Pin, Volume2, VolumeX } from 'lucide-react';

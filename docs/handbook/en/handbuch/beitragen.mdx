@@ -2,7 +2,7 @@
 title: Working on the stack together
 description: How a contribution becomes a pull request, who reviews, what gets merged, how a release comes out of it.
 translationOf: docs/handbook/de/handbuch/beitragen.mdx
-sourceHash: e9e99beab99e716d3afb8b5c43f44e40b13a2d2497a433a63b1fc89d8a3c2005
+sourceHash: df6da22175f0d688d8f927e9b7b05eb76cb66949c3514b289d56abb46e4922ec
 group: anleitungen
 sidebar:
   order: 11
@@ -54,7 +54,7 @@ A merge to `master` reaches users on two different ways, and only one of them ne
 
 **Continuously, with every matching merge.** On changes to apps, packages, handbook or site, `deploy-prototypes.yml` builds the web app, the site and Storybook and publishes them under real-life-stack.de; plus the OTA bundles with which installed apps (F-Droid, Obtainium, iOS) reload their web content. On changes to the reference app, packages or `deploy/app/`, `publish-app-image.yml` publishes the container image of the edge instance. None of this needs a release PR: what is on `master` can reach users the same day.
 
-**Versioned, via the release PR.** release-please keeps a release PR open from the Conventional Commits. Merging it creates the tags, and from them the npm packages (`@real-life-stack/*`, for apps outside the repository) and the native artefacts of the reference app (APK for F-Droid, AAB for Play). Play gets no OTA updates; a change reaches Play only on this way. That is why a fix in a package cascades to the app version, so it arrives there too. The whole mechanism, with its fragile spots, is in `docs/RELEASING.md`.
+**Versioned, via the release PR.** release-please keeps a release PR open from the Conventional Commits. Merging it creates the tags, and from them the npm packages (`@real-life/*`, for apps outside the repository) and the native artefacts of the reference app (APK for F-Droid, AAB for Play). Play gets no OTA updates; a change reaches Play only on this way. That is why a fix in a package cascades to the app version, so it arrives there too. The whole mechanism, with its fragile spots, is in `docs/RELEASING.md`.
 
 ## Responsibilities and expectations
 

@@ -24,7 +24,7 @@ import {
   isFrozen,
   itemContent,
   jcsCanonicalize,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import { rowToItem } from "../src/row-mapping.js"
 
 /**

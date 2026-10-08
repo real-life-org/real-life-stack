@@ -1,7 +1,7 @@
 import { Fragment, useState, useCallback, useEffect, useRef, type ReactNode } from "react"
 import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, RotateCcw, SlidersHorizontal, Check as CheckIcon, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
-import type { Group, ContactInfo } from "@real-life-stack/data-interface"
+import type { Group, ContactInfo } from "@real-life/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
 import { cn, getReadableTextColor, getSpacePrimaryColor, resolveAssetUrl, SPACE_COLOR_SWATCHES } from "../../lib/utils"

@@ -22,15 +22,15 @@ import type {
   Source,
   Unsubscribe,
   User,
-} from "@real-life-stack/data-interface"
-import type { PublicProfileData } from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
+import type { PublicProfileData } from "@real-life/data-interface"
 import {
   createDefaultRelationStore,
   createObservable,
   createRelationRecordWith,
   deriveContext,
   withoutAuthoredClaim,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import type {
   AuthSessionLike,
   ChannelLike,

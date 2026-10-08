@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, MapPin, User } from 'lucide-react';
-import { Button } from '@real-life-stack/toolkit';
+import { Button } from '@real-life/toolkit';
 
 const CalendarFilters = ({ isOpen, onClose, filters, onFiltersChange }) => {
   const handleEventTypeToggle = (type) => {

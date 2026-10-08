@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell, CheckCheck } from 'lucide-react';
-import { Button } from '@real-life-stack/toolkit';
+import { Button } from '@real-life/toolkit';
 import NotificationItem from './NotificationItem';
 
 const NotificationPanel = ({

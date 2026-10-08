@@ -1,4 +1,4 @@
-import type { ContactInfo } from "@real-life-stack/data-interface"
+import type { ContactInfo } from "@real-life/data-interface"
 import { Users } from "lucide-react"
 
 import { ContactCard } from "./contact-card"

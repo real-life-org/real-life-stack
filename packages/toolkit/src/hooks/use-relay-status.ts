@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import type { RelayState } from "@real-life-stack/data-interface"
-import { hasMessaging } from "@real-life-stack/data-interface"
+import type { RelayState } from "@real-life/data-interface"
+import { hasMessaging } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 function useMessagingConnector() {

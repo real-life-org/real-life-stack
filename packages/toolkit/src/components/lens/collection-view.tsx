@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Grid2X2, List } from "lucide-react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { cn } from "../../lib/utils"

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react"
-import { hasItemGroups, type Group, type Item } from "@real-life-stack/data-interface"
+import { hasItemGroups, type Group, type Item } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 import { useGroups, usePersonalGroupId } from "./use-groups"
 import { getSpacePrimaryColor } from "../lib/utils"

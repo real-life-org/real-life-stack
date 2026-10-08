@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
-import { Button, Dialog, DialogContent, DialogTitle, DialogDescription } from '@real-life-stack/toolkit';
+import { Button, Dialog, DialogContent, DialogTitle, DialogDescription } from '@real-life/toolkit';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 const Lightbox = ({ isOpen, onClose, images = [] as Array<{src: string; alt?: string; description?: string}>, initialIndex = 0 }) => {

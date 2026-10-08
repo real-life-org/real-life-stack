@@ -2,7 +2,7 @@
 
 import { memo, useMemo, useCallback } from "react"
 import { FileText, SearchX } from "lucide-react"
-import { isWritable, type Item, type User } from "@real-life-stack/data-interface"
+import { isWritable, type Item, type User } from "@real-life/data-interface"
 
 import { useConnector } from "../hooks/connector-context"
 import { useItemPresentation } from "../hooks/use-item-presentation"

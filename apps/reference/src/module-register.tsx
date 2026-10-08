@@ -6,7 +6,7 @@
 // eigene Module einfuehrt (`definitions`) oder eine Toolkit-Flaeche
 // ausdruecklich ersetzt (`extensions` mit `replaces: ["view"]`).
 
-import { TOOLKIT_DEFINITION, composeModules, setModuleRegistry } from "@real-life-stack/toolkit"
+import { TOOLKIT_DEFINITION, composeModules, setModuleRegistry } from "@real-life/toolkit"
 
 // Einmal komponiert, einmal gebunden, danach unveraenderlich (Spec 01, Regel 3).
 export const MODULE_REGISTRY = composeModules([

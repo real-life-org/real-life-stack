@@ -2,8 +2,8 @@
 
 import { useRef, useState } from "react"
 import { Download, MoreHorizontal, Upload } from "lucide-react"
-import type { Item, RelationRecord } from "@real-life-stack/data-interface"
-import { deriveContext, hasGroupScope, hasItemGroups, isWritable } from "@real-life-stack/data-interface"
+import type { Item, RelationRecord } from "@real-life/data-interface"
+import { deriveContext, hasGroupScope, hasItemGroups, isWritable } from "@real-life/data-interface"
 import { createInSpace, createOptionsForSpace } from "../../lib/create-in-space"
 import { useConnector } from "@/hooks/connector-context"
 import { buildExport, importItemData, planImport, type ImportPlan } from "@/lib/resonance-transfer"

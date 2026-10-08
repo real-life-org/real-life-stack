@@ -1,4 +1,4 @@
-import type { Item, Relation } from "@real-life-stack/data-interface"
+import type { Item, Relation } from "@real-life/data-interface"
 
 /**
  * Item-Kanten im Composer (C3, Schreibform): Chips und eine `@`-Suche über

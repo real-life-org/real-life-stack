@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, startTransition } from "react"
-import type { DataInterface, Group, GroupManager, User } from "@real-life-stack/data-interface"
-import { hasGroups, hasItemGroups } from "@real-life-stack/data-interface"
+import type { DataInterface, Group, GroupManager, User } from "@real-life/data-interface"
+import { hasGroups, hasItemGroups } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 import { useInitialSync } from "./use-initial-sync"
 

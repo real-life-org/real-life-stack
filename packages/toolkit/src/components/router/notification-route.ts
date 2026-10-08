@@ -1,4 +1,4 @@
-import type { Group } from "@real-life-stack/data-interface"
+import type { Group } from "@real-life/data-interface"
 
 import { notificationTarget } from "../../lib/notification-target"
 import type { NotificationCandidate } from "../activity/notification-center"

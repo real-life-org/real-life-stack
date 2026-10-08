@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@real-life-stack/toolkit';
+} from '@real-life/toolkit';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import { CURRENT_USER_ID } from '@/data/mockMessages';

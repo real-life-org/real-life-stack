@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
-import { AUTHORIAL_ITEM_TYPES, hasItemClaimVerification } from "@real-life-stack/data-interface"
+import { AUTHORIAL_ITEM_TYPES, hasItemClaimVerification } from "@real-life/data-interface"
 import { SupabaseConnector } from "../src/supabase-connector.js"
 import { FakeSupabaseClient } from "./fake-client.js"
 

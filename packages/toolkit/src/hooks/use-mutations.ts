@@ -1,6 +1,6 @@
 import { useCallback } from "react"
-import type { CreateItemInput, CreateItemOptions, DataInterface, Item } from "@real-life-stack/data-interface"
-import { hasGroupScope, isWritable } from "@real-life-stack/data-interface"
+import type { CreateItemInput, CreateItemOptions, DataInterface, Item } from "@real-life/data-interface"
+import { hasGroupScope, isWritable } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 /**

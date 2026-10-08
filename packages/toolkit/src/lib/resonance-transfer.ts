@@ -1,5 +1,5 @@
-import type { Item, RelationRecord } from "@real-life-stack/data-interface"
-import { itemContentHash, votesFromRelationRecords } from "@real-life-stack/data-interface"
+import type { Item, RelationRecord } from "@real-life/data-interface"
+import { itemContentHash, votesFromRelationRecords } from "@real-life/data-interface"
 import { variantOfId } from "./resonance-variants"
 import type { ResonancePopulation } from "./resonance-sort"
 

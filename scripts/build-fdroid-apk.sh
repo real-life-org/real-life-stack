@@ -84,10 +84,10 @@ sed -i 's|"@real-life/adapter-yjs": "^0.1.0"|"@real-life/adapter-yjs": "link:../
 pnpm install --no-frozen-lockfile
 
 echo "==> Building workspace packages..."
-pnpm --filter @real-life-stack/data-interface build
-pnpm --filter @real-life-stack/toolkit build
-pnpm --filter @real-life-stack/mock-connector --filter @real-life-stack/local-connector build
-pnpm --filter @real-life-stack/wot-connector build
+pnpm --filter @real-life/data-interface build
+pnpm --filter @real-life/toolkit build
+pnpm --filter @real-life/mock-connector --filter @real-life/local-connector build
+pnpm --filter @real-life/wot-connector build
 
 # OTA channel: defaults to the platform name (= "android") via
 # live-update.ts's fallback, which is right for testing and direct

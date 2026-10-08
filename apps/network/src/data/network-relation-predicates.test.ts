@@ -1,4 +1,4 @@
-import { deriveRelationRecordId } from "@real-life-stack/data-interface"
+import { deriveRelationRecordId } from "@real-life/data-interface"
 import { describe, expect, it } from "vitest"
 
 import { DWEB_CAMP_SEED_CREATOR } from "./network-seed"

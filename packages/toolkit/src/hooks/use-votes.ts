@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react"
-import type { ClaimVerdict, DataInterface, Item, RelationRecord, VoteRecord, VoteValue } from "@real-life-stack/data-interface"
+import type { ClaimVerdict, DataInterface, Item, RelationRecord, VoteRecord, VoteValue } from "@real-life/data-interface"
 import {
   VOTE_PREDICATE,
   partitionVotesByContent,
@@ -11,7 +11,7 @@ import {
   relationAuthorialPayload,
   voteRecordInput,
   votesFromRelationRecords,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 import { useCountingContentHashes } from "./use-item-standing"
 import { useResonancePopulation } from "./use-resonance-population"

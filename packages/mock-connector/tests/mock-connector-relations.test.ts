@@ -3,7 +3,7 @@ import {
   hasRelationRecords,
   hasRelationRecordWriter,
   type Item,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import { MockConnector, type MockConnectorSeed } from "../src/index"
 
 const items: Item[] = [
@@ -184,7 +184,7 @@ describe("MockConnector RelationRecord capabilities", () => {
 
 describe("MockConnector — authoritative claim mode (spec 08)", () => {
   it("binds createdBy to the session on the regular ingress and answers trusted", async () => {
-    const { hasClaimVerification } = await import("@real-life-stack/data-interface")
+    const { hasClaimVerification } = await import("@real-life/data-interface")
     const connector = new MockConnector({
       items: [],
       groups: [{ id: "g1", name: "G", data: {} }],
@@ -233,7 +233,7 @@ describe("MockConnector — authoritative claim mode (spec 08)", () => {
   })
 
   it("fixture mode keeps foreign authors and drops the capability", async () => {
-    const { hasClaimVerification } = await import("@real-life-stack/data-interface")
+    const { hasClaimVerification } = await import("@real-life/data-interface")
     const connector = new MockConnector({
       items: [],
       groups: [{ id: "g1", name: "G", data: {} }],

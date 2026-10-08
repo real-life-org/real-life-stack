@@ -1,5 +1,5 @@
 import * as React from "react"
-import type { Authenticatable } from "@real-life-stack/data-interface"
+import type { Authenticatable } from "@real-life/data-interface"
 import { Button } from "../primitives/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../primitives/card"
 import { Input } from "../primitives/input"

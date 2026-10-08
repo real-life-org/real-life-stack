@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import type { Item, User } from "@real-life-stack/data-interface"
+import type { Item, User } from "@real-life/data-interface"
 
 /**
  * Who wrote this item?

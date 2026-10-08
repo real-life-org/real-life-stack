@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react"
 
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { FilterPill } from "../filter/filter-pill"
 import { useOptionalSharedFilter } from "../filter/filter-store"

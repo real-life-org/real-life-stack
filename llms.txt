@@ -4,11 +4,11 @@
 
 Architecture in one line: `app frame / modules -> hooks -> DataInterface -> connector -> data source`. Surfaces never talk to a backend; they ask hooks, hooks read the `DataInterface`, and the connector decides whether data lives in memory, in Supabase or in an end-to-end encrypted Web of Trust network. Swapping the connector swaps the backend without touching the UI.
 
-The spec is written in German. The type definitions in `@real-life-stack/data-interface` are the precise, English source of truth for all data shapes. This file is generated (`pnpm docs:agents`) from the packages, the spec index and the hooks' documentation comments; CI fails when it is stale.
+The spec is written in German. The type definitions in `@real-life/data-interface` are the precise, English source of truth for all data shapes. This file is generated (`pnpm docs:agents`) from the packages, the spec index and the hooks' documentation comments; CI fails when it is stale.
 
 ## Building an app on Real Life Stack
 
-Requires `@real-life-stack/toolkit` 0.2.0 or newer: the frame (`RoutedAppFrame`, subpath `/router`) and the seven modules arrived with that release.
+Requires `@real-life/toolkit` 0.2.0 or newer: the frame (`RoutedAppFrame`, subpath `/router`) and the seven modules arrived with that release.
 
 - [First app (handbook, German)](https://real-life-stack.de/handbuch/erste-app/): ~40 lines — connector, router, `RoutedAppFrame`. Every line explained.
 - [examples/first-app](https://github.com/real-life-org/real-life-stack/tree/master/examples/first-app): the same app as running code, built and tested in CI.
@@ -18,12 +18,12 @@ Requires `@real-life-stack/toolkit` 0.2.0 or newer: the frame (`RoutedAppFrame`,
 
 ## Packages (npm)
 
-- [@real-life-stack/data-interface](https://www.npmjs.com/package/@real-life-stack/data-interface): The core contract: Item, Relation, Group (Space), User, ItemFilter, Observable, capability interfaces and module hints. Zero dependencies.
-- [@real-life-stack/toolkit](https://www.npmjs.com/package/@real-life-stack/toolkit): React UI toolkit: the app frame (AppFrame, RoutedAppFrame), the module host, seven modules (feed, list, kanban, calendar, map, graph, resonance), item preview and detail, composer, hooks. Styles from ./styles/globals.css; map engine from ./maplibre or ./leaflet; router glue from ./router.
-- [@real-life-stack/local-connector](https://www.npmjs.com/package/@real-life-stack/local-connector): Local persistence connector: offline-first, single device.
-- [@real-life-stack/mock-connector](https://www.npmjs.com/package/@real-life-stack/mock-connector): In-memory connector with seed data. The starting point for prototypes, stories and tests.
-- [@real-life-stack/supabase-connector](https://www.npmjs.com/package/@real-life-stack/supabase-connector): Connector for a central Supabase backend (auth, rows, realtime).
-- [@real-life-stack/wot-connector](https://www.npmjs.com/package/@real-life-stack/wot-connector): Decentralized connector on the Web of Trust stack: DID identity, end-to-end encrypted groups and sync.
+- [@real-life/data-interface](https://www.npmjs.com/package/@real-life/data-interface): The core contract: Item, Relation, Group (Space), User, ItemFilter, Observable, capability interfaces and module hints. Zero dependencies.
+- [@real-life/toolkit](https://www.npmjs.com/package/@real-life/toolkit): React UI toolkit: the app frame (AppFrame, RoutedAppFrame), the module host, seven modules (feed, list, kanban, calendar, map, graph, resonance), item preview and detail, composer, hooks. Styles from ./styles/globals.css; map engine from ./maplibre or ./leaflet; router glue from ./router.
+- [@real-life/local-connector](https://www.npmjs.com/package/@real-life/local-connector): Local persistence connector: offline-first, single device.
+- [@real-life/mock-connector](https://www.npmjs.com/package/@real-life/mock-connector): In-memory connector with seed data. The starting point for prototypes, stories and tests.
+- [@real-life/supabase-connector](https://www.npmjs.com/package/@real-life/supabase-connector): Connector for a central Supabase backend (auth, rows, realtime).
+- [@real-life/wot-connector](https://www.npmjs.com/package/@real-life/wot-connector): Decentralized connector on the Web of Trust stack: DID identity, end-to-end encrypted groups and sync.
 
 ## Specification (normative, German)
 

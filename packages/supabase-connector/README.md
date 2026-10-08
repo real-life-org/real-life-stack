@@ -1,4 +1,4 @@
-# @real-life-stack/supabase-connector
+# @real-life/supabase-connector
 
 Nativer Supabase-Connector: PostgREST für Queries/Writes, Supabase Realtime
 (`postgres_changes`) für live `observe()` — dieselbe Reaktivität wie beim
@@ -52,7 +52,7 @@ Anmeldung, steht im Handbuch unter „Ein Supabase-Backend betreiben“ und
 SUPABASE_URL=http://127.0.0.1:54321 \
 SUPABASE_ANON_KEY=<anon key> \
 SUPABASE_SERVICE_ROLE_KEY=<service_role key> \
-pnpm --filter @real-life-stack/supabase-connector test
+pnpm --filter @real-life/supabase-connector test
 ```
 
 ## Vertragsgrenzen (dokumentierte Abweichungen)

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CalendarView } from "../src/components/calendar/calendar-view"

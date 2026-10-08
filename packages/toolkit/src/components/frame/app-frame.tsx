@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Plus } from "lucide-react"
-import type { Group, Item } from "@real-life-stack/data-interface"
-import { hasGroups, hasEncounterVerification, isAuthenticatable, moduleHintsFor } from "@real-life-stack/data-interface"
+import type { Group, Item } from "@real-life/data-interface"
+import { hasGroups, hasEncounterVerification, isAuthenticatable, moduleHintsFor } from "@real-life/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useActivity } from "../../hooks/use-activity"
@@ -52,7 +52,7 @@ export type FrameOverlayId = "contacts" | "verify"
 
 /**
  * Was der Rahmen vom Routing braucht — nicht mehr. Mit Router liefert es
- * `useWorkspaceRouting` (`@real-life-stack/toolkit/router`, `RoutedAppFrame`);
+ * `useWorkspaceRouting` (`@real-life/toolkit/router`, `RoutedAppFrame`);
  * ohne Router haelt eine Story oder ein Test es im Speicher (`HostWorld`).
  */
 export interface FrameRouting {

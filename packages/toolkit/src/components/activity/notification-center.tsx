@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import type { Group, NotificationState, ScopedActivityEntry } from "@real-life-stack/data-interface"
+import type { Group, NotificationState, ScopedActivityEntry } from "@real-life/data-interface"
 import { Bell, BellOff, MessageCircle, MoreHorizontal, Pencil, Plus, Smile, Trash2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, EmptyState, RelativeTime, Tabs, TabsContent, TabsList, TabsTrigger } from "../primitives"
 import { cn } from "../../lib/utils"

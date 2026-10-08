@@ -1,4 +1,4 @@
-import { CollectionView, useItemFocus, useModuleHost, type ModuleViewProps } from "@real-life-stack/toolkit"
+import { CollectionView, useItemFocus, useModuleHost, type ModuleViewProps } from "@real-life/toolkit"
 
 /**
  * Der Marktplatz: die Ressourcen des Space als Liste. Ein App-eigenes Modul

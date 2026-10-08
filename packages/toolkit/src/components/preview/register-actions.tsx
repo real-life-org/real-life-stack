@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { Check } from "lucide-react"
 
 import { cn } from "../../lib/utils"

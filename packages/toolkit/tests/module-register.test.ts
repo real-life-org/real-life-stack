@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
-import { registerModuleHint, resetModuleHints, type Item } from "@real-life-stack/data-interface"
+import { registerModuleHint, resetModuleHints, type Item } from "@real-life/data-interface"
 import {
   TOOLKIT_MODULES,
   TOOLKIT_DEFINITION,

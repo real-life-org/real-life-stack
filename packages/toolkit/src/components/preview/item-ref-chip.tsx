@@ -1,6 +1,6 @@
 "use client"
 
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { X } from "lucide-react"
 
 import { useOptionalItemFocus } from "../../hooks/use-item-focus"

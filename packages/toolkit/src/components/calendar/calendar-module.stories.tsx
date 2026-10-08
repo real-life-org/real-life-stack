@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { HostWorld } from "../../story-support/host-world"
 import { STORY_SEED } from "../../story-support/story-world"
 

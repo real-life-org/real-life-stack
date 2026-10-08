@@ -1,5 +1,5 @@
 {
-  "name": "@real-life-stack/site",
+  "name": "@real-life/site",
   "private": true,
   "type": "module",
   "scripts": {

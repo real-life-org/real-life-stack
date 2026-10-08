@@ -1,7 +1,7 @@
 "use client"
 
 import { memo, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
-import type { Item, User } from "@real-life-stack/data-interface"
+import type { Item, User } from "@real-life/data-interface"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { RelativeTime } from "../primitives/relative-time"
 import { ProfileLink } from "../profile/profile-link"

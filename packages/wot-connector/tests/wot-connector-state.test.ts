@@ -16,7 +16,7 @@ import {
   type Item,
   type RelayState,
   type User,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import type { SpaceInfo } from "@real-life/wot-core"
 import { derivePrivateSpaceGenesis } from "@real-life/wot-core/protocol"
 

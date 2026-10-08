@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { resolveAdminView } from "../src/lib/group-admin-view"
-import type { User } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
 
 const u = (id: string, isAdmin?: boolean): User =>
   isAdmin === undefined ? { id } : { id, isAdmin }

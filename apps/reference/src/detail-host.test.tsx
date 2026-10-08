@@ -2,8 +2,8 @@
 import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
 import { beforeEach, describe, expect, it } from "vitest"
-import { MockConnector } from "@real-life-stack/mock-connector"
-import { ConnectorProvider, ItemDetailRead, feedFooter, selectFeedItems } from "@real-life-stack/toolkit"
+import { MockConnector } from "@real-life/mock-connector"
+import { ConnectorProvider, ItemDetailRead, feedFooter, selectFeedItems } from "@real-life/toolkit"
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 

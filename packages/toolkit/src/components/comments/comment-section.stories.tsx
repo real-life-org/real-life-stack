@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import type { CommentWithAuthor } from "@/hooks/use-comments"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { CommentInput } from "./comment-input"
 import { CommentBubble } from "./comment-bubble"
 import { CommentThread } from "./comment-thread"

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, startTransition } from "react"
-import type { ClaimVerdict, DataInterface, Item, ItemStanding } from "@real-life-stack/data-interface"
+import type { ClaimVerdict, DataInterface, Item, ItemStanding } from "@real-life/data-interface"
 import {
   hasItemClaimVerification,
   isAuthorialItemType,
@@ -7,7 +7,7 @@ import {
   itemContentHash,
   itemStanding,
   jcsCanonicalize,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import { useOptionalConnector } from "./connector-context"
 
 /** Verdict key binds everything the item claim signs — a verdict must never

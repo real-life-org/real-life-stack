@@ -30,7 +30,7 @@ import { ProbeWorld } from "../../story-support/probe-world"
  * This story contains **no line** of module wiring — no `useItems`, no
  * `useRegisterDetail`, no plus button. The map shows the note "no map engine
  * provided" on purpose: the engine is the one line an app writes for the map
- * (`MapLibreAdapterProvider` from `@real-life-stack/toolkit/maplibre`), and it
+ * (`MapLibreAdapterProvider` from `@real-life/toolkit/maplibre`), and it
  * is missing here so that you have seen the note once.
  *
  * Click the event: the host opens the detail in the panel, with edit. Click an

@@ -2,27 +2,27 @@
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "packages": {
     "packages/data-interface": {
-      "package-name": "@real-life-stack/data-interface",
+      "package-name": "@real-life/data-interface",
       "changelog-path": "CHANGELOG.md"
     },
     "packages/toolkit": {
-      "package-name": "@real-life-stack/toolkit",
+      "package-name": "@real-life/toolkit",
       "changelog-path": "CHANGELOG.md"
     },
     "packages/mock-connector": {
-      "package-name": "@real-life-stack/mock-connector",
+      "package-name": "@real-life/mock-connector",
       "changelog-path": "CHANGELOG.md"
     },
     "packages/local-connector": {
-      "package-name": "@real-life-stack/local-connector",
+      "package-name": "@real-life/local-connector",
       "changelog-path": "CHANGELOG.md"
     },
     "packages/wot-connector": {
-      "package-name": "@real-life-stack/wot-connector",
+      "package-name": "@real-life/wot-connector",
       "changelog-path": "CHANGELOG.md"
     },
     "packages/supabase-connector": {
-      "package-name": "@real-life-stack/supabase-connector",
+      "package-name": "@real-life/supabase-connector",
       "changelog-path": "CHANGELOG.md"
     },
     "apps/reference": {

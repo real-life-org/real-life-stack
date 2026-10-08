@@ -3,7 +3,7 @@ import {
   deriveContext,
   deriveRelationRecordId,
   type Item,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import rawGraph from "./graph.json" with { type: "json" }
 import campSchedule from "./camp-schedule.json" with { type: "json" }

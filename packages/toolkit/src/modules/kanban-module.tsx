@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, type DragEvent } from "react"
 import { ChevronDown, ChevronRight, Layers, LayoutList, Settings } from "lucide-react"
-import { hasItemGroups, type Item } from "@real-life-stack/data-interface"
+import { hasItemGroups, type Item } from "@real-life/data-interface"
 
 import { useConnector } from "../hooks/connector-context"
 import { useItemFocus } from "../hooks/use-item-focus"

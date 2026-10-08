@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type ReactNode } from "react"
-import type { Group } from "@real-life-stack/data-interface"
+import type { Group } from "@real-life/data-interface"
 
 import { getModule, getModules } from "../../lib/module-register"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"

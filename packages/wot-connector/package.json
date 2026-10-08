@@ -1,5 +1,5 @@
 {
-  "name": "@real-life-stack/wot-connector",
+  "name": "@real-life/wot-connector",
   "version": "0.2.3",
   "description": "Decentralized connector on the Web of Trust stack: DID identity, end-to-end encrypted groups and sync.",
   "repository": {
@@ -34,8 +34,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@real-life-stack/data-interface": "workspace:*",
-    "@real-life-stack/toolkit": "workspace:*",
+    "@real-life/data-interface": "workspace:*",
+    "@real-life/toolkit": "workspace:*",
     "@real-life/adapter-yjs": "npm:@web_of_trust/adapter-yjs@^0.2.10",
     "@real-life/wot-core": "npm:@web_of_trust/core@^0.5.10"
   },

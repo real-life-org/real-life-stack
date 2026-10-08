@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { isAuthenticatable, type DataInterface, type User } from "@real-life-stack/data-interface"
+import { isAuthenticatable, type DataInterface, type User } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 interface Aufloesung {

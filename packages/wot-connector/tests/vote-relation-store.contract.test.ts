@@ -6,7 +6,7 @@ import {
   voteRecordInput,
   votesFromRelationRecords,
   VOTE_PREDICATE,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import { WotConnector } from "../src/wot-connector.js"
 import type { RlsSpaceDoc } from "../src/types.js"
 

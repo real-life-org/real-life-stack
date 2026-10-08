@@ -2,7 +2,7 @@
 import { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { createObservable, type Item, type User } from "@real-life-stack/data-interface"
+import { createObservable, type Item, type User } from "@real-life/data-interface"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { FilterProvider, useSharedFilter } from "../src/components/filter/filter-store"

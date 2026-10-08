@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { statementFamily, variantOfId, variantOfValue } from "../src/lib/resonance-variants"
 
 function statement(id: string, variantOf?: string, createdAt = `2026-09-26T10:00:0${id.length % 10}.000Z`): Item {

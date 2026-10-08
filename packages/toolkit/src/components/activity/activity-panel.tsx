@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import type { ActivityEntry, User } from "@real-life-stack/data-interface"
+import type { ActivityEntry, User } from "@real-life/data-interface"
 import { History, MessageCircle, Pencil, Plus, Trash2, UserRound } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage, EmptyState, RelativeTime } from "../primitives"
 import { cn } from "../../lib/utils"

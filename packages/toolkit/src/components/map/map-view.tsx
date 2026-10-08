@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { Loader2, MapPin } from "lucide-react"
 
 import { latLngFromPoint } from "../../lib/geo"

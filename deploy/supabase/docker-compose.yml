@@ -1,4 +1,4 @@
-# Supabase self-hosted (schlank) für den @real-life-stack/supabase-connector
+# Supabase self-hosted (schlank) für den @real-life/supabase-connector
 # Domain: SUPABASE_DOMAIN aus .env (generate-secrets.sh schreibt sie hinein)
 # Deploy: SUPABASE_DOMAIN=… SITE_URL=… ./generate-secrets.sh
 #         → docker compose up -d → ./apply-migrations.sh

@@ -13,7 +13,7 @@ import {
   relationAffordanceKey,
   type ComposedTypeManifest,
   type RelationRole,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import { OPTION_TONES, type OptionTone } from "../../lib/field-values"
 
 /** Ein Widget je Datentyp, nicht je Fachfeld (B1–B15). */

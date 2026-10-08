@@ -3,8 +3,8 @@ import { act, createElement, useEffect, type ReactNode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { List } from "lucide-react"
-import type { Item } from "@real-life-stack/data-interface"
-import { MockConnector } from "@real-life-stack/mock-connector"
+import type { Item } from "@real-life/data-interface"
+import { MockConnector } from "@real-life/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { FilterProvider, useSharedFilter } from "../src/components/filter/filter-store"
@@ -205,7 +205,7 @@ describe("Der Modul-Host", () => {
 
 describe("#538: Anlegen gesperrt, solange die Spaces laden — auch mit groups-Prop vom Rahmen", () => {
   it("die leere, noch ladende Gruppenliste sperrt Speichern mit Grund", async () => {
-    const { createObservable } = await import("@real-life-stack/data-interface")
+    const { createObservable } = await import("@real-life/data-interface")
     const { CreateSheetController } = await import("../src/components/host/create-host")
     const { GROUPS_LOADING } = await import("../src/components/composer/composer-mapping")
     const { ModulePanelProvider } = await import("../src/components/module-panel/module-panel")

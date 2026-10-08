@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button, Label } from '@real-life-stack/toolkit';
+import { Button, Label } from '@real-life/toolkit';
 import { toast } from '@/components/ui/use-toast';
 import { Switch } from "@/components/ui/switch";
 import { 

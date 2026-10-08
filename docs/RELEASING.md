@@ -1,7 +1,7 @@
 # Releasing
 
 Wie aus einem Merge auf `master` veröffentlichte Artefakte werden — für **beide**
-Ausgänge dieses Repos: die **npm-Pakete** (`@real-life-stack/*`, für externe
+Ausgänge dieses Repos: die **npm-Pakete** (`@real-life/*`, für externe
 Konsumenten) und die **App** (Reference App, für Nutzer auf F-Droid / Play /
 Obtainium).
 
@@ -87,12 +87,11 @@ Publisher erst konfigurieren, wenn das Paket **schon existiert** — die Einstel
 hängt an der Paketseite. Ein nie publiziertes Paket lässt sich also nicht per OIDC
 publizieren. Die Reihenfolge ist deshalb zwingend:
 
-1. **Org/Scope**: Die npm-Org muss zum Scope passen. `@real-life-stack/*` verlangt
-   die Org **`real-life-stack`** — nicht `real-life`. (Scopes sind an den
-   Org-Namen gebunden.)
+1. **Org/Scope**: Die npm-Org muss zum Scope passen. `@real-life/*` verlangt
+   die Org **`real-life`**. (Scopes sind an den Org-Namen gebunden.)
 2. **Erst-Publish von Hand**, einmal pro Paket, mit normaler npm-Session:
    ```bash
-   npm login                                    # Mitglied der Org real-life-stack
+   npm login                                    # Mitglied der Org real-life
    scripts/release/bootstrap-npm-publish.sh --dry-run
    scripts/release/bootstrap-npm-publish.sh
    ```
@@ -100,7 +99,7 @@ publizieren. Die Reihenfolge ist deshalb zwingend:
    Abhängigkeitsreihenfolge und publiziert den `pnpm pack`-Tarball — exakt so, wie
    es `publish.yml` später tut.
 3. **Trusted Publisher eintragen**, einmal pro Paket:
-   `npmjs.com/package/@real-life-stack/<name>` → *Settings → Trusted publishing* →
+   `npmjs.com/package/@real-life/<name>` → *Settings → Trusted publishing* →
    Repository `real-life-org/real-life-stack`, Workflow `publish.yml`.
    (Das Skript gibt am Ende die direkten Links aus.)
 

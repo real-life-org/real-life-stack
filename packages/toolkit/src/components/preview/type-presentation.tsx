@@ -48,7 +48,7 @@ import {
   type ComposedTypeManifest,
   type Item,
   normalizeItemType,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import { ItemMetaRow } from "./item-meta-row"
 import {
@@ -68,7 +68,7 @@ import {
   type SelfActionEntry,
   type FieldOption,
 } from "./field-register"
-import type { RelationRole } from "@real-life-stack/data-interface"
+import type { RelationRole } from "@real-life/data-interface"
 import { RegisterMeta, RegisterPeopleStack } from "./register-meta"
 import { RegisterActions, actionEdges } from "./register-actions"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"

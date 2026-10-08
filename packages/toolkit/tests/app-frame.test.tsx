@@ -2,8 +2,8 @@
 import { act, createElement, type ReactNode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { MockConnector } from "@real-life-stack/mock-connector"
-import type { DataInterface } from "@real-life-stack/data-interface"
+import { MockConnector } from "@real-life/mock-connector"
+import type { DataInterface } from "@real-life/data-interface"
 import { Sparkles } from "lucide-react"
 
 import { AppFrame, type FrameRouting } from "../src/components/frame/app-frame"
