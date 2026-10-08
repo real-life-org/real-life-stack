@@ -2,7 +2,7 @@
 title: Runtime configuration
 description: What an instance reads at runtime — endpoints, connector, branding — where the values come from and what happens to wrong ones.
 translationOf: docs/handbook/de/handbuch/runtime-config.mdx
-sourceHash: e2b07d674b5c29f75c426310adc9e71c4fa69e5012197028a36b104da3e81ab3
+sourceHash: da413d2c784d9aeba6beef34c7380444ea8ffa5a4959f4f1190445a2abe7eb9c
 group: anleitungen
 sidebar:
   order: 9
@@ -52,7 +52,7 @@ Values are validated, not passed through. An endpoint must be a URL with a match
 
 ## Colours separately
 
-`colorsUrl` is loaded **separately**: if `theme.json` is broken, only the colours are missing; name, relay and connector still stand. If `colorsUrl` is set and readable, it overrides a `colors` present at the same time. The tokens land as CSS custom properties on the root element, per scheme.
+`colorsUrl` is loaded **separately**: if `theme.json` is broken, only the colours are missing; name, relay and [connector](term:connector) still stand. If `colorsUrl` is set and readable, it overrides a `colors` present at the same time. The tokens land as CSS custom properties on the root element, per scheme.
 
 ## What is not part of it
 

@@ -2,7 +2,7 @@
 title: Run an instance
 description: From the local preview to running under your own domain — a finished image, your configuration and assets, no build.
 translationOf: docs/handbook/de/handbuch/instanz.mdx
-sourceHash: 0ea8ae7d6f35db7b72a1f58826a9363e330e5c927754b915826e219ad3b9a6f8
+sourceHash: 0c13eec6d6366cb1a1a2863edded6db08179ce1c1d4f1afc40a2e6386b20a201
 group: loslegen
 sidebar:
   order: 1
@@ -65,7 +65,7 @@ Then point DNS at the server, `docker compose up -d`, and check HTTPS, landing p
 
 ## 4. Choose the connector
 
-The app instance serves only static files; the data lives where the connector points.
+The app instance serves only static files; the data lives where the [connector](term:connector) points.
 
 | `RLS_DEFAULT_CONNECTOR` | Data | Also needed |
 |---|---|---|
@@ -89,4 +89,4 @@ The landing page may be anything, it is a page of its own. The app layout is not
 - **Container does not start:** `docker compose logs app`. If a required field is missing, Compose says which.
 - **Configuration does not change:** after `.env` changes `docker compose up -d` (recreates the container with the new variables), after changes to `branding/config.json` `docker compose restart app` (runs the start-up again). A `config.json` of your own overrides all environment variables.
 - **Colours have no effect:** read the browser console; an unknown token name is named there.
-- **App runs, but nobody sees the others:** check connector, relay address and membership in the space.
+- **App runs, but nobody sees the others:** check connector, relay address and membership in the [space](term:space).

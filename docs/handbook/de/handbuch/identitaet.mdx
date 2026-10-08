@@ -14,7 +14,7 @@ sources:
   - apps/reference/src/App.tsx
 ---
 
-Module und Toolkit wissen nicht, wie sich jemand anmeldet. Sie fragen den Connector, ob er Anmeldung kann, welche Wege er anbietet und wer gerade angemeldet ist. Ob dahinter ein Schlüsselpaar im Browser steht oder ein Konto auf einem Server, entscheidet allein der Connector.
+Module und Toolkit wissen nicht, wie sich jemand anmeldet. Sie fragen den [Connector](term:connector), ob er Anmeldung kann, welche Wege er anbietet und wer gerade angemeldet ist. Ob dahinter ein Schlüsselpaar im Browser steht oder ein Konto auf einem Server, entscheidet allein der Connector.
 
 ## Der Vertrag
 
@@ -55,4 +55,4 @@ Die Referenz-App entscheidet in ihrem `AuthGate`:
 
 ## Eine App, eine Identität
 
-Eine App hält genau einen Connector. Wer sich anmeldet, ist damit für die ganze App diese eine Identität, und alle Spaces der App liegen in derselben Quelle.
+Eine App hält genau einen Connector. Wer sich anmeldet, ist damit für die ganze App diese eine Identität, und alle [Spaces](term:space) der App liegen in derselben Quelle.

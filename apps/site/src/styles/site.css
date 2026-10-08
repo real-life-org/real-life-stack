@@ -23,6 +23,10 @@
   --sl-color-accent-low: oklch(0.92 0.06 55);
   --sl-color-accent: oklch(0.63 0.16 55);
   --sl-color-accent-high: oklch(0.38 0.10 55);
+  /* Linktext: dasselbe Orange, dunkel genug fuer 4,5:1 auf dem hellen Grund
+     (0.54 → 4,9:1; das Markenorange 0.63 erreicht als Text nur 3,4:1). Flaechen
+     und Knoepfe behalten --sl-color-accent. */
+  --sl-color-text-accent: oklch(0.54 0.15 55);
   --sl-color-bg: oklch(0.975 0.003 70);
   --sl-color-bg-nav: oklch(0.975 0.003 70 / 0.9);
   --sl-color-bg-sidebar: oklch(0.985 0.0025 70);

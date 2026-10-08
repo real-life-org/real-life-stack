@@ -1,6 +1,8 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { sep } from 'node:path'
 import { createHash } from 'node:crypto'
+import { createRequire } from 'node:module'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 /** Gemeinsames der Site-Skripte: Wurzel, Lesen, Seiten des Handbuchs, Prüfregeln. */
 export const root = new URL('../../', import.meta.url)
@@ -77,4 +79,40 @@ export function validatePage(page, { files, stories, routes, sources }) {
   if (page.lang !== 'de' && page.meta.translationOf && page.meta.sourceHash !== hash(sources(page.meta.translationOf)))
     errors.push('Übersetzung prüfen: die Quelle hat sich geändert (sourceHash)')
   return errors
+}
+
+/**
+ * Das Begriffsregister (`docs/reference/rls.skos.jsonld`), gelesen mit dem
+ * Loader aus `@real-life/docs-kit` — derselbe, den die Site beim Build nutzt.
+ * Das Paket ist eine Abhängigkeit der Site, darum von dort aufgelöst.
+ */
+export async function loadRegister() {
+  const load = createRequire(new URL('apps/site/package.json', root)).resolve('@real-life/docs-kit/load')
+  const { loadScheme } = await import(pathToFileURL(load).href)
+  return loadScheme(fileURLToPath(new URL('docs/reference/rls.skos.jsonld', root)))
+}
+
+/** Das Glossar als Markdown: je Begriff `## Label` und Definition, nach Label sortiert. */
+export function glossaryMarkdown(register, lang) {
+  return Object.values(register.concepts)
+    .map((c) => ({ label: c.label[lang] ?? c.label.en, definition: c.definition[lang] ?? c.definition.en }))
+    .sort((a, b) => a.label.localeCompare(b.label, lang))
+    .map((c) => `## ${c.label}\n\n${c.definition}\n`)
+    .join('\n')
+}
+
+/**
+ * Eine Handbuchseite als reines Markdown für Agenten: Importe fallen weg,
+ * Komponenten werden zu Text — eingebetteter Beispielcode, Story-Links,
+ * Linkkarten, das Glossar —, ein markierter Begriff `[Text](term:x)` zu `Text`.
+ */
+export function toMarkdown(page, register) {
+  return page.body
+    .replace(/^import .+;?\n/gm, '')
+    .replace(/\[([^\]]*)\]\(term:([^)\s]+)\)/g, (_, text, term) => text || (register.concepts[term]?.label[page.lang] ?? term))
+    .replace(/<Source file="([^"]+)"[^>]*\/>/g, (_, file) => `\n\`\`\`tsx\n${read(file)}\`\`\`\n`)
+    .replace(/<Story id="([^"]+)" title="([^"]+)"[^>]*\/>/g, (_, id, title) => `[${title}](https://real-life-stack.de/storybook/?path=/story/${id})`)
+    .replace(/<LinkCard title="([^"]+)" description="([^"]+)" href="([^"]+)" \/>/g, (_, title, description, href) => `- [${title}](${href}): ${description}`)
+    .replace(/<\/?CardGrid>/g, '')
+    .replace(/<Glossary\s*\/>/g, () => glossaryMarkdown(register, page.lang))
 }
