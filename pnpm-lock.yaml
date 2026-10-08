@@ -328,14 +328,14 @@ importers:
   examples/first-app:
     dependencies:
       '@real-life/data-interface':
-        specifier: npm:@real-life-stack/data-interface@0.3.0
-        version: '@real-life-stack/data-interface@0.3.0'
+        specifier: ^0.4.0
+        version: 0.4.0
       '@real-life/mock-connector':
-        specifier: npm:@real-life-stack/mock-connector@0.2.0
-        version: '@real-life-stack/mock-connector@0.2.0'
+        specifier: ^0.2.3
+        version: 0.2.3
       '@real-life/toolkit':
-        specifier: npm:@real-life-stack/toolkit@0.2.0
-        version: '@real-life-stack/toolkit@0.2.0(@floating-ui/dom@1.7.4)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)'
+        specifier: ^0.4.0
+        version: 0.4.0(@floating-ui/dom@1.7.4)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       maplibre-gl:
         specifier: ^5.24.0
         version: 5.24.0
@@ -2401,14 +2401,21 @@ packages:
       react: ^18.0.0
       react-dom: ^18.0.0
 
-  '@real-life-stack/data-interface@0.3.0':
-    resolution: {integrity: sha512-l2WEzvWU99+RqP5xCYdxQaUsU8QZ5sFuxq0KZj7iookH6oJIRe8DTXW2VMEGf2FdMBE/LQKWNwM+epYz4mUwTg==}
+  '@real-life/data-interface@0.4.0':
+    resolution: {integrity: sha512-hYqjBwihf+ni9XW/8VISXN2FLcNsX0nGBbDgGopEvToYMvNmjDueqPTs0cqSojPYP+6MOVl/uROX5dRnhBMZqg==}
 
-  '@real-life-stack/mock-connector@0.2.0':
-    resolution: {integrity: sha512-Zg1HY/QIG/JKm6fJ6aN/vyAX4h8QRKzdfdX/cS+vW/TBCKXxejeGyCNjqSpVYnfhg53sR63BM1sKfY80DEsNrA==}
+  '@real-life/docs-kit@0.1.0':
+    resolution: {integrity: sha512-cK7ciXMj6zE+H5Az0HUFVeWP5VkkdlLp9C4xPN/ldBUWQenNY0A6xljOkQmWDf1NVowaZWzoAc7WEthUCG4/jA==}
+    engines: {node: '>=22.12.0'}
+    peerDependencies:
+      '@astrojs/starlight': ^0.42
+      astro: ^7
 
-  '@real-life-stack/toolkit@0.2.0':
-    resolution: {integrity: sha512-O00aD9dq5dQu+CF47mAYZ8PFVRpLtp4DDD7UBlHN55REMoEX6Wuo3KZG9yK9lstynqphtLJB4aA4DEKhe+a90g==}
+  '@real-life/mock-connector@0.2.3':
+    resolution: {integrity: sha512-Wmn7oqmDKWgEJgM7zXH1Ez7hIqTjMMMooKVEMPIPQbxe+ewkKOF4XsmoW3NITscfZSFU5Xx6nTtRW4NCymoMvQ==}
+
+  '@real-life/toolkit@0.4.0':
+    resolution: {integrity: sha512-bQ/OQgpyB6mltopdoc0zfhqhNLqjpbwJlGjW9imiNLTY045TLpCmfRYh+1w9PwmB6pswOHcWMRZtqVj2+h856A==}
     peerDependencies:
       leaflet: ^1.9.0
       maplibre-gl: ^5.0.0
@@ -2422,13 +2429,6 @@ packages:
         optional: true
       react-router-dom:
         optional: true
-
-  '@real-life/docs-kit@0.1.0':
-    resolution: {integrity: sha512-cK7ciXMj6zE+H5Az0HUFVeWP5VkkdlLp9C4xPN/ldBUWQenNY0A6xljOkQmWDf1NVowaZWzoAc7WEthUCG4/jA==}
-    engines: {node: '>=22.12.0'}
-    peerDependencies:
-      '@astrojs/starlight': ^0.42
-      astro: ^7
 
   '@rolldown/binding-android-arm-eabi@1.2.9':
     resolution: {integrity: sha512-tNISae1QEf/vkb3xkRcjV5SEdzPE97We5IVaa2Z8jSszQPZ8U60B/YCYpw4QI7VidYsBtKavczXf+DyDs9WGxw==}
@@ -7865,13 +7865,18 @@ snapshots:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
 
-  '@real-life-stack/data-interface@0.3.0': {}
+  '@real-life/data-interface@0.4.0': {}
 
-  '@real-life-stack/mock-connector@0.2.0':
+  '@real-life/docs-kit@0.1.0(@astrojs/starlight@0.42.1(astro@7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1))(typescript@5.7.3))(astro@7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1))':
     dependencies:
-      '@real-life-stack/data-interface': 0.3.0
+      '@astrojs/starlight': 0.42.1(astro@7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1))(typescript@5.7.3)
+      astro: 7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1)
 
-  '@real-life-stack/toolkit@0.2.0(@floating-ui/dom@1.7.4)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
+  '@real-life/mock-connector@0.2.3':
+    dependencies:
+      '@real-life/data-interface': 0.4.0
+
+  '@real-life/toolkit@0.4.0(@floating-ui/dom@1.7.4)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@radix-ui/colors': 3.0.0
       '@radix-ui/react-avatar': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -7882,7 +7887,7 @@ snapshots:
       '@radix-ui/react-slot': 1.2.4(@types/react@19.2.7)(react@19.2.3)
       '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@radix-ui/react-tooltip': 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@real-life-stack/data-interface': 0.3.0
+      '@real-life/data-interface': 0.4.0
       '@tanstack/react-virtual': 3.14.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tiptap/extension-image': 3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))
       '@tiptap/extension-list': 3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3)
@@ -7911,11 +7916,6 @@ snapshots:
       - '@types/react'
       - '@types/react-dom'
       - supports-color
-
-  '@real-life/docs-kit@0.1.0(@astrojs/starlight@0.42.1(astro@7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1))(typescript@5.7.3))(astro@7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1))':
-    dependencies:
-      '@astrojs/starlight': 0.42.1(astro@7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1))(typescript@5.7.3)
-      astro: 7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1)
 
   '@rolldown/binding-android-arm-eabi@1.2.9':
     optional: true

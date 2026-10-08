@@ -10,9 +10,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@real-life/data-interface": "npm:@real-life-stack/data-interface@0.3.0",
-    "@real-life/mock-connector": "npm:@real-life-stack/mock-connector@0.2.0",
-    "@real-life/toolkit": "npm:@real-life-stack/toolkit@0.2.0",
+    "@real-life/data-interface": "^0.4.0",
+    "@real-life/mock-connector": "^0.2.3",
+    "@real-life/toolkit": "^0.4.0",
     "maplibre-gl": "^5.24.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
