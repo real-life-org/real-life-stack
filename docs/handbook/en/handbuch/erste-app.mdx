@@ -2,7 +2,7 @@
 title: Build your own app
 description: Your own app on the frame in ten minutes — connector, router, frame, done.
 translationOf: docs/handbook/de/handbuch/erste-app.mdx
-sourceHash: 9e7b6bdac7f6ae1dae2da94b3617eda935a8bdd6a10ace423d6d8f31382e463f
+sourceHash: 5264c032112a1404238a7257858ff3dbf984beff4165d9de335ebd1e809288a9
 group: loslegen
 sidebar:
   order: 2
@@ -19,7 +19,7 @@ stories:
 import Source from '@site/components/Source.astro'
 import Story from '@site/components/Story.astro'
 
-An app on Real Life Stack provides three things: a **connector** to its data, a **router** for the address and the **frame** from the toolkit. Header, tabs, panel, create, detail view and the seven modules (feed, list, kanban, calendar, map, graph, resonance) come ready-made. All the code below lives as a living example under `examples/first-app/` in the repository and is built and tested in every CI run.
+An app on Real Life Stack provides three things: a **[connector](term:connector)** to its data, a **router** for the address and the **frame** from the toolkit. Header, tabs, panel, create, detail view and the seven modules (feed, list, kanban, calendar, map, graph, resonance) come ready-made. All the code below lives as a living example under `examples/first-app/` in the repository and is built and tested in every CI run.
 
 This is what the result looks like, with the same building blocks, in Storybook:
 
@@ -39,7 +39,7 @@ The three packages come from npm with exactly pinned versions, in the repository
 
 Line by line:
 
-- **`MockConnector`** keeps the data in memory: one person (`users`), one space (`groups`) with its modules in tab order (`data.modules`), the membership (`groupMembers`) and one item (`items`) assigned to the space (`groupItems`). The item has a date (`start`) and a place (`position`); that is why it appears in the calendar **and** on the map, as the same object.
+- **`MockConnector`** keeps the data in memory: one person (`users`), one [space](term:space) (`groups`) with its modules in tab order (`data.modules`), the membership (`groupMembers`) and one item (`items`) assigned to the space (`groupItems`). The item has a date (`start`) and a place (`position`); that is why it appears in the calendar **and** on the map, as the same object.
 - **`await connector.init()`** waits until the connector is ready. **`setCurrentGroup`** picks the space the app shows first.
 - **`createBrowserRouter`** with a single route `*`: the frame reads the address `/{space}/{module}/{item}` itself. The app owns only the router; that is the part that stays with it (spec 01, "what stays with the app").
 - The two CSS imports: your stylesheet and the map's.

@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
-import { root, read, pages, route } from './lib.mjs'
+import { root, read, pages, route, loadRegister, toMarkdown } from './lib.mjs'
 
 /**
  * Vor jedem Build der Site: Build-Stand und die Markdown-Ausgabe des Handbuchs
@@ -29,13 +29,9 @@ write('apps/site/public/favicon.svg', read('apps/reference/public/favicon.svg'))
 for (const lang of ['de', 'en']) write(`apps/site/public/og/${lang}.png`, readFileSync(new URL(`apps/site/og/${lang}.png`, root)))
 
 const all = pages()
+const register = await loadRegister()
 for (const p of all) {
-  const body = p.body
-    .replace(/^import .+;?\n/gm, '')
-    .replace(/<Source file="([^"]+)"[^>]*\/>/g, (_, file) => `\n\`\`\`tsx\n${read(file)}\`\`\`\n`)
-    .replace(/<Story id="([^"]+)" title="([^"]+)"[^>]*\/>/g, (_, id, title) => `[${title}](https://real-life-stack.de/storybook/?path=/story/${id})`)
-    .replace(/<LinkCard title="([^"]+)" description="([^"]+)" href="([^"]+)" \/>/g, (_, title, description, href) => `- [${title}](${href}): ${description}`)
-    .replace(/<\/?CardGrid>/g, '')
+  const body = toMarkdown(p, register)
   write(
     `apps/site/public/markdown/${p.lang}/${p.id}.md`,
     `# ${p.meta.title}\n${body}\n${p.meta.sources?.length ? '## Quellen\n\n' + p.meta.sources.map((f) => `- https://github.com/real-life-org/real-life-stack/blob/master/${f}`).join('\n') + '\n' : ''}`,

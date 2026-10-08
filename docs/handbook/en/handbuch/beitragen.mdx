@@ -2,7 +2,7 @@
 title: Working on the stack together
 description: How a contribution becomes a pull request, who reviews, what gets merged, how a release comes out of it.
 translationOf: docs/handbook/de/handbuch/beitragen.mdx
-sourceHash: 8a06524882cd982e797acc75ead5d5a9e3165943b94916849eddefa92ddf07c5
+sourceHash: e9e99beab99e716d3afb8b5c43f44e40b13a2d2497a433a63b1fc89d8a3c2005
 group: anleitungen
 sidebar:
   order: 11
@@ -25,7 +25,7 @@ Describe the problem or the user's path, not the solution. Read the spec section
 ## The normal way
 
 1. A branch for a manageable contribution. Small and checkable beats complete and large; two PRs are better than one that does two things.
-2. Change behaviour, code, story, test and explanation together. If the contribution touches items, schemas, modules, capabilities, connectors or hooks, the spec comes along: either the code follows it, or it changes visibly, with the reason in the PR.
+2. Change behaviour, code, story, test and explanation together. If the contribution touches items, schemas, modules, capabilities, [connectors](term:connector) or hooks, the spec comes along: either the code follows it, or it changes visibly, with the reason in the PR.
 3. Run the checks that concern the area ([Develop locally → Check](/en/handbuch/entwickeln/#check)).
 4. A pull request with the problem, the behaviour after the change and the checks that actually ran. The title follows Conventional Commits (`feat(toolkit): …`, `fix(network): …`, `docs(spec): …`); CI checks that, because release-please derives the versions from it.
 5. Review. Usually an agent reviews first (Codex in the loop review, CodeRabbit), then a person; findings are answered in the PR and fixed in the same branch. The merge decision stays with a person.

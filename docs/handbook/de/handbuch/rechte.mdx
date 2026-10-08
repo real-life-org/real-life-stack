@@ -21,7 +21,7 @@ Ob ein Knopf „Bearbeiten“ erscheint, hängt von drei Antworten ab, und jede 
 
 ## Fähigkeit: was die Datenquelle kann
 
-Der Kern des `DataInterface` liest und beobachtet. Alles darüber hinaus ist eine **Fähigkeit** (Spec 03): schreiben (`isWritable`), Gruppen führen (`hasGroups`), anmelden (`isAuthenticatable`), Relations, Aktivität, Benachrichtigungen. Ein Connector hat sie oder nicht; die Oberfläche fragt nach, statt anzunehmen.
+Der Kern des `DataInterface` liest und beobachtet. Alles darüber hinaus ist eine **Fähigkeit** (Spec 03): schreiben (`isWritable`), Gruppen führen (`hasGroups`), anmelden (`isAuthenticatable`), [Relations](term:relation), Aktivität, Benachrichtigungen. Ein [Connector](term:connector) hat sie oder nicht; die Oberfläche fragt nach, statt anzunehmen.
 
 Im Rahmen ist das erledigt: Lesende Hooks antworten ohne Fähigkeit leer, schreibende scheitern beim Aufruf, nicht beim Rendern, und Flächen blenden aus, was der Connector nicht kann. Derselbe Garten mit einem Connector, der nur lesen kann:
 
@@ -31,13 +31,13 @@ Im Rahmen ist das erledigt: Lesende Hooks antworten ohne Fähigkeit leer, schrei
 
 ## Berechtigung: was ich hier darf
 
-Dass ein Connector schreiben kann, heißt nicht, dass ich dieses Item ändern darf. Die **Berechtigung** hängt an mir und am Item: Bin ich Mitglied des Space, bin ich Urheber, was erlaubt die Gruppe? `useItemPermissions(item)` beantwortet das für die Oberfläche als `{canEdit, canDelete}`, ohne Fähigkeit beides `false`.
+Dass ein Connector schreiben kann, heißt nicht, dass ich dieses Item ändern darf. Die **Berechtigung** hängt an mir und am Item: Bin ich [Mitglied](term:member) des [Space](term:space), bin ich Urheber, was erlaubt die Gruppe? `useItemPermissions(item)` beantwortet das für die Oberfläche als `{canEdit, canDelete}`, ohne Fähigkeit beides `false`.
 
 Wichtig ist die Richtung: Die Oberfläche zeigt passende Aktionen, aber der Schreibpfad setzt die Regel durch. Einen Knopf auszublenden ist keine Autorisierung. Wo ein Server steht, ist er die Grenze: Bei Supabase weist die Zeilenregel fremde Änderungen ab. Im Web of Trust gibt es diese Grenze für gewöhnliche Items heute nicht: Jedes Mitglied hält den Schlüssel des Space und kann das Dokument direkt schreiben; die Autorenprüfung beim Schreiben ist eine Konvention, die ehrliche Clients ehrlich hält, kein Schutz gegen andere Mitglieder. Signaturen prüfen dort nur, was signiert ist, etwa Relation-Records (Spec 08) und Spiegel-Snapshots (Spec 09). Wer die Regel nur in der Oberfläche hat, hat keine.
 
 ## Herkunft: wo das Item zu Hause ist
 
-Ein Item hat genau einen Heimat-Space. Erscheint es in einem anderen, ist es dort ein **Spiegel** (Spec 09): lesbar, mit Hinweis auf die Herkunft, aber nicht dort zu bearbeiten, denn die Wahrheit liegt im Heimat-Space. Das Profil einer Person ist das erste Item, das so wandert: Es lebt im persönlichen Space und wird in jede Gruppe gespiegelt, der die Person es freigibt (Spec 12).
+Ein Item hat genau einen Heimat-Space. Erscheint es in einem anderen, ist es dort ein **[Spiegel](term:mirror)** (Spec 09): lesbar, mit Hinweis auf die Herkunft, aber nicht dort zu bearbeiten, denn die Wahrheit liegt im Heimat-Space. Das [Profil](term:profile) einer Person ist das erste Item, das so wandert: Es lebt im persönlichen Space und wird in jede Gruppe gespiegelt, der die Person es freigibt (Spec 12).
 
 Die Herkunft entscheidet also nicht allein über Schreibbarkeit; sie sagt, **wo** eine Änderung hingehört. Die Oberfläche zeigt sie als Badge (`ItemScopeBadge`: Gruppe, Farbe, privat), aus einer Ableitung für alle Flächen (`useItemPresentation`).
 

@@ -63,7 +63,7 @@ Dann DNS auf den Server, `docker compose up -d`, und HTTPS, Landingpage und App 
 
 ## 4. Den Connector wählen
 
-Die App-Instanz liefert nur statische Dateien aus; die Daten liegen dort, wohin der Connector zeigt.
+Die App-Instanz liefert nur statische Dateien aus; die Daten liegen dort, wohin der [Connector](term:connector) zeigt.
 
 | `RLS_DEFAULT_CONNECTOR` | Daten | Dazu nötig |
 |---|---|---|
@@ -87,4 +87,4 @@ Die Landingpage darf beliebig sein, sie ist eine eigene Seite. Das App-Layout is
 - **Container startet nicht:** `docker compose logs app`. Fehlt ein Pflichtfeld, sagt Compose, welches.
 - **Konfiguration ändert sich nicht:** Nach `.env`-Änderungen `docker compose up -d` (erstellt den Container mit den neuen Variablen), nach Änderungen an `branding/config.json` `docker compose restart app` (führt den Start erneut aus). Eine eigene `config.json` sticht alle Umgebungsvariablen.
 - **Farben wirken nicht:** Browser-Konsole lesen; ein unbekannter Token-Name wird dort genannt.
-- **App läuft, aber niemand sieht die anderen:** Connector, Relay-Adresse und Mitgliedschaft im Space prüfen.
+- **App läuft, aber niemand sieht die anderen:** Connector, Relay-Adresse und Mitgliedschaft im [Space](term:space) prüfen.

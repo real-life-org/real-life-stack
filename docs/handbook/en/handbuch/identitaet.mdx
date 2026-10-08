@@ -2,7 +2,7 @@
 title: Identity and sign-in
 description: Signing in is a capability of the connector. What the contract fixes and what the connectors make of it.
 translationOf: docs/handbook/de/handbuch/identitaet.mdx
-sourceHash: 51b0f261d7a68d05856369bde94a326d346fbdbba6bb0a699ff2610c0a55d28d
+sourceHash: 75f0c79b93bf46b5916f5c99426c4ffe1ac8ad959327ecf7ffd2ddddd5367055
 group: verstehen
 sidebar:
   order: 14
@@ -16,7 +16,7 @@ sources:
   - apps/reference/src/App.tsx
 ---
 
-Modules and the toolkit do not know how anyone signs in. They ask the connector whether it can sign people in, which ways it offers and who is signed in right now. Whether a key pair in the browser or an account on a server stands behind that is up to the connector alone.
+Modules and the toolkit do not know how anyone signs in. They ask the [connector](term:connector) whether it can sign people in, which ways it offers and who is signed in right now. Whether a key pair in the browser or an account on a server stands behind that is up to the connector alone.
 
 ## The contract
 
@@ -57,4 +57,4 @@ The reference app decides in its `AuthGate`:
 
 ## One app, one identity
 
-An app holds exactly one connector. Whoever signs in is that one identity for the whole app, and all spaces of the app live in the same source.
+An app holds exactly one connector. Whoever signs in is that one identity for the whole app, and all [spaces](term:space) of the app live in the same source.

@@ -2,7 +2,7 @@
 title: Run a Supabase backend
 description: Your own Supabase for instances using the supabase connector — set it up, connect it, check it, back it up.
 translationOf: docs/handbook/de/handbuch/supabase.mdx
-sourceHash: 5c70df63c6e1a97df1988c97e2ae45c7ec5f108aab231b4a8eedb193025a435d
+sourceHash: 5c3d836ae13d89a5a20376298c49b6947359e94dfadf2a44b8746acf5d54658e
 group: anleitungen
 sidebar:
   order: 13
@@ -69,16 +69,16 @@ Then `docker compose up -d` in the instance. The app shows the toolkit's sign-in
 
 ## Sign-in
 
-The connector offers three ways: email with password, sign-up with email and password, and an anonymous account for trying things out. Without SMTP, GoTrue confirms every sign-up immediately, so the email address is not verified and password reset by mail does not work. If you need that, set the `GOTRUE_SMTP_*` variables and `GOTRUE_MAILER_AUTOCONFIRM: "false"` in `docker-compose.yml`. The links in the mails already point to `/auth/v1/verify`, the path Kong passes on to GoTrue. If you want no anonymous accounts, set `GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"`.
+The [connector](term:connector) offers three ways: email with password, sign-up with email and password, and an anonymous account for trying things out. Without SMTP, GoTrue confirms every sign-up immediately, so the email address is not verified and password reset by mail does not work. If you need that, set the `GOTRUE_SMTP_*` variables and `GOTRUE_MAILER_AUTOCONFIRM: "false"` in `docker-compose.yml`. The links in the mails already point to `/auth/v1/verify`, the path Kong passes on to GoTrue. If you want no anonymous accounts, set `GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"`.
 
 An account here is a Supabase UUID, not a DID. How sign-in works across connectors is described under [Identity and sign-in](/en/handbuch/identitaet/).
 
 ## Who sees what
 
-- **Items without a space** are visible to every signed-in user of the instance.
-- **Items in a space** can be read and written only by its members. Relations, comments and reactions can be changed and deleted only by whoever wrote them.
+- **Items without a [space](term:space)** are visible to every signed-in user of the instance.
+- **Items in a space** can be read and written only by its [members](term:member). [Relations](term:relation), comments and reactions can be changed and deleted only by whoever wrote them.
 - **Spaces and member lists** are visible only to the creator and the members. Only members may invite.
-- **Profiles** are readable by everyone signed in, so you can find people when inviting.
+- **[Profiles](term:profile)** are readable by everyone signed in, so you can find people when inviting.
 - **Contacts** are visible only to the two people on the edge.
 - **Without sign-in** the database returns nothing.
 

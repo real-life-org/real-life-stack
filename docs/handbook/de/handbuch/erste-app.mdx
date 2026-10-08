@@ -17,7 +17,7 @@ stories:
 import Source from '@site/components/Source.astro'
 import Story from '@site/components/Story.astro'
 
-Eine App auf Real Life Stack stellt drei Dinge: einen **Connector** zu ihren Daten, einen **Router** für die Adresse und den **Rahmen** aus dem Toolkit. Kopfzeile, Tabs, Panel, Erstellen, Detailansicht und die sieben Module (Feed, Liste, Kanban, Kalender, Karte, Graph, Resonanz) kommen fertig mit. Der ganze Code unten steht als lebendes Beispiel unter `examples/first-app/` im Repo und wird in jeder CI gebaut und getestet.
+Eine App auf Real Life Stack stellt drei Dinge: einen **[Connector](term:connector)** zu ihren Daten, einen **Router** für die Adresse und den **Rahmen** aus dem Toolkit. Kopfzeile, Tabs, Panel, Erstellen, Detailansicht und die sieben Module (Feed, Liste, Kanban, Kalender, Karte, Graph, Resonanz) kommen fertig mit. Der ganze Code unten steht als lebendes Beispiel unter `examples/first-app/` im Repo und wird in jeder CI gebaut und getestet.
 
 So sieht das Ergebnis aus, mit denselben Bausteinen, im Storybook:
 
@@ -37,7 +37,7 @@ Die drei Pakete kommen von npm, mit genau gepinnten Versionen, auch im Repo. Der
 
 Zeile für Zeile:
 
-- **`MockConnector`** hält die Daten im Speicher: ein Mensch (`users`), ein Space (`groups`) mit seinen Modulen in Tab-Reihenfolge (`data.modules`), die Mitgliedschaft (`groupMembers`) und ein Item (`items`), das dem Space zugeordnet ist (`groupItems`). Das Item hat ein Datum (`start`) und einen Ort (`position`); deshalb steht es im Kalender **und** auf der Karte, als dasselbe Objekt.
+- **`MockConnector`** hält die Daten im Speicher: ein Mensch (`users`), ein [Space](term:space) (`groups`) mit seinen Modulen in Tab-Reihenfolge (`data.modules`), die Mitgliedschaft (`groupMembers`) und ein Item (`items`), das dem Space zugeordnet ist (`groupItems`). Das Item hat ein Datum (`start`) und einen Ort (`position`); deshalb steht es im Kalender **und** auf der Karte, als dasselbe Objekt.
 - **`await connector.init()`** wartet, bis der Connector bereit ist. **`setCurrentGroup`** wählt den Space, den die App zuerst zeigt.
 - **`createBrowserRouter`** mit einer einzigen Route `*`: Die Adresse `/{space}/{modul}/{item}` liest der Rahmen selbst. Die App besitzt nur den Router; das ist der Teil, der bei ihr bleibt (Spec 01, „Was bei der App bleibt“).
 - Die beiden CSS-Importe: dein Stylesheet und das der Karte.

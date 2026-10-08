@@ -38,5 +38,10 @@
   "devDependencies": {
     "turbo": "^2.3.3",
     "typescript": "~5.7.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss-selector-parser": "^7.1.6"
+    }
   }
 }

@@ -2,7 +2,7 @@
 title: From space to item
 description: The interface as three levels — frame, space, item — and why an event does not belong to the calendar.
 translationOf: docs/handbook/de/handbuch/oberflaeche.mdx
-sourceHash: 00b53c81fb4e2bce49040b81099f3ac4423079de0a8b7a36243704bfc44dad5e
+sourceHash: dda2c9dabd87970809aa8791ee54467fed05ba5c3278c2df90208329a095502d
 group: verstehen
 sidebar:
   order: 5
@@ -20,7 +20,7 @@ stories:
 
 import Story from '@site/components/Story.astro'
 
-An app on Real Life Stack has three levels, and each answers a different question. The **frame** asks: who are you, which space are you in, which module are you looking at? The **space** asks: what belongs here, who belongs to it? The **item** is the thing itself, an event, a place, a task, a post. The modules in between are views onto the same items, not owners.
+An app on Real Life Stack has three levels, and each answers a different question. The **frame** asks: who are you, which [space](term:space) are you in, which module are you looking at? The **space** asks: what belongs here, who belongs to it? The **item** is the thing itself, an event, a place, a task, a post. The modules in between are views onto the same items, not owners.
 
 Try it in the garden: open the harvest festival, switch to the calendar, then to the map. It is the same address, the same item, shown three times.
 
@@ -36,7 +36,7 @@ The frame holds the **focus**: which space, which module, which item is open, wh
 
 ## The space
 
-A space is the working context: a group (`Group` in the data model) with members, items and the list of its modules in tab order. The space chooses from the register what it shows; it does not extend it (spec 01). A space "Community garden" can carry calendar, map and list, a space "Open workshop" only the list. The personal space is a space like any other, just with one member.
+A space is the working context: a group (`Group` in the data model) with [members](term:member), items and the list of its modules in tab order. The space chooses from the register what it shows; it does not extend it (spec 01). A space "Community garden" can carry calendar, map and list, a space "Open workshop" only the list. The personal space is a space like any other, just with one member.
 
 What all modules of a space share belongs to the surface, not to the module: the search, the vocabulary of tags and types, the filter card, the chips. That is why a filter survives switching modules, and why no module offers a selection of its own that another one does not know (spec 01, rule 2a).
 
@@ -48,7 +48,7 @@ The **preview** (`ItemPreview`) is the card in the feed, in the list, on the kan
 
 <Story id="rls-app-05-focus-panel-create--panel" title="The one panel: detail, create and history swap the content instead of stacking" height={560} />
 
-A person's profile is not a second UI system here. It is the detail view of an item of type person (spec 12); "profile" names the content, not another surface.
+A person's [profile](term:profile) is not a second UI system here. It is the detail view of an item of type person (spec 12); "profile" names the content, not another surface.
 
 ## Which level does what
 
@@ -56,7 +56,7 @@ A person's profile is not a second UI system here. It is the detail view of an i
 - **Host of the module:** produce from the register entry what the module needs: the items by `presents`, filtered by search and filter; members, authors, colours; detail, create, plus button. A module loads none of this itself (spec 01, rule 2).
 - **Module:** its rendering and its own interactions, nothing more.
 - **Detail content:** title, facts, content, matching actions, comments.
-- **Connector:** read, observe, permitted writes.
+- **[Connector](term:connector):** read, observe, permitted writes.
 
 Whoever finds something from a lower level inside an upper one is looking at a violation of the spec; that is the rule that holds all apps together.
 

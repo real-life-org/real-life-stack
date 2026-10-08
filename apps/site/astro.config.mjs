@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'astro/config'
 import starlight from '@astrojs/starlight'
+import docsKit from '@real-life/docs-kit'
 
 /**
  * real-life-stack.de aus einem Guss: Landing, Handbuch und der Verweis auf
@@ -84,6 +85,11 @@ export default defineConfig({
       description: 'Der Baukasten für lokale Vernetzung: Handbuch, Storybook, App.',
       defaultLocale: 'root',
       locales: LOCALES,
+      plugins: [docsKit({
+        world: 'rls',
+        scheme: fileURLToPath(new URL('../../docs/reference/rls.skos.jsonld', import.meta.url)),
+        glossary: { de: '/handbuch/glossar/', en: '/en/handbuch/glossar/' },
+      })],
       customCss: ['./src/styles/site.css'],
       components: { Footer: './src/components/Footer.astro' },
       // Vorschaubild fuer geteilte Links (og:image) je Sprache.
