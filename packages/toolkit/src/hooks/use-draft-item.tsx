@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 /** Synthetic id for a not-yet-saved create draft (edit drafts reuse the real id). */
 export const DRAFT_ITEM_ID = "__draft__"

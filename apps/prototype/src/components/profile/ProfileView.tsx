@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useScroll, useMotionValueEvent, useMotionValue, animate } from 'framer-motion';
 import { useDrag } from '@use-gesture/react';
-import { Dialog, DialogContent, DialogTitle } from '@real-life-stack/toolkit';
+import { Dialog, DialogContent, DialogTitle } from '@real-life/toolkit';
 import { Element as ScrollElement, scroller } from 'react-scroll';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfileNavTabs from '@/components/profile/ProfileNavTabs';

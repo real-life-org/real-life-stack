@@ -2,7 +2,7 @@
 import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { MockConnector } from "@real-life-stack/mock-connector"
+import { MockConnector } from "@real-life/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { ItemComposer } from "../src/components/composer/item-composer"

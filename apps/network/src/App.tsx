@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useState } from "react"
-import type { DataInterface } from "@real-life-stack/data-interface"
+import type { DataInterface } from "@real-life/data-interface"
 import {
   AdaptivePanel,
   ConnectorProvider,
   ProfilePanelContent,
   useMembers,
   useOptionalCurrentUser,
-} from "@real-life-stack/toolkit"
-import { MapLibreAdapterProvider } from "@real-life-stack/toolkit/maplibre"
-import { RoutedAppFrame } from "@real-life-stack/toolkit/router"
+} from "@real-life/toolkit"
+import { MapLibreAdapterProvider } from "@real-life/toolkit/maplibre"
+import { RoutedAppFrame } from "@real-life/toolkit/router"
 
 interface AppProps {
   connector: DataInterface

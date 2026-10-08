@@ -19,12 +19,12 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@real-life-stack/data-interface": ["../../packages/data-interface/src"],
-      "@real-life-stack/local-connector": ["../../packages/local-connector/src"],
-      "@real-life-stack/mock-connector": ["../../packages/mock-connector/src"],
-      "@real-life-stack/toolkit": ["../../packages/toolkit/src"],
-      "@real-life-stack/toolkit/router": ["../../packages/toolkit/src/router.tsx"],
-      "@real-life-stack/toolkit/maplibre": ["../../packages/toolkit/src/maplibre.ts"],
+      "@real-life/data-interface": ["../../packages/data-interface/src"],
+      "@real-life/local-connector": ["../../packages/local-connector/src"],
+      "@real-life/mock-connector": ["../../packages/mock-connector/src"],
+      "@real-life/toolkit": ["../../packages/toolkit/src"],
+      "@real-life/toolkit/router": ["../../packages/toolkit/src/router.tsx"],
+      "@real-life/toolkit/maplibre": ["../../packages/toolkit/src/maplibre.ts"],
       "@/*": ["../../packages/toolkit/src/*"]
     }
   },

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
-import type { Item, User } from "@real-life-stack/data-interface"
+import type { Item, User } from "@real-life/data-interface"
 import { ArrowLeft, ArrowRight, Calendar, CircleDot, Contact, Globe, Hash, Layers, Link2, List, Mail, MapPin, Phone, Users } from "lucide-react"
 
 import { useMembers } from "../../hooks/use-groups"

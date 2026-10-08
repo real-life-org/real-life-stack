@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react"
-import type { Item } from "@real-life-stack/data-interface"
-import { isWritable, hasRelations, isAuthenticatable, deriveContext } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
+import { isWritable, hasRelations, isAuthenticatable, deriveContext } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 import { standingMark, standingStateCounts, useCanVerifyItems, useItemStandings } from "./use-item-standing"
 

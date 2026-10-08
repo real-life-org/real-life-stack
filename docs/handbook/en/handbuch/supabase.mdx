@@ -2,7 +2,7 @@
 title: Run a Supabase backend
 description: Your own Supabase for instances using the supabase connector — set it up, connect it, check it, back it up.
 translationOf: docs/handbook/de/handbuch/supabase.mdx
-sourceHash: 5c3d836ae13d89a5a20376298c49b6947359e94dfadf2a44b8746acf5d54658e
+sourceHash: 4740d5bb03c0c50012d79af4fc25fc0f373a57e9863ab9296e3a029d00b29a11
 group: anleitungen
 sidebar:
   order: 13
@@ -92,7 +92,7 @@ The live contract suite runs the same contract tests as for every connector, plu
 SUPABASE_URL=https://supabase-test.example.org \
 SUPABASE_ANON_KEY="$ANON_KEY" \
 SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
-pnpm --filter @real-life-stack/supabase-connector test
+pnpm --filter @real-life/supabase-connector test
 ```
 
 The suite needs the `SERVICE_ROLE_KEY` to create test data by other authors. Run it from a trusted machine.

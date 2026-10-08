@@ -263,7 +263,7 @@ interface CommentSectionProps {
   hideInput?: boolean
   /**
    * Reply-State an den Caller herausgeben (für externes CommentInput).
-   * `CommentQuote` ist aus `@real-life-stack/toolkit` re-exportiert.
+   * `CommentQuote` ist aus `@real-life/toolkit` re-exportiert.
    */
   onReplyChange?: (
     replyTo: CommentQuote | null,

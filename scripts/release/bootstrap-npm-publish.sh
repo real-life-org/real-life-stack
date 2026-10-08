@@ -12,7 +12,7 @@
 # Einzeiler.
 #
 # Voraussetzungen:
-#   - `npm login` als Mitglied der npm-Org `real-life-stack` (Scope-Eigentuemer).
+#   - `npm login` als Mitglied der npm-Org `real-life` (Scope-Eigentuemer).
 #   - pnpm + node wie ueblich.
 # Das Skript fasst KEINE Tokens an: es nutzt deine bestehende npm-Session.
 #
@@ -57,7 +57,7 @@ cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.."
 
 echo "==> 1/4 npm-Session pruefen (Registry: $REGISTRY)"
 who=$(npm whoami --registry "$REGISTRY" 2>/dev/null) \
-  || abort "nicht eingeloggt bei $REGISTRY — erst 'npm login' (Mitglied der Org real-life-stack)."
+  || abort "nicht eingeloggt bei $REGISTRY — erst 'npm login' (Mitglied der Org real-life)."
 echo "    eingeloggt als: $who"
 
 echo "==> 2/4 Was liegt schon auf npm?"

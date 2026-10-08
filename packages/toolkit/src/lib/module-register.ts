@@ -16,8 +16,8 @@
 // an die Ids.
 
 import type { ComponentType } from "react"
-import type { Group, Item, ModuleHintOptions, ModuleHints } from "@real-life-stack/data-interface"
-import { hintKeyFor, isAggregateVisibleItemType, moduleHintsFor } from "@real-life-stack/data-interface"
+import type { Group, Item, ModuleHintOptions, ModuleHints } from "@real-life/data-interface"
+import { hintKeyFor, isAggregateVisibleItemType, moduleHintsFor } from "@real-life/data-interface"
 import type { SelectionFocusVisibleArea } from "./selection-focus"
 import { CalendarModule } from "../modules/calendar-module"
 import { CollectionModule } from "../modules/collection-module"

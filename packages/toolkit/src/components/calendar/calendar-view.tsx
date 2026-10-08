@@ -1,4 +1,4 @@
-import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType } from "@real-life/data-interface"
 "use client"
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent, type TransitionEvent } from "react"
@@ -42,7 +42,7 @@ import { ItemTypeBadge } from "../preview/item-type-badge"
 import { ItemTimeRange } from "../preview/item-time-range"
 import { FilterSection, FilterToggle, FilterMultiSelect } from "../filter/filter-building-blocks"
 import { ModuleSurfaceScope, useSurfaceItems } from "../layout/module-surface-scope"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 const MONTH_NAMES = [

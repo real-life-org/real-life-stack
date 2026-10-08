@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { hasActivityLog, type ActivityEntry } from "@real-life-stack/data-interface"
+import { hasActivityLog, type ActivityEntry } from "@real-life/data-interface"
 import { MockConnector } from "../src/index.js"
 
 const seed = {

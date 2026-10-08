@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Mail, Phone, Globe, Copy } from 'lucide-react';
-import { Button } from '@real-life-stack/toolkit';
+import { Button } from '@real-life/toolkit';
 import { toast } from '@/components/ui/use-toast';
 
 const ContactInfo = ({ contactInfo }) => {

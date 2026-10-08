@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { AuthMethod, AuthState, Authenticatable, User } from "@real-life-stack/data-interface"
-import { createObservable } from "@real-life-stack/data-interface"
+import type { AuthMethod, AuthState, Authenticatable, User } from "@real-life/data-interface"
+import { createObservable } from "@real-life/data-interface"
 import { AuthScreen } from "./auth-screen"
 
 /**

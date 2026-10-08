@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { createObservable } from "@real-life-stack/data-interface"
+import { createObservable } from "@real-life/data-interface"
 import { WotConnector } from "../src/wot-connector"
 
 /**

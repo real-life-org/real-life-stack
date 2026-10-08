@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react"
-import type { User } from "@real-life-stack/data-interface"
-import { hasGroups, isAuthenticatable } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
+import { hasGroups, isAuthenticatable } from "@real-life/data-interface"
 import { useOptionalConnector } from "./connector-context"
 
 /**

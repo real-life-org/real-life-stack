@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
-import { hasGroups, type Group } from "@real-life-stack/data-interface"
+import { hasGroups, type Group } from "@real-life/data-interface"
 
 import { AppFrame, type FrameRouting } from "../components/frame/app-frame"
 import { MapLibreAdapterProvider } from "../components/map/adapters/maplibre-provider"

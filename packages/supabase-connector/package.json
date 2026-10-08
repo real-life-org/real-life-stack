@@ -1,5 +1,5 @@
 {
-  "name": "@real-life-stack/supabase-connector",
+  "name": "@real-life/supabase-connector",
   "version": "0.3.2",
   "description": "Connector for a central Supabase backend (auth, rows, realtime).",
   "repository": {
@@ -29,7 +29,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@real-life-stack/data-interface": "workspace:*",
+    "@real-life/data-interface": "workspace:*",
     "@supabase/supabase-js": "^2.49.0"
   },
   "devDependencies": {

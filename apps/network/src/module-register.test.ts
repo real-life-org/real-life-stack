@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { filterForHint, type Item } from "@real-life-stack/data-interface"
-import { getModule, getModules, hostFiltersFor, moduleIds, modulePresentsItem, resolveSpaceModules } from "@real-life-stack/toolkit"
+import { filterForHint, type Item } from "@real-life/data-interface"
+import { getModule, getModules, hostFiltersFor, moduleIds, modulePresentsItem, resolveSpaceModules } from "@real-life/toolkit"
 
 import "./module-register"
 import { DWEB_CAMP_VIEW, DWEB_CAMP_WEEK } from "./module-register"

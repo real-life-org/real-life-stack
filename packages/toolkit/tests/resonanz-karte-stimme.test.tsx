@@ -2,8 +2,8 @@
 import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
-import { MockConnector } from "@real-life-stack/mock-connector"
+import type { Item } from "@real-life/data-interface"
+import { MockConnector } from "@real-life/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { FilterProvider } from "../src/components/filter/filter-store"

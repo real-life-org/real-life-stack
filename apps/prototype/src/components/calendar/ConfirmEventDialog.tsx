@@ -7,7 +7,7 @@ import {
   Button,
   Dialog,
   DialogContent,
-} from '@real-life-stack/toolkit';
+} from '@real-life/toolkit';
 
 const ConfirmEventDialog = ({ isOpen, onClose, onConfirm, selectedDate }) => {
   const handleConfirm = () => {

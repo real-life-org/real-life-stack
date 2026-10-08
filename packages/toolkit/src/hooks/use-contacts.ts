@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useCallback, useMemo, startTransition } from "react"
-import type { ContactInfo } from "@real-life-stack/data-interface"
-import { hasContacts } from "@real-life-stack/data-interface"
+import type { ContactInfo } from "@real-life/data-interface"
+import { hasContacts } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 const noop = () => Promise.resolve() as any

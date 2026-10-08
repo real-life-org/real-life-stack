@@ -1,6 +1,6 @@
 import { useState } from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { ContactInfo } from "@real-life-stack/data-interface"
+import type { ContactInfo } from "@real-life/data-interface"
 import { ContactsDialog } from "./contacts-dialog"
 import { AddContactDialog } from "./add-contact-dialog"
 import { VerificationDialog } from "./verification-dialog"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { MockConnector, type MockConnectorSeed } from "../src/index"
 
 const USER = "did:example:user"

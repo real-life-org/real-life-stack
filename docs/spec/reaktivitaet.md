@@ -64,7 +64,7 @@ ISO-8601 Strings sortieren lexikographisch korrekt: `"2026-01-01" < "2026-01-02"
 ### Erstellen und Nutzen
 
 ```typescript
-import { createObservable } from "@real-life-stack/data-interface"
+import { createObservable } from "@real-life/data-interface"
 
 const obs = createObservable<Item[]>([])  // Startwert
 obs.set(newItems)                          // Feuert alle Subscriber
@@ -248,7 +248,7 @@ function KanbanCard({ item, users }) {
 Alle Connectors nutzen denselben Helper — **keine eigene Implementierung in Connectors!**
 
 ```typescript
-import { findRelatedItems } from "@real-life-stack/data-interface"
+import { findRelatedItems } from "@real-life/data-interface"
 
 // Connector-intern (in getRelatedItems + notifyObservers):
 findRelatedItems(itemId, allItems, predicate?, options?)
@@ -270,7 +270,7 @@ findRelatedItems(itemId, allItems, predicate?, options?)
 Hooks und UI **müssen** Capabilities prüfen, bevor sie Features nutzen:
 
 ```typescript
-import { isWritable, hasRelations, hasGroups, hasContacts } from "@real-life-stack/data-interface"
+import { isWritable, hasRelations, hasGroups, hasContacts } from "@real-life/data-interface"
 
 if (isWritable(connector)) {
   await connector.createItem(...)

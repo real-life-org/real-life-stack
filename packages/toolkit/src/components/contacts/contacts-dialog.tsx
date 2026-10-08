@@ -1,7 +1,7 @@
 "use client"
 
 import { QrCode, UserPlus, Users } from "lucide-react"
-import type { ContactInfo } from "@real-life-stack/data-interface"
+import type { ContactInfo } from "@real-life/data-interface"
 
 import { Button } from "@/components/primitives/button"
 import {

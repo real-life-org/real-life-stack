@@ -10,7 +10,7 @@ import {
   type Item,
   type ItemFilter,
   type User,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"

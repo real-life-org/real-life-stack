@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Copy, Check, Trash2, Pencil } from "lucide-react"
-import type { ContactInfo } from "@real-life-stack/data-interface"
+import type { ContactInfo } from "@real-life/data-interface"
 
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Button } from "../primitives/button"

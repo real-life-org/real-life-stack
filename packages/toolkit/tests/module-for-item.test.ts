@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { moduleForItem, modulePresentsItem, PRESENT_PRIORITY } from "../src/lib/module-register"
 
 const base: Item = { id: "i", type: "post", createdAt: "2026-09-01T10:00:00+02:00", createdBy: "mira", data: {} }

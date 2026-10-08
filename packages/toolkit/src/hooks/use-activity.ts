@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, startTransition } from "react"
-import { hasActivityLog } from "@real-life-stack/data-interface"
+import { hasActivityLog } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 /**

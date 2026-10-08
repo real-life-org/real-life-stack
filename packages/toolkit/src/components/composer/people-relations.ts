@@ -1,4 +1,4 @@
-import type { Relation } from "@real-life-stack/data-interface"
+import type { Relation } from "@real-life/data-interface"
 import { isMissingQualifier } from "../preview/field-register"
 
 /**

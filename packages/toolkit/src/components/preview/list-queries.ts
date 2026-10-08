@@ -4,7 +4,7 @@
 // Toolkit (und Apps) die Umsetzung an den Namen.
 
 import type { ReactNode } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import type { ListEntry } from "./field-register"
 

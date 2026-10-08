@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@real-life-stack/toolkit"
+} from "@real-life/toolkit"
 import { Key, Fingerprint } from "lucide-react"
 import type { WotConnector } from "../wot-connector.js"
 import { BiometricService } from "../biometric-service.js"

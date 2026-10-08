@@ -10,7 +10,7 @@ import {
   type Item,
   type TypeManifestEntry,
   type User,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import {
@@ -24,7 +24,7 @@ import { contentTypeFromRegister } from "../src/components/composer/content-type
 import { metaRowOrder, type EdgeEntry, type FieldEntry } from "../src/components/preview/field-register"
 import { RegisterMeta } from "../src/components/preview/register-meta"
 import { renderTypeCardFooter } from "../src/components/preview/type-presentation"
-import { getTypeManifest } from "@real-life-stack/data-interface"
+import { getTypeManifest } from "@real-life/data-interface"
 import { ContentComposer, widgetRenderOrder } from "../src/components/composer/content-composer"
 
 /**

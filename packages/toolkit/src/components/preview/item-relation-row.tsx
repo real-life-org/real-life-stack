@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { useItem } from "../../hooks/use-items"
 import { cn } from "../../lib/utils"
 import type { FieldEntry } from "./field-register"
 import { ItemRefChip, MissingRefText } from "./item-ref-chip"
-import { hasItemGroups } from "@real-life-stack/data-interface"
+import { hasItemGroups } from "@real-life/data-interface"
 import { useConnector } from "../../hooks/connector-context"
 import { targetItemId, targetPointsTo, type EdgeTarget } from "./use-item-edges"
 import { useFittingTags } from "./use-fitting-tags"

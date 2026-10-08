@@ -14,7 +14,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Check, RotateCcw, SlidersHorizontal } from "lucide-react"
-import type { Group } from "@real-life-stack/data-interface"
+import type { Group } from "@real-life/data-interface"
 
 import { useColorScheme } from "../../hooks/use-color-scheme"
 import { scalesForColor } from "../../lib/color-scales"

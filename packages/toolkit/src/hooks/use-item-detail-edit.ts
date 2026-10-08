@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import type { Item, User } from "@real-life-stack/data-interface"
+import type { Item, User } from "@real-life/data-interface"
 
 import type { ContentComposerProps, ContentTypeConfig, WidgetData } from "../components/composer/content-composer"
 import type { ItemEditorMapper } from "./use-item-editor"

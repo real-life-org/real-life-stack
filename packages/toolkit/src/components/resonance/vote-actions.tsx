@@ -1,7 +1,7 @@
 "use client"
 
-import type { Item, VoteValue } from "@real-life-stack/data-interface"
-import { hasItemGroups } from "@real-life-stack/data-interface"
+import type { Item, VoteValue } from "@real-life/data-interface"
+import { hasItemGroups } from "@real-life/data-interface"
 import { Check } from "lucide-react"
 
 import { cn } from "@/lib/utils"

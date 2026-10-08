@@ -2,7 +2,7 @@
 import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { composeTypeManifest, TOOLKIT_TYPE_LAYER } from "@real-life-stack/data-interface"
+import { composeTypeManifest, TOOLKIT_TYPE_LAYER } from "@real-life/data-interface"
 
 import {
   peopleQualifierKey,

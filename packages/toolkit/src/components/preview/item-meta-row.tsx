@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { Calendar, MapPin } from "lucide-react"
 import { cn } from "../../lib/utils"
 import { formatClock, formatDay, isAllDayDate, parseEventDate } from "../../lib/date-utils"

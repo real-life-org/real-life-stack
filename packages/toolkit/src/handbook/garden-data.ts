@@ -1,4 +1,4 @@
-import type { MockConnectorSeed } from '@real-life-stack/mock-connector'
+import type { MockConnectorSeed } from '@real-life/mock-connector'
 import { GARDEN_IMAGE, WORKSHOP_IMAGE } from '../story-support/group-images'
 export const seed: MockConnectorSeed = {
   users: [

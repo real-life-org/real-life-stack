@@ -8,13 +8,13 @@
 // („eingetragen von …") — liegt immer im EIGENEN Record-Slot
 // (`createdBy` = ich). Andere Records werden nie angefasst.
 
-import type { DataInterface, Item } from "@real-life-stack/data-interface"
+import type { DataInterface, Item } from "@real-life/data-interface"
 import {
   hasRelationRecords,
   hasRelationRecordWriter,
   isAuthenticatable,
   selfStatementFields,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 export interface OwnStatement {
   predicate: string

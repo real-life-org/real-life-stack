@@ -1,6 +1,6 @@
 # UI/UX Design-Entscheidungen
 
-Atomare Design-Entscheidungen für das @real-life-stack/toolkit.
+Atomare Design-Entscheidungen für das @real-life/toolkit.
 Jede Checkbox repräsentiert eine einzelne, aktivierbare Entscheidung.
 
 ---

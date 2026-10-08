@@ -5,7 +5,7 @@ import type {
   Observable,
   RelationRecord,
   RelationRecordCapable,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 interface HookSlot {
   cleanup?: () => void

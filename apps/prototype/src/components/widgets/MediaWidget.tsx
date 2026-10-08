@@ -1,6 +1,6 @@
 import React, { useRef, useCallback } from 'react';
 import { useDrop, useDrag } from 'react-dnd';
-import { Button } from '@real-life-stack/toolkit';
+import { Button } from '@real-life/toolkit';
 import { Paperclip, X } from 'lucide-react';
 
 const DraggableMediaItem = ({ file, index, moveItem, onRemove }) => {

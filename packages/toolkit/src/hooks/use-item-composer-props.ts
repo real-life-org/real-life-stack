@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import type { User } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
 
 import type { ContentComposerProps, PersonOption } from "../components/composer/content-composer"
 import { useLocationPick } from "../components/map/location-pick"

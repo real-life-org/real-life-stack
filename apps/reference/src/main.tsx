@@ -10,8 +10,8 @@ import './module-register'
 import './index.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { checkForLiveUpdate } from './live-update'
-import { prefetchMapLibre } from '@real-life-stack/toolkit/maplibre'
-import { loadRuntimeConfig, applyBranding, applyInitialColorScheme } from '@real-life-stack/toolkit'
+import { prefetchMapLibre } from '@real-life/toolkit/maplibre'
+import { loadRuntimeConfig, applyBranding, applyInitialColorScheme } from '@real-life/toolkit'
 import { RootError } from './root-error'
 
 // Check for OTA updates before rendering (no-op in browser/dev)

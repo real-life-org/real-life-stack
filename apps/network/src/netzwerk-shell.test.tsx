@@ -3,7 +3,7 @@ import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { RouterProvider, createMemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { MockConnector, type MockConnectorSeed } from "@real-life-stack/mock-connector"
+import { MockConnector, type MockConnectorSeed } from "@real-life/mock-connector"
 
 import App from "./App"
 import "./module-register"

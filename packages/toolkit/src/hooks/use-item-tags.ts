@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 const EMPTY_TAGS: readonly string[] = Object.freeze([])
 

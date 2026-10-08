@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 // Mock idb-keyval (no IndexedDB in Node)
 vi.mock("idb-keyval", () => ({

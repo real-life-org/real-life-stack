@@ -1,5 +1,5 @@
 {
-  "name": "@real-life-stack/data-interface",
+  "name": "@real-life/data-interface",
   "version": "0.4.0",
   "description": "The core contract: Item, Relation, Group (Space), User, ItemFilter, Observable, capability interfaces and module hints. Zero dependencies.",
   "repository": {

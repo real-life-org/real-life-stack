@@ -1,7 +1,7 @@
 import {
   relationStoreOptionsFrom,
   type RelationPredicateDefinition,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 /**
  * Interim app-owned relation catalog until P5 stores versioned

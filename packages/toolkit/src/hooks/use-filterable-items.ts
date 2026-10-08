@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { useOptionalSharedFilter } from "../components/filter/filter-store"
 import type { FilterBarValue } from "../components/filter/types"
 

@@ -1,4 +1,4 @@
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 /**
  * Wie ein Item heißt, wenn eine Fläche es in einer Zeile nennen muss.

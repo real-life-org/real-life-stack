@@ -1,6 +1,6 @@
 "use client"
 
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import type { FieldEntry } from "./field-register"
 import { ItemRefValue, itemRefId } from "./item-relation-row"

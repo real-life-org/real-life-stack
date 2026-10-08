@@ -35,7 +35,7 @@ import type {
   NotificationStatePatch,
   InitialSyncCapable,
   InitialSyncState,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import {
   deriveActivitySummary,
   BaseConnector,
@@ -65,7 +65,7 @@ import {
   maxTs,
   pruneReadEntryKeys,
   type ReactiveObservable,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import {
   PersonalDocSpaceMetadataStorage,

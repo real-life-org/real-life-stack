@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useId, useMemo, useRef, useState, startTransition } from "react"
-import { hasGroups, hasGroupScope, hasItemGroups, isAuthenticatable, type DataInterface, type Item } from "@real-life-stack/data-interface"
+import { hasGroups, hasGroupScope, hasItemGroups, isAuthenticatable, type DataInterface, type Item } from "@real-life/data-interface"
 import { Lock, MousePointerClick } from "lucide-react"
 
 import { useOptionalConnector } from "../../../hooks/connector-context"

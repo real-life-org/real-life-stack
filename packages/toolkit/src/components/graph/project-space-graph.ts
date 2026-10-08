@@ -3,7 +3,7 @@ import {
   type Item,
   type RelationRecord,
   type User,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import { itemTitle } from "../../lib/item-text"
 import type { GraphEdge, GraphNode, GraphTypeDescriptor } from "./types"
 

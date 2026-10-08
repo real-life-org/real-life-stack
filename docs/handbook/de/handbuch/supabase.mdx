@@ -90,7 +90,7 @@ Die Live-Contract-Suite fährt dieselben Vertragstests wie für jeden Connector,
 SUPABASE_URL=https://supabase-test.example.org \
 SUPABASE_ANON_KEY="$ANON_KEY" \
 SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
-pnpm --filter @real-life-stack/supabase-connector test
+pnpm --filter @real-life/supabase-connector test
 ```
 
 Den `SERVICE_ROLE_KEY` braucht die Suite, um Testdaten fremder Autoren anzulegen. Lasst sie von einem vertrauenswürdigen Rechner laufen.

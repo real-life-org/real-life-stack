@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send, Plus } from 'lucide-react';
-import { Button, Textarea, Input } from '@real-life-stack/toolkit';
+import { Button, Textarea, Input } from '@real-life/toolkit';
 import EmojiReactionPicker from '@/components/ui/EmojiReactionPicker';
 import { cn } from '@/lib/utils';
 

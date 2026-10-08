@@ -1,4 +1,4 @@
-import type { ActivityEntry, Relation } from "@real-life-stack/data-interface"
+import type { ActivityEntry, Relation } from "@real-life/data-interface"
 import type {
   DocLogStore,
   KeyManagementPort,

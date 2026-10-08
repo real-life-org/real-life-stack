@@ -6,7 +6,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import BottomMenu from '@/components/layout/BottomMenu';
 import MainContent from '@/components/layout/MainContent';
 import { Toaster } from '@/components/ui/toaster';
-import { Button, Dialog, DialogContent, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@real-life-stack/toolkit';
+import { Button, Dialog, DialogContent, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@real-life/toolkit';
 import SmartPostWidget, { POST_TYPES } from '@/components/SmartPostWidget';
 import { initializeMockData } from '@/data/mockData';
 import { DndProvider } from 'react-dnd';

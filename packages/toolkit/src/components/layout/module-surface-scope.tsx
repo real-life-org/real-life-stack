@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, type ReactNode } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { useModuleFilteredItems } from "../../hooks/use-filterable-items"
 import { FilterScope } from "../filter/filter-store"

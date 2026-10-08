@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { DataInterface, Item } from "@real-life-stack/data-interface"
+import type { DataInterface, Item } from "@real-life/data-interface"
 import { resolveItemPermissions } from "../src/hooks/use-item-permissions"
 
 const ME = "user-me"

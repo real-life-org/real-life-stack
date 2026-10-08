@@ -1,7 +1,7 @@
-import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType } from "@real-life/data-interface"
 import { useEffect, useMemo, useRef } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import {
   focusVirtualItemOnce,

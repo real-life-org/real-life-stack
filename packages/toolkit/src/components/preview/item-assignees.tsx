@@ -1,6 +1,6 @@
 "use client"
 
-import type { User } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Tooltip, TooltipTrigger, TooltipContent } from "../primitives/tooltip"
 import { ProfileLink } from "../profile/profile-link"

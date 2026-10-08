@@ -1,5 +1,5 @@
 {
-  "name": "@real-life-stack/local-connector",
+  "name": "@real-life/local-connector",
   "version": "0.3.1",
   "description": "Local persistence connector: offline-first, single device.",
   "repository": {
@@ -29,7 +29,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@real-life-stack/data-interface": "workspace:*",
+    "@real-life/data-interface": "workspace:*",
     "idb-keyval": "^6.2.1"
   },
   "devDependencies": {

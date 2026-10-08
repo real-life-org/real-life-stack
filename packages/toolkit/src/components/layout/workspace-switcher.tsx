@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/primitives/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
-import type { Group } from "@real-life-stack/data-interface"
+import type { Group } from "@real-life/data-interface"
 import { readGray, readRadius, readSurfaces, type GrayChoice, type RadiusStep, type Surfaces } from "../../lib/space-theme"
 
 export interface Workspace {

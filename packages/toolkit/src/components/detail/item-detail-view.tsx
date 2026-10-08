@@ -1,7 +1,7 @@
 "use client"
 
 import { type ReactNode, useCallback, useState } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { ItemDetailPanel } from "./item-detail-panel"
 import { ItemDetailActions } from "./item-detail-actions"
 import { ItemDetailSkeleton } from "./item-detail-skeleton"
@@ -20,7 +20,7 @@ import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import { useIsFrozen } from "../../hooks/use-item-frozen"
 import { useItem } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
-import { hasItemGroups, isWritable, normalizeItemType } from "@real-life-stack/data-interface"
+import { hasItemGroups, isWritable, normalizeItemType } from "@real-life/data-interface"
 
 export interface ItemDetailViewProps {
   /** The item to show. The view subscribes via `useItem`, so it always renders

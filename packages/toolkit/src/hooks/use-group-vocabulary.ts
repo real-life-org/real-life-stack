@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { isAggregateVisibleItemType, type Item } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType, type Item } from "@real-life/data-interface"
 
 import { resolveTypePresentation } from "../components/preview/type-presentation"
 import type { FilterTypeOption } from "../components/filter/types"

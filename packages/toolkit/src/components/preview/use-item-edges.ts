@@ -18,7 +18,7 @@ import {
   parseQualifiedItemTarget,
   type Item,
   type ItemFilter,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import { useItemsUnion } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"

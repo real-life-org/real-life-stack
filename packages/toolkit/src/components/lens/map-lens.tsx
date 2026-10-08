@@ -1,6 +1,6 @@
-import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType } from "@real-life/data-interface"
 import { useEffect, useMemo, useRef, useState } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { latLngFromPoint } from "../../lib/geo"
 import { getItemColor, getSpacePrimaryColor } from "../../lib/utils"

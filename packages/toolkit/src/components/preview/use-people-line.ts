@@ -11,8 +11,8 @@
 // und lesen nur über die Capabilities des Connectors.
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react"
-import type { DataInterface, Item, RelationRecord } from "@real-life-stack/data-interface"
-import { onePerSubjectWinners } from "@real-life-stack/data-interface"
+import type { DataInterface, Item, RelationRecord } from "@real-life/data-interface"
+import { onePerSubjectWinners } from "@real-life/data-interface"
 import {
   hasAuthorization,
   hasClaimVerification,
@@ -22,7 +22,7 @@ import {
   hasRelationRecordWriter,
   isAuthenticatable,
   isWritable,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"

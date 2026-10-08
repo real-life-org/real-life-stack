@@ -1,4 +1,4 @@
-import type { RelayState } from "@real-life-stack/data-interface"
+import type { RelayState } from "@real-life/data-interface"
 
 import { cn } from "@/lib/utils"
 import {

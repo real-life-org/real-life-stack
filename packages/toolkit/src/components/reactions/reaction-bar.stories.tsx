@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { ReactionBar } from "./reaction-bar"
 import { ItemPreview } from "../preview/item-preview"
 import { ItemTypeBadge } from "../preview/item-type-badge"

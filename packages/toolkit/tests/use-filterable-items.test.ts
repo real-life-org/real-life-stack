@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { applyFilterBarValue } from "../src/hooks/use-filterable-items"
 import { emptyFilterBarValue } from "../src/components/filter/types"
 

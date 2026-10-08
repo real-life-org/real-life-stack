@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Users, MessageSquare, Check } from 'lucide-react';
-import { Button, Avatar, AvatarFallback, AvatarImage } from '@real-life-stack/toolkit';
+import { Button, Avatar, AvatarFallback, AvatarImage } from '@real-life/toolkit';
 import { mockUsers } from '@/data/mockData';
 import { CURRENT_USER_ID } from '@/data/mockMessages';
 

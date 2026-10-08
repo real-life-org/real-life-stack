@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Label, Button } from '@real-life-stack/toolkit';
+import { Label, Button } from '@real-life/toolkit';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { MapPin } from 'lucide-react';

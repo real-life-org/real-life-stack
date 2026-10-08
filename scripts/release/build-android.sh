@@ -82,7 +82,7 @@ OTA_SENTINEL=android-foss
 # in topologischer Reihenfolge. Eine gepflegte Aufzaehlung driftet lautlos,
 # sobald die App eine Abhaengigkeit dazubekommt - genau das ist mit dem
 # supabase-connector passiert: der Build von app-v0.2.6 starb an
-# `TS2307: Cannot find module '@real-life-stack/supabase-connector'`, weil das
+# `TS2307: Cannot find module '@real-life/supabase-connector'`, weil das
 # Paket in der Liste fehlte, obwohl App.tsx es importiert.
 build_workspace_deps() {
   pnpm --filter "$APP_PKG^..." build

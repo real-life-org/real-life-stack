@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button, Input } from '@real-life-stack/toolkit';
+import { Button, Input } from '@real-life/toolkit';
 import { Search, Clock } from 'lucide-react';
 
 // Default recent emojis (Telegram-style defaults)

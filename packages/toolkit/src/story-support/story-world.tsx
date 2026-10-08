@@ -1,6 +1,6 @@
 import { useEffect, useMemo, type ReactNode } from "react"
-import type { DataInterface, Item, User } from "@real-life-stack/data-interface"
-import { MockConnector, type MockConnectorSeed } from "@real-life-stack/mock-connector"
+import type { DataInterface, Item, User } from "@real-life/data-interface"
+import { MockConnector, type MockConnectorSeed } from "@real-life/mock-connector"
 import { ConnectorProvider } from "../hooks/connector-context"
 import { GARDEN_IMAGE, WORKSHOP_IMAGE } from "./group-images"
 

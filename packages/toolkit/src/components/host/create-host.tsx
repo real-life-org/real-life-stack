@@ -4,7 +4,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore,
   type MutableRefObject, type ReactNode,
 } from "react"
-import { hasGroups, hasItemGroups, type DataInterface, type Item } from "@real-life-stack/data-interface"
+import { hasGroups, hasItemGroups, type DataInterface, type Item } from "@real-life/data-interface"
 
 import { useItemFocus } from "../../hooks/use-item-focus"
 import { useOptionalConnector } from "../../hooks/connector-context"

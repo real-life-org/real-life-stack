@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Button } from "@real-life-stack/toolkit"
+import { Button } from "@real-life/toolkit"
 import { Fingerprint } from "lucide-react"
 import { BiometricService } from "../biometric-service.js"
 

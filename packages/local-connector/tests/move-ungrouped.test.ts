@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 // PR #518, Befund Anton: In der Übersicht angelegte Items liegen in keinem
 // Space (persönlich). Einen Space zu setzen scheiterte mit „Item not found",

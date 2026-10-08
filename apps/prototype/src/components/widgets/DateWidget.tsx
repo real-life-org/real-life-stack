@@ -1,5 +1,5 @@
 import React from 'react';
-import { Label } from '@real-life-stack/toolkit';
+import { Label } from '@real-life/toolkit';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 

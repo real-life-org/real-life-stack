@@ -1,4 +1,4 @@
-import { normalizeItemType, type Item } from "@real-life-stack/data-interface"
+import { normalizeItemType, type Item } from "@real-life/data-interface"
 
 import { resolveTypePresentation } from "../components/preview/type-presentation"
 import { targetItemId } from "../components/preview/use-item-edges"

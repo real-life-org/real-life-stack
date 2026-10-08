@@ -10,7 +10,7 @@ import { test } from "node:test"
  * statt eine eigene Kopie zu bündeln (real-life-stack#555). Vorher steckte
  * data-interface ein zweites Mal im Toolkit-dist: `setTypeManifest` des
  * Toolkits band nur die Kopie, `getTypeManifest()` aus
- * `@real-life-stack/data-interface` sah das Manifest ohne App-Schicht, und
+ * `@real-life/data-interface` sah das Manifest ohne App-Schicht, und
  * jede App mit eigener Register-Schicht musste beide binden.
  * Läuft nach dem Toolkit-Build (`pnpm test` baut es über turbo).
  */
@@ -26,8 +26,8 @@ const distJs = readdirSync(dist).filter((f) => f.endsWith(".js"))
 const distSource = distJs.map((f) => readFileSync(resolve(dist, f), "utf8")).join("\n")
 
 test("data-interface is a runtime dependency of the toolkit, not a dev dependency", () => {
-  assert.ok(workspaceDeps.includes("@real-life-stack/data-interface"), "dependencies must list @real-life-stack/data-interface")
-  assert.equal(pkg.devDependencies?.["@real-life-stack/data-interface"], undefined)
+  assert.ok(workspaceDeps.includes("@real-life/data-interface"), "dependencies must list @real-life/data-interface")
+  assert.equal(pkg.devDependencies?.["@real-life/data-interface"], undefined)
 })
 
 test("every workspace dependency is imported by the dist, not bundled", () => {
@@ -53,7 +53,7 @@ test("setTypeManifest from the toolkit binds the manifest data-interface sees", 
   }
   const toolkit = await import(pathToFileURL(resolve(dist, "index.js")).href)
   // Über den Symlink im Toolkit aufgelöst: dieselbe Datei, die das Toolkit-dist importiert.
-  const diDir = realpathSync(resolve(toolkitDir, "node_modules/@real-life-stack/data-interface"))
+  const diDir = realpathSync(resolve(toolkitDir, "node_modules/@real-life/data-interface"))
   const di = await import(pathToFileURL(resolve(diDir, "dist/src/index.js")).href)
 
   const composed = di.composeTypeManifest([di.TOOLKIT_TYPE_LAYER])

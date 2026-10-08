@@ -138,7 +138,7 @@ check(
   'build_workspace_deps nutzt den Abhaengigkeits-Filter',
   'erwartet: pnpm --filter "$APP_PKG^..." build',
 )
-const genannt = [...rumpf.matchAll(/@real-life-stack\/[a-z-]+/g)].map((m) => m[0])
+const genannt = [...rumpf.matchAll(/@real-life\/[a-z-]+/g)].map((m) => m[0])
 check(
   genannt.length === 0,
   'build_workspace_deps zaehlt keine Pakete von Hand auf',
