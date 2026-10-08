@@ -91,7 +91,12 @@ describe("LocalConnector activity-log contract", () => {
     expect(foreign.current).toBeNull()
   })
 
-  it("2. retains 500 deterministic entries locally and pruning writes no extra log entry", async () => {
+  // Crossing the 500-entry cap takes 501 creates through the public API, each
+  // one an atomic whole-state transaction that the idb double structured-clones
+  // on read and on write, as IndexedDB does. That is ~1 s of CPU alone and
+  // ~3 s when `pnpm test` runs every package in parallel, too close to the
+  // 5 s default. Same budget as the 1000-create retention test above.
+  it("2. retains 500 deterministic entries locally and pruning writes no extra log entry", { timeout: 60_000 }, async () => {
     const connector = await ready()
     const ids = Array.from({ length: 501 }, (_, i) => `entry-${String(i).padStart(3, "0")}`)
     const uuid = vi.spyOn(crypto, "randomUUID").mockImplementation(() => ids.shift()!)
