@@ -17,10 +17,10 @@
  * sondern der White-Label-Kern: eine Instanz muss „Gruppe" in „Kreis"
  * umbenennen können, ohne einen Build anzufassen.
  */
-import { de, type Message, type MessageKey } from "./de"
+import { de, type AppMessages, type Message, type MessageKey, type ToolkitMessageKey } from "./de"
 import { en } from "./en"
 
-export type { Message, MessageKey }
+export type { AppMessages, Message, MessageKey, ToolkitMessageKey }
 
 export type Language = "de" | "en"
 
@@ -93,13 +93,22 @@ interface State {
   readonly extensions: Layer
   /** Instanz-Overrides ({@link applyLanguageConfig}) — oberste Ebene. */
   readonly overrides: Layer
+  /**
+   * Hat der Nutzer in dieser Sitzung ausdrücklich gewählt (oder liegt eine
+   * gespeicherte Wahl vor)? Steht im Stand, nicht nur im localStorage: ist der
+   * Speicher nicht beschreibbar, gilt die Wahl trotzdem die Sitzung über und
+   * eine spätere Instanz-Vorgabe übersteuert sie nicht (rls#615).
+   */
+  readonly userChosen: boolean
 }
 
 function initialState(): State {
+  const stored = storedLanguage()
   return {
-    language: storedLanguage() ?? browserLanguage() ?? "de",
+    language: stored ?? browserLanguage() ?? "de",
     extensions: EMPTY_LAYER,
     overrides: EMPTY_LAYER,
+    userChosen: stored !== null,
   }
 }
 
@@ -125,7 +134,10 @@ export function getLocale(): string {
   return getI18n().locale
 }
 
-/** Nutzerwahl — persistiert und ab sofort ranghöchste Stufe. */
+/**
+ * Nutzerwahl — ab sofort ranghöchste Stufe: für die Sitzung im Stand,
+ * darüber hinaus im localStorage, sofern er beschreibbar ist.
+ */
 export function setLanguage(language: Language): void {
   if (!isLanguage(language)) return
   // Auch eine Wahl, die der aktuellen Sprache entspricht, ist eine Wahl: kam
@@ -136,7 +148,9 @@ export function setLanguage(language: Language): void {
   } catch {
     /* nicht persistierbar — für die laufende Sitzung gilt die Wahl trotzdem */
   }
-  if (language !== state.language) commit({ ...state, language })
+  if (language !== state.language || !state.userChosen) {
+    commit({ ...state, language, userChosen: true })
+  }
 }
 
 /**
@@ -168,8 +182,8 @@ function listenToBrowserLanguage(): void {
 /**
  * Instanz-Konfiguration übernehmen — dieselbe Stelle im App-Start wie
  * `applyBranding` (Spec 11). Die Vorgabe greift nur, solange der Nutzer noch
- * nie gewählt hat: eine gespeicherte Wahl übersteuert die Instanz, nicht
- * umgekehrt.
+ * nie gewählt hat: eine gespeicherte Wahl oder eine Wahl in dieser Sitzung
+ * übersteuert die Instanz, nicht umgekehrt.
  */
 export function applyLanguageConfig(config: {
   defaultLanguage?: string
@@ -178,6 +192,7 @@ export function applyLanguageConfig(config: {
   let next = state
   if (
     isLanguage(config.defaultLanguage) &&
+    !next.userChosen &&
     storedLanguage() === null &&
     config.defaultLanguage !== next.language
   ) {
@@ -208,25 +223,64 @@ export function applyLanguageConfig(config: {
         }
       }
     }
-    next = { ...next, overrides }
+    next = { ...next, overrides: freezeLayer(overrides) }
   }
   if (next !== state) commit(next)
+}
+
+/** Die App-Schlüssel aus dem erweiterbaren Register {@link AppMessages}. */
+export type AppMessageKey = Extract<keyof AppMessages, string>
+
+/**
+ * Eine Nachricht beim Übernehmen in den Stand kopieren (rls#290).
+ *
+ * Ein Plural-Objekt des Aufrufers darf nicht in den Stand wandern: ändert er
+ * es danach, änderte sich jeder Schnappschuss, der es enthält — ohne neue
+ * Identität, ohne Benachrichtigung. Die Kopie wird eingefroren, das Objekt des
+ * Aufrufers bleibt unberührt. Unbrauchbare Werte (kein Text, kein `other`)
+ * fallen mit Warnung heraus, statt den Rückfall zu verdecken.
+ */
+function intakeMessage(key: string, value: unknown): Message | undefined {
+  if (typeof value === "string") return value
+  if (isRecord(value) && typeof value.other === "string") {
+    const copy: Record<string, string> = {}
+    for (const [category, text] of Object.entries(value)) {
+      if (typeof text === "string") copy[category] = text
+    }
+    return Object.freeze(copy) as Message
+  }
+  console.warn(`[i18n] "${key}" ist weder Text noch Plural-Objekt mit \`other\` — übersprungen.`)
+  return undefined
 }
 
 /**
  * App-eigene Schlüssel nachtragen (unterhalb der Instanz-Overrides).
  * Für Texte, die nur die App kennt — Modul-Labels, App-Dialoge.
+ *
+ * Die Schlüssel sind gegen das Register {@link AppMessages} getypt (rls#614):
+ * eine App trägt sie dort per Deklarationsverschmelzung ein. Die Werte werden
+ * beim Übernehmen kopiert — späteres Ändern des übergebenen Objekts wirkt
+ * nicht, erst ein erneuter Aufruf.
  */
-export function extendMessages(messages: Partial<Record<Language, Record<string, Message>>>): void {
+export function extendMessages(
+  messages: Partial<Record<Language, Partial<Record<AppMessageKey, Message>>>>,
+): void {
   const extensions: Record<Language, Record<string, Message>> = {
     de: { ...state.extensions.de },
     en: { ...state.extensions.en },
   }
   for (const [lang, entries] of Object.entries(messages)) {
-    if (!isLanguage(lang) || !entries) continue
-    Object.assign(extensions[lang], entries)
+    if (!isLanguage(lang) || !isRecord(entries)) continue
+    for (const [key, value] of Object.entries(entries)) {
+      const message = intakeMessage(key, value)
+      if (message !== undefined) extensions[lang][key] = message
+    }
   }
-  commit({ ...state, extensions })
+  commit({ ...state, extensions: freezeLayer(extensions) })
+}
+
+function freezeLayer(layer: Record<Language, Record<string, Message>>): Layer {
+  return Object.freeze({ de: Object.freeze(layer.de), en: Object.freeze(layer.en) })
 }
 
 /**
@@ -282,15 +336,27 @@ export interface I18n {
   locale: string
   setLanguage: typeof setLanguage
   /**
-   * Text zur Sprache des Bündels.
+   * Text zur Sprache des Bündels — für Schlüssel, die der Compiler kennt.
+   *
+   * `key` ist streng getypt (rls#614): Toolkit-Schlüssel aus `de.ts` plus die
+   * App-Schlüssel, die eine App im Register {@link AppMessages} einträgt. Ein
+   * Tippfehler ist ein Compilerfehler, kein roher Schlüssel in der
+   * Oberfläche. Für Schlüssel, die erst zur Laufzeit entstehen: `tDynamic`.
    *
    * Plural-Einträge brauchen `count` in den Parametern; die Kategorie wählt
    * `Intl.PluralRules` der Nachrichtensprache. Fehlt ein Schlüssel in der
-   * Sprache, greift die deutsche Referenz; fehlt er ganz (nur bei App- oder
-   * Override-Schlüsseln möglich — Toolkit-Schlüssel prüft der Compiler),
-   * kommt der Schlüssel selbst zurück und die Konsole meldet es.
+   * Sprache, greift die deutsche Referenz; fehlt er ganz (bei App-Schlüsseln,
+   * deren Text nie übergeben wurde), kommt der Schlüssel selbst zurück und
+   * die Konsole meldet es.
    */
-  t(key: MessageKey | (string & {}), params?: MessageParams): string
+  t(key: MessageKey, params?: MessageParams): string
+  /**
+   * Wie `t`, aber für Schlüssel, die erst zur Laufzeit feststehen —
+   * Register-Ids (`module.${id}.label`), Instanz-Texte aus `config.json`.
+   * Bewusst ein eigener, sichtbarer Name: ein freier String an `t` würde die
+   * Prüfung für alle Aufrufer wieder aushebeln.
+   */
+  tDynamic(key: string, params?: MessageParams): string
   /** Tag und Monat („18. Aug." / „18 Aug"), oder eigene `Intl`-Optionen. */
   formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string
   /** Uhrzeit („14:32" / „2:32 PM"). */
@@ -306,6 +372,7 @@ export function isI18n(value: unknown): value is I18n {
   return (
     isRecord(value) &&
     typeof value.t === "function" &&
+    typeof value.tDynamic === "function" &&
     typeof value.formatDate === "function" &&
     typeof value.formatTime === "function"
   )
@@ -315,7 +382,7 @@ function createBundle(s: State): I18n {
   const language = s.language
   const locale = resolveLocale(language)
 
-  const t: I18n["t"] = (key, params) => {
+  const tDynamic: I18n["tDynamic"] = (key, params) => {
     const message = lookup(s, language, key) ?? lookup(s, "de", key)
     if (message === undefined) {
       console.warn(`[i18n] fehlender Schlüssel: ${key}`)
@@ -332,6 +399,8 @@ function createBundle(s: State): I18n {
     const category = new Intl.PluralRules(language).select(count)
     return interpolate(message[category] ?? message.other, params)
   }
+
+  const t: I18n["t"] = (key, params) => tDynamic(key, params)
 
   // --- Datum und Zeit — über die REGIONALE Locale, nicht die Sprache (rls#289) ---
 
@@ -382,6 +451,7 @@ function createBundle(s: State): I18n {
     locale,
     setLanguage,
     t,
+    tDynamic,
     formatDate,
     formatTime,
     formatFullDateTime,
@@ -409,8 +479,13 @@ export function getI18n(): I18n {
 // --- Imperative Kurzformen für Nicht-React-Code: lesen den AKTUELLEN Stand ---
 
 /** Text zur aktiven Sprache — siehe {@link I18n.t}. In React: `useI18n().t`. */
-export function t(key: MessageKey | (string & {}), params?: MessageParams): string {
+export function t(key: MessageKey, params?: MessageParams): string {
   return getI18n().t(key, params)
+}
+
+/** Wie {@link t} für Laufzeit-Schlüssel — siehe {@link I18n.tDynamic}. */
+export function tDynamic(key: string, params?: MessageParams): string {
+  return getI18n().tDynamic(key, params)
 }
 
 /** Tag und Monat zur aktiven Locale. In React: `useI18n().formatDate`. */

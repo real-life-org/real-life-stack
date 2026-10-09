@@ -303,4 +303,51 @@ describe("i18n-Laufzeit", () => {
       expect(formatRelativeTime(new Date(now + half))).toBe("in 1 hr.")
     })
   })
+
+  describe("Übernommene Pluralwerte sind Kopien (rls#290)", () => {
+    it("ein späteres Ändern des Aufrufer-Objekts verändert keinen Schnappschuss", () => {
+      const plural = { one: "eine Gruppe", other: "alte Gruppen" }
+      extendMessages({ de: { "app.groups": plural } })
+      const old = getI18n()
+      const listener = vi.fn()
+      subscribeLanguage(listener)
+
+      plural.other = "neue Gruppen"
+
+      expect(old.t("app.groups" as never, { count: 2 })).toBe("alte Gruppen")
+      expect(getI18n()).toBe(old) // keine stille neue Identität …
+      expect(getI18n().t("app.groups" as never, { count: 2 })).toBe("alte Gruppen")
+      expect(listener).not.toHaveBeenCalled() // … und keine Benachrichtigung
+
+      // Erst ein erneutes Übernehmen bringt den neuen Text — als neuer Stand.
+      extendMessages({ de: { "app.groups": plural } })
+      expect(getI18n().t("app.groups" as never, { count: 2 })).toBe("neue Gruppen")
+      expect(old.t("app.groups" as never, { count: 2 })).toBe("alte Gruppen")
+      expect(listener).toHaveBeenCalledTimes(1)
+    })
+
+    it("friert die eigene Kopie ein, nicht das Objekt des Aufrufers", () => {
+      const plural = { one: "eine Gruppe", other: "Gruppen" }
+      extendMessages({ de: { "app.groups": plural } })
+      expect(Object.isFrozen(plural)).toBe(false)
+      plural.one = "geändert" // darf nicht werfen
+      expect(getI18n().t("app.groups" as never, { count: 1 })).toBe("eine Gruppe")
+    })
+  })
+
+  describe("Sitzungswahl ohne beschreibbaren Speicher (rls#615)", () => {
+    it("eine ausdrückliche Wahl gilt die Sitzung über, auch wenn setItem wirft", () => {
+      resetI18nForTests("de")
+      const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new DOMException("QuotaExceededError")
+      })
+      setLanguage("en")
+      expect(setItem).toHaveBeenCalled()
+      expect(localStorage.getItem("rls.language")).toBeNull()
+
+      applyLanguageConfig({ defaultLanguage: "de" })
+
+      expect(getLanguage()).toBe("en")
+    })
+  })
 })

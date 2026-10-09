@@ -1,5 +1,6 @@
 export {
   t,
+  tDynamic,
   getLanguage,
   setLanguage,
   getLocale,
@@ -18,6 +19,9 @@ export {
   type Language,
   type Message,
   type MessageKey,
+  type ToolkitMessageKey,
+  type AppMessages,
+  type AppMessageKey,
   type MessageParams,
 } from "./runtime"
 export { useI18n } from "./use-i18n"

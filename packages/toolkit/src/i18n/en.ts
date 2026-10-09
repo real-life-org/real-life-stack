@@ -1,4 +1,4 @@
-import type { Message, MessageKey } from "./de"
+import type { Message, ToolkitMessageKey } from "./de"
 
 /**
  * Englisches Wörterbuch — gegen die Schlüssel von `de.ts` getypt.
@@ -24,4 +24,4 @@ export const en = {
 
   "item.editedBy": "Edited by {name} on {date}",
   "item.edited": "edited",
-} satisfies Record<MessageKey, Message>
+} satisfies Record<ToolkitMessageKey, Message>

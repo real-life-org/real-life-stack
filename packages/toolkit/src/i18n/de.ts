@@ -1,10 +1,11 @@
 /**
  * Deutsches Wörterbuch — die REFERENZ für alle Schlüssel.
  *
- * `MessageKey` wird aus dieser Datei abgeleitet; `en.ts` ist dagegen getypt.
- * Ein Schlüssel, der hier fehlt, ist ein Compilerfehler beim Aufrufer; einer,
- * der in `en.ts` fehlt, ein Compilerfehler dort. Es gibt keinen Zustand, in dem
- * eine Sprache still hinterherhinkt.
+ * `ToolkitMessageKey` wird aus dieser Datei abgeleitet; `en.ts` ist dagegen
+ * getypt. Ein Schlüssel, der hier fehlt, ist ein Compilerfehler beim Aufrufer
+ * von `t` (rls#614 — `t` nimmt keinen freien String an); einer, der in `en.ts`
+ * fehlt, ein Compilerfehler dort. Es gibt keinen Zustand, in dem eine Sprache
+ * still hinterherhinkt.
  *
  * Flache Schlüssel (`bereich.name`), Werte sind Strings oder Plural-Objekte
  * nach den Kategorien von `Intl.PluralRules` (`one`/`other` reicht für DE/EN;
@@ -42,4 +43,29 @@ export const de = {
 /** Ein Eintrag: fester Text oder Plural-Formen nach `Intl.PluralRules`. */
 export type Message = string | (Partial<Record<Intl.LDMLPluralRule, string>> & { other: string })
 
-export type MessageKey = keyof typeof de
+/** Die Schlüssel, die das Toolkit selbst mitbringt. */
+export type ToolkitMessageKey = keyof typeof de
+
+/**
+ * Das erweiterbare Register der App-Schlüssel (rls#614).
+ *
+ * Leer im Toolkit; eine App trägt ihre Schlüssel per Deklarations-
+ * verschmelzung ein und bekommt damit dieselbe Compilerprüfung für `t` und
+ * `extendMessages` wie das Toolkit selbst:
+ *
+ * ```ts
+ * declare module "@real-life/toolkit" {
+ *   interface AppMessages {
+ *     "myApp.greeting": string
+ *   }
+ * }
+ * ```
+ *
+ * Nur die Schlüssel zählen, der Werttyp ist Doku. Für Schlüssel, die erst zur
+ * Laufzeit entstehen (Register-Ids, Instanz-Texte), gibt es `tDynamic`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface AppMessages {}
+
+/** Jeder Schlüssel, den `t` annimmt: Toolkit plus App-Register. */
+export type MessageKey = ToolkitMessageKey | Extract<keyof AppMessages, string>

@@ -148,7 +148,7 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 - `useNotifications()` → `{notifications, badgeCount, …}`: What is new for me, and how much is unread? Without capability: empty.
 - `useMarkNotificationsSeen(notifications)` → —: Advance the seen boundary once per opening. Without capability: no-op.
 - `useRelayStatus()` → `{state, isConnected, pendingCount}`: Is this device attached to the relay, is anything unsent waiting? Without capability: throws on render.
-- `useI18n()` → `I18n` — `{language, locale, t, formatDate, formatTime, formatFullDateTime, formatRelativeTime, setLanguage}`: In which language and regional locale does this surface speak — and how? Without capability: — (works without a provider; the toolkit owns its language state).
+- `useI18n()` → `I18n` — `{language, locale, t, tDynamic, formatDate, formatTime, formatFullDateTime, formatRelativeTime, setLanguage}`: In which language and regional locale does this surface speak — and how? Without capability: — (works without a provider; the toolkit owns its language state).
 
 ### Item properties
 

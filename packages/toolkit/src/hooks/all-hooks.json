@@ -934,7 +934,7 @@
           "name": "useI18n",
           "signature": "",
           "question": "In which language and regional locale does this surface speak — and how?",
-          "answers": "`I18n` — `{language, locale, t, formatDate, formatTime, formatFullDateTime, formatRelativeTime, setLanguage}`",
+          "answers": "`I18n` — `{language, locale, t, tDynamic, formatDate, formatTime, formatFullDateTime, formatRelativeTime, setLanguage}`",
           "without": "— (works without a provider; the toolkit owns its language state)",
           "stories": [
             "rls-foundations-hooks--environment"

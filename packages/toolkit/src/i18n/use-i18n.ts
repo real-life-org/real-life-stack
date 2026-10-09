@@ -20,7 +20,7 @@ import { getI18n, subscribeLanguage, type I18n } from "./runtime"
  * ändert — es taugt damit als Dependency für `useMemo`/`useCallback` über
  * übersetzten Werten.
  *
- * @answers `I18n` — `{language, locale, t, formatDate, formatTime, formatFullDateTime, formatRelativeTime, setLanguage}`
+ * @answers `I18n` — `{language, locale, t, tDynamic, formatDate, formatTime, formatFullDateTime, formatRelativeTime, setLanguage}`
  * @without — (works without a provider; the toolkit owns its language state)
  * @group environment
  * @see story rls-foundations-hooks--environment

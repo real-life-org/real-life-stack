@@ -59,8 +59,9 @@ describe("i18n-Reaktivität", () => {
 
   it("rendert neu, wenn eine App Texte nachträgt — ohne Sprachwechsel", async () => {
     function Dynamic() {
-      const { t } = useI18n()
-      return createElement("span", null, t("app.dynamic"))
+      // Laufzeit-Schlüssel ohne Register-Eintrag: tDynamic (rls#614).
+      const { tDynamic } = useI18n()
+      return createElement("span", null, tDynamic("app.dynamic"))
     }
     const warn = console.warn
     console.warn = () => {}
