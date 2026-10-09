@@ -9,11 +9,14 @@
  * der Sprachzustand. Die Wörterbücher sind 1:1 nach JSON übersetzbar, damit
  * ein späterer Wechsel zu einem Übersetzungswerkzeug den Bestand behält.
  *
- * **Vorrangkette der Sprache:** Nutzerwahl (localStorage) → Instanz-Vorgabe
- * (`config.json`, siehe {@link applyLanguageConfig}) → Browsersprache → `de`.
- * Die Oberfläche des Toolkits selbst bietet keine Sprachwahl an — ohne
- * Instanz-Vorgabe folgt sie dem Browser. Die „Nutzerwahl" entsteht nur, wenn
- * eine App {@link setLanguage} aufruft (etwa aus einem eigenen Umschalter).
+ * **Vorrangkette der Sprache:** Instanz-Vorgabe (`config.json`, siehe
+ * {@link applyLanguageConfig}) → Browsersprache → `de`. Die Oberfläche des
+ * Toolkits bietet keine Sprachwahl an. Bietet eine APP einen Umschalter an,
+ * erklärt sie das mit {@link enableLanguageChoice}; erst dann steht die
+ * gespeicherte Nutzerwahl (localStorage `rls.language`) vorn:
+ * Nutzerwahl → Instanz-Vorgabe → Browsersprache → `de`. Ohne diese Erklärung
+ * wird eine gespeicherte Wahl übergangen, nicht gelöscht (Entscheid
+ * 09.10.2026: eine Wahl, die man nirgends ändern kann, darf nicht gelten).
  *
  * **Vorrangkette je Text:** Instanz-Override → App-Erweiterung → Toolkit-
  * Wörterbuch → deutsche Referenz. Die Instanz-Ebene ist kein Randfall,
@@ -133,15 +136,23 @@ interface State {
    * eine spätere Instanz-Vorgabe übersteuert sie nicht (rls#615).
    */
   readonly userChosen: boolean
+  /**
+   * Hat die App mit {@link enableLanguageChoice} erklärt, dass sie einen
+   * Sprachumschalter anbietet? Nur dann wird eine Wahl gespeichert und eine
+   * gespeicherte gelesen.
+   */
+  readonly choiceEnabled: boolean
 }
 
 function initialState(): State {
-  const stored = storedLanguage()
+  // Die gespeicherte Wahl liest erst `enableLanguageChoice` — beim Laden des
+  // Moduls weiß die Laufzeit noch nicht, ob die App einen Umschalter hat.
   return {
-    language: stored ?? browserLanguage() ?? "de",
+    language: browserLanguage() ?? "de",
     extensions: EMPTY_LAYER,
     overrides: EMPTY_LAYER,
-    userChosen: stored !== null,
+    userChosen: false,
+    choiceEnabled: false,
   }
 }
 
@@ -173,20 +184,25 @@ export interface SetLanguageOptions {
    * `localStorage`, und die Wahl zählt nicht als Nutzerwahl (eine spätere
    * Instanz-Vorgabe darf sie ablösen). Für Vorschauen wie Storybook, die auf
    * derselben Origin wie die App laufen und deren gespeicherte Wahl nicht
-   * überschreiben dürfen (rls#620). Standard: `true`.
+   * überschreiben dürfen (rls#620). Standard: speichern — aber nur, wenn die
+   * App {@link enableLanguageChoice} aufgerufen hat; ohne das verhält sich
+   * jeder Aufruf wie `persist: false`.
    */
   persist?: boolean
 }
 
 /**
- * Nutzerwahl — ab sofort ranghöchste Stufe: für die Sitzung im Stand,
- * darüber hinaus im localStorage, sofern er beschreibbar ist. Mit
- * `{ persist: false }` nur eine flüchtige Anzeige-Sprache, siehe
- * {@link SetLanguageOptions}.
+ * Sprache wählen. Mit {@link enableLanguageChoice} ist das die Nutzerwahl —
+ * ab sofort ranghöchste Stufe: für die Sitzung im Stand, darüber hinaus im
+ * localStorage, sofern er beschreibbar ist. Ohne (oder mit
+ * `{ persist: false }`) nur eine flüchtige Anzeige-Sprache für die Sitzung,
+ * siehe {@link SetLanguageOptions}.
  */
 export function setLanguage(language: Language, options?: SetLanguageOptions): void {
   if (!isLanguage(language)) return
-  if (options?.persist === false) {
+  // Ohne erklärten Umschalter der App gibt es keine Nutzerwahl, die man
+  // speichern könnte: der Wechsel gilt nur für die Sitzung.
+  if (options?.persist === false || !state.choiceEnabled) {
     if (language !== state.language) commit({ ...state, language })
     return
   }
@@ -200,6 +216,28 @@ export function setLanguage(language: Language, options?: SetLanguageOptions): v
   }
   if (language !== state.language || !state.userChosen) {
     commit({ ...state, language, userChosen: true })
+  }
+}
+
+/**
+ * Die App bietet einen eigenen Sprachumschalter an — erst damit zählt eine
+ * gespeicherte Wahl (`rls.language`), und {@link setLanguage} speichert.
+ *
+ * Aufrufen beim App-Start, vor dem ersten Rendern und gleich ob vor oder nach
+ * {@link applyLanguageConfig}: eine gespeicherte Wahl gewinnt danach vor der
+ * Instanz-Vorgabe. Mehrfaches Aufrufen schadet nicht. Ohne diesen Aufruf folgt
+ * die Sprache der Instanz-Vorgabe und dem Browser, und eine gespeicherte Wahl
+ * bleibt liegen, bis eine App sie wieder anbietet.
+ */
+export function enableLanguageChoice(): void {
+  if (state.choiceEnabled) return
+  const stored = storedLanguage()
+  if (stored !== null && !state.userChosen) {
+    commit({ ...state, choiceEnabled: true, language: stored, userChosen: true })
+  } else {
+    // Keine Benachrichtigung nötig, wenn sich nur der Schalter umlegt —
+    // die Sprache bleibt, kein Bündel wird anders.
+    state = { ...state, choiceEnabled: true }
   }
 }
 
@@ -243,7 +281,7 @@ export function applyLanguageConfig(config: {
   if (
     isLanguage(config.defaultLanguage) &&
     !next.userChosen &&
-    storedLanguage() === null &&
+    !(next.choiceEnabled && storedLanguage() !== null) &&
     config.defaultLanguage !== next.language
   ) {
     next = { ...next, language: config.defaultLanguage }

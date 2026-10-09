@@ -3,7 +3,7 @@ import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { getLanguage, setLanguage } from "../src/i18n"
+import { enableLanguageChoice, getLanguage, setLanguage } from "../src/i18n"
 import { resetI18nForTests } from "../src/testing"
 
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}))
@@ -33,7 +33,9 @@ async function mountDecorator(language: string) {
 
 describe("Storybook-Sprachumschalter", () => {
   it("lässt eine gespeicherte App-Sprache unangetastet", async () => {
+    // Die App hat einen Umschalter und dort Englisch gespeichert.
     resetI18nForTests()
+    enableLanguageChoice()
     setLanguage("en")
     expect(localStorage.getItem("rls.language")).toBe("en")
 

@@ -2,7 +2,7 @@
 title: Working on the stack together
 description: How a contribution becomes a pull request, who reviews, what gets merged, how a release comes out of it.
 translationOf: docs/handbook/de/handbuch/beitragen.mdx
-sourceHash: a5356fc6471125696305d450a054905e2ffbc01341a22e5af13727c76a507c0c
+sourceHash: d78562b8f4b67119c26d9c9a0fc8e0131093f51004296423b6e5c15269ac4bfa
 group: anleitungen
 sidebar:
   order: 11
@@ -49,7 +49,7 @@ Spec and documentation are German, identifiers in code English, code comments in
 
 ### Text in the interface
 
-The toolkit speaks German and English. The language follows the browser unless the instance (`config.json: defaultLanguage`) or the app (`setLanguage`, the choice is stored) sets one; the toolkit's own interface offers no language switcher, an app can build one. Text that people see or have read out to them does not live in the code but as a key in `packages/toolkit/src/i18n/de.ts` (the reference) and `en.ts` (typed against `de.ts`; a missing key breaks the build). Components get it through `useI18n().t("area.name", { placeholder })`, code outside React through `getI18n().t`. Counts are plural entries (`{ one, other }` with `count`), names and numbers are placeholders; sentences are never assembled from fragments. Messages for developers (`throw`, `console`) stay German.
+The toolkit speaks German and English. The language is set by the instance (`config.json: defaultLanguage`), otherwise by the browser, otherwise German; the toolkit's own interface offers no language switcher. An app that builds one calls `enableLanguageChoice()` at startup: only then does `setLanguage` store the choice, and a stored choice takes precedence over the instance. Without that call, `setLanguage` switches for the session only, and a previously stored choice stays in place without applying. Text that people see or have read out to them does not live in the code but as a key in `packages/toolkit/src/i18n/de.ts` (the reference) and `en.ts` (typed against `de.ts`; a missing key breaks the build). Components get it through `useI18n().t("area.name", { placeholder })`, code outside React through `getI18n().t`. Counts are plural entries (`{ one, other }` with `count`), names and numbers are placeholders; sentences are never assembled from fragments. Messages for developers (`throw`, `console`) stay German.
 
 A guard holds the rest in place: `packages/toolkit/tests/i18n-guard.test.ts` counts per file where fixed text remains (JSX text, display attributes such as `title`, `aria-label`, `placeholder`, props ending in `…Label`/`…Message`, literals in JSX children and German-looking literals) and compares with `i18n-baseline.json`. New fixed text turns it red, and so does removed text until the baseline comes down with it: `pnpm --filter @real-life/toolkit i18n:baseline`. What it should not read is listed with a reason in `i18n-scan.ts`; single places are exempted by a comment `i18n-exempt: <reason>`.
 

@@ -76,8 +76,8 @@ export function UserMenu({
   onLogout,
   build,
 }: UserMenuProps) {
-  // Keine Sprachwahl im Menü: die Sprache folgt dem Browser, sofern Instanz
-  // (`config.json: defaultLanguage`) oder App (`setLanguage`) keine setzen.
+  // Keine Sprachwahl im Menü: die Sprache folgt der Instanz-Vorgabe, sonst dem
+  // Browser. Eine App mit eigenem Umschalter ruft `enableLanguageChoice()` auf.
   const { t } = useI18n()
   const displayName = user.displayName ?? user.id
   const getInitials = (name: string) => {

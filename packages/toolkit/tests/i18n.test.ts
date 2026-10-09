@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   getLanguage,
   setLanguage,
+  enableLanguageChoice,
   getLocale,
   subscribeLanguage,
   applyLanguageConfig,
@@ -53,7 +54,8 @@ describe("i18n-Laufzeit", () => {
       expect(t("userMenu.contacts")).toBe("Contacts")
     })
 
-    it("persistiert die Nutzerwahl", () => {
+    it("persistiert die Nutzerwahl, wenn die App einen Umschalter anbietet", () => {
+      enableLanguageChoice()
       setLanguage("en")
       expect(localStorage.getItem("rls.language")).toBe("en")
     })
@@ -61,6 +63,7 @@ describe("i18n-Laufzeit", () => {
     it("persistiert auch eine Wahl, die der aktuellen Sprache entspricht", () => {
       // Sprache kam von der Instanz-Vorgabe; der Nutzer bestätigt sie ausdrücklich.
       resetI18nForTests()
+      enableLanguageChoice()
       applyLanguageConfig({ defaultLanguage: "en" })
       setLanguage("en")
       expect(localStorage.getItem("rls.language")).toBe("en")
@@ -85,7 +88,8 @@ describe("i18n-Laufzeit", () => {
     })
 
     it("lässt die Instanz-Vorgabe NICHT über die Nutzerwahl gewinnen", () => {
-      // setLanguage("de") in beforeEach ist eine persistierte Nutzerwahl.
+      // Mit Umschalter der App ist setLanguage eine persistierte Nutzerwahl.
+      enableLanguageChoice()
       setLanguage("en")
       applyLanguageConfig({ defaultLanguage: "de" })
       expect(getLanguage()).toBe("en")
@@ -342,6 +346,7 @@ describe("i18n-Laufzeit", () => {
   describe("Sitzungswahl ohne beschreibbaren Speicher (rls#615)", () => {
     it("eine ausdrückliche Wahl gilt die Sitzung über, auch wenn setItem wirft", () => {
       resetI18nForTests("de")
+      enableLanguageChoice()
       const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
         throw new DOMException("QuotaExceededError")
       })

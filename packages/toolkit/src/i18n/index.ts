@@ -4,6 +4,7 @@
 export {
   getLanguage,
   setLanguage,
+  enableLanguageChoice,
   getLocale,
   getI18n,
   isI18n,
