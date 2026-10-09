@@ -3,7 +3,8 @@
 import type { Item } from "@real-life/data-interface"
 import { Clock, MapPin } from "lucide-react"
 import { cn } from "../../lib/utils"
-import { formatClock, formatDay, isAllDayDate, parseEventDate } from "../../lib/date-utils"
+import { isAllDayDate, parseEventDate } from "../../lib/date-utils"
+import { getI18n, isI18n, useI18n, type I18n } from "@/i18n"
 
 /**
  * `ItemTimeRange` — inline row showing the time-of-day for an event
@@ -37,6 +38,7 @@ export interface ItemTimeRangeProps {
 }
 
 export function ItemTimeRange({ item, locationLabel, className }: ItemTimeRangeProps) {
+  const i18n = useI18n()
   const data = item.data as Record<string, unknown>
   const start = typeof data.start === "string" ? data.start : undefined
   const end = typeof data.end === "string" ? data.end : undefined
@@ -53,7 +55,7 @@ export function ItemTimeRange({ item, locationLabel, className }: ItemTimeRangeP
       {start && (
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" />
-          {formatTimeRange(start, end)}
+          {formatTimeRange(i18n, start, end)}
         </span>
       )}
       {location && (
@@ -73,16 +75,36 @@ export function ItemTimeRange({ item, locationLabel, className }: ItemTimeRangeP
  * read them as same-day — "Ganztägig, bis 24. Juli" / "18:00 – 24. Juli".
  *
  * Exported for callers that want the string outside the inline row
- * (e.g. tooltip, list cell).
+ * (e.g. tooltip, list cell). Takes the i18n bundle as the first argument —
+ * in components it comes from `useI18n()` (which carries the language
+ * subscription), outside React from `getI18n()` (rls#290).
  */
-export function formatTimeRange(start: string, end?: string): string {
+export function formatTimeRange(i18n: I18n, start: string, end?: string): string
+/**
+ * @deprecated Since 0.5.0. Pass the i18n bundle first:
+ * `formatTimeRange(useI18n(), start, end)` in components,
+ * `formatTimeRange(getI18n(), start, end)` outside React. This form reads the
+ * current language once and does not subscribe a component to language
+ * changes (rls#291).
+ */
+export function formatTimeRange(start: string, end?: string): string
+export function formatTimeRange(
+  i18nOrStart: I18n | string,
+  startOrEnd?: string,
+  end?: string,
+): string {
+  // Alte Form (start, end?) bleibt für veröffentlichte Aufrufer erhalten (rls#291).
+  if (!isI18n(i18nOrStart)) return timeRange(getI18n(), i18nOrStart, startOrEnd)
+  return timeRange(i18nOrStart, startOrEnd ?? "", end)
+}
+
+function timeRange(i18n: I18n, start: string, end?: string): string {
+  const { t, formatDate, formatTime } = i18n
   const startAllDay = isAllDayDate(start)
   const s = parseEventDate(start)
   if (Number.isNaN(s.getTime())) return start
 
-  const startTime = startAllDay
-    ? "Ganztägig"
-    : formatClock(s)
+  const startTime = startAllDay ? t("time.allDay") : formatTime(s)
 
   if (!end) return startTime
 
@@ -94,20 +116,16 @@ export function formatTimeRange(start: string, end?: string): string {
   // festival — the surrounding UI implies the *current* day, never the range.
   if (startAllDay) {
     if (s.toDateString() === e.toDateString()) return startTime
-    const endDay = formatDay(e)
-    return `Ganztägig, bis ${endDay}`
+    return `${startTime}, ${t("time.until")} ${formatDate(e)}`
   }
 
   if (s.toDateString() === e.toDateString()) {
     if (isAllDayDate(end)) return startTime
-    const endTime = formatClock(e)
-    return `${startTime} – ${endTime}`
+    return `${startTime} – ${formatTime(e)}`
   }
 
   // Multi-day — hint at the end date so the user knows it isn't same-day.
-  const endDate = formatDay(e)
-  const endTime = isAllDayDate(end)
-    ? null
-    : formatClock(e)
+  const endDate = formatDate(e)
+  const endTime = isAllDayDate(end) ? null : formatTime(e)
   return endTime ? `${startTime} – ${endDate}, ${endTime}` : `${startTime} – ${endDate}`
 }

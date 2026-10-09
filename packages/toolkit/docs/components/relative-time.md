@@ -97,7 +97,9 @@ Renders a `<time>` element with `datetime` attribute (for SEO/accessibility) and
 function formatRelativeTime(date: string | Date): string
 ```
 
-Returns the formatted relative time string without a component wrapper.
+Returns the formatted relative time string without a component wrapper, in
+the active language (`@/i18n`). Inside components prefer
+`useI18n().formatRelativeTime`, which re-renders on a language switch.
 
 ### Full date formatter
 
@@ -105,7 +107,9 @@ Returns the formatted relative time string without a component wrapper.
 function formatFullDateTime(date: string | Date): string
 ```
 
-Returns the full date/time string used in the tooltip.
+Returns the full date/time string used in the tooltip, in the active
+formatting locale (e.g. `en-GB` keeps day/month order). Inside components prefer
+`useI18n().formatFullDateTime`.
 
 ---
 
@@ -116,7 +120,7 @@ Returns the full date/time string used in the tooltip.
 - formatRelativeTime standalone function
 - formatFullDateTime standalone function
 - Auto-updating relative time
-- German locale
+- Active language and regional formatting locale (`@/i18n`)
 
 ### Not in scope
 - i18n / multi-locale support (can be added later)

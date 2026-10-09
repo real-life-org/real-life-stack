@@ -11,6 +11,7 @@ import { cn } from "../../lib/utils"
 import { useFieldLink } from "../navigation/field-navigation"
 import { ItemAssignees } from "./item-assignees"
 import { formatEventRange } from "./item-meta-row"
+import { useI18n } from "@/i18n"
 import { groupNumberFields, metaRowOrder, type EdgeEntry, type FieldEntry, type ListEntry, type MetaRow } from "./field-register"
 import { chipValues, contactHref, contactKind, formatNumber, optionTone, parseNumberInput, safeHref, urlLabel } from "../../lib/field-values"
 import { ToneDot, toneSoftClass } from "./value-tone"
@@ -284,10 +285,11 @@ function DateRow({ item, field }: { item: Item; field: FieldEntry }) {
   // zum Feld `start`.
   const end = field.key === "start" ? text(d.end) : undefined
   const zumDatum = useFieldLink(field.key, item)
+  const i18n = useI18n()
   if (!start) return null
   return (
     <Row id={field.key} icon={<Calendar className="h-3.5 w-3.5" />} label={field.label}>
-      <Sprung onClick={zumDatum}>{formatEventRange(start, end)}</Sprung>
+      <Sprung onClick={zumDatum}>{formatEventRange(i18n, start, end)}</Sprung>
     </Row>
   )
 }

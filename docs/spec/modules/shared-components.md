@@ -431,7 +431,7 @@ List-, Grid-, Feed- und Board-Caller keine eigene Kartenfläche bauen.
 `fallback`. Read-only-Linsen komponieren ausschließlich diese Slots und
 `ItemPreview`; sie führen kein eigenes Card-Markup.
 
-Plus eine exportierte Format-Funktion `formatEventRange(start, end?)` für Caller, die den String außerhalb der Inline-Zeile brauchen (z.B. Tooltip, Tabelle).
+Plus eine exportierte Format-Funktion `formatEventRange(i18n, start, end?)` für Caller, die den String außerhalb der Inline-Zeile brauchen (z.B. Tooltip, Tabelle). `i18n` ist das Bündel aus `useI18n()` (in Komponenten, mit Abo auf den Sprachwechsel) oder aus `getI18n()` (außerhalb von React). Die frühere Form `formatEventRange(start, end?)` bleibt als veraltete Überladung erhalten und formatiert über die gerade aktive Sprache.
 
 #### `ItemTimeRange`
 
@@ -449,11 +449,11 @@ interface ItemTimeRangeProps {
 }
 ```
 
-All-day-Events rendern als „Ganztägig". Same-day-Range als „18:00 – 20:00", ohne `end` als „18:00". Mehrtägige Range fügt das End-Datum hinzu, damit User nicht denken das Event ende noch am gleichen Tag.
+All-day-Events rendern als „Ganztägig" (in der aktiven Sprache, Schlüssel `time.allDay`). Same-day-Range als „18:00 – 20:00", ohne `end` als „18:00". Mehrtägige Range fügt das End-Datum hinzu, damit User nicht denken das Event ende noch am gleichen Tag.
 
 Location-Auflösung: `locationLabel`-Prop hat Vorrang; sonst `data.locationName ?? data.address` (analog zu Calendar's eigener Location-Normalisierung). Dadurch wird ein Event mit nur `locationName` ebenfalls korrekt angezeigt.
 
-Plus exportierte Format-Funktion `formatTimeRange(start, end?)`.
+Plus exportierte Format-Funktion `formatTimeRange(i18n, start, end?)`, mit denselben Regeln für `i18n` und derselben veralteten Überladung `formatTimeRange(start, end?)` wie `formatEventRange`.
 
 #### `ItemCommentCount`
 
