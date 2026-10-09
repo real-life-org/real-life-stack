@@ -17,9 +17,9 @@ Currently, the formatting logic is duplicated (inline in `comment-thread.tsx`, h
 
 - **Single source of truth** — one formatting function, one component
 - **Native HTML tooltip** — `title` attribute, no custom tooltip component needed
-- **Locale-aware** — German relative strings, full date in `de-DE` locale
+- **Locale-aware** — relative strings in the active language, full date in the regional formatting locale (`@/i18n`, e.g. `de-DE`, `en-GB`)
 - **Auto-updating** — relative time updates periodically (e.g. "gerade eben" becomes "vor 1 Min." after a minute)
-- **Lightweight** — no dependencies, no Intl.RelativeTimeFormat (bundle size)
+- **Lightweight** — no dependencies; plain `Intl.RelativeTimeFormat` / `Intl.DateTimeFormat`
 
 ---
 
@@ -123,7 +123,6 @@ formatting locale (e.g. `en-GB` keeps day/month order). Inside components prefer
 - Active language and regional formatting locale (`@/i18n`)
 
 ### Not in scope
-- i18n / multi-locale support (can be added later)
 - Custom tooltip component (native `title` attribute is sufficient)
 - "time ago" libraries (dayjs, date-fns — not needed for this scope)
 

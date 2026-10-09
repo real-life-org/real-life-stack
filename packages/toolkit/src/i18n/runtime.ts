@@ -127,13 +127,16 @@ export function getLocale(): string {
 
 /** Nutzerwahl — persistiert und ab sofort ranghöchste Stufe. */
 export function setLanguage(language: Language): void {
-  if (!isLanguage(language) || language === state.language) return
+  if (!isLanguage(language)) return
+  // Auch eine Wahl, die der aktuellen Sprache entspricht, ist eine Wahl: kam
+  // die aktuelle Sprache vom Browser oder der Instanz-Vorgabe, muss sie ab
+  // jetzt trotzdem vor einer späteren Instanz-Vorgabe stehen.
   try {
     if (typeof localStorage !== "undefined") localStorage.setItem(STORAGE_KEY, language)
   } catch {
     /* nicht persistierbar — für die laufende Sitzung gilt die Wahl trotzdem */
   }
-  commit({ ...state, language })
+  if (language !== state.language) commit({ ...state, language })
 }
 
 /**

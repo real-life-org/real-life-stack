@@ -54,6 +54,17 @@ describe("i18n-Laufzeit", () => {
       expect(localStorage.getItem("rls.language")).toBe("en")
     })
 
+    it("persistiert auch eine Wahl, die der aktuellen Sprache entspricht", () => {
+      // Sprache kam von der Instanz-Vorgabe; der Nutzer bestätigt sie ausdrücklich.
+      resetI18nForTests()
+      applyLanguageConfig({ defaultLanguage: "en" })
+      setLanguage("en")
+      expect(localStorage.getItem("rls.language")).toBe("en")
+      // Eine spätere, andere Instanz-Vorgabe gewinnt nicht mehr.
+      applyLanguageConfig({ defaultLanguage: "de" })
+      expect(getLanguage()).toBe("en")
+    })
+
     it("benachrichtigt nicht, wenn sich nichts ändert", () => {
       const listener = vi.fn()
       subscribeLanguage(listener)
