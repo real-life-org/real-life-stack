@@ -12,6 +12,9 @@ sources:
   - .github/workflows/pr-title.yml
   - .github/workflows/deploy-prototypes.yml
   - .github/workflows/publish-app-image.yml
+  - packages/toolkit/src/i18n/de.ts
+  - packages/toolkit/tests/i18n-scan.ts
+  - packages/toolkit/tests/i18n-guard.test.ts
 ---
 
 Ein Beitrag ist alles, was den Stack für die nächste Community besser macht: Code, eine Story, ein Satz in der Spec, ein Test mit echten Menschen, eine Grafik, eine bessere Erklärung. Der Weg ist für alle derselbe, und er braucht keinen bestimmten Agenten und keinen Runner.
@@ -40,7 +43,13 @@ Das Handbuch nennt je Seite seine Quellen im Frontmatter; `pnpm check:site` fäl
 
 ## Sprache und Konventionen
 
-Spec und Dokumentation sind Deutsch, Bezeichner im Code Englisch, Code-Kommentare in der Sprache ihrer Umgebung (im Toolkit Deutsch). Storybook ist Englisch, seine Beispieldaten Deutsch, bis das Toolkit mehrsprachig ist. Normative Wörter in der Spec (`MUSS`, `SOLLTE`, `DARF NICHT`) folgen der Konvention der ganzen Familie in [`real-life-org/meta` → `CONVENTIONS.md`](https://github.com/real-life-org/meta/blob/main/CONVENTIONS.md); ein Wächter prüft sie.
+Spec und Dokumentation sind Deutsch, Bezeichner im Code Englisch, Code-Kommentare in der Sprache ihrer Umgebung (im Toolkit Deutsch). Storybook ist Englisch, seine Beispieldaten Deutsch; die Sprache des Toolkits selbst schaltet der Umschalter „Language“ in der Werkzeugleiste. Normative Wörter in der Spec (`MUSS`, `SOLLTE`, `DARF NICHT`) folgen der Konvention der ganzen Familie in [`real-life-org/meta` → `CONVENTIONS.md`](https://github.com/real-life-org/meta/blob/main/CONVENTIONS.md); ein Wächter prüft sie.
+
+### Texte in der Oberfläche
+
+Das Toolkit spricht Deutsch und Englisch. Ein Text, den Menschen sehen oder vorgelesen bekommen, steht nicht im Code, sondern als Schlüssel in `packages/toolkit/src/i18n/de.ts` (die Referenz) und `en.ts` (gegen `de.ts` getypt, ein fehlender Schlüssel bricht den Build). Komponenten holen ihn über `useI18n().t("bereich.name", { platzhalter })`, Code außerhalb von React über `getI18n().t`. Mengen sind Plural-Einträge (`{ one, other }` mit `count`), Namen und Zahlen Platzhalter; Sätze werden nie aus Bruchstücken zusammengesetzt. Meldungen an Entwickler (`throw`, `console`) bleiben Deutsch.
+
+Ein Wächter hält den Rest fest: `packages/toolkit/tests/i18n-guard.test.ts` zählt je Datei, wo noch fester Text steht (JSX-Text, Anzeige-Attribute wie `title`, `aria-label`, `placeholder`, Props auf `…Label`/`…Message`, Literale in JSX-Kindern und deutsch aussehende Literale), und vergleicht mit `i18n-baseline.json`. Neue feste Texte machen ihn rot, abgebaute auch, bis die Baseline mitsinkt: `pnpm --filter @real-life/toolkit i18n:baseline`. Was er nicht lesen soll, nennt `i18n-scan.ts` mit Grund; einzelne Stellen nimmt ein Kommentar `i18n-exempt: <Grund>` aus.
 
 ## Mit einem Agenten
 

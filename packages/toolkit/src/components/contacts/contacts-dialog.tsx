@@ -13,6 +13,7 @@ import {
 } from "@/components/primitives/dialog"
 import { Skeleton } from "@/components/primitives/skeleton"
 import { ContactList } from "./contact-list"
+import { useI18n } from "@/i18n"
 
 export interface ContactsDialogProps {
   open: boolean
@@ -45,31 +46,37 @@ export function ContactsDialog({
   onVerify,
   onAdd,
   onActivate,
-  activeLabel = "Aktiv",
+  activeLabel: activeLabelProp,
 }: ContactsDialogProps) {
+  const { t } = useI18n()
+  const activeLabel = activeLabelProp ?? t("contacts.active")
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[80dvh] flex flex-col" errorLabel="Die Kontaktliste">
+      <DialogContent className="sm:max-w-md max-h-[80dvh] flex flex-col" errorLabel={t("contacts.errorLabel")}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Kontakte
+            {t("contacts.title")}
           </DialogTitle>
           <DialogDescription>
-            {activeContacts.length} {activeLabel.toLowerCase()} · {pendingContacts.length} ausstehend
+            {t("contacts.summary", {
+              active: activeContacts.length,
+              label: activeLabel.toLowerCase(),
+              pending: pendingContacts.length,
+            })}
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto space-y-4 -mx-6 px-6">
           {onVerify && (
             <Button size="sm" className="w-full" onClick={onVerify}>
               <QrCode className="h-3.5 w-3.5 mr-1.5" />
-              Verifizieren
+              {t("verification.title")}
             </Button>
           )}
           {onAdd && (
             <Button size="sm" variant={onVerify ? "outline" : "default"} className="w-full" onClick={onAdd}>
               <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-              Kontakt hinzufügen
+              {t("addContact.title")}
             </Button>
           )}
           {isLoading ? (
@@ -88,7 +95,7 @@ export function ContactsDialog({
             <>
               {pendingContacts.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Ausstehend</h3>
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t("contacts.pending")}</h3>
                   <ContactList
                     contacts={pendingContacts}
                     onRemove={onRemove}
@@ -107,7 +114,7 @@ export function ContactsDialog({
                   onRemove={onRemove}
                   onEditName={onEditName}
                   activeLabel={activeLabel}
-                  emptyMessage="Noch keine Kontakte"
+                  emptyMessage={t("contacts.empty")}
                 />
               </div>
             </>

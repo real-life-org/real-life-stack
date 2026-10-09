@@ -8,6 +8,7 @@ import { writeOwnStatement, type OwnStatement } from "../lib/own-statement"
 import { resolveItemPermissions } from "./use-item-permissions"
 import type { IncomingEdgeChange } from "../components/composer/item-relations"
 import { createOptionsForSpace } from "../lib/create-in-space"
+import { getI18n } from "@/i18n"
 
 /**
  * The shape a caller-supplied mapper returns. The hook handles the
@@ -293,7 +294,7 @@ export function useItemEditor(options: UseItemEditorOptions): UseItemEditorResul
         // geöffneten Space. Liegt das angelegte Item woanders, sagt das
         // Formular es, statt zu scheitern oder etwas vorzutäuschen (Codex R2/1).
         if (submitOptions?.resume && !unchanged && !(await connector.getItem(existingItem!.id))) {
-          throw new Error("Schon in einem anderen Space angelegt – Änderungen dort bearbeiten; ohne Änderung setzt „Erneut“ fort")
+          throw new Error(getI18n().t("itemEditor.createdElsewhere"))
         }
         const updated = unchanged ? existingItem! : await updateItem(existingItem!.id, update)
         submitOptions?.onPersisted?.(updated)
@@ -376,7 +377,7 @@ async function applyIncoming(
   // anderen Space das falsche Item (Codex R1/1) — dann nichts schreiben.
   const openSpace = hasGroups(connector) ? (connector.getCurrentGroup()?.id ?? null) : null
   if (hasItemGroups(connector) && formGroup && openSpace !== formGroup) {
-    throw new Error("„Braucht“ lässt sich nur im geöffneten Space speichern – zum Verknüpfen dorthin wechseln")
+    throw new Error(getI18n().t("itemEditor.needsOpenSpace"))
   }
   const space = formGroup ?? (hasItemGroups(connector) ? connector.getItemGroupId(item.id) : null)
   // Vorprüfung: Erst wenn jede Quelle erreichbar und schreibbar ist, wird
@@ -393,14 +394,14 @@ async function applyIncoming(
 
 /** Die Quelle frisch, im richtigen Space und schreibbar — sonst ein Fehler mit Grund. */
 async function checkedSource(connector: DataInterface, sourceId: string, currentUserId: string | undefined, space: string | null): Promise<Item> {
-  if (!isWritable(connector)) throw new Error("Dieser Speicher ist nur lesbar")
+  if (!isWritable(connector)) throw new Error(getI18n().t("itemEditor.readOnly"))
   const source = await connector.getItem(sourceId)
   if (!source || (space && hasItemGroups(connector) && connector.getItemGroupId(sourceId) !== space)) {
-    throw new Error("Eine verknüpfte Aufgabe ist hier nicht erreichbar – die Verknüpfung wurde nicht gespeichert")
+    throw new Error(getI18n().t("itemEditor.linkedUnreachable"))
   }
-  const title = typeof source.data?.title === "string" && source.data.title.trim() !== "" ? source.data.title : "Ohne Titel"
+  const title = typeof source.data?.title === "string" && source.data.title.trim() !== "" ? source.data.title : getI18n().t("item.untitled")
   if (!resolveItemPermissions(connector, source, currentUserId).canEdit) {
-    throw new Error(`Keine Schreibrechte an „${title}“ – die Verknüpfung wurde dort nicht gespeichert`)
+    throw new Error(getI18n().t("itemEditor.linkedNotWritable", { title }))
   }
   return source
 }

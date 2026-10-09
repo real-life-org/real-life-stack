@@ -46,6 +46,7 @@ import { CommentNavigationProvider } from "../navigation/comment-navigation"
 import { FieldNavigationProvider } from "../navigation/field-navigation"
 import { TagNavigationProvider } from "../navigation/tag-navigation"
 import { Button } from "../primitives/button"
+import { useI18n } from "@/i18n"
 
 /** Die Overlay-Ebenen, die der Rahmen selbst kennt (Kontakte, Verifizieren). */
 export type FrameOverlayId = "contacts" | "verify"
@@ -182,6 +183,7 @@ function useMemoryOverlay(): NonNullable<FrameRouting["overlay"]> {
  * (`RoutedAppFrame` in `/router` legt es um diesen Rahmen).
  */
 export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAccessContent, children, build, spaceSections, spaceSectionsTitle }: AppFrameProps) {
+  const { t } = useI18n()
   const { groups, workspaces, activeWorkspace, activeModule, modules, urlSpaceId, handleWorkspaceChange, handleModuleChange, goTo, goHome } = routing
   const connector = useConnector()
   const { data: currentUser } = useOptionalCurrentUser()
@@ -339,7 +341,7 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
             ) : (
               <Button variant="outline" size="sm" onClick={openCreateDialog}>
                 <Plus className="h-4 w-4 mr-2" />
-                Neue Gruppe
+                {t("groupDialog.newGroup")}
               </Button>
             )}
           </NavbarStart>
@@ -382,9 +384,9 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
             selectionFocusVisibleArea={drawerHeight > 0 ? { bottomInset: drawerHeight } : undefined}
             noAccessContent={noAccessContent ?? (
               <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
-                <p className="text-lg font-medium text-foreground">Du bist kein Mitglied dieses Spaces</p>
-                <p className="text-sm text-muted-foreground mt-2">Der Space existiert nicht oder du hast keinen Zugang.</p>
-                <Button variant="outline" className="mt-4" onClick={goHome}>Zurück zur Übersicht</Button>
+                <p className="text-lg font-medium text-foreground">{t("appFrame.noAccessTitle")}</p>
+                <p className="text-sm text-muted-foreground mt-2">{t("appFrame.noAccessBody")}</p>
+                <Button variant="outline" className="mt-4" onClick={goHome}>{t("appFrame.backToOverview")}</Button>
               </div>
             )}
           />
@@ -444,7 +446,7 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
           onVerify={hasEncounterVerification(connector) ? () => overlay.open("verify") : undefined}
           onAdd={supportsContacts && !hasEncounterVerification(connector) ? () => setAddContactOpen(true) : undefined}
           onActivate={activateContact}
-          activeLabel={hasEncounterVerification(connector) ? "Verifiziert" : "Aktiv"}
+          activeLabel={hasEncounterVerification(connector) ? t("contacts.verified") : t("contacts.active")}
         />
         <AddContactDialog
           open={addContactOpen}

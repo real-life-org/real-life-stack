@@ -1,6 +1,7 @@
 import type { RelayState } from "@real-life/data-interface"
 
 import { cn } from "@/lib/utils"
+import { useI18n, type ToolkitMessageKey } from "@/i18n"
 import {
   Tooltip,
   TooltipContent,
@@ -15,11 +16,11 @@ export interface RelayStatusBadgeProps {
   onClick?: () => void
 }
 
-const stateConfig: Record<RelayState, { color: string; label: string }> = {
-  connected: { color: "bg-green-500", label: "Verbunden" },
-  connecting: { color: "bg-amber-500 animate-pulse", label: "Verbindet…" },
-  disconnected: { color: "bg-gray-400", label: "Getrennt" },
-  error: { color: "bg-red-500", label: "Fehler" },
+const stateConfig: Record<RelayState, { color: string; label: ToolkitMessageKey }> = {
+  connected: { color: "bg-green-500", label: "relay.connected" },
+  connecting: { color: "bg-amber-500 animate-pulse", label: "relay.connecting" },
+  disconnected: { color: "bg-gray-400", label: "relay.disconnected" },
+  error: { color: "bg-red-500", label: "relay.error" },
 }
 
 export function RelayStatusBadge({
@@ -28,6 +29,7 @@ export function RelayStatusBadge({
   className,
   onClick,
 }: RelayStatusBadgeProps) {
+  const { t } = useI18n()
   const config = stateConfig[state]
 
   return (
@@ -48,8 +50,8 @@ export function RelayStatusBadge({
         </TooltipTrigger>
         <TooltipContent side="bottom">
           <p className="text-xs">
-            Relay: {config.label}
-            {pendingCount > 0 && ` · ${pendingCount} ausstehend`}
+            {t("relay.status", { state: t(config.label) })}
+            {pendingCount > 0 && ` · ${t("relay.pending", { count: pendingCount })}`}
           </p>
         </TooltipContent>
       </Tooltip>

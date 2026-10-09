@@ -4,6 +4,7 @@ import './storybook.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Preview } from '@storybook/react-vite'
 import React from 'react'
+import { setLanguage, type Language } from '../src/i18n'
 
 /**
  * Eingebettet (Handbuch, Startseite) meldet die Vorschau dem Elternfenster, wenn
@@ -54,6 +55,17 @@ function useSchema(dark: boolean) {
   }, [dark])
 }
 
+/**
+ * Die Sprache des Toolkits (i18n) als Umschalter. Deutsch vorweg: die
+ * Beispieldaten der Stories sind deutsch, und eine Oberfläche in der Sprache
+ * des Browsers neben deutschen Daten läse sich wie ein Fehler.
+ */
+function useSprache(language: Language) {
+  React.useEffect(() => {
+    setLanguage(language)
+  }, [language])
+}
+
 const preview: Preview = {
   parameters: {
     controls: {
@@ -85,6 +97,18 @@ const preview: Preview = {
   },
 
   globalTypes: {
+    language: {
+      description: 'Toolkit language',
+      toolbar: {
+        title: 'Language',
+        icon: 'globe',
+        items: [
+          { value: 'de', title: 'Deutsch' },
+          { value: 'en', title: 'English' },
+        ],
+        dynamicTitle: true,
+      },
+    },
     theme: {
       description: 'Color scheme',
       toolbar: {
@@ -102,6 +126,7 @@ const preview: Preview = {
   decorators: [
     (Story, context) => {
       useSchema(context.globals.theme === 'dark')
+      useSprache(context.globals.language === 'en' ? 'en' : 'de')
       return (
         <div
           className={`font-sans bg-background text-foreground ${context.parameters.layout === 'fullscreen' ? '' : 'p-4'}`}
@@ -112,7 +137,7 @@ const preview: Preview = {
     },
   ],
 
-  initialGlobals: { theme: 'light' },
+  initialGlobals: { theme: 'light', language: 'de' },
 }
 
 export default preview

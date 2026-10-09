@@ -2,6 +2,7 @@ import { useCallback, useState } from "react"
 import { hasEncounterVerification } from "@real-life/data-interface"
 import type { EncounterPeerInfo, VerificationChallenge } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
+import { getI18n } from "@/i18n"
 
 const NOOP_VERIFICATION = {
   supported: false as const,
@@ -44,7 +45,7 @@ export function useVerification() {
       setChallenge(result)
       return result
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Challenge creation failed")
+      setError(e instanceof Error ? e.message : getI18n().t("verification.createFailed"))
       return null
     } finally {
       setIsProcessing(false)
@@ -78,7 +79,7 @@ export function useVerification() {
       setPeerInfo(info)
       return info
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Invalid challenge code")
+      setError(e instanceof Error ? e.message : getI18n().t("verification.invalidCode"))
       return null
     } finally {
       setIsProcessing(false)
@@ -94,7 +95,7 @@ export function useVerification() {
       setChallenge(null)
       setPeerInfo(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Verification failed")
+      setError(e instanceof Error ? e.message : getI18n().t("verification.failed"))
     } finally {
       setIsProcessing(false)
     }

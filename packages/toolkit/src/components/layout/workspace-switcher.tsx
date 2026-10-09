@@ -14,6 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
 import type { Group } from "@real-life/data-interface"
 import { readGray, readRadius, readSurfaces, type GrayChoice, type RadiusStep, type Surfaces } from "../../lib/space-theme"
+import { useI18n } from "@/i18n"
 
 export interface Workspace {
   id: string
@@ -83,15 +84,16 @@ interface WorkspaceSwitcherProps {
  * kommt (rls#265).
  */
 export function WorkspaceSyncNotice({ loaded, expected }: { loaded: number; expected: number | null }) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
       <Loader2 className="h-3.5 w-3.5 animate-spin" />
       <span>
         {expected !== null && expected > loaded
-          ? `${loaded} von ${expected} ${expected === 1 ? "Gruppe" : "Gruppen"} geladen …`
+          ? t("workspaceSwitcher.syncProgress", { loaded, count: expected })
           : loaded > 0
-            ? `${loaded} ${loaded === 1 ? "Gruppe" : "Gruppen"} geladen, es kommen noch welche …`
-            : "Deine Gruppen werden geladen …"}
+            ? t("workspaceSwitcher.syncMore", { count: loaded })
+            : t("workspaceSwitcher.syncStart")}
       </span>
     </div>
   )
@@ -109,6 +111,7 @@ export function WorkspaceSwitcher({
   // Controlled so the gear (edit) button can close the menu before opening the
   // group dialog — otherwise the menu stays open and overlaps the dialog.
   const [open, setOpen] = useState(false)
+  const { t } = useI18n()
 
   const getInitials = (name: string) => {
     return name
@@ -146,10 +149,10 @@ export function WorkspaceSwitcher({
             ist min-w-0, NavbarEnd shrink-0 — ein fester Deckel (34vw) schnitt
             „Gemeinschaftsgarten" auf dem Telefon ab, obwohl Platz war. */}
         <span className="min-w-0 truncate text-base font-semibold sm:text-lg">
-          {activeWorkspace ? activeWorkspace.name : "Space wählen"}
+          {activeWorkspace ? activeWorkspace.name : t("workspaceSwitcher.choose")}
         </span>
         {syncing ? (
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" aria-label="Gruppen werden geladen" />
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" aria-label={t("workspaceSwitcher.loading")} />
         ) : (
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         )}
@@ -169,7 +172,7 @@ export function WorkspaceSwitcher({
             <DropdownMenuSeparator />
           </>
         )}
-        <DropdownMenuLabel>Gruppen</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("workspaceSwitcher.groups")}</DropdownMenuLabel>
         {syncing && <WorkspaceSyncNotice loaded={groupWorkspaces.length} expected={syncExpected ?? null} />}
         {groupWorkspaces.map((workspace) => (
           <DropdownMenuItem
@@ -187,7 +190,7 @@ export function WorkspaceSwitcher({
             {onEditWorkspace && (
               <button
                 type="button"
-                aria-label={`${workspace.name} bearbeiten`}
+                aria-label={t("workspaceSwitcher.edit", { name: workspace.name })}
                 className="rounded p-0.5 opacity-50 hover:opacity-100! hover:bg-accent shrink-0"
                 onClick={(e) => {
                   e.stopPropagation()
@@ -205,7 +208,7 @@ export function WorkspaceSwitcher({
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onCreateWorkspace} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
-              <span>Neue Gruppe erstellen</span>
+              <span>{t("workspaceSwitcher.create")}</span>
             </DropdownMenuItem>
           </>
         )}

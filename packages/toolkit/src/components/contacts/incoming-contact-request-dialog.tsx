@@ -8,6 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/primitives/dialog"
+import { useI18n } from "@/i18n"
+import { withNodes } from "@/i18n/with-nodes"
 import { Button } from "@/components/primitives/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
 
@@ -49,7 +51,8 @@ export function IncomingContactRequestDialog({
   onConfirm,
   onDismiss,
 }: IncomingContactRequestDialogProps) {
-  const displayName = fromName ?? "Jemand"
+  const { t } = useI18n()
+  const displayName = fromName ?? t("contacts.someone")
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -77,7 +80,7 @@ export function IncomingContactRequestDialog({
       await onConfirm()
     } catch (cause) {
       if (epoch !== requestEpoch.current) return
-      setError(cause instanceof Error ? cause.message : "Bestätigen fehlgeschlagen. Bitte erneut versuchen.")
+      setError(cause instanceof Error ? cause.message : t("contactRequest.confirmFailed"))
     } finally {
       if (epoch === requestEpoch.current) setConfirming(false)
     }
@@ -95,7 +98,7 @@ export function IncomingContactRequestDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            Neue Kontaktanfrage
+            {t("contactRequest.title")}
           </DialogTitle>
         </DialogHeader>
 
@@ -107,7 +110,7 @@ export function IncomingContactRequestDialog({
             </AvatarFallback>
           </Avatar>
           <p className="text-sm">
-            <span className="font-medium">{displayName}</span> möchte dich als Kontakt hinzufügen.
+            {withNodes(t("contactRequest.body"), { name: <span className="font-medium">{displayName}</span> })}
           </p>
         </div>
 
@@ -115,10 +118,10 @@ export function IncomingContactRequestDialog({
 
         <div className="flex justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onDismiss} disabled={confirming}>
-            Später
+            {t("common.later")}
           </Button>
           <Button size="sm" onClick={handleConfirm} disabled={confirming}>
-            {confirming ? "Bestätige…" : "Bestätigen"}
+            {confirming ? t("contactRequest.confirming") : t("common.confirm")}
           </Button>
         </div>
       </DialogContent>

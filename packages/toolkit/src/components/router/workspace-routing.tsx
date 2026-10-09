@@ -18,6 +18,7 @@ import { applyThemeTokens, clearThemeTokens, themeTokens } from "../../lib/theme
 import { getSpacePrimaryColor } from "../../lib/utils"
 import type { Module } from "../layout/module-tabs"
 import { workspaceOf, type Workspace } from "../layout/workspace-switcher"
+import { useI18n } from "@/i18n"
 
 /**
  * Space, Modul und Item aus der URL — die Auflösung, die jede App mit Router
@@ -50,7 +51,11 @@ export const scopeToSlug = (id: string) => (id === OVERVIEW_ID ? OVERVIEW_SLUG :
 /** URL slug → internal scope id. */
 const slugToScope = (slug: string) => (slug === OVERVIEW_SLUG ? OVERVIEW_ID : slug)
 
-const OVERVIEW_WORKSPACE: Workspace = { id: OVERVIEW_ID, name: "Mein Netzwerk", scope: "overview" }
+/**
+ * Das Aggregat als Workspace. Der Name ist reine Anzeige in der aktiven
+ * Sprache — er wird nirgends gespeichert, die Kennung bleibt `__overview__`.
+ */
+const overviewWorkspace = (name: string): Workspace => ({ id: OVERVIEW_ID, name, scope: "overview" })
 
 
 /**
@@ -124,6 +129,7 @@ export interface WorkspaceRoutingOptions {
  * @see spec docs/spec/01-app-composition.md
  */
 export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions = {}): WorkspaceRouting {
+  const { t } = useI18n()
   const connector = useConnector()
   const navigate = useNavigate()
   const location = useLocation()
@@ -152,10 +158,10 @@ export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions 
 
   const workspaces: Workspace[] = useMemo(
     () => [
-      OVERVIEW_WORKSPACE,
+      overviewWorkspace(t("workspace.overview")),
       ...groups.map(workspaceOf),
     ],
-    [groups]
+    [groups, t]
   )
 
   // Derive active workspace from the URL scope (fallback localStorage → first space).

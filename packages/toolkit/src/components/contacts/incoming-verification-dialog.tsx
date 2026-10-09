@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/primitives/dialog"
+import { useI18n } from "@/i18n"
 
 export interface IncomingVerificationDialogProps {
   open: boolean
@@ -33,6 +34,7 @@ export function IncomingVerificationDialog({
   onConfirm,
   onReject,
 }: IncomingVerificationDialogProps) {
+  const { t } = useI18n()
   const [confirming, setConfirming] = useState(false)
   const name = fromName ?? `User-${fromId.slice(-6)}`
 
@@ -50,9 +52,9 @@ export function IncomingVerificationDialog({
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onReject() }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-center">Stehst du vor dieser Person?</DialogTitle>
+          <DialogTitle className="text-center">{t("verification.incomingQuestion")}</DialogTitle>
           <DialogDescription className="text-center">
-            Bestätige nur, wenn du diese Person persönlich kennst.
+            {t("verification.confirmHint")}
           </DialogDescription>
         </DialogHeader>
 
@@ -77,7 +79,7 @@ export function IncomingVerificationDialog({
             className="flex-1"
             onClick={onReject}
           >
-            Ablehnen
+            {t("verification.reject")}
           </Button>
           <Button
             className="flex-1"
@@ -85,7 +87,7 @@ export function IncomingVerificationDialog({
             disabled={confirming}
           >
             {confirming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Bestätigen
+            {t("common.confirm")}
           </Button>
         </div>
       </DialogContent>

@@ -2,6 +2,7 @@
 
 import { Settings } from "lucide-react"
 import type { ReactNode } from "react"
+import { useI18n } from "@/i18n"
 
 export interface ModuleSettingsPlaceholderProps {
   /** Module display name, e.g. "Kanban" — shown in the heading. */
@@ -26,24 +27,23 @@ export function ModuleSettingsPlaceholder({
   moduleLabel,
   plannedItems,
 }: ModuleSettingsPlaceholderProps) {
+  const { t } = useI18n()
   return (
     <div className="flex h-full flex-col">
       <div className="border-b p-4 pr-12">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Settings className="h-4 w-4" />
-          {moduleLabel}-Einstellungen
+          {t("modulePanel.settingsTitle", { module: moduleLabel })}
         </h2>
       </div>
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
         <p className="text-sm text-muted-foreground">
-          Moduleinstellungen sind in Vorbereitung. Hier konfigurierst du
-          später, wie das {moduleLabel}-Modul in diesem Space aussieht und
-          sich verhält.
+          {t("modulePanel.settingsPlaceholder", { module: moduleLabel })}
         </p>
         {plannedItems && plannedItems.length > 0 && (
           <div className="rounded-lg border border-dashed p-4">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Geplant
+              {t("modulePanel.planned")}
             </p>
             <ul className="list-disc space-y-1 pl-4 text-sm text-muted-foreground">
               {plannedItems.map((item, i) => (

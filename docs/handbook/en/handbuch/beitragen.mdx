@@ -2,7 +2,7 @@
 title: Working on the stack together
 description: How a contribution becomes a pull request, who reviews, what gets merged, how a release comes out of it.
 translationOf: docs/handbook/de/handbuch/beitragen.mdx
-sourceHash: df6da22175f0d688d8f927e9b7b05eb76cb66949c3514b289d56abb46e4922ec
+sourceHash: 791dbc0b56a4330639118e3e46fb897c399845cb6ed20af87f3e45dcff9cf20a
 group: anleitungen
 sidebar:
   order: 11
@@ -14,6 +14,9 @@ sources:
   - .github/workflows/pr-title.yml
   - .github/workflows/deploy-prototypes.yml
   - .github/workflows/publish-app-image.yml
+  - packages/toolkit/src/i18n/de.ts
+  - packages/toolkit/tests/i18n-scan.ts
+  - packages/toolkit/tests/i18n-guard.test.ts
 ---
 
 A contribution is everything that makes the stack better for the next community: code, a story, a sentence in the spec, a test with real people, a graphic, a better explanation. The way is the same for all of them, and it needs no particular agent and no runner.
@@ -42,7 +45,13 @@ The handbook names its sources per page in the frontmatter; `pnpm check:site` fa
 
 ## Language and conventions
 
-Spec and documentation are German, identifiers in code English, code comments in the language of their surroundings (German in the toolkit). Storybook is English, its sample data German until the toolkit is multilingual. Normative words in the spec (`MUSS`, `SOLLTE`, `DARF NICHT`) follow the convention of the whole family in [`real-life-org/meta` → `CONVENTIONS.md`](https://github.com/real-life-org/meta/blob/main/CONVENTIONS.md); a guard checks them.
+Spec and documentation are German, identifiers in code English, code comments in the language of their surroundings (German in the toolkit). Storybook is English, its sample data German; the toolkit's own language is switched with the "Language" toggle in the toolbar. Normative words in the spec (`MUSS`, `SOLLTE`, `DARF NICHT`) follow the convention of the whole family in [`real-life-org/meta` → `CONVENTIONS.md`](https://github.com/real-life-org/meta/blob/main/CONVENTIONS.md); a guard checks them.
+
+### Text in the interface
+
+The toolkit speaks German and English. Text that people see or have read out to them does not live in the code but as a key in `packages/toolkit/src/i18n/de.ts` (the reference) and `en.ts` (typed against `de.ts`; a missing key breaks the build). Components get it through `useI18n().t("area.name", { placeholder })`, code outside React through `getI18n().t`. Counts are plural entries (`{ one, other }` with `count`), names and numbers are placeholders; sentences are never assembled from fragments. Messages for developers (`throw`, `console`) stay German.
+
+A guard holds the rest in place: `packages/toolkit/tests/i18n-guard.test.ts` counts per file where fixed text remains (JSX text, display attributes such as `title`, `aria-label`, `placeholder`, props ending in `…Label`/`…Message`, literals in JSX children and German-looking literals) and compares with `i18n-baseline.json`. New fixed text turns it red, and so does removed text until the baseline comes down with it: `pnpm --filter @real-life/toolkit i18n:baseline`. What it should not read is listed with a reason in `i18n-scan.ts`; single places are exempted by a comment `i18n-exempt: <reason>`.
 
 ## With an agent
 
