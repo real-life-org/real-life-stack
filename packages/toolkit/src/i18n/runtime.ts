@@ -76,7 +76,37 @@ function resolveLocale(language: Language): string {
 /** Eine Text-Ebene je Sprache (App-Erweiterungen oder Instanz-Overrides). */
 type Layer = Readonly<Record<Language, Readonly<Record<string, Message>>>>
 
-const EMPTY_LAYER: Layer = { de: {}, en: {} }
+/**
+ * Eine Schlüssel-Map ohne Prototyp (rls#617): `toString`, `constructor`,
+ * `__proto__` sind darin gewöhnliche Schlüssel — vorhanden nur, wenn jemand
+ * sie einträgt — und eine Zuweisung an `__proto__` legt einen Eintrag an,
+ * statt einen Prototyp zu setzen.
+ */
+/**
+ * `Object.hasOwn` ohne ES2022-Lib: Apps, die Toolkit-Quellen mit älterem
+ * `lib` prüfen (apps/network), und ältere WebViews kennen es nicht.
+ */
+function hasOwn(target: object, key: PropertyKey): boolean {
+  return Object.prototype.hasOwnProperty.call(target, key)
+}
+
+function messageMap<V>(from?: Readonly<Record<string, V>>): Record<string, V> {
+  const map = Object.create(null) as Record<string, V>
+  if (from) for (const key of Object.keys(from)) map[key] = from[key]
+  return map
+}
+
+/**
+ * Nachschlagen nur unter EIGENEN Schlüsseln (rls#617). Das deckt auch die
+ * eingebauten Wörterbücher ab, die gewöhnliche Objekte sind: ohne diese
+ * Prüfung fand `lookup` für `toString` die geerbte Funktion und
+ * `interpolate` warf.
+ */
+function own<V>(map: Readonly<Record<string, V>>, key: string): V | undefined {
+  return hasOwn(map, key) ? map[key] : undefined
+}
+
+const EMPTY_LAYER: Layer = Object.freeze({ de: Object.freeze(messageMap<Message>()), en: Object.freeze(messageMap<Message>()) })
 
 /**
  * Der gesamte veränderliche Zustand als EIN unveränderlicher Stand (rls#290).
@@ -200,8 +230,8 @@ export function applyLanguageConfig(config: {
   }
   if (isRecord(config.strings)) {
     const overrides: Record<Language, Record<string, Message>> = {
-      de: { ...next.overrides.de },
-      en: { ...next.overrides.en },
+      de: messageMap(next.overrides.de),
+      en: messageMap(next.overrides.en),
     }
     for (const [lang, messages] of Object.entries(config.strings)) {
       if (!isLanguage(lang)) {
@@ -242,8 +272,8 @@ export type AppMessageKey = Extract<keyof AppMessages, string>
  */
 function intakeMessage(key: string, value: unknown): Message | undefined {
   if (typeof value === "string") return value
-  if (isRecord(value) && typeof value.other === "string") {
-    const copy: Record<string, string> = {}
+  if (isRecord(value) && hasOwn(value, "other") && typeof value.other === "string") {
+    const copy = messageMap<string>()
     for (const [category, text] of Object.entries(value)) {
       if (typeof text === "string") copy[category] = text
     }
@@ -266,8 +296,8 @@ export function extendMessages(
   messages: Partial<Record<Language, Partial<Record<AppMessageKey, Message>>>>,
 ): void {
   const extensions: Record<Language, Record<string, Message>> = {
-    de: { ...state.extensions.de },
-    en: { ...state.extensions.en },
+    de: messageMap(state.extensions.de),
+    en: messageMap(state.extensions.en),
   }
   for (const [lang, entries] of Object.entries(messages)) {
     if (!isLanguage(lang) || !isRecord(entries)) continue
@@ -303,7 +333,7 @@ export function resetI18nForTests(language?: Language): void {
 export type MessageParams = Record<string, string | number>
 
 function lookup(s: State, language: Language, key: string): Message | undefined {
-  return s.overrides[language][key] ?? s.extensions[language][key] ?? builtin[language][key]
+  return own(s.overrides[language], key) ?? own(s.extensions[language], key) ?? own(builtin[language], key)
 }
 
 /**
@@ -314,7 +344,7 @@ function lookup(s: State, language: Language, key: string): Message | undefined 
 function interpolate(template: string, params?: MessageParams): string {
   if (!params) return template
   return template.replace(/\{(\w+)\}/g, (match, name: string) =>
-    name in params ? String(params[name]) : match,
+    hasOwn(params, name) ? String(params[name]) : match,
   )
 }
 
@@ -397,7 +427,7 @@ function createBundle(s: State): I18n {
     }
     // Plural gehört zum TEXT, nicht zur Region: Nachrichtensprache, nicht Locale.
     const category = new Intl.PluralRules(language).select(count)
-    return interpolate(message[category] ?? message.other, params)
+    return interpolate(own(message as Record<string, string>, category) ?? message.other, params)
   }
 
   const t: I18n["t"] = (key, params) => tDynamic(key, params)

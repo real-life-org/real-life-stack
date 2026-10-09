@@ -354,4 +354,53 @@ describe("i18n-Laufzeit", () => {
       expect(getLanguage()).toBe("en")
     })
   })
+
+  describe("Nur eigene Schlüssel — nichts aus Object.prototype (rls#617)", () => {
+    const geerbt = ["toString", "__proto__", "constructor", "hasOwnProperty", "valueOf"]
+
+    it.each(geerbt)("„%s“ ist ein unbekannter Schlüssel, mit und ohne Parameter", (key) => {
+      expect(t(key)).toBe(key)
+      expect(t(key, { count: 1 })).toBe(key)
+      expect(t(key, { name: "x" })).toBe(key)
+      setLanguage("en")
+      expect(t(key, { count: 2 })).toBe(key)
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining(key))
+    })
+
+    it("ein registrierter Schlüssel „toString“ gilt wie jeder andere, mit Rückfallkette", () => {
+      extendMessages({ de: { toString: "Als Text" } } as never)
+      expect(t("toString")).toBe("Als Text")
+      setLanguage("en")
+      expect(t("toString")).toBe("Als Text") // deutsche Referenz als Rückfall
+      applyLanguageConfig({ strings: { en: { toString: "As text" } } })
+      expect(t("toString")).toBe("As text")
+    })
+
+    it("ein Plural-Eintrag unter „constructor“ wählt seine Kategorie", () => {
+      extendMessages({ de: { constructor: { one: "{count} Bau", other: "{count} Bauten" } } } as never)
+      expect(t("constructor", { count: 1 })).toBe("1 Bau")
+      expect(t("constructor", { count: 3 })).toBe("3 Bauten")
+    })
+
+    it("ein Platzhalter „{toString}“ greift nicht auf geerbte Parameter zu", () => {
+      extendMessages({ de: { "app.ph": "Wert: {toString}" } } as never)
+      expect(t("app.ph", {})).toBe("Wert: {toString}")
+      expect(t("app.ph", { toString: "eigen" })).toBe("Wert: eigen")
+    })
+
+    it("ein „__proto__“-Schlüssel in der Eingabe verschmutzt nichts", () => {
+      const app = JSON.parse('{"de": {"__proto__": {"other": "App-Proto", "polluted": "ja"}}}')
+      const instance = JSON.parse('{"de": {"__proto__": "Instanz-Proto"}, "__proto__": {"en": {"x": "y"}}}')
+      extendMessages(app)
+      expect(t("__proto__", { count: 2 })).toBe("App-Proto")
+      applyLanguageConfig({ strings: instance })
+      expect(t("__proto__")).toBe("Instanz-Proto")
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined()
+      expect(({} as Record<string, unknown>).other).toBeUndefined()
+      expect(({} as Record<string, unknown>).en).toBeUndefined()
+      // Andere Schlüssel lösen unverändert auf.
+      expect(t("userMenu.contacts")).toBe("Kontakte")
+      expect(t("polluted")).toBe("polluted")
+    })
+  })
 })
