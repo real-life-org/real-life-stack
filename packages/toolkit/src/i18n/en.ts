@@ -12,7 +12,6 @@ export const en = {
   "userMenu.verify": "Verify",
   "userMenu.settings": "Settings",
   "userMenu.logout": "Log out",
-  "userMenu.language": "Language",
 
   "build.title": "Version · commit · channel — tap to copy",
   "build.ariaLabel": "Build {build}, tap to copy",

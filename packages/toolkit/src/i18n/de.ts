@@ -23,7 +23,6 @@ export const de = {
   "userMenu.verify": "Verifizieren",
   "userMenu.settings": "Einstellungen",
   "userMenu.logout": "Abmelden",
-  "userMenu.language": "Sprache",
 
   // --- Build-Zeile im Nutzermenü ---
   "build.title": "Version · Commit · Kanal — antippen kopiert",

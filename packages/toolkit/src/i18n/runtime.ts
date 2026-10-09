@@ -11,6 +11,9 @@
  *
  * **Vorrangkette der Sprache:** Nutzerwahl (localStorage) → Instanz-Vorgabe
  * (`config.json`, siehe {@link applyLanguageConfig}) → Browsersprache → `de`.
+ * Die Oberfläche des Toolkits selbst bietet keine Sprachwahl an — ohne
+ * Instanz-Vorgabe folgt sie dem Browser. Die „Nutzerwahl" entsteht nur, wenn
+ * eine App {@link setLanguage} aufruft (etwa aus einem eigenen Umschalter).
  *
  * **Vorrangkette je Text:** Instanz-Override → App-Erweiterung → Toolkit-
  * Wörterbuch → deutsche Referenz. Die Instanz-Ebene ist kein Randfall,
