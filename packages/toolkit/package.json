@@ -33,6 +33,11 @@
       "types": "./dist/router.d.ts",
       "development": "./src/router.tsx",
       "import": "./dist/router.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "development": "./src/testing.ts",
+      "import": "./dist/testing.js"
     }
   },
   "files": [
@@ -136,6 +141,10 @@
       "./router": {
         "types": "./dist/router.d.ts",
         "import": "./dist/router.js"
+      },
+      "./testing": {
+        "types": "./dist/testing.d.ts",
+        "import": "./dist/testing.js"
       }
     }
   }

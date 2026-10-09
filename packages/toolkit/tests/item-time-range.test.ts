@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import { formatTimeRange as formatTimeRangeImpl } from "../src/components/preview/item-time-range"
 import { formatEventRange as formatEventRangeImpl } from "../src/components/preview/item-meta-row"
-import { getI18n, resetI18nForTests, setLanguage } from "../src/i18n"
+import { getI18n, setLanguage } from "../src/i18n"
+import { resetI18nForTests } from "../src/testing"
 
 // Diese Erwartungen sind deutsche Literale — die Sprache wird deshalb
 // FESTGENAGELT statt vom System geerbt. Vorher liefen die Tests nur auf

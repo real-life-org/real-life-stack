@@ -1,6 +1,6 @@
 import { beforeEach } from "vitest"
 
-import { resetI18nForTests } from "../src/i18n"
+import { resetI18nForTests } from "../src/testing"
 
 /**
  * Die Toolkit-Suiten prüfen deutsche Literale („Ganztägig", „bearbeitet",

@@ -3,7 +3,8 @@ import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
-import { setLanguage, resetI18nForTests, extendMessages, applyLanguageConfig } from "../src/i18n"
+import { setLanguage, extendMessages, applyLanguageConfig } from "../src/i18n"
+import { resetI18nForTests } from "../src/testing"
 import { useI18n } from "../src/i18n/use-i18n"
 import { RelativeTime } from "../src/components/primitives/relative-time"
 

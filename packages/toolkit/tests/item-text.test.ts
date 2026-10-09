@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import type { Item } from "@real-life/data-interface"
 import { editedLabel, itemText, itemTitle } from "../src/lib/item-text"
-import { getI18n, resetI18nForTests, setLanguage } from "../src/i18n"
+import { getI18n, setLanguage } from "../src/i18n"
+import { resetI18nForTests } from "../src/testing"
 
 const base: Item = { id: "i1", type: "post", createdAt: "2026-09-01T10:00:00+02:00", createdBy: "mira", data: {} }
 

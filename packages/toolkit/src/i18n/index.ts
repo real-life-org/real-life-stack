@@ -1,6 +1,7 @@
+// Bewusst ohne freies `t`/`tDynamic`: in React `useI18n().t`, sonst
+// `getI18n().t` / `getI18n().tDynamic` — Text hängt immer an einem Bündel.
+// `resetI18nForTests` liegt im Einstieg `@real-life/toolkit/testing`.
 export {
-  t,
-  tDynamic,
   getLanguage,
   setLanguage,
   getLocale,
@@ -9,7 +10,6 @@ export {
   subscribeLanguage,
   applyLanguageConfig,
   extendMessages,
-  resetI18nForTests,
   formatDate,
   formatTime,
   formatFullDateTime,

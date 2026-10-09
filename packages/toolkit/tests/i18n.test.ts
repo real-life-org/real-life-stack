@@ -2,19 +2,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  t,
   getLanguage,
   setLanguage,
   getLocale,
   subscribeLanguage,
   applyLanguageConfig,
   extendMessages,
-  resetI18nForTests,
   formatRelativeTime,
   formatFullDateTime,
   formatDate,
   getI18n,
+  type MessageParams,
 } from "../src/i18n"
+import { resetI18nForTests } from "../src/testing"
+
+// Diese Suite prüft die Auflösung auch für App- und fehlende Schlüssel —
+// darum über `tDynamic` des aktuellen Bündels, nicht über das streng getypte `t`.
+const t = (key: string, params?: MessageParams) => getI18n().tDynamic(key, params)
 
 
 /**
