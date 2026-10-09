@@ -10,16 +10,17 @@
  * ein späterer Wechsel zu einem Übersetzungswerkzeug den Bestand behält.
  *
  * **Vorrangkette der Sprache:** Instanz-Vorgabe (`config.json`, siehe
- * {@link applyLanguageConfig}) → Browsersprache → `de`. Die Oberfläche des
+ * {@link applyLanguageConfig}) → Browsersprache → `en`. Die Oberfläche des
  * Toolkits bietet keine Sprachwahl an. Bietet eine APP einen Umschalter an,
  * erklärt sie das mit {@link enableLanguageChoice}; erst dann steht die
  * gespeicherte Nutzerwahl (localStorage `rls.language`) vorn:
- * Nutzerwahl → Instanz-Vorgabe → Browsersprache → `de`. Ohne diese Erklärung
+ * Nutzerwahl → Instanz-Vorgabe → Browsersprache → `en`. Ohne diese Erklärung
  * wird eine gespeicherte Wahl übergangen, nicht gelöscht (Entscheid
  * 09.10.2026: eine Wahl, die man nirgends ändern kann, darf nicht gelten).
  *
  * **Vorrangkette je Text:** Instanz-Override → App-Erweiterung → Toolkit-
- * Wörterbuch → deutsche Referenz. Die Instanz-Ebene ist kein Randfall,
+ * Wörterbuch, je in der aktiven Sprache, dann auf Englisch, dann auf Deutsch
+ * (der Referenz, aus der `de.ts` die Schlüssel liefert). Die Instanz-Ebene ist kein Randfall,
  * sondern der White-Label-Kern: eine Instanz muss „Gruppe" in „Kreis"
  * umbenennen können, ohne einen Build anzufassen.
  */
@@ -31,6 +32,9 @@ export type { AppMessages, Message, MessageKey, ToolkitMessageKey }
 export type Language = "de" | "en"
 
 export const SUPPORTED_LANGUAGES: readonly Language[] = ["de", "en"]
+
+/** Die Sprache, wenn nichts anderes greift — und die erste Rückfallstufe je Text. */
+const FALLBACK_LANGUAGE: Language = "en"
 
 const STORAGE_KEY = "rls.language"
 
@@ -148,7 +152,9 @@ function initialState(): State {
   // Die gespeicherte Wahl liest erst `enableLanguageChoice` — beim Laden des
   // Moduls weiß die Laufzeit noch nicht, ob die App einen Umschalter hat.
   return {
-    language: browserLanguage() ?? "de",
+    // Im Zweifel Englisch (Entscheid 09.10.2026): ein Browser in einer
+    // Sprache, die das Toolkit nicht spricht (fr, ja …), liest Englisch eher.
+    language: browserLanguage() ?? FALLBACK_LANGUAGE,
     extensions: EMPTY_LAYER,
     overrides: EMPTY_LAYER,
     userChosen: false,
@@ -433,7 +439,7 @@ export interface I18n {
    *
    * Plural-Einträge brauchen `count` in den Parametern; die Kategorie wählt
    * `Intl.PluralRules` der Nachrichtensprache. Fehlt ein Schlüssel in der
-   * Sprache, greift die deutsche Referenz; fehlt er ganz (bei App-Schlüsseln,
+   * Sprache, greift Englisch, dann die deutsche Referenz; fehlt er ganz (bei App-Schlüsseln,
    * deren Text nie übergeben wurde), kommt der Schlüssel selbst zurück und
    * die Konsole meldet es.
    */
@@ -471,7 +477,9 @@ function createBundle(s: State): I18n {
   const locale = resolveLocale(language)
 
   const tDynamic: I18n["tDynamic"] = (key, params) => {
-    const message = lookup(s, language, key) ?? lookup(s, "de", key)
+    // Je Text: aktive Sprache → Englisch → deutsche Referenz. Lücken gibt es
+    // nur auf App- und Instanz-Ebene; das Toolkit selbst ist vollständig.
+    const message = lookup(s, language, key) ?? lookup(s, FALLBACK_LANGUAGE, key) ?? lookup(s, "de", key)
     if (message === undefined) {
       console.warn(`[i18n] fehlender Schlüssel: ${key}`)
       return key
