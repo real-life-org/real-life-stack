@@ -167,12 +167,29 @@ export function getLocale(): string {
   return getI18n().locale
 }
 
+export interface SetLanguageOptions {
+  /**
+   * `false`: nur anzeigen, nichts merken — keine Speicherung in
+   * `localStorage`, und die Wahl zählt nicht als Nutzerwahl (eine spätere
+   * Instanz-Vorgabe darf sie ablösen). Für Vorschauen wie Storybook, die auf
+   * derselben Origin wie die App laufen und deren gespeicherte Wahl nicht
+   * überschreiben dürfen (rls#620). Standard: `true`.
+   */
+  persist?: boolean
+}
+
 /**
  * Nutzerwahl — ab sofort ranghöchste Stufe: für die Sitzung im Stand,
- * darüber hinaus im localStorage, sofern er beschreibbar ist.
+ * darüber hinaus im localStorage, sofern er beschreibbar ist. Mit
+ * `{ persist: false }` nur eine flüchtige Anzeige-Sprache, siehe
+ * {@link SetLanguageOptions}.
  */
-export function setLanguage(language: Language): void {
+export function setLanguage(language: Language, options?: SetLanguageOptions): void {
   if (!isLanguage(language)) return
+  if (options?.persist === false) {
+    if (language !== state.language) commit({ ...state, language })
+    return
+  }
   // Auch eine Wahl, die der aktuellen Sprache entspricht, ist eine Wahl: kam
   // die aktuelle Sprache vom Browser oder der Instanz-Vorgabe, muss sie ab
   // jetzt trotzdem vor einer späteren Instanz-Vorgabe stehen.

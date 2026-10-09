@@ -59,10 +59,14 @@ function useSchema(dark: boolean) {
  * Die Sprache des Toolkits (i18n) als Umschalter. Deutsch vorweg: die
  * Beispieldaten der Stories sind deutsch, und eine Oberfläche in der Sprache
  * des Browsers neben deutschen Daten läse sich wie ein Fehler.
+ *
+ * `persist: false`: Storybook liegt im Deployment auf derselben Origin wie die
+ * App, das Handbuch bettet Stories ein. Die Vorschau darf die gespeicherte
+ * Sprachwahl der App (`rls.language`) nie anfassen (rls#620).
  */
 function useSprache(language: Language) {
   React.useEffect(() => {
-    setLanguage(language)
+    setLanguage(language, { persist: false })
   }, [language])
 }
 
