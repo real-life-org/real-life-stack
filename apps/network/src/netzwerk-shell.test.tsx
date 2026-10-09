@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client"
 import { RouterProvider, createMemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MockConnector, type MockConnectorSeed } from "@real-life/mock-connector"
+import { resetI18nForTests } from "@real-life/toolkit/testing"
 
 import App from "./App"
 import "./module-register"
@@ -15,6 +16,9 @@ vi.stubGlobal("matchMedia", (query: string) => ({
   matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {},
   addListener: () => {}, removeListener: () => {}, onchange: null, dispatchEvent: () => false,
 }))
+// Die Suite prüft deutsche Texte der Toolkit-Hülle („Änderungen verwerfen?").
+// Ohne Festnageln folgte die Sprache dem System — CI-Node meldet `en-US`.
+beforeEach(() => { resetI18nForTests("de") })
 class ResizeObserverStub { observe() {} unobserve() {} disconnect() {} }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub)
 

@@ -38,6 +38,7 @@ export function ConnectorSwitcher({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="top" className="w-56">
         <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+          {/* i18n-exempt: Entwicklerwerkzeug, nur mit ?dev sichtbar */}
           Connector wechseln (Dev)
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

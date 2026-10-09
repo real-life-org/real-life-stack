@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Button } from "../primitives/button"
 import { ProfileLink } from "../profile/profile-link"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n"
 
 function getInitials(name: string): string {
   return name
@@ -38,9 +39,10 @@ export function ContactCard({
   onRemove,
   onEditName,
   onActivate,
-  activeLabel = "Aktiv",
+  activeLabel,
   className,
 }: ContactCardProps) {
+  const { t } = useI18n()
   const [copied, setCopied] = useState(false)
 
   const handleCopyId = async () => {
@@ -58,7 +60,7 @@ export function ContactCard({
         className
       )}
     >
-      <ProfileLink userId={contact.id} label={`Profil von ${displayName} öffnen`}>
+      <ProfileLink userId={contact.id} label={t("profile.openOf", { name: displayName })}>
         <Avatar className="h-10 w-10">
           <AvatarImage src={contact.avatar} alt={displayName} />
           <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
@@ -78,13 +80,13 @@ export function ContactCard({
                 : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
             )}
           >
-            {contact.status === "active" ? activeLabel : "Ausstehend"}
+            {contact.status === "active" ? (activeLabel ?? t("contacts.active")) : t("contacts.pending")}
           </span>
         </div>
         <button
           onClick={handleCopyId}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          title="ID kopieren"
+          title={t("contacts.copyId")}
         >
           <code className="font-mono truncate max-w-[180px]">
             {truncateId(contact.id)}
@@ -100,7 +102,7 @@ export function ContactCard({
       <div className="flex items-center gap-1 shrink-0">
         {onActivate && contact.status === "pending" && contact.direction === "incoming" && (
           <Button size="sm" onClick={() => onActivate(contact.id)}>
-            Bestätigen
+            {t("common.confirm")}
           </Button>
         )}
         {onEditName && (
@@ -108,12 +110,12 @@ export function ContactCard({
             variant="ghost"
             size="icon-sm"
             onClick={() => {
-              const newName = window.prompt("Name ändern:", contact.name || "")
+              const newName = window.prompt(t("contacts.renamePrompt"), contact.name || "")
               if (newName !== null && newName.trim()) {
                 onEditName(contact.id, newName.trim())
               }
             }}
-            title="Name bearbeiten"
+            title={t("contacts.rename")}
           >
             <Pencil className="h-3.5 w-3.5" />
           </Button>
@@ -124,7 +126,7 @@ export function ContactCard({
             size="icon-sm"
             className="text-muted-foreground hover:text-destructive"
             onClick={() => onRemove(contact.id)}
-            title="Kontakt entfernen"
+            title={t("contacts.remove")}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>

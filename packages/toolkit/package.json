@@ -51,7 +51,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "i18n:baseline": "I18N_WRITE_BASELINE=1 vitest run tests/i18n-guard.test.ts"
   },
   "dependencies": {
     "@radix-ui/colors": "^3.0.0",

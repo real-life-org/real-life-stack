@@ -3,6 +3,7 @@
 import * as React from "react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
+import { useI18n } from "@/i18n"
 
 import { cn } from "@/lib/utils"
 import { ErrorBoundary, type ErrorFallbackProps } from "./error-boundary"
@@ -46,14 +47,19 @@ function SheetOverlay({
 }
 
 /** Wie {@link renderDialogError}, nur für die Sheet-Variante der Dialog-Familie. */
-function renderSheetError({ error, label }: ErrorFallbackProps) {
+function renderSheetError(props: ErrorFallbackProps) {
+  return <SheetError {...props} />
+}
+
+function SheetError({ error, label }: ErrorFallbackProps) {
+  const { t } = useI18n()
   return (
     <div role="alert" className="flex flex-col gap-2 p-6 text-center">
       <SheetTitle className="text-base">
-        {label ?? 'Dieser Bereich'} konnte nicht angezeigt werden
+        {t("errorBoundary.title", { label: label ?? t("errorBoundary.thisArea") })}
       </SheetTitle>
       <SheetDescription>
-        Du kannst ihn schliessen — der Rest der App funktioniert weiter.
+        {t("errorBoundary.closeHint")}
       </SheetDescription>
       <p className="break-words font-mono text-xs text-muted-foreground/70">{error.message}</p>
     </div>
@@ -71,6 +77,7 @@ function SheetContent({
   /** Name des Bereichs in der Fehlermeldung. */
   errorLabel?: string
 }) {
+  const { t } = useI18n()
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -96,7 +103,7 @@ function SheetContent({
         </ErrorBoundary>
         <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
           <XIcon className="size-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{t("common.close")}</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>

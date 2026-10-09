@@ -125,6 +125,7 @@ export function ModuleToolbar({
   )
 }
 
+// i18n-exempt: Konsolenwarnung an Modul-Autoren
 const ABHILFE =
   "Abhilfe: FilterScope außerhalb von ModuleFrame setzen, um Leiste UND Inhalt herum " +
   "(oder ModuleSurfaceScope, das beides mitbringt)."
@@ -146,6 +147,7 @@ const ABHILFE =
  * reicht, ist KEIN Fall: Das ist der Test- und Story-Fall aus Spec 01,
  * Regel 4, und alles, was er beitraegt, steht.
  */
+// i18n-exempt: Konsolenwarnung an Modul-Autoren
 function warnungOhneBesitzer(fall: { fehlverschachtelt: boolean; drawerExtra: boolean }): string | null {
   if (fall.fehlverschachtelt) {
     return (

@@ -4,6 +4,7 @@
 export {
   getLanguage,
   setLanguage,
+  enableLanguageChoice,
   getLocale,
   getI18n,
   isI18n,
@@ -23,5 +24,6 @@ export {
   type AppMessages,
   type AppMessageKey,
   type MessageParams,
+  type SetLanguageOptions,
 } from "./runtime"
 export { useI18n } from "./use-i18n"

@@ -25,6 +25,7 @@ import { cn, getSpacePrimaryColor } from "../../lib/utils"
 import { instanceTheme } from "../../lib/runtime-config"
 import { Button } from "../primitives/button"
 import { AdaptivePanel } from "./adaptive-panel"
+import { getI18n, useI18n } from "@/i18n"
 
 export interface SpaceThemePanelProps {
   group: Group
@@ -33,6 +34,7 @@ export interface SpaceThemePanelProps {
 }
 
 export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemePanelProps) {
+  const { t } = useI18n()
   const onUpdateRef = useRef(onUpdateGroup)
   onUpdateRef.current = onUpdateGroup
 
@@ -89,7 +91,7 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
           setGrayChoice(readGray(groupRef.current.data?.gray))
           setRadiusChoice(readRadius(groupRef.current.data?.radius))
           setSurfacesChoice(readSurfaces(groupRef.current.data?.surfaces))
-          setError(err instanceof Error ? err.message : "Aussehen konnte nicht gespeichert werden")
+          setError(err instanceof Error ? err.message : getI18n().t("spaceTheme.saveFailed"))
         }
       }
     } finally {
@@ -171,9 +173,9 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
   }
 
   const sliders = [
-    ["hue", "Farbton", 0, 360],
-    ["chroma", "Kräftigkeit", 0, 100],
-    ["lightness", "Helligkeit", 0, 100],
+    ["hue", t("spaceTheme.hue"), 0, 360],
+    ["chroma", t("spaceTheme.chroma"), 0, 100],
+    ["lightness", t("spaceTheme.lightness"), 0, 100],
   ] as const
 
   return (
@@ -183,7 +185,7 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">Theme</div>
+          <div className="truncate text-sm font-semibold">{t("spaceTheme.title")}</div>
           <div className="truncate text-xs text-muted-foreground">{group.name}</div>
         </div>
       </div>
@@ -196,7 +198,7 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
             eine eigene Farbe neben den 25 Skalen, die Toenung neben den
             sechs Neutralen. Wer nur Radix-Werte nimmt, ist exakt bei Radix. */}
         <section className="space-y-2">
-          <ThemeSectionLabel>Akzentfarbe</ThemeSectionLabel>
+          <ThemeSectionLabel>{t("spaceTheme.accent")}</ThemeSectionLabel>
           <AccentGrid
             effectiveColor={effectiveColor}
             onPick={setAccentScale}
@@ -228,21 +230,21 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
         </section>
 
         <section className="space-y-2">
-          <ThemeSectionLabel>Grau</ThemeSectionLabel>
-          <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Gray color">
+          <ThemeSectionLabel>{t("spaceTheme.gray")}</ThemeSectionLabel>
+          <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t("spaceTheme.grayGroup")}>
             <button
               type="button"
               role="radio"
               aria-checked={effectiveGray === "auto"}
-              aria-label="Gray auto"
-              title="auto"
+              aria-label={t("spaceTheme.grayAuto")}
+              title={t("spaceTheme.auto")}
               onClick={() => setGray("auto")}
               className={cn(
                 "h-7 rounded-full border px-2 text-[11px] text-muted-foreground transition-colors hover:text-foreground",
                 effectiveGray === "auto" && "border-foreground text-foreground",
               )}
             >
-              auto
+              {t("spaceTheme.auto")}
             </button>
             {graySwatches(scheme).map(({ name, hex }) => {
               const active = effectiveGray === name
@@ -252,7 +254,7 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
                   type="button"
                   role="radio"
                   aria-checked={active}
-                  aria-label={`Gray ${name}`}
+                  aria-label={t("spaceTheme.grayScale", { name })}
                   title={name}
                   onClick={() => setGray(name)}
                   style={{ backgroundColor: hex }}
@@ -269,10 +271,10 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
           {/* Die Toenung — unsere Erweiterung neben Radix' Neutralen. 0 ist
               exakt Radix; reallife.network liegt mit seinem Creme bei 50. */}
           <label className="flex items-center gap-3 pt-1 text-xs">
-            <span className="w-20 shrink-0 text-muted-foreground">Tönung</span>
+            <span className="w-20 shrink-0 text-muted-foreground">{t("spaceTheme.tint")}</span>
             <input
               type="range"
-              aria-label="Tönung"
+              aria-label={t("spaceTheme.tint")}
               min={0}
               max={100}
               value={Math.round(effectiveTint * 100)}
@@ -286,12 +288,12 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
         </section>
 
         <section className="space-y-2">
-          <ThemeSectionLabel>Radius</ThemeSectionLabel>
+          <ThemeSectionLabel>{t("spaceTheme.radius")}</ThemeSectionLabel>
           <RadiusTiles value={effectiveRadius} onChange={setRadius} />
         </section>
 
         <section className="space-y-2">
-          <ThemeSectionLabel>Panel-Hintergrund</ThemeSectionLabel>
+          <ThemeSectionLabel>{t("spaceTheme.panelBackground")}</ThemeSectionLabel>
           <SurfacesToggle value={effectiveSurfaces} onChange={setSurfaces} />
         </section>
 
@@ -304,7 +306,7 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
               <span className="text-muted-foreground">{check.label}</span>
               <span className={cn("tabular-nums", check.ok ? "text-muted-foreground" : "text-destructive")}>
                 {check.ratio.toFixed(1)}:1
-                {!check.ok && <span className="ml-1">· {check.minimum}:1 nötig</span>}
+                {!check.ok && <span className="ml-1">· {t("spaceTheme.contrastNeeded", { minimum: check.minimum })}</span>}
               </span>
             </div>
           ))}
@@ -313,7 +315,7 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
         {(colorChoice != null || tintChoice != null || grayChoice != null || radiusChoice != null || surfacesChoice != null) && (
           <Button variant="outline" size="sm" onClick={reset}>
             <RotateCcw className="h-3.5 w-3.5" />
-            Zurücksetzen
+            {t("common.reset")}
           </Button>
         )}
 

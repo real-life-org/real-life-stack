@@ -5,13 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../pr
 import { Input } from "../primitives/input"
 import { Label } from "../primitives/label"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n"
 
 export interface AuthScreenProps {
   /** Connector mit Authenticatable-Capability — der Screen rendert genau die
       Methoden, die getAuthMethods() anbietet (email, email-signup, anonymous). */
   connector: Authenticatable
   onAuthenticated: () => void
-  /** Überschrift, Default "Anmelden". */
+  /** Überschrift, Default „Anmelden" in der aktiven Sprache. */
   title?: string
   className?: string
 }
@@ -23,7 +24,8 @@ export interface AuthScreenProps {
  * seinen eigenen DIDAuthScreen (Seed-Onboarding), Backend-Connectoren wie
  * Supabase bekommen E-Mail-Login/-Registrierung plus anonymen Schnellstart.
  */
-export function AuthScreen({ connector, onAuthenticated, title = "Anmelden", className }: AuthScreenProps) {
+export function AuthScreen({ connector, onAuthenticated, title, className }: AuthScreenProps) {
+  const { t } = useI18n()
   const methods = React.useMemo(() => new Map(connector.getAuthMethods().map((m) => [m.method, m])), [connector])
   const hasEmail = methods.has("email")
   const hasSignup = methods.has("email-signup")
@@ -46,7 +48,7 @@ export function AuthScreen({ connector, onAuthenticated, title = "Anmelden", cla
       await connector.authenticate(method, credentials)
       onAuthenticated()
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Anmeldung fehlgeschlagen. Bitte erneut versuchen.")
+      setError(cause instanceof Error ? cause.message : t("auth.failed"))
     } finally {
       setSubmitting(false)
     }
@@ -72,11 +74,11 @@ export function AuthScreen({ connector, onAuthenticated, title = "Anmelden", cla
     <div className={cn("flex min-h-full items-center justify-center p-4", className)}>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>{showForm && mode === "signup" ? "Registrieren" : title}</CardTitle>
+          <CardTitle>{showForm && mode === "signup" ? t("auth.signUp") : (title ?? t("auth.signIn"))}</CardTitle>
           {showForm && mode === "signup" ? (
-            <CardDescription>Neues Konto mit E-Mail und Passwort anlegen.</CardDescription>
+            <CardDescription>{t("auth.signUpDescription")}</CardDescription>
           ) : (
-            <CardDescription>Mit deinem Konto fortfahren.</CardDescription>
+            <CardDescription>{t("auth.signInDescription")}</CardDescription>
           )}
         </CardHeader>
         <CardContent className="space-y-4">
@@ -84,7 +86,7 @@ export function AuthScreen({ connector, onAuthenticated, title = "Anmelden", cla
             <form onSubmit={handleSubmit} className="space-y-3">
               {mode === "signup" && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="auth-display-name">Anzeigename (optional)</Label>
+                  <Label htmlFor="auth-display-name">{t("auth.displayName")}</Label>
                   <Input
                     id="auth-display-name"
                     name="displayName"
@@ -96,7 +98,7 @@ export function AuthScreen({ connector, onAuthenticated, title = "Anmelden", cla
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label htmlFor="auth-email">E-Mail</Label>
+                <Label htmlFor="auth-email">{t("auth.email")}</Label>
                 <Input
                   id="auth-email"
                   name="email"
@@ -109,7 +111,7 @@ export function AuthScreen({ connector, onAuthenticated, title = "Anmelden", cla
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="auth-password">Passwort</Label>
+                <Label htmlFor="auth-password">{t("auth.password")}</Label>
                 <Input
                   id="auth-password"
                   name="password"
@@ -124,7 +126,7 @@ export function AuthScreen({ connector, onAuthenticated, title = "Anmelden", cla
               </div>
               {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
               <Button type="submit" className="w-full" disabled={submitting || !email.trim() || !password}>
-                {mode === "signup" ? "Konto anlegen" : "Anmelden"}
+                {mode === "signup" ? t("auth.createAccount") : t("auth.signIn")}
               </Button>
             </form>
           )}
@@ -133,15 +135,15 @@ export function AuthScreen({ connector, onAuthenticated, title = "Anmelden", cla
           {showForm && hasEmail && hasSignup && (
             <p className="text-center text-sm text-muted-foreground">
               {mode === "signup" ? (
-                <>Schon ein Konto?{" "}
+                <>{t("auth.haveAccount")}{" "}
                   <button type="button" className="underline underline-offset-4 hover:text-foreground" onClick={() => { setMode("login"); setError(null) }} disabled={submitting}>
-                    Anmelden
+                    {t("auth.signIn")}
                   </button>
                 </>
               ) : (
-                <>Noch kein Konto?{" "}
+                <>{t("auth.noAccount")}{" "}
                   <button type="button" className="underline underline-offset-4 hover:text-foreground" onClick={() => { setMode("signup"); setError(null) }} disabled={submitting}>
-                    Registrieren
+                    {t("auth.signUp")}
                   </button>
                 </>
               )}
@@ -153,7 +155,7 @@ export function AuthScreen({ connector, onAuthenticated, title = "Anmelden", cla
               {showForm && (
                 <div className="flex items-center gap-3">
                   <div className="h-px flex-1 bg-border" />
-                  <span className="text-xs text-muted-foreground">oder</span>
+                  <span className="text-xs text-muted-foreground">{t("auth.or")}</span>
                   <div className="h-px flex-1 bg-border" />
                 </div>
               )}

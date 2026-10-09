@@ -3,30 +3,18 @@
 import type { User } from "@real-life/data-interface"
 import { useState } from "react"
 import { formatBuild, type BuildInfo } from "../../lib/build-info"
-import { Languages, LogOut, QrCode, Settings, User as UserIcon, Users } from "lucide-react"
+import { LogOut, QrCode, Settings, User as UserIcon, Users } from "lucide-react"
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/primitives/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
-import { useI18n, SUPPORTED_LANGUAGES, type Language } from "@/i18n"
-
-/**
- * Eigennamen der Sprachen — bewusst NICHT übersetzt: wer in der falschen
- * Sprache festhängt, muss seine eigene im Menü erkennen können. „Deutsch"
- * bleibt „Deutsch", auch wenn die Oberfläche englisch ist.
- */
-const LANGUAGE_NAMES: Record<Language, string> = {
-  de: "Deutsch",
-  en: "English",
-}
+import { useI18n } from "@/i18n"
 
 /**
  * Das Menü sprach lange eine eigene Personenform (`name`, `avatar`), während
@@ -88,7 +76,9 @@ export function UserMenu({
   onLogout,
   build,
 }: UserMenuProps) {
-  const { t, language, setLanguage } = useI18n()
+  // Keine Sprachwahl im Menü: die Sprache folgt der Instanz-Vorgabe, sonst dem
+  // Browser. Eine App mit eigenem Umschalter ruft `enableLanguageChoice()` auf.
+  const { t } = useI18n()
   const displayName = user.displayName ?? user.id
   const getInitials = (name: string) => {
     return name
@@ -144,20 +134,6 @@ export function UserMenu({
             <span>{t("userMenu.settings")}</span>
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
-          <Languages className="h-3.5 w-3.5" />
-          {t("userMenu.language")}
-        </DropdownMenuLabel>
-        {/* RadioGroup statt einfacher Items: der aktive Eintrag trägt damit
-            `aria-checked` (role menuitemradio) — sichtbar UND hörbar markiert. */}
-        <DropdownMenuRadioGroup value={language} onValueChange={(v) => setLanguage(v as Language)}>
-          {SUPPORTED_LANGUAGES.map((lang) => (
-            <DropdownMenuRadioItem key={lang} value={lang} data-testid={`language-${lang}`}>
-              {LANGUAGE_NAMES[lang]}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
         {onLogout && (
           <>
             <DropdownMenuSeparator />

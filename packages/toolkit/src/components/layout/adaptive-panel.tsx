@@ -18,6 +18,7 @@ import {
   adaptivePanelStack,
   getAdaptivePanelZIndex,
 } from "./adaptive-panel-stack"
+import { useI18n } from "@/i18n"
 
 /**
  * `floating` ist die schwebende Detail-Karte: sie liegt als Karte ueber dem
@@ -223,6 +224,7 @@ function ModeSwitchButton({
   isCompact: boolean
   onSwitch: (mode: PanelMode) => void
 }) {
+  const { t } = useI18n()
   let targetMode: PanelMode | null = null
   let Icon = Maximize2
 
@@ -247,7 +249,13 @@ function ModeSwitchButton({
       type="button"
       onClick={() => onSwitch(targetMode!)}
       className="p-1.5 rounded-sm opacity-60 hover:opacity-100 transition-opacity"
-      aria-label={`Zu ${targetMode} wechseln`}
+      aria-label={
+        targetMode === "modal"
+          ? t("adaptivePanel.showAsDialog")
+          : targetMode === "sidebar"
+            ? t("adaptivePanel.showAsSidebar")
+            : t("adaptivePanel.showAsDrawer")
+      }
     >
       <Icon className="h-4 w-4" />
     </button>
@@ -275,6 +283,7 @@ export function AdaptivePanel({
   backdrop = true,
   className,
 }: AdaptivePanelProps) {
+  const { t } = useI18n()
   const isCompact = useIsCompact()
   const [mode, setMode] = useState<PanelMode>(() =>
     resolveMode(allowedModes, isCompact)
@@ -879,7 +888,7 @@ export function AdaptivePanel({
                       "p-1.5 rounded-sm transition-opacity",
                       pinned ? "opacity-100 text-primary" : "opacity-60 hover:opacity-100"
                     )}
-                    aria-label={pinned ? "Loslösen" : "Anheften"}
+                    aria-label={pinned ? t("adaptivePanel.unpin") : t("adaptivePanel.pin")}
                   >
                     {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
                   </button>
@@ -932,7 +941,7 @@ export function AdaptivePanel({
                     "p-1.5 rounded-sm transition-opacity",
                     pinned ? "opacity-100 text-primary" : "opacity-60 hover:opacity-100"
                   )}
-                  aria-label={pinned ? "Loslösen" : "Anheften"}
+                  aria-label={pinned ? t("adaptivePanel.unpin") : t("adaptivePanel.pin")}
                 >
                   {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
                 </button>
@@ -949,7 +958,7 @@ export function AdaptivePanel({
                 className="p-1.5 rounded-sm opacity-60 hover:opacity-100 transition-opacity"
               >
                 <X className="h-4 w-4" />
-                <span className="sr-only">Schliessen</span>
+                <span className="sr-only">{t("common.close")}</span>
               </button>
             </div>
           )}
