@@ -4,7 +4,8 @@ import type { ReactNode } from "react"
 import type { Item } from "@real-life/data-interface"
 import { Calendar, MapPin } from "lucide-react"
 import { cn } from "../../lib/utils"
-import { formatClock, formatDay, isAllDayDate, parseEventDate } from "../../lib/date-utils"
+import { isAllDayDate, parseEventDate } from "../../lib/date-utils"
+import { getI18n, isI18n, useI18n, type I18n } from "@/i18n"
 import { useFieldLink } from "../navigation/field-navigation"
 
 /**
@@ -23,9 +24,8 @@ import { useFieldLink } from "../navigation/field-navigation"
  * Date formatting handles the common event shapes: single date, single
  * datetime, same-day range, and multi-day range. Bare YYYY-MM-DD dates
  * are treated as all-day (no clock time) — see `lib/date-utils.ts` for
- * the parsing rationale. Locale defaults to German because the demo
- * data and references currently target a German audience; future
- * polish can lift the locale into a prop or read a context.
+ * the parsing rationale. Formatting follows the active language and the
+ * regional formatting locale (`@/i18n`).
  */
 export interface ItemMetaRowProps {
   item: Item
@@ -33,6 +33,7 @@ export interface ItemMetaRowProps {
 }
 
 export function ItemMetaRow({ item, className }: ItemMetaRowProps) {
+  const i18n = useI18n()
   const data = item.data as Record<string, unknown>
   const start = typeof data.start === "string" ? data.start : undefined
   const end = typeof data.end === "string" ? data.end : undefined
@@ -61,7 +62,7 @@ export function ItemMetaRow({ item, className }: ItemMetaRowProps) {
     <div className={cn("flex flex-wrap gap-3 text-xs text-muted-foreground", className)}>
       {start && (
         <MetaWert icon={<Calendar className="h-3 w-3" />} onClick={zumDatum}>
-          {formatEventRange(start, end)}
+          {formatEventRange(i18n, start, end)}
         </MetaWert>
       )}
       {place && (
@@ -114,16 +115,39 @@ function MetaWert({
 /**
  * Format a single date or a range. Exported for callers that need the
  * string outside of the inline meta row (e.g. a table cell, a tooltip).
+ *
+ * Takes the i18n bundle as the first argument — in components it comes from
+ * `useI18n()` (which carries the language subscription, so the caller
+ * re-renders on a language switch), outside React from `getI18n()`
+ * (rls#290).
  */
-export function formatEventRange(start: string, end?: string): string {
+export function formatEventRange(i18n: I18n, start: string, end?: string): string
+/**
+ * @deprecated Since 0.5.0. Pass the i18n bundle first:
+ * `formatEventRange(useI18n(), start, end)` in components,
+ * `formatEventRange(getI18n(), start, end)` outside React. This form reads the
+ * current language once and does not subscribe a component to language
+ * changes (rls#291).
+ */
+export function formatEventRange(start: string, end?: string): string
+export function formatEventRange(
+  i18nOrStart: I18n | string,
+  startOrEnd?: string,
+  end?: string,
+): string {
+  // Alte Form (start, end?) bleibt für veröffentlichte Aufrufer erhalten (rls#291).
+  if (!isI18n(i18nOrStart)) return eventRange(getI18n(), i18nOrStart, startOrEnd)
+  return eventRange(i18nOrStart, startOrEnd ?? "", end)
+}
+
+function eventRange(i18n: I18n, start: string, end?: string): string {
+  const { t, formatDate, formatTime } = i18n
   const startAllDay = isAllDayDate(start)
   const s = parseEventDate(start)
   if (Number.isNaN(s.getTime())) return start
 
-  const dateStr = formatDay(s)
-  const timeStr = startAllDay
-    ? null
-    : formatClock(s)
+  const dateStr = formatDate(s)
+  const timeStr = startAllDay ? null : formatTime(s)
 
   if (!end) return timeStr ? `${dateStr}, ${timeStr}` : dateStr
 
@@ -131,9 +155,7 @@ export function formatEventRange(start: string, end?: string): string {
   const e = parseEventDate(end)
   if (Number.isNaN(e.getTime())) return timeStr ? `${dateStr}, ${timeStr}` : dateStr
 
-  const endTimeStr = endAllDay
-    ? null
-    : formatClock(e)
+  const endTimeStr = endAllDay ? null : formatTime(e)
 
   // Same day — four cases, handle the mixed ones explicitly so a null
   // side doesn't get interpolated into the string.
@@ -141,10 +163,10 @@ export function formatEventRange(start: string, end?: string): string {
     if (!timeStr && !endTimeStr) return dateStr
     if (timeStr && endTimeStr) return `${dateStr}, ${timeStr} – ${endTimeStr}`
     if (timeStr) return `${dateStr}, ${timeStr}`
-    return `${dateStr}, bis ${endTimeStr}`
+    return `${dateStr}, ${t("time.until")} ${endTimeStr}`
   }
 
-  const endDateStr = formatDay(e)
+  const endDateStr = formatDate(e)
   const startPart = timeStr ? `${dateStr}, ${timeStr}` : dateStr
   const endPart = endTimeStr ? `${endDateStr}, ${endTimeStr}` : endDateStr
   return `${startPart} – ${endPart}`

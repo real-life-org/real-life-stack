@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import type { Item } from "@real-life/data-interface"
 import { editedLabel, itemText, itemTitle } from "../src/lib/item-text"
+import { getI18n, setLanguage } from "../src/i18n"
+import { resetI18nForTests } from "../src/testing"
 
 const base: Item = { id: "i1", type: "post", createdAt: "2026-09-01T10:00:00+02:00", createdBy: "mira", data: {} }
 
@@ -36,14 +38,25 @@ describe("itemText", () => {
 
 describe("editedLabel", () => {
   const resolve = (id: string) => (id === "mira" ? "Mira" : id)
+  // Sprache festnageln — sonst erbt der Test die Systemsprache (CI-Node: en-US).
+  beforeEach(() => {
+    resetI18nForTests()
+    setLanguage("de")
+  })
 
   it("bleibt aus, solange nichts geändert wurde", () => {
-    expect(editedLabel(base, resolve)).toBeUndefined()
+    expect(editedLabel(getI18n(), base, resolve)).toBeUndefined()
   })
 
   it("nennt den, der geändert hat, sonst den Urheber", () => {
     const ts = "2026-09-05T12:00:00+02:00"
-    expect(editedLabel({ ...base, updatedAt: ts, updatedBy: "mira" }, resolve)).toContain("Bearbeitet von Mira am ")
-    expect(editedLabel({ ...base, updatedAt: ts }, resolve)).toContain("Bearbeitet von Mira am ")
+    expect(editedLabel(getI18n(), { ...base, updatedAt: ts, updatedBy: "mira" }, resolve)).toContain("Bearbeitet von Mira am ")
+    expect(editedLabel(getI18n(), { ...base, updatedAt: ts }, resolve)).toContain("Bearbeitet von Mira am ")
+  })
+
+  it("folgt der aktiven Sprache", () => {
+    setLanguage("en")
+    const ts = "2026-09-05T12:00:00+02:00"
+    expect(editedLabel(getI18n(), { ...base, updatedAt: ts, updatedBy: "mira" }, resolve)).toContain("Edited by Mira on ")
   })
 })

@@ -101,6 +101,10 @@ export {
 
 // Components
 export { itemTitle, itemText } from "./lib/item-text"
+
+// i18n
+export * from "./i18n"
+
 export * from "./components"
 
 // Hooks

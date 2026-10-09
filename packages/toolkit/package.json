@@ -33,6 +33,11 @@
       "types": "./dist/router.d.ts",
       "development": "./src/router.tsx",
       "import": "./dist/router.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "development": "./src/testing.ts",
+      "import": "./dist/testing.js"
     }
   },
   "files": [
@@ -42,7 +47,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.typetest.json",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest run",
@@ -136,6 +141,10 @@
       "./router": {
         "types": "./dist/router.d.ts",
         "import": "./dist/router.js"
+      },
+      "./testing": {
+        "types": "./dist/testing.d.ts",
+        "import": "./dist/testing.js"
       }
     }
   }

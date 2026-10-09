@@ -929,6 +929,21 @@
           ],
           "source": "packages/toolkit/src/hooks/use-relay-status.ts",
           "line": 23
+        },
+        {
+          "name": "useI18n",
+          "signature": "",
+          "question": "In which language and regional locale does this surface speak — and how?",
+          "answers": "`I18n` — `{language, locale, t, tDynamic, formatDate, formatTime, formatFullDateTime, formatRelativeTime, setLanguage}`",
+          "without": "— (works without a provider; the toolkit owns its language state)",
+          "stories": [
+            "rls-foundations-hooks--environment"
+          ],
+          "specs": [
+            "docs/spec/11-runtime-config-und-branding.md"
+          ],
+          "source": "packages/toolkit/src/i18n/use-i18n.ts",
+          "line": 29
         }
       ]
     },

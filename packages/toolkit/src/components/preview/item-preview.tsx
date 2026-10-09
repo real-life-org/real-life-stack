@@ -15,6 +15,7 @@ import { useUserNameResolver } from "../../hooks/use-user-names"
 import { useCanComment } from "../../hooks/use-comments"
 import { useCommentCount } from "../../hooks/use-comment-count"
 import { useCommentLink } from "../navigation/comment-navigation"
+import { useI18n } from "@/i18n"
 import { MessageSquare } from "lucide-react"
 
 /**
@@ -256,6 +257,7 @@ export const ItemPreview = memo(function ItemPreview({
   className,
   style,
 }: ItemPreviewProps) {
+  const i18n = useI18n()
   const data = item.data as Record<string, unknown>
   const isRow = density === "row"
   // `dense` ist die Matrix-Kachel: Sie teilt mit `compact` die engen Masse,
@@ -299,7 +301,7 @@ export const ItemPreview = memo(function ItemPreview({
   const authorId = author?.id ?? item.createdBy
   // Who edited it, resolved like any other user id; falls back to the raw id.
   const resolveName = useUserNameResolver()
-  const editedTitle = editedLabel(item, resolveName)
+  const editedTitle = editedLabel(i18n, item, resolveName)
   const isCompact = density === "compact" || isRow || isDense
 
   // Keyboard activation: when the card is interactive, treat Enter and
@@ -526,7 +528,7 @@ export const ItemPreview = memo(function ItemPreview({
                     <RelativeTime date={item.createdAt} className="text-xs" />
                     {/* Mitglieder duerfen fremde Items aendern; ohne diesen
                         Hinweis waere eine fremde Aenderung unsichtbar. */}
-                    {item.updatedAt && <span title={editedTitle}>· bearbeitet</span>}
+                    {item.updatedAt && <span title={editedTitle}>· {i18n.t("item.edited")}</span>}
                   </span>
                 </>
               )}

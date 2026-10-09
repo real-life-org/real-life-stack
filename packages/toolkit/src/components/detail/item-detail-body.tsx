@@ -8,6 +8,7 @@ import { ProfileLink } from "../profile/profile-link"
 import { TagFilterChip } from "../tag/tag-filter-chip"
 import { MarkdownText } from "../preview/markdown-text"
 import { editedLabel, itemText } from "@/lib/item-text"
+import { useI18n } from "@/i18n"
 import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
 import { useUserNameResolver } from "../../hooks/use-user-names"
@@ -119,8 +120,9 @@ export function ItemDetailBody({
 
   const authorName = author?.displayName || UNKNOWN_AUTHOR
   const authorId = author?.id ?? item.createdBy
+  const i18n = useI18n()
   const resolveName = useUserNameResolver()
-  const editedTitle = editedLabel(item, resolveName)
+  const editedTitle = editedLabel(i18n, item, resolveName)
 
   return (
     <article className={cn("flex flex-col gap-3 p-4", className)}>
@@ -204,7 +206,7 @@ export function ItemDetailBody({
             {/* Mitglieder duerfen fremde Items aendern; ohne diesen Hinweis
                 waere eine fremde Aenderung unsichtbar. Bewusst knapp: WAS sich
                 geaendert hat, braucht eine Versionshistorie (rls#263). */}
-            {item.updatedAt && <span title={editedTitle}>· bearbeitet</span>}
+            {item.updatedAt && <span title={editedTitle}>· {i18n.t("item.edited")}</span>}
           </span>
         </div>
       </div>

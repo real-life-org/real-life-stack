@@ -62,7 +62,7 @@ A module is a register entry plus a view; the host loads what a module presents 
 - `collection` (Liste): The list shows everything in a space that stands as a card of its own, as a list or a grid; the density toggle sits in the header next to the search. It is a toolkit module and runs inside the module host (spec 01) without a line of wiring here: the host loads (no `presents` — the list aggregates), filters, and provides detail, create and the plus button. presents: everything that stands as a card; loads: host; story: https://real-life-stack.de/storybook/?path=/docs/rls-modules-list--docs
 - `graph` (Graph): The graph shows the items of a space and their relations as a force layout: embedded relations (a task assigned to a person) and relation records (a vote on a statement) become edges; people appear as nodes only when an edge reaches them. It is a toolkit module and runs inside the module host (spec 01): the host loads everything that stands as a card, applies search and filter — here floating over the canvas (`panelFit: "overlay"`) — and provides detail, create and the plus button. presents: everything that stands as a card; loads: host; story: https://real-life-stack.de/storybook/?path=/docs/rls-modules-graph--docs
 
-## Hooks (61, generated from the toolkit's documentation comments)
+## Hooks (62, generated from the toolkit's documentation comments)
 
 Every surface asks hooks, never the connector. Reading hooks answer empty without a capability; writing hooks fail on the call, not on render. Living examples: https://real-life-stack.de/storybook/?path=/docs/rls-foundations-all-hooks--docs
 
@@ -148,6 +148,7 @@ Every surface asks hooks, never the connector. Reading hooks answer empty withou
 - `useNotifications()` → `{notifications, badgeCount, …}`: What is new for me, and how much is unread? Without capability: empty.
 - `useMarkNotificationsSeen(notifications)` → —: Advance the seen boundary once per opening. Without capability: no-op.
 - `useRelayStatus()` → `{state, isConnected, pendingCount}`: Is this device attached to the relay, is anything unsent waiting? Without capability: throws on render.
+- `useI18n()` → `I18n` — `{language, locale, t, tDynamic, formatDate, formatTime, formatFullDateTime, formatRelativeTime, setLanguage}`: In which language and regional locale does this surface speak — and how? Without capability: — (works without a provider; the toolkit owns its language state).
 
 ### Item properties
 

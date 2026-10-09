@@ -40,6 +40,7 @@ export default defineConfig({
         leaflet: resolve(__dirname, 'src/leaflet.ts'),
         maplibre: resolve(__dirname, 'src/maplibre.ts'),
         router: resolve(__dirname, 'src/router.tsx'),
+        testing: resolve(__dirname, 'src/testing.ts'),
       },
       formats: ['es'],
       // Force flat `<name>.js` filenames so the paths in package.json's
