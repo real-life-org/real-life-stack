@@ -50,6 +50,7 @@ Die Kern-Dokumente bauen in dieser Reihenfolge aufeinander auf:
 | [10-activity-log.md](10-activity-log.md) | Normativer Entwurf | CRUD-Historie pro Space: Collection-Form, ID-/Merge-Ordnung, Retention, Atomarität |
 | [11-runtime-config-und-branding.md](11-runtime-config-und-branding.md) | Normativer Entwurf | Ein Artefakt, viele Instanzen: Endpunkte und Identität zur Laufzeit statt zur Build-Zeit |
 | [12-profile.md](12-profile.md) | Normativer Entwurf (erste Anwendung von 09) | Profil = person-Item im persönlichen Space, Mirror je freigegebenem Gruppen-Space; Freigabe, Widerruf, Ablage |
+| [13-identitaet-und-anmeldung.md](13-identitaet-und-anmeldung.md) | Entwurf zur Besprechung | Identität gehört der Person, nicht der Quelle: `IdentityProvider`, Anmeldearten mit `kind`, Bildschirme im Toolkit, DID-Login per Challenge, eine Anmeldung für mehrere Connectoren |
 | [glossary.md](glossary.md) | Lebendes Dokument | Kurzdefinitionen der Spec-Begrifflichkeit mit Verweisen auf die normative Quelle |
 
 ## Formale Schemas
