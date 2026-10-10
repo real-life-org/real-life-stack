@@ -37,7 +37,8 @@ Alle Typen liegen in `data-interface`. Der Identitätsdienst ist kein Connector 
 interface Identity {
   did: string;                 // did:key
   kid: string;                 // `${did}#sig-0`
-  publicKeyMultibase: string;
+  ed25519PublicKey: Uint8Array;
+  x25519PublicKey: Uint8Array;
 }
 
 type IdentityState =
@@ -51,10 +52,13 @@ interface IdentityEncryptedPayload {   // wie wot-core
   ephemeralPublicKey?: Uint8Array;
 }
 
-// Entspricht wot-core `PublicIdentitySession` Feld für Feld; data-interface
-// deklariert die Form strukturell und hängt nicht von wot-core ab.
+// wot-core `PublicIdentitySession` ohne `deleteStoredIdentity`, plus
+// `generation` und `onRevoked`; data-interface deklariert die Form
+// strukturell und hängt nicht von wot-core ab.
 interface IdentitySession extends Identity {
   generation: number;                                          // siehe Regel 11
+  onRevoked(listener: () => void): () => void;                 // nur lesen; siehe Regel 11
+  getDid(): string;
   sign(data: string): Promise<string>;                         // Ed25519, base64url
   signEd25519(data: Uint8Array): Promise<Uint8Array>;
   signJws(payload: unknown): Promise<string>;                  // JCS, EdDSA, Header mit kid
@@ -66,6 +70,11 @@ interface IdentitySession extends Identity {
 }
 
 class IdentityRevokedError extends Error {}   // jede Methode einer beendeten Sitzung wirft ihn
+```
+
+Adaptergrenze zu wot-core: Der Identitätsdienst gibt ein Objekt heraus, das `PublicIdentitySession` strukturell erfüllt und zusätzlich `generation` und `onRevoked` trägt; `deleteStoredIdentity` ist darauf vorhanden, wirft aber immer, weil Löschen allein dem Identitätsdienst zusteht (`destroy`). Der WoT-Connector reicht das Objekt unverändert an wot-core-Ports weiter (etwa `inbox-reception-host`); kein Port braucht `deleteStoredIdentity`.
+
+```ts
 
 interface IdentityProvider {
   getState(): Observable<IdentityState>;
@@ -124,7 +133,7 @@ Die Texte der Bildschirme ziehen mit den Bildschirmen um (`wot.*` wird zu Toolki
 8. Anmeldung mit `identity` bei einem Dienst mit Konten (Supabase) MUSS über eine Challenge laufen: Der Dienst gibt eine Nonce, die Sitzung signiert `{ nonce, aud, iat }` als JWS mit `kid`, der Dienst prüft die Signatur gegen die `did:key`, verbraucht die Nonce einmalig innerhalb von zwei Minuten und stellt ein Token für das Konto der DID aus (Regel 9).
 9. Bei einem Dienst mit Konten bleibt die Konto-Id (bei Supabase die UUID aus `auth.users`) der technische Schlüssel aller Daten und Richtlinien; `auth.users.id` wird nicht geändert, kein Eintrag wird umgeschrieben. Der Dienst MUSS eine Abbildung `did → Konto` führen (eine Tabelle `identities(did, user_id)`, eine DID je Konto, ein Konto je DID). Die Anmeldung mit `identity` legt das Konto beim ersten Mal an; die Verknüpfung eines bestehenden E-Mail-Kontos trägt dessen Konto-Id in die Abbildung ein. Das Token trägt `sub` = Konto-Id und den Anspruch `did`; das öffentliche Profil trägt die DID. Über Quellen hinweg ist die DID der Schlüssel der Person, innerhalb von Supabase die Konto-Id. Die Verknüpfung DARF NICHT gelöst werden.
 10. Eine anonyme Sitzung DARF NICHT einen verschlüsselten Space betreten.
-11. `lock`, `destroy` und ein Identitätswechsel MÜSSEN jede ausgegebene Sitzung beenden: Der Identitätsdienst zählt eine Generation hoch, und jede Methode einer Sitzung älterer Generation wirft `IdentityRevokedError`. Ein Connector, der eine Sitzung hält, MUSS `getState()` beobachten und bei `locked` oder `none` seinen Auth-Zustand auf `unauthenticated` setzen und die Sitzung verwerfen. Ein lokales Sperren widerruft keine Token eines Dienstes; der Connector MUSS sein Token lokal verwerfen (bei Supabase `signOut`), der Widerruf auf dem Dienst bleibt dessen Sache.
+11. `lock`, `destroy` und ein Identitätswechsel MÜSSEN jede ausgegebene Sitzung beenden: Der Identitätsdienst zählt eine Generation hoch, jede Methode einer Sitzung älterer Generation wirft `IdentityRevokedError`, und `onRevoked` feuert genau einmal. Ein Connector, der eine Sitzung hält, MUSS sich bei `onRevoked` eintragen und dort die Sitzung verwerfen, sein Token beim Dienst lokal verwerfen (bei Supabase `signOut`) und seinen Auth-Zustand auf `unauthenticated` setzen; der Widerruf des Tokens auf dem Dienst bleibt dessen Sache. Die App MUSS beim Wechsel von Identität A zu B zuerst `lock` oder `destroy` für A ausführen und darf B erst danach bei den Connectoren anmelden; so hält kein Connector ein Token von A, wenn B angemeldet ist.
 
 ## Anmeldearten je Connector
 
