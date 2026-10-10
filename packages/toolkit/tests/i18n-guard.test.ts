@@ -3,6 +3,11 @@
  *
  * Das Toolkit spricht über `t()` (`src/i18n/`). Was noch fest im Code steht,
  * zählt `i18n-scan.ts` je Datei; `i18n-baseline.json` hält den Bestand fest.
+ *
+ * Dieselbe Regel gilt für die Connector-Pakete (`packages/*-connector/src`):
+ * wer Bildschirme mitbringt, bringt auch ihre Texte mit (eigenes `src/i18n/`,
+ * per `extendMessages` eingetragen — Vorbild `wot-connector`). Ihre Einträge
+ * stehen in derselben Baseline als `<paket>:<pfad relativ zu src/>`.
  * Der Wächter lässt den Bestand nur sinken:
  *
  * - Eine Datei, die nicht in der Baseline steht, darf keinen festen Text
@@ -14,7 +19,7 @@
  * Die Regel selbst (was zählt, was nicht) steht in `i18n-scan.ts` und ist
  * unten an Beispielen festgenagelt.
  */
-import { readFileSync, writeFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 
@@ -24,7 +29,17 @@ const SRC = resolve(__dirname, "../src")
 const BASELINE_FILE = resolve(__dirname, "i18n-baseline.json")
 const FIX = "pnpm --filter @real-life/toolkit i18n:baseline"
 
-const findings = scanTree(SRC)
+const PACKAGES = resolve(__dirname, "../..")
+const CONNECTORS = readdirSync(PACKAGES)
+  .filter((dir) => dir.endsWith("-connector") && existsSync(resolve(PACKAGES, dir, "src")))
+  .sort()
+
+const findings: Record<string, Finding[]> = { ...scanTree(SRC) }
+for (const dir of CONNECTORS) {
+  for (const [file, list] of Object.entries(scanTree(resolve(PACKAGES, dir, "src")))) {
+    findings[`${dir}:${file}`] = list
+  }
+}
 const current: Record<string, number> = Object.fromEntries(
   Object.keys(findings)
     .sort()
@@ -62,6 +77,10 @@ describe("i18n-Wächter: fest geschriebener Oberflächentext", () => {
       weniger.map((file) => `${file}: Baseline ${baseline[file]}, jetzt ${current[file] ?? 0}`),
       `Abgebaut — Baseline nachziehen: ${FIX}`,
     ).toEqual([])
+  })
+
+  it("liest die Connector-Pakete mit", () => {
+    expect(CONNECTORS).toContain("wot-connector")
   })
 
   it("jede Ausnahme nennt einen Grund", () => {

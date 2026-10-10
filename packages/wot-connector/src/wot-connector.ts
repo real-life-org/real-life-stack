@@ -2846,6 +2846,7 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
   private spaceToGroup(space: SpaceInfo): Group {
     return {
       id: space.id,
+      // i18n-exempt: Datenfeld der Gruppe, kein Oberflächentext — Anzeigename und gespeicherter Bezeichner trennt i18n Teil 3 (wie „Privat“)
       name: space.name ?? "Unnamed Space",
       members: space.members,
       data: {
@@ -3613,6 +3614,7 @@ export class WotConnector extends BaseConnector implements GroupScopeCapable, Ac
       fromId: invite.fromDid,
       fromName: inviterName,
       spaceId: invite.spaceId,
+      // i18n-exempt: Datenfeld des Ereignisses (Gruppenname), Anzeige gehört der Oberfläche — i18n Teil 3
       spaceName: group?.name ?? invite.spaceName ?? "Unnamed Space",
       spaceImage: typeof group?.data?.image === "string" ? group.data.image : undefined,
     })

@@ -8,8 +8,10 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  useI18n,
 } from "@real-life/toolkit"
 import { Key, Fingerprint } from "lucide-react"
+import "../i18n/index.js"
 import type { WotConnector } from "../wot-connector.js"
 import { BiometricService } from "../biometric-service.js"
 import { generateRandomPassphrase } from "../random-passphrase.js"
@@ -21,6 +23,7 @@ interface RecoveryFlowProps {
 }
 
 export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProps) {
+  const { t } = useI18n()
   const [step, setStep] = useState<"mnemonic" | "passphrase">("mnemonic")
   const [mnemonic, setMnemonic] = useState("")
   const [passphrase, setPassphrase] = useState("")
@@ -78,7 +81,7 @@ export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProp
       // Surface the failure on the password step instead of silently falling
       // back (the enroll-cancel case above stays silent — that's a deliberate
       // user choice; this branch is a real recovery failure).
-      setError("Biometrie-Einrichtung fehlgeschlagen. Bitte mit Passwort fortfahren.")
+      setError(t("wot.biometric.setupFailed"))
       setLoading(false)
       setStep("passphrase")
     }
@@ -101,7 +104,7 @@ export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProp
       }
       onComplete()
     } catch (err: any) {
-      setError(err.message ?? "Wiederherstellung fehlgeschlagen")
+      setError(err.message ?? t("wot.recovery.failed"))
     } finally {
       setLoading(false)
     }
@@ -114,10 +117,8 @@ export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProp
           <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-primary/10">
             <Key className="size-7 text-primary" />
           </div>
-          <CardTitle>Identity wiederherstellen</CardTitle>
-          <CardDescription>
-            Gib deinen 12-Wörter Recovery Seed ein.
-          </CardDescription>
+          <CardTitle>{t("wot.recovery.title")}</CardTitle>
+          <CardDescription>{t("wot.recovery.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <textarea
@@ -126,14 +127,15 @@ export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProp
               setMnemonic(e.target.value)
               setError("")
             }}
-            placeholder="Wort 1  Wort 2  Wort 3 …"
+            placeholder={t("wot.recovery.placeholder")}
+            data-testid="wot-recovery-mnemonic"
             rows={3}
             autoFocus
             className="flex w-full rounded-md border bg-transparent px-3 py-2 text-sm font-mono transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
           />
           {mnemonic.length > 0 && !mnemonicValid && (
             <p className="text-sm text-muted-foreground">
-              {words.length}/12 Wörter
+              {t("wot.recovery.wordCount", { count: words.length })}
             </p>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -145,15 +147,16 @@ export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProp
                 disabled={!mnemonicValid || loading}
               >
                 <Fingerprint className="size-5" />
-                {loading ? "Stellt wieder her…" : "Mit Biometrie wiederherstellen"}
+                {loading ? t("wot.recovery.restoring") : t("wot.recovery.withBiometrics")}
               </Button>
               <button
                 type="button"
                 onClick={() => setStep("passphrase")}
                 disabled={!mnemonicValid}
                 className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                data-testid="wot-recovery-use-password"
               >
-                Stattdessen Passwort verwenden
+                {t("wot.usePasswordInstead")}
               </button>
             </>
           ) : (
@@ -161,8 +164,9 @@ export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProp
               className="w-full"
               onClick={() => setStep("passphrase")}
               disabled={!mnemonicValid}
+              data-testid="wot-recovery-continue"
             >
-              Weiter
+              {t("wot.recovery.continue")}
             </Button>
           )}
           <div className="text-center">
@@ -171,7 +175,7 @@ export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProp
               onClick={onBack}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Zurück
+              {t("common.back")}
             </button>
           </div>
         </CardContent>
@@ -182,13 +186,15 @@ export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProp
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle>Neues Passwort setzen</CardTitle>
-        <CardDescription>
-          Wähle ein Passwort, um deine wiederhergestellte Identity zu schützen.
-        </CardDescription>
+        <CardTitle>{t("wot.recovery.passwordTitle")}</CardTitle>
+        <CardDescription>{t("wot.recovery.passwordDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={(e) => { e.preventDefault(); handleRecover() }} className="space-y-4">
+        <form
+          onSubmit={(e) => { e.preventDefault(); handleRecover() }}
+          className="space-y-4"
+          data-testid="wot-recovery-password"
+        >
           <PassphraseConfirm
             passphrase={passphrase}
             confirm={confirm}
@@ -200,8 +206,9 @@ export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProp
             type="submit"
             className="w-full"
             disabled={loading || passphrase.length < 8 || passphrase !== confirm}
+            data-testid="wot-recovery-submit"
           >
-            {loading ? "Stelle wieder her…" : "Identity wiederherstellen"}
+            {loading ? t("wot.recovery.restoring") : t("wot.recovery.submit")}
           </Button>
         </form>
         <div className="text-center">
@@ -210,7 +217,7 @@ export function RecoveryFlow({ connector, onComplete, onBack }: RecoveryFlowProp
             onClick={() => setStep("mnemonic")}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Zurück zum Seed
+            {t("wot.recovery.backToSeed")}
           </button>
         </div>
       </CardContent>

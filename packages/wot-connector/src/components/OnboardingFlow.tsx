@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { formatMnemonicForCopy } from "../mnemonic-format.js"
+import "../i18n/index.js"
 import {
   MnemonicGrid,
   MnemonicVerify,
@@ -14,6 +15,7 @@ import {
   Input,
   Label,
   Separator,
+  useI18n,
 } from "@real-life/toolkit"
 import { Key, Shield, Sparkles, Check, AlertTriangle, User as UserIcon, Fingerprint } from "lucide-react"
 import type { WotConnector } from "../wot-connector.js"
@@ -22,7 +24,6 @@ import { generateRandomPassphrase } from "../random-passphrase.js"
 
 type OnboardingStep = "welcome" | "seed" | "verify" | "profile" | "password" | "complete"
 
-const STEP_LABELS = ["Start", "Seed", "Prüfen", "Profil", "Passwort"]
 const STEP_INDEX: Record<OnboardingStep, number> = {
   welcome: 0,
   seed: 1,
@@ -39,6 +40,14 @@ interface OnboardingFlowProps {
 }
 
 export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: OnboardingFlowProps) {
+  const { t } = useI18n()
+  const STEP_LABELS = [
+    t("wot.onboarding.step.start"),
+    t("wot.onboarding.step.seed"),
+    t("wot.onboarding.step.verify"),
+    t("wot.onboarding.step.profile"),
+    t("wot.onboarding.step.password"),
+  ]
   const [step, setStepRaw] = useState<OnboardingStep>("welcome")
   const [mnemonic, setMnemonic] = useState<string[]>([])
   const [displayName, setDisplayName] = useState("")
@@ -92,7 +101,7 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
         goToStep("seed")
       }
     } catch (err: any) {
-      setError(err.message ?? "Fehler beim Generieren")
+      setError(err.message ?? t("wot.onboarding.createFailed"))
     } finally {
       setLoading(false)
     }
@@ -153,7 +162,7 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
       // Surface the failure on the password step instead of silently falling
       // back (the enroll-cancel case above stays silent — that's a deliberate
       // user choice; this branch is a real create failure).
-      setError("Biometrie-Einrichtung fehlgeschlagen. Bitte mit Passwort fortfahren.")
+      setError(t("wot.biometric.setupFailed"))
       setLoading(false)
       goToStep("password")
     }
@@ -161,11 +170,11 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
 
   const handleFinalize = async () => {
     if (passphrase.length < 8) {
-      setError("Mindestens 8 Zeichen")
+      setError(t("auth.minLength", { count: 8 }))
       return
     }
     if (passphrase !== confirm) {
-      setError("Passwörter stimmen nicht überein")
+      setError(t("auth.passwordMismatch"))
       return
     }
     setLoading(true)
@@ -186,7 +195,7 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
       goToStep("complete")
       setTimeout(onComplete, 2000)
     } catch (err: any) {
-      setError(err.message ?? "Fehler beim Schützen der Identity")
+      setError(err.message ?? t("wot.onboarding.protectFailed"))
     } finally {
       setLoading(false)
     }
@@ -202,43 +211,42 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
             <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-primary/10">
               <Sparkles className="size-7 text-primary" />
             </div>
-            <CardTitle>Willkommen!</CardTitle>
-            <CardDescription>
-              Erstelle deine dezentrale digitale Identity. Sie gehört nur dir — kein Server, kein Anbieter.
-            </CardDescription>
+            <CardTitle>{t("wot.onboarding.welcomeTitle")}</CardTitle>
+            <CardDescription>{t("wot.onboarding.welcomeDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-4 space-y-2">
               <div className="flex items-center gap-2 font-medium text-blue-900 dark:text-blue-300">
                 <Shield className="size-4" />
-                <span>Was wird passieren:</span>
+                <span>{t("wot.onboarding.whatHappens")}</span>
               </div>
               <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800 dark:text-blue-400 ml-1">
-                <li>Du erhältst 12 geheime Wörter (dein „Seed")</li>
-                <li>Du schreibst sie auf und bestätigst das</li>
-                <li>Du füllst dein Profil aus</li>
-                <li>Du setzt ein Passwort zum Schutz</li>
+                <li>{t("wot.onboarding.whatHappens.seed")}</li>
+                <li>{t("wot.onboarding.whatHappens.writeDown")}</li>
+                <li>{t("wot.onboarding.whatHappens.profile")}</li>
+                <li>{t("wot.onboarding.whatHappens.password")}</li>
               </ol>
             </div>
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="size-4 text-amber-500 mt-0.5 shrink-0" />
                 <p className="text-sm text-amber-700 dark:text-amber-400">
-                  <strong>Wichtig:</strong> Die 12 Wörter sind dein einziger Weg, die Identity wiederherzustellen. Halte Stift und Papier bereit.
+                  <strong>{t("wot.onboarding.importantLabel")}</strong> {t("wot.onboarding.importantText")}
                 </p>
               </div>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button className="w-full" onClick={handleGenerate} disabled={loading}>
-              {loading ? "Generiere Identity…" : "Identity generieren"}
+            <Button className="w-full" onClick={handleGenerate} disabled={loading} data-testid="wot-onboarding-create">
+              {loading ? t("wot.onboarding.creating") : t("wot.onboarding.create")}
             </Button>
             <div className="text-center">
               <button
                 type="button"
                 onClick={onSwitchToRecovery}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="wot-onboarding-have-seed"
               >
-                Ich habe bereits einen Seed
+                {t("wot.onboarding.haveSeed")}
               </button>
             </div>
           </CardContent>
@@ -257,21 +265,19 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
             <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-amber-500/10">
               <AlertTriangle className="size-7 text-amber-500" />
             </div>
-            <CardTitle>Dein Recovery Seed</CardTitle>
-            <CardDescription>
-              Schreibe diese 12 Wörter in der richtigen Reihenfolge auf und bewahre sie sicher auf.
-            </CardDescription>
+            <CardTitle>{t("wot.onboarding.seedTitle")}</CardTitle>
+            <CardDescription>{t("wot.onboarding.seedDescription")}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4" data-testid="wot-onboarding-seed">
             <MnemonicGrid words={mnemonic} copyable />
 
             {/* Security Checklist */}
             <Separator />
             <div className="space-y-1">
               {[
-                { id: "written", label: "Ich habe alle 12 Wörter aufgeschrieben" },
-                { id: "safe", label: "Ich habe sie an einem sicheren Ort verwahrt" },
-                { id: "understand", label: "Ich verstehe, dass sie nicht wiederhergestellt werden können" },
+                { id: "written", label: t("wot.onboarding.check.written") },
+                { id: "safe", label: t("wot.onboarding.check.safe") },
+                { id: "understand", label: t("wot.onboarding.check.understand") },
               ].map(({ id, label }) => {
                 const item = checklistItems.find((c) => c.id === id)!
                 return (
@@ -283,6 +289,7 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
                       type="checkbox"
                       checked={item.checked}
                       onChange={() => toggleChecklist(id)}
+                      data-testid={`wot-onboarding-check-${id}`}
                       className="size-4 rounded border-muted-foreground/40 accent-green-600 shrink-0"
                     />
                     <span className="text-sm">{label}</span>
@@ -293,12 +300,17 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
 
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
               <p className="text-sm text-destructive">
-                <strong>Letzte Warnung:</strong> Wenn du die Wörter verlierst, gibt es keine Möglichkeit, deine Identity wiederherzustellen.
+                <strong>{t("wot.onboarding.lastWarningLabel")}</strong> {t("wot.onboarding.lastWarningText")}
               </p>
             </div>
 
-            <Button className="w-full" onClick={() => goToStep("verify")} disabled={!allChecked}>
-              Weiter zur Verifizierung
+            <Button
+              className="w-full"
+              onClick={() => goToStep("verify")}
+              disabled={!allChecked}
+              data-testid="wot-onboarding-to-verify"
+            >
+              {t("wot.onboarding.toVerify")}
             </Button>
           </CardContent>
         </Card>
@@ -313,19 +325,17 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
         <StepProgress steps={STEP_LABELS} currentStep={2} />
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Seed bestätigen</CardTitle>
-            <CardDescription>
-              Gib die folgenden Wörter ein, um sicherzustellen, dass du sie korrekt notiert hast.
-            </CardDescription>
+            <CardTitle>{t("wot.onboarding.verifyTitle")}</CardTitle>
+            <CardDescription>{t("wot.onboarding.verifyDescription")}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4" data-testid="wot-onboarding-verify">
             <MnemonicVerify words={mnemonic} onVerified={() => goToStep("profile")} />
             <button
               type="button"
               onClick={() => history.back()}
               className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              ← Zurück zum Seed
+              {t("wot.onboarding.backToSeed")}
             </button>
           </CardContent>
         </Card>
@@ -343,19 +353,18 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
             <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-primary/10">
               <UserIcon className="size-7 text-primary" />
             </div>
-            <CardTitle>Dein Profil</CardTitle>
-            <CardDescription>
-              Wie möchtest du dich anderen gegenüber zeigen?
-            </CardDescription>
+            <CardTitle>{t("wot.onboarding.profileTitle")}</CardTitle>
+            <CardDescription>{t("wot.onboarding.profileDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="onboarding-name">Name</Label>
+              <Label htmlFor="onboarding-name">{t("wot.onboarding.name")}</Label>
               <Input
                 id="onboarding-name"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Dein Name"
+                placeholder={t("wot.onboarding.namePlaceholder")}
+                data-testid="wot-onboarding-name"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -366,12 +375,12 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="onboarding-bio">Über mich</Label>
+              <Label htmlFor="onboarding-bio">{t("wot.onboarding.bio")}</Label>
               <Input
                 id="onboarding-bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="Ein kurzer Satz über dich (optional)"
+                placeholder={t("wot.onboarding.bioPlaceholder")}
               />
             </div>
             {biometricAvailable ? (
@@ -382,27 +391,28 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
                   disabled={loading}
                 >
                   <Fingerprint className="size-5" />
-                  {loading ? "Richte ein…" : "Mit Biometrie schützen"}
+                  {loading ? t("wot.biometric.settingUp") : t("wot.onboarding.protectWithBiometrics")}
                 </Button>
                 <button
                   type="button"
                   onClick={() => goToStep("password")}
                   className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="wot-onboarding-use-password"
                 >
-                  Stattdessen Passwort verwenden
+                  {t("wot.usePasswordInstead")}
                 </button>
               </>
             ) : (
               <>
-                <Button className="w-full" onClick={() => goToStep("password")}>
-                  Weiter
+                <Button className="w-full" onClick={() => goToStep("password")} data-testid="wot-onboarding-profile-continue">
+                  {t("wot.onboarding.continue")}
                 </Button>
                 <button
                   type="button"
                   onClick={() => goToStep("password")}
                   className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Überspringen
+                  {t("wot.onboarding.skip")}
                 </button>
               </>
             )}
@@ -422,16 +432,18 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
             <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-green-500/10">
               <Key className="size-7 text-green-500" />
             </div>
-            <CardTitle>Schütze deine Identity</CardTitle>
-            <CardDescription>
-              Wähle ein starkes Passwort, um deine Identity auf diesem Gerät zu schützen.
-            </CardDescription>
+            <CardTitle>{t("wot.onboarding.passwordTitle")}</CardTitle>
+            <CardDescription>{t("wot.onboarding.passwordDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={(e) => { e.preventDefault(); handleFinalize() }} className="space-y-4">
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleFinalize() }}
+              className="space-y-4"
+              data-testid="wot-onboarding-password"
+            >
               <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3">
                 <p className="text-sm text-blue-800 dark:text-blue-300">
-                  <strong>Tipp:</strong> Das Passwort ist nicht dein Seed. Es schützt deine Identity lokal auf diesem Gerät.
+                  <strong>{t("wot.onboarding.tipLabel")}</strong> {t("wot.onboarding.tipText")}
                 </p>
               </div>
               <PassphraseConfirm
@@ -443,10 +455,11 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button
                 type="submit"
+                data-testid="wot-onboarding-set-password"
                 className="w-full"
                 disabled={loading || passphrase.length < 8 || passphrase !== confirm}
               >
-                {loading ? "Wird gesichert…" : "Passwort setzen"}
+                {loading ? t("wot.onboarding.saving") : t("wot.onboarding.setPassword")}
               </Button>
             </form>
           </CardContent>
@@ -464,14 +477,12 @@ export function OnboardingFlow({ connector, onComplete, onSwitchToRecovery }: On
           <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-green-500/10">
             <Check className="size-7 text-green-500" />
           </div>
-          <CardTitle>Geschafft!</CardTitle>
-          <CardDescription>
-            Deine Identity wurde erfolgreich erstellt und geschützt.
-          </CardDescription>
+          <CardTitle>{t("wot.onboarding.doneTitle")}</CardTitle>
+          <CardDescription>{t("wot.onboarding.doneDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="text-center">
           <div className="animate-pulse text-sm text-muted-foreground">
-            Du wirst zur App weitergeleitet…
+            {t("wot.onboarding.redirecting")}
           </div>
         </CardContent>
       </Card>

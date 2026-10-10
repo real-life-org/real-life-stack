@@ -68,9 +68,12 @@
   "lib/resonance-transfer.ts": 8,
   "lib/runtime-config.ts": 2,
   "lib/theme-tokens.ts": 9,
+  "local-connector:local-connector.ts": 1,
+  "mock-connector:mock-connector.ts": 4,
   "modules/feed-module.tsx": 5,
   "modules/graph-module.tsx": 1,
   "modules/kanban-module.tsx": 12,
   "modules/map-module.tsx": 6,
-  "modules/resonance-module.tsx": 12
+  "modules/resonance-module.tsx": 12,
+  "supabase-connector:supabase-connector.ts": 3
 }
