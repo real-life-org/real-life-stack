@@ -36,8 +36,8 @@
   "dependencies": {
     "@real-life/data-interface": "workspace:*",
     "@real-life/toolkit": "workspace:*",
-    "@real-life/adapter-yjs": "npm:@web_of_trust/adapter-yjs@^0.2.10",
-    "@real-life/wot-core": "npm:@web_of_trust/core@^0.5.10"
+    "@real-life/adapter-yjs": "npm:@web_of_trust/adapter-yjs@^0.3.0",
+    "@real-life/wot-core": "npm:@web_of_trust/core@^0.6.0"
   },
   "peerDependencies": {
     "@capacitor/core": "^8.0.0",
