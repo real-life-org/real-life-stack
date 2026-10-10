@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.1](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.4.0...toolkit-v0.4.1) (2026-10-10)
+
+
+### Features
+
+* **toolkit:** i18n-Laufzeit — dünne Schicht über Intl, Deutsch + Englisch ([#288](https://github.com/real-life-org/real-life-stack/issues/288)) ([b2bd7e8](https://github.com/real-life-org/real-life-stack/commit/b2bd7e89a5a430a41da9bb07de9b97cb688fc32b))
+* **toolkit:** Texte der App-Hülle, Anmeldung und Kontakte übersetzbar (i18n, Teil 2.1) ([#619](https://github.com/real-life-org/real-life-stack/issues/619)) ([522d616](https://github.com/real-life-org/real-life-stack/commit/522d61655b675e1a045147e686fa1c54f2967146))
+* **wot-connector:** Onboarding und Entsperren übersetzbar, „Identität“ statt „Identity“ ([#621](https://github.com/real-life-org/real-life-stack/issues/621)) ([b81a4b2](https://github.com/real-life-org/real-life-stack/commit/b81a4b223b4ecfe3bf626bddae443be51a2ee13e))
+
 ## [0.4.0](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.3.0...toolkit-v0.4.0) (2026-10-01)
 
 

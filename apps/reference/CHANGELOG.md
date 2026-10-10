@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.2](https://github.com/real-life-org/real-life-stack/compare/app-v0.5.1...app-v0.5.2) (2026-10-10)
+
+
+### Features
+
+* **toolkit:** i18n-Laufzeit — dünne Schicht über Intl, Deutsch + Englisch ([#288](https://github.com/real-life-org/real-life-stack/issues/288)) ([b2bd7e8](https://github.com/real-life-org/real-life-stack/commit/b2bd7e89a5a430a41da9bb07de9b97cb688fc32b))
+* **wot-connector:** Onboarding und Entsperren übersetzbar, „Identität“ statt „Identity“ ([#621](https://github.com/real-life-org/real-life-stack/issues/621)) ([b81a4b2](https://github.com/real-life-org/real-life-stack/commit/b81a4b223b4ecfe3bf626bddae443be51a2ee13e))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life/toolkit bumped to 0.4.1
+    * @real-life/wot-connector bumped to 0.2.4
+
 ## [0.5.1](https://github.com/real-life-org/real-life-stack/compare/app-v0.5.0...app-v0.5.1) (2026-10-01)
 
 
