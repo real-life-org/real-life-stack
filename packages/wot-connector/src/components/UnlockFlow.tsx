@@ -7,8 +7,10 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  useI18n,
 } from "@real-life/toolkit"
 import { Key, Fingerprint } from "lucide-react"
+import "../i18n/index.js"
 import type { WotConnector } from "../wot-connector.js"
 import { BiometricService } from "../biometric-service.js"
 import { BiometricOptIn, shouldShowBiometricOptIn } from "./BiometricOptIn.js"
@@ -29,6 +31,7 @@ function errorCode(err: unknown): string {
 }
 
 export function UnlockFlow({ connector, onComplete, onSwitchToRecovery }: UnlockFlowProps) {
+  const { t } = useI18n()
   const [passphrase, setPassphrase] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -45,7 +48,7 @@ export function UnlockFlow({ connector, onComplete, onSwitchToRecovery }: Unlock
   const finishPasswordError = (err: unknown) => {
     const msg = (err as { message?: string })?.message
     const matched = msg ? (msg.includes("passphrase") || msg.includes("decrypt")) : false
-    setError(matched ? "Falsches Passwort" : (msg ?? "Entsperrung fehlgeschlagen"))
+    setError(matched ? t("wot.unlock.wrongPassword") : (msg ?? t("wot.unlock.failed")))
   }
 
   const handleBiometricUnlock = async () => {
@@ -65,9 +68,9 @@ export function UnlockFlow({ connector, onComplete, onSwitchToRecovery }: Unlock
         await BiometricService.unenroll().catch(() => {})
         setBioEnrolled(false)
         setUsePassword(true)
-        setError("Biometrie wurde zurückgesetzt. Bitte mit Passwort entsperren.")
+        setError(t("wot.unlock.biometricReset"))
       } else {
-        setError((err as { message?: string })?.message ?? "Biometrische Entsperrung fehlgeschlagen")
+        setError((err as { message?: string })?.message ?? t("wot.unlock.biometricFailed"))
       }
     } finally {
       setBioLoading(false)
@@ -129,10 +132,8 @@ export function UnlockFlow({ connector, onComplete, onSwitchToRecovery }: Unlock
           <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-primary/10">
             <Fingerprint className="size-7 text-primary" />
           </div>
-          <CardTitle>Willkommen zurück</CardTitle>
-          <CardDescription>
-            Entsperre deine Identity mit Fingerabdruck oder Gesicht.
-          </CardDescription>
+          <CardTitle>{t("wot.unlock.title")}</CardTitle>
+          <CardDescription>{t("wot.unlock.biometricDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {error && <p className="text-sm text-destructive text-center">{error}</p>}
@@ -142,7 +143,7 @@ export function UnlockFlow({ connector, onComplete, onSwitchToRecovery }: Unlock
             disabled={bioLoading}
           >
             <Fingerprint className="mr-2 size-4" />
-            {bioLoading ? "Entsperre…" : "Biometrisch entsperren"}
+            {bioLoading ? t("wot.unlock.unlocking") : t("wot.unlock.biometric")}
           </Button>
           <div className="flex flex-col items-center gap-2">
             <button
@@ -150,14 +151,15 @@ export function UnlockFlow({ connector, onComplete, onSwitchToRecovery }: Unlock
               onClick={() => { setError(""); setUsePassword(true) }}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Stattdessen Passwort verwenden
+              {t("wot.usePasswordInstead")}
             </button>
             <button
               type="button"
               onClick={onSwitchToRecovery}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="wot-unlock-recover"
             >
-              Identity wiederherstellen
+              {t("wot.recovery.title")}
             </button>
           </div>
         </CardContent>
@@ -172,18 +174,16 @@ export function UnlockFlow({ connector, onComplete, onSwitchToRecovery }: Unlock
         <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-primary/10">
           <Key className="size-7 text-primary" />
         </div>
-        <CardTitle>Willkommen zurück</CardTitle>
-        <CardDescription>
-          Gib dein Passwort ein, um deine Identity zu entsperren.
-        </CardDescription>
+        <CardTitle>{t("wot.unlock.title")}</CardTitle>
+        <CardDescription>{t("wot.unlock.passwordDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={(e) => { e.preventDefault(); handleUnlock() }}>
           <PassphraseInput
             value={passphrase}
             onChange={setPassphrase}
-            label="Passwort"
-            placeholder="Passwort eingeben"
+            label={t("auth.password")}
+            placeholder={t("wot.unlock.passwordPlaceholder")}
             error={error}
             autoFocus
           />
@@ -191,8 +191,9 @@ export function UnlockFlow({ connector, onComplete, onSwitchToRecovery }: Unlock
             type="submit"
             className="w-full mt-4"
             disabled={loading || passphrase.length < 1}
+            data-testid="wot-unlock-submit"
           >
-            {loading ? "Entsperre…" : "Entsperren"}
+            {loading ? t("wot.unlock.unlocking") : t("wot.unlock.unlock")}
           </Button>
         </form>
         <div className="flex flex-col items-center gap-2">
@@ -202,15 +203,16 @@ export function UnlockFlow({ connector, onComplete, onSwitchToRecovery }: Unlock
               onClick={() => { setError(""); setUsePassword(false) }}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Zurück zur biometrischen Entsperrung
+              {t("wot.unlock.backToBiometric")}
             </button>
           )}
           <button
             type="button"
             onClick={onSwitchToRecovery}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="wot-unlock-recover"
           >
-            Identity wiederherstellen
+            {t("wot.recovery.title")}
           </button>
         </div>
       </CardContent>

@@ -1,7 +1,8 @@
 import { useState } from "react"
-import { Button } from "@real-life/toolkit"
+import { Button, useI18n } from "@real-life/toolkit"
 import { Fingerprint } from "lucide-react"
 import { BiometricService } from "../biometric-service.js"
+import "../i18n/index.js"
 
 interface BiometricOptInProps {
   /** The passphrase to store behind the biometric prompt. */
@@ -28,6 +29,7 @@ export function shouldShowBiometricOptIn(): boolean {
  * don't nag on every unlock.
  */
 export function BiometricOptIn({ passphrase, onDone }: BiometricOptInProps) {
+  const { t } = useI18n()
   const [isEnrolling, setIsEnrolling] = useState(false)
 
   const handleEnable = async () => {
@@ -58,21 +60,16 @@ export function BiometricOptIn({ passphrase, onDone }: BiometricOptInProps) {
           <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-primary/10">
             <Fingerprint className="size-7 text-primary" />
           </div>
-          <h3 className="text-lg font-bold text-foreground">
-            Schneller entsperren
-          </h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Möchtest du deine Identity künftig mit Fingerabdruck oder Gesicht
-            entsperren, statt jedes Mal das Passwort einzugeben?
-          </p>
+          <h3 className="text-lg font-bold text-foreground">{t("wot.biometricOptIn.title")}</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{t("wot.biometricOptIn.description")}</p>
         </div>
 
         <div className="flex gap-3">
           <Button variant="outline" className="flex-1" onClick={handleSkip} disabled={isEnrolling}>
-            Nicht jetzt
+            {t("wot.biometricOptIn.notNow")}
           </Button>
           <Button className="flex-1" onClick={handleEnable} disabled={isEnrolling}>
-            {isEnrolling ? "Richte ein…" : "Aktivieren"}
+            {isEnrolling ? t("wot.biometric.settingUp") : t("wot.biometricOptIn.enable")}
           </Button>
         </div>
       </div>

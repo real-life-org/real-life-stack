@@ -46,10 +46,14 @@
   "devDependencies": {
     "@capacitor/core": "^8.2.0",
     "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.2",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "fake-indexeddb": "^6.2.5",
+    "jsdom": "^26.1.0",
     "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "typescript": "~5.7.2",
     "vitest": "^4.1.0",
     "yjs": "^13.6.30"
