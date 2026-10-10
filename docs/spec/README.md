@@ -2,7 +2,7 @@
 
 **Status:** Spezifikationskern im Aufbau — **Single Source of Truth** des Repositories
 
-Diese Spec beschreibt den stabilen technischen Vertrag des Real Life Stack. Sie ist der normative Bereich des Repositories. Konzeptdokumente dürfen weiterdenken, Beispiele sammeln oder offene Richtungen erkunden; die Dateien in `docs/spec/` definieren, worauf Code, Connectoren, Hooks und UI-Flächen sich verlassen dürfen.
+Diese Spec beschreibt den stabilen technischen Vertrag des Real Life Stack. Sie ist der normative Bereich des Repositories. Konzeptdokumente dürfen weiterdenken, Beispiele sammeln oder offene Richtungen erkunden; die Dateien in `docs/spec/` definieren, worauf Code, Connectoren, Hooks und UI-Flächen sich verlassen dürfen. Ein Dokument mit Status „Entwurf zur Besprechung“ ist davon ausgenommen, bis es beschlossen ist.
 
 **Bei Konflikt zwischen Spec und Implementierung gewinnt die Spec.** Entweder Code anpassen oder Spec ändern + PR-Note. Code führt keine Regeln stillschweigend ein.
 
@@ -50,7 +50,7 @@ Die Kern-Dokumente bauen in dieser Reihenfolge aufeinander auf:
 | [10-activity-log.md](10-activity-log.md) | Normativer Entwurf | CRUD-Historie pro Space: Collection-Form, ID-/Merge-Ordnung, Retention, Atomarität |
 | [11-runtime-config-und-branding.md](11-runtime-config-und-branding.md) | Normativer Entwurf | Ein Artefakt, viele Instanzen: Endpunkte und Identität zur Laufzeit statt zur Build-Zeit |
 | [12-profile.md](12-profile.md) | Normativer Entwurf (erste Anwendung von 09) | Profil = person-Item im persönlichen Space, Mirror je freigegebenem Gruppen-Space; Freigabe, Widerruf, Ablage |
-| [13-identitaet-und-anmeldung.md](13-identitaet-und-anmeldung.md) | Entwurf zur Besprechung | Identität gehört der Person, nicht der Quelle: `IdentityProvider`, Anmeldearten mit `kind`, Bildschirme im Toolkit, DID-Login per Challenge, eine Anmeldung für mehrere Connectoren |
+| [13-identitaet-und-anmeldung.md](13-identitaet-und-anmeldung.md) | Entwurf zur Besprechung (nicht normativ) | Identität gehört der Person, nicht der Quelle: `IdentityProvider`, Anmeldearten mit `kind`, Bildschirme im Toolkit, DID-Login per Challenge, eine Anmeldung für mehrere Connectoren |
 | [glossary.md](glossary.md) | Lebendes Dokument | Kurzdefinitionen der Spec-Begrifflichkeit mit Verweisen auf die normative Quelle |
 
 ## Formale Schemas
