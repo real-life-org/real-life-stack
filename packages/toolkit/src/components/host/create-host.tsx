@@ -219,7 +219,7 @@ export function CreateHostProvider({ children }: { children: ReactNode }) {
       <CreateOutletContext.Provider value={outletValue}>
         {children}
         <ComposerFullscreenShell open={!!showFullscreen} suspended={isPicking} onRequestClose={stopCreate}>
-          {showFullscreen && <CreateComposerOutlet className="p-4 sm:p-6" />}
+          {showFullscreen && <CreateComposerOutlet />}
         </ComposerFullscreenShell>
       </CreateOutletContext.Provider>
     </CreateHostContext.Provider>
@@ -237,7 +237,7 @@ export function CreateSheetController() {
     if (sheetComposing) {
       if (ownedRef.current && modulePanel.current?.kind === "composer") return
       ownedRef.current = true
-      modulePanel.open({ kind: "composer", content: <CreateComposerOutlet className="p-4 sm:p-6" />, onClose: cancel })
+      modulePanel.open({ kind: "composer", content: <CreateComposerOutlet />, onClose: cancel })
     } else if (ownedRef.current) {
       ownedRef.current = false
       if (modulePanel.current?.kind === "composer") modulePanel.close({ silent: true })
@@ -246,7 +246,7 @@ export function CreateSheetController() {
   return null
 }
 
-function CreateComposerOutlet({ className }: { className?: string }) {
+function CreateComposerOutlet() {
   const ctx = useContext(CreateOutletContext)
   const config = ctx?.activeConfig
   if (!ctx || !config) return null
@@ -256,7 +256,6 @@ function CreateComposerOutlet({ className }: { className?: string }) {
     <ItemComposer
       key={ctx.composerKey}
       apiRef={ctx.composerApiRef}
-      className={className}
       contentTypes={fixedGroup ? withFixedGroup(config.contentTypes, fixedGroup, fixedGroupReason) : config.contentTypes}
       initialContentType={ctx.composeType ?? undefined}
       initialData={ctx.pendingInitialData()}
