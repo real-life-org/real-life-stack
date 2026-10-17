@@ -38,7 +38,7 @@ if (isWritable(connector)) {
 | `EncounterVerificationCapable` | `hasEncounterVerification()` | QR-/Begegnungsverifikation als eigenen Ablauf bereitstellen |
 | `ProfileCapable` | `hasProfile()` | eigenes Profil, öffentliche Profile, Profil-Sync und Profil-Freigaben je Space (`observeProfileShares`, `acceptSpace`, `declineSpace`, `shareProfile`, `revokeProfileShare`; [12-profile.md](12-profile.md) Regel 14) |
 | `EventListenerCapable` | `hasEventListener()` | eingehende Connector-Ereignisse abonnieren |
-| `ItemGroupCapable` | `hasItemGroups()` | Item-zu-Group-Zuordnung lesen oder verschieben |
+| `ItemGroupCapable` | `hasItemGroups()` | Item-zu-Group-Zuordnung lesen oder verschieben; den Space einer gelesenen Instanz sagt `Item.spaceId` ([02 → Space einer Instanz](02-data-interface.md#space-einer-instanz)) |
 | `GroupScopeCapable` | `hasGroupScope()` | Items eines bestimmten Space lesen und in ihm anlegen, ohne ihn zu öffnen (`ItemFilter.group`, `createItem(item, { group })`, [02 → Lesen in einem bestimmten Space](02-data-interface.md#lesen-in-einem-bestimmten-space-group)) |
 | `AuthorizationCapable` | `hasAuthorization()` | per-Resource-Autorisierung (UCAN/RLS) für Create/Edit/Delete |
 | `MirrorCapable` | `hasMirrors()` | Items in weitere Spaces freigeben und Freigaben beobachten/widerrufen ([09-mirror-bridge.md → §Capability-Vertrag](09-mirror-bridge.md)) |
