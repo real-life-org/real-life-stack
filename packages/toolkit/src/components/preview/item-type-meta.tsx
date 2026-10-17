@@ -6,6 +6,7 @@ import { BadgeCheck, Globe, Wrench } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
+import { initials } from "./person-avatar"
 import { ItemTypeBadge } from "./item-type-badge"
 import { resolveTypePresentation } from "./type-presentation"
 
@@ -18,16 +19,6 @@ import { resolveTypePresentation } from "./type-presentation"
 export interface ItemTypeMetaProps {
   item: Item
   className?: string
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part[0]!)
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "?"
 }
 
 /** Avatar and display name for a canonical `person` item. */
