@@ -4,6 +4,8 @@ This file is a template. Copy it into the root of a new app repository (or hand 
 
 Machine-readable overview of the whole stack (packages, spec, every hook): <https://real-life-stack.de/llms.txt>. Handbook page for humans: <https://real-life-stack.de/handbuch/erste-app/> (German).
 
+The toolkit package carries the documentation of its own version: `node_modules/@real-life-stack/toolkit/docs/stack/` (spec, handbook, this template, `llms.txt`; start with its `README.md`). When it is there, read it instead of the repository: master may already be ahead of the version you installed.
+
 ## What Real Life Stack is
 
 A modular, backend-agnostic app and UI toolkit for community apps: maps of people, places and projects, calendars, kanban boards, feeds, lists, graphs, profiles.
