@@ -20,7 +20,7 @@ The short version for this repository:
   `MUSS`.
 - Umlauts are written out: `MÜSSEN`, not `MUESSEN`.
 - No English keywords. The English document class lives in
-  `wot-spec/rltp/`, not here.
+  [`real-life-org/trust-protocol`](https://github.com/real-life-org/trust-protocol), not here.
 
 This is checked by a script, not by reading:
 
