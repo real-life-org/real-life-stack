@@ -72,7 +72,9 @@ Each connector implements the DataInterface and only the capabilities its data s
 
 ---
 
-## RLNP and Real Life Game
+## Neighbouring Repositories
+
+The organisation-wide picture, the seams between the repositories and the term register live in the meta repository: [real-life-org/meta](https://github.com/real-life-org/meta). The stack ends at the connector; what a backend provides below it is declared through capabilities, see [Connectors](#connectors).
 
 Real Life Stack does not own the social or game semantics. It makes them displayable and usable as a backend-agnostic UI and connector layer. The social meaning comes from the [Real Life Network Protocol](https://github.com/real-life-org/real-life-network-protocol), the optional game semantics from the [Real Life Game](https://github.com/real-life-org/real-life-game). Details: [docs/concepts/rlnp-game-integration.md](docs/concepts/rlnp-game-integration.md).
 
