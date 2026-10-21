@@ -30,6 +30,31 @@ python3 scripts/check-normative-words.py
 
 Läuft in der CI mit.
 
+## Konzeptvorschläge
+
+Eine Architekturidee kommt zuerst als Konzept, nicht als Code. Das Konzept ist
+eine Markdown-Datei unter `docs/concepts/<thema>.md` und kommt per Pull
+Request. Oben steht die Statuszeile `**Status:** Entwurf (Datum)`, wie in
+[`docs/concepts/item-edit-delete-2026-06.md`](docs/concepts/item-edit-delete-2026-06.md).
+Offene Fragen bleiben im Entwurf offen und werden dort nicht entschieden.
+
+Ein Entwurf enthält:
+
+- das Problem,
+- die betroffenen Specs mit Pfad unter `docs/spec/`,
+- den vorgeschlagenen Mechanismus,
+- die Folgen für Local-first und Ende-zu-Ende-Verschlüsselung,
+- die offenen Fragen.
+
+Der Maintainer entscheidet den Mechanismus, bevor gebaut wird. Ein Entwurf ist
+keine Freigabe. Nach der Entscheidung wird aus dem Konzept eine Spec unter
+`docs/spec/`, erst danach folgt Code.
+
+Kleine Änderungen wie Tippfehler, Dokulücken oder Bugs gehen direkt als Pull
+Request, siehe [`AGENTS.md`](AGENTS.md). Prüfläufe und Repository-Regeln
+stehen in [`AGENTS.md`](AGENTS.md) und
+[`docs/agent-workspace.md`](docs/agent-workspace.md).
+
 ## Code
 
 Die Arbeitsanweisungen für dieses Repository — Architekturregeln, Prüfläufe,
