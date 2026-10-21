@@ -34,11 +34,11 @@ Läuft in der CI mit.
 
 Eine Architekturidee kommt zuerst als Konzept, nicht als Code. Das Konzept ist
 eine Markdown-Datei unter `docs/concepts/<thema>.md` und kommt per Pull
-Request. Oben steht die Statuszeile `**Status:** Entwurf (Datum)`, wie in
+Request. Oben steht die Statuszeile `**Status:** Vorschlag (Datum)`, wie in
 [`docs/concepts/item-edit-delete-2026-06.md`](docs/concepts/item-edit-delete-2026-06.md).
-Offene Fragen bleiben im Entwurf offen und werden dort nicht entschieden.
+Offene Fragen bleiben im Vorschlag offen und werden dort nicht entschieden.
 
-Ein Entwurf enthält:
+Ein Vorschlag enthält:
 
 - das Problem,
 - die betroffenen Specs mit Pfad unter `docs/spec/`,
@@ -46,7 +46,7 @@ Ein Entwurf enthält:
 - die Folgen für Local-first und Ende-zu-Ende-Verschlüsselung,
 - die offenen Fragen.
 
-Der Maintainer entscheidet den Mechanismus, bevor gebaut wird. Ein Entwurf ist
+Der Maintainer entscheidet den Mechanismus, bevor gebaut wird. Ein Vorschlag ist
 keine Freigabe. Nach der Entscheidung wird aus dem Konzept eine Spec unter
 `docs/spec/`, erst danach folgt Code.
 
