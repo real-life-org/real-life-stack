@@ -139,6 +139,8 @@ Binding Space Module specs live in [docs/spec/modules/](docs/spec/modules/). The
 
 # Developer Documentation
 
+How to propose a concept, contribute code and run the checks: [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Monorepo Structure
 
 ```text

@@ -18,6 +18,8 @@ The DataInterface and connector boundaries are the most important contracts in t
 
 This file is about contributing to the stack itself. If you are building an app **on top of** the published packages, start with [docs/templates/AGENTS.md](./docs/templates/AGENTS.md) and the machine-readable overview in [llms.txt](./llms.txt).
 
+Concept proposals, spec writing rules and the language rule are in [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 ## Source of Truth
 
 - Spec index: [docs/spec/README.md](./docs/spec/README.md)
