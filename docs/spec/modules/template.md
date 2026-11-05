@@ -96,6 +96,19 @@ Beispiele:
 - keine WoT-Attestation-Formate,
 - keine globale Berechtigungslogik.
 
+## Abnahme
+
+Vor der Übergabe gegen [01 → Die Modulfläche ist eine Spalte](../01-app-composition.md#die-modulfläche-ist-eine-spalte), [01 → Der Modul-Host](../01-app-composition.md#der-modul-host) und [shared-components.md](shared-components.md) prüfen:
+
+- Das Modul ist genau ein Registereintrag; `presents` nennt Felder oder Klassen mit Affordanz, keine Typnamen als Abkürzung.
+- Das Modul lädt keine Items, registriert weder Detail noch Erstellen und hält keinen Fokus; das stellt der Host her. Ausnahme: `loads: "module"`, dann lädt und filtert es selbst.
+- Suche, Vokabular, Filterkarte und Chips kommen von der Fläche. Eigene Steuerelemente gehen über `ModuleToolbar` in den Kopf; eine eigene Kopfzeile gibt es nicht.
+- Beim Erstellen schlägt das Modul höchstens einen Typ vor und belegt Felder vor; es schränkt die Auswahl nicht ein.
+- Jede Item-Karte ist eine `ItemPreview`. Detail und Bearbeiten kommen aus dem Register (`ItemDetailView`, `ContentComposer`), nicht aus dem Modul.
+- Fehlt eine Capability, verhält sich das Modul wie in der Tabelle „Capabilities“ angegeben.
+- Das Modul läuft ohne eine Zeile in der App, mindestens in einer Story.
+- Jede eigene Komponente ist unter „Komponenten“ begründet oder als fehlender Baustein im Toolkit gemeldet.
+
 ## Implementierungsreferenzen
 
 Links auf bestehende Code- oder Demo-Stellen, wenn vorhanden.

@@ -156,7 +156,8 @@ jobs:
 
       # Die Einstiege fuer Agenten (llms.txt, docs/templates/AGENTS.md) entstehen
       # aus Paketen, Spec-Index, Hook-Referenz und examples/first-app
-      # (scripts/agents). Faellt, wenn sie nicht mehr zum Repo passen.
+      # (scripts/agents). Faellt, wenn sie nicht mehr zum Repo passen. Die
+      # Tests pruefen auch die Doku-Kopie, die das Toolkit beim Packen mitnimmt.
       - name: Agent entry points
         run: pnpm check:agents && pnpm test:agents
 
