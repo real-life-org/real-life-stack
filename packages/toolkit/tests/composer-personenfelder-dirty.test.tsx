@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ContentComposer, type ContentTypeConfig } from "../src/components/composer/content-composer"
+import { textOhneAvatar } from "./support/text-ohne-avatar"
 
 /**
  * Welche Datenschlüssel Personen tragen, sagt die KONFIGURATION — nicht das
@@ -55,7 +56,7 @@ function personWaehlen(input: HTMLInputElement, name: string) {
     input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }))
   })
   const vorschlag = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
-    (el) => el.textContent?.trim() === name,
+    (el) => textOhneAvatar(el) === name,
   )
   expect(vorschlag, `Vorschlag „${name}" nicht gefunden`).toBeTruthy()
   act(() => vorschlag!.dispatchEvent(new MouseEvent("click", { bubbles: true })))

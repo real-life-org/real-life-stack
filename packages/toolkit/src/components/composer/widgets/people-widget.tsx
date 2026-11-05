@@ -4,10 +4,13 @@ import * as React from "react"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { isMissingQualifier } from "../../preview/field-register"
+import { PersonAvatar } from "../../preview/person-avatar"
 
 export interface PersonOption {
   id: string
   name: string
+  /** Bild der Person (`User.avatarUrl`); ohne Bild zeigt das Feld die Initialen. */
+  avatarUrl?: string
 }
 
 interface PeopleWidgetProps {
@@ -70,13 +73,13 @@ export function PeopleWidget({
   // Build a lookup map from options for resolving display names
   const optionMap = React.useMemo(() => {
     if (!options) return null
-    const map = new Map<string, string>()
-    for (const o of options) map.set(o.id, o.name)
+    const map = new Map<string, PersonOption>()
+    for (const o of options) map.set(o.id, o)
     return map
   }, [options])
 
   const resolveLabel = React.useCallback(
-    (id: string) => optionMap?.get(id) ?? id,
+    (id: string) => optionMap?.get(id)?.name ?? id,
     [optionMap],
   )
 
@@ -229,8 +232,9 @@ export function PeopleWidget({
             key={personId}
             data-person-chip={personId}
             // Wie im Design: neutraler Chip, Zustand gedämpft dahinter.
-            className="inline-flex items-center gap-0.5 rounded-full border bg-background px-2 py-0.5 text-xs font-medium text-foreground"
+            className="inline-flex items-center gap-1 rounded-full border bg-background py-0.5 pl-0.5 pr-2 text-xs font-medium text-foreground"
           >
+            <PersonAvatar name={resolveLabel(personId)} avatarUrl={optionMap?.get(personId)?.avatarUrl} />
             {resolveLabel(personId)}
             {record && <span aria-hidden className="px-0.5 text-muted-foreground">·</span>}
             {record && (
@@ -291,12 +295,14 @@ export function PeopleWidget({
             <button
               key={option.id}
               type="button"
+              data-person-option={option.id}
               onClick={() => addPerson(option.id)}
               className={cn(
-                "w-full rounded-sm px-2 py-1.5 text-left text-sm",
+                "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm",
                 "hover:bg-accent hover:text-accent-foreground",
               )}
             >
+              <PersonAvatar name={option.name} avatarUrl={option.avatarUrl} className="h-5 w-5" />
               {option.name}
             </button>
           ))}
@@ -315,9 +321,11 @@ export function PeopleWidget({
               <button
                 key={person.id}
                 type="button"
+                data-person-suggestion={person.id}
                 onClick={() => addPerson(person.id)}
-                className="inline-flex cursor-pointer items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-700 opacity-70 transition-opacity hover:opacity-100 dark:bg-sky-900/30 dark:text-sky-300"
+                className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-sky-100 py-0.5 pl-0.5 pr-2 text-[10px] font-medium text-sky-700 opacity-70 transition-opacity hover:opacity-100 dark:bg-sky-900/30 dark:text-sky-300"
               >
+                <PersonAvatar name={person.name} avatarUrl={person.avatarUrl} className="h-4 w-4" />
                 {person.name}
               </button>
             ))}
