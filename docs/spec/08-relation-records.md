@@ -103,8 +103,12 @@ Regeln:
    `claim` (s. „Autorbindung: SignedClaims“) sind reserviert; neue
    Vertragsfelder kommen nur mit einer neuen Vokabular-Version
    (`relation/v2`), nie still in `v1`.
-7. Ein RelationRecord SOLLTE im selben Space liegen wie sein `from`-Ziel.
-   Endpunkte in anderen Spaces werden über `space:{id}/item:` adressiert.
+7. Ein RelationRecord liegt im Space des Items, auf das er sich bezieht:
+   im Space des `to`-Ziels, wenn `to` ein Item adressiert, sonst im Space
+   des `from`-Ziels. Er liegt nicht im Space von `from`, nur weil `from`
+   der Autor oder Träger ist (bei `attends` ist `from` eine Person mit
+   `global:`-Target). Endpunkte in anderen Spaces werden über
+   `space:{id}/item:` adressiert.
 8. Records mit nicht auflösbaren oder fehlerhaften Endpunkten (kein oder
    mehr als ein `from`-/`to`-Eintrag) MÜSSEN von Leseflächen ignoriert
    werden (kein Crash, keine Phantom-Knoten). Aufräumen ist eine explizite
@@ -122,6 +126,14 @@ Regeln:
     die Schema-Definition folgt in `schemas/vocab/relation/v1/` (validiert
     u. a. genau einen `from`- und einen `to`-Eintrag, die ID-Regel und die
     reservierten Vertragsfelder `predicate`/`confirmationRef`/`claim`).
+11. **Space eines Records.** Ein RelationRecord trägt beim Lesen seinen
+    Space in `spaceId` wie jedes Item ([02 → Space einer Instanz](02-data-interface.md#space-einer-instanz)).
+    Der Wert ist der Space der Ablage, in der der Record liegt (Dokument,
+    Tabelle oder Zuordnung des Space), nicht der Space eines Endpunkts und
+    nicht der geöffnete Space. Dasselbe gilt für Kommentare und Reaktionen.
+    Der zusammengesetzte Schlüssel `(spaceId, id)` aus Regel 4 ist genau
+    diese Angabe. Endpunkte mit `item:` sind space-lokal zum Space des
+    Records ([04 → Space einer Instanz und Kanten-Ziele](04-items-relations-groups-spaces.md#space-einer-instanz-und-kanten-ziele)).
 
 ## RelationRecordCapable und RelationRecordWriterCapable (der „RelationStore")
 
