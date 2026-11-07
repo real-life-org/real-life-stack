@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react"
 import type { Item } from "@real-life/data-interface"
-import { isWritable, hasRelations, isAuthenticatable, deriveContext } from "@real-life/data-interface"
+import { isWritable, hasRelations, hasUserLookup, isAuthenticatable, deriveContext } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 import { standingMark, standingStateCounts, useCanVerifyItems, useItemStandings } from "./use-item-standing"
 
@@ -266,7 +266,7 @@ export function useReactionUsers(itemId: string, emojiFilter?: string): UseReact
             let displayName = r.createdBy
             let avatarUrl: string | undefined
 
-            if (isAuthenticatable(connector)) {
+            if (hasUserLookup(connector)) {
               try {
                 const user = await connector.getUser(r.createdBy)
                 if (user) {

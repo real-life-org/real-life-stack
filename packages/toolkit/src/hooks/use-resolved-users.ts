@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { isAuthenticatable, type DataInterface, type User } from "@real-life/data-interface"
+import { hasUserLookup, type DataInterface, type User } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 interface Aufloesung {
@@ -48,7 +48,7 @@ export function useResolvedUsers(ids: readonly string[]): ReadonlyMap<string, Us
 
   useEffect(() => {
     if (anfragen.current.connector !== connector) anfragen.current = { connector, laufend: new Set() }
-    if (!isAuthenticatable(connector)) return
+    if (!hasUserLookup(connector)) return
     const behaelter = anfragen.current
     for (const id of ids) {
       if (resolved.has(id) || behaelter.laufend.has(id)) continue

@@ -12,7 +12,7 @@ import { useItem } from "../../hooks/use-items"
 import { scalesForColor } from "../../lib/color-scales"
 import { getModule, moduleIds, resolveActiveModule, resolveSpaceModules } from "../../lib/module-register"
 import { resolveDefaultModule } from "../../lib/notification-target"
-import { instanceTheme } from "../../lib/runtime-config"
+import { getRuntimeConfig, instanceTheme } from "../../lib/runtime-config"
 import { layoutTokens } from "../../lib/space-theme"
 import { applyThemeTokens, clearThemeTokens, themeTokens } from "../../lib/theme-tokens"
 import { getSpacePrimaryColor } from "../../lib/utils"
@@ -156,12 +156,15 @@ export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions 
   // Wahrheiten.
   const scheme = useColorScheme()
 
+  // Ohne Gruppen (Spec 03, hasGroups) gibt es genau einen Space: die App
+  // selbst. Er traegt ihren Namen, nicht „Mein Netzwerk" — es gibt kein
+  // Netzwerk aus Spaces, das er zusammenfasst.
+  const groupsSupported = hasGroups(connector)
   const workspaces: Workspace[] = useMemo(
-    () => [
-      overviewWorkspace(t("workspace.overview")),
-      ...groups.map(workspaceOf),
-    ],
-    [groups, t]
+    () => groupsSupported
+      ? [overviewWorkspace(t("workspace.overview")), ...groups.map(workspaceOf)]
+      : [overviewWorkspace(getRuntimeConfig().branding?.appName || document.title || t("workspace.overview"))],
+    [groups, groupsSupported, t]
   )
 
   // Derive active workspace from the URL scope (fallback localStorage → first space).

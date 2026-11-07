@@ -612,7 +612,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-votes.ts",
-          "line": 50
+          "line": 51
         },
         {
           "name": "useVotes",
@@ -627,7 +627,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-votes.ts",
-          "line": 174
+          "line": 175
         },
         {
           "name": "useVoteUsers",
@@ -642,7 +642,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-votes.ts",
-          "line": 347
+          "line": 348
         }
       ]
     },
