@@ -326,7 +326,10 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
       <AppShell>
         <Navbar>
           <NavbarStart>
-            {workspaces.length > 0 ? (
+            {!hasGroups(connector) ? (
+              // Ohne Gruppen ein Space (Spec 03): nichts zu wechseln, nichts anzulegen.
+              <span className="truncate px-2 text-sm font-semibold">{activeWorkspace?.name ?? workspaces[0]?.name}</span>
+            ) : workspaces.length > 0 ? (
               // Auch ohne aktiven Space (kein Zugang) bleibt der Umschalter da.
               <WorkspaceSwitcher
                 workspaces={workspaces}
