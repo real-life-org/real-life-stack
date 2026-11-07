@@ -328,14 +328,14 @@ importers:
   examples/first-app:
     dependencies:
       '@real-life/data-interface':
-        specifier: ^0.4.0
-        version: 0.4.0
+        specifier: ^0.4.1
+        version: 0.4.1
       '@real-life/mock-connector':
-        specifier: ^0.2.3
-        version: 0.2.3
+        specifier: ^0.2.4
+        version: 0.2.4
       '@real-life/toolkit':
-        specifier: ^0.4.0
-        version: 0.4.0(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
+        specifier: ^0.4.1
+        version: 0.4.1(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       maplibre-gl:
         specifier: ^5.24.0
         version: 5.24.0
@@ -2410,8 +2410,8 @@ packages:
       react: ^18.0.0
       react-dom: ^18.0.0
 
-  '@real-life/data-interface@0.4.0':
-    resolution: {integrity: sha512-hYqjBwihf+ni9XW/8VISXN2FLcNsX0nGBbDgGopEvToYMvNmjDueqPTs0cqSojPYP+6MOVl/uROX5dRnhBMZqg==}
+  '@real-life/data-interface@0.4.1':
+    resolution: {integrity: sha512-iLM/GHzLMiwNCl0WCo1HtEcmeTCczUaYYEUnPrfv5Fa2/IMVzJdDEIt93Vaa7tIaPyIsgroAMbjH3RPSLCshmw==}
 
   '@real-life/docs-kit@0.1.0':
     resolution: {integrity: sha512-cK7ciXMj6zE+H5Az0HUFVeWP5VkkdlLp9C4xPN/ldBUWQenNY0A6xljOkQmWDf1NVowaZWzoAc7WEthUCG4/jA==}
@@ -2420,11 +2420,11 @@ packages:
       '@astrojs/starlight': ^0.42
       astro: ^7
 
-  '@real-life/mock-connector@0.2.3':
-    resolution: {integrity: sha512-Wmn7oqmDKWgEJgM7zXH1Ez7hIqTjMMMooKVEMPIPQbxe+ewkKOF4XsmoW3NITscfZSFU5Xx6nTtRW4NCymoMvQ==}
+  '@real-life/mock-connector@0.2.4':
+    resolution: {integrity: sha512-nkGv/u9E/+Vf5lxjZhgnLIlAaSKvNEXGDvFwEbZd8hXX6CBOdoZVFIqtc7sohxOmZZ8yjjVgJNGX9ttHPwXAjQ==}
 
-  '@real-life/toolkit@0.4.0':
-    resolution: {integrity: sha512-bQ/OQgpyB6mltopdoc0zfhqhNLqjpbwJlGjW9imiNLTY045TLpCmfRYh+1w9PwmB6pswOHcWMRZtqVj2+h856A==}
+  '@real-life/toolkit@0.4.1':
+    resolution: {integrity: sha512-GgMjvVere2MlMaCFFAunowkpbhqVUT+zGFa9jSOrsL3w/KqAeWrqpb2NGfEGdJk/+tjtrskdMt5b6MM6QwjhnA==}
     peerDependencies:
       leaflet: ^1.9.0
       maplibre-gl: ^5.0.0
@@ -7870,18 +7870,18 @@ snapshots:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
 
-  '@real-life/data-interface@0.4.0': {}
+  '@real-life/data-interface@0.4.1': {}
 
   '@real-life/docs-kit@0.1.0(@astrojs/starlight@0.42.1(astro@7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1))(typescript@5.7.3))(astro@7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1))':
     dependencies:
       '@astrojs/starlight': 0.42.1(astro@7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1))(typescript@5.7.3)
       astro: 7.2.10(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1)
 
-  '@real-life/mock-connector@0.2.3':
+  '@real-life/mock-connector@0.2.4':
     dependencies:
-      '@real-life/data-interface': 0.4.0
+      '@real-life/data-interface': 0.4.1
 
-  '@real-life/toolkit@0.4.0(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
+  '@real-life/toolkit@0.4.1(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@radix-ui/colors': 3.0.0
       '@radix-ui/react-avatar': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -7892,7 +7892,7 @@ snapshots:
       '@radix-ui/react-slot': 1.2.4(@types/react@19.2.7)(react@19.2.3)
       '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@radix-ui/react-tooltip': 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@real-life/data-interface': 0.4.0
+      '@real-life/data-interface': 0.4.1
       '@tanstack/react-virtual': 3.14.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tiptap/extension-image': 3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))
       '@tiptap/extension-list': 3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3)
