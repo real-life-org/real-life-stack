@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.4](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.2.3...wot-connector-v0.2.4) (2026-11-07)
+
+
+### Features
+
+* **wot-connector:** Onboarding und Entsperren übersetzbar, „Identität“ statt „Identity“ ([#621](https://github.com/real-life-org/real-life-stack/issues/621)) ([b81a4b2](https://github.com/real-life-org/real-life-stack/commit/b81a4b223b4ecfe3bf626bddae443be51a2ee13e))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life/data-interface bumped to 0.4.1
+    * @real-life/toolkit bumped to 0.4.1
+
 ## [0.2.3](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.2.2...wot-connector-v0.2.3) (2026-10-01)
 
 
