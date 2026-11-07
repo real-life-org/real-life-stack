@@ -6,6 +6,7 @@ import {
   hasRelationRecordWriter,
   hasGroups,
   isAuthenticatable,
+  hasUserLookup,
   hasMultiSource,
   hasContacts,
   hasMessaging,
@@ -133,6 +134,41 @@ describe("Type Guards", () => {
         authenticate: async () => ({}),
       })
       expect(isAuthenticatable(connector)).toBe(true)
+    })
+  })
+
+  describe("hasUserLookup", () => {
+    it("returns false for plain DataInterface", () => {
+      expect(hasUserLookup(createStub())).toBe(false)
+    })
+
+    it("returns true with getUser alone — no login needed to name someone", () => {
+      const connector = createStub({ getUser: async () => null })
+      expect(hasUserLookup(connector)).toBe(true)
+      expect(isAuthenticatable(connector)).toBe(false)
+    })
+
+    it("returns false for a BaseConnector subclass that only inherits the getUser default", () => {
+      class PlainConnector extends BaseConnector {
+        async getItems(_filter?: ItemFilter): Promise<Item[]> { return [] }
+        async getItem(_id: string): Promise<Item | null> { return null }
+        async createItem(_item: CreateItemInput): Promise<Item> { throw new Error("not supported") }
+        async updateItem(_id: string, _updates: Partial<Item>): Promise<Item> { throw new Error("not supported") }
+        async deleteItem(_id: string): Promise<void> {}
+      }
+      expect(hasUserLookup(new PlainConnector())).toBe(false)
+    })
+
+    it("returns true for a BaseConnector subclass that overrides getUser", () => {
+      class NamingConnector extends BaseConnector {
+        async getItems(_filter?: ItemFilter): Promise<Item[]> { return [] }
+        async getItem(_id: string): Promise<Item | null> { return null }
+        async createItem(_item: CreateItemInput): Promise<Item> { throw new Error("not supported") }
+        async updateItem(_id: string, _updates: Partial<Item>): Promise<Item> { throw new Error("not supported") }
+        async deleteItem(_id: string): Promise<void> {}
+        override async getUser(id: string) { return { id, displayName: "Mira" } }
+      }
+      expect(hasUserLookup(new NamingConnector())).toBe(true)
     })
   })
 

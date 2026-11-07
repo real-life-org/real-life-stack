@@ -541,10 +541,19 @@ export interface GroupManager {
   removeMember(groupId: string, userId: string): Promise<void>
 }
 
-export interface Authenticatable {
+/**
+ * Personen nachschlagen: wer steckt hinter einer Id (`createdBy`, Mitglied,
+ * Stimme)? Unabhaengig von Anmeldung und Gruppen — auch eine Lese-Quelle
+ * kennt die Namen ihrer Urheber (Spec 03).
+ */
+export interface UserLookup {
+  getUser(id: string): Promise<User | null>
+}
+
+/** Wer sich anmelden kann, kann auch nachschlagen. */
+export interface Authenticatable extends UserLookup {
   getCurrentUser(): Promise<User | null>
   observeCurrentUser(): Observable<User | null>
-  getUser(id: string): Promise<User | null>
   getAuthState(): Observable<AuthState>
   getAuthMethods(): AuthMethod[]
   authenticate(method: string, credentials: unknown): Promise<User>
@@ -953,6 +962,12 @@ export function hasGroups(c: DataInterface): c is DataInterface & GroupManager {
 
 export function isAuthenticatable(c: DataInterface): c is DataInterface & Authenticatable {
   return "getAuthState" in c && "authenticate" in c
+}
+
+export function hasUserLookup(c: DataInterface): c is DataInterface & UserLookup {
+  const getUser = (c as Partial<UserLookup>).getUser
+  // BaseConnector defaults must not imply support — getUser must be overridden.
+  return typeof getUser === "function" && getUser !== BaseConnector.prototype.getUser
 }
 
 export function hasMultiSource(c: DataInterface): c is DataInterface & MultiSource {

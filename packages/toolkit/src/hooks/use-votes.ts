@@ -7,6 +7,7 @@ import {
   hasRelationRecords,
   hasRelationRecordWriter,
   isAuthenticatable,
+  hasUserLookup,
   jcsCanonicalize,
   relationAuthorialPayload,
   voteRecordInput,
@@ -384,7 +385,7 @@ export function useVoteUsers(statementId: string, enabled = true): UseVoteUsersR
       try {
         const resolved = await Promise.all(
           votes.map(async (vote: VoteRecord) => {
-            const user = isAuthenticatable(connector) ? await connector.getUser(vote.voterId) : null
+            const user = hasUserLookup(connector) ? await connector.getUser(vote.voterId) : null
             return {
               id: vote.voterId,
               displayName: user?.displayName ?? vote.voterId,

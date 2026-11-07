@@ -29,7 +29,8 @@ if (isWritable(connector)) {
 | `ItemWriter` | `isWritable()` | Items erstellen, aktualisieren und löschen |
 | `RelationCapable` | `hasRelations()` | Related Items lesen und beobachten |
 | `GroupManager` | `hasGroups()` | Groups/Spaces, Current Group, Mitglieder und Einladungen verwalten |
-| `Authenticatable` | `isAuthenticatable()` | Current User, Auth State, Auth Methods und Login/Logout |
+| `UserLookup` | `hasUserLookup()` | Personen zu einer Id nachschlagen (`getUser`): Urheber, Stimmen, Reaktionen; ohne Anmeldung und ohne Gruppen |
+| `Authenticatable` | `isAuthenticatable()` | Current User, Auth State, Auth Methods und Login/Logout; schließt `UserLookup` ein |
 | `MultiSource` | `hasMultiSource()` | mehrere Datenquellen sichtbar machen und aktive Quelle wechseln |
 | `ContactManager` | `hasContacts()` | Kontakte und Kontaktstatus verwalten |
 | `MessagingCapable` | `hasMessaging()` | Relay-Status und Outbox-Pending-Count anzeigen |
@@ -125,7 +126,7 @@ Wichtige Regel:
 
 > Ein Default auf `BaseConnector` darf nicht automatisch bedeuten, dass die Capability fachlich unterstützt wird.
 
-Deshalb prüfen manche Type Guards, ob eine Methode wirklich überschrieben wurde. Das gilt besonders für Confirmations und Encounter Verification.
+Deshalb prüfen manche Type Guards, ob eine Methode wirklich überschrieben wurde. Das gilt besonders für Confirmations, Encounter Verification und `UserLookup`.
 
 ## Delivery, Outbox und Retry
 

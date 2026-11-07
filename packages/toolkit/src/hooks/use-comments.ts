@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, startTransition } from "react"
 import type { Item, RelatedItemsOptions } from "@real-life/data-interface"
-import { isWritable, hasRelations, isAuthenticatable, deriveContext } from "@real-life/data-interface"
+import { isWritable, hasRelations, hasUserLookup, isAuthenticatable, deriveContext } from "@real-life/data-interface"
 import { useOptionalConnector, useConnector } from "./connector-context"
 import { standingMark, useCanVerifyItems, useItemStandings, type StandingMark } from "./use-item-standing"
 
@@ -139,7 +139,7 @@ export function useComments(itemId: string): UseCommentsResult {
   const [resolvedAuthors, setResolvedAuthors] = useState<Map<string, { name: string; avatar?: string }>>(new Map())
 
   useEffect(() => {
-    if (!isAuthenticatable(connector)) return
+    if (!hasUserLookup(connector)) return
 
     const authConnector = connector
     const userIds = [...new Set(allComments.map((c) => c.createdBy))]
@@ -266,7 +266,7 @@ export function useReplies(itemId: string, commentId: string): UseRepliesResult 
             let authorName = item.createdBy
             let authorAvatar: string | undefined
 
-            if (isAuthenticatable(connector)) {
+            if (hasUserLookup(connector)) {
               try {
                 const user = await connector.getUser(item.createdBy)
                 if (user) {
