@@ -9,13 +9,13 @@
     "typecheck": "node ../../scripts/site/prepare.mjs && astro check"
   },
   "dependencies": {
-    "@astrojs/starlight": "0.42.1",
+    "@astrojs/starlight": "0.42.10",
     "@real-life/docs-kit": "^0.1.0",
     "astro": "7.2.10"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
-    "typescript": "~5.7.2"
+    "typescript": "~5.9.0"
   },
   "engines": { "node": ">=22.12.0" }
 }
