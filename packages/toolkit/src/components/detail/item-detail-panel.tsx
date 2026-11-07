@@ -3,6 +3,7 @@
 import { useCallback, useState, type ReactNode } from "react"
 import { CommentSection } from "../comments/comment-section"
 import { CommentInput, type CommentQuote } from "../comments/comment-input"
+import { useCanComment } from "../../hooks/use-comments"
 import { cn } from "../../lib/utils"
 
 /**
@@ -58,6 +59,9 @@ export function ItemDetailPanel({
   // Reply wiring: CommentSection owns the comment tree and hands us its
   // submit/cancel callbacks whenever the reply target changes; CommentInput
   // sits outside the scroll container so it stays visible while scrolling.
+  // Ein Kommentar ist ein neues Item: ohne Schreiben (und Beziehungen) kein
+  // Feld — dieselbe Prüfung wie Karte und CommentSection (Spec 03).
+  const canComment = useCanComment()
   const [replyTo, setReplyTo] = useState<CommentQuote | null>(null)
   const [submit, setSubmit] = useState<((text: string) => Promise<void>) | null>(null)
   const [cancel, setCancel] = useState<(() => void) | null>(null)
@@ -104,7 +108,7 @@ export function ItemDetailPanel({
         )}
       </div>
 
-      {!editing && (
+      {!editing && canComment && (
         <CommentInput
           onSubmit={submit ?? (async () => {})}
           replyTo={replyTo}
