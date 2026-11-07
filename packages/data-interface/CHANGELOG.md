@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.4.0...data-interface-v0.4.1) (2026-11-07)
+
+
+### Bug Fixes
+
+* **toolkit:** read-only, single-space apps from capabilities (comments, space switcher, author names) ([#639](https://github.com/real-life-org/real-life-stack/issues/639)) ([23bcfa7](https://github.com/real-life-org/real-life-stack/commit/23bcfa72eb470100df3766107b87fb446132019f))
+
 ## [0.4.0](https://github.com/real-life-org/real-life-stack/compare/data-interface-v0.3.1...data-interface-v0.4.0) (2026-09-28)
 
 

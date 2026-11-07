@@ -1,6 +1,6 @@
 {
   "name": "@real-life/wot-connector",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Decentralized connector on the Web of Trust stack: DID identity, end-to-end encrypted groups and sync.",
   "repository": {
     "type": "git",
