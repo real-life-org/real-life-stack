@@ -21,6 +21,7 @@ import { useIsFrozen } from "../../hooks/use-item-frozen"
 import { useItem } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
 import { hasItemGroups, isWritable, normalizeItemType } from "@real-life/data-interface"
+import { useI18n } from "@/i18n"
 
 export interface ItemDetailViewProps {
   /** The item to show. The view subscribes via `useItem`, so it always renders
@@ -128,6 +129,8 @@ export function ItemDetailView({
   // nur der Space des Items, nie die des Erstellens (Regel 1; Codex R1/5):
   // Ohne bekannten Space bleibt der Kopf leer, und Speichern verschiebt nicht.
   const canMove = hasItemGroups(connector)
+  // Der Grund unten entsteht in diesem Render: bei Sprachwechsel neu rechnen.
+  useI18n()
   const composerTypes = withEditGroup(
     (vorlage ? contentTypes.filter((t) => t.id === vorlage) : []).map((t) => ({ ...t, defaultGroup: itemGroup ?? undefined })),
     canMove,

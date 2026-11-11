@@ -789,6 +789,15 @@ export const de = {
   "reactions.name.handshake": "Handschlag",
   "auth.method.anonymous": "Anonym ausprobieren",
 
+  // --- CodeRabbit zu #645 ---
+  "value.atLeast": "Mindestens {min}",
+  "people.ownStatementFixed": "eigene Aussage, fest",
+  "people.switch": "wechseln",
+  "relation.thisSpace": "diesem Space",
+  "composer.reason.persisted": "Schon angelegt – bleibt in diesem Space",
+  "resonance.vote.generic": "Stimme",
+  "activity.voteOn": "{stance} zu „{title}\"",
+
 } as const
 
 /** Ein Eintrag: fester Text oder Plural-Formen nach `Intl.PluralRules`. */

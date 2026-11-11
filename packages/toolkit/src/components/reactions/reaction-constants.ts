@@ -34,6 +34,8 @@ export const REACTION_NAMES: Record<string, string> = {
 
 /** Der Name einer Reaktion in der Sprache der Oberfläche, für Screenreader. */
 export function reactionName(i18n: I18n, emoji: string): string {
+  // Nur eigene Schlüssel: Ein Reaktionswert wie „constructor“ darf keine geerbte Eigenschaft treffen.
+  if (!Object.prototype.hasOwnProperty.call(REACTION_NAMES, emoji)) return emoji
   const english = REACTION_NAMES[emoji]
   if (!english) return emoji
   return registerText(i18n, `reactions.name.${english.replace(/\s+(\w)/g, (_, c: string) => c.toUpperCase()).replace(/^\w/, (c) => c.toLowerCase())}`, english)

@@ -242,7 +242,7 @@ export function PeopleWidget({
                 disabled={!!record.live[personId]?.locked}
                 onClick={() => cycleState(personId)}
                 title={record.live[personId]?.locked ? t("people.ownStatement") : undefined}
-                aria-label={`${resolveLabel(personId)}: ${stateOf(personId)?.label} — ${record.live[personId]?.locked ? "eigene Aussage, fest" : "wechseln"}`}
+                aria-label={`${resolveLabel(personId)}: ${stateOf(personId)?.label} — ${record.live[personId]?.locked ? t("people.ownStatementFixed") : t("people.switch")}`}
                 className="rounded-sm px-0.5 font-normal text-muted-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-default disabled:no-underline"
               >
                 {stateOf(personId)?.label}

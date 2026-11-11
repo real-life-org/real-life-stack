@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage, EmptyState, RelativeTime } from ".
 import { cn } from "../../lib/utils"
 import { sectionFor } from "./notification-center"
 import { getI18n, useI18n } from "@/i18n"
+import { localizeActivitySummary } from "@/lib/activity-text"
 
 export interface ActivityPanelProps {
   entries: readonly ActivityEntry[]
@@ -47,7 +48,7 @@ function rowPresentation(entry: ActivityEntry): { rest: React.ReactNode; badge: 
   }
   const Icon = ACTION_ICONS[entry.action as keyof typeof ACTION_ICONS] ?? Pencil
   const { t } = getI18n()
-  const title = t("notify.quoted", { title: entry.summary ?? entry.targetType })
+  const title = t("notify.quoted", { title: entry.summary ? localizeActivitySummary(getI18n(), entry.summary) : entry.targetType })
   const rest = entry.action === "create" || entry.action === "update" || entry.action === "delete"
     ? t(`activity.${entry.action}`, { subject: title })
     : t("activity.other", { subject: title, action: entry.action })

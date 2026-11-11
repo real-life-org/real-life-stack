@@ -755,4 +755,13 @@ export const en = {
   "reactions.name.handshake": "Handshake",
   "auth.method.anonymous": "Try anonymously",
 
+  // --- CodeRabbit zu #645 ---
+  "value.atLeast": "At least {min}",
+  "people.ownStatementFixed": "own statement, fixed",
+  "people.switch": "switch",
+  "relation.thisSpace": "this space",
+  "composer.reason.persisted": "Already created – stays in this space",
+  "resonance.vote.generic": "Vote",
+  "activity.voteOn": "{stance} on “{title}”",
+
 } satisfies Record<ToolkitMessageKey, Message>

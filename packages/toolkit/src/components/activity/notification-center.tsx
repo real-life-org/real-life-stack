@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent,
 import { cn } from "../../lib/utils"
 import { getI18n, useI18n } from "@/i18n"
 import { resolveTypePresentation } from "../preview/type-presentation"
+import { localizeActivitySummary } from "@/lib/activity-text"
 
 export type NotificationAction = "created" | "updated" | "deleted" | "reacted" | "commented"
 export type NotificationPriority = "high" | "low"
@@ -120,7 +121,7 @@ function sentenceParts(notification: NotificationCandidate): { lead: string; res
   const { t } = getI18n()
   const name = notification.actor?.displayName ?? notification.actorId
   const lead = notification.actorCount > 1 ? t("notify.andOthers", { name, count: notification.actorCount - 1 }) : name
-  const subject = t("notify.quoted", { title: notification.subjectTitle ?? subjectWord(notification.subjectType) })
+  const subject = t("notify.quoted", { title: notification.subjectTitle ? localizeActivitySummary(getI18n(), notification.subjectTitle) : subjectWord(notification.subjectType) })
   return { lead, rest: t(`notify.${notification.semanticAction}`, { subject, count: notification.actorCount }) }
 }
 

@@ -141,7 +141,7 @@ export function ItemRelationWidget({
   const candidates = canChoose ? allCandidates.filter(canChoose) : allCandidates
   const connector = useOptionalConnector()
   const groupName = useGroupName(connector, otherSpace ? spaceId : undefined)
-  const spaceName = groupName ?? "diesem Space"
+  const spaceName = groupName ?? t("relation.thisSpace")
   const [pickError, setPickError] = useState<string | null>(null)
   // Gewählte Ziele gegen alle sichtbaren Items (ein space-qualifiziertes
   // bleibt nach einem Space-Wechsel gültig); gesucht wird nur im Formular-Space.
