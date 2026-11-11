@@ -13,6 +13,7 @@ import { useModuleHost } from "../components/host/module-host"
 import { useOptionalModulePanel } from "../components/module-panel/module-panel"
 import { resolveTypePresentation } from "../components/preview/type-presentation"
 import type { ModuleViewProps } from "../lib/module-register"
+import { useI18n } from "@/i18n"
 
 /**
  * Das Graph-Modul, vollstaendig aus dem Toolkit (Spec 01, Der Modul-Host;
@@ -37,7 +38,8 @@ export function GraphModule({ items = [] }: ModuleViewProps) {
   const panel = useOptionalModulePanel()
   const graphRef = useRef<GraphViewHandle>(null)
 
-  const resolveLabel = useCallback((typeId: string) => resolveTypePresentation(typeId).label, [])
+  const i18n = useI18n()
+  const resolveLabel = useCallback((typeId: string) => resolveTypePresentation(typeId).label, [i18n]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Der Heimat-Space eines Items laut Connector — um space-qualifizierte
   // Relationsziele (`space:B/item:x`) gegen Id-Kollisionen zu pruefen.

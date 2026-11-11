@@ -22,6 +22,7 @@ import { renderTypeCardFooter } from "../components/preview/type-presentation"
 import { EmptyState } from "../components/primitives/empty-state"
 import { ReactionBar } from "../components/reactions/reaction-bar"
 import type { ModuleViewProps } from "../lib/module-register"
+import { useI18n } from "@/i18n"
 
 /**
  * Everything new in the network, newest first: the feed is an AGGREGATING view
@@ -37,6 +38,7 @@ export function selectFeedItems(items: readonly Item[]): Item[] {
 }
 
 export function FeedModule({ items = [], itemsLoading: isLoading = false }: ModuleViewProps) {
+  const { t } = useI18n()
   const { currentUser, resolveAuthor, activeItemId, filterActive, registerItemElement, isOverview, resolveItemGroupColor, setCreateAnchor } = useModuleHost()
   const feedItems = useMemo(() => selectFeedItems(items), [items])
   const { focusItem } = useItemFocus()
@@ -59,7 +61,7 @@ export function FeedModule({ items = [], itemsLoading: isLoading = false }: Modu
       {darfSchreiben && (
         <div ref={setCreateAnchor}>
           <FeedComposerTrigger
-            placeholder="Was gibt's Neues?"
+            placeholder={t("feed.composerPlaceholder")}
             userName={currentUser?.displayName}
             userAvatar={currentUser?.avatarUrl}
             onCompose={(initialText) => startCreate("post", initialText ? { text: initialText } : undefined)}
@@ -75,11 +77,11 @@ export function FeedModule({ items = [], itemsLoading: isLoading = false }: Modu
         ) : filteredFeedItems.length === 0 ? (
           <EmptyState
             icon={filterActive ? SearchX : FileText}
-            title={filterActive ? "Keine Treffer" : "Noch nichts hier"}
+            title={filterActive ? t("feed.noMatches") : t("feed.empty")}
             description={
               filterActive
-                ? "Passe Suche oder Filter an."
-                : "Hier erscheint alles Neue — Beiträge, Termine, Orte, Aufgaben."
+                ? t("feed.noMatchesHint")
+                : t("feed.emptyHint")
             }
           />
         ) : (

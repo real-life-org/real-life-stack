@@ -15,6 +15,7 @@ import { useConnector } from "../../hooks/connector-context"
 import { useItemPermissions } from "../../hooks/use-item-permissions"
 import { DeleteConfirmDialog } from "./delete-confirm-dialog"
 import { visibleDetailActions } from "./detail-actions"
+import { useI18n } from "@/i18n"
 
 export interface ItemDetailActionsProps {
   item: Item
@@ -37,6 +38,7 @@ export interface ItemDetailActionsProps {
  * backend-side (this gating is UX only).
  */
 export function ItemDetailActions({ item, onEdit, onDeleted, onShare, title }: ItemDetailActionsProps) {
+  const { t } = useI18n()
   const connector = useConnector()
   const perms = useItemPermissions(item)
   const visible = visibleDetailActions(perms, !!onEdit, !!onShare)
@@ -48,7 +50,7 @@ export function ItemDetailActions({ item, onEdit, onDeleted, onShare, title }: I
     <div className="flex items-center justify-end">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Aktionen">
+          <Button variant="ghost" size="icon" aria-label={t("detail.actions")}>
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -56,13 +58,13 @@ export function ItemDetailActions({ item, onEdit, onDeleted, onShare, title }: I
           {visible.edit && (
             <DropdownMenuItem onClick={onEdit} className="gap-2">
               <Pencil className="h-4 w-4" />
-              Bearbeiten
+              {t("detail.edit")}
             </DropdownMenuItem>
           )}
           {visible.share && (
             <DropdownMenuItem onClick={onShare} className="gap-2">
               <Share2 className="h-4 w-4" />
-              Teilen
+              {t("detail.share")}
             </DropdownMenuItem>
           )}
           {visible.delete && (
@@ -71,7 +73,7 @@ export function ItemDetailActions({ item, onEdit, onDeleted, onShare, title }: I
               className="gap-2 text-destructive focus:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
-              Löschen
+              {t("detail.delete")}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>

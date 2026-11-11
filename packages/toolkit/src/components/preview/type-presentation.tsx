@@ -79,6 +79,8 @@ import { RegisterReverse, hasReverseLists } from "./register-reverse"
 import { RegisterCardRefs } from "./register-card-refs"
 import { VoteBar } from "../resonance/vote-bar"
 import { MessageSquareQuote } from "lucide-react"
+import { getI18n, type I18n } from "@/i18n"
+import { localizeRegisterEntry } from "@/lib/register-labels"
 
 /** Every slot receives the item — nothing else. Data resolution (members,
  *  votes, …) happens inside the slot component via hooks, so a slot works on
@@ -517,6 +519,8 @@ const layers = new Map<string, TypePresentationLayer>([
 ])
 /** Composed view, invalidated on every registration. */
 let composedCache: Map<string, TypePresentationEntry> | null = null
+/** Der Sprachstand, aus dem {@link composedCache} stammt. */
+let composedFor: I18n | null = null
 
 /**
  * Bind the register to the app's composed manifest (the authoritative type
@@ -654,12 +658,17 @@ export function registerTypePresentation(
 const SCALAR_SLOTS = ["badge", "composerWidgets", "preview", "detail", "detailSlot", "footer", "composer"] as const
 
 function composePresentation(): Map<string, TypePresentationEntry> {
-  if (composedCache) return composedCache
+  // Je Sprachstand einmal: Die Texte jeder Schicht kommen VOR dem Zusammensetzen aus dem Wörterbuch
+  // (`type.<id>.<Pfad>`, lib/register-labels.ts). Ein Fragment hat eigene Pfade, so ersetzt der Text
+  // einer App-Schicht einen Toolkit-Text weiterhin, statt von dessen Übersetzung überdeckt zu werden.
+  const i18n = getI18n()
+  if (composedCache && composedFor === i18n) return composedCache
+  const localize = <T extends { id: string }>(entry: T): T => localizeRegisterEntry(i18n, `type.${entry.id}`, entry)
   const composed = new Map<string, TypePresentationEntry>()
   // Pass 1: definitions. Deterministic — ids are unique across layers by the
   // registration checks, so order cannot change the outcome.
   for (const [, layer] of layers) {
-    for (const def of layer.definitions ?? []) {
+    for (const def of (layer.definitions ?? []).map(localize)) {
       composed.set(def.id, { ...def, relationWidgets: { ...(def.relationWidgets ?? {}) } })
     }
   }
@@ -674,7 +683,7 @@ function composePresentation(): Map<string, TypePresentationEntry> {
   // by layer name: the lists are ordered, and the composed view must not
   // depend on registration order (Spec 06, Erweiterung und Merge).
   for (const [name, layer] of [...layers].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
-    for (const frag of layer.extensions ?? []) {
+    for (const frag of (layer.extensions ?? []).map(localize)) {
       const base = composed.get(frag.id)
       if (!base) {
         throw new Error(
@@ -708,7 +717,7 @@ function composePresentation(): Map<string, TypePresentationEntry> {
   // Qualifier-Werte vereinigt sind, damit die Pills gegen das zusammengesetzte
   // Vokabular geprüft werden, unabhängig von der Reihenfolge der Schichten.
   for (const [name, layer] of [...layers].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
-    for (const frag of layer.extensions ?? []) {
+    for (const frag of (layer.extensions ?? []).map(localize)) {
       const base = composed.get(frag.id)
       if (base && frag.selfActions?.length) overrideSelfActions(base, frag.selfActions, name, overridden)
     }
@@ -722,6 +731,7 @@ function composePresentation(): Map<string, TypePresentationEntry> {
     assertListFields(entry, composed)
   }
   composedCache = composed
+  composedFor = i18n
   return composed
 }
 
@@ -923,6 +933,7 @@ export function resolveTypePresentation(typeId: string): ResolvedTypePresentatio
     generic: false,
   }
 }
+
 
 /**
  * Die Typ-Fußzeile im DETAIL, oder null. Übergang (Spec 06, Regel 17): nur

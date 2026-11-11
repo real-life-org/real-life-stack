@@ -11,6 +11,7 @@ import { EmptyState } from "../primitives/empty-state"
 import { getItemPreviewAdornments, ItemPreview } from "../preview"
 import { lensItems } from "./list-view"
 import { GRID_CARD_ESTIMATE, GRID_LANE_GAP, gridLaneLayout, gridLaneRange } from "./grid-lane-layout"
+import { useI18n } from "@/i18n"
 
 export interface GridViewProps {
   items: readonly Item[]
@@ -31,6 +32,7 @@ function gridColumnsForWidth(width: number): number {
 
 /** A read-only grid composed from comfortable ItemPreview cards. */
 export function GridView({ items, activeItemId, selectionFocusVisibleArea, selectionFocusGateKey, onItemClick }: GridViewProps) {
+  const { t } = useI18n()
   // Die Breite gehoert der Flaeche, nicht der Lens: So stehen Kopf und
   // Eintraege auf derselben Kante, auch wenn ein Modul eine andere waehlt.
   const inhaltsbreite = useModuleContentClass()
@@ -144,14 +146,14 @@ export function GridView({ items, activeItemId, selectionFocusVisibleArea, selec
     return (
       <EmptyState
         icon={Inbox}
-        title="Noch keine Einträge"
-        description="Erstelle den ersten Eintrag in diesem Space."
+        title={t("lens.empty")}
+        description={t("lens.emptyHint")}
       />
     )
   }
 
   return (
-    <div ref={scrollElementRef} onScroll={updateViewport} aria-label="Rasteransicht" data-virtualizer-item-count={visibleItems.length} className="h-full overflow-y-auto [scrollbar-gutter:stable]">
+    <div ref={scrollElementRef} onScroll={updateViewport} aria-label={t("lens.grid")} data-virtualizer-item-count={visibleItems.length} className="h-full overflow-y-auto [scrollbar-gutter:stable]">
       <div className={inhaltsbreite}>
         <section className="relative" style={{ height: layout.totalSize }}>
           {virtualItems.map((placement) => {

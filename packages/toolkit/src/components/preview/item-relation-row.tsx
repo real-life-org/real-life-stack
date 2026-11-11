@@ -11,6 +11,7 @@ import { hasItemGroups } from "@real-life/data-interface"
 import { useConnector } from "../../hooks/connector-context"
 import { targetItemId, targetPointsTo, type EdgeTarget } from "./use-item-edges"
 import { useFittingTags } from "./use-fitting-tags"
+import { useI18n } from "@/i18n"
 
 /**
  * Leseform einer Item-Kante (C3): Label aus dem Register, Chips in Typfarbe,
@@ -21,6 +22,7 @@ import { useFittingTags } from "./use-fitting-tags"
  * Detail-Anatomie, Regel 4.
  */
 export function ItemRelationChips({ targets }: { targets: readonly EdgeTarget[] }) {
+  const { t } = useI18n()
   const [all, setAll] = useState(false)
   const keys = targets.map((t) => t.item.id)
   // Ohne Messung (Server, jsdom) drei, dann „+N".
@@ -38,7 +40,7 @@ export function ItemRelationChips({ targets }: { targets: readonly EdgeTarget[] 
         <button
           type="button"
           data-more={hidden}
-          aria-label={`${hidden} weitere zeigen`}
+          aria-label={t("item.showMore", { count: hidden })}
           onClick={(event) => {
             event.stopPropagation()
             setAll(true)
@@ -85,10 +87,11 @@ export function itemRefId(item: Item, field: FieldEntry): string | null {
  * Regel 11). `null` ohne Wert.
  */
 export function ItemRefValue({ item, field }: { item: Item; field: FieldEntry }) {
+  const { t } = useI18n()
   const id = itemRefId(item, field)
   if (!id) return null
   const value = (item.data as Record<string, unknown>)[field.key] as string
-  return <ResolvedRef carrier={item} value={value} id={id} missing={field.ref?.missing ?? "nicht verfügbar"} />
+  return <ResolvedRef carrier={item} value={value} id={id} missing={field.ref?.missing ?? t("item.unavailable")} />
 }
 
 function ResolvedRef({ carrier, value, id, missing }: { carrier: Item; value: string; id: string; missing: string }) {

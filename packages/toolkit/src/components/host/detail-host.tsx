@@ -16,6 +16,7 @@ import { ItemScopeBadge } from "../preview/item-scope-badge"
 import { ItemTypeBadge } from "../preview/item-type-badge"
 import { renderTypeFooter, resolveTypePresentation } from "../preview/type-presentation"
 import { ReactionBar } from "../reactions/reaction-bar"
+import { useI18n } from "@/i18n"
 
 /**
  * Der Detail-Host: EIN Panel für das offene Item, über alle Module hinweg
@@ -152,6 +153,8 @@ export function useRegisterDetail(module: string, config: DetailConfig): void {
  * lookup, the scope badge and the group colour.
  */
 export function ItemDetailRead({ item, actions, groupId }: { item: Item; actions: ReactNode; groupId: string | null }) {
+  // Die Slots kommen aus dem Typ-Register, dessen Texte der Sprache folgen: bei Sprachwechsel neu auflösen.
+  useI18n()
   // No space (or the aggregate) → `null` asks for the union of all known
   // members, so an author from another space still resolves.
   const isOverview = groupId === "__overview__"

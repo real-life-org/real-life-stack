@@ -9,6 +9,7 @@ import { ModuleToolbar } from "../layout/module-toolbar"
 import { Button } from "../primitives/button"
 import { GridView } from "./grid-view"
 import { ListView } from "./list-view"
+import { useI18n } from "@/i18n"
 
 export type CollectionLayout = "list" | "grid"
 
@@ -29,13 +30,14 @@ export interface CollectionLayoutToggleProps {
  * selbst verwaltet.
  */
 export function CollectionLayoutToggle({ layout, onChange }: CollectionLayoutToggleProps) {
+  const { t } = useI18n()
   return (
-    <div role="group" aria-label="Darstellung" className="flex gap-1">
+    <div role="group" aria-label={t("lens.layout")} className="flex gap-1">
       <Button
         type="button"
         variant={layout === "list" ? "secondary" : "ghost"}
         size="icon"
-        aria-label="Listenansicht"
+        aria-label={t("lens.list")}
         aria-pressed={layout === "list"}
         onClick={() => onChange("list")}
       >
@@ -45,7 +47,7 @@ export function CollectionLayoutToggle({ layout, onChange }: CollectionLayoutTog
         type="button"
         variant={layout === "grid" ? "secondary" : "ghost"}
         size="icon"
-        aria-label="Rasteransicht"
+        aria-label={t("lens.grid")}
         aria-pressed={layout === "grid"}
         onClick={() => onChange("grid")}
       >
@@ -101,6 +103,7 @@ function CollectionViewInner({
   selectionFocusVisibleArea,
   className,
 }: CollectionViewProps) {
+  const { t } = useI18n()
   // Die Items kommen gefiltert von der Flaeche — freistehend wie unter dem
   // Host; die Lens wendet keinen Filter selbst an (Spec 01, Regel 2a).
   const gefiltert = useSurfaceItems()
@@ -113,7 +116,7 @@ function CollectionViewInner({
   }
 
   return (
-    <section aria-label="Sammlungsansicht" className={cn("flex h-full min-h-0 flex-col gap-4", className)}>
+    <section aria-label={t("lens.collection")} className={cn("flex h-full min-h-0 flex-col gap-4", className)}>
       {/* Der Umschalter ist ein Steuerelement des Moduls und gehoert in den
           Kopf neben die Suche (Spec 01, Regel 2) — freistehend genauso wie
           unter der App, wo die Ansicht ihn ueber dieselbe Leiste hineinreicht.

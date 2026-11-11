@@ -318,6 +318,15 @@ Register-Einträge werden in deterministischer Reihenfolge zusammengesetzt: **Co
 
 Die zusammengesetzte Sicht ist pro Space deterministisch: gleiche Schichten, gleiches Ergebnis, unabhängig von Lade- oder Registrierungsreihenfolge — Vereinigung und Konfliktprüfung sind ordnungsunabhängig definiert.
 
+#### Texte und Sprache
+
+Die Texte eines Eintrags (`label`, Feld- und Kantenbeschriftungen, `add`, Optionen, Qualifier-Werte, Selbstaktionen, `composer.submitLabel`, `ref.missing`) sind der **Rückfall**. Die Oberfläche nimmt jeden davon aus dem Wörterbuch ihrer Sprache, wenn es ihn kennt (`lib/register-labels.ts`):
+
+1. **Schlüssel = Ort im Eintrag.** Ein Text steht unter `type.<id>.<Pfad>`; der Pfad folgt der Struktur des Beitrags, Listen sind über die Kennung ihrer Einträge adressiert, nie über ihre Position: Felder über `key`, Kanten über `<predicate>.<itemRole>`, Optionen und Qualifier-Werte über `value`, Listen über `query`, Aktionen über `id`. Ein Listeneintrag ohne Kennung wird nicht übersetzt — eine Position würde mit den Einträgen einer anderen Schicht an derselben Stelle zusammenfallen. Übersetzt werden nur Text-Eigenschaften (`label`, `add`, `mine`, `release`, `action`, `submitLabel`, `missing`, `placeholder`); Kennungen und technische Werte (`key`, `widget`, `predicate` …) nie. Beispiele: `type.task.label`, `type.task.fields.status.options.done.label`, `type.task.edges.assignedTo.from.selfAction.mine`, `type.statement.lists.family.label`, `type.event.composer.submitLabel`.
+2. **Je Beitrag, vor dem Zusammensetzen.** Übersetzt wird jede Typdefinition und jedes Erweiterungsfragment für sich, bevor die Schichten zusammengesetzt werden. Ein Fragment hat damit eigene Pfade (`type.task.selfActions.…`): Ersetzt eine Schicht einen Text der Basis (Regel 20), gilt ihr Text — die Übersetzung des Basistextes überdeckt ihn nicht.
+3. **Wer den Eintrag bringt, bringt die Übersetzung.** Das Toolkit liefert die Schlüssel seiner Typen; eine App oder ein Space trägt die seiner Beiträge über `extendMessages` ein (Spec 11). Ein Text ohne Schlüssel erscheint so, wie er im Eintrag steht.
+4. Die zusammengesetzte Sicht gilt je Sprachstand: Wechselt die Sprache, wird neu zusammengesetzt; bei gleicher Sprache bleibt sie dieselbe.
+
 #### Verhältnis zu den Schemas
 
 Register und Vokabulare bleiben getrennt: Schemas (`@context`) definieren die **Feldstruktur**, das Register die **Intention** (`type`) und ihre Folgen für Composer und Darstellung. Die Vokabular-Bindung im Manifest benennt, welche Schemas der Composer beim Erstellen setzt (`event` → `base/v1` + `event/v1` + optional `place/v1`), damit Template und Schema nicht divergieren.

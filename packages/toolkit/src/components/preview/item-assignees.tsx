@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Tooltip, TooltipTrigger, TooltipContent } from "../primitives/tooltip"
 import { ProfileLink } from "../profile/profile-link"
 import { cn, getReadableTextColor, getUserColor } from "../../lib/utils"
+import { useI18n } from "@/i18n"
 
 /**
  * `ItemAssignees` — overlapping avatar stack with a compact name
@@ -71,6 +72,7 @@ function getInitials(name: string): string {
 }
 
 export function ItemAssignees({ users, size = "sm", className }: ItemAssigneesProps) {
+  const { t } = useI18n()
   if (users.length === 0) return null
 
   const winzig = size === "xs"
@@ -106,7 +108,7 @@ export function ItemAssignees({ users, size = "sm", className }: ItemAssigneesPr
                   userId={user.id}
                   // Der Qualifier gehoert zur Person: Wer per Tastatur auf den
                   // Avatar faellt, hoert „Lena Berg (lernt)", auch ohne Tooltip.
-                  label={`Profil von ${name}${user.qualifier ? ` (${user.qualifier})` : ""} öffnen`}
+                  label={user.qualifier ? t("profile.openOfQualified", { name, qualifier: user.qualifier }) : t("profile.openOf", { name })}
                 >
                   <Avatar
                     data-variant={umrandet ? "outline" : "solid"}

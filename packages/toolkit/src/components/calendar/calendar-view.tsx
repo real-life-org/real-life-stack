@@ -43,14 +43,23 @@ import { ItemTimeRange } from "../preview/item-time-range"
 import { FilterSection, FilterToggle, FilterMultiSelect } from "../filter/filter-building-blocks"
 import { ModuleSurfaceScope, useSurfaceItems } from "../layout/module-surface-scope"
 import type { Item } from "@real-life/data-interface"
+import { getI18n, useI18n, type MessageKey } from "@/i18n"
 
-const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-const MONTH_NAMES = [
-  "Januar", "Februar", "März", "April", "Mai", "Juni",
-  "Juli", "August", "September", "Oktober", "November", "Dezember",
-]
-const DAY_NAMES = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
-const LONG_DAY_NAMES = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
+// Tages- und Monatsnamen aus `Intl` in der Sprache des Toolkits, nicht aus festen Listen.
+const fmt = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(getI18n().locale, options)
+/** Die Kurznamen der Wochentage, Montag zuerst (der 1. Januar 2024 war ein Montag). */
+const weekdays = (): string[] => Array.from({ length: 7 }, (_, i) => fmt({ weekday: "short" }).format(new Date(2024, 0, 1 + i)))
+const shortDayName = (date: Date): string => fmt({ weekday: "short" }).format(date)
+/**
+ * Ein Zeitraum in der Schreibweise der Sprache („2.–8. November 2026" / „November 2 – 8, 2026").
+ * `formatRange` (ES2021) steht nicht in jeder Typbibliothek der Apps, die das Toolkit einbinden (die
+ * Network-App baut gegen ES2020); zur Laufzeit kennen es alle unterstützten Browser. Fehlt es doch,
+ * stehen beide Daten mit Gedankenstrich nebeneinander.
+ */
+function formatDateRange(format: Intl.DateTimeFormat, start: Date, end: Date): string {
+  const ranged = format as Intl.DateTimeFormat & { formatRange?: (a: Date, b: Date) => string }
+  return typeof ranged.formatRange === "function" ? ranged.formatRange(start, end) : `${format.format(start)} – ${format.format(end)}`
+}
 const TIME_SLOTS = Array.from({ length: 18 }, (_, index) => index + 6)
 
 /** Resolves the group/space fallback colour for a given item, so every EventPill
@@ -129,11 +138,11 @@ interface CalendarEventGroup {
   events: CalendarEvent[]
 }
 
-const VIEW_MODES: Array<{ id: CalendarViewMode; label: string; icon: typeof CalendarIcon }> = [
-  { id: "month", label: "Monat", icon: Grid3x3 },
-  { id: "week", label: "Woche", icon: Columns },
-  { id: "day", label: "Tag", icon: CalendarIcon },
-  { id: "list", label: "Liste", icon: List },
+const VIEW_MODES: Array<{ id: CalendarViewMode; label: MessageKey; icon: typeof CalendarIcon }> = [
+  { id: "month", label: "calendar.month", icon: Grid3x3 },
+  { id: "week", label: "calendar.week", icon: Columns },
+  { id: "day", label: "calendar.day", icon: CalendarIcon },
+  { id: "list", label: "calendar.list", icon: List },
 ]
 
 function getInitialDate(value?: Date | string): Date {
@@ -293,26 +302,22 @@ function getPeriodEvents(events: CalendarEvent[], visibleDate: Date, viewMode: C
 
 function getHeaderLabel(date: Date, viewMode: CalendarViewMode): string {
   if (viewMode === "day") {
-    return `${LONG_DAY_NAMES[date.getDay()]}, ${date.getDate()}. ${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`
+    return fmt({ weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(date)
   }
   if (viewMode === "week") {
     const weekStart = startOfWeek(date)
-    const weekEnd = addDays(weekStart, 6)
-    if (weekStart.getMonth() === weekEnd.getMonth()) {
-      return `${weekStart.getDate()}. - ${weekEnd.getDate()}. ${MONTH_NAMES[weekStart.getMonth()]} ${weekStart.getFullYear()}`
-    }
-    return `${weekStart.getDate()}. ${MONTH_NAMES[weekStart.getMonth()]} - ${weekEnd.getDate()}. ${MONTH_NAMES[weekEnd.getMonth()]} ${weekEnd.getFullYear()}`
+    return formatDateRange(fmt({ day: "numeric", month: "long", year: "numeric" }), weekStart, addDays(weekStart, 6))
   }
-  return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`
+  return fmt({ month: "long", year: "numeric" }).format(date)
 }
 
 
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+  return fmt({ hour: "2-digit", minute: "2-digit" }).format(date)
 }
 
 function formatDayLabel(date: Date): string {
-  return `${LONG_DAY_NAMES[date.getDay()]}, ${date.getDate()}. ${MONTH_NAMES[date.getMonth()]}`
+  return fmt({ weekday: "long", day: "numeric", month: "long" }).format(date)
 }
 
 export interface CalendarViewProps {
@@ -369,6 +374,7 @@ function CalendarViewInner({
   onCreateEvent,
   className,
 }: CalendarViewProps) {
+  const { t } = useI18n()
   const today = useMemo(() => getInitialDate(initialDate), [initialDate])
   const initialVisibleDateValue = useMemo(
     () => getOptionalInitialDate(initialVisibleDate) ?? today,
@@ -654,16 +660,16 @@ function CalendarViewInner({
       <ModuleToolbar
         trailingActions={
           <Button variant="outline" size="sm" className="shrink-0" onClick={goToday}>
-            Heute
+            {t("calendar.today")}
           </Button>
         }
         drawerExtra={
           <>
-            <FilterSection label="Ort">
+            <FilterSection label={t("calendar.location")}>
               <FilterMultiSelect
                 options={[
-                  { id: "with", label: "Mit Ort" },
-                  { id: "without", label: "Ohne Ort" },
+                  { id: "with", label: t("calendar.withLocation") },
+                  { id: "without", label: t("calendar.withoutLocation") },
                 ]}
                 value={locationFilter === "all" ? [] : [locationFilter]}
                 onChange={(next) => {
@@ -673,9 +679,9 @@ function CalendarViewInner({
               />
             </FilterSection>
             {currentUserId && (
-              <FilterSection label="Zuweisung">
+              <FilterSection label={t("calendar.assignment")}>
                 <FilterToggle
-                  label="Nur meine Events"
+                  label={t("calendar.myEventsOnly")}
                   value={myEventsOnly}
                   onChange={setMyEventsOnly}
                 />
@@ -691,12 +697,12 @@ function CalendarViewInner({
             <>
               {locationFilter !== "all" && (
                 <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
-                  {locationFilter === "with" ? "Mit Ort" : "Ohne Ort"}
+                  {locationFilter === "with" ? t("calendar.withLocation") : t("calendar.withoutLocation")}
                   <button
                     type="button"
                     onClick={() => setLocationFilter("all")}
                     className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                    aria-label="Ortsfilter entfernen"
+                    aria-label={t("calendar.removeLocationFilter")}
                   >
                     ×
                   </button>
@@ -704,12 +710,12 @@ function CalendarViewInner({
               )}
               {myEventsOnly && currentUserId && (
                 <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
-                  Nur meine
+                  {t("calendar.mineOnly")}
                   <button
                     type="button"
                     onClick={() => setMyEventsOnly(false)}
                     className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                    aria-label="Filter entfernen"
+                    aria-label={t("filter.remove")}
                   >
                     ×
                   </button>
@@ -734,7 +740,7 @@ function CalendarViewInner({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Vorheriger Zeitraum"
+            aria-label={t("calendar.previous")}
             onClick={() => movePeriod(-1)}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -745,7 +751,7 @@ function CalendarViewInner({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Nächster Zeitraum"
+            aria-label={t("calendar.next")}
             onClick={() => movePeriod(1)}
           >
             <ChevronRight className="h-4 w-4" />
@@ -762,7 +768,7 @@ function CalendarViewInner({
                   key={mode.id}
                   type="button"
                   aria-pressed={selected}
-                  title={mode.label}
+                  title={t(mode.label)}
                   onClick={() => selectViewMode(mode.id)}
                   className={cn(
                     "inline-flex h-8 min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-medium transition-colors sm:px-3",
@@ -772,7 +778,7 @@ function CalendarViewInner({
                   )}
                 >
                   <Icon className="h-4 w-4" />
-                  <span>{mode.label}</span>
+                  <span>{t(mode.label)}</span>
                 </button>
               )
             })}
@@ -837,6 +843,7 @@ function MonthCalendar({
   onItemClick,
   onCreateEvent,
 }: MonthCalendarProps) {
+  const { t } = useI18n()
   const days = useMemo(
     () => buildCalendarDays(
       visibleDate.getFullYear(),
@@ -870,7 +877,7 @@ function MonthCalendar({
   return (
     <div>
       <div className="grid grid-cols-7 border-b bg-muted/30 text-xs font-semibold text-muted-foreground">
-        {WEEKDAYS.map((weekday) => (
+        {weekdays().map((weekday) => (
           <div key={weekday} className="px-2 py-2 text-center">
             {weekday}
           </div>
@@ -918,7 +925,7 @@ function MonthCalendar({
                 {onCreateEvent && day.isCurrentMonth && (
                   <button
                     type="button"
-                    aria-label="Event an diesem Tag erstellen"
+                    aria-label={t("calendar.createOnDay")}
                     onClick={() => onCreateEvent(day.date)}
                     tabIndex={-1}
                     className="min-h-4 flex-1 rounded transition-colors hover:bg-primary/5"
@@ -964,7 +971,7 @@ function MonthCalendar({
                           onClick={(clickEvent) => clickEvent.stopPropagation()}
                           className="w-full truncate rounded px-1 text-left text-[11px] font-medium text-muted-foreground hover:text-foreground"
                         >
-                          +{hidden} weitere
+                          {t("calendar.more", { count: hidden })}
                         </button>
                       </DayEventsMenu>
                     </div>
@@ -1091,6 +1098,7 @@ function WeekCalendar({
   onItemClick,
   onCreateEvent,
 }: WeekCalendarProps) {
+  const { t } = useI18n()
   const weekStart = startOfWeek(visibleDate)
   const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index))
 
@@ -1112,7 +1120,7 @@ function WeekCalendar({
   return (
     <div>
       <div className={cn("grid border-b bg-muted/30 text-[11px] font-semibold text-muted-foreground", WEEK_COLS)}>
-        <div className="px-1 py-2 text-center">Zeit</div>
+        <div className="px-1 py-2 text-center">{t("calendar.time")}</div>
         {weekDays.map((day) => (
           <button
             key={day.toISOString()}
@@ -1120,7 +1128,7 @@ function WeekCalendar({
             onClick={() => onSelectDate(day)}
             className="px-1 py-2 text-center hover:bg-muted"
           >
-            <span>{DAY_NAMES[day.getDay()]}</span>
+            <span>{shortDayName(day)}</span>
             <span className="ml-1 text-foreground">{day.getDate()}</span>
           </button>
         ))}
@@ -1135,7 +1143,7 @@ function WeekCalendar({
             className="flex items-center justify-center border-r bg-muted/20 px-0.5 text-center text-[9px] leading-tight text-muted-foreground"
             style={{ gridColumn: 1, gridRow: `1 / ${allDayLaneCount + 1}` }}
           >
-            Ganztägig
+            {t("time.allDay")}
           </div>
           {allDayBars.map((bar) => (
             <div
@@ -1199,6 +1207,7 @@ interface DayCalendarProps {
 }
 
 function DayCalendar({ visibleDate, eventsByDay, onItemClick, onCreateEvent }: DayCalendarProps) {
+  const { t } = useI18n()
   const dayEvents = getEventsForDay(eventsByDay, visibleDate)
   // All-day and multi-day events have no hour to sit in on this day: an all-day
   // event starts below the 06:00 first slot, and on the second day of a
@@ -1228,14 +1237,14 @@ function DayCalendar({ visibleDate, eventsByDay, onItemClick, onCreateEvent }: D
       <div className="border-b bg-muted/20 px-4 py-3">
         <h3 className="font-semibold">{formatDayLabel(visibleDate)}</h3>
         <p className="text-sm text-muted-foreground">
-          {dayEvents.length === 1 ? "1 Event" : `${dayEvents.length} Events`}
+          {t("calendar.events", { count: dayEvents.length })}
         </p>
       </div>
 
       {bandEvents.length > 0 && (
         <div className="grid w-full grid-cols-[72px_1fr] border-b">
           <div className="flex items-center justify-end border-r bg-muted/20 px-2 py-3 text-right text-xs text-muted-foreground">
-            Ganztägig
+            {t("time.allDay")}
           </div>
           <div className="space-y-2 p-2">
             {bandEvents.map((event) => (
@@ -1290,13 +1299,14 @@ interface EventListProps {
 }
 
 function EventList({ events, onItemClick }: EventListProps) {
+  const { t } = useI18n()
   const groups = useMemo(() => groupEventsByDay(events), [events])
 
   if (events.length === 0) {
     return (
       <div className="flex min-h-64 flex-col items-center justify-center p-8 text-center text-sm text-muted-foreground">
         <CalendarDays className="mb-3 h-8 w-8" />
-        Keine Events im sichtbaren Zeitraum
+        {t("calendar.noEvents")}
       </div>
     )
   }
@@ -1308,7 +1318,7 @@ function EventList({ events, onItemClick }: EventListProps) {
           <div className="sticky top-0 z-10 border-b surface-glass px-4 py-3">
             <h3 className="font-semibold">{formatDayLabel(group.date)}</h3>
             <p className="text-sm text-muted-foreground">
-              {group.events.length === 1 ? "1 Event" : `${group.events.length} Events`}
+              {t("calendar.events", { count: group.events.length })}
             </p>
           </div>
           <div className="space-y-3 p-4">

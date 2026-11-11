@@ -3,6 +3,7 @@
 import { X } from "lucide-react"
 import { cn, getTagColor, getTagAccentColor } from "../../lib/utils"
 import { getIcon, iconToDataUrl } from "../../lib/icons/icon-registry"
+import { useI18n } from "@/i18n"
 
 export interface TagChipProps {
   tag: string
@@ -56,6 +57,7 @@ const SIZES = {
  * - removable (`onRemove`): a coloured chip with a ✕ for active filters.
  */
 export function TagChip({ tag, icon, size = "sm", selected, onToggle, onClick, onRemove, className }: TagChipProps) {
+  const { t } = useI18n()
   const base = cn(
     "inline-flex items-center gap-1 rounded-full font-medium",
     SIZES[size],
@@ -131,7 +133,7 @@ export function TagChip({ tag, icon, size = "sm", selected, onToggle, onClick, o
             onRemove()
           }}
           className="-mr-0.5 rounded-full p-0.5 hover:bg-foreground/10"
-          aria-label={`Filter ${tag} entfernen`}
+          aria-label={t("filter.removeTag", { tag })}
         >
           <X className="h-3 w-3" />
         </button>

@@ -6,6 +6,7 @@ import { Search } from "lucide-react"
 import { cn } from "../../lib/utils"
 import { Input } from "../primitives/input"
 import { useOptionalSharedFilter } from "./filter-store"
+import { useI18n } from "@/i18n"
 
 export interface ModuleSearchBarProps {
   /** Beschriftung des Suchfelds — benennt, was es durchsucht. */
@@ -39,7 +40,8 @@ export interface ModuleSearchBarProps {
  * keine Suche; das ist kein Fehler, sondern der Fall „nackter `ModuleFrame` im
  * Test".
  */
-export function ModuleSearchBar({ searchLabel = "Inhalte durchsuchen", trailing, className }: ModuleSearchBarProps) {
+export function ModuleSearchBar({ searchLabel, trailing, className }: ModuleSearchBarProps) {
+  const { t } = useI18n()
   const filter = useOptionalSharedFilter()
   if (!filter) return null
   return (
@@ -47,8 +49,8 @@ export function ModuleSearchBar({ searchLabel = "Inhalte durchsuchen", trailing,
       <div className="relative min-w-0 flex-1 sm:flex-none">
         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Suche…"
-          aria-label={searchLabel}
+          placeholder={t("search.placeholder")}
+          aria-label={searchLabel ?? t("search.contentLabel")}
           value={filter.searchText}
           onChange={(event) => filter.setSearchText(event.target.value)}
           className="h-8 w-full rounded-md pl-8 text-[13px] sm:w-[220px]"

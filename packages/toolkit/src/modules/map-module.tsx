@@ -10,6 +10,8 @@ import { useModuleHost } from "../components/host/module-host"
 import { MapView } from "../components/map/map-view"
 import type { MapAdapter } from "../components/map/adapter"
 import type { ModuleViewProps } from "../lib/module-register"
+import { useI18n } from "@/i18n"
+import { withNodes } from "@/i18n/with-nodes"
 
 const AWAITING_VIEWPORT_FILTER = { hasField: ["__rls_awaiting_viewport__"] }
 type Bounds = [number, number, number, number]
@@ -41,6 +43,7 @@ function useMapAdapterFactory(): (() => MapAdapter) | null {
  * Referenz-App.
  */
 export function MapModule({ groupId, active = true }: ModuleViewProps) {
+  const { t } = useI18n()
   const { entry, resolveItemGroupColor, activeItemId } = useModuleHost()
   const [bbox, setBbox] = useState<Bounds | undefined>()
   const { data: items, isLoading } = useItems(bbox ? { hasField: ["position"], bbox } : AWAITING_VIEWPORT_FILTER)
@@ -56,9 +59,10 @@ export function MapModule({ groupId, active = true }: ModuleViewProps) {
     // Karte — die App stellt sie mit einer Zeile aus dem Unterpfad.
     return (
       <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
-        <p className="text-lg font-medium text-foreground">Karte</p>
+        <p className="text-lg font-medium text-foreground">{t("map.title")}</p>
         <p className="text-sm text-muted-foreground mt-2">
-          Keine Karten-Engine gestellt. Eine App setzt <code>MapLibreAdapterProvider</code> aus <code>@real-life/toolkit/maplibre</code> um ihre Shell.
+          {/* i18n-exempt: Komponenten- und Paketnamen, kein Oberflächentext */}
+          {withNodes(t("map.noEngine"), { provider: <code>MapLibreAdapterProvider</code>, package: <code>@real-life/toolkit/maplibre</code> })}
         </p>
       </div>
     )

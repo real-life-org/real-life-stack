@@ -240,7 +240,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/hooks/use-group-vocabulary.ts",
-          "line": 85
+          "line": 86
         },
         {
           "name": "usePersonalGroupId",

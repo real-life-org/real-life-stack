@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Skeleton } from "../primitives/skeleton"
 import { ErrorBoundary } from "../primitives/error-boundary"
 import { getI18n, useI18n, type I18n } from "@/i18n"
+import { moduleLabel } from "@/lib/register-labels"
 
 function getInitials(name: string): string {
   return name
@@ -1649,11 +1650,11 @@ export function GroupDialog({
                     >
                       <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
                       <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <span className="flex-1 text-sm">{mod.label}</span>
+                      <span className="flex-1 text-sm">{moduleLabel(getI18n(), mod)}</span>
                       {/* Keyboard path — appears only while focused (see keyboardRow). */}
                       <button
                         type="button"
-                        aria-label={t("groupDialog.moveUp", { module: mod.label })}
+                        aria-label={t("groupDialog.moveUp", { module: moduleLabel(getI18n(), mod) })}
                         disabled={index === 0}
                         onClick={() => applyVisibleOrder(moveModule(visibleModules, id, -1))}
                         onFocus={() => setKeyboardRow(id)}
@@ -1667,7 +1668,7 @@ export function GroupDialog({
                       </button>
                       <button
                         type="button"
-                        aria-label={t("groupDialog.moveDown", { module: mod.label })}
+                        aria-label={t("groupDialog.moveDown", { module: moduleLabel(getI18n(), mod) })}
                         disabled={index === visibleModules.length - 1}
                         onClick={() => applyVisibleOrder(moveModule(visibleModules, id, 1))}
                         onFocus={() => setKeyboardRow(id)}
@@ -1681,7 +1682,7 @@ export function GroupDialog({
                       </button>
                       <button
                         type="button"
-                        aria-label={t("groupDialog.deactivate", { module: mod.label })}
+                        aria-label={t("groupDialog.deactivate", { module: moduleLabel(getI18n(), mod) })}
                         disabled={isOnly}
                         onClick={() => applyVisibleOrder(visibleModules.filter((m) => m !== id))}
                         className="rounded p-1 text-muted-foreground hover:text-destructive disabled:opacity-30"
@@ -1706,7 +1707,7 @@ export function GroupDialog({
                           className="flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground hover:border-primary hover:text-foreground"
                         >
                           <Icon className="h-3 w-3" />
-                          {mod.label} +
+                          {moduleLabel(getI18n(), mod)} +
                         </button>
                       )
                     })}

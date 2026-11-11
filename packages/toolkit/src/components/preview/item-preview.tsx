@@ -15,7 +15,7 @@ import { useUserNameResolver } from "../../hooks/use-user-names"
 import { useCanComment } from "../../hooks/use-comments"
 import { useCommentCount } from "../../hooks/use-comment-count"
 import { useCommentLink } from "../navigation/comment-navigation"
-import { useI18n } from "@/i18n"
+import { getI18n, useI18n } from "@/i18n"
 import { MessageSquare } from "lucide-react"
 
 /**
@@ -166,12 +166,13 @@ function KommentarHinweis({
   kompakt: boolean
   onClick: (() => void) | null
 }) {
+  const { t } = useI18n()
   const inhalt = (
     <>
       <MessageSquare className="h-3.5 w-3.5" aria-hidden />
       {anzahl > 0 && <span className="tabular-nums">{anzahl}</span>}
       {/* In einer Kanban-Spalte ist fuer das Wort kein Platz. */}
-      {!kompakt && <span>Kommentieren</span>}
+      {!kompakt && <span>{t("comments.comment")}</span>}
     </>
   )
   // Was hier steht, ist in der dichten Ansicht eine nackte Zahl neben einem
@@ -180,8 +181,8 @@ function KommentarHinweis({
   // Kommentieren" liest sich vorgelesen holprig.
   const beschriftung =
     anzahl === 0
-      ? "Kommentieren"
-      : `${anzahl} ${anzahl === 1 ? "Kommentar" : "Kommentare"}, kommentieren`
+      ? t("comments.comment")
+      : t("comments.countAction", { count: anzahl })
   const klassen = "flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground"
   if (!onClick) {
     // Ohne Weg ist es eine Auskunft, kein Bedienelement — der Name gehoert
@@ -215,7 +216,7 @@ function rowTitle(data: Record<string, unknown>): string {
     const value = data[key]
     if (typeof value === "string" && value.trim() !== "") return value.trim().split("\n")[0]!
   }
-  return "Ohne Titel"
+  return getI18n().t("item.untitled")
 }
 
 function getInitials(name: string): string {
@@ -340,7 +341,7 @@ export const ItemPreview = memo(function ItemPreview({
   const erledigt = completed && (
     <>
       <span aria-hidden>✓ </span>
-      <span className="sr-only">Erledigt: </span>
+      <span className="sr-only">{i18n.t("item.donePrefix")}</span>
     </>
   )
 
@@ -494,7 +495,7 @@ export const ItemPreview = memo(function ItemPreview({
                   // Tooltip. Die verborgenen Tags stehen im Titel, damit man
                   // nicht erst das Item oeffnen muss.
                   aria-label={
-                    verborgeneTags === 1 ? "1 weiterer Tag" : `${verborgeneTags} weitere Tags`
+                    i18n.t("item.moreTags", { count: verborgeneTags })
                   }
                   title={tags.slice(sichtbareTags.length).join(", ")}
                 >
@@ -510,7 +511,7 @@ export const ItemPreview = memo(function ItemPreview({
                verschwaenden im `overflow-hidden` darum herum. Derselbe Fehler
                stand schon einmal in ItemDetailBody (#307). */
             <div ref={tagFit.fixedRef} data-measure="tag-author" className="ml-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-              <ProfileLink userId={authorId} label={`Profil von ${authorName} öffnen`}>
+              <ProfileLink userId={authorId} label={i18n.t("profile.openOf", { name: authorName })}>
                 {/* In der dichten Ansicht traegt das Bild den Namen: In einer
                     Kanban-Spalte ist fuer beides kein Platz. */}
                 <Avatar className="h-5 w-5 shrink-0" title={isCompact ? authorName : undefined}>

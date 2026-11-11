@@ -451,6 +451,12 @@ export interface I18n {
    * Prüfung für alle Aufrufer wieder aushebeln.
    */
   tDynamic(key: string, params?: MessageParams): string
+  /**
+   * Ob dieser Stand einen Text unter `key` kennt (in irgendeiner Sprache) — gebunden an dasselbe
+   * Wörterbuch wie `tDynamic` dieses Bündels. Für Register mit eigenem Rückfalltext
+   * (`lib/register-labels.ts`).
+   */
+  has(key: string): boolean
   /** Tag und Monat („18. Aug." / „18 Aug"), oder eigene `Intl`-Optionen. */
   formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string
   /** Uhrzeit („14:32" / „2:32 PM"). */
@@ -497,6 +503,8 @@ function createBundle(s: State): I18n {
   }
 
   const t: I18n["t"] = (key, params) => tDynamic(key, params)
+  const has: I18n["has"] = (key) =>
+    lookup(s, language, key) !== undefined || lookup(s, FALLBACK_LANGUAGE, key) !== undefined || lookup(s, "de", key) !== undefined
 
   // --- Datum und Zeit — über die REGIONALE Locale, nicht die Sprache (rls#289) ---
 
@@ -548,6 +556,7 @@ function createBundle(s: State): I18n {
     setLanguage,
     t,
     tDynamic,
+    has,
     formatDate,
     formatTime,
     formatFullDateTime,
