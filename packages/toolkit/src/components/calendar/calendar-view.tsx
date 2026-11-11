@@ -50,6 +50,16 @@ const fmt = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(get
 /** Die Kurznamen der Wochentage, Montag zuerst (der 1. Januar 2024 war ein Montag). */
 const weekdays = (): string[] => Array.from({ length: 7 }, (_, i) => fmt({ weekday: "short" }).format(new Date(2024, 0, 1 + i)))
 const shortDayName = (date: Date): string => fmt({ weekday: "short" }).format(date)
+/**
+ * Ein Zeitraum in der Schreibweise der Sprache („2.–8. November 2026" / „November 2 – 8, 2026").
+ * `formatRange` (ES2021) steht nicht in jeder Typbibliothek der Apps, die das Toolkit einbinden (die
+ * Network-App baut gegen ES2020); zur Laufzeit kennen es alle unterstützten Browser. Fehlt es doch,
+ * stehen beide Daten mit Gedankenstrich nebeneinander.
+ */
+function formatDateRange(format: Intl.DateTimeFormat, start: Date, end: Date): string {
+  const ranged = format as Intl.DateTimeFormat & { formatRange?: (a: Date, b: Date) => string }
+  return typeof ranged.formatRange === "function" ? ranged.formatRange(start, end) : `${format.format(start)} – ${format.format(end)}`
+}
 const TIME_SLOTS = Array.from({ length: 18 }, (_, index) => index + 6)
 
 /** Resolves the group/space fallback colour for a given item, so every EventPill
@@ -296,7 +306,7 @@ function getHeaderLabel(date: Date, viewMode: CalendarViewMode): string {
   }
   if (viewMode === "week") {
     const weekStart = startOfWeek(date)
-    return fmt({ day: "numeric", month: "long", year: "numeric" }).formatRange(weekStart, addDays(weekStart, 6))
+    return formatDateRange(fmt({ day: "numeric", month: "long", year: "numeric" }), weekStart, addDays(weekStart, 6))
   }
   return fmt({ month: "long", year: "numeric" }).format(date)
 }
