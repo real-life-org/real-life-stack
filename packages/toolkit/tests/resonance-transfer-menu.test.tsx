@@ -63,8 +63,19 @@ async function choose(content: string, name = "aussagen.json") {
   const file = new File([content], name, { type: "application/json" })
   Object.defineProperty(input, "files", { value: [file], configurable: true })
   await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })) })
-  for (let round = 0; round < 3; round++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+  // Auf das Ergebnis der Prüfung warten, nicht auf eine feste Zeit: Datei lesen und gegen den Space
+  // abgleichen ist asynchron, auf einem langsamen CI-Runner reichten drei Ticks à 10 ms nicht (#644, LA-Job).
+  for (let round = 0; round < 200 && !/angelegt|übersprungen|Fehler|keine gültige/.test(document.body.textContent ?? ""); round++) {
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+  }
   return document.body.textContent ?? ""
+}
+
+/** Wartet, bis der Text erscheint (höchstens ~2 s) — statt fester Ticks, die auf langsamen Runnern nicht reichen. */
+async function untilText(pattern: RegExp) {
+  for (let round = 0; round < 200 && !pattern.test(document.body.textContent ?? ""); round++) {
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+  }
 }
 
 const button = (label: string) => [...document.body.querySelectorAll("button")].find((el) => el.textContent?.trim() === label)
@@ -81,7 +92,7 @@ describe("ResonanceTransferMenu: import", () => {
     }))
     expect(text).toContain("2 Aussagen werden angelegt, 1 übersprungen")
     await act(async () => { button("Importieren")!.click() })
-    for (let round = 0; round < 3; round++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+    await untilText(/\d+ Aussagen? angelegt/)
     expect(document.body.textContent).toContain("2 Aussagen angelegt, 1 übersprungen")
 
     const statements = await connector.getItems({ type: "statement" })
@@ -132,7 +143,7 @@ describe("ResonanceTransferMenu: import from the overview", () => {
     // Checked against the TARGET space: „montags" already exists there.
     expect(text).toContain("1 Aussage wird angelegt, 1 übersprungen")
     await act(async () => { button("Importieren")!.click() })
-    for (let round = 0; round < 3; round++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+    await untilText(/\d+ Aussagen? angelegt/)
     const created = (await connector.getItems({ type: "statement" })).find((item) => item.data.title === "Aus der Übersicht")!
     expect(connector.getItemGroupId(created.id)).toBe("g")
   })
@@ -187,7 +198,7 @@ describe("ResonanceTransferMenu: im geöffneten Space ohne GroupScopeCapable (#5
     })
     await choose(JSON.stringify({ format: "resonance-import/1", statements: [{ title: "Ohne Zusage" }] }))
     await act(async () => { button("Importieren")!.click() })
-    for (let round = 0; round < 3; round++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+    await untilText(/\d+ Aussagen? angelegt/)
     const created = (await connector.getItems({ type: "statement" })).find((item) => item.data.title === "Ohne Zusage")!
     expect(connector.getItemGroupId(created.id)).toBe("g")
     expect(move).not.toHaveBeenCalled()
@@ -213,7 +224,7 @@ describe("ResonanceTransferMenu: import against the loaded space (#521)", () => 
     }))
     expect(text).toContain("1 Aussage wird angelegt, 1 übersprungen")
     await act(async () => { button("Importieren")!.click() })
-    for (let round = 0; round < 3; round++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+    await untilText(/\d+ Aussagen? angelegt/)
     const titles = (await connector.getItems({ type: "statement" })).map((item) => item.data.title).sort()
     expect(titles).toEqual(["Variante", "Wir treffen uns montags"])
   })
@@ -223,7 +234,7 @@ describe("ResonanceTransferMenu: import against the loaded space (#521)", () => 
     // Meanwhile the same statement arrives (another device, a second tab).
     await connector.createItem({ type: "statement", createdBy: "u1", data: { title: "Neu hier" } })
     await act(async () => { button("Importieren")!.click() })
-    for (let round = 0; round < 3; round++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
+    await untilText(/\d+ Aussagen? angelegt/)
     expect(document.body.textContent).toContain("0 Aussagen angelegt, 1 übersprungen")
     expect((await connector.getItems({ type: "statement" })).filter((item) => item.data.title === "Neu hier")).toHaveLength(1)
   })
