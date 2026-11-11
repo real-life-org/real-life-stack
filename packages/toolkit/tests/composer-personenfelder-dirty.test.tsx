@@ -43,7 +43,7 @@ afterEach(() => {
 /** Das zweite Personen-Eingabefeld (Reihenfolge = Deklarationsreihenfolge). */
 function zweitesPersonenfeld(): HTMLInputElement {
   const inputs = [...document.querySelectorAll<HTMLInputElement>("input")].filter(
-    (el) => el.placeholder === "Hinzufuegen...",
+    (el) => el.placeholder === "Hinzufügen...",
   )
   expect(inputs.length).toBe(2)
   return inputs[1]

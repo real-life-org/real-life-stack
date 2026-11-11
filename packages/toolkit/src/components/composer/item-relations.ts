@@ -1,4 +1,5 @@
 import type { Item, Relation } from "@real-life/data-interface"
+import { getI18n } from "@/i18n"
 
 /**
  * Item-Kanten im Composer (C3, Schreibform): Chips und eine `@`-Suche über
@@ -161,5 +162,5 @@ export function itemRelationsFromWidgetData(
 export function itemTitle(item: Item): string {
   const data = (item.data ?? {}) as Record<string, unknown>
   const title = data.title ?? data.displayName ?? data.content
-  return typeof title === "string" && title.trim() !== "" ? title : "Ohne Titel"
+  return typeof title === "string" && title.trim() !== "" ? title : getI18n().t("item.untitled")
 }

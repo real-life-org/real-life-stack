@@ -2,12 +2,13 @@ import { normalizeItemType, type Item } from "@real-life/data-interface"
 
 import { resolveTypePresentation } from "../components/preview/type-presentation"
 import { targetItemId } from "../components/preview/use-item-edges"
+import { getI18n } from "@/i18n"
 
 /**
  * Grund im Tooltip der festen Space-Anzeige (shared-components → Space des
  * Formulars, Regel 5).
  */
-export const ITEM_BINDINGS_REASON = "Hat Verknüpfungen, Stimmen oder Zusagen – bleibt in diesem Space"
+export const itemBindingsReason = (): string => getI18n().t("item.bindingsReason")
 
 /** Die Schlüssel der Felder mit Item-Verweis (B15 `item-ref`) aller Klassen eines Items, aus dem Register. */
 function itemRefKeys(type: string): string[] {

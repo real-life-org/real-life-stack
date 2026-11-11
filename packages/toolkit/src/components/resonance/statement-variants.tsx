@@ -12,6 +12,7 @@ import { useOptionalCurrentUser } from "@/hooks/use-auth"
 import { statementFamily, variantOfValue, type StatementFamily } from "@/lib/resonance-variants"
 import { useOptionalCreate } from "../host/create-host"
 import { VoteMiniBar } from "./vote-bar"
+import { useI18n } from "@/i18n"
 
 const STATEMENTS = { type: "statement" } as const
 
@@ -28,12 +29,13 @@ function useStatementFamily(item: Item): StatementFamily {
  * when there are no variants.
  */
 export function StatementVariantLine({ item }: { item: Item }) {
+  const { t } = useI18n()
   const { variants } = useStatementFamily(item)
   if (variants.length === 0) return null
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
       <GitBranch className="size-3 shrink-0" aria-hidden />
-      <span>{variants.length === 1 ? "1 Variante" : `${variants.length} Varianten`}</span>
+      <span>{t("resonance.variants", { count: variants.length })}</span>
     </div>
   )
 }
@@ -50,6 +52,7 @@ export function StatementVariantLine({ item }: { item: Item }) {
  * Regel 4; resonance.md, Wortlaut rule 3).
  */
 export const familyListQuery: ListQuery = function useFamilyList(item) {
+  const { t } = useI18n()
   const connector = useConnector()
   const create = useOptionalCreate()
   const frozen = useIsFrozen(item)
@@ -62,8 +65,8 @@ export const familyListQuery: ListQuery = function useFamilyList(item) {
   return {
     entries: members,
     decorate: (member) => ({
-      badge: member.id === rootId ? "Ausgang" : "Variante",
-      ...(member.id === item.id ? { mark: "diese" } : {}),
+      badge: member.id === rootId ? t("resonance.variant.origin") : t("resonance.variant.variant"),
+      ...(member.id === item.id ? { mark: t("resonance.variant.this") } : {}),
       trailing: <VoteMiniBar statementId={member.id} />,
     }),
     ...(canCreateVariant
@@ -73,13 +76,13 @@ export const familyListQuery: ListQuery = function useFamilyList(item) {
               title: typeof item.data.title === "string" ? item.data.title : "",
               text: typeof item.data.description === "string" ? item.data.description : "",
               variantOf: variantOfValue(item),
-            }, { fixedGroup: originGroup!, fixedGroupReason: "Varianten bleiben im Space ihrer Aussage" }),
+            }, { fixedGroup: originGroup!, fixedGroupReason: t("resonance.variant.fixedSpace") }),
         }
       : {}),
     ...(frozen && isAuthor
       ? {
-          note: "Wortlaut eingefroren",
-          noteDetail: "Andere haben zu diesem Wortlaut abgestimmt, deshalb lässt er sich nicht mehr ändern. Für eine neue Formulierung leg eine Variante an.",
+          note: t("resonance.variant.frozen"),
+          noteDetail: t("resonance.variant.frozenDetail"),
         }
       : {}),
   }

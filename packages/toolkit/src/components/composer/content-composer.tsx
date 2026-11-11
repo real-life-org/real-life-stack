@@ -38,7 +38,7 @@ import { peopleQualifierKey, peopleStatementKey, resolvePeopleFields, type Peopl
 export type { PeopleRelationConfig } from "./people-relations"
 import { TagsWidget } from "./widgets/tags-widget"
 import { useFormSpaceSources } from "./use-form-space-sources"
-import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
+import { itemBindingsReason } from "../../lib/item-bindings"
 import { StatusWidget } from "./widgets/status-widget"
 import { ChipsField, ContactField, NumberGroupField, OptionField, UrlField } from "./widgets/value-widgets"
 import { VALUE_WIDGETS, valueFieldError, type ValueFieldConfig } from "./value-fields"
@@ -46,6 +46,7 @@ import { groupNumberFields } from "../preview/field-register"
 import { chipValues, type OptionTone } from "../../lib/field-values"
 import { FixedItemRefField, IncomingRelationField, ItemRelationWidget, type RequestItemPick } from "./widgets/item-relation-widget"
 import { incomingRemovedKey, itemRelationChoiceKeys, itemRelationDataKey, itemRelationDataKeys, type ItemRefFieldConfig, type ItemRelationFieldConfig } from "./item-relations"
+import { useI18n, type MessageKey } from "@/i18n"
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -207,6 +208,7 @@ export interface CustomWidgetDefinition {
  * über das Token `destructive`.
  */
 function SaveErrorBanner({ reason, onRetry, busy }: { reason?: string; onRetry: () => void; busy: boolean }) {
+  const { t } = useI18n()
   return (
     <div
       data-slot="save-error"
@@ -215,7 +217,7 @@ function SaveErrorBanner({ reason, onRetry, busy }: { reason?: string; onRetry: 
     >
       <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-foreground">Konnte nicht gespeichert werden. Deine Eingaben bleiben erhalten.</span>
+        <span className="text-foreground">{t("composer.saveFailed")}</span>
         {reason && <span className="text-xs text-muted-foreground">{reason}</span>}
       </div>
       <button
@@ -224,7 +226,7 @@ function SaveErrorBanner({ reason, onRetry, busy }: { reason?: string; onRetry: 
         disabled={busy}
         className="shrink-0 rounded-md px-2 py-0.5 text-sm font-semibold text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 disabled:opacity-50"
       >
-        Erneut
+        {t("composer.retry")}
       </button>
     </div>
   )
@@ -344,23 +346,23 @@ const WIDGET_ORDER: WidgetType[] = [
   "tags",
 ]
 
-const DEFAULT_WIDGET_LABELS: Record<WidgetType, string> = {
-  "item-relation": "Verknüpfungen",
-  "item-ref": "Verweis",
-  number: "Zahl",
-  select: "Auswahl",
-  url: "Link",
-  chips: "Liste",
-  contact: "Kontakt",
-  group: "Gruppe",
-  title: "Titel",
-  text: "Text",
-  media: "Medien",
-  date: "Datum",
-  location: "Ort",
-  people: "Personen",
-  tags: "Tags",
-  status: "Status",
+const DEFAULT_WIDGET_LABELS: Record<WidgetType, MessageKey> = {
+  "item-relation": "composer.widget.item-relation",
+  "item-ref": "composer.widget.item-ref",
+  number: "composer.widget.number",
+  select: "composer.widget.select",
+  url: "composer.widget.url",
+  chips: "composer.widget.chips",
+  contact: "composer.widget.contact",
+  group: "composer.widget.group",
+  title: "composer.widget.title",
+  text: "composer.widget.text",
+  media: "composer.widget.media",
+  date: "composer.widget.date",
+  location: "composer.widget.location",
+  people: "composer.widget.people",
+  tags: "composer.widget.tags",
+  status: "composer.widget.status",
 }
 
 const DEFAULT_DATA: WidgetData = {
@@ -559,6 +561,7 @@ interface ComposerHeadProps {
  * gedämpft mit dem Grund im Tooltip.
  */
 function ComposerHead({ types, selectedType, onSelectType, space }: ComposerHeadProps) {
+  const { t } = useI18n()
   const current = types.find((t) => t.id === selectedType) ?? types[0]
   return (
     // Eine Zeile; rechts bleibt Platz für die Knöpfe eines Panels darüber (✕).
@@ -567,7 +570,7 @@ function ComposerHead({ types, selectedType, onSelectType, space }: ComposerHead
         <span data-slot="composer-type" className="inline-flex shrink-0">
           {onSelectType ? (
             <DropdownMenu>
-              <DropdownMenuTrigger aria-label={`Typ wählen, aktuell ${current.label}`} data-value={current.id} className={HEAD_TRIGGER}>
+              <DropdownMenuTrigger aria-label={t("composer.chooseTypeCurrent", { type: current.label })} data-value={current.id} className={HEAD_TRIGGER}>
                 <TypeBadge config={current} trailing={<ChevronDown className="h-3 w-3 opacity-80" aria-hidden />} />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={6} className={cn(HEAD_MENU, "w-[220px]")}>
@@ -664,6 +667,7 @@ function SpaceLogo({ option, size = "sm" }: { option?: GroupOption; size?: "sm" 
 }
 
 function SpacePill({ value, options, required, fixedReason: fixedBy, lockedReason, onChange }: NonNullable<ComposerHeadProps["space"]>) {
+  const { t } = useI18n()
   const selected = options.find((o) => o.id === value)
   // Mit Beziehungen fest wie der feste Space einer Variante (Regel 5). Ohne
   // gesetzten Space ist auch eine einzige Option zu wählen, statt als gesetzt
@@ -685,7 +689,7 @@ function SpacePill({ value, options, required, fixedReason: fixedBy, lockedReaso
         className="inline-flex h-7 min-w-0 items-center gap-1.5 rounded-full text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       >
         {only && <SpaceLogo option={only} />}
-        <span className="truncate">{only?.name ?? "Space unbekannt"}</span>
+        <span className="truncate">{only?.name ?? t("composer.spaceUnknown")}</span>
         {fixedReason && <span className="sr-only">{`: ${fixedReason}`}</span>}
       </span>
     )
@@ -730,7 +734,7 @@ function SpacePill({ value, options, required, fixedReason: fixedBy, lockedReaso
         }}
       >
         <DropdownMenuTrigger
-          aria-label={selected ? `Space wählen, aktuell ${selected.name}` : "Space wählen"}
+          aria-label={selected ? t("composer.chooseSpaceCurrent", { space: selected.name }) : t("composer.chooseSpace")}
           aria-invalid={missing || undefined}
           aria-required={required || undefined}
           data-value={value}
@@ -742,7 +746,7 @@ function SpacePill({ value, options, required, fixedReason: fixedBy, lockedReaso
           )}
         >
           {selected && <SpaceLogo option={selected} />}
-          <span className="truncate">{selected?.name ?? `Space wählen${required ? " *" : ""}`}</span>
+          <span className="truncate">{selected?.name ?? `${t("composer.chooseSpace")}${required ? " *" : ""}`}</span>
           <ChevronDown className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -753,8 +757,8 @@ function SpacePill({ value, options, required, fixedReason: fixedBy, lockedReaso
           <input
             ref={searchRef}
             type="search"
-            placeholder="Space suchen…"
-            aria-label="Space suchen"
+            placeholder={t("composer.searchSpacePlaceholder")}
+            aria-label={t("composer.searchSpace")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             // Tippen gehört dem Feld, nicht der Typeahead-Suche des Menüs;
@@ -773,17 +777,17 @@ function SpacePill({ value, options, required, fixedReason: fixedBy, lockedReaso
           />
           {personal.length > 0 && (
             <>
-              <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Persönlich</DropdownMenuLabel>
+              <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("composer.personal")}</DropdownMenuLabel>
               {personal.map(row)}
             </>
           )}
           {groups.length > 0 && (
             <>
-              <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gruppen</DropdownMenuLabel>
+              <DropdownMenuLabel className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t("composer.groups")}</DropdownMenuLabel>
               {groups.map(row)}
             </>
           )}
-          {shown.length === 0 && <p className="px-2 py-1.5 text-sm text-muted-foreground">Kein Space gefunden</p>}
+          {shown.length === 0 && <p className="px-2 py-1.5 text-sm text-muted-foreground">{t("composer.noSpaceFound")}</p>}
         </DropdownMenuContent>
       </DropdownMenu>
     </span>
@@ -802,6 +806,7 @@ function CollapsedText({
   availableWidgets: readonly WidgetType[]
   onToggleWidget: (w: WidgetType) => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="flex flex-wrap items-center gap-1">
       <button
@@ -821,7 +826,7 @@ function CollapsedText({
               type="button"
               variant="ghost"
               size="icon-sm"
-              title={WIDGET_LABELS[w]}
+              title={WIDGET_LABELS[w] ? t(WIDGET_LABELS[w]) : undefined}
               onClick={() => onToggleWidget(w)}
               className="h-7 w-7 text-muted-foreground"
             >
@@ -868,6 +873,7 @@ export function ContentComposer({
   onDirtyChange,
   className,
 }: ContentComposerProps) {
+  const { t } = useI18n()
   const isEditMode = editModeProp ?? !!onDelete
   const isSingleTypeMode = !!mode
 
@@ -1121,7 +1127,7 @@ export function ContentComposer({
   const getWidgetLabel = (widgetId: string): string => {
     return (
       currentConfig.widgetLabels?.[widgetId] ||
-      DEFAULT_WIDGET_LABELS[widgetId as WidgetType] ||
+      (DEFAULT_WIDGET_LABELS[widgetId as WidgetType] ? t(DEFAULT_WIDGET_LABELS[widgetId as WidgetType]) : "") ||
       widgetId
     )
   }
@@ -1197,8 +1203,8 @@ export function ContentComposer({
   const formSpaceOption = currentConfig.groupOptions?.find((o) => o.id === data.group)
   const contactVisibility = formSpaceOption
     ? formSpaceOption.personal
-      ? "Nur für dich sichtbar (Privat)"
-      : `Sichtbar für alle in ${formSpaceOption.name}`
+      ? t("composer.visibleOnlyYou")
+      : t("composer.visibleTo", { space: formSpaceOption.name })
     : undefined
   // Wert-Felder stehen im Formular in Register-Reihenfolge an der Stelle des
   // ersten Wert-Widgets; nur benachbarte Zahlen mit gleicher Beschriftung
@@ -1236,8 +1242,8 @@ export function ContentComposer({
 
   // Submit label
   const submitLabel = isEditMode
-    ? currentConfig.editLabel || "Speichern"
-    : currentConfig.submitLabel || "Erstellen"
+    ? currentConfig.editLabel || t("composer.save")
+    : currentConfig.submitLabel || t("create.label")
 
   // ── Render ──
 
@@ -1257,7 +1263,7 @@ export function ContentComposer({
                 options: currentConfig.groupOptions!,
                 required: spaceRequired,
                 fixedReason: currentConfig.groupFixedReason,
-                ...(formHasItemBinding ? { lockedReason: ITEM_BINDINGS_REASON } : {}),
+                ...(formHasItemBinding ? { lockedReason: itemBindingsReason() } : {}),
                 onChange: (v) => updateData("group", v),
               }
             : undefined
@@ -1268,7 +1274,7 @@ export function ContentComposer({
       {/* Ohne Space wird nichts angelegt — auch nicht per liveUpdate (#538). Sichtbar, sobald es etwas zu speichern gäbe. */}
       {spaceMissing && hasContent && (
         <p data-space-required role="status" className="text-xs text-destructive">
-          {currentConfig.groupUnavailableReason && !isEditMode ? currentConfig.groupUnavailableReason : "Erst einen Space wählen – vorher wird nichts gespeichert."}
+          {currentConfig.groupUnavailableReason && !isEditMode ? currentConfig.groupUnavailableReason : t("composer.chooseSpaceFirst")}
         </p>
       )}
 
@@ -1304,7 +1310,7 @@ export function ContentComposer({
                       type="button"
                       onClick={() => toggleWidget(widgetId)}
                       className="absolute right-0 top-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
-                      title="Entfernen"
+                      title={t("composer.remove")}
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -1604,7 +1610,7 @@ export function ContentComposer({
                       label={widgetLabel}
                       suggestions={effectiveTagSuggestions}
                       quickSuggestions={effectiveTagQuick}
-                      {...(spaceSources?.tagsUnavailable ? { hint: "Keine Vorschläge: Dieser Speicher liest nur Tags des geöffneten Space" } : {})}
+                      {...(spaceSources?.tagsUnavailable ? { hint: t("composer.noTagSuggestions") } : {})}
                     />
                   )}
                 </div>
@@ -1631,7 +1637,7 @@ export function ContentComposer({
                         })
                       }}
                       className="absolute right-0 top-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
-                      title="Entfernen"
+                      title={t("composer.remove")}
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -1671,14 +1677,14 @@ export function ContentComposer({
               className="gap-1.5 px-2 has-[>svg]:px-1.5 text-xs text-destructive hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Löschen
+              {t("detail.delete")}
             </Button>
           )}
         </div>
         <div className="flex items-center gap-1">
           {onCancel && (
             <Button type="button" variant="ghost" size="sm" className="px-2" onClick={onCancel}>
-              Abbrechen
+              {t("common.cancel")}
             </Button>
           )}
           {/* Preview toggle */}
@@ -1689,7 +1695,7 @@ export function ContentComposer({
               size="sm"
               onClick={() => setIsPreviewing(!isPreviewing)}
             >
-              {isPreviewing ? "Bearbeiten" : "Vorschau"}
+              {isPreviewing ? t("detail.edit") : t("composer.preview")}
             </Button>
           )}
           {/* Split-Button: Submit + Visibility */}
@@ -1725,12 +1731,12 @@ export function ContentComposer({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => setIsPublic(true)}>
                     <Globe className="h-3.5 w-3.5" />
-                    Oeffentlich
+                    {t("composer.public")}
                     {isPublic && <span className="ml-auto text-xs">✓</span>}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setIsPublic(false)}>
                     <Lock className="h-3.5 w-3.5" />
-                    Privat
+                    {t("composer.private")}
                     {!isPublic && <span className="ml-auto text-xs">✓</span>}
                   </DropdownMenuItem>
                 </DropdownMenuContent>

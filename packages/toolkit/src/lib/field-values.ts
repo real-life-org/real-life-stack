@@ -1,3 +1,4 @@
+import { getI18n } from "@/i18n"
 // Wert-Widgets (S4a): der gemeinsame Datenvertrag von Lese- und Schreibform.
 //
 // Spec: docs/spec/modules/shared-components.md → „Item-Detail aus dem
@@ -49,7 +50,7 @@ export function urlLabel(href: string): string {
 /** Fehler der Schreibform, oder `null`. Leer ist kein Fehler. */
 export function urlError(input: string): string | null {
   if (input.trim() === "") return null
-  return normalizeUrl(input) ? null : "Nur Adressen mit http oder https, z. B. gartenprojekt.org"
+  return normalizeUrl(input) ? null : getI18n().t("value.urlInvalid")
 }
 
 // ---------------------------------------------------------------------------
@@ -82,7 +83,7 @@ export function contactHref(value: unknown): string | null {
 
 export function contactError(input: string): string | null {
   if (input.trim() === "") return null
-  return contactKind(input) ? null : "Eine Telefonnummer oder E-Mail-Adresse"
+  return contactKind(input) ? null : getI18n().t("value.contactInvalid")
 }
 
 // ---------------------------------------------------------------------------
@@ -102,9 +103,9 @@ export function parseNumberInput(value: unknown): number | undefined {
 export function numberError(input: unknown, range: { min?: number; max?: number }): string | null {
   const n = parseNumberInput(input)
   if (n === undefined) return null
-  if (Number.isNaN(n)) return "Eine Zahl"
-  if (range.min !== undefined && n < range.min) return `Mindestens ${formatNumber(range.min)}`
-  if (range.max !== undefined && n > range.max) return `Höchstens ${formatNumber(range.max)}`
+  if (Number.isNaN(n)) return getI18n().t("value.numberInvalid")
+  if (range.min !== undefined && n < range.min) return getI18n().t("value.atLeast", { min: formatNumber(range.min) })
+  if (range.max !== undefined && n > range.max) return getI18n().t("value.atMost", { max: formatNumber(range.max) })
   return null
 }
 
@@ -116,7 +117,7 @@ export function numberError(input: unknown, range: { min?: number; max?: number 
  * nie „0". Sehr kleine und sehr große Zahlen stehen mit Exponent („1e-21").
  */
 export function formatNumber(value: number, unit?: string): string {
-  const text = formatExact(value)
+  const text = localSeparators(formatExact(value))
   return unit ? `${text} ${unit}` : text
 }
 
@@ -125,6 +126,16 @@ export function formatNumber(value: number, unit?: string): string {
  * ausgeschrieben erscheint; darüber bleibt der Exponent.
  */
 const MAX_PLAIN = 21
+
+/**
+ * `formatExact` schreibt deutsch (Komma als Dezimal-, Punkt als Tausendertrenner). In einer Sprache
+ * mit Punkt als Dezimaltrenner tauschen beide — sonst läse „1.000“ auf Englisch als eins.
+ */
+function localSeparators(text: string): string {
+  const decimal = new Intl.NumberFormat(getI18n().locale).format(1.5).replace(/\d/g, "")
+  if (decimal === ",") return text
+  return text.replace(/[.,]/g, (c) => (c === "," ? "." : ","))
+}
 
 function formatExact(value: number): string {
   if (!Number.isFinite(value)) return String(value)

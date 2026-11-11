@@ -17,10 +17,11 @@ import { resolveTypePresentation } from "../preview/type-presentation"
 import { usePeopleFormStates } from "../preview/use-people-line"
 import { withFixedGroup } from "./composer-mapping"
 import { useItemHasBindings } from "./use-item-bindings"
-import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
+import { itemBindingsReason } from "../../lib/item-bindings"
+import { getI18n, useI18n } from "@/i18n"
 
 /** Tooltip, wenn das Item beim Erstellen schon angelegt ist, ein Folgeschritt aber scheiterte (#523). */
-export const GROUP_FIXED_PERSISTED = "Schon angelegt – bleibt in diesem Space"
+export const groupFixedPersisted = (): string => getI18n().t("composer.reason.persisted")
 
 export interface ItemComposerProps {
   /** Types offered. Create: a module's subset; edit: locked to the item's type. */
@@ -134,13 +135,15 @@ export function ItemComposer({
   )
   const peopleStates = usePeopleFormStates(current ?? null, formEdges, formGroup)
   // Nach dem Anlegen steht der Typ fest.
+  const i18n = useI18n()
   const offeredTypes = useMemo(() => {
     if (!persisted || existingItem) return contentTypes
     const own = contentTypes.filter((t) => t.id === persisted.type)
     const types = own.length > 0 ? own : contentTypes
     if (!persistedGroup) return types
-    return withFixedGroup(types, persistedGroup, persistedHasBindings ? ITEM_BINDINGS_REASON : GROUP_FIXED_PERSISTED)
-  }, [contentTypes, persisted, existingItem, persistedGroup, persistedHasBindings])
+    return withFixedGroup(types, persistedGroup, persistedHasBindings ? itemBindingsReason() : groupFixedPersisted())
+    // i18n: Der Grund steht in der Sprache der Oberfläche; ein Sprachwechsel rechnet ihn neu.
+  }, [contentTypes, persisted, existingItem, persistedGroup, persistedHasBindings, i18n])
 
   return (
     <ContentComposer

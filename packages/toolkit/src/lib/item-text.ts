@@ -1,5 +1,6 @@
 import type { Item } from "@real-life/data-interface"
 import type { I18n } from "@/i18n"
+import { getI18n } from "@/i18n"
 
 /**
  * Wie ein Item heißt, wenn eine Fläche es in einer Zeile nennen muss.
@@ -10,7 +11,7 @@ import type { I18n } from "@/i18n"
  * Datenvertrags, `displayName` und `name` sind die Namen, die Personenprofile
  * und Spaces mitbringen.
  */
-export function itemTitle(item: Item, fallback = "Ohne Titel"): string {
+export function itemTitle(item: Item, fallback = getI18n().t("item.untitled")): string {
   const d = item.data as Record<string, unknown>
   for (const key of ["title", "displayName", "name"] as const) {
     const value = d[key]

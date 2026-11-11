@@ -9,8 +9,8 @@ import { ConnectorProvider } from "../src/hooks/connector-context"
 import { ItemComposer } from "../src/components/composer/item-composer"
 import { ItemRelationWidget } from "../src/components/composer/widgets/item-relation-widget"
 import { contentTypeFromRegister, mapComposerSubmission } from "../src/components/composer/content-types"
-import { withCreateGroup, withEditGroup, withGroupOptions, GROUP_FIXED_NO_SCOPE } from "../src/components/composer/composer-mapping"
-import { itemHasBindings, ITEM_BINDINGS_REASON } from "../src/lib/item-bindings"
+import { withCreateGroup, withEditGroup, withGroupOptions, groupFixedNoScope } from "../src/components/composer/composer-mapping"
+import { itemHasBindings, itemBindingsReason } from "../src/lib/item-bindings"
 import { ItemDetailView } from "../src/components/detail/item-detail-view"
 import { setTypeManifest } from "../src/components/preview/type-presentation"
 
@@ -185,7 +185,7 @@ describe("Anlegen in einem Schritt (Regel 6, 02 → Anlegen in einem bestimmten 
     expect(withCreateGroup(offered, true, "g")).toBe(offered)
     const fixed = withCreateGroup(offered, false, "g")
     expect(fixed[0]!.groupOptions?.map((o) => o.id)).toEqual(["g"])
-    expect(fixed[0]!.groupFixedReason).toBe(GROUP_FIXED_NO_SCOPE)
+    expect(fixed[0]!.groupFixedReason).toBe(groupFixedNoScope())
     // Übersicht ohne Zusage: welcher Space, bestimmt der Connector — keine Auswahl.
     expect(withCreateGroup(offered, false, undefined)[0]!.groupOptions).toBeUndefined()
   })
@@ -242,9 +242,9 @@ describe("Ein Item mit Beziehungen bleibt in seinem Space (Regel 5)", () => {
     const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], undefined)
     const typesOn = types.map((t) => ({ ...t, defaultGroup: "h" }))
     expect(withEditGroup(typesOn, true)).toBe(typesOn)
-    const locked = withEditGroup(typesOn, true, ITEM_BINDINGS_REASON)
+    const locked = withEditGroup(typesOn, true, itemBindingsReason())
     expect(locked[0]!.groupOptions?.map((o) => o.id)).toEqual(["h"])
-    expect(locked[0]!.groupFixedReason).toBe(ITEM_BINDINGS_REASON)
+    expect(locked[0]!.groupFixedReason).toBe(itemBindingsReason())
   })
 
   it("im Bearbeiten: eine eingehende Kante macht die Space-Auswahl fest, ohne Speichern zu sperren", async () => {
@@ -260,7 +260,7 @@ describe("Ein Item mit Beziehungen bleibt in seinem Space (Regel 5)", () => {
     expect(host.querySelector('button[aria-label^="Space wählen"]')).toBeNull()
     const fixed = host.querySelector('[data-slot="composer-space"]')
     expect(fixed?.textContent).toContain("Hof")
-    expect(fixed?.textContent).toContain(ITEM_BINDINGS_REASON)
+    expect(fixed?.textContent).toContain(itemBindingsReason())
     expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Speichern")?.disabled).toBe(false)
   })
 
@@ -287,7 +287,7 @@ describe("Ein Item mit Beziehungen bleibt in seinem Space (Regel 5)", () => {
     await act(async () => host.querySelector<HTMLInputElement>('[data-item-relation-field="blocks"] input')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })))
     await settle()
     expect(host.querySelector('button[aria-label^="Space wählen"]')).toBeNull()
-    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain(ITEM_BINDINGS_REASON)
+    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain(itemBindingsReason())
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Im Garten entfernen"]')!.click())
     await settle()
     expect(host.querySelector('button[aria-label^="Space wählen"]')).not.toBeNull()
@@ -545,9 +545,9 @@ describe("#538 Codex-Runde: Übergänge", () => {
   })
 
   it("ohne GroupScopeCapable in der Übersicht: kein Anlegen ohne bestimmbaren Space, mit Grund", async () => {
-    const { GROUP_UNAVAILABLE_NO_SCOPE } = await import("../src/components/composer/composer-mapping")
+    const { groupUnavailableNoScope } = await import("../src/components/composer/composer-mapping")
     const types = withCreateGroup(withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], undefined, null), false, undefined)
-    expect(types[0]!.groupUnavailableReason).toBe(GROUP_UNAVAILABLE_NO_SCOPE)
+    expect(types[0]!.groupUnavailableReason).toBe(groupUnavailableNoScope())
     connector.setCurrentGroup(null)
     const create = vi.spyOn(connector, "createItem")
     await render(createElement(ItemComposer, {
@@ -556,17 +556,17 @@ describe("#538 Codex-Runde: Übergänge", () => {
     }), withoutScope(connector))
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
     expect(create).not.toHaveBeenCalled()
-    expect(host.querySelector("[data-space-required]")?.textContent).toContain(GROUP_UNAVAILABLE_NO_SCOPE)
+    expect(host.querySelector("[data-space-required]")?.textContent).toContain(groupUnavailableNoScope())
   })
 })
 
 describe("#538 Codex-Runde 2: Spaces noch nicht geladen", () => {
   it("withSpacesPending sperrt das Anlegen, solange die Spaces laden und keine Option bekannt ist", async () => {
-    const { withSpacesPending, GROUPS_LOADING } = await import("../src/components/composer/composer-mapping")
+    const { withSpacesPending, groupsLoading } = await import("../src/components/composer/composer-mapping")
     const base = [contentTypeFromRegister("task")]
     expect(withSpacesPending(base, false)).toBe(base)
     const pending = withSpacesPending(base, true)
-    expect(pending[0]!.groupUnavailableReason).toBe(GROUPS_LOADING)
+    expect(pending[0]!.groupUnavailableReason).toBe(groupsLoading())
     // Sind Optionen schon bekannt, gilt die normale Pflicht.
     const withOptions = withGroupOptions(base, [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], undefined, null)
     expect(withSpacesPending(withOptions, true)).toBe(withOptions)
@@ -577,6 +577,6 @@ describe("#538 Codex-Runde 2: Spaces noch nicht geladen", () => {
     }))
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)) })
     expect(create).not.toHaveBeenCalled()
-    expect(host.querySelector("[data-space-required]")?.textContent).toContain(GROUPS_LOADING)
+    expect(host.querySelector("[data-space-required]")?.textContent).toContain(groupsLoading())
   })
 })

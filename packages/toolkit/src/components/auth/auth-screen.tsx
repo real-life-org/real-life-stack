@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../pr
 import { Input } from "../primitives/input"
 import { Label } from "../primitives/label"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/i18n"
+import { getI18n, useI18n, type I18n } from "@/i18n"
+
 
 export interface AuthScreenProps {
   /** Connector mit Authenticatable-Capability — der Screen rendert genau die
@@ -24,6 +25,16 @@ export interface AuthScreenProps {
  * seinen eigenen DIDAuthScreen (Seed-Onboarding), Backend-Connectoren wie
  * Supabase bekommen E-Mail-Login/-Registrierung plus anonymen Schnellstart.
  */
+/**
+ * Der anonyme Zugang: der allgemeine Text der Anmeldeart in der Oberflächensprache — es sei denn, der
+ * Connector sagt etwas Eigenes (etwa, dass nichts gespeichert wird). Das zeigt die Seite unverändert.
+ */
+// i18n-exempt: Vergleichswerte, um den allgemeinen Text eines Connectors zu erkennen, keine Anzeige
+const GENERIC_ANONYMOUS = new Set(["", "Anonym ausprobieren", "Try anonymously"])
+export function anonymousLabel(i18n: I18n, label: string | undefined): string {
+  return GENERIC_ANONYMOUS.has((label ?? "").trim()) ? i18n.t("auth.method.anonymous") : label!
+}
+
 export function AuthScreen({ connector, onAuthenticated, title, className }: AuthScreenProps) {
   const { t } = useI18n()
   const methods = React.useMemo(() => new Map(connector.getAuthMethods().map((m) => [m.method, m])), [connector])
@@ -166,7 +177,7 @@ export function AuthScreen({ connector, onAuthenticated, title, className }: Aut
                 disabled={submitting}
                 onClick={() => void run("anonymous", {})}
               >
-                {anonymous.label}
+                {anonymousLabel(getI18n(), anonymous.label)}
               </Button>
             </>
           )}

@@ -13,6 +13,7 @@ import {
 import { toStoredDateTime } from "./date-widget-state"
 import { valueFieldFromData, valueFieldToData } from "./value-fields"
 import { incomingChangesFromWidgetData, itemRelationDataKeys, itemRelationsFromWidgetData, itemRelationsToWidgetData } from "./item-relations"
+import { getI18n } from "@/i18n"
 
 /**
  * Composer ↔ item: the one mapping every module and every app shares.
@@ -249,7 +250,7 @@ export function createComposerMapping(types: readonly ContentTypeConfig[] | Reso
  */
 export function withFixedGroup(types: ContentTypeConfig[], groupId: string, reason?: string): ContentTypeConfig[] {
   return types.map((t) => {
-    const option = t.groupOptions?.find((o) => o.id === groupId) ?? { id: groupId, name: "Space der Vorlage" }
+    const option = t.groupOptions?.find((o) => o.id === groupId) ?? { id: groupId, name: getI18n().t("composer.templateSpace") }
     return {
       ...t,
       groupOptions: [option],
@@ -267,7 +268,7 @@ export function withFixedGroup(types: ContentTypeConfig[], groupId: string, reas
  * die Optionen vorausgewählt sind —, statt wegzufallen. Ist keiner bekannt,
  * gibt es keinen Space im Kopf.
  */
-export const GROUP_FIXED_NO_MOVE = "Dieser Speicher kann Einträge nicht in einen anderen Space verschieben"
+export const groupFixedNoMove = (): string => getI18n().t("composer.reason.noMove")
 
 /**
  * `lockedReason`: Das Item hat Beziehungen (shared-components → Space des
@@ -278,7 +279,7 @@ export function withEditGroup(types: ContentTypeConfig[], canMove: boolean, lock
   if (canMove && !lockedReason) return types
   return types.flatMap((t) => {
     const known = t.defaultGroup && t.groupOptions?.some((o) => o.id === t.defaultGroup) ? t.defaultGroup : undefined
-    if (known) return withFixedGroup([t], known, canMove ? lockedReason : GROUP_FIXED_NO_MOVE)
+    if (known) return withFixedGroup([t], known, canMove ? lockedReason : groupFixedNoMove())
     return [{ ...t, groupOptions: undefined, defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") }]
   })
 }
@@ -291,20 +292,20 @@ export function withEditGroup(types: ContentTypeConfig[], canMove: boolean, lock
  * geöffneten; in der Übersicht bestimmt der Connector ihn, das Formular
  * zeigt dann keine Auswahl.
  */
-export const GROUP_FIXED_NO_SCOPE = "Dieser Speicher legt nur im geöffneten Space an"
+export const groupFixedNoScope = (): string => getI18n().t("composer.reason.noScope")
 
 export function withCreateGroup(types: ContentTypeConfig[], canScope: boolean, openSpace: string | undefined): ContentTypeConfig[] {
   if (canScope) return types
   return types.map((t) => {
     if (!t.groupOptions) return t
-    if (openSpace && t.groupOptions.some((o) => o.id === openSpace)) return withFixedGroup([t], openSpace, GROUP_FIXED_NO_SCOPE)[0]!
+    if (openSpace && t.groupOptions.some((o) => o.id === openSpace)) return withFixedGroup([t], openSpace, groupFixedNoScope())[0]!
     // Spaces gibt es, aber keinen, in dem das Formular anlegen könnte: Anlegen
     // gesperrt, statt den Connector still wählen zu lassen (Regel 8).
-    return { ...t, groupOptions: undefined, defaultGroup: undefined, groupUnavailableReason: GROUP_UNAVAILABLE_NO_SCOPE, defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") }
+    return { ...t, groupOptions: undefined, defaultGroup: undefined, groupUnavailableReason: groupUnavailableNoScope(), defaultWidgets: t.defaultWidgets.filter((w) => w !== "group") }
   })
 }
 
-export const GROUP_UNAVAILABLE_NO_SCOPE = "Dieser Speicher legt nur im geöffneten Space an – zum Erstellen einen Space öffnen"
+export const groupUnavailableNoScope = (): string => getI18n().t("composer.reason.openSpaceToCreate")
 
 export function withGroupOptions(
   types: ContentTypeConfig[],
@@ -353,9 +354,9 @@ export function withGroupOptions(
  * Formular-Space ungeklärt: Anlegen gesperrt, mit Grund (Space des
  * Formulars, Regel 8; Codex zu #538). Ein Connector ohne Spaces lädt nie.
  */
-export const GROUPS_LOADING = "Spaces werden geladen – gleich lässt sich speichern"
+export const groupsLoading = (): string => getI18n().t("composer.reason.spacesLoading")
 
 export function withSpacesPending(types: ContentTypeConfig[], pending: boolean): ContentTypeConfig[] {
   if (!pending || types.every((t) => (t.groupOptions?.length ?? 0) > 0)) return types
-  return types.map((t) => ((t.groupOptions?.length ?? 0) > 0 ? t : { ...t, groupUnavailableReason: GROUPS_LOADING }))
+  return types.map((t) => ((t.groupOptions?.length ?? 0) > 0 ? t : { ...t, groupUnavailableReason: groupsLoading() }))
 }

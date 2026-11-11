@@ -133,7 +133,7 @@ describe("contrastChecks", () => {
     // Genau der Fall, den die Anzeige abfangen soll: jemand setzt die
     // Fuellflaeche auf denselben Ton wie ihre Schrift.
     const tokens = { ...build("#e87520", "light"), "--primary": "#ffffff", "--primary-foreground": "#ffffff" }
-    const hit = contrastChecks(tokens, { accentOnly: true }).find((c) => c.label === "Knopfbeschriftung")
+    const hit = contrastChecks(tokens, { accentOnly: true }).find((c) => c.label === "theme.pair.buttonText")
     expect(hit?.ok).toBe(false)
     expect(hit?.ratio).toBeCloseTo(1, 1)
   })
