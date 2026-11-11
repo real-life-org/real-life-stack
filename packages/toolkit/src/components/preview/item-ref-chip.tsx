@@ -7,6 +7,7 @@ import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import { cn } from "../../lib/utils"
 import { statusRole } from "./field-register"
 import { GENERIC_BADGE, resolveTypePresentation } from "./type-presentation"
+import { getI18n, useI18n } from "@/i18n"
 
 /**
  * Chip für ein Item-Ziel (C3 `item-relation`, B15 `item-ref`).
@@ -23,7 +24,7 @@ import { GENERIC_BADGE, resolveTypePresentation } from "./type-presentation"
 const titleOf = (item: Item): string => {
   const data = (item.data ?? {}) as Record<string, unknown>
   const title = data.title ?? data.displayName ?? data.content
-  return typeof title === "string" && title.trim() !== "" ? title : "Ohne Titel"
+  return typeof title === "string" && title.trim() !== "" ? title : getI18n().t("item.untitled")
 }
 
 /** Ist das Item erledigt? Sein Status-Wert trägt im Register die Rolle `done` (06, Regel 18). */
@@ -51,6 +52,7 @@ export interface ItemRefChipProps {
 }
 
 export function ItemRefChip({ item, qualifier, onRemove, inert, className }: ItemRefChipProps) {
+  const { t } = useI18n()
   const focus = useOptionalItemFocus()
   const presentation = resolveTypePresentation(item.type)
   const badge = presentation.badge ?? GENERIC_BADGE
@@ -61,7 +63,7 @@ export function ItemRefChip({ item, qualifier, onRemove, inert, className }: Ite
     <>
       <Icon className="h-3 w-3 shrink-0" aria-hidden />
       <span className={cn("truncate", done && "line-through")}>{title}</span>
-      {done && <span className="sr-only"> (erledigt)</span>}
+      {done && <span className="sr-only">{t("item.doneSuffix")}</span>}
     </>
   )
   const open = !inert && focus ? () => focus.focusItem(item.id) : null
@@ -85,7 +87,7 @@ export function ItemRefChip({ item, qualifier, onRemove, inert, className }: Ite
           {onRemove && (
             <button
               type="button"
-              aria-label={`${title} entfernen`}
+              aria-label={t("item.removeRef", { title })}
               onClick={(event) => {
                 event.stopPropagation()
                 onRemove()

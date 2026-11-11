@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/ava
 import { ProfileLink } from "@/components/profile/profile-link"
 import { useReactionUsers } from "@/hooks/use-reactions"
 import type { AggregatedReaction } from "@/hooks/use-reactions"
+import { useI18n } from "@/i18n"
 
 export interface ReactionDetailsProps {
   /** ID of the item to show reaction details for. */
@@ -48,6 +49,7 @@ export function ReactionDetails({
   showHeaderClose = true,
   className,
 }: ReactionDetailsProps) {
+  const { t } = useI18n()
   const [activeFilter, setActiveFilter] = useState<string | undefined>(initialEmoji)
   const { data: users, isLoading } = useReactionUsers(itemId, activeFilter)
 
@@ -57,14 +59,14 @@ export function ReactionDetails({
     <div className={cn("flex flex-col h-full", className)}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
-        <h3 className="text-sm font-semibold text-foreground">Reaktionen</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t("reactions.title")}</h3>
         {showHeaderClose && (
           <button
             type="button"
             className="text-muted-foreground hover:text-foreground text-sm"
             onClick={onClose}
           >
-            Schliessen
+            {t("common.close")}
           </button>
         )}
       </div>
@@ -82,7 +84,7 @@ export function ReactionDetails({
           )}
           onClick={() => setActiveFilter(undefined)}
         >
-          Alle
+          {t("reactions.all")}
           <span className="tabular-nums">{totalCount}</span>
         </button>
 
@@ -108,11 +110,11 @@ export function ReactionDetails({
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
-            Wird geladen …
+            {t("reactions.loading")}
           </div>
         ) : users.length === 0 ? (
           <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
-            Noch keine Reaktionen
+            {t("reactions.none")}
           </div>
         ) : (
           <ul>
@@ -121,7 +123,7 @@ export function ReactionDetails({
                 key={`${user.id}-${user.emoji}`}
                 className="flex items-center gap-3 px-4 py-2 hover:bg-muted/50 transition-colors"
               >
-                <ProfileLink userId={user.id} label={`Profil von ${user.displayName} öffnen`}>
+                <ProfileLink userId={user.id} label={t("profile.openOf", { name: user.displayName })}>
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={user.avatarUrl} alt={user.displayName} />
                     <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
@@ -134,9 +136,9 @@ export function ReactionDetails({
                   {user.unsigned && (
                     <span
                       className="ml-2 text-xs text-muted-foreground/70"
-                      title="Ohne Signatur: Dass die Reaktion von dieser Person stammt, lässt sich nicht nachweisen."
+                      title={t("signature.unsignedReaction")}
                     >
-                      unsigniert
+                      {t("signature.unsigned")}
                     </span>
                   )}
                 </span>

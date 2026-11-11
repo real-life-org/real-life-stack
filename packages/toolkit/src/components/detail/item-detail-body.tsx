@@ -189,7 +189,7 @@ export function ItemDetailBody({
             aus der Karte schieben. Was rechts steht, ist die kuerzere und
             verlaesslichere Auskunft. */}
         <div className="ml-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-          <ProfileLink userId={authorId} label={`Profil von ${authorName} öffnen`}>
+          <ProfileLink userId={authorId} label={i18n.t("profile.openOf", { name: authorName })}>
             <Avatar className="h-5 w-5 shrink-0">
               <AvatarImage src={author?.avatarUrl} alt={authorName} />
               <AvatarFallback className="bg-primary/10 text-[9px] font-medium text-primary">
@@ -198,7 +198,7 @@ export function ItemDetailBody({
             </Avatar>
           </ProfileLink>
           <span className="truncate" title={authorName}>
-            Erstellt von <span className="text-foreground">{authorName}</span>
+            {i18n.t("detail.createdBy")} <span className="text-foreground">{authorName}</span>
           </span>
           <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
             <span aria-hidden>·</span>

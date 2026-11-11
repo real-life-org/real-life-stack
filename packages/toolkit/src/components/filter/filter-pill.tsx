@@ -7,6 +7,7 @@ import { cn } from "../../lib/utils"
 import { FilterCardSections } from "./filter-card"
 import { useSharedFilter } from "./filter-store"
 import type { FilterTypeOption } from "./types"
+import { useI18n } from "@/i18n"
 
 export interface FilterPillProps {
   availableTags?: readonly string[]
@@ -45,6 +46,7 @@ export function FilterPill({
   drawerExtra,
   className,
 }: FilterPillProps) {
+  const { t } = useI18n()
   const { value, setValue } = useSharedFilter()
   const [offen, setOffen] = useState(false)
   const huelle = useRef<HTMLDivElement | null>(null)
@@ -87,7 +89,7 @@ export function FilterPill({
   // Weg zurueck, aber nur wenn das Schliessen von hier ausging (siehe oben).
   useEffect(() => {
     if (offen) {
-      huelle.current?.querySelector<HTMLElement>("[aria-label='Filter schließen']")?.focus()
+      huelle.current?.querySelector<HTMLElement>("[data-filter-close]")?.focus()
       return
     }
     if (!fokusZurueck.current) return
@@ -137,7 +139,7 @@ export function FilterPill({
             data-filter-pill-trigger
             onClick={() => setOffen(true)}
             aria-expanded={false}
-            aria-label="Filter"
+            aria-label={t("filter.label")}
             // Auf dem Telefon nur das Symbol — der Text nahm der schmalen
             // Flaeche Platz, ohne mehr zu sagen. Quadratisch und ruhiger als
             // der runde Plusknopf gegenueber: Der ist die Handlung, dies eine
@@ -146,7 +148,7 @@ export function FilterPill({
             className="flex h-11 w-11 items-center justify-center gap-2 text-sm font-medium text-muted-foreground sm:h-12 sm:w-auto sm:px-[18px] sm:text-foreground"
           >
             <Filter className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline">Filter</span>
+            <span className="hidden sm:inline">{t("filter.label")}</span>
           </button>
         )}
       </div>

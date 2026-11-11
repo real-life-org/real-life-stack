@@ -8,6 +8,7 @@ import { cn } from "../../lib/utils"
 import { VoteActions } from "../resonance/vote-actions"
 import { statusRole, type EdgeEntry, type FieldEntry } from "./field-register"
 import { useFollowUps, useSelfAction } from "./use-people-line"
+import { useI18n } from "@/i18n"
 
 /**
  * Slot `actions` aus dem Register: Selbstaktionen als Pill-Zeile (C2) und die
@@ -90,6 +91,7 @@ export function SelfActionPills({
   defaultStatus?: string
 }) {
   const followUps = edge.selfAction?.followUps
+  const { t } = useI18n()
   const statusField = followUps ? fields?.find((f) => f.key === followUps.field && f.widget === "status") : undefined
   const transitions = useMemo(() => (statusField ? { field: statusField, defaultStatus } : undefined), [statusField, defaultStatus])
   const { available, mine, others, act, withdraw, busy, error } = useSelfAction(item, edge, transitions)
@@ -205,7 +207,7 @@ export function SelfActionPills({
       )}
       {(error || follow.error) && (
         <span role="alert" className="basis-full text-xs text-destructive">
-          Konnte nicht gespeichert werden. {error ?? follow.error}
+          {t("register.saveFailed", { error: error ?? follow.error ?? "" })}
         </span>
       )}
     </div>

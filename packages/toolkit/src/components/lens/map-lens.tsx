@@ -11,6 +11,7 @@ import {
   type SelectionFocusVisibleAreaState,
 } from "../../lib/selection-focus"
 import { hasCluster, type MapAdapter, type MapBounds, type MapMarkerSpec, type MapMountOptions } from "../map"
+import { useI18n } from "@/i18n"
 
 /** A single selected marker is close enough to read without a street-level jump. */
 export const SINGLE_MARKER_ZOOM = 16
@@ -330,6 +331,7 @@ export function MapLens({
   onMountError,
   containerClassName,
 }: MapLensProps) {
+  const { t } = useI18n()
   const outerRef = useRef<HTMLDivElement>(null)
   const initialViewRef = useRef(initialView)
   const [adapter, setAdapter] = useState<MapAdapter | null>(null)
@@ -425,7 +427,7 @@ export function MapLens({
   }, [activeItemId, adapter, markers, selectionFocusVisibleArea, viewportMode, viewportResetKey])
 
   return (
-    <section aria-label="Kartenansicht" className="relative h-full min-h-80">
+    <section aria-label={t("lens.map")} className="relative h-full min-h-80">
       <div ref={outerRef} className={`absolute inset-0 isolate ${containerClassName ?? ""}`} />
     </section>
   )

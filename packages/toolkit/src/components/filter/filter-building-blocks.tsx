@@ -3,6 +3,7 @@
 import type { ReactNode } from "react"
 import { Check, X } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { useI18n } from "@/i18n"
 
 /**
  * Building blocks for the shared `FilterBar` UI.
@@ -32,6 +33,7 @@ export interface FilterChipProps {
 }
 
 export function FilterChip({ label, onRemove, icon, className }: FilterChipProps) {
+  const { t } = useI18n()
   return (
     <span
       className={cn(
@@ -48,7 +50,7 @@ export function FilterChip({ label, onRemove, icon, className }: FilterChipProps
           onRemove()
         }}
         className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-        aria-label="Filter entfernen"
+        aria-label={t("filter.remove")}
       >
         <X className="h-3 w-3" />
       </button>
@@ -81,11 +83,12 @@ export function FilterMultiSelect({
   options,
   value,
   onChange,
-  emptyLabel = "Keine Optionen",
+  emptyLabel,
   className,
 }: FilterMultiSelectProps) {
+  const { t } = useI18n()
   if (options.length === 0) {
-    return <p className={cn("text-xs text-muted-foreground", className)}>{emptyLabel}</p>
+    return <p className={cn("text-xs text-muted-foreground", className)}>{emptyLabel ?? t("filter.noOptions")}</p>
   }
   const selected = new Set(value)
   return (
