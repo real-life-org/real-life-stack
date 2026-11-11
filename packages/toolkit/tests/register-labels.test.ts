@@ -52,6 +52,28 @@ describe("Typ-Register", () => {
     expect(resolveTypePresentation("task").fields).toBe(resolveTypePresentation("task").fields)
   })
 
+  it("übersetzt nur Text-Eigenschaften: ein technischer Wert mit passendem Schlüssel bleibt (Review #644)", () => {
+    sprache("en")
+    const eintrag = { id: "y", label: "Typ", fields: [{ key: "label", widget: "text", label: "Feld" }] }
+    // Schlüssel, die genau auf technische Werte zeigen würden
+    extendMessages({ de: { "type.y.fields.label.key": "KAPUTT", "type.y.fields.label.widget": "KAPUTT" }, en: { "type.y.fields.label.key": "BROKEN", "type.y.fields.label.widget": "BROKEN" } })
+    const out = localizeRegisterEntry(getI18n(), "type.y", eintrag)
+    expect(out.fields[0]).toEqual({ key: "label", widget: "text", label: "Feld" })
+  })
+
+  it("eine weitere Liste einer App bekommt nicht die Texte der Toolkit-Liste an derselben Position (Review #644)", () => {
+    sprache("en")
+    const appListe = { id: "statement", lists: [{ query: "app-eigene", label: "Meine Liste", action: { id: "app-aktion", label: "+ Neu" } }] }
+    const out = localizeRegisterEntry(getI18n(), "type.statement", appListe)
+    expect(out.lists[0].label).toBe("Meine Liste")
+    expect(out.lists[0].action.label).toBe("+ Neu")
+    // die Toolkit-Liste selbst ist übersetzt
+    expect(resolveTypePresentation("statement").lists?.find((l) => l.query === "family")?.label).toBe("Versions")
+    // ohne Kennung: nicht übersetzt
+    const ohneKennung = { id: "statement", lists: [{ label: "Fassungen" }] }
+    expect(localizeRegisterEntry(getI18n(), "type.statement", ohneKennung)).toBe(ohneKennung)
+  })
+
   it("Listen sind über ihre Kennung adressiert, nicht über die Position; ohne Schlüssel bleibt der Eintrag dasselbe Objekt", () => {
     sprache("en")
     const eintrag = { id: "x", label: "Eintrag", fields: [{ key: "b", label: "Bee" }, { key: "a", label: "Ah" }] }

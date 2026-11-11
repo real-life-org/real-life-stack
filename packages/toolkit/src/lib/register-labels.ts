@@ -11,7 +11,7 @@
  * - Modul: `module.<id>.label`
  * - Typ: `type.<id>.<Pfad>`, der Pfad folgt der Struktur des Eintrags. Listen sind über die Kennung
  *   ihrer Einträge adressiert (`key` bei Feldern, `<predicate>.<itemRole>` bei Kanten, `value` bei
- *   Optionen), nicht
+ *   Optionen, `query` bei Listen; ein Eintrag ohne Kennung wird nicht übersetzt), nicht
  *   über ihre Position: `type.event.label`, `type.task.fields.status.options.todo.label`,
  *   `type.event.edges.invited.from.add`, `type.task.composer.submitLabel`.
  *
@@ -29,21 +29,28 @@ export function moduleLabel(i18n: I18n, entry: { id: string; label: string }): s
   return registerText(i18n, `module.${entry.id}.label`, entry.label)
 }
 
-/** Die Kennung, unter der ein Listeneintrag im Schlüssel steht. */
-const IDENTITY = ["key", "predicate", "value", "id"] as const
+/** Die Eigenschaften, die Text tragen. Alles andere (`key`, `widget`, `predicate` …) ist technisch und bleibt. */
+const TEXT_PROPS = new Set(["label", "add", "mine", "release", "action", "submitLabel", "missing", "placeholder"])
 
-function segmentOf(item: unknown, index: number): string {
-  if (item && typeof item === "object") {
-    // Eine Kante ist erst mit ihrer Rolle eindeutig: dasselbe Prädikat steht eingehend und ausgehend
-    // („Braucht" und „Ermöglicht" an `blocks`).
-    const { predicate, itemRole } = item as Record<string, unknown>
-    if (typeof predicate === "string" && typeof itemRole === "string") return `${predicate}.${itemRole}`
-    for (const prop of IDENTITY) {
-      const value = (item as Record<string, unknown>)[prop]
-      if (typeof value === "string" && value !== "") return value
-    }
+/** Die Kennung, unter der ein Listeneintrag im Schlüssel steht. */
+const IDENTITY = ["key", "value", "query", "id"] as const
+
+/**
+ * Die Kennung eines Listeneintrags — oder `null`: Ein Eintrag ohne Kennung wird nicht übersetzt. Die
+ * Position taugt nicht als Adresse, weil eine weitere Schicht ihre eigenen Einträge an dieselbe Stelle
+ * ihrer Liste legt und sonst die Texte des Toolkits bekäme.
+ */
+function segmentOf(item: unknown): string | null {
+  if (!item || typeof item !== "object") return null
+  // Eine Kante ist erst mit ihrer Rolle eindeutig: dasselbe Prädikat steht eingehend und ausgehend
+  // („Braucht" und „Ermöglicht" an `blocks`).
+  const { predicate, itemRole } = item as Record<string, unknown>
+  if (typeof predicate === "string" && typeof itemRole === "string") return `${predicate}.${itemRole}`
+  for (const prop of IDENTITY) {
+    const value = (item as Record<string, unknown>)[prop]
+    if (typeof value === "string" && value !== "") return value
   }
-  return String(index)
+  return null
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -53,17 +60,20 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Ersetzt in einem Register-Eintrag jeden Text, für den `<prefix>.<Pfad>` im Wörterbuch steht.
- * Alles andere (Komponenten, Funktionen, Kennungen, Texte ohne Schlüssel) bleibt, wie es ist; ein
- * Eintrag ohne einen einzigen Schlüssel kommt unverändert (dasselbe Objekt) zurück.
+ * Ersetzt in einem Register-Eintrag jeden Text (eine der {@link TEXT_PROPS}), für den
+ * `<prefix>.<Pfad>` im Wörterbuch steht. Alles andere (Komponenten, Funktionen, Kennungen, Texte ohne
+ * Schlüssel, Listeneinträge ohne Kennung) bleibt, wie es ist; ein Eintrag ohne einen einzigen Schlüssel
+ * kommt unverändert (dasselbe Objekt) zurück.
  */
 export function localizeRegisterEntry<T>(i18n: I18n, prefix: string, entry: T): T {
-  const walk = (value: unknown, path: string): unknown => {
-    if (typeof value === "string") return hasMessage(path) ? i18n.tDynamic(path) : value
+  const walk = (value: unknown, path: string, prop: string | null): unknown => {
+    if (typeof value === "string") return prop !== null && TEXT_PROPS.has(prop) && hasMessage(path) ? i18n.tDynamic(path) : value
     if (Array.isArray(value)) {
       let changed = false
-      const next = value.map((item, index) => {
-        const out = walk(item, `${path}.${segmentOf(item, index)}`)
+      const next = value.map((item) => {
+        const segment = segmentOf(item)
+        if (segment === null) return item
+        const out = walk(item, `${path}.${segment}`, null)
         if (out !== item) changed = true
         return out
       })
@@ -73,7 +83,7 @@ export function localizeRegisterEntry<T>(i18n: I18n, prefix: string, entry: T): 
       let changed = false
       const next: Record<string, unknown> = {}
       for (const [key, item] of Object.entries(value)) {
-        const out = walk(item, `${path}.${key}`)
+        const out = walk(item, `${path}.${key}`, key)
         if (out !== item) changed = true
         next[key] = out
       }
@@ -81,5 +91,5 @@ export function localizeRegisterEntry<T>(i18n: I18n, prefix: string, entry: T): 
     }
     return value
   }
-  return walk(entry, prefix) as T
+  return walk(entry, prefix, null) as T
 }
