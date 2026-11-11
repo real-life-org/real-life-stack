@@ -81,6 +81,9 @@ export function ItemDetailView({
   mode: modeProp,
   onModeChange,
 }: ItemDetailViewProps) {
+  // Vor jedem frühen Rücksprung (Hook-Reihenfolge): Der Grund für den festen Space unten entsteht in
+  // diesem Render und soll einem Sprachwechsel folgen.
+  useI18n()
   const { data: item } = useItem(itemId)
   const connector = useConnector()
   // Spec 08 → Einfrieren: once another person bound a reference to the
@@ -129,8 +132,6 @@ export function ItemDetailView({
   // nur der Space des Items, nie die des Erstellens (Regel 1; Codex R1/5):
   // Ohne bekannten Space bleibt der Kopf leer, und Speichern verschiebt nicht.
   const canMove = hasItemGroups(connector)
-  // Der Grund unten entsteht in diesem Render: bei Sprachwechsel neu rechnen.
-  useI18n()
   const composerTypes = withEditGroup(
     (vorlage ? contentTypes.filter((t) => t.id === vorlage) : []).map((t) => ({ ...t, defaultGroup: itemGroup ?? undefined })),
     canMove,
