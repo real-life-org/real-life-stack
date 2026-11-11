@@ -37,15 +37,16 @@ import {
   type ResonanceSortMode,
 } from "../lib/resonance-sort"
 import type { ModuleViewProps } from "../lib/module-register"
+import { useI18n, type MessageKey } from "@/i18n"
 
-const SORT_LABELS: Record<ResonanceSortMode, string> = {
-  newest: "Neueste",
-  votes: "Stimmen",
-  approval: "Zustimmung",
-  concerns: "Bedenken",
-  rejection: "Ablehnung",
-  participation: "Beteiligung",
-  activity: "Aktivität",
+const SORT_LABELS: Record<ResonanceSortMode, MessageKey> = {
+  newest: "resonance.sort.newest",
+  votes: "resonance.sort.votes",
+  approval: "resonance.sort.approval",
+  concerns: "resonance.sort.concerns",
+  rejection: "resonance.sort.rejection",
+  participation: "resonance.sort.participation",
+  activity: "resonance.sort.activity",
 }
 
 const NO_ONE: string[] = []
@@ -65,6 +66,7 @@ const SORT_MODES: readonly ResonanceSortMode[] = ["newest", "votes", "approval",
  * Karte kommen vom Host; Detail, Erstellen und Plusknopf stellt er.
  */
 export function ResonanceModule({ items: statements = [], itemsLoading: isLoading = false }: ModuleViewProps) {
+  const { t } = useI18n()
   // Alle Stimmen des Space in einer Abfrage — die Sortierschluessel je
   // Aussage (Anzahl, Zustimmung, letzte Aktivitaet) brauchen das ganze Bild.
   const { data: voteRecords } = useRelationRecords({ predicate: VOTE_PREDICATE })
@@ -141,13 +143,13 @@ export function ResonanceModule({ items: statements = [], itemsLoading: isLoadin
     <>
       {chosenPeople.length > 0 && (
         <FilterChip
-          label={chosenPeople.length === 1 ? `Person: ${nameOf(chosenPeople[0]!)}` : `${chosenPeople.length} Personen`}
+          label={chosenPeople.length === 1 ? t("resonance.filter.person", { name: nameOf(chosenPeople[0]!) }) : t("resonance.filter.people", { count: chosenPeople.length })}
           onRemove={() => setChosenPeople([])}
         />
       )}
-      {votersOnly && <FilterChip label="Nur wer abgestimmt hat" onRemove={() => setVotersOnly(false)} />}
+      {votersOnly && <FilterChip label={t("resonance.filter.votersOnly")} onRemove={() => setVotersOnly(false)} />}
       {greenBy.length > 0 && (
-        <FilterChip label={`Trägt grün: ${greenBy.map(nameOf).join(", ")}`} onRemove={() => setGreenBy([])} />
+        <FilterChip label={t("resonance.filter.greenByNamed", { names: greenBy.map(nameOf).join(", ") })} onRemove={() => setGreenBy([])} />
       )}
     </>
   ) : undefined
@@ -159,13 +161,13 @@ export function ResonanceModule({ items: statements = [], itemsLoading: isLoadin
         drawerExtra={
           <>
             {memberOptions.length > 0 && (
-              <FilterSection label="Personen">
+              <FilterSection label={t("resonance.filter.peopleSection")}>
                 <FilterMultiSelect options={memberOptions} value={chosenPeople} onChange={setChosenPeople} />
-                <FilterToggle label="Nur wer abgestimmt hat" value={votersOnly} onChange={setVotersOnly} />
+                <FilterToggle label={t("resonance.filter.votersOnly")} value={votersOnly} onChange={setVotersOnly} />
               </FilterSection>
             )}
             {memberOptions.length > 0 && (
-              <FilterSection label="Trägt grün">
+              <FilterSection label={t("resonance.filter.greenBy")}>
                 <FilterMultiSelect options={memberOptions} value={greenBy} onChange={setGreenBy} />
               </FilterSection>
             )}
@@ -178,14 +180,14 @@ export function ResonanceModule({ items: statements = [], itemsLoading: isLoadin
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
                   <ArrowUpDown className="h-3.5 w-3.5" />
-                  {SORT_LABELS[sortMode]}
+                  {t(SORT_LABELS[sortMode])}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuRadioGroup value={sortMode} onValueChange={(value) => setSortMode(value as ResonanceSortMode)}>
                   {SORT_MODES.map((mode) => (
                     <DropdownMenuRadioItem key={mode} value={mode}>
-                      {SORT_LABELS[mode]}
+                      {t(SORT_LABELS[mode])}
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
@@ -212,11 +214,11 @@ export function ResonanceModule({ items: statements = [], itemsLoading: isLoadin
         ) : sortedStatements.length === 0 ? (
           <EmptyState
             icon={MessageSquareQuote}
-            title={filterActive || moduleFilterActive ? "Keine Treffer" : "Noch keine Aussagen"}
+            title={filterActive || moduleFilterActive ? t("feed.noMatches") : t("resonance.empty")}
             description={
               filterActive || moduleFilterActive
-                ? "Passe die Filter an."
-                : "Bring die erste Aussage ein und finde heraus, was in der Gruppe Resonanz findet."
+                ? t("resonance.noMatchesHint")
+                : t("resonance.emptyHint")
             }
           />
         ) : (

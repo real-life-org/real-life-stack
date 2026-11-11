@@ -54,6 +54,6 @@ describe("ContentComposer — Personenfelder", () => {
     expect(markup).toContain("Zugewiesen")
     expect(markup).not.toContain("Personen")
     // Genau ein Personen-Eingabefeld (das Widget zeigt den Platzhalter, solange leer).
-    expect(markup.match(/Hinzufuegen\.\.\./g) ?? []).toHaveLength(1)
+    expect(markup.match(/Hinzufügen\.\.\./g) ?? []).toHaveLength(1)
   })
 })

@@ -48,6 +48,14 @@ export const EXCLUDED_PATHS: ReadonlyArray<{ path: string; reason: string }> = [
   { path: "components/debug/", reason: "Debug-Ansichten für Entwickler" },
   { path: "testing.ts", reason: "Test-Einstieg, keine Oberfläche" },
   {
+    path: "components/preview/type-presentation.tsx",
+    reason: "Typ-Register: Texte der Einträge sind Rückfall, die Anzeige übersetzt über type.<id>.… (Spec 06, Texte und Sprache); dazu Validierungsmeldungen an Modul-Autoren",
+  },
+  {
+    path: "lib/module-register.ts",
+    reason: "Modul-Register: label ist Rückfall, die Anzeige übersetzt über module.<id>.label (Spec 01, Regel 9)",
+  },
+  {
     path: "components/preview/field-register.ts",
     reason: "Validierung des Feldregisters — Meldungen an Modul-Autoren",
   },

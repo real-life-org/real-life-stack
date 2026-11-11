@@ -39,6 +39,7 @@ export function GraphModule({ items = [] }: ModuleViewProps) {
   const graphRef = useRef<GraphViewHandle>(null)
 
   const i18n = useI18n()
+  const { t } = i18n
   const resolveLabel = useCallback((typeId: string) => resolveTypePresentation(typeId).label, [i18n]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Der Heimat-Space eines Items laut Connector — um space-qualifizierte
@@ -106,7 +107,7 @@ export function GraphModule({ items = [] }: ModuleViewProps) {
       onSelectedNodeChange={onSelect}
       fitViewKey={groupId || "__overview__"}
       className="h-full w-full"
-      ariaLabel="Beziehungsgraph des Space"
+      ariaLabel={t("graph.spaceLabel")}
       selectionFocusBottomInset={panel?.current ? 200 : 0}
     />
   )

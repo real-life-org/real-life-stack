@@ -614,7 +614,7 @@ function MapViewInner({
       },
       () => starte(),
     )
-  }, [adapter, beendeOrtung, fahreZu, ortung])
+  }, [adapter, beendeOrtung, fahreZu, ortung, t])
 
   // Eine Geste beendet das Nachziehen, nicht die Ortung (siehe `folgt`).
   useEffect(() => {

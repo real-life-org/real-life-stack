@@ -10,6 +10,7 @@ import { cn } from "../../../lib/utils"
 import { ItemRefChip, MissingRefText } from "../../preview/item-ref-chip"
 import { targetFilter, targetItemId, targetPointsTo } from "../../preview/use-item-edges"
 import { itemTitle } from "../item-relations"
+import { getI18n, useI18n } from "@/i18n"
 
 /**
  * Schreibform einer Item-Kante (C3): Chips mit ✕ und eine Suche
@@ -135,11 +136,12 @@ export function ItemRelationWidget({
   canChoose,
   unavailable,
 }: ItemRelationWidgetProps) {
+  const { t } = useI18n()
   const { items: allCandidates, all, needsSpace, otherSpace, spaceOf } = useCandidates(targetType, spaceId)
   const candidates = canChoose ? allCandidates.filter(canChoose) : allCandidates
   const connector = useOptionalConnector()
   const groupName = useGroupName(connector, otherSpace ? spaceId : undefined)
-  const spaceName = groupName ?? "diesem Space"
+  const spaceName = groupName ?? t("relation.thisSpace")
   const [pickError, setPickError] = useState<string | null>(null)
   // Gewählte Ziele gegen alle sichtbaren Items (ein space-qualifiziertes
   // bleibt nach einem Space-Wechsel gültig); gesucht wird nur im Formular-Space.
@@ -163,14 +165,14 @@ export function ItemRelationWidget({
   const checkPick = (id: string): ItemPickResult => {
     const now = latest.current
     if (now.unavailable) return { ok: false, reason: now.unavailable }
-    if (now.full) return { ok: false, reason: "Das Feld hat schon ein Ziel" }
-    if (id === now.excludeId) return { ok: false, reason: "Ein Item verweist nicht auf sich selbst" }
+    if (now.full) return { ok: false, reason: t("relation.full") }
+    if (id === now.excludeId) return { ok: false, reason: t("relation.self") }
     const target = now.candidates.find((c) => c.id === id)
-    if (!target && now.allCandidates.some((c) => c.id === id)) return { ok: false, reason: "Keine Schreibrechte an diesem Item" }
+    if (!target && now.allCandidates.some((c) => c.id === id)) return { ok: false, reason: t("relation.notWritable") }
     if (!target) {
-      return { ok: false, reason: targetType ? "Das Ziel ist nicht vom passenden Typ oder liegt nicht in diesem Space" : "Das Ziel liegt nicht in diesem Space" }
+      return { ok: false, reason: targetType ? t("relation.wrongTypeOrSpace") : t("relation.otherSpace") }
     }
-    if (now.value.some((t) => targetPointsTo(t, target, now.spaceId ?? null, now.spaceOf))) return { ok: false, reason: "Das Ziel ist schon gewählt" }
+    if (now.value.some((t) => targetPointsTo(t, target, now.spaceId ?? null, now.spaceOf))) return { ok: false, reason: t("relation.alreadyChosen") }
     return { ok: true }
   }
   const onPick = (id: string): ItemPickResult => {
@@ -211,8 +213,8 @@ export function ItemRelationWidget({
                   <ItemRefChip item={item} inert onRemove={locked(target) ? undefined : () => remove(target)} />
                 ) : (
                   <span className="inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5">
-                    <MissingRefText text="nicht verfügbar" />
-                    <button type="button" aria-label="Nicht verfügbares Ziel entfernen" onClick={() => remove(target)} className="text-xs text-muted-foreground hover:text-foreground">
+                    <MissingRefText text={t("item.unavailable")} />
+                    <button type="button" aria-label={t("relation.removeUnavailable")} onClick={() => remove(target)} className="text-xs text-muted-foreground hover:text-foreground">
                       ✕
                     </button>
                   </span>
@@ -224,10 +226,10 @@ export function ItemRelationWidget({
             <span data-incoming-unavailable className="text-sm text-muted-foreground">{unavailable}</span>
           )}
           {!full && !unavailable && needsSpace && (
-            <span data-needs-space className="text-sm text-muted-foreground">Erst einen Space wählen</span>
+            <span data-needs-space className="text-sm text-muted-foreground">{t("relation.chooseSpaceFirst")}</span>
           )}
           {!full && !unavailable && otherSpace && (
-            <span data-other-space className="text-sm text-muted-foreground">Dieser Speicher sucht nur im geöffneten Space – zum Verknüpfen in „{spaceName}“ dorthin wechseln</span>
+            <span data-other-space className="text-sm text-muted-foreground">{t("relation.onlyOpenSpace", { space: spaceName ?? "" })}</span>
           )}
           {!full && !unavailable && !needsSpace && !otherSpace && (
             <input
@@ -237,7 +239,7 @@ export function ItemRelationWidget({
               aria-controls={listId}
               aria-label={label}
               value={query}
-              placeholder={placeholder ?? "@ suchen…"}
+              placeholder={placeholder ?? t("relation.searchPlaceholder")}
               onFocus={() => setOpen(true)}
               onBlur={() => setTimeout(() => setOpen(false), 150)}
               onChange={(event) => {
@@ -266,7 +268,7 @@ export function ItemRelationWidget({
               className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <MousePointerClick className="h-3.5 w-3.5" aria-hidden />
-              Im Modul wählen
+              {t("relation.pickInModule")}
             </button>
           )}
         </div>
@@ -318,7 +320,7 @@ export interface IncomingRelationFieldProps {
 }
 
 /** Grund, wenn der Formular-Space nicht der geöffnete ist (Space des Formulars, Regel 7). */
-export const INCOMING_OTHER_SPACE = "„Braucht“ lässt sich nur im geöffneten Space setzen – die andere Aufgabe wird dort geschrieben"
+export const incomingOtherSpace = (): string => getI18n().t("relation.incomingOtherSpace")
 
 /**
  * Schreibform einer EINGEHENDEN Item-Kante („Braucht", C3; S3b): Die Kante
@@ -348,7 +350,7 @@ export function IncomingRelationField({
   const meId = useMeId(connector)
   const { all, spaceOf } = useCandidates(targetType, spaceId)
   const openSpace = connector && hasGroups(connector) ? (connector.getCurrentGroup()?.id ?? null) : null
-  const unavailable = connector && hasItemGroups(connector) && spaceId && openSpace !== spaceId ? INCOMING_OTHER_SPACE : undefined
+  const unavailable = connector && hasItemGroups(connector) && spaceId && openSpace !== spaceId ? incomingOtherSpace() : undefined
   const canEdit = (item: Item) => !!connector && resolveItemPermissions(connector, item, meId).canEdit
   // Die Quellen: Items im Formular-Space, deren Kante auf dieses Item zeigt.
   const self = itemId ? ({ id: itemId } as Item) : null
@@ -388,6 +390,7 @@ export function IncomingRelationField({
  * Edit-Regeln 9): sichtbar, nicht bearbeitbar, mit Schloss.
  */
 export function FixedItemRefField({ label, value, missing, spaceId }: { label: string; value: string; missing: string; spaceId?: string }) {
+  const { t } = useI18n()
   const connector = useOptionalConnector()
   const id = targetItemId(value)
   const [item, setItem] = useState<Item | null>(null)
@@ -402,7 +405,7 @@ export function FixedItemRefField({ label, value, missing, spaceId }: { label: s
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       <div className={cn("flex min-h-10 items-center justify-between gap-2 rounded-md border bg-muted/50 px-2 py-1.5")}>
         {item && fitsSpace(connector, value, item, spaceId) ? <ItemRefChip item={item} inert /> : <MissingRefText text={missing} />}
-        <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label="nicht änderbar" />
+        <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label={t("relation.fixed")} />
       </div>
     </div>
   )

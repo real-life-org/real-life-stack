@@ -209,6 +209,7 @@ export async function loadRuntimeConfig(opts: LoadOptions = {}): Promise<Runtime
   const base = rawBase.endsWith("/") ? rawBase : rawBase + "/"
 
   inFlight = (async () => {
+    // i18n-exempt: Teil einer Konsolenmeldung für Betreiber, keine Oberfläche
     const fromFile = (await fetchJson(fetchImpl, `${base}config.json`, "die Konfiguration")) ?? {}
 
     const env = opts.buildTimeEnv ?? {}
@@ -268,6 +269,7 @@ export async function loadRuntimeConfig(opts: LoadOptions = {}): Promise<Runtime
     // Farben aus einer eigenen Datei: getrennt geladen, damit ein Fehler dort
     // nur die Farben kostet.
     if (branding?.colorsUrl) {
+      // i18n-exempt: Teil einer Konsolenmeldung für Betreiber, keine Oberfläche
       const colors = await fetchJson(fetchImpl, branding.colorsUrl, "die Farben")
       if (colors) branding = { ...branding, colors: colors as BrandingColors }
     }

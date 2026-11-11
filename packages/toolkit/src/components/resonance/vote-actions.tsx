@@ -9,6 +9,7 @@ import { useConnector } from "@/hooks/connector-context"
 import { useMembers } from "@/hooks/use-groups"
 import { useVotes, useVoteUsers } from "@/hooks/use-votes"
 import type { EdgeEntry } from "../preview/field-register"
+import { useI18n } from "@/i18n"
 
 /**
  * Die Stimme im Slot `actions` (C4): Pills Dafür · Skeptisch · Dagegen als
@@ -35,6 +36,7 @@ const PILL_ON = "border-emerald-600 bg-emerald-50 text-emerald-700 dark:border-e
 const PILL_IDLE = "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
 
 export function VoteActions({ item, edge }: { item: Item; edge: EdgeEntry }) {
+  const { t } = useI18n()
   const connector = useConnector()
   const { data: summary, vote, canVote } = useVotes(item.id)
   const { data: voters } = useVoteUsers(item.id, summary.total > 0)
@@ -48,10 +50,8 @@ export function VoteActions({ item, edge }: { item: Item; edge: EdgeEntry }) {
   const percent = summary.total > 0 ? Math.round((summary.green / summary.total) * 100) : 0
   const answered =
     groupId && members.length >= summary.total && members.length > 0
-      ? `${summary.total} von ${members.length} haben geantwortet`
-      : summary.total === 1
-        ? "1 Stimme"
-        : `${summary.total} Stimmen`
+      ? t("resonance.vote.answered", { count: summary.total, members: members.length })
+      : t("resonance.vote.count", { count: summary.total })
 
   return (
     <div data-vote-actions className="flex w-full flex-col gap-2" onClick={(event) => event.stopPropagation()}>
@@ -105,7 +105,7 @@ export function VoteActions({ item, edge }: { item: Item; edge: EdgeEntry }) {
       {summary.myVoteOtherVersion && (
         // resonance.md, Stimmregel 5: Die Stimme galt einer früheren Fassung.
         <p className="text-xs text-muted-foreground">
-          Deine Stimme ({label(summary.myVoteOtherVersion)}) galt einer früheren Fassung und zählt nicht mehr. Stimme neu ab, damit sie zählt.
+          {t("resonance.vote.outdated", { vote: label(summary.myVoteOtherVersion) })}
         </p>
       )}
     </div>

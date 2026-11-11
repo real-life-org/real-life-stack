@@ -24,6 +24,7 @@ import { Button } from "@/components/primitives/button"
 import { Textarea } from "@/components/primitives/textarea"
 import { cn } from "@/lib/utils"
 import { TiptapEditor, type TiptapEditorHandle } from "./tiptap-editor"
+import { useI18n, type MessageKey } from "@/i18n"
 
 type WidgetType =
   | "title"
@@ -46,14 +47,14 @@ export const WIDGET_ICONS: Record<string, React.ComponentType<{ className?: stri
   group: FolderOpen,
 }
 
-export const WIDGET_LABELS: Record<string, string> = {
-  media: "Medien",
-  date: "Datum",
-  location: "Ort",
-  people: "Personen",
-  tags: "Tags",
-  status: "Status",
-  group: "Gruppe",
+export const WIDGET_LABELS: Record<string, MessageKey> = {
+  media: "composer.widget.media",
+  date: "composer.widget.date",
+  location: "composer.widget.location",
+  people: "composer.widget.people",
+  tags: "composer.widget.tags",
+  status: "composer.widget.status",
+  group: "composer.widget.group",
 }
 
 interface TextWidgetProps {
@@ -87,6 +88,7 @@ export function TextWidget({
   onHashtag,
   autoFocus,
 }: TextWidgetProps) {
+  const { t } = useI18n()
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
   const tiptapRef = React.useRef<TiptapEditorHandle>(null)
   const [mode, setMode] = React.useState<"visual" | "source">("visual")
@@ -261,14 +263,14 @@ export function TextWidget({
   }
 
   const formatButtons: { format: FormatAction; icon: React.ComponentType<{ className?: string }>; title: string }[] = [
-    { format: "bold", icon: Bold, title: "Fett" },
-    { format: "italic", icon: Italic, title: "Kursiv" },
-    { format: "h1", icon: Heading1, title: "Ueberschrift 1" },
-    { format: "h2", icon: Heading2, title: "Ueberschrift 2" },
-    { format: "ul", icon: List, title: "Liste" },
-    { format: "ol", icon: ListOrdered, title: "Nummerierte Liste" },
-    { format: "quote", icon: Quote, title: "Zitat" },
-    { format: "code", icon: Code, title: "Code" },
+    { format: "bold", icon: Bold, title: t("text.bold") },
+    { format: "italic", icon: Italic, title: t("text.italic") },
+    { format: "h1", icon: Heading1, title: t("text.heading1") },
+    { format: "h2", icon: Heading2, title: t("text.heading2") },
+    { format: "ul", icon: List, title: t("text.bulletList") },
+    { format: "ol", icon: ListOrdered, title: t("text.numberedList") },
+    { format: "quote", icon: Quote, title: t("text.quote") },
+    { format: "code", icon: Code, title: t("text.code") },
   ]
 
   const ModeIcon = mode === "visual" ? Code2 : Eye
@@ -296,7 +298,7 @@ export function TextWidget({
           type="button"
           variant="ghost"
           size="icon-sm"
-          title={mode === "visual" ? "Quelltext" : "Visuell"}
+          title={mode === "visual" ? t("text.source") : t("text.visual")}
           onClick={handleModeToggle}
           className="h-7 w-7 ml-auto"
         >
@@ -343,7 +345,7 @@ export function TextWidget({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                title={WIDGET_LABELS[widgetId]}
+                title={WIDGET_LABELS[widgetId] ? t(WIDGET_LABELS[widgetId]) : undefined}
                 onClick={() => onToggleWidget(widgetId)}
                 className="h-7 w-7 text-muted-foreground"
               >

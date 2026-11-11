@@ -15,12 +15,13 @@ import {
 import { ItemComposer } from "../composer/item-composer"
 import { withEditGroup } from "../composer/composer-mapping"
 import { useItemHasBindings } from "../composer/use-item-bindings"
-import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
+import { itemBindingsReason } from "../../lib/item-bindings"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import { useIsFrozen } from "../../hooks/use-item-frozen"
 import { useItem } from "../../hooks/use-items"
 import { useConnector } from "../../hooks/connector-context"
 import { hasItemGroups, isWritable, normalizeItemType } from "@real-life/data-interface"
+import { useI18n } from "@/i18n"
 
 export interface ItemDetailViewProps {
   /** The item to show. The view subscribes via `useItem`, so it always renders
@@ -80,6 +81,9 @@ export function ItemDetailView({
   mode: modeProp,
   onModeChange,
 }: ItemDetailViewProps) {
+  // Vor jedem frühen Rücksprung (Hook-Reihenfolge): Der Grund für den festen Space unten entsteht in
+  // diesem Render und soll einem Sprachwechsel folgen.
+  useI18n()
   const { data: item } = useItem(itemId)
   const connector = useConnector()
   // Spec 08 → Einfrieren: once another person bound a reference to the
@@ -131,7 +135,7 @@ export function ItemDetailView({
   const composerTypes = withEditGroup(
     (vorlage ? contentTypes.filter((t) => t.id === vorlage) : []).map((t) => ({ ...t, defaultGroup: itemGroup ?? undefined })),
     canMove,
-    hasBindings === false ? undefined : ITEM_BINDINGS_REASON,
+    hasBindings === false ? undefined : itemBindingsReason(),
   )
   const canEdit = composerTypes.length > 0 && !frozen
 

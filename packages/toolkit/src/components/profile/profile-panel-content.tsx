@@ -5,6 +5,7 @@ import { Input } from "../primitives/input"
 import { Avatar, AvatarImage, AvatarFallback } from "../primitives/avatar"
 import { resolveAssetUrl } from "../../lib/utils"
 import { Label } from "../primitives/label"
+import { useI18n } from "@/i18n"
 
 export interface ProfileData {
   did: string
@@ -76,6 +77,7 @@ export function ProfilePanelContent({
   contactStatus,
   contactDirection,
 }: ProfilePanelContentProps) {
+  const { t } = useI18n()
   const [name, setName] = useState(profile.name)
   const [bio, setBio] = useState(profile.bio ?? "")
   const [avatar, setAvatar] = useState(profile.avatar ?? "")
@@ -105,7 +107,7 @@ export function ProfilePanelContent({
       const base64 = await resizeImage(file, 200, 0.8)
       setAvatar(base64)
     } catch {
-      setError("Bild konnte nicht verarbeitet werden")
+      setError(t("groupDialog.imageFailed"))
     }
     e.target.value = ""
   }
@@ -118,7 +120,7 @@ export function ProfilePanelContent({
       await onSave({ name: name.trim(), bio: bio.trim(), avatar })
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Fehler beim Speichern")
+      setError(err instanceof Error ? err.message : t("profile.saveFailed"))
     } finally {
       setSaving(false)
     }
@@ -149,7 +151,7 @@ export function ProfilePanelContent({
                     <img src={resolveAssetUrl(avatar)} alt={name} className="w-14 h-14 rounded-full object-cover ring-2 ring-background shadow-sm" />
                     <button
                       type="button"
-                      aria-label="Profilbild entfernen"
+                      aria-label={t("profile.removePicture")}
                       onClick={() => setAvatar("")}
                       className="absolute -top-1 -right-1 p-0.5 bg-destructive text-white rounded-full shadow-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                     >
@@ -157,7 +159,7 @@ export function ProfilePanelContent({
                     </button>
                     <button
                       type="button"
-                      aria-label="Profilbild ändern"
+                      aria-label={t("profile.changePicture")}
                       onClick={() => fileInputRef.current?.click()}
                       className="absolute -bottom-0.5 -right-0.5 p-1 bg-card border border-border rounded-full shadow-sm cursor-pointer opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-accent"
                     >
@@ -167,7 +169,7 @@ export function ProfilePanelContent({
                 ) : (
                   <button
                     type="button"
-                    aria-label="Profilbild hochladen"
+                    aria-label={t("profile.uploadPicture")}
                     onClick={() => fileInputRef.current?.click()}
                     className="w-14 h-14 rounded-full border-2 border-dashed border-border hover:border-primary/50 bg-muted/30 flex items-center justify-center cursor-pointer transition-all hover:bg-muted/50"
                   >
@@ -198,7 +200,7 @@ export function ProfilePanelContent({
                   ref={nameInputRef}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Dein Name"
+                  placeholder={t("profile.namePlaceholder")}
                   className="h-7 text-base font-semibold border-transparent shadow-none bg-transparent -ml-1.5 px-1 min-w-32 max-w-[calc(100%-2rem)] hover:bg-muted/50 focus:shadow-sm focus:bg-card focus:border-input focus:ml-0 focus:px-2 focus:max-w-[calc(100%-2rem)] transition-all truncate"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -220,7 +222,7 @@ export function ProfilePanelContent({
               <h2 className="text-base font-semibold truncate">{name}</h2>
             )}
             <p className="text-xs text-muted-foreground mt-0.5">
-              {contactCount != null ? `${contactCount} Kontakte` : ""}
+              {contactCount != null ? t("profile.contactCount", { count: contactCount }) : ""}
             </p>
           </div>
         </div>
@@ -232,7 +234,7 @@ export function ProfilePanelContent({
         <button
           onClick={handleCopyDid}
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 hover:bg-muted transition-colors cursor-pointer group/did"
-          title="DID kopieren"
+          title={t("profile.copyDid")}
         >
           <code className="text-[10px] font-mono text-muted-foreground tracking-tight">
             {shortDid}
@@ -256,7 +258,7 @@ export function ProfilePanelContent({
             }}
           >
             {linkCopied ? <Check className="h-3.5 w-3.5 mr-1.5 text-green-600" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
-            {linkCopied ? "Link kopiert!" : "Profil-Link kopieren"}
+            {linkCopied ? t("profile.linkCopied") : t("profile.copyLink")}
           </Button>
         )}
 
@@ -271,40 +273,40 @@ export function ProfilePanelContent({
                 await onAddContact()
                 setRequested(true)
               } catch (err) {
-                setError(err instanceof Error ? err.message : "Anfrage fehlgeschlagen")
+                setError(err instanceof Error ? err.message : t("profile.requestFailed"))
               } finally {
                 setRequesting(false)
               }
             }}
           >
             {contactStatus === "pending" && contactDirection === "incoming"
-              ? (requesting ? "Bestätige…" : "Anfrage bestätigen")
+              ? (requesting ? t("contactRequest.confirming") : t("profile.confirmRequest"))
               : contactStatus === "pending" || requested
-                ? "Anfrage gesendet"
-                : requesting ? "Sende…" : "Als Kontakt anfragen"}
+                ? t("profile.requestSent")
+                : requesting ? t("profile.sending") : t("profile.requestContact")}
           </Button>
         )}
         {onAddContact && contactStatus === "active" && (
           <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
-            <Check className="h-3.5 w-3.5 text-green-600" /> Ihr seid Kontakte
+            <Check className="h-3.5 w-3.5 text-green-600" /> {t("profile.areContacts")}
           </p>
         )}
 
         {isEdit ? (
           <div className="space-y-1.5">
-            <Label htmlFor="profile-bio" className="text-xs text-muted-foreground">Ueber mich</Label>
+            <Label htmlFor="profile-bio" className="text-xs text-muted-foreground">{t("profile.aboutMe")}</Label>
             <Input
               id="profile-bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Ein kurzer Satz ueber dich (optional)"
+              placeholder={t("profile.bioPlaceholder")}
               className="h-9"
             />
           </div>
         ) : (
           bio.trim() && (
             <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">Ueber</p>
+              <p className="text-xs text-muted-foreground">{t("profile.about")}</p>
               <p className="text-sm">{bio}</p>
             </div>
           )
@@ -320,10 +322,10 @@ export function ProfilePanelContent({
       {isEdit && (
         <div className="mt-auto flex justify-end gap-2 px-6 py-4">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={saving}>
-            Abbrechen
+            {t("common.cancel")}
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saving || !name.trim()}>
-            {saving ? "Speichern..." : "Speichern"}
+            {saving ? t("profile.saving") : t("composer.save")}
           </Button>
         </div>
       )}

@@ -207,7 +207,7 @@ describe("#538: Anlegen gesperrt, solange die Spaces laden — auch mit groups-P
   it("die leere, noch ladende Gruppenliste sperrt Speichern mit Grund", async () => {
     const { createObservable } = await import("@real-life/data-interface")
     const { CreateSheetController } = await import("../src/components/host/create-host")
-    const { GROUPS_LOADING } = await import("../src/components/composer/composer-mapping")
+    const { groupsLoading } = await import("../src/components/composer/composer-mapping")
     const { ModulePanelProvider } = await import("../src/components/module-panel/module-panel")
     const connector = new MockConnector(
       { items: [], groups: [{ id: "g1", name: "Garten" }], users: [{ id: "u1", displayName: "Uli" }], groupMembers: { g1: ["u1"] } },
@@ -235,7 +235,7 @@ describe("#538: Anlegen gesperrt, solange die Spaces laden — auch mit groups-P
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(title, "T")
       title.dispatchEvent(new Event("input", { bubbles: true }))
     })
-    expect(document.body.querySelector("[data-space-required]")?.textContent).toContain(GROUPS_LOADING)
+    expect(document.body.querySelector("[data-space-required]")?.textContent).toContain(groupsLoading())
     const speichern = [...document.body.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Erstellen")
     expect(speichern?.disabled).toBe(true)
     expect(create).not.toHaveBeenCalled()
