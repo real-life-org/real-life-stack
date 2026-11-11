@@ -182,7 +182,8 @@ describe("shared detail read view", () => {
   })
 
   it("labels a statement with its badge", async () => {
-    expect(await textOf(connector, statement(), SPACE_A)).toContain("Aussage")
+    // Der Typname kommt aus dem Wörterbuch der Oberflächensprache (Spec 06, „Texte und Sprache“); die Tests laufen auf Englisch.
+    expect(await textOf(connector, statement(), SPACE_A)).toContain("Statement")
   })
 })
 
