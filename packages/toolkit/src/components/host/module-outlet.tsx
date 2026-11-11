@@ -7,7 +7,8 @@ import { getModule, getModules } from "../../lib/module-register"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { ModuleFrame } from "../layout/module-frame"
 import { ModuleHost } from "./module-host"
-import { useI18n } from "@/i18n"
+import { getI18n, useI18n } from "@/i18n"
+import { moduleLabel } from "@/lib/register-labels"
 
 export interface ModuleOutletProps {
   /** Der aktive Space; `null` heisst: die URL nennt einen Space ohne Zugang. */
@@ -74,7 +75,7 @@ export function ModuleOutlet({ activeWorkspace, activeModule, groups, urlSpaceId
       ) : active ? (
         // Registriert, aber ohne Flaeche — sichtbar sagen statt leer (Spec 01, Regel 7).
         <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
-          <p className="text-lg font-medium text-foreground">{active.label}</p>
+          <p className="text-lg font-medium text-foreground">{moduleLabel(getI18n(), active)}</p>
           <p className="text-sm text-muted-foreground mt-2">{t("moduleOutlet.noView")}</p>
         </div>
       ) : null}
