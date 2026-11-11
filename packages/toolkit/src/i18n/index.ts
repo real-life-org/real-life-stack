@@ -7,6 +7,7 @@ export {
   enableLanguageChoice,
   getLocale,
   getI18n,
+  hasMessage,
   isI18n,
   subscribeLanguage,
   applyLanguageConfig,

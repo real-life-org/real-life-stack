@@ -8,6 +8,8 @@ import { useConnector } from "../hooks/connector-context"
 import { MemoryFocusProvider, useItemFocus } from "../hooks/use-item-focus"
 import { getModule, getModules, resolveSpaceModules } from "../lib/module-register"
 import { STORY_SEED, StoryWorld, type StoryWorldOptions } from "./story-world"
+import { useI18n } from "@/i18n"
+import { moduleLabel } from "@/lib/register-labels"
 
 /**
  * Was eine App fuer den Modul-Host stellt — und sonst nichts: Connector,
@@ -93,9 +95,10 @@ function MemoryFrame({ groups: allGroups, spaceId, onSpaceChange, module, onModu
   const { focusItem } = useItemFocus()
   const focusRef = useRef(focusItem)
   focusRef.current = focusItem
+  const i18n = useI18n()
   const modules = useMemo(
-    () => hostWorldModules(allGroups, spaceId).map(getModule).filter((m): m is NonNullable<typeof m> => !!m).map((m) => ({ id: m.id, label: m.label, icon: m.icon })),
-    [allGroups, spaceId],
+    () => hostWorldModules(allGroups, spaceId).map(getModule).filter((m): m is NonNullable<typeof m> => !!m).map((m) => ({ id: m.id, label: moduleLabel(i18n, m), icon: m.icon })),
+    [allGroups, spaceId, i18n],
   )
   const groups = useMemo(() => hostWorldGroups(hasGroups(connector), allGroups, spaceId), [connector, allGroups, spaceId])
   const workspaces = useMemo(() => groups.map(workspaceOf), [groups])

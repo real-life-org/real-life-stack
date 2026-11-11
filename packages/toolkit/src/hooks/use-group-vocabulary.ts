@@ -6,6 +6,7 @@ import { isAggregateVisibleItemType, type Item } from "@real-life/data-interface
 import { resolveTypePresentation } from "../components/preview/type-presentation"
 import type { FilterTypeOption } from "../components/filter/types"
 import { useOptionalConnector } from "./connector-context"
+import { useI18n } from "@/i18n"
 
 export interface GroupVocabulary {
   /** Alle Tags des Space, alphabetisch. */
@@ -101,5 +102,7 @@ export function useGroupVocabulary(fallbackItems?: readonly Item[]): GroupVocabu
   // ist die einzige, die sie kennt. Sonst verlöre sie Tag- und Typfilter, die
   // sie vor dem 20.09.2026 selbst ableitete (Codex-Review zu #407, rls#408).
   const quelle = observable ? items : (fallbackItems ?? [])
-  return useMemo(() => groupVocabulary(quelle), [quelle])
+  // Die Typnamen kommen übersetzt aus dem Register: bei Sprachwechsel neu ableiten.
+  const i18n = useI18n()
+  return useMemo(() => groupVocabulary(quelle), [quelle, i18n]) // eslint-disable-line react-hooks/exhaustive-deps
 }

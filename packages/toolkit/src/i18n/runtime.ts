@@ -579,6 +579,15 @@ export function t(key: MessageKey, params?: MessageParams): string {
   return getI18n().t(key, params)
 }
 
+/**
+ * Ob das Wörterbuch (eingebaut, App-Erweiterung oder Instanz) einen Text unter `key` kennt — in
+ * irgendeiner Sprache. Für Register, deren Einträge einen eigenen Text als Rückfall mitbringen
+ * (`lib/register-labels.ts`): Sie fragen erst, statt `tDynamic` eine Warnung auslösen zu lassen.
+ */
+export function hasMessage(key: string): boolean {
+  return lookup(state, state.language, key) !== undefined || lookup(state, FALLBACK_LANGUAGE, key) !== undefined || lookup(state, "de", key) !== undefined
+}
+
 /** Wie {@link t} für Laufzeit-Schlüssel — siehe {@link I18n.tDynamic}. */
 export function tDynamic(key: string, params?: MessageParams): string {
   return getI18n().tDynamic(key, params)

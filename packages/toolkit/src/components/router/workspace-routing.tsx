@@ -19,6 +19,7 @@ import { getSpacePrimaryColor } from "../../lib/utils"
 import type { Module } from "../layout/module-tabs"
 import { workspaceOf, type Workspace } from "../layout/workspace-switcher"
 import { useI18n } from "@/i18n"
+import { moduleLabel } from "@/lib/register-labels"
 
 /**
  * Space, Modul und Item aus der URL — die Auflösung, die jede App mit Router
@@ -129,7 +130,8 @@ export interface WorkspaceRoutingOptions {
  * @see spec docs/spec/01-app-composition.md
  */
 export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions = {}): WorkspaceRouting {
-  const { t } = useI18n()
+  const i18n = useI18n()
+  const { t } = i18n
   const connector = useConnector()
   const navigate = useNavigate()
   const location = useLocation()
@@ -286,8 +288,8 @@ export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions 
     // Filter waere der Registerzugriff darunter undefined.
     () => groupModuleIds
       .map((id) => getModule(id)!)
-      .map((m) => ({ id: m.id, label: m.label, icon: m.icon })),
-    [groupModuleIds.join(",")] // eslint-disable-line react-hooks/exhaustive-deps
+      .map((m) => ({ id: m.id, label: moduleLabel(i18n, m), icon: m.icon })),
+    [groupModuleIds.join(","), i18n] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
   // Re-theme the app's primary color to the active space's identity color, so
