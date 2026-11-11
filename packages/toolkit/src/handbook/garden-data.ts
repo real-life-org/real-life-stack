@@ -57,3 +57,35 @@ export const seed: MockConnectorSeed = {
     },
   ],
 }
+
+/**
+ * Derselbe Bestand auf Englisch: Die Startseite und das Handbuch betten den Garten in der Sprache der Seite ein
+ * (Storybook-Global `language`). Nur die Texte wechseln, Ids, Zeiten und Orte bleiben gleich.
+ */
+const EN: Record<string, string> = {
+  'Mira Beispiel': 'Mira Example',
+  Gemeinschaftsgarten: 'Community garden',
+  'Offene Werkstatt': 'Open workshop',
+  Erntefest: 'Harvest festival',
+  'Wir teilen unsere Ernte. Bring eine Schüssel und eine Idee mit.': 'We share our harvest. Bring a bowl and an idea.',
+  'Am Gemeinschaftsgarten': 'At the community garden',
+  'Beete gießen': 'Water the beds',
+  'Wer übernimmt die Abendrunde?': 'Who takes the evening round?',
+  Reparaturtreff: 'Repair meetup',
+  'Gemeinsam Dinge wieder nutzbar machen.': 'Making things usable again, together.',
+}
+const KEYS = new Set(['displayName', 'name', 'title', 'description', 'address'])
+function translate<T>(value: T, key?: string): T {
+  if (typeof value === 'string') return (key && KEYS.has(key) ? EN[value] ?? value : value) as T
+  if (Array.isArray(value)) return value.map((v) => translate(v)) as T
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, translate(v, k)])) as T
+  }
+  return value
+}
+export const seedEn: MockConnectorSeed = translate(seed)
+
+/** Der Bestand in der Sprache der Vorschau: Deutsch nur bei `de`, sonst Englisch. */
+export function gardenSeed(language: string | undefined): MockConnectorSeed {
+  return language === 'de' ? seed : seedEn
+}
