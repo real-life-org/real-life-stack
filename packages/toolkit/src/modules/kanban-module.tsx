@@ -22,6 +22,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Skeleton } from "../components/primitives/skeleton"
 import { filterByAssignee } from "../lib/item-filter"
 import type { ModuleViewProps } from "../lib/module-register"
+import { useI18n } from "@/i18n"
 
 /**
  * The mutation half of Kanban's drag handler.  Keeping it at module scope
@@ -56,6 +57,7 @@ export async function handleKanbanDrag(
 const NO_ONE: string[] = []
 
 export function KanbanModule({ items: tasks = [], itemsLoading: tasksLoading = false }: ModuleViewProps) {
+  const { t } = useI18n()
   const connector = useConnector()
   const { members, groups, isOverview: isAggregate, currentUser, resolveItemGroupColor, activeItemId } = useModuleHost()
   // Scope tag on the card (Privat OR group), only in the meta group („Mein
@@ -139,13 +141,13 @@ export function KanbanModule({ items: tasks = [], itemsLoading: tasksLoading = f
           checked={!groupedView}
           onCheckedChange={() => setGroupedView(false)}
         >
-          Zusammengeführt
+          {t("kanban.merged")}
         </DropdownMenuCheckboxItem>
         <DropdownMenuCheckboxItem
           checked={groupedView}
           onCheckedChange={() => setGroupedView(true)}
         >
-          Nach Gruppe
+          {t("kanban.byGroup")}
         </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -201,15 +203,15 @@ export function KanbanModule({ items: tasks = [], itemsLoading: tasksLoading = f
       <ModuleToolbar
         drawerExtra={
           <>
-            <FilterSection label="Schnellfilter">
+            <FilterSection label={t("kanban.quickFilter")}>
               <FilterToggle
-                label="Nur meine Aufgaben"
+                label={t("kanban.myTasksOnly")}
                 value={myItemsOnly}
                 onChange={setMyItemsOnly}
               />
             </FilterSection>
             {memberOptions.length > 0 && (
-              <FilterSection label="Zuweisung">
+              <FilterSection label={t("calendar.assignment")}>
                 <FilterMultiSelect
                   options={memberOptions}
                   value={assignedTo}
@@ -224,12 +226,12 @@ export function KanbanModule({ items: tasks = [], itemsLoading: tasksLoading = f
         chipsExtra={
           myItemsOnly ? (
             <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 pl-2 pr-1 py-0.5 text-xs font-medium">
-              Nur meine
+              {t("calendar.mineOnly")}
               <button
                 type="button"
                 onClick={() => setMyItemsOnly(false)}
                 className="rounded-full p-0.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                aria-label="Filter entfernen"
+                aria-label={t("filter.remove")}
               >
                 ×
               </button>
@@ -246,13 +248,13 @@ export function KanbanModule({ items: tasks = [], itemsLoading: tasksLoading = f
                   kind: "settings",
                   content: (
                     <ModuleSettingsPlaceholder
-                      moduleLabel="Kanban"
-                      plannedItems={["Spalten bearbeiten", "Standard-Gruppierung", "Sichtbarkeit der Spalten"]}
+                      moduleLabel={t("module.kanban.label")}
+                      plannedItems={[t("kanban.planned.editColumns"), t("kanban.planned.defaultGrouping"), t("kanban.planned.columnVisibility")]}
                     />
                   ),
                 })
               }
-              title="Moduleinstellungen"
+              title={t("kanban.moduleSettings")}
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -340,7 +342,7 @@ export function KanbanModule({ items: tasks = [], itemsLoading: tasksLoading = f
                   ? <ChevronRight className="h-4 w-4" />
                   : <ChevronDown className="h-4 w-4" />
                 }
-                Ohne Gruppe
+                {t("kanban.noGroup")}
                 <span className="text-xs font-normal">({tasksByGroup.get("__ungrouped__")!.length})</span>
               </button>
               {!collapsedGroups.has("__ungrouped__") && (

@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { cn } from "@/lib/utils"
-import { REACTION_EMOJIS, REACTION_NAMES } from "./reaction-constants"
+import { REACTION_EMOJIS, reactionName } from "./reaction-constants"
 import { FLOATING_CHOICE_Z_INDEX } from "../../lib/z-layers"
 import { createPortal } from "react-dom"
-import { useI18n } from "@/i18n"
+import { getI18n, useI18n } from "@/i18n"
 
 export interface ReactionPickerProps {
   /** Callback when an emoji is selected. */
@@ -139,7 +139,7 @@ export function ReactionPicker({ onSelect, onClose, anchorRef, className }: Reac
           <button
             key={emoji}
             type="button"
-            aria-label={REACTION_NAMES[emoji] ?? emoji}
+            aria-label={reactionName(getI18n(), emoji)}
             className="flex items-center justify-center h-9 w-9 rounded-md text-lg hover:bg-accent transition-colors cursor-pointer"
             onClick={() => {
               onSelect(emoji)

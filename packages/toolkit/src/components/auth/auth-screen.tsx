@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../pr
 import { Input } from "../primitives/input"
 import { Label } from "../primitives/label"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/i18n"
+import { getI18n, useI18n } from "@/i18n"
+import { registerText } from "@/lib/register-labels"
 
 export interface AuthScreenProps {
   /** Connector mit Authenticatable-Capability — der Screen rendert genau die
@@ -166,7 +167,7 @@ export function AuthScreen({ connector, onAuthenticated, title, className }: Aut
                 disabled={submitting}
                 onClick={() => void run("anonymous", {})}
               >
-                {anonymous.label}
+                {registerText(getI18n(), "auth.method.anonymous", anonymous.label)}
               </Button>
             </>
           )}

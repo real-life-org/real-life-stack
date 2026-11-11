@@ -4,6 +4,7 @@ import { History, MessageCircle, Pencil, Plus, Trash2, UserRound } from "lucide-
 import { Avatar, AvatarFallback, AvatarImage, EmptyState, RelativeTime } from "../primitives"
 import { cn } from "../../lib/utils"
 import { sectionFor } from "./notification-center"
+import { getI18n, useI18n } from "@/i18n"
 
 export interface ActivityPanelProps {
   entries: readonly ActivityEntry[]
@@ -14,7 +15,6 @@ export interface ActivityPanelProps {
 }
 
 const ACTION_ICONS = { create: Plus, update: Pencil, delete: Trash2 } as const
-const ACTION_VERBS = { create: "erstellt", update: "geändert", delete: "gelöscht" } as const
 
 /** A raw DID is a poor name — keep it recognizable but short. */
 function shortActor(actorId: string): string {
@@ -35,27 +35,32 @@ function reactionParts(entry: ActivityEntry): { emoji: string; target?: string }
 function rowPresentation(entry: ActivityEntry): { rest: React.ReactNode; badge: React.ReactNode; quote?: string } {
   const reaction = reactionParts(entry)
   if (reaction) {
+    const { t } = getI18n()
     const rest = entry.action === "delete"
-      ? `hat eine Reaktion ${reaction.target ? `auf ${reaction.target} ` : ""}entfernt`
-      : `hat ${reaction.target ? `auf ${reaction.target} ` : ""}reagiert`
+      ? (reaction.target ? t("activity.reactionRemovedOn", { target: reaction.target }) : t("activity.reactionRemoved"))
+      : (reaction.target ? t("activity.reactedOn", { target: reaction.target }) : t("activity.reacted"))
     return { rest, badge: reaction.emoji }
   }
   if (entry.targetType === "comment") {
-    const rest = entry.action === "delete" ? "hat einen Kommentar gelöscht" : "hat kommentiert"
+    const rest = entry.action === "delete" ? getI18n().t("activity.commentDeleted") : getI18n().t("activity.commented")
     return { rest, badge: <MessageCircle className="size-3 text-muted-foreground" />, quote: entry.action === "delete" ? undefined : entry.summary }
   }
   const Icon = ACTION_ICONS[entry.action as keyof typeof ACTION_ICONS] ?? Pencil
-  const verb = ACTION_VERBS[entry.action as keyof typeof ACTION_VERBS] ?? entry.action
-  const title = entry.summary ?? entry.targetType
-  return { rest: `hat „${title}" ${verb}`, badge: <Icon className="size-3 text-muted-foreground" /> }
+  const { t } = getI18n()
+  const title = t("notify.quoted", { title: entry.summary ?? entry.targetType })
+  const rest = entry.action === "create" || entry.action === "update" || entry.action === "delete"
+    ? t(`activity.${entry.action}`, { subject: title })
+    : t("activity.other", { subject: title, action: entry.action })
+  return { rest, badge: <Icon className="size-3 text-muted-foreground" /> }
 }
 
 /** Best-effort space history; targets remain visible even when not projectable. */
 export function ActivityPanel({ entries, onOpenTarget, isTargetOpenable, resolveActor }: ActivityPanelProps) {
+  const { t } = useI18n()
   const visible = entries.filter((entry) => entry.action === "create" || entry.action === "update" || entry.action === "delete")
   const now = useMemo(() => new Date(), [entries])
   if (visible.length === 0) {
-    return <section id="activity-panel" aria-label="Verlauf"><EmptyState icon={History} title="Noch keine Änderungen" description="Für alle Mitglieder sichtbare Verlaufsansicht." /></section>
+    return <section id="activity-panel" aria-label={t("activity.title")}><EmptyState icon={History} title={t("activity.empty")} description={t("activity.hint")} /></section>
   }
   const sections: Array<{ label: string; rows: ActivityEntry[] }> = []
   for (const entry of visible) {
@@ -65,8 +70,8 @@ export function ActivityPanel({ entries, onOpenTarget, isTargetOpenable, resolve
     else sections.push({ label, rows: [entry] })
   }
   return (
-    <section id="activity-panel" aria-label="Verlauf" className="p-4">
-      <p className="mb-3 text-xs text-muted-foreground">Für alle Mitglieder sichtbare Verlaufsansicht.</p>
+    <section id="activity-panel" aria-label={t("activity.title")} className="p-4">
+      <p className="mb-3 text-xs text-muted-foreground">{t("activity.hint")}</p>
       {sections.map((section) => (
         <div key={section.label}>
           <p className="mb-1 mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground first:mt-0">{section.label}</p>

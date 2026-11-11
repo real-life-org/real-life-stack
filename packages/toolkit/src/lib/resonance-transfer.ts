@@ -2,6 +2,7 @@ import type { Item, RelationRecord } from "@real-life/data-interface"
 import { itemContentHash, votesFromRelationRecords } from "@real-life/data-interface"
 import { variantOfId } from "./resonance-variants"
 import type { ResonancePopulation } from "./resonance-sort"
+import { getI18n } from "@/i18n"
 
 /**
  * Import und Export des Resonanzmoduls (docs/spec/modules/resonance.md →
@@ -53,21 +54,21 @@ export function importItemData(entry: ImportEntry): Record<string, unknown> {
 }
 
 function validateEntry(raw: unknown, index: number, statementIds: ReadonlySet<string>): ImportEntry | ImportError {
-  if (!isRecord(raw)) return { index, message: "ist kein Objekt" }
+  if (!isRecord(raw)) return { index, message: getI18n().t("resonance.import.notObject") }
   const { title, description, tags, variantOf } = raw
-  if (typeof title !== "string" || title.trim().length === 0) return { index, message: "„title“ fehlt oder ist leer" }
-  if (description !== undefined && typeof description !== "string") return { index, message: "„description“ ist kein Text" }
+  if (typeof title !== "string" || title.trim().length === 0) return { index, message: getI18n().t("resonance.import.titleMissing") }
+  if (description !== undefined && typeof description !== "string") return { index, message: getI18n().t("resonance.import.descriptionNotText") }
   if (tags !== undefined && (!Array.isArray(tags) || tags.some((tag) => typeof tag !== "string"))) {
-    return { index, message: "„tags“ ist keine Liste von Texten" }
+    return { index, message: getI18n().t("resonance.import.tagsNotList") }
   }
   if (variantOf !== undefined) {
     if (typeof variantOf !== "string" || !variantOf.startsWith("item:")) {
-      return { index, message: "„variantOf“ muss die Form item:<id> haben" }
+      return { index, message: getI18n().t("resonance.import.variantOfForm") }
     }
     // Varianten-Regel 2: das Ziel ist ein Statement im selben Space.
     const target = variantOfId({ data: { variantOf } } as unknown as Item)
     if (target === null || !statementIds.has(target)) {
-      return { index, message: `„variantOf“ zeigt auf keine Aussage in diesem Space (${variantOf})` }
+      return { index, message: getI18n().t("resonance.import.variantOfMissing", { value: variantOf }) }
     }
   }
   return {
@@ -89,12 +90,12 @@ export async function planImport(
   raw: unknown,
   context: { userId: string; statements: readonly Item[] },
 ): Promise<ImportPlan> {
-  if (!isRecord(raw)) return { create: [], skipped: [], errors: [{ index: -1, message: "Die Datei enthält kein JSON-Objekt." }] }
+  if (!isRecord(raw)) return { create: [], skipped: [], errors: [{ index: -1, message: getI18n().t("resonance.import.noObject") }] }
   if (raw.format !== IMPORT_FORMAT) {
-    return { create: [], skipped: [], errors: [{ index: -1, message: `Unbekanntes Format — erwartet „${IMPORT_FORMAT}“.` }] }
+    return { create: [], skipped: [], errors: [{ index: -1, message: getI18n().t("resonance.import.unknownFormat", { format: IMPORT_FORMAT }) }] }
   }
   if (!Array.isArray(raw.statements) || raw.statements.length === 0) {
-    return { create: [], skipped: [], errors: [{ index: -1, message: "„statements“ fehlt oder ist leer." }] }
+    return { create: [], skipped: [], errors: [{ index: -1, message: getI18n().t("resonance.import.statementsMissing") }] }
   }
 
   const statementIds = new Set(context.statements.map((item) => item.id))

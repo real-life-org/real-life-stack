@@ -17,7 +17,7 @@ import { resolveTypePresentation } from "../preview/type-presentation"
 import { usePeopleFormStates } from "../preview/use-people-line"
 import { withFixedGroup } from "./composer-mapping"
 import { useItemHasBindings } from "./use-item-bindings"
-import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
+import { itemBindingsReason } from "../../lib/item-bindings"
 
 /** Tooltip, wenn das Item beim Erstellen schon angelegt ist, ein Folgeschritt aber scheiterte (#523). */
 export const GROUP_FIXED_PERSISTED = "Schon angelegt – bleibt in diesem Space"
@@ -139,7 +139,7 @@ export function ItemComposer({
     const own = contentTypes.filter((t) => t.id === persisted.type)
     const types = own.length > 0 ? own : contentTypes
     if (!persistedGroup) return types
-    return withFixedGroup(types, persistedGroup, persistedHasBindings ? ITEM_BINDINGS_REASON : GROUP_FIXED_PERSISTED)
+    return withFixedGroup(types, persistedGroup, persistedHasBindings ? itemBindingsReason() : GROUP_FIXED_PERSISTED)
   }, [contentTypes, persisted, existingItem, persistedGroup, persistedHasBindings])
 
   return (

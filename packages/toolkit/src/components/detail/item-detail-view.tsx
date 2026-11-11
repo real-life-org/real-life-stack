@@ -15,7 +15,7 @@ import {
 import { ItemComposer } from "../composer/item-composer"
 import { withEditGroup } from "../composer/composer-mapping"
 import { useItemHasBindings } from "../composer/use-item-bindings"
-import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
+import { itemBindingsReason } from "../../lib/item-bindings"
 import type { ItemEditorMapper } from "../../hooks/use-item-editor"
 import { useIsFrozen } from "../../hooks/use-item-frozen"
 import { useItem } from "../../hooks/use-items"
@@ -131,7 +131,7 @@ export function ItemDetailView({
   const composerTypes = withEditGroup(
     (vorlage ? contentTypes.filter((t) => t.id === vorlage) : []).map((t) => ({ ...t, defaultGroup: itemGroup ?? undefined })),
     canMove,
-    hasBindings === false ? undefined : ITEM_BINDINGS_REASON,
+    hasBindings === false ? undefined : itemBindingsReason(),
   )
   const canEdit = composerTypes.length > 0 && !frozen
 

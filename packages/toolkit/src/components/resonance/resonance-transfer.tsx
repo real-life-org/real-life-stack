@@ -24,6 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../primitives/dropdown-menu"
+import { useI18n } from "@/i18n"
 
 const STATEMENTS = { type: "statement" } as const
 
@@ -75,6 +76,7 @@ export function ResonanceTransferMenu({
   population,
   tags,
 }: ResonanceTransferMenuProps) {
+  const { t } = useI18n()
   const connector = useConnector()
   const fileInput = useRef<HTMLInputElement>(null)
   const [importState, setImportState] = useState<ImportState | null>(null)
@@ -109,14 +111,14 @@ export function ResonanceTransferMenu({
     try {
       parsed = JSON.parse(await file.text())
     } catch {
-      setImportState({ phase: "failed", message: `„${file.name}“ ist keine gültige JSON-Datei.` })
+      setImportState({ phase: "failed", message: t("resonance.import.notJson", { name: file.name }) })
       return
     }
     try {
       const plan = await planImport(parsed, { userId: userId!, statements: await loadStatementsOf(target) })
       setImportState({ phase: "review", plan, fileName: file.name, raw: parsed, target })
     } catch (error) {
-      setImportState({ phase: "failed", message: error instanceof Error ? error.message : "Die Aussagen des Space ließen sich nicht laden." })
+      setImportState({ phase: "failed", message: error instanceof Error ? error.message : t("resonance.import.loadFailed") })
     }
   }
 
@@ -145,7 +147,7 @@ export function ResonanceTransferMenu({
       }
       setImportState({ phase: "done", created: plan.create.length, skipped: plan.skipped.length })
     } catch (error) {
-      setImportState({ phase: "failed", message: error instanceof Error ? error.message : "Import fehlgeschlagen." })
+      setImportState({ phase: "failed", message: error instanceof Error ? error.message : t("resonance.import.failed") })
     }
   }
 
@@ -168,7 +170,7 @@ export function ResonanceTransferMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 w-8 p-0" aria-label="Weitere Aktionen">
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" aria-label={t("resonance.moreActions")}>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -179,11 +181,11 @@ export function ResonanceTransferMenu({
             onSelect={() => (space !== undefined ? fileInput.current?.click() : setPickOpen(true))}
           >
             <Upload className="h-4 w-4" />
-            Aussagen importieren …
+            {t("resonance.import.menu")}
           </DropdownMenuItem>
           <DropdownMenuItem className="gap-2" onSelect={() => setExportOpen(true)}>
             <Download className="h-4 w-4" />
-            Auswertung exportieren …
+            {t("resonance.export.menu")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -192,7 +194,7 @@ export function ResonanceTransferMenu({
         type="file"
         accept="application/json,.json"
         className="hidden"
-        aria-label="Importdatei wählen"
+        aria-label={t("resonance.import.chooseFile")}
         onChange={(event) => {
           const file = event.target.files?.[0]
           event.target.value = ""
@@ -203,21 +205,21 @@ export function ResonanceTransferMenu({
       <Dialog open={importState !== null} onOpenChange={(open) => { if (!open && importState?.phase !== "writing") setImportState(null) }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Aussagen importieren</DialogTitle>
+            <DialogTitle>{t("resonance.import.title")}</DialogTitle>
             {importState?.phase === "review" && importState.plan.errors.length > 0 && (
               <DialogDescription>
-                „{importState.fileName}“ enthält Fehler. Es wird nichts importiert.
+                {t("resonance.import.hasErrors", { name: importState.fileName })}
               </DialogDescription>
             )}
             {importState?.phase === "review" && importState.plan.errors.length === 0 && (
               <DialogDescription>
-                {importState.plan.create.length === 1 ? "1 Aussage wird" : `${importState.plan.create.length} Aussagen werden`} angelegt
-                {importState.plan.skipped.length > 0 && `, ${importState.plan.skipped.length} übersprungen, weil du sie schon eingebracht hast`}.
+                {t("resonance.import.willCreate", { count: importState.plan.create.length })}
+                {importState.plan.skipped.length > 0 && t("resonance.import.skippedOwn", { count: importState.plan.skipped.length })}.
               </DialogDescription>
             )}
             {importState?.phase === "done" && (
               <DialogDescription>
-                {importState.created === 1 ? "1 Aussage angelegt" : `${importState.created} Aussagen angelegt`}, {importState.skipped} übersprungen.
+                {t("resonance.import.done", { count: importState.created, skipped: importState.skipped })}
               </DialogDescription>
             )}
             {importState?.phase === "failed" && <DialogDescription>{importState.message}</DialogDescription>}
@@ -227,7 +229,7 @@ export function ResonanceTransferMenu({
             <ul role="alert" className="max-h-60 space-y-1 overflow-y-auto text-sm text-destructive">
               {importState.plan.errors.map((error) => (
                 <li key={`${error.index}-${error.message}`}>
-                  {error.index >= 0 ? `Eintrag ${error.index + 1}: ` : ""}{error.message}
+                  {error.index >= 0 ? t("resonance.import.entry", { number: error.index + 1 }) : ""}{error.message}
                 </li>
               ))}
             </ul>
@@ -237,13 +239,13 @@ export function ResonanceTransferMenu({
             {importState?.phase === "review" && importState.plan.errors.length === 0 && importState.plan.create.length > 0 ? (
               <>
                 <DialogClose asChild>
-                  <Button variant="outline">Abbrechen</Button>
+                  <Button variant="outline">{t("common.cancel")}</Button>
                 </DialogClose>
-                <Button onClick={() => void runImport(importState)}>Importieren</Button>
+                <Button onClick={() => void runImport(importState)}>{t("resonance.import.action")}</Button>
               </>
             ) : (
               <DialogClose asChild>
-                <Button variant="outline" disabled={importState?.phase === "writing"}>Schließen</Button>
+                <Button variant="outline" disabled={importState?.phase === "writing"}>{t("common.close")}</Button>
               </DialogClose>
             )}
           </DialogFooter>
@@ -253,8 +255,8 @@ export function ResonanceTransferMenu({
       <Dialog open={pickOpen} onOpenChange={setPickOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Aussagen importieren</DialogTitle>
-            <DialogDescription>In welchen Space sollen die Aussagen?</DialogDescription>
+            <DialogTitle>{t("resonance.import.title")}</DialogTitle>
+            <DialogDescription>{t("resonance.import.whichSpace")}</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-1.5">
             {targetSpaces.map((option) => (
@@ -278,17 +280,16 @@ export function ResonanceTransferMenu({
       <Dialog open={exportOpen} onOpenChange={setExportOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Auswertung exportieren</DialogTitle>
+            <DialogTitle>{t("resonance.export.title")}</DialogTitle>
             <DialogDescription>
-              Der Export enthält die Stellungnahmen anderer Menschen mit ihrer Identität. Mit der Datei verlassen diese Daten den Space.
-              Exportiert werden die gezeigten Aussagen mit den Stimmen der gewählten Personen.
+              {t("resonance.export.warning")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Abbrechen</Button>
+              <Button variant="outline">{t("common.cancel")}</Button>
             </DialogClose>
-            <Button onClick={() => void runExport()}>Exportieren</Button>
+            <Button onClick={() => void runExport()}>{t("resonance.export.action")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

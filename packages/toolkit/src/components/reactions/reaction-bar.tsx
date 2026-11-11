@@ -8,10 +8,10 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/primitives/dial
 import { useReactions } from "@/hooks/use-reactions"
 import { useUserNameResolver } from "@/hooks/use-user-names"
 import type { AggregatedReaction } from "@/hooks/use-reactions"
-import { REACTION_NAMES } from "./reaction-constants"
+import { reactionName } from "./reaction-constants"
 import { ReactionDetails } from "./reaction-details"
 import { ReactionPicker } from "./reaction-picker"
-import { useI18n } from "@/i18n"
+import { getI18n, useI18n } from "@/i18n"
 
 export interface ReactionBarProps {
   /** ID of the item to show reactions for. */
@@ -82,7 +82,7 @@ function ReactionPill({ reaction, onReact, onOpenDetails, reactorNames }: PillPr
     setPressing(false)
   }, [])
 
-  const name = REACTION_NAMES[emoji] ?? emoji
+  const name = reactionName(getI18n(), emoji)
   // Answers "who was that?" without a click — the frequent question.
   const tooltip = reactorNames?.length ? `${reactorNames.join(", ")} — ${name}` : name
 
