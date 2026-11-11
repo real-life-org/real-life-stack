@@ -38,7 +38,7 @@ import { peopleQualifierKey, peopleStatementKey, resolvePeopleFields, type Peopl
 export type { PeopleRelationConfig } from "./people-relations"
 import { TagsWidget } from "./widgets/tags-widget"
 import { useFormSpaceSources } from "./use-form-space-sources"
-import { ITEM_BINDINGS_REASON } from "../../lib/item-bindings"
+import { itemBindingsReason } from "../../lib/item-bindings"
 import { StatusWidget } from "./widgets/status-widget"
 import { ChipsField, ContactField, NumberGroupField, OptionField, UrlField } from "./widgets/value-widgets"
 import { VALUE_WIDGETS, valueFieldError, type ValueFieldConfig } from "./value-fields"
@@ -1263,7 +1263,7 @@ export function ContentComposer({
                 options: currentConfig.groupOptions!,
                 required: spaceRequired,
                 fixedReason: currentConfig.groupFixedReason,
-                ...(formHasItemBinding ? { lockedReason: ITEM_BINDINGS_REASON } : {}),
+                ...(formHasItemBinding ? { lockedReason: itemBindingsReason() } : {}),
                 onChange: (v) => updateData("group", v),
               }
             : undefined

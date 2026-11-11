@@ -3,6 +3,8 @@ import type { Group, NotificationState, ScopedActivityEntry } from "@real-life/d
 import { Bell, BellOff, MessageCircle, MoreHorizontal, Pencil, Plus, Smile, Trash2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, EmptyState, RelativeTime, Tabs, TabsContent, TabsList, TabsTrigger } from "../primitives"
 import { cn } from "../../lib/utils"
+import { getI18n, useI18n } from "@/i18n"
+import { resolveTypePresentation } from "../preview/type-presentation"
 
 export type NotificationAction = "created" | "updated" | "deleted" | "reacted" | "commented"
 export type NotificationPriority = "high" | "low"
@@ -85,7 +87,7 @@ export function unreadHighPriorityKeys(notifications: readonly NotificationCandi
 }
 
 const presentation = {
-  created: { verb: "erstellt", icon: Plus }, updated: { verb: "geändert", icon: Pencil }, deleted: { verb: "gelöscht", icon: Trash2 }, reacted: { verb: "reagiert", icon: Smile }, commented: { verb: "kommentiert", icon: MessageCircle },
+  created: { icon: Plus }, updated: { icon: Pencil }, deleted: { icon: Trash2 }, reacted: { icon: Smile }, commented: { icon: MessageCircle },
 } as const
 
 export interface NotificationCenterProps {
@@ -93,31 +95,33 @@ export interface NotificationCenterProps {
   onMarkRead?: (keys: Record<string, string>) => void; onMarkAllRead?: () => void; onMuteGroup?: (groupId: string, muted: boolean) => void; onOpenActivity?: () => void
 }
 
-const SUBJECT_WORD: Record<string, string> = { post: "Post", event: "Event", task: "Aufgabe", place: "Ort", resource: "Ressource", person: "Profil", project: "Projekt" }
-const subjectWord = (type: string) => SUBJECT_WORD[type] ?? "Beitrag"
+/** Das Wort für den Gegenstand ohne Titel: der Typname aus dem Register (übersetzt, Spec 06), sonst „Beitrag". */
+const subjectWord = (type: string) => {
+  const darstellung = resolveTypePresentation(type)
+  return darstellung.generic ? getI18n().t("notify.genericSubject") : darstellung.label
+}
 
 
 /** HEUTE / GESTERN / DIESE WOCHE / FRÜHER — the mockup's time sections. */
 export function sectionFor(ts: string, now: Date): string {
   const day = (value: Date) => `${value.getFullYear()}-${value.getMonth()}-${value.getDate()}`
   const date = new Date(ts)
-  if (day(date) === day(now)) return "Heute"
+  const { t } = getI18n()
+  if (day(date) === day(now)) return t("notify.today")
   const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
-  if (day(date) === day(yesterday)) return "Gestern"
-  if (now.getTime() - date.getTime() <= 7 * 86_400_000) return "Diese Woche"
-  return "Früher"
+  if (day(date) === day(yesterday)) return t("notify.yesterday")
+  if (now.getTime() - date.getTime() <= 7 * 86_400_000) return t("notify.thisWeek")
+  return t("notify.earlier")
 }
 
 /** Sentence with the mockup's bold-name grammar — always the title form
  * (Antons Entscheid 19.07.: „Titel" schlägt „dein Event", in BEIDEN Tabs). */
 function sentenceParts(notification: NotificationCandidate): { lead: string; rest: string } {
+  const { t } = getI18n()
   const name = notification.actor?.displayName ?? notification.actorId
-  const lead = notification.actorCount > 1 ? `${name} und ${notification.actorCount - 1} weitere` : name
-  const plural = notification.actorCount > 1
-  const subject = `„${notification.subjectTitle ?? subjectWord(notification.subjectType)}"`
-  if (notification.semanticAction === "reacted") return { lead, rest: `${plural ? "haben" : "hat"} auf ${subject} reagiert` }
-  if (notification.semanticAction === "commented") return { lead, rest: `${plural ? "haben" : "hat"} ${subject} kommentiert` }
-  return { lead, rest: `${plural ? "haben" : "hat"} ${subject} ${presentation[notification.semanticAction].verb}` }
+  const lead = notification.actorCount > 1 ? t("notify.andOthers", { name, count: notification.actorCount - 1 }) : name
+  const subject = t("notify.quoted", { title: notification.subjectTitle ?? subjectWord(notification.subjectType) })
+  return { lead, rest: t(`notify.${notification.semanticAction}`, { subject, count: notification.actorCount }) }
 }
 
 const reactionEmoji = (notification: NotificationCandidate) => {
@@ -135,7 +139,7 @@ function ActorBadge({ notification }: { notification: NotificationCandidate }) {
   // seine rechte untere Ecke.
   return <span className="relative inline-block size-10 shrink-0 self-start">
     <Avatar className="size-10"><AvatarImage src={notification.actor?.avatarUrl} alt="" /><AvatarFallback>{name.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
-    <span aria-label={info.verb} className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full border bg-background text-[11px] shadow-sm">
+    <span aria-label={getI18n().t(`notify.badge.${notification.semanticAction}`)} className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full border bg-background text-[11px] shadow-sm">
       {emoji ?? <Icon className="size-3 text-muted-foreground" />}
     </span>
   </span>
@@ -144,6 +148,7 @@ function ActorBadge({ notification }: { notification: NotificationCandidate }) {
 const PAGE_SIZE = 10
 
 export function NotificationCenter({ notifications, onOpenSubject, onOpenGroup, onMarkRead, onMarkAllRead, onMuteGroup, onOpenActivity }: NotificationCenterProps) {
+  const { t } = useI18n()
   const [tab, setTab] = useState<"personal" | "groups">("personal")
   const [personalLimit, setPersonalLimit] = useState(PAGE_SIZE)
   const [groupsLimit, setGroupsLimit] = useState(PAGE_SIZE)
@@ -180,49 +185,50 @@ export function NotificationCenter({ notifications, onOpenSubject, onOpenGroup, 
                 {navigable
                   ? <button type="button" onClick={() => { onMarkRead?.(notification.readKeys); onOpenSubject?.(notification) }} className="cursor-pointer rounded-sm text-left text-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">{sentence}</button>
                   : unread && onMarkRead
-                    ? <button type="button" onClick={() => onMarkRead(notification.readKeys)} aria-label="Als gelesen markieren" className="cursor-pointer rounded-sm text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">{sentence}</button>
+                    ? <button type="button" onClick={() => onMarkRead(notification.readKeys)} aria-label={t("notify.markRead")} className="cursor-pointer rounded-sm text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">{sentence}</button>
                     : <p className="text-sm">{sentence}</p>}
                 {quote && <p className="mt-1 truncate rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">„{quote}"</p>}
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                   <RelativeTime date={notification.ts} /><span aria-hidden>·</span>
                   <button type="button" onClick={() => onOpenGroup?.(notification.groupId)} className="cursor-pointer rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">{notification.groupName}</button>
-                  {notification.muted && <BellOff aria-label="Stummgeschaltet" className="size-3 shrink-0" />}
+                  {notification.muted && <BellOff aria-label={t("notify.muted")} className="size-3 shrink-0" />}
                 </p>
               </div>
-              {onMuteGroup && <DropdownMenu><DropdownMenuTrigger aria-label={`${notification.muted ? "Aktivieren" : "Stummschalten"}: ${notification.groupName}`} className="cursor-pointer self-start rounded-sm p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"><MoreHorizontal className="size-4" /></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => onMuteGroup(notification.groupId, !notification.muted)}>{notification.muted ? "Gruppe aktivieren" : "Gruppe stummschalten"}</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
-              {unread && <span aria-label="Ungelesen" className="mt-1 size-2 shrink-0 rounded-full bg-primary" />}
+              {onMuteGroup && <DropdownMenu><DropdownMenuTrigger aria-label={t(notification.muted ? "notify.unmuteGroupNamed" : "notify.muteGroupNamed", { group: notification.groupName })} className="cursor-pointer self-start rounded-sm p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"><MoreHorizontal className="size-4" /></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => onMuteGroup(notification.groupId, !notification.muted)}>{notification.muted ? t("notify.unmuteGroup") : t("notify.muteGroup")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
+              {unread && <span aria-label={t("notify.unread")} className="mt-1 size-2 shrink-0 rounded-full bg-primary" />}
             </div>
           </li>
         })}</ol>
       </div>)}
-      {list.length > limit && <button type="button" onClick={raiseLimit} className="mt-2 w-full cursor-pointer rounded-md border-t py-2 text-center text-sm text-primary hover:underline">Ältere laden</button>}
+      {list.length > limit && <button type="button" onClick={raiseLimit} className="mt-2 w-full cursor-pointer rounded-md border-t py-2 text-center text-sm text-primary hover:underline">{t("notify.loadOlder")}</button>}
     </div>
   }
 
-  return <section id="notification-center" aria-label="Benachrichtigungen" className="p-4">
+  return <section id="notification-center" aria-label={t("notify.title")} className="p-4">
     <header className="mb-3 flex items-center justify-between gap-2">
-      <h2 className="font-semibold">Benachrichtigungen</h2>
-      {onMarkAllRead && <button type="button" onClick={onMarkAllRead} className="cursor-pointer text-sm font-medium text-primary hover:underline">Alle als gelesen</button>}
+      <h2 className="font-semibold">{t("notify.title")}</h2>
+      {onMarkAllRead && <button type="button" onClick={onMarkAllRead} className="cursor-pointer text-sm font-medium text-primary hover:underline">{t("notify.markAllRead")}</button>}
     </header>
     <Tabs value={tab} onValueChange={(value) => setTab(value as "personal" | "groups")} className="mb-2">
-      <TabsList aria-label="Benachrichtigungen filtern">
-        <TabsTrigger value="personal">Für dich</TabsTrigger>
-        <TabsTrigger value="groups"><span className="flex items-center gap-1.5">Gruppen{groupsUnread && <span aria-label="Ungelesene Gruppen-Aktivität" className="size-1.5 rounded-full bg-primary" />}</span></TabsTrigger>
+      <TabsList aria-label={t("notify.filter")}>
+        <TabsTrigger value="personal">{t("notify.forYou")}</TabsTrigger>
+        <TabsTrigger value="groups"><span className="flex items-center gap-1.5">{t("notify.groups")}{groupsUnread && <span aria-label={t("notify.groupsUnread")} className="size-1.5 rounded-full bg-primary" />}</span></TabsTrigger>
       </TabsList>
       <TabsContent value={tab}>
       {tab === "personal"
         ? (personal.length === 0
-            ? <EmptyState icon={Bell} title="Keine Benachrichtigungen" description="Hier erscheinen neue Aktivitäten für dich." />
+            ? <EmptyState icon={Bell} title={t("notify.empty")} description={t("notify.emptyHint")} />
             : renderRows(personal, personalLimit, () => setPersonalLimit((limit) => limit + 2 * PAGE_SIZE)))
         : (notifications.length === 0
-            ? <EmptyState icon={Bell} title="Keine Gruppen-Aktivität" description="Hier erscheint, was in deinen Gruppen passiert." />
+            ? <EmptyState icon={Bell} title={t("notify.groupsEmpty")} description={t("notify.groupsEmptyHint")} />
             : renderRows(notifications, groupsLimit, () => setGroupsLimit((limit) => limit + 2 * PAGE_SIZE)))}
       </TabsContent>
     </Tabs>
-    {onOpenActivity && <footer className="mt-3 border-t pt-3"><button type="button" onClick={onOpenActivity} className="cursor-pointer text-sm text-primary hover:underline">Alle Benachrichtigungen ansehen</button></footer>}
+    {onOpenActivity && <footer className="mt-3 border-t pt-3"><button type="button" onClick={onOpenActivity} className="cursor-pointer text-sm text-primary hover:underline">{t("notify.viewAll")}</button></footer>}
   </section>
 }
 
 export function NotificationBell({ open, count, onOpenChange }: { open: boolean; count: number; onOpenChange(open: boolean): void }) {
-  return <button type="button" aria-label={count ? `${count} neue Benachrichtigungen` : "Benachrichtigungen"} aria-expanded={open} aria-controls="notification-center" className="relative cursor-pointer rounded-md p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => onOpenChange(!open)}><Bell className="size-5" aria-hidden />{count > 0 && <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-primary px-1 text-xs text-primary-foreground">{count}</span>}</button>
+  const { t } = useI18n()
+  return <button type="button" aria-label={count ? t("notify.newCount", { count }) : t("notify.title")} aria-expanded={open} aria-controls="notification-center" className="relative cursor-pointer rounded-md p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50" onClick={() => onOpenChange(!open)}><Bell className="size-5" aria-hidden />{count > 0 && <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-primary px-1 text-xs text-primary-foreground">{count}</span>}</button>
 }

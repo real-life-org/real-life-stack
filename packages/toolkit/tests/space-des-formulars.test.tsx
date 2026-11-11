@@ -10,7 +10,7 @@ import { ItemComposer } from "../src/components/composer/item-composer"
 import { ItemRelationWidget } from "../src/components/composer/widgets/item-relation-widget"
 import { contentTypeFromRegister, mapComposerSubmission } from "../src/components/composer/content-types"
 import { withCreateGroup, withEditGroup, withGroupOptions, groupFixedNoScope } from "../src/components/composer/composer-mapping"
-import { itemHasBindings, ITEM_BINDINGS_REASON } from "../src/lib/item-bindings"
+import { itemHasBindings, itemBindingsReason } from "../src/lib/item-bindings"
 import { ItemDetailView } from "../src/components/detail/item-detail-view"
 import { setTypeManifest } from "../src/components/preview/type-presentation"
 
@@ -242,9 +242,9 @@ describe("Ein Item mit Beziehungen bleibt in seinem Space (Regel 5)", () => {
     const types = withGroupOptions([contentTypeFromRegister("task")], [{ id: "g", name: "Garten" }, { id: "h", name: "Hof" }], undefined)
     const typesOn = types.map((t) => ({ ...t, defaultGroup: "h" }))
     expect(withEditGroup(typesOn, true)).toBe(typesOn)
-    const locked = withEditGroup(typesOn, true, ITEM_BINDINGS_REASON)
+    const locked = withEditGroup(typesOn, true, itemBindingsReason())
     expect(locked[0]!.groupOptions?.map((o) => o.id)).toEqual(["h"])
-    expect(locked[0]!.groupFixedReason).toBe(ITEM_BINDINGS_REASON)
+    expect(locked[0]!.groupFixedReason).toBe(itemBindingsReason())
   })
 
   it("im Bearbeiten: eine eingehende Kante macht die Space-Auswahl fest, ohne Speichern zu sperren", async () => {
@@ -260,7 +260,7 @@ describe("Ein Item mit Beziehungen bleibt in seinem Space (Regel 5)", () => {
     expect(host.querySelector('button[aria-label^="Space wählen"]')).toBeNull()
     const fixed = host.querySelector('[data-slot="composer-space"]')
     expect(fixed?.textContent).toContain("Hof")
-    expect(fixed?.textContent).toContain(ITEM_BINDINGS_REASON)
+    expect(fixed?.textContent).toContain(itemBindingsReason())
     expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.trim() === "Speichern")?.disabled).toBe(false)
   })
 
@@ -287,7 +287,7 @@ describe("Ein Item mit Beziehungen bleibt in seinem Space (Regel 5)", () => {
     await act(async () => host.querySelector<HTMLInputElement>('[data-item-relation-field="blocks"] input')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })))
     await settle()
     expect(host.querySelector('button[aria-label^="Space wählen"]')).toBeNull()
-    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain(ITEM_BINDINGS_REASON)
+    expect(host.querySelector('[data-slot="composer-space"]')?.textContent).toContain(itemBindingsReason())
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Im Garten entfernen"]')!.click())
     await settle()
     expect(host.querySelector('button[aria-label^="Space wählen"]')).not.toBeNull()

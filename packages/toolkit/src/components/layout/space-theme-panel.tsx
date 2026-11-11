@@ -303,7 +303,7 @@ export function SpaceThemePanel({ group, onUpdateGroup, className }: SpaceThemeP
         <div className="space-y-0.5">
           {checks.map((check) => (
             <div key={check.label} className="flex items-baseline justify-between text-xs">
-              <span className="text-muted-foreground">{check.label}</span>
+              <span className="text-muted-foreground">{t(check.label)}</span>
               <span className={cn("tabular-nums", check.ok ? "text-muted-foreground" : "text-destructive")}>
                 {check.ratio.toFixed(1)}:1
                 {!check.ok && <span className="ml-1">· {t("spaceTheme.contrastNeeded", { minimum: check.minimum })}</span>}

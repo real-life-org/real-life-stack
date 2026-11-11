@@ -4,6 +4,7 @@ import { useCallback } from "react"
 import type { VoteValue } from "@real-life/data-interface"
 import { cn } from "@/lib/utils"
 import { useVotes, useVoteUsers } from "@/hooks/use-votes"
+import { useI18n, type MessageKey } from "@/i18n"
 
 export interface VoteBarProps {
   /** ID of the statement item to show votes for. */
@@ -12,10 +13,10 @@ export interface VoteBarProps {
   className?: string
 }
 
-const VOTE_LABELS: Record<VoteValue, string> = {
-  green: "Zustimmung",
-  yellow: "Bedenken",
-  red: "Ablehnung",
+const VOTE_LABELS: Record<VoteValue, MessageKey> = {
+  green: "resonance.vote.green",
+  yellow: "resonance.vote.yellow",
+  red: "resonance.vote.red",
 }
 
 const VOTE_ORDER: readonly VoteValue[] = ["green", "yellow", "red"]
@@ -54,6 +55,7 @@ const DOT_CLASSES: Record<VoteValue, string> = {
  * Sits in ItemPreview's footerAdornment, so all interactions stop propagation.
  */
 export function VoteBar({ statementId, className }: VoteBarProps) {
+  const { t } = useI18n()
   const { data: summary, vote, canVote } = useVotes(statementId)
   // Votes are transparent: the tooltip names who voted how (resonance.md).
   const { data: voters } = useVoteUsers(statementId, summary.total > 0)
@@ -61,8 +63,8 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
   const tooltipFor = useCallback(
     (value: VoteValue, isMine: boolean) => {
       const names = voters.filter((voter) => voter.value === value).map((voter) => voter.displayName)
-      if (names.length > 0) return `${VOTE_LABELS[value]}: ${names.join(", ")}`
-      return isMine ? `${VOTE_LABELS[value]} zurückziehen` : VOTE_LABELS[value]
+      if (names.length > 0) return `${t(VOTE_LABELS[value])}: ${names.join(", ")}`
+      return isMine ? t("resonance.vote.withdraw", { vote: t(VOTE_LABELS[value]) }) : t(VOTE_LABELS[value])
     },
     [voters],
   )
@@ -92,7 +94,7 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
         <div
           className="flex h-1.5 w-full overflow-hidden rounded-full bg-muted"
           role="img"
-          aria-label={VOTE_ORDER.map((value) => `${VOTE_LABELS[value]}: ${summary[value]}`).join(", ")}
+          aria-label={VOTE_ORDER.map((value) => `${t(VOTE_LABELS[value])}: ${summary[value]}`).join(", ")}
         >
           {VOTE_ORDER.map((value) =>
             summary[value] > 0 ? (
@@ -120,7 +122,7 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
                 isMine ? BUTTON_CLASSES[value].active : BUTTON_CLASSES[value].idle,
               )}
               aria-pressed={isMine}
-              aria-label={`${VOTE_LABELS[value]}${isMine ? ", deine Stimme" : ""}`}
+              aria-label={`${t(VOTE_LABELS[value])}${isMine ? t("resonance.vote.yoursSuffix") : ""}`}
               title={tooltipFor(value, isMine)}
               onClick={() => handleVote(value)}
             >
@@ -130,8 +132,8 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
           )
         })}
         <span className="pl-1 text-xs text-muted-foreground tabular-nums">
-          {summary.total === 1 ? "1 Stimme" : `${summary.total} Stimmen`}
-          {summary.noVote !== undefined && summary.noVote > 0 && ` · ${summary.noVote} ohne Stimme`}
+          {t("resonance.vote.count", { count: summary.total })}
+          {summary.noVote !== undefined && summary.noVote > 0 && t("resonance.vote.noVote", { count: summary.noVote })}
         </span>
       </div>
 
@@ -139,7 +141,7 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
         // Vote rule 5 (resonance.md): the voter must see that their vote
         // was cast on an earlier wording and no longer counts.
         <p className="text-xs text-muted-foreground">
-          Deine Stimme ({VOTE_LABELS[summary.myVoteOtherVersion]}) galt einer früheren Fassung und zählt nicht mehr. Stimme neu ab, damit sie zählt.
+          {t("resonance.vote.outdated", { vote: t(VOTE_LABELS[summary.myVoteOtherVersion]) })}
         </p>
       )}
     </div>
@@ -152,6 +154,7 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
  * Knöpfe. Abgestimmt wird im Detail der Fassung. Nichts ohne Stimmen.
  */
 export function VoteMiniBar({ statementId, className }: VoteBarProps) {
+  const { t } = useI18n()
   const { data: summary } = useVotes(statementId)
   if (summary.total === 0) return null
   return (
@@ -159,7 +162,7 @@ export function VoteMiniBar({ statementId, className }: VoteBarProps) {
       data-vote-mini
       className={cn("flex h-1.5 w-full overflow-hidden rounded-full bg-muted", className)}
       role="img"
-      aria-label={VOTE_ORDER.map((value) => `${VOTE_LABELS[value]}: ${summary[value]}`).join(", ")}
+      aria-label={VOTE_ORDER.map((value) => `${t(VOTE_LABELS[value])}: ${summary[value]}`).join(", ")}
     >
       {VOTE_ORDER.map((value) =>
         summary[value] > 0 ? <div key={value} className={SEGMENT_CLASSES[value]} style={{ flexGrow: summary[value] }} /> : null,

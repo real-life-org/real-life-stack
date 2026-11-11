@@ -969,6 +969,7 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
   }
 
   getAuthMethods(): AuthMethod[] {
+    // i18n-exempt: Bezeichner der Anmeldeart; die Anmeldeseite zeigt ihn nicht an
     return [{ method: "local", label: "Local Login" }]
   }
 

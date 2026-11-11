@@ -223,7 +223,7 @@ describe("feed card footer", () => {
       )
     })
     await settle()
-    expect(container.querySelectorAll('[aria-label^="Zustimmung"]').length).toBe(1)
+    expect(container.querySelectorAll('[aria-label^="Approval"]').length).toBe(1)
     // Reactions stay available alongside the votes.
     expect(container.querySelectorAll('[aria-label="Add reaction"]').length).toBe(1)
     await act(async () => { root.unmount() })

@@ -39,7 +39,9 @@ import {
   type PointerGesture,
 } from "./graph-view-helpers"
 import type { GraphEdge, GraphTypeDescriptor, GraphViewHandle, GraphViewProps } from "./types"
+import { useI18n } from "@/i18n"
 
+// i18n-exempt: Farbzuordnung je Typ; die label-Felder zeigt der Graph nicht an
 const DEFAULT_NODE_TYPES: readonly GraphTypeDescriptor[] = [
   { id: "person", label: "Person", color: "#2a78d6", darkColor: "#3987e5" },
   { id: "project", label: "Projekt", color: "#1baf7a", darkColor: "#199e70" },
@@ -101,10 +103,12 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     selectionFocusBottomInset = 0,
     fitViewKey,
     className,
-    ariaLabel = "Interaktiver Netzwerkgraph",
+    ariaLabel: ariaLabelProp,
   },
   ref,
 ) {
+  const { t } = useI18n()
+  const ariaLabel = ariaLabelProp ?? t("graph.label")
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const instructionsId = useId()
@@ -790,7 +794,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLCanvasElement>) => {
     if (event.key === "Escape") {
       onSelectedNodeChange(null)
-      setAnnouncement("Auswahl aufgehoben.")
+      setAnnouncement(t("graph.selectionCleared"))
       return
     }
     const direction = event.key === "ArrowRight" || event.key === "ArrowDown"
@@ -819,7 +823,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
         ref={canvasRef}
         className="block h-full w-full cursor-grab touch-none outline-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         role="application"
-        aria-label={`${ariaLabel}. ${nodes.length} Knoten, ${validEdges.length} Verbindungen.`}
+        aria-label={t("graph.summary", { label: ariaLabel, nodes: nodes.length, edges: validEdges.length })}
         aria-describedby={instructionsId}
         tabIndex={0}
         onPointerDown={handlePointerDown}
@@ -835,14 +839,14 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
         onKeyDown={handleKeyDown}
       />
       <p id={instructionsId} className="sr-only">
-        Pfeiltasten wählen Knoten aus. Escape hebt die Auswahl auf.
+        {t("graph.keyboardHint")}
       </p>
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {announcement}
       </p>
       {nodes.length === 0 && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center px-6 text-center">
-          <p className="text-sm font-medium text-muted-foreground">Noch keine Einträge</p>
+          <p className="text-sm font-medium text-muted-foreground">{t("lens.empty")}</p>
         </div>
       )}
     </div>

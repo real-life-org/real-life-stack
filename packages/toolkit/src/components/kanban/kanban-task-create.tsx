@@ -9,6 +9,7 @@ import { Button } from "../primitives/button"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { cn, getTagColor } from "../../lib/utils"
 import { AlignLeft, Tag, Columns3, X, UserIcon, FolderOpen, ChevronRight, Trash2 } from "lucide-react"
+import { getI18n, useI18n } from "@/i18n"
 
 function getInitials(name: string): string {
   return name
@@ -22,11 +23,12 @@ function getInitials(name: string): string {
 // Keys are task/v1 spec IDs; legacy todo/doing get folded in via
 // normalizeStatus before lookup.
 function getStatusLabel(status: string): string {
+  const { t } = getI18n()
   const labels: Record<string, string> = {
-    open: "To Do",
-    "in-progress": "In Arbeit",
-    done: "Erledigt",
-    archived: "Archiviert",
+    open: t("kanban.status.open"),
+    "in-progress": t("kanban.status.in-progress"),
+    done: t("kanban.status.done"),
+    archived: t("kanban.status.archived"),
   }
   return labels[normalizeStatus(status)] ?? status
 }
@@ -76,6 +78,7 @@ export function KanbanTaskForm({
   availableTags = [],
   className,
 }: KanbanTaskFormProps) {
+  const { t } = useI18n()
   const isEdit = !!initialData
   const defaultData: KanbanTaskFormData = {
     title: initialData?.title ?? "",
@@ -150,7 +153,7 @@ export function KanbanTaskForm({
     <div className={cn("space-y-5 p-4", className)}>
       {/* Heading */}
       <h2 className="text-lg font-semibold text-foreground leading-tight">
-        {isEdit ? "Task bearbeiten" : "Neuen Task erstellen"}
+        {isEdit ? t("kanban.editTask") : t("kanban.newTask")}
       </h2>
 
       {/* Group */}
@@ -162,7 +165,7 @@ export function KanbanTaskForm({
             className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide hover:text-foreground transition-colors"
           >
             <FolderOpen className="h-3.5 w-3.5" />
-            Gruppe
+            {t("composer.widget.group")}
             {!groupOpen && groupId && (
               <span className="normal-case tracking-normal text-foreground font-medium">
                 — {selectableGroups.find((g) => g.id === groupId)?.name}
@@ -198,7 +201,7 @@ export function KanbanTaskForm({
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Titel eingeben..."
+          placeholder={t("kanban.titlePlaceholder")}
           autoFocus
         />
       </div>
@@ -207,7 +210,7 @@ export function KanbanTaskForm({
       <div className="space-y-1.5">
         <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
           <Columns3 className="h-3.5 w-3.5" />
-          Status
+          {t("register.status")}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {columns.map((col) => (
@@ -234,7 +237,7 @@ export function KanbanTaskForm({
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
             <UserIcon className="h-3.5 w-3.5" />
-            Zugewiesen
+            {t("kanban.assigned")}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {/* Unassigned option */}
@@ -249,7 +252,7 @@ export function KanbanTaskForm({
                   : "opacity-50 hover:opacity-75"
               )}
             >
-              Niemand
+              {t("kanban.nobody")}
             </button>
             {users.map((user) => (
               <button
@@ -281,12 +284,12 @@ export function KanbanTaskForm({
       <div className="space-y-1.5">
         <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
           <AlignLeft className="h-3.5 w-3.5" />
-          Beschreibung
+          {t("kanban.description")}
         </div>
         <Textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Beschreibung hinzufuegen..."
+          placeholder={t("kanban.descriptionPlaceholder")}
           rows={3}
         />
       </div>
@@ -295,7 +298,7 @@ export function KanbanTaskForm({
       <div className="space-y-1.5">
         <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
           <Tag className="h-3.5 w-3.5" />
-          Tags
+          {t("filter.tags")}
         </div>
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -323,7 +326,7 @@ export function KanbanTaskForm({
           value={tagInput}
           onChange={(e) => setTagInput(e.target.value)}
           onKeyDown={handleTagKeyDown}
-          placeholder="Tag eingeben und Enter druecken..."
+          placeholder={t("kanban.tagPlaceholder")}
         />
         {suggestedTags.length > 0 && (
           <div className="flex flex-wrap gap-1">
@@ -352,14 +355,14 @@ export function KanbanTaskForm({
           </Button>
         )}
         <Button variant="outline" onClick={handleCancel} className="flex-1">
-          Abbrechen
+          {t("common.cancel")}
         </Button>
         <Button
           onClick={handleSubmit}
           disabled={!title.trim() || (selectableGroups.length > 0 && !groupId)}
           className="flex-1"
         >
-          {isEdit ? "Speichern" : "Task erstellen"}
+          {isEdit ? t("composer.save") : t("kanban.createTask")}
         </Button>
       </div>
     </div>

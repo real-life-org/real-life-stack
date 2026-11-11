@@ -13,6 +13,7 @@ import { resolveTypePresentation } from "../preview/type-presentation"
 import { ItemCommentCount } from "../preview/item-comment-count"
 import { normalizeStatus } from "./reorder"
 import { EyeOff, Eye, ChevronDown, ChevronRight } from "lucide-react"
+import { getI18n, useI18n } from "@/i18n"
 
 export interface KanbanColumn {
   id: string
@@ -25,6 +26,7 @@ export interface KanbanColumn {
 // different columns pass their own set via the `columns` prop;
 // `feature.kanban.customColumns` is a separate capability flag, not a
 // column source.
+// i18n-exempt: Rückfall; das Board zeigt die Standardspalten über kanban.status.<id> in der Oberflächensprache
 export const defaultColumns: KanbanColumn[] = [
   { id: "open", label: "To Do" },
   { id: "in-progress", label: "In Arbeit" },
@@ -113,7 +115,7 @@ const KanbanCard = memo(function KanbanCard({ item, users, readOnly, isDragged, 
   const displayItem = useMemo<Item>(() => {
     const title = typeof item.data.title === "string" ? item.data.title : ""
     if (title.length > 0) return item
-    return { ...item, data: { ...item.data, title: "Ohne Titel" } }
+    return { ...item, data: { ...item.data, title: getI18n().t("item.untitled") } }
   }, [item])
 
   // Drag lives on the wrapper. ItemPreview owns the keyboard / click
@@ -231,6 +233,9 @@ export function KanbanBoard({
   renderCardAdornment,
   onExternalDrop,
 }: KanbanBoardProps) {
+  const { t, tDynamic } = useI18n()
+  // Die Standardspalten sprechen die Sprache der Oberfläche; eigene Spalten einer App bringen ihr label mit.
+  const columnLabel = (column: KanbanColumn) => (defaultColumns.includes(column) ? tDynamic(`kanban.status.${column.id}`) : column.label)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
@@ -467,7 +472,7 @@ export function KanbanBoard({
                 )}
               >
                 <Eye className="h-3.5 w-3.5" />
-                {column.label}
+                {columnLabel(column)}
                 <span className="text-xs opacity-70">({columnItems.length})</span>
               </button>
             )
@@ -516,14 +521,14 @@ export function KanbanBoard({
                       type="button"
                       onClick={() => toggleCollapseColumn(column.id)}
                       className="@3xl:hidden p-0.5 rounded hover:bg-muted transition-colors"
-                      aria-label={isCollapsed ? "Spalte ausklappen" : "Spalte einklappen"}
+                      aria-label={isCollapsed ? t("kanban.expandColumn") : t("kanban.collapseColumn")}
                     >
                       {isCollapsed
                         ? <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         : <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       }
                     </button>}
-                    <span>{column.label}</span>
+                    <span>{columnLabel(column)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">
@@ -538,7 +543,7 @@ export function KanbanBoard({
                         "hidden @3xl:inline-flex p-1 rounded hover:bg-muted transition-colors",
                         visibleColumns.length <= 1 && "opacity-30 cursor-not-allowed"
                       )}
-                      aria-label={`Spalte "${column.label}" ausblenden`}
+                      aria-label={t("kanban.hideColumn", { column: columnLabel(column) })}
                     >
                       <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>}
@@ -613,7 +618,7 @@ export function KanbanBoard({
                     : "border-primary/30 text-foreground"
                 )}
               >
-                {column.label}
+                {columnLabel(column)}
               </div>
             ))}
           </div>
