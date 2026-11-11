@@ -18,6 +18,7 @@ import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { cn, getSpacePrimaryColor } from "../../lib/utils"
 import { hasViewportPadding, hasGlobe, hasUserPosition, hasUserGesture, type MapAdapter, type MapBounds, type MapMountOptions, type MapProjection } from "./adapter"
 import { useLocationPick } from "./location-pick"
+import { useI18n } from "@/i18n"
 const PICK_MARKER_ID = "__rls_pick__"
 const PICK_MARKER_COLOR = "#ef4444"
 const MAP_SHEET_FRACTION = .55
@@ -290,6 +291,7 @@ function MapViewInner({
   onViewportBoundsChange, active = true, activeItemId, selectionFocusVisibleArea, onItemClick,
   allowCreate, onCreate, clustering = false, resolveGroupColor, draftItem, isCompact = false,
 }: MapViewProps) {
+  const { t } = useI18n()
   const [adapter, setAdapter] = useState<MapAdapter | null>(null)
   const [mountError, setMountError] = useState(false)
   const [mountAttempt, setMountAttempt] = useState(0)
@@ -579,7 +581,7 @@ function MapViewInner({
           // Kein Konsolen-Rauschen: Eine Ablehnung ist keine Stoerung, sondern
           // eine Antwort — sie gehoert dorthin, wo gefragt wurde.
           beendeOrtung()
-          setStandortFehler("Standort nicht verfügbar")
+          setStandortFehler(t("map.locationUnavailable"))
         },
         { enableHighAccuracy: true, timeout: 10_000 },
       )
@@ -605,7 +607,7 @@ function MapViewInner({
         if (stand.state === "denied") {
           setOrtung("aus")
           folgt.current = false
-          setStandortFehler("Standort nicht verfügbar")
+          setStandortFehler(t("map.locationUnavailable"))
           return
         }
         starte()
@@ -643,12 +645,12 @@ function MapViewInner({
       nonClickableItemIds={draftItem && !isPicking ? [draftItem.id] : []}
       containerClassName={projection === "globe" ? "rls-globe-sky" : undefined}
       mountKey={mountAttempt} onMountError={() => setMountError(true)} />
-    {!adapter && <div className="absolute inset-0 z-10 bg-background/80"><PanelSafeArea className="flex items-center justify-center text-muted-foreground">{mountError ? <div className="flex flex-col items-center gap-3"><span>Karte konnte nicht geladen werden.</span><Button variant="outline" size="sm" onClick={() => { setMountError(false); setMountAttempt((value) => value + 1) }}>Erneut versuchen</Button></div> : <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Karte wird geladen…</>}</PanelSafeArea></div>}
-    {isPicking && <PanelSafeArea className="z-30 flex items-start justify-center p-3"><div className="flex items-center gap-2 rounded-full border bg-background/95 px-3 py-2 text-sm shadow-md"><MapPin className="h-4 w-4" /><span>{pickPosition ? "Position gewählt." : "Tippe auf die Karte, um die Position zu setzen."}</span>{isCompact && pickPosition && <Button size="sm" onClick={confirmPick}>Übernehmen</Button>}<Button size="sm" variant="ghost" onClick={cancelPick}>Abbrechen</Button></div></PanelSafeArea>}
+    {!adapter && <div className="absolute inset-0 z-10 bg-background/80"><PanelSafeArea className="flex items-center justify-center text-muted-foreground">{mountError ? <div className="flex flex-col items-center gap-3"><span>{t("map.loadFailed")}</span><Button variant="outline" size="sm" onClick={() => { setMountError(false); setMountAttempt((value) => value + 1) }}>{t("common.retry")}</Button></div> : <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t("map.loading")}</>}</PanelSafeArea></div>}
+    {isPicking && <PanelSafeArea className="z-30 flex items-start justify-center p-3"><div className="flex items-center gap-2 rounded-full border bg-background/95 px-3 py-2 text-sm shadow-md"><MapPin className="h-4 w-4" /><span>{pickPosition ? t("map.positionChosen") : t("map.tapToPick")}</span>{isCompact && pickPosition && <Button size="sm" onClick={confirmPick}>{t("map.apply")}</Button>}<Button size="sm" variant="ghost" onClick={cancelPick}>{t("common.cancel")}</Button></div></PanelSafeArea>}
     {/* Der Beitrag der Karte zur Steuerung ihrer Flaeche — WO er steht,
         entscheidet die Flaeche (Suche und Chips schwebend oben, Pille unten).
         `clearsTopLeft`: links oben sitzen die Zoom-Knoepfe. */}
-    <ModuleToolbar clearsTopLeft trailingActions={hasGeolocation() && !isPicking ? <div className="flex flex-col items-end gap-1"><Button size="icon-sm" variant="outline" aria-label={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} title={ortung === "aus" ? "Standort verfolgen" : "Standortverfolgung beenden"} aria-pressed={ortung === "aktiv"} aria-busy={ortung === "suchend"} onClick={zeigeStandort} className="bg-card!">{ortung === "suchend" ? <Loader2 className="h-4 w-4 animate-spin" /> : <StandortIcon className={cn(ortung === "aktiv" && "text-primary")} />}</Button>{standortFehler && <span role="status" className="rounded-full border bg-card/95 px-2 py-0.5 text-xs text-muted-foreground shadow-sm">{standortFehler}</span>}</div> : undefined} />
-    {!isPicking && canCreate && <CreateFab onClick={onCreate!} label="Ort erstellen" />}
+    <ModuleToolbar clearsTopLeft trailingActions={hasGeolocation() && !isPicking ? <div className="flex flex-col items-end gap-1"><Button size="icon-sm" variant="outline" aria-label={ortung === "aus" ? t("map.follow") : t("map.stopFollowing")} title={ortung === "aus" ? t("map.follow") : t("map.stopFollowing")} aria-pressed={ortung === "aktiv"} aria-busy={ortung === "suchend"} onClick={zeigeStandort} className="bg-card!">{ortung === "suchend" ? <Loader2 className="h-4 w-4 animate-spin" /> : <StandortIcon className={cn(ortung === "aktiv" && "text-primary")} />}</Button>{standortFehler && <span role="status" className="rounded-full border bg-card/95 px-2 py-0.5 text-xs text-muted-foreground shadow-sm">{standortFehler}</span>}</div> : undefined} />
+    {!isPicking && canCreate && <CreateFab onClick={onCreate!} label={t("map.createPlace")} />}
   </div>
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, type RefObject } from "react"
 import { Plus } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { useI18n } from "@/i18n"
 
 export interface CreateFabProps {
   onClick: () => void
@@ -70,7 +71,9 @@ function useAusDemBild(ziel: RefObject<Element | null> | undefined): boolean {
  * Use inside a relative or full-screen container; the z-index keeps it above
  * Leaflet panes but below modal sheets / drawers.
  */
-export function CreateFab({ onClick, label = "Erstellen", hideWhileVisible, className }: CreateFabProps) {
+export function CreateFab({ onClick, label: labelProp, hideWhileVisible, className }: CreateFabProps) {
+  const { t } = useI18n()
+  const label = labelProp ?? t("create.label")
   const zielWeg = useAusDemBild(hideWhileVisible)
   // Der FAB ist die Ausnahme, nicht die Regel: Nur wer ein Ziel nennt,
   // bekommt ihn ueberhaupt versteckt.

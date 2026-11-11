@@ -11,6 +11,7 @@ import { Inbox } from "lucide-react"
 import { useModuleContentClass } from "../layout/module-frame"
 import { EmptyState } from "../primitives/empty-state"
 import { getItemPreviewAdornments, ItemPreview } from "../preview"
+import { useI18n } from "@/i18n"
 
 export interface ListViewProps {
   items: readonly Item[]
@@ -33,6 +34,7 @@ export function lensItems(items: readonly Item[]): Item[] {
  * filter controls of its own.
  */
 export function ListView({ items, activeItemId, selectionFocusVisibleArea, selectionFocusGateKey, onItemClick }: ListViewProps) {
+  const { t } = useI18n()
   // Die Breite gehoert der Flaeche, nicht der Lens: So stehen Kopf und
   // Eintraege auf derselben Kante, auch wenn ein Modul eine andere waehlt.
   const inhaltsbreite = useModuleContentClass()
@@ -74,14 +76,14 @@ export function ListView({ items, activeItemId, selectionFocusVisibleArea, selec
     return (
       <EmptyState
         icon={Inbox}
-        title="Noch keine Einträge"
-        description="Erstelle den ersten Eintrag in diesem Space."
+        title={t("lens.empty")}
+        description={t("lens.emptyHint")}
       />
     )
   }
 
   return (
-    <div ref={scrollElementRef} aria-label="Listenansicht" data-virtualizer-item-count={visibleItems.length} className="h-full overflow-y-auto [scrollbar-gutter:stable]">
+    <div ref={scrollElementRef} aria-label={t("lens.list")} data-virtualizer-item-count={visibleItems.length} className="h-full overflow-y-auto [scrollbar-gutter:stable]">
       <div className={inhaltsbreite}>
         <section className="relative" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((virtualItem) => {

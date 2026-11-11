@@ -5,6 +5,7 @@ import { ImageOff } from "lucide-react"
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { cn } from "../../lib/utils"
+import { useI18n } from "@/i18n"
 
 /**
  * Renders item body text as Markdown.
@@ -53,6 +54,7 @@ function transformUrl(url: string, key: string, node: Readonly<{ tagName?: strin
  * the image, one click loads it (rls#257). Same trade-off mail clients make.
  */
 function RemoteImage({ src, alt }: { src: string; alt: string }) {
+  const { t } = useI18n()
   const [loaded, setLoaded] = useState(false)
   if (loaded) return <img src={src} alt={alt} className="my-2 max-w-full rounded-lg" />
   return (
@@ -67,8 +69,8 @@ function RemoteImage({ src, alt }: { src: string; alt: string }) {
       className="my-2 flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-left text-xs text-muted-foreground hover:border-primary hover:text-foreground"
     >
       <ImageOff className="h-4 w-4 shrink-0" aria-hidden />
-      <span className="min-w-0 flex-1 truncate">{alt || "Externes Bild"}</span>
-      <span className="shrink-0 underline underline-offset-2">Bild laden</span>
+      <span className="min-w-0 flex-1 truncate">{alt || t("markdown.externalImage")}</span>
+      <span className="shrink-0 underline underline-offset-2">{t("markdown.loadImage")}</span>
     </button>
   )
 }

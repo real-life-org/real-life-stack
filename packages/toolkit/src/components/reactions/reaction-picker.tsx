@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { REACTION_EMOJIS, REACTION_NAMES } from "./reaction-constants"
 import { FLOATING_CHOICE_Z_INDEX } from "../../lib/z-layers"
 import { createPortal } from "react-dom"
+import { useI18n } from "@/i18n"
 
 export interface ReactionPickerProps {
   /** Callback when an emoji is selected. */
@@ -22,6 +23,7 @@ export interface ReactionPickerProps {
  * Positions itself near the anchor element, flipping if needed to fit on screen.
  */
 export function ReactionPicker({ onSelect, onClose, anchorRef, className }: ReactionPickerProps) {
+  const { t } = useI18n()
   const pickerRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
 
@@ -103,6 +105,7 @@ export function ReactionPicker({ onSelect, onClose, anchorRef, className }: Reac
   // nichts. Am Body haengend meint `fixed` wieder den Bildschirm.
   return createPortal(
     <>
+      {/* i18n-exempt: CSS-Keyframes, kein Oberflächentext */}
       <style>{`
         @keyframes reaction-picker-in {
           from {
@@ -118,7 +121,7 @@ export function ReactionPicker({ onSelect, onClose, anchorRef, className }: Reac
       <div
         ref={pickerRef}
         role="dialog"
-        aria-label="Choose a reaction"
+        aria-label={t("reactions.choose")}
         className={cn(
           // Ueber dem Detail-Panel: Der Waehler gehoert zu dem Knopf, der ihn
           // geoeffnet hat — und der steht oft IM Panel. Siehe z-layers.

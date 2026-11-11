@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Send, X } from "lucide-react"
 import { Button } from "@/components/primitives/button"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n"
 
 export interface CommentQuote {
   id: string
@@ -39,12 +40,13 @@ export function CommentInput({
   onSubmit,
   replyTo,
   onCancelReply,
-  placeholder = "Kommentar schreiben...",
+  placeholder,
   autoFocus = false,
   onAutoFocused,
   disabled = false,
   className,
 }: CommentInputProps) {
+  const { t } = useI18n()
   const [text, setText] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -118,7 +120,7 @@ export function CommentInput({
             size="sm"
             className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground shrink-0"
             onClick={onCancelReply}
-            aria-label="Cancel reply"
+            aria-label={t("comments.cancelReply")}
           >
             <X className="h-3.5 w-3.5" />
           </Button>
@@ -132,7 +134,7 @@ export function CommentInput({
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t("comments.placeholder")}
           rows={1}
           className={cn(
             // Pille statt Kasten: die Eingabe ist die einzige Aktion in der
@@ -149,7 +151,7 @@ export function CommentInput({
           className="h-9 w-9 shrink-0 rounded-full p-0"
           disabled={!text.trim()}
           onClick={handleSubmit}
-          aria-label="Send comment"
+          aria-label={t("comments.send")}
         >
           <Send className="h-4 w-4" />
         </Button>
