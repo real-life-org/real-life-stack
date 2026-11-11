@@ -40,7 +40,7 @@ export const seed: MockConnectorSeed = {
       data: {
         title: 'Beete gießen',
         description: 'Wer übernimmt die Abendrunde?',
-        status: 'todo',
+        status: 'open',
       },
     },
     {
