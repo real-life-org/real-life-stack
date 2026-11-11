@@ -815,7 +815,7 @@ const GraphViewInner = forwardRef<GraphViewHandle, GraphViewProps>(function Grap
     onSelectedNodeChange(next.id)
     setAnnouncement(selectionAnnouncement(next.label))
     focusNode(next.id)
-  }, [focusNode, nodes, onSelectedNodeChange])
+  }, [focusNode, nodes, onSelectedNodeChange, t])
 
   return (
     <div ref={containerRef} className={cn("relative h-full min-h-0 w-full overflow-hidden", className)}>

@@ -66,7 +66,7 @@ export function VoteBar({ statementId, className }: VoteBarProps) {
       if (names.length > 0) return `${t(VOTE_LABELS[value])}: ${names.join(", ")}`
       return isMine ? t("resonance.vote.withdraw", { vote: t(VOTE_LABELS[value]) }) : t(VOTE_LABELS[value])
     },
-    [voters],
+    [voters, t],
   )
 
   const handleVote = useCallback(

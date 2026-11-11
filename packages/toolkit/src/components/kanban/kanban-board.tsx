@@ -13,7 +13,7 @@ import { resolveTypePresentation } from "../preview/type-presentation"
 import { ItemCommentCount } from "../preview/item-comment-count"
 import { normalizeStatus } from "./reorder"
 import { EyeOff, Eye, ChevronDown, ChevronRight } from "lucide-react"
-import { getI18n, useI18n } from "@/i18n"
+import { useI18n } from "@/i18n"
 
 export interface KanbanColumn {
   id: string
@@ -112,11 +112,13 @@ const KanbanCard = memo(function KanbanCard({ item, users, readOnly, isDragged, 
   // and the user only opens it to fill in. Without a placeholder the card
   // is visually blank. We don't mutate the upstream item — synthesize a
   // shadow item only when needed.
+  // Abonniert die Sprache: Die Karte ist memoisiert, der Ersatztitel folgt sonst keinem Sprachwechsel (#647).
+  const i18n = useI18n()
   const displayItem = useMemo<Item>(() => {
     const title = typeof item.data.title === "string" ? item.data.title : ""
     if (title.length > 0) return item
-    return { ...item, data: { ...item.data, title: getI18n().t("item.untitled") } }
-  }, [item])
+    return { ...item, data: { ...item.data, title: i18n.t("item.untitled") } }
+  }, [item, i18n])
 
   // Drag lives on the wrapper. ItemPreview owns the keyboard / click
   // semantics for opening the detail panel — wrapper handles drag,
