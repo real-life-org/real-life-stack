@@ -17,11 +17,11 @@
  *
  * Eine App übersetzt ihre eigenen Einträge über `extendMessages` unter denselben Schlüsseln.
  */
-import { hasMessage, type I18n } from "@/i18n"
+import type { I18n } from "@/i18n"
 
 /** Der Text unter `key`, wenn das Wörterbuch ihn kennt, sonst `fallback`. */
 export function registerText(i18n: I18n, key: string, fallback: string): string {
-  return hasMessage(key) ? i18n.tDynamic(key) : fallback
+  return i18n.has(key) ? i18n.tDynamic(key) : fallback
 }
 
 /** Die Beschriftung eines Moduls in der Sprache der Oberfläche. */
@@ -67,7 +67,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  */
 export function localizeRegisterEntry<T>(i18n: I18n, prefix: string, entry: T): T {
   const walk = (value: unknown, path: string, prop: string | null): unknown => {
-    if (typeof value === "string") return prop !== null && TEXT_PROPS.has(prop) && hasMessage(path) ? i18n.tDynamic(path) : value
+    if (typeof value === "string") return prop !== null && TEXT_PROPS.has(prop) && i18n.has(path) ? i18n.tDynamic(path) : value
     if (Array.isArray(value)) {
       let changed = false
       const next = value.map((item) => {

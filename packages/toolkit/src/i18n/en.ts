@@ -436,4 +436,9 @@ export const en = {
   "type.statement.edges.votesOn.to.selfAction.mine": "Voted",
   "type.statement.composer.submitLabel": "Submit",
 
+  // --- Register: Teilnahme-Qualifier am Event ---
+  "type.event.edges.attends.to.qualifier.values.going.label": "going",
+  "type.event.edges.attends.to.qualifier.values.maybe.label": "maybe",
+  "type.event.edges.attends.to.qualifier.values.declined.label": "declined",
+
 } satisfies Record<ToolkitMessageKey, Message>

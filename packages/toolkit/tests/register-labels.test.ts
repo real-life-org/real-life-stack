@@ -33,9 +33,21 @@ describe("Modulnamen", () => {
   })
 })
 
+describe("Bündel-Stand", () => {
+  it("prüft am selben Stand wie tDynamic: ein festgehaltenes Bündel sieht einen später ergänzten Schlüssel nicht (CodeRabbit #644)", () => {
+    sprache("en")
+    const alt = getI18n()
+    extendMessages({ de: { "module.neu.label": "Neu" }, en: { "module.neu.label": "New" } })
+    expect(moduleLabel(alt, { id: "neu", label: "Rückfall" })).toBe("Rückfall")
+    expect(moduleLabel(getI18n(), { id: "neu", label: "Rückfall" })).toBe("New")
+  })
+})
+
 describe("Typ-Register", () => {
   it("Typname, Feldnamen, Status-Optionen und Selbstaktionen folgen der Sprache", () => {
     sprache("en")
+    const zusage = resolveTypePresentation("event").edges?.find((e) => e.predicate === "attends")?.qualifier?.values
+    expect(zusage?.map((v) => [v.label, v.action])).toEqual([["going", "Accept"], ["maybe", "Maybe"], ["declined", "Decline"]])
     const task = resolveTypePresentation("task")
     expect(task.label).toBe("Task")
     expect(task.fields?.find((f) => f.key === "start")?.label).toBe("Due")

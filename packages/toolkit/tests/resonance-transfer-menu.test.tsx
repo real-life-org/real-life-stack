@@ -76,6 +76,7 @@ async function untilText(pattern: RegExp) {
   for (let round = 0; round < 200 && !pattern.test(document.body.textContent ?? ""); round++) {
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)) })
   }
+  if (!pattern.test(document.body.textContent ?? "")) throw new Error(`Text ${pattern} erschien nicht: ${document.body.textContent}`)
 }
 
 const button = (label: string) => [...document.body.querySelectorAll("button")].find((el) => el.textContent?.trim() === label)

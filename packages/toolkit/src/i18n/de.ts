@@ -470,6 +470,11 @@ export const de = {
   "type.statement.edges.votesOn.to.selfAction.mine": "Abgestimmt",
   "type.statement.composer.submitLabel": "Einbringen",
 
+  // --- Register: Teilnahme-Qualifier am Event ---
+  "type.event.edges.attends.to.qualifier.values.going.label": "zugesagt",
+  "type.event.edges.attends.to.qualifier.values.maybe.label": "vielleicht",
+  "type.event.edges.attends.to.qualifier.values.declined.label": "abgesagt",
+
 } as const
 
 /** Ein Eintrag: fester Text oder Plural-Formen nach `Intl.PluralRules`. */
