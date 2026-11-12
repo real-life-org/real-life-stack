@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.2.4...mock-connector-v0.2.5) (2026-11-12)
+
+
+### Features
+
+* **toolkit:** Composer und seine Widgets zweisprachig ([#645](https://github.com/real-life-org/real-life-stack/issues/645)) ([a06193a](https://github.com/real-life-org/real-life-stack/commit/a06193a21753b745a43187ed846a10faae2464af))
+
 ## [0.2.4](https://github.com/real-life-org/real-life-stack/compare/mock-connector-v0.2.3...mock-connector-v0.2.4) (2026-11-07)
 
 
