@@ -11,8 +11,8 @@ export const seed: MockConnectorSeed = {
   // Gruppenbild und Module liegen unter `data`, wie bei den Connectoren (Spec 04):
   // der Space wählt aus dem Register, was er zeigt (Spec 01).
   groups: [
-    { id: 'garden', name: 'Gemeinschaftsgarten', data: { image: GARDEN_IMAGE, modules: ['feed', 'calendar', 'map'] } },
-    { id: 'workshop', name: 'Offene Werkstatt', data: { image: WORKSHOP_IMAGE, modules: ['collection'] } },
+    { id: 'garden', name: 'Garten', data: { image: GARDEN_IMAGE, modules: ['feed', 'calendar', 'map'] } },
+    { id: 'workshop', name: 'Werkstatt', data: { image: WORKSHOP_IMAGE, modules: ['collection'] } },
   ],
   groupMembers: { garden: ['mira'], workshop: ['mira'] },
   groupItems: { garden: ['harvest', 'watering'], workshop: ['repair'] },
@@ -64,8 +64,8 @@ export const seed: MockConnectorSeed = {
  */
 const EN: Record<string, string> = {
   'Mira Beispiel': 'Mira Example',
-  Gemeinschaftsgarten: 'Community garden',
-  'Offene Werkstatt': 'Open workshop',
+  Garten: 'Garden',
+  Werkstatt: 'Workshop',
   Erntefest: 'Harvest festival',
   'Wir teilen unsere Ernte. Bring eine Schüssel und eine Idee mit.': 'We share our harvest. Bring a bowl and an idea.',
   'Am Gemeinschaftsgarten': 'At the community garden',

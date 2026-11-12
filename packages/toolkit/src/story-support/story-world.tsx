@@ -95,8 +95,8 @@ export const STORY_SEED: MockConnectorSeed = {
   users: STORY_USERS,
   // Gruppenbild liegt wie in den Connectoren unter `data.image` (Spec 04); der Rahmen liest es von dort.
   groups: [
-    { id: "garden", name: "Gemeinschaftsgarten", data: { image: GARDEN_IMAGE } },
-    { id: "workshop", name: "Offene Werkstatt", data: { image: WORKSHOP_IMAGE } },
+    { id: "garden", name: "Garten", data: { image: GARDEN_IMAGE } },
+    { id: "workshop", name: "Werkstatt", data: { image: WORKSHOP_IMAGE } },
   ],
   groupMembers: { garden: ["mira", "jonas", "lea"], workshop: ["mira"] },
   groupItems: { garden: [STORY_POST.id, STORY_EVENT.id, STORY_TASK.id], workshop: [] },
@@ -116,7 +116,7 @@ export const STORY_SEED: MockConnectorSeed = {
 export interface StoryWorldOptions {
   /** Items zusätzlich zum Grundbestand, oder ein ganz eigener Bestand. */
   seed?: Partial<MockConnectorSeed>
-  /** Welcher Space beim Start aktiv ist. Standard: der Gemeinschaftsgarten. */
+  /** Welcher Space beim Start aktiv ist. Standard: der Garten. */
   group?: string
   /** Nur die sechs Kernmethoden des DataInterface: kein Schreiben, keine Gruppen, keine Relations. Zeigt, wie der Rahmen ohne Fähigkeiten aussieht. */
   readOnly?: boolean
