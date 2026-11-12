@@ -25,6 +25,12 @@
 
   // Hell oder dunkel: Starlight stempelt `data-theme` auf <html>; Storybook nimmt es als Global `theme` in der Adresse.
   const theme = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+  // Die Sprache des Inhalts: die eingebettete App spricht sie mit, als Global `language`. Im Handbuch nennt die Figure
+  // sie selbst (`data-lang`), weil nicht uebersetzte Sprachen den deutschen Inhalt zeigen. Ohne Angabe (Startseite)
+  // gilt die Sprache der Seite (Starlight stempelt `lang` auf <html>): Deutsch nur auf deutschen Seiten, sonst
+  // Englisch. Die Vorschau speichert die Wahl nicht (rls#620).
+  const language = (fig: HTMLElement) =>
+    fig.dataset.lang ?? (document.documentElement.lang.toLowerCase().startsWith('de') ? 'de' : 'en')
   // Die App bleibt unsichtbar, bis Storybook die Story gerendert hat, und blendet dann ein. Gleicher Ursprung
   // (gebaute Site): auf den Inhalt der Story-Wurzel warten; sonst (Dev-Server auf anderem Port) reicht `load` plus Puffer.
   function reveal(fig: HTMLElement, iframe: HTMLIFrameElement) {
@@ -81,7 +87,7 @@
 
   function load(fig: HTMLElement) {
     const iframe = fig.querySelector<HTMLIFrameElement>('iframe')!
-    const src = `${iframe.dataset.src}&globals=theme:${theme()}`
+    const src = `${iframe.dataset.src}&globals=theme:${theme()};language:${language(fig)}`
     if (iframe.src === src) return
     fig.querySelector('.story-box')?.classList.remove('is-ready')
     iframe.addEventListener('load', () => reveal(fig, iframe), { once: true })
