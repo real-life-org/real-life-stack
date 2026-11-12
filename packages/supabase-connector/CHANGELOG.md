@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4](https://github.com/real-life-org/real-life-stack/compare/supabase-connector-v0.3.3...supabase-connector-v0.3.4) (2026-11-12)
+
+
+### Features
+
+* **toolkit:** Composer und seine Widgets zweisprachig ([#645](https://github.com/real-life-org/real-life-stack/issues/645)) ([a06193a](https://github.com/real-life-org/real-life-stack/commit/a06193a21753b745a43187ed846a10faae2464af))
+
 ## [0.3.3](https://github.com/real-life-org/real-life-stack/compare/supabase-connector-v0.3.2...supabase-connector-v0.3.3) (2026-11-07)
 
 
