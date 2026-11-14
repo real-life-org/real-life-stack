@@ -20,7 +20,7 @@
 services:
   db:
     container_name: supabase-db
-    image: supabase/postgres:17.6.1.136
+    image: supabase/postgres:17.12.0.000
     restart: unless-stopped
     networks: [supabase]
     volumes:
@@ -50,7 +50,7 @@ services:
 
   auth:
     container_name: supabase-auth
-    image: supabase/gotrue:v2.189.0
+    image: supabase/gotrue:v2.197.0
     restart: unless-stopped
     networks: [supabase]
     depends_on:
@@ -97,7 +97,7 @@ services:
 
   rest:
     container_name: supabase-rest
-    image: postgrest/postgrest:v14.12
+    image: postgrest/postgrest:v14.18
     restart: unless-stopped
     networks: [supabase]
     depends_on:
@@ -125,7 +125,7 @@ services:
   realtime:
     # Container name is parsed by Realtime as tenant id (realtime-dev) — keep it.
     container_name: realtime-dev.supabase-realtime
-    image: supabase/realtime:v2.102.3
+    image: supabase/realtime:v2.161.0
     restart: unless-stopped
     networks: [supabase]
     depends_on:
@@ -160,7 +160,7 @@ services:
 
   kong:
     container_name: supabase-kong
-    image: kong/kong:3.9.3
+    image: kong/kong:3.9.4
     restart: unless-stopped
     networks: [supabase]
     depends_on:
