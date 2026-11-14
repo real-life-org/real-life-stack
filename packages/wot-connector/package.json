@@ -54,7 +54,7 @@
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "typescript": "~5.7.2",
+    "typescript": "~5.9.0",
     "vitest": "^4.1.0",
     "yjs": "^13.6.30"
   },

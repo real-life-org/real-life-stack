@@ -31,7 +31,7 @@
     "@real-life/data-interface": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "~5.7.2",
+    "typescript": "~5.9.0",
     "vitest": "^4.1.0"
   },
   "publishConfig": {

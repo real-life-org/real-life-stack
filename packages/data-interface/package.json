@@ -41,7 +41,7 @@
   "devDependencies": {
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "typescript": "~5.7.2",
+    "typescript": "~5.9.0",
     "vitest": "^4.1.0"
   },
   "publishConfig": {
