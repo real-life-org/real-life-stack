@@ -47,7 +47,7 @@ vi.mock("../src/messaging-runtime.js", async (importOriginal) => ({
   createOutboxMessagingRuntime: vi.fn(() => bootstrapHarness.outbox),
 }))
 vi.mock("../src/inbox-reception-host.js", () => ({
-  InboxReceptionHost: class { start() {} onAttestation() { return () => {} } onAttestationReceipt() { return () => {} } },
+  InboxReceptionHost: class { start() {} onAttestation() { return () => {} } onAttestationReceipt() { return () => {} } onProfileUpdate() { return () => {} } },
 }))
 
 function doc(): RlsSpaceDoc {
