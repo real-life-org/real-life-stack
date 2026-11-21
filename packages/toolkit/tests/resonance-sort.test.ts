@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Item, RelationRecord } from "@real-life-stack/data-interface"
+import type { Item, RelationRecord } from "@real-life/data-interface"
 import { aggregateVoteStats, noVoteCount, sortStatements, type StatementVoteStats } from "../src/lib/resonance-sort"
 
 function statement(id: string, createdAt: string): Item {

@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.4.1](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.4.0...toolkit-v0.4.1) (2026-11-07)
+
+
+### Features
+
+* **toolkit:** i18n-Laufzeit — dünne Schicht über Intl, Deutsch + Englisch ([#288](https://github.com/real-life-org/real-life-stack/issues/288)) ([b2bd7e8](https://github.com/real-life-org/real-life-stack/commit/b2bd7e89a5a430a41da9bb07de9b97cb688fc32b))
+* **toolkit:** Texte der App-Hülle, Anmeldung und Kontakte übersetzbar (i18n, Teil 2.1) ([#619](https://github.com/real-life-org/real-life-stack/issues/619)) ([522d616](https://github.com/real-life-org/real-life-stack/commit/522d61655b675e1a045147e686fa1c54f2967146))
+* **wot-connector:** Onboarding und Entsperren übersetzbar, „Identität“ statt „Identity“ ([#621](https://github.com/real-life-org/real-life-stack/issues/621)) ([b81a4b2](https://github.com/real-life-org/real-life-stack/commit/b81a4b223b4ecfe3bf626bddae443be51a2ee13e))
+
+
+### Bug Fixes
+
+* **toolkit:** read-only, single-space apps from capabilities (comments, space switcher, author names) ([#639](https://github.com/real-life-org/real-life-stack/issues/639)) ([23bcfa7](https://github.com/real-life-org/real-life-stack/commit/23bcfa72eb470100df3766107b87fb446132019f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life/data-interface bumped to 0.4.1
+  * devDependencies
+    * @real-life/mock-connector bumped to 0.2.4
+
+## [0.4.0](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.3.0...toolkit-v0.4.0) (2026-10-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* **toolkit:** `ModuleControls` / `ModuleControlsProps` entfallen aus dem oeffentlichen Export; `useOptionalModuleHead()` liefert kein `controlsElement` mehr. Knoepfe stattdessen als `trailingActions`.
+
+### Features
+
+* **toolkit:** ColorSchemeToggle als Baustein ([#568](https://github.com/real-life-org/real-life-stack/issues/568)) ([#573](https://github.com/real-life-org/real-life-stack/issues/573)) ([bb8487b](https://github.com/real-life-org/real-life-stack/commit/bb8487b15d764396f3d46ace4f8aa58347817224))
+* **toolkit:** GroupDialog nimmt App-Abschnitte auf ([#551](https://github.com/real-life-org/real-life-stack/issues/551)) ([#579](https://github.com/real-life-org/real-life-stack/issues/579)) ([87ea640](https://github.com/real-life-org/real-life-stack/commit/87ea6408e02c2d2666fb6a8974edf8e17ee58200))
+* **toolkit:** Standardwert eines Qualifiers aus der Schicht, Zusatz und Gruppen in Rückwärts-Listen ([#556](https://github.com/real-life-org/real-life-stack/issues/556), [#557](https://github.com/real-life-org/real-life-stack/issues/557)) ([#580](https://github.com/real-life-org/real-life-stack/issues/580)) ([ab98304](https://github.com/real-life-org/real-life-stack/commit/ab98304c96155e32acf5d3182f19c51ac45b17aa))
+
+
+### Bug Fixes
+
+* Stack-Fixes Paket A aus dem Karabirrdt-Umzug ([#569](https://github.com/real-life-org/real-life-stack/issues/569)) ([196e9f2](https://github.com/real-life-org/real-life-stack/commit/196e9f239154cf73610bf810424f2d3b858550d4))
+* **toolkit:** Container-Module polstern unten mit --module-controls-block ([#585](https://github.com/real-life-org/real-life-stack/issues/585)) ([4a408be](https://github.com/real-life-org/real-life-stack/commit/4a408be4f7d569b790f68347e5d30b80ae2ca44d))
+* **toolkit:** Ecke unten links gehört Pille und Erstellen, Frame meldet ihre Höhe ([#567](https://github.com/real-life-org/real-life-stack/issues/567)) ([#581](https://github.com/real-life-org/real-life-stack/issues/581)) ([3009374](https://github.com/real-life-org/real-life-stack/commit/300937451998ad127f1dbd9c04e3cfb6ebf1db84))
+* **toolkit:** ModuleFrame zeichnet Modul-Aktionen auch ohne Filter-Besitzer ([#570](https://github.com/real-life-org/real-life-stack/issues/570)) ([#578](https://github.com/real-life-org/real-life-stack/issues/578)) ([57b9e30](https://github.com/real-life-org/real-life-stack/commit/57b9e3086b85fe66ea71031c8bf775332304c012))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @real-life-stack/mock-connector bumped to 0.2.3
+
 ## [0.3.0](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.2.1...toolkit-v0.3.0) (2026-09-28)
 
 

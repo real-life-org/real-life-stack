@@ -2,8 +2,8 @@
 import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { composeTypeManifest, TOOLKIT_TYPE_LAYER, type Item } from "@real-life-stack/data-interface"
-import { MockConnector } from "@real-life-stack/mock-connector"
+import { composeTypeManifest, TOOLKIT_TYPE_LAYER, type Item } from "@real-life/data-interface"
+import { MockConnector } from "@real-life/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import {

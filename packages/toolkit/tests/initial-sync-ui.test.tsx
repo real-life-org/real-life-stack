@@ -2,8 +2,8 @@
 import { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { InitialSyncState, Observable } from "@real-life-stack/data-interface"
-import { createObservable } from "@real-life-stack/data-interface"
+import type { InitialSyncState, Observable } from "@real-life/data-interface"
+import { createObservable } from "@real-life/data-interface"
 
 import { WorkspaceSwitcher, WorkspaceSyncNotice, type Workspace } from "../src/components/layout/workspace-switcher"
 import { ConnectorProvider } from "../src/hooks/connector-context"

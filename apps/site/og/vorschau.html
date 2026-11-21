@@ -4,7 +4,7 @@
   Die Bilder liegen daneben (de.png, en.png); scripts/site/prepare.mjs kopiert sie nach public/og,
   apps/site/src/route-data.ts setzt sie als og:image.
 
-  Neu erzeugen: Storybook starten (pnpm --filter @real-life-stack/toolkit storybook, Port 6006),
+  Neu erzeugen: Storybook starten (pnpm --filter @real-life/toolkit storybook, Port 6006),
   dann diese Datei in einem Headless-Browser mit 1200 x 630 aufnehmen, je einmal mit ?lang=de und ?lang=en,
   und das Ergebnis hier als de.png bzw. en.png ablegen, z. B.
   npx playwright screenshot --viewport-size=1200,630 --wait-for-timeout=8000 "file://$PWD/vorschau.html?lang=de" de.png

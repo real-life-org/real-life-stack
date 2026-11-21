@@ -2,8 +2,8 @@
 import { describe, expect, it } from "vitest"
 import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
-import { createObservable } from "@real-life-stack/data-interface"
-import type { Item } from "@real-life-stack/data-interface"
+import { createObservable } from "@real-life/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { ReactionBar } from "../src/components/reactions/reaction-bar"
 

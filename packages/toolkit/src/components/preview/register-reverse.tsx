@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 import { Lock } from "lucide-react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { useOptionalItemFocus } from "../../hooks/use-item-focus"
 import { cn } from "../../lib/utils"

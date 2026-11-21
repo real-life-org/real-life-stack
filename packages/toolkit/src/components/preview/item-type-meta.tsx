@@ -1,7 +1,7 @@
 "use client"
 
 import { createElement, type ReactNode } from "react"
-import { isProfileItem, isProject, isResource, type Item } from "@real-life-stack/data-interface"
+import { isProfileItem, isProject, isResource, type Item } from "@real-life/data-interface"
 import { BadgeCheck, Globe, Wrench } from "lucide-react"
 
 import { cn } from "../../lib/utils"
@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { initials } from "./person-avatar"
 import { ItemTypeBadge } from "./item-type-badge"
 import { resolveTypePresentation } from "./type-presentation"
+import { useI18n } from "@/i18n"
 
 /**
  * Type-specific preview adornments for items whose useful metadata is not
@@ -40,6 +41,7 @@ export function ItemProfileMeta({ item, className }: ItemTypeMetaProps) {
 
 /** Website and repository hints for a canonical `project` item. */
 export function ItemProjectMeta({ item, className }: ItemTypeMetaProps) {
+  const { t } = useI18n()
   if (!isProject(item) || (!item.data.website && !item.data.repo)) return null
 
   return (
@@ -47,13 +49,13 @@ export function ItemProjectMeta({ item, className }: ItemTypeMetaProps) {
       {item.data.website && (
         <span className="flex items-center gap-1 truncate">
           <Globe className="size-3 shrink-0" />
-          Website: {item.data.website}
+          {t("item.website", { url: String(item.data.website) })}
         </span>
       )}
       {item.data.repo && (
         <span className="flex items-center gap-1 truncate">
           <Globe className="size-3 shrink-0" />
-          Repo: {item.data.repo}
+          {t("item.repo", { url: String(item.data.repo) })}
         </span>
       )}
     </div>

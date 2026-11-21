@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react"
 import { Layers } from "lucide-react"
-import { composeTypeManifest, TOOLKIT_TYPE_LAYER, type TypeManifestLayer } from "@real-life-stack/data-interface"
+import { composeTypeManifest, TOOLKIT_TYPE_LAYER, type TypeManifestLayer } from "@real-life/data-interface"
 
 import type { EdgeEntry } from "../components/preview/field-register"
 import { registerTypePresentation, setTypeManifest } from "../components/preview/type-presentation"

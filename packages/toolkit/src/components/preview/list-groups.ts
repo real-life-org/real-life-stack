@@ -7,7 +7,7 @@
 // React-frei: welche Felder zulässig sind, was als Wert gilt und wie die
 // Einträge gegliedert werden. Gerendert wird in `register-reverse.tsx`.
 
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { formatNumber, parseNumberInput } from "../../lib/field-values"
 import type { FieldEntry, WidgetId } from "./field-register"

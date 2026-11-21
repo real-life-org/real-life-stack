@@ -11,8 +11,8 @@
 // und lesen nur über die Capabilities des Connectors.
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react"
-import type { DataInterface, Item, RelationRecord } from "@real-life-stack/data-interface"
-import { onePerSubjectWinners } from "@real-life-stack/data-interface"
+import type { DataInterface, Item, RelationRecord } from "@real-life/data-interface"
+import { onePerSubjectWinners } from "@real-life/data-interface"
 import {
   hasAuthorization,
   hasClaimVerification,
@@ -22,7 +22,7 @@ import {
   hasRelationRecordWriter,
   isAuthenticatable,
   isWritable,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
@@ -31,6 +31,7 @@ import { writeOwnStatement } from "../../lib/own-statement"
 import { useVerifiedRelationRecords } from "../../hooks/use-votes"
 import { firstOptionWithRole, isMissingQualifier, statusRole, type EdgeEntry, type FieldEntry } from "./field-register"
 import { peopleLine, peopleLineGroups, recordPeopleEdges, type PeopleLineEntry } from "./people-line"
+import { getI18n } from "@/i18n"
 
 const NO_RECORDS: RelationRecord[] = []
 
@@ -207,7 +208,7 @@ const PERSON = "global:"
 
 
 /** Grund, wenn der geöffnete Space unter der Id des Items ein anderes (oder keins) liefert. */
-export const ITEM_ELSEWHERE = "Dieses Item liegt nicht im geöffneten Space – dort bearbeiten"
+export const itemElsewhere = (): string => getI18n().t("item.elsewhere")
 
 /**
  * Dasselbe Item? `updateItem` erreicht nur den geöffneten Space, und
@@ -221,9 +222,9 @@ function sameItem(fresh: Item, shown: Item): boolean {
 
 /** Das angezeigte Item frisch aus dem geöffneten Space — oder ein Fehler mit Grund, nie ein anderes. */
 async function freshItem(connector: DataInterface, shown: Item): Promise<Item> {
-  if (!inOpenSpace(connector, shown)) throw new Error(ITEM_ELSEWHERE)
+  if (!inOpenSpace(connector, shown)) throw new Error(itemElsewhere())
   const fresh = await connector.getItem(shown.id)
-  if (!fresh || !sameItem(fresh, shown)) throw new Error(ITEM_ELSEWHERE)
+  if (!fresh || !sameItem(fresh, shown)) throw new Error(itemElsewhere())
   return fresh
 }
 

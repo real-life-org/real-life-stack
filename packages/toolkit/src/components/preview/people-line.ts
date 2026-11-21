@@ -12,7 +12,7 @@
 // Record-Aussage schlägt die eingebettete Kante (08, Teilnahme am Event,
 // Regel 5).
 
-import { onePerSubjectWinners, type Item, type RelationRecord } from "@real-life-stack/data-interface"
+import { onePerSubjectWinners, type Item, type RelationRecord } from "@real-life/data-interface"
 import type { EdgeEntry, FieldOption } from "./field-register"
 
 const PERSON_PREFIX = "global:"

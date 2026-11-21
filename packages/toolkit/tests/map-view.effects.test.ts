@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, createElement, StrictMode } from "react"
 import { createRoot, type Root } from "react-dom/client"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { MapView, type MapViewProps } from "../src/components/map/map-view"

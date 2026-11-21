@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { KanbanBoard } from "../src/components/kanban/kanban-board"
 import { ItemAssignees } from "../src/components/preview/item-assignees"
@@ -63,7 +63,7 @@ describe("Qualifier der Zuweisung auf der Karte", () => {
 describe("CodeRabbit: isItemDone mit Standard-Status", () => {
   it("ohne Status gilt der Standard-Status des Typs", async () => {
     const { isItemDone } = await import("../src/components/preview/item-ref-chip")
-    const { composeTypeManifest, TOOLKIT_TYPE_LAYER } = await import("@real-life-stack/data-interface")
+    const { composeTypeManifest, TOOLKIT_TYPE_LAYER } = await import("@real-life/data-interface")
     const { registerTypePresentation, setTypeManifest, resetTypePresentationForTests } = await import("../src/components/preview/type-presentation")
     setTypeManifest(composeTypeManifest([TOOLKIT_TYPE_LAYER, { name: "app", definitions: [{ id: "note", vocabularies: [], relations: [] }] }]))
     registerTypePresentation("app", [{ id: "note", label: "Notiz", composer: { defaultStatus: "fertig" }, fields: [{ key: "status", widget: "status", pos: "meta", options: [{ id: "neu", label: "Neu", role: "open" }, { id: "fertig", label: "Fertig", role: "done" }] }] }])

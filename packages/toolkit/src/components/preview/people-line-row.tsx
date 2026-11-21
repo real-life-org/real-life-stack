@@ -1,11 +1,12 @@
 "use client"
 
 import { useId, useState } from "react"
-import type { User } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
 
 import { PersonAvatar } from "./person-avatar"
 import { ProfileLink } from "../profile/profile-link"
 import { summarizePeople, type PeopleLineEntry } from "./people-line"
+import { getI18n, useI18n } from "@/i18n"
 
 /**
  * Die Menschen-Zeile (C1, Lesen): Chips mit Avatar, Name und Qualifier klein
@@ -29,11 +30,13 @@ function UserAvatar({ user, className }: { user: User; className?: string }) {
 
 /** Der Name des Profil-Links trägt, was der Chip zeigt: Qualifier und Sprecher. */
 function accessibleLabel(name: string, entry: PeopleLineEntry, speaker: (id: string) => string): string {
-  const parts = [entry.qualifier?.label, entry.speakerId ? `eingetragen von ${speaker(entry.speakerId)}` : undefined].filter(Boolean)
-  return parts.length > 0 ? `Profil von ${name} öffnen — ${parts.join(", ")}` : `Profil von ${name} öffnen`
+  const { t } = getI18n()
+  const parts = [entry.qualifier?.label, entry.speakerId ? t("people.enteredBy", { name: speaker(entry.speakerId) }) : undefined].filter(Boolean)
+  return parts.length > 0 ? t("people.openWithDetails", { name, details: parts.join(", ") }) : t("profile.openOf", { name })
 }
 
 export function PeopleLineRow({ entries, resolveUser, resolveName, currentUserId }: PeopleLineRowProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const listId = useId()
   const known = entries.filter((entry) => resolveUser(entry.userId))
@@ -70,7 +73,7 @@ export function PeopleLineRow({ entries, resolveUser, resolveName, currentUserId
                     <span className="truncate">{name}</span>
                     {entry.qualifier && <span className="font-normal text-muted-foreground"> {entry.qualifier.label}</span>}
                     {entry.speakerId && (
-                      <span className="font-normal text-muted-foreground"> · eingetragen von {speaker(entry.speakerId)}</span>
+                      <span className="font-normal text-muted-foreground"> · {t("people.enteredBy", { name: speaker(entry.speakerId) })}</span>
                     )}
                   </span>
                 </ProfileLink>
@@ -87,12 +90,12 @@ export function PeopleLineRow({ entries, resolveUser, resolveName, currentUserId
             }}
             className="rounded-sm text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            {open ? "Weniger" : "Alle"}
+            {open ? t("people.less") : t("people.all")}
           </button>
         )}
       </div>
       {open && (
-        <ul id={listId} aria-label="Alle" className="flex flex-col gap-1.5">
+        <ul id={listId} aria-label={t("people.all")} className="flex flex-col gap-1.5">
           {known.map((entry) => {
             const user = resolveUser(entry.userId)!
             const name = user.displayName ?? user.id
@@ -101,7 +104,7 @@ export function PeopleLineRow({ entries, resolveUser, resolveName, currentUserId
                 <UserAvatar user={user} />
                 <span className="truncate font-medium text-foreground">{name}</span>
                 {entry.qualifier && <span className="text-muted-foreground"> {entry.qualifier.label}</span>}
-                {entry.speakerId && <span className="text-muted-foreground"> · eingetragen von {speaker(entry.speakerId)}</span>}
+                {entry.speakerId && <span className="text-muted-foreground"> · {t("people.enteredBy", { name: speaker(entry.speakerId) })}</span>}
               </li>
             )
           })}

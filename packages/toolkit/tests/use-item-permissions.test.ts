@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import type { DataInterface, Item } from "@real-life-stack/data-interface"
+import type { DataInterface, Item } from "@real-life/data-interface"
 import { resolveItemPermissions, resolveCanCreate } from "../src/hooks/use-item-permissions"
 
 function makeItem(overrides: Partial<Item> = {}): Item {

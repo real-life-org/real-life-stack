@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '@real-life-stack/toolkit';
+import { Button } from '@real-life/toolkit';
 import { Map } from 'lucide-react';
 import MapPreview from '@/components/shared/MapPreview';
 

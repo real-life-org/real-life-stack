@@ -1,4 +1,4 @@
-import type { Group, Item, ModuleHints } from "@real-life-stack/data-interface"
+import type { Group, Item, ModuleHints } from "@real-life/data-interface"
 
 import { moduleForItem, resolveSpaceModules } from "./module-register"
 

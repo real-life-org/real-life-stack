@@ -23,16 +23,16 @@ import {
   getRuntimeConfig,
   type ProfileData,
   type ConnectorOption,
-} from "@real-life-stack/toolkit"
-import type { DataInterface, User } from "@real-life-stack/data-interface"
-import { isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile } from "@real-life-stack/data-interface"
-import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
-import { MapLibreAdapterProvider } from "@real-life-stack/toolkit/maplibre"
-import { MockConnector } from "@real-life-stack/mock-connector"
-import { LocalConnector } from "@real-life-stack/local-connector"
+} from "@real-life/toolkit"
+import type { DataInterface, User } from "@real-life/data-interface"
+import { isAuthenticatable, hasMessaging, hasEncounterVerification, hasProfile } from "@real-life/data-interface"
+import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life/data-interface/demo-data"
+import { MapLibreAdapterProvider } from "@real-life/toolkit/maplibre"
+import { MockConnector } from "@real-life/mock-connector"
+import { LocalConnector } from "@real-life/local-connector"
 // Der Rahmen mit Router: Fokus in der URL, Space/Modul/Item aus der URL,
 // Provider, Panel, Kopfzeile, Controller — einmal im Toolkit (Spec 01).
-import { RoutedAppFrame } from "@real-life-stack/toolkit/router"
+import { RoutedAppFrame } from "@real-life/toolkit/router"
 
 
 const CONNECTOR_OPTIONS: ConnectorOption[] = [
@@ -198,7 +198,7 @@ export function ProfilePanelHost({
     // surface as unhandledrejection.
     let cancelled = false
     const observable = connector.observeMyProfile()
-    const apply = (item: import("@real-life-stack/data-interface").Item | null) => {
+    const apply = (item: import("@real-life/data-interface").Item | null) => {
       if (cancelled) return
       setMyBio(typeof item?.data.bio === "string" ? item.data.bio : "")
     }
@@ -375,7 +375,7 @@ const demoData = {
 
 async function createConnector(type: string): Promise<DataInterface> {
   if (type === "wot") {
-    const { WotConnector } = await import("@real-life-stack/wot-connector")
+    const { WotConnector } = await import("@real-life/wot-connector")
     // 0.3.0: vaultUrl entfernt (Connector nutzt kein Vault); Defaults auf die
     // aktiven web-of-trust.de-Dienste (utopia-lab-Legacy ist abgeschaltet).
     // Endpunkte kommen zur Laufzeit (Spec 11) — dasselbe Artefakt bedient
@@ -397,7 +397,7 @@ async function createConnector(type: string): Promise<DataInterface> {
     return c
   }
   if (type === "supabase") {
-    const { createSupabaseConnector } = await import("@real-life-stack/supabase-connector")
+    const { createSupabaseConnector } = await import("@real-life/supabase-connector")
     const { supabaseUrl, supabaseAnonKey } = getRuntimeConfig().endpoints
     const connector = createSupabaseConnector(
       supabaseUrl ?? "http://127.0.0.1:54321",
@@ -426,7 +426,7 @@ function getInitialConnectorId(): string {
 
 // Lazy-load the DIDAuthScreen to keep WoT bundle separate
 const LazyDIDAuthScreen = lazy(() =>
-  import("@real-life-stack/wot-connector/components").then((m) => ({
+  import("@real-life/wot-connector/components").then((m) => ({
     default: m.DIDAuthScreen,
   }))
 )
@@ -478,7 +478,7 @@ export function AuthGate({ connector, wot, children }: { connector: DataInterfac
       }
     >
       <LazyDIDAuthScreen
-        connector={connector as unknown as import("@real-life-stack/wot-connector").WotConnector}
+        connector={connector as unknown as import("@real-life/wot-connector").WotConnector}
         onAuthenticated={() => setAuthenticated(true)}
       />
     </Suspense>

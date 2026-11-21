@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/primitives/dialog"
 import { challengeRemainingMs, formatCountdown } from "./challenge-countdown"
+import { useI18n } from "@/i18n"
 
 type VerificationStep = "ready" | "confirm" | "done" | "error"
 
@@ -49,6 +50,7 @@ export function VerificationDialog({
   onConfirmVerification,
   onReset,
 }: VerificationDialogProps) {
+  const { t } = useI18n()
   const [step, setStep] = useState<VerificationStep>("ready")
   const [copied, setCopied] = useState(false)
   const [scannedCode, setScannedCode] = useState("")
@@ -253,11 +255,11 @@ export function VerificationDialog({
         <DialogHeader className="text-center">
           <DialogTitle className="flex items-center justify-center gap-2">
             <QrCode className="h-5 w-5 text-primary" />
-            {step === "done" ? "Verifizierung gesendet" : "Verifizieren"}
+            {step === "done" ? t("verification.sent") : t("verification.title")}
           </DialogTitle>
           {step === "ready" && (
             <DialogDescription className="text-center">
-              Zeige deinen Code oder scanne den Code deines Gegenübers.
+              {t("verification.instructions")}
             </DialogDescription>
           )}
         </DialogHeader>
@@ -290,7 +292,7 @@ export function VerificationDialog({
             ) : qrDataUrl ? (
               <div className="flex flex-col items-center gap-1.5">
                 <div className="rounded-xl border bg-white p-3 shadow-sm">
-                  <img src={qrDataUrl} alt="QR Code" className="w-[220px] h-[220px]" />
+                  <img src={qrDataUrl} alt={t("verification.qrCode")} className="w-[220px] h-[220px]" />
                 </div>
                 <button
                   type="button"
@@ -299,16 +301,16 @@ export function VerificationDialog({
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
                   {copied ? (
-                    <><Check className="h-3 w-3 text-green-500" /> Kopiert</>
+                    <><Check className="h-3 w-3 text-green-500" /> {t("verification.copied")}</>
                   ) : (
-                    <><Copy className="h-3 w-3" /> Code kopieren</>
+                    <><Copy className="h-3 w-3" /> {t("verification.copyCode")}</>
                   )}
                 </button>
                 {remainingMs !== null && (
                   <span className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
                     {remainingMs > 0
-                      ? <>Code gültig für {formatCountdown(remainingMs)}</>
-                      : <>Code abgelaufen — neuer wird erzeugt…</>}
+                      ? t("verification.validFor", { time: formatCountdown(remainingMs) })
+                      : t("verification.expired")}
                   </span>
                 )}
               </div>
@@ -327,7 +329,7 @@ export function VerificationDialog({
               disabled={isScanning}
             >
               <Camera className="h-3.5 w-3.5 mr-1.5" />
-              Scannen
+              {t("verification.scan")}
             </Button>
 
             {/* Manual entry toggle */}
@@ -338,14 +340,14 @@ export function VerificationDialog({
                 onClick={() => setShowManualEntry(!showManualEntry)}
               >
                 {showManualEntry ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                Code manuell eingeben
+                {t("verification.enterManually")}
               </button>
               {showManualEntry && (
                 <div className="flex gap-2 mt-2">
                   <textarea
                     value={manualCode}
                     onChange={(e) => setManualCode(e.target.value)}
-                    placeholder="Code hier einfügen..."
+                    placeholder={t("verification.pastePlaceholder")}
                     className="flex-1 rounded-md border bg-background px-3 py-2 text-xs font-mono min-h-[60px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
                   />
                   <Button
@@ -369,7 +371,7 @@ export function VerificationDialog({
         {step === "confirm" && peerInfo && (
           <div className="space-y-4 pt-2">
             <p className="text-sm text-center text-muted-foreground">
-              Stehst du gerade vor dieser Person?
+              {t("verification.confirmQuestion")}
             </p>
             <div className="rounded-lg border bg-primary/5 p-4 text-center">
               <Avatar className="mx-auto mb-2 h-12 w-12">
@@ -379,6 +381,7 @@ export function VerificationDialog({
                 </AvatarFallback>
               </Avatar>
               <p className="font-medium">
+                {/* i18n-exempt: Kürzel der Kennung als Ersatzname, kein Text */}
                 {peerInfo.peerName ?? `User-${peerInfo.peerId.slice(-6)}`}
               </p>
               <p className="mt-1 text-xs text-muted-foreground font-mono">
@@ -386,15 +389,15 @@ export function VerificationDialog({
               </p>
             </div>
             <p className="text-xs text-center text-muted-foreground">
-              Bestätige nur, wenn du diese Person persönlich kennst.
+              {t("verification.confirmHint")}
             </p>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setStep("ready")}>
-                Zurück
+                {t("common.back")}
               </Button>
               <Button className="flex-1" onClick={handleConfirm} disabled={isProcessing}>
                 {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Bestätigen
+                {t("common.confirm")}
               </Button>
             </div>
           </div>
@@ -407,11 +410,11 @@ export function VerificationDialog({
             </div>
             <p className="text-sm text-muted-foreground">
               {peerInfo?.peerName
-                ? `Warte auf Verifizierung von ${peerInfo.peerName}...`
-                : "Warte auf Verifizierung der Gegenseite..."}
+                ? t("verification.waitingFor", { name: peerInfo.peerName })
+                : t("verification.waitingForPeer")}
             </p>
             <Button variant="outline" className="w-full" onClick={() => handleClose(false)}>
-              Im Hintergrund warten
+              {t("verification.waitInBackground")}
             </Button>
           </div>
         )}
@@ -422,10 +425,10 @@ export function VerificationDialog({
               <X className="h-8 w-8 text-destructive" />
             </div>
             <p className="text-sm text-muted-foreground">
-              Die Verifizierung ist fehlgeschlagen.
+              {t("verification.failed")}
             </p>
             <Button className="w-full" onClick={handleAnother}>
-              Erneut versuchen
+              {t("common.retry")}
             </Button>
           </div>
         )}

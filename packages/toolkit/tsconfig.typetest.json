@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@real-life/toolkit": ["./src/index.ts"]
+    }
+  },
+  "include": ["tests/types"]
+}

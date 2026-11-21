@@ -1,26 +1,23 @@
 {
-  // Renovate öffnet Bump-PRs für die WoT-Pakete — und NUR für die.
+  // Renovate für real-life-stack.
   //
-  // Warum überhaupt: `pnpm install --frozen-lockfile` läuft in jedem Job
-  // (tests, publish, deploy-prototypes). Die Range `^0.2.9` in der
-  // package.json wird dabei nie neu aufgelöst — es gilt ausschliesslich,
-  // was in der Lockfile steht. Ein neues Release auf npm erreicht uns also
-  // nur, wenn jemand den Bump von Hand macht. Zwischen dem 30.07. und dem
-  // 12.09.2026 ist das zweimal passiert, davon einmal unbeabsichtigt als
-  // Beifang eines fremden PRs (#274). In der Lücke lag wochenlang ein
-  // Absturz der Kontaktliste in der App, dessen Fix auf npm längst
-  // bereitlag (adapter-yjs 0.2.7, web-of-trust#349).
+  // Die Regeln selbst stehen im gemeinsamen Preset aller real-life-org-Repos:
+  // https://github.com/real-life-org/meta/blob/main/renovate/default.json5
+  // Kurz: Sicherheits-PRs sofort, unsere eigenen Pakete (`@web_of_trust/**`,
+  // `@real-life/**`) sobald sie erscheinen, alles andere als EIN gebündelter
+  // PR am Monatsersten, Majors nur nach Freigabe im Dependency-Dashboard.
+  // Dort steht auch die allgemeine Begründung (warum überhaupt Renovate,
+  // warum nicht jeder Bump als eigener PR).
   //
-  // Bewusst nur die WoT-Pakete: der Rest des Baums (React, Vite, Storybook,
-  // Capacitor …) wird weiter von Hand bewegt. Alles auf einmal zu öffnen
-  // erzeugt eine PR-Flut, die niemand liest — und ungelesene Bump-PRs sind
-  // schlechter als keine, weil sie den Eindruck erwecken, das Thema sei
-  // versorgt.
+  // Der Anlass für die WoT-Regel war hier: zwischen dem 30.07. und dem
+  // 12.09.2026 kamen neue WoT-Releases nur per Hand-Bump an, einmal davon
+  // unbeabsichtigt als Beifang eines fremden PRs (#274). In der Lücke lag
+  // wochenlang ein Absturz der Kontaktliste in der App, dessen Fix auf npm
+  // längst bereitlag (adapter-yjs 0.2.7, web-of-trust#349).
+  //
+  // Was hier steht, ist nur das, was real-life-stack vom Preset unterscheidet.
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
-
-  // Eine Übersichts-Issue statt stiller Arbeit: was Renovate sieht und
-  // warum es nichts tut, steht dort nachlesbar.
-  dependencyDashboard: true,
+  extends: ['github>real-life-org/meta//renovate/default.json5'],
 
   // Der PR-Titel wird beim Squash-Merge zum Commit-Betreff auf master und
   // muss durch die Prüfung in `.github/workflows/pr-title.yml` —
@@ -28,44 +25,27 @@
   // lautlos. `chore(deps): …` erfüllt das.
   semanticCommits: 'enabled',
 
-  // Sicherheitsmeldungen von GitHub fragen wir nicht ab.
+  // Sicherheits-PRs als `fix(deps)`, aus demselben Grund wie die WoT-Pakete
+  // unten: ein geschlossenes Sicherheitsloch in einer Abhängigkeit erreicht
+  // Play-Nutzer nur über einen App-Release, und den löst release-please nur
+  // bei `fix`, `feat` oder Breaking Change aus.
   //
-  // Renovate liest sie sonst beim Start, um daraus eigene Sicherheits-PRs zu
-  // bauen. Bei uns liefe das ins Leere: ausser den beiden WoT-Paketen ist
-  // unten alles abgeschaltet, ein Alert zu irgendeinem anderen Paket wuerde
-  // also nie zu einem PR fuehren.
-  //
-  // Der Abruf verlangt dafuer ein weiteres Token-Recht (`Dependabot alerts`).
-  // Ohne das Recht warnt Renovate bei jedem Lauf und schreibt die Warnung als
-  // "Repository Problems" an den Kopf des Dashboards — ein Banner, das
-  // dauerhaft steht und einem abgewoehnt, dort hinzuschauen.
-  //
-  // Wir geben darum nicht das Recht, sondern lassen die Frage weg. Weniger
-  // Zugriff bei gleicher Funktion. Wer die Sicherheits-PRs spaeter will,
-  // dreht das hier um UND ergaenzt das Recht am Token — eines allein nuetzt
-  // nichts.
+  // Das Preset schaltet die Sicherheits-PRs ein (`enabled: true`); das Objekt
+  // wird zusammengeführt, die beiden Felder kommen hier nur dazu.
   vulnerabilityAlerts: {
-    enabled: false,
+    semanticCommitType: 'fix',
+    semanticCommitScope: 'deps',
   },
 
   packageRules: [
-    // Erst alles aus, dann gezielt eines an. Andersherum (nur eine
-    // Positiv-Regel) bliebe der Standard für alle übrigen Pakete aktiv.
-    {
-      matchPackageNames: ['*'],
-      enabled: false,
-    },
     {
       // Die Pakete hängen als npm-Alias in der package.json
       // (`npm:@web_of_trust/adapter-yjs@^0.2.9`). Renovate matcht auf den
-      // echten Paketnamen hinter dem Alias, nicht auf den Alias-Schlüssel.
+      // echten Paketnamen hinter dem Alias, nicht auf den Alias-Schlüssel —
+      // deshalb greift die Preset-Regel für `@web_of_trust/**` (sofort, ein
+      // gemeinsamer PR, `rangeStrategy: bump`) auch hier, und diese hier
+      // ergänzt nur den Commit-Typ.
       matchPackageNames: ['@web_of_trust/**'],
-      enabled: true,
-
-      // Ein PR für beide. adapter-yjs verlangt core als Peer in exakt
-      // passender Minor (0.2.9 → `^0.5.9`); einzeln geöffnet wäre jeder
-      // der beiden PRs für sich rot.
-      groupName: 'WoT-Pakete',
 
       // `fix`, nicht `chore` — das ist hier keine Kosmetik am Changelog.
       //
@@ -87,43 +67,12 @@
       // Umgekehrt gilt: ein Bump, der nachweislich nur Features enthält, die
       // wir nicht benutzen, darf von Hand auf `chore` zurückgestuft werden —
       // das ist eine Aussage über diesen einen Release, keine Regel.
+      //
+      // Der monatliche Sammel-PR bleibt dagegen bei `chore(deps)`: er ist
+      // Wartung ohne bekannten Fix für Nutzer und geht mit dem nächsten
+      // Release ohnehin mit raus.
       semanticCommitType: 'fix',
       semanticCommitScope: 'deps',
-
-      // Die Range in der package.json mitziehen, nicht nur die Lockfile.
-      // Sonst driftet die veröffentlichte Angabe von dem weg, was wir
-      // tatsächlich testen: wir liefern `^0.2.5` aus und prüfen 0.2.9 —
-      // jeder, der unsere Pakete frisch installiert, bekommt eine
-      // Kombination, die hier nie gelaufen ist.
-      rangeStrategy: 'bump',
-    },
-    {
-      // Renovate haelt seinen eigenen Runner aktuell.
-      //
-      // `.github/workflows/renovate.yml` pinnt die Action auf einen
-      // Commit-SHA (das Repo hat keine mitlaufenden Major-Tags, und ein Tag
-      // liesse sich umhaengen). Ein gepinnter SHA veraltet, und niemand
-      // merkt es: der Lauf bleibt gruen, bis die Version irgendwann an einer
-      // Registry-Aenderung zerbricht. Genau die Klasse Fehler, gegen die
-      // dieser ganze PR antritt — also soll der Bot auch sich selbst
-      // nachziehen. Renovate hebt SHA und den Versionskommentar dahinter
-      // gemeinsam an.
-      //
-      // PREIS: der Token braucht dafuer `Workflows: read+write`. GitHub weist
-      // jeden Push zurueck, der `.github/workflows/` aendert, wenn das Recht
-      // fehlt. Es ist das maechtigste der vier Rechte — mit ihm kann der Bot
-      // jede CI-Datei umschreiben. Wem das zu weit geht, streicht diese Regel
-      // und bewegt den Pin von Hand; dann reichen Contents, Pull requests und
-      // Issues.
-      matchManagers: ['github-actions'],
-      matchDepNames: ['renovatebot/github-action'],
-      enabled: true,
-
-      // `ci`, nicht `fix`: eine neue Runner-Version aendert nichts an dem,
-      // was die App tut. release-please ignoriert `ci` — hier ist das
-      // richtig, waehrend es bei den WoT-Paketen oben falsch waere.
-      semanticCommitType: 'ci',
-      semanticCommitScope: 'renovate',
     },
   ],
 }

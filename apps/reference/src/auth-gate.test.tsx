@@ -2,7 +2,7 @@
 import { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, describe, expect, it } from "vitest"
-import type { AuthState, DataInterface, User } from "@real-life-stack/data-interface"
+import type { AuthState, DataInterface, User } from "@real-life/data-interface"
 import { AuthGate } from "./App"
 
 /** Minimal Authenticatable+DataInterface fake with an emittable auth state. */

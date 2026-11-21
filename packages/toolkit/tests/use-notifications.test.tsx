@@ -2,7 +2,7 @@
 import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
 import { describe, expect, it, vi } from "vitest"
-import { applyNotificationStatePatch, createObservable, type ScopedActivityEntry } from "@real-life-stack/data-interface"
+import { applyNotificationStatePatch, createObservable, type ScopedActivityEntry } from "@real-life/data-interface"
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { useMarkNotificationsSeen, useNotifications } from "../src/hooks/use-notifications"
 import { NotificationCenter } from "../src/components/activity/notification-center"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bell } from 'lucide-react';
-import { Button } from '@real-life-stack/toolkit';
+import { Button } from '@real-life/toolkit';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const NotificationBell = ({ unreadCount, onClick, isOpen }) => {

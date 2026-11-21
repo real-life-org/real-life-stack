@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import type { User } from "@real-life-stack/data-interface"
-import { isAuthenticatable } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
+import { isAuthenticatable } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 /**

@@ -246,7 +246,7 @@ describe("VerificationWorkflow mit IndexedDbVerificationStateStore (Reload-Szena
   })
 
   const workflow = () =>
-    new VerificationWorkflow({ crypto: protocolCrypto, stateStore: store() })
+    new VerificationWorkflow({ stateStore: store() })
 
   it("akzeptiert die Gegen-Verifizierung auch nach Workflow-Neuaufbau (Reload überlebt)", async () => {
     const before = workflow()
@@ -256,7 +256,7 @@ describe("VerificationWorkflow mit IndexedDbVerificationStateStore (Reload-Szena
       challengeNonce: "550e8400-e29b-41d4-a716-446655440000",
     })
 
-    const counter = await new VerificationWorkflow({ crypto: protocolCrypto }).createCounterVerificationAttestation({
+    const counter = await new VerificationWorkflow().createCounterVerificationAttestation({
       issuer: ownerIdentity,
       subjectDid: scannerIdentity.getDid(),
       inResponseTo: verification.id,
@@ -274,7 +274,6 @@ describe("VerificationWorkflow mit IndexedDbVerificationStateStore (Reload-Szena
   it("Entscheidung 1c: die aktive QR-Challenge übersteht den Workflow-Neuaufbau über den IndexedDB-Store", async () => {
     const { isActiveQrChallengeValid } = await import("@real-life/wot-core/protocol")
     const before = new VerificationWorkflow({
-      crypto: protocolCrypto,
       now: () => new Date("2026-08-05T10:00:00Z"),
       stateStore: store(),
     })
@@ -282,7 +281,6 @@ describe("VerificationWorkflow mit IndexedDbVerificationStateStore (Reload-Szena
 
     // Reload: neue Workflow-Instanz, gleicher Store (gleiche DID-DB).
     const after = new VerificationWorkflow({
-      crypto: protocolCrypto,
       now: () => new Date("2026-08-05T10:03:00Z"),
       stateStore: store(),
     })
@@ -296,7 +294,7 @@ describe("VerificationWorkflow mit IndexedDbVerificationStateStore (Reload-Szena
 
   it("erkennt einen Nonce-Replay auch nach Workflow-Neuaufbau als nonce-consumed", async () => {
     const nonce = "123e4567-e89b-42d3-a456-426614174000"
-    const verification = await new VerificationWorkflow({ crypto: protocolCrypto }).createVerificationAttestation({
+    const verification = await new VerificationWorkflow().createVerificationAttestation({
       issuer: scannerIdentity,
       subjectDid: ownerIdentity.getDid(),
       challengeNonce: nonce,
@@ -309,7 +307,6 @@ describe("VerificationWorkflow mit IndexedDbVerificationStateStore (Reload-Szena
     await store().recordConsumedNonce(nonce, "2026-08-04T10:00:00Z")
 
     const after = new VerificationWorkflow({
-      crypto: protocolCrypto,
       now: () => new Date("2026-08-04T10:30:00Z"),
       stateStore: store(),
     })

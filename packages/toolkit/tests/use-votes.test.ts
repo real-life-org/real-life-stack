@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
-import type { DataInterface, Item, Observable, RelationRecord, RelationRecordInput } from "@real-life-stack/data-interface"
-import { itemContentHash } from "@real-life-stack/data-interface"
+import type { DataInterface, Item, Observable, RelationRecord, RelationRecordInput } from "@real-life/data-interface"
+import { itemContentHash } from "@real-life/data-interface"
 
 interface HookSlot {
   cleanup?: () => void

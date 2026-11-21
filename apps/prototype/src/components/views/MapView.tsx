@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import ProfileView from '@/components/profile/ProfileView';
 import { postToProfileData } from '@/lib/profileAdapter';
 import { generateProfileConfig } from '@/lib/profileConfig';
-import { Button } from '@real-life-stack/toolkit';
+import { Button } from '@real-life/toolkit';
 import { ArrowLeft } from 'lucide-react';
 import L from 'leaflet';
 

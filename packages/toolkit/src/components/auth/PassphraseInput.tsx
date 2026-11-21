@@ -1,6 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Eye, EyeOff } from "lucide-react"
+import { useI18n } from "@/i18n"
 
 export interface PassphraseInputProps {
   value: string
@@ -16,13 +17,16 @@ export interface PassphraseInputProps {
 export function PassphraseInput({
   value,
   onChange,
-  label = "Passwort",
-  placeholder = "Mindestens 8 Zeichen",
+  label: labelProp,
+  placeholder: placeholderProp,
   minLength = 8,
   error,
   autoFocus,
   className,
 }: PassphraseInputProps) {
+  const { t } = useI18n()
+  const label = labelProp ?? t("auth.password")
+  const placeholder = placeholderProp ?? t("auth.minLength", { count: minLength })
   const [visible, setVisible] = React.useState(false)
 
   return (
@@ -75,6 +79,7 @@ export function PassphraseConfirm({
   minLength = 8,
   className,
 }: PassphraseConfirmProps) {
+  const { t } = useI18n()
   const tooShort = passphrase.length > 0 && passphrase.length < minLength
   const mismatch = confirm.length > 0 && passphrase !== confirm
 
@@ -83,16 +88,16 @@ export function PassphraseConfirm({
       <PassphraseInput
         value={passphrase}
         onChange={onPassphraseChange}
-        label="Passwort"
+        label={t("auth.password")}
         minLength={minLength}
-        error={tooShort ? `Mindestens ${minLength} Zeichen` : undefined}
+        error={tooShort ? t("auth.minLength", { count: minLength }) : undefined}
       />
       <PassphraseInput
         value={confirm}
         onChange={onConfirmChange}
-        label="Passwort bestätigen"
-        placeholder="Passwort wiederholen"
-        error={mismatch ? "Passwörter stimmen nicht überein" : undefined}
+        label={t("auth.confirmPassword")}
+        placeholder={t("auth.repeatPassword")}
+        error={mismatch ? t("auth.passwordMismatch") : undefined}
       />
     </div>
   )

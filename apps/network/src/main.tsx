@@ -1,7 +1,7 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { createBrowserRouter, RouterProvider } from "react-router-dom"
-import { MockConnector, type MockConnectorSeed } from "@real-life-stack/mock-connector"
+import { MockConnector, type MockConnectorSeed } from "@real-life/mock-connector"
 
 import App from "./App"
 // Bindet das Register (Toolkit-Module + Marktplatz) — vor dem ersten Render,

@@ -7,6 +7,7 @@ import { Input } from "@/components/primitives/input"
 import { cn } from "@/lib/utils"
 import { contactKind, type OptionTone } from "@/lib/field-values"
 import { ToneDot, toneSoftClass } from "@/components/preview/value-tone"
+import { useI18n } from "@/i18n"
 
 /**
  * Schreibformen der einfachen Wert-Widgets (S4a; shared-components →
@@ -39,7 +40,8 @@ function FieldError({ id, text }: { id: string; text: string | null }) {
 
 /** Symbol eines festen Felds (06, Regel 14). */
 function FixedMark() {
-  return <Lock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="fest" />
+  const { t } = useI18n()
+  return <Lock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label={t("value.fixed")} />
 }
 
 // ---------------------------------------------------------------------------
@@ -70,6 +72,7 @@ export interface OptionFieldProps {
 export const SEGMENT_MAX = 4
 
 export function OptionField({ label, options, value, onChange, allowClear, disabled, typeTone }: OptionFieldProps) {
+  const { t } = useI18n()
   const id = React.useId()
   if (options.length > SEGMENT_MAX) {
     return (
@@ -84,7 +87,7 @@ export function OptionField({ label, options, value, onChange, allowClear, disab
           className="h-9 w-full rounded-md border border-input bg-card px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50 dark:bg-input/30"
         >
           {/* Leer wählbar nur, wo das Feld leer sein darf; ohne Wert steht ein Platzhalter. */}
-          {allowClear ? <option value="">Keine Angabe</option> : !value && <option value="" disabled>Bitte wählen</option>}
+          {allowClear ? <option value="">{t("value.none")}</option> : !value && <option value="" disabled>{t("value.choose")}</option>}
           {/* Ein Wert, den das Register nicht kennt, bleibt wählbar stehen. */}
           {value && !options.some((o) => o.id === value) && <option value={value}>{value}</option>}
           {options.map((o) => (
@@ -276,13 +279,15 @@ function IconInput({
 
 /** Adresse mit Globus, geprüft: nur http und https (Widget-Paare B9). */
 export function UrlField(props: TextValueFieldProps) {
-  return <IconInput {...props} kind="url" icon={<Globe className="h-3.5 w-3.5" />} placeholder="gartenprojekt.org" inputMode="url" />
+  const { t } = useI18n()
+  return <IconInput {...props} kind="url" icon={<Globe className="h-3.5 w-3.5" />} placeholder={t("value.urlPlaceholder")} inputMode="url" />
 }
 
 /** Telefon oder E-Mail mit Sichtbarkeits-Hinweis (Widget-Paare B12). */
 export function ContactField({ visibility, ...props }: TextValueFieldProps & { visibility?: string }) {
+  const { t } = useI18n()
   const Icon = contactKind(props.value) === "email" ? Mail : Phone
-  return <IconInput {...props} kind="contact" icon={<Icon className="h-3.5 w-3.5" />} placeholder="Telefon oder E-Mail" hint={visibility} />
+  return <IconInput {...props} kind="contact" icon={<Icon className="h-3.5 w-3.5" />} placeholder={t("value.contactPlaceholder")} hint={visibility} />
 }
 
 // ---------------------------------------------------------------------------
@@ -301,6 +306,7 @@ const SUGGESTIONS_SHOWN = 8
 
 /** Chips mit Vorschlägen und „+ eigenes" (Widget-Paare B10). */
 export function ChipsField({ label, value, onChange, suggestions = [], disabled }: ChipsFieldProps) {
+  const { t } = useI18n()
   const [adding, setAdding] = React.useState(false)
   const [draft, setDraft] = React.useState("")
   // Nach Bestätigen oder Abbrechen kehrt der Fokus zu „+ eigenes" zurück.
@@ -338,7 +344,7 @@ export function ChipsField({ label, value, onChange, suggestions = [], disabled 
             {!disabled && (
               <button
                 type="button"
-                aria-label={`${chip} entfernen`}
+                aria-label={t("value.removeChip", { chip })}
                 onClick={() => onChange(value.filter((v) => v !== chip))}
                 className="rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
@@ -362,7 +368,7 @@ export function ChipsField({ label, value, onChange, suggestions = [], disabled 
           (adding ? (
             <input
               autoFocus
-              aria-label={`${label}: eigenes`}
+              aria-label={t("value.own", { label })}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -387,7 +393,7 @@ export function ChipsField({ label, value, onChange, suggestions = [], disabled 
               onClick={() => setAdding(true)}
               className="rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground hover:border-solid hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              + eigenes
+              {t("value.addOwn")}
             </button>
           ))}
       </div>

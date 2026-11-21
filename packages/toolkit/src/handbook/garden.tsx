@@ -1,5 +1,5 @@
 import { HostWorld } from '../story-support/host-world'
-import { seed } from './garden-data'
+import { gardenSeed } from './garden-data'
 
 /**
  * Der Gemeinschaftsgarten: die Beispiel-App des Handbuchs. Was hier steht,
@@ -15,11 +15,15 @@ import { seed } from './garden-data'
 export function GardenDemo({
   readOnly = false,
   module = 'feed',
+  language = 'de',
 }: {
   /** Nur lesen: kein Plusknopf, kein Bearbeiten, alles sichtbar. */
   readOnly?: boolean
   /** Modul beim Start: `feed`, `calendar` oder `map`. */
   module?: string
+  /** Sprache des Bestands (`de` oder `en`); die Story reicht das Storybook-Global `language` durch. */
+  language?: string
 }) {
-  return <HostWorld seed={seed} group="garden" module={module} readOnly={readOnly} />
+  // `key`: Ein Sprachwechsel baut die Welt neu auf, statt den alten Bestand weiterzuführen.
+  return <HostWorld key={language} seed={gardenSeed(language)} group="garden" module={module} readOnly={readOnly} />
 }

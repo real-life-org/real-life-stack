@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "../components/primitives/dialog"
 import { Button } from "../components/primitives/button"
+import { useI18n } from "@/i18n"
 
 /**
  * Die zwei Hälften des Schutzes vor verlorenen Eingaben, die jede App braucht.
@@ -53,18 +54,19 @@ export interface DiscardChangesDialogProps {
 
 /** Die Rückfrage, bevor ungespeicherte Eingaben verloren gehen. */
 export function DiscardChangesDialog({ open, onKeepEditing, onDiscard }: DiscardChangesDialogProps) {
+  const { t } = useI18n()
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onKeepEditing() }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Änderungen verwerfen?</DialogTitle>
+          <DialogTitle>{t("discardChanges.title")}</DialogTitle>
           <DialogDescription>
-            Du hast ungespeicherte Änderungen. Wenn du fortfährst, gehen sie verloren.
+            {t("discardChanges.description")}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onKeepEditing}>Weiter bearbeiten</Button>
-          <Button variant="destructive" onClick={onDiscard}>Verwerfen</Button>
+          <Button variant="outline" onClick={onKeepEditing}>{t("discardChanges.keepEditing")}</Button>
+          <Button variant="destructive" onClick={onDiscard}>{t("discardChanges.discard")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

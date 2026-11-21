@@ -1,4 +1,4 @@
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 /**
  * Map legacy column IDs to the current spec enum.

@@ -3,7 +3,7 @@ import { createElement } from "react"
 import { act } from "react"
 import { createRoot } from "react-dom/client"
 import { describe, expect, it } from "vitest"
-import { MockConnector } from "@real-life-stack/mock-connector"
+import { MockConnector } from "@real-life/mock-connector"
 import { KanbanBoard } from "../src/components/kanban/kanban-board"
 import { handleKanbanDrag } from "../src/modules/kanban-module"
 

@@ -6,6 +6,7 @@ import { X } from "lucide-react"
 import { cn } from "../../lib/utils"
 import { TagChip } from "../tag/tag-chip"
 import type { FilterBarValue, FilterTypeOption } from "./types"
+import { useI18n } from "@/i18n"
 
 export interface FilterCardSectionsProps {
   value: FilterBarValue
@@ -28,6 +29,7 @@ function Sektion({
   onClose?: () => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   return (
     <div className="px-4 pt-3 first:pt-3 [&+&]:pt-4">
       <div className="mb-1.5 flex items-center justify-between">
@@ -38,7 +40,8 @@ function Sektion({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Filter schließen"
+            aria-label={t("filter.close")}
+            data-filter-close
             className="-mr-1 rounded p-1 text-muted-foreground hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" />
@@ -109,13 +112,14 @@ export function FilterCardSections({
   extra,
   onClose,
 }: FilterCardSectionsProps) {
+  const { t } = useI18n()
   const typen = availableTypes ?? []
   const tags = [...new Set(availableTags ?? [])].sort()
 
   return (
     <>
       {typen.length > 0 && (
-        <Sektion label="Typ" onClose={onClose}>
+        <Sektion label={t("filter.type")} onClose={onClose}>
           {typen.map((typ) => {
             const aktiv = isTypeSelected(value, typ.id)
             const Icon = typ.icon
@@ -143,9 +147,9 @@ export function FilterCardSections({
         </Sektion>
       )}
 
-      <Sektion label="Tags" onClose={typen.length === 0 ? onClose : undefined}>
+      <Sektion label={t("filter.tags")} onClose={typen.length === 0 ? onClose : undefined}>
         {tags.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Keine Tags verfügbar</p>
+          <p className="text-xs text-muted-foreground">{t("filter.noTags")}</p>
         ) : (
           tags.map((tag) => {
             const aktiv = value.tags.includes(tag)

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { MockConnector, type MockConnectorSeed } from "../src/index"
 
 const CREATED_AT = "2026-07-16T00:00:00.000Z"

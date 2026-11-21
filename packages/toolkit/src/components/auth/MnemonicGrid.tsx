@@ -1,6 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Copy, Check } from "lucide-react"
+import { useI18n } from "@/i18n"
 
 export interface MnemonicGridProps {
   words: string[]
@@ -9,6 +10,7 @@ export interface MnemonicGridProps {
 }
 
 export function MnemonicGrid({ words, className, copyable = true }: MnemonicGridProps) {
+  const { t } = useI18n()
   const [copied, setCopied] = React.useState(false)
 
   const handleCopy = async () => {
@@ -37,7 +39,7 @@ export function MnemonicGrid({ words, className, copyable = true }: MnemonicGrid
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-          {copied ? "Kopiert!" : "Wörter kopieren"}
+          {copied ? t("mnemonic.copied") : t("mnemonic.copyWords")}
         </button>
       )}
     </div>

@@ -8,6 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/primitives/dialog"
+import { useI18n } from "@/i18n"
+import { withNodes } from "@/i18n/with-nodes"
 
 export interface IncomingSpaceInviteDialogProps {
   open: boolean
@@ -30,11 +32,12 @@ export function IncomingSpaceInviteDialog({
   onOpen,
   onDismiss,
 }: IncomingSpaceInviteDialogProps) {
+  const { t } = useI18n()
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onDismiss() }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Neue Einladung</DialogTitle>
+          <DialogTitle>{t("spaceInvite.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex items-center gap-3 py-2">
@@ -45,19 +48,19 @@ export function IncomingSpaceInviteDialog({
             </AvatarFallback>
           </Avatar>
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{inviterName ?? "Jemand"}</span>
-            {" hat dich in "}
-            <span className="font-medium text-foreground">{spaceName}</span>
-            {" eingeladen."}
+            {withNodes(t("spaceInvite.body"), {
+              inviter: <span className="font-medium text-foreground">{inviterName ?? t("contacts.someone")}</span>,
+              space: <span className="font-medium text-foreground">{spaceName}</span>,
+            })}
           </p>
         </div>
 
         <div className="flex gap-3">
           <Button variant="outline" className="flex-1" onClick={onDismiss}>
-            Schließen
+            {t("common.close")}
           </Button>
           <Button className="flex-1" onClick={onOpen}>
-            Öffnen
+            {t("common.open")}
           </Button>
         </div>
       </DialogContent>

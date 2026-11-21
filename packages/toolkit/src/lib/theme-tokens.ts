@@ -27,6 +27,7 @@ import { type ColorScale, type ColorScheme } from "./color-scales"
 import { LAYOUT_TOKENS } from "./space-theme"
 import { contrastRatio, parseColor } from "./oklch"
 import { getReadableTextColor } from "./utils"
+import type { MessageKey } from "@/i18n"
 
 export interface ThemeTokenInput {
   accent: ColorScale
@@ -180,7 +181,8 @@ export function themeTokens({ accent, gray, scheme }: ThemeTokenInput): ThemeTok
  * `accent` markiert die Paare, an denen die Akzentskala haengt.
  */
 export interface TokenPair {
-  label: string
+  /** Wörterbuch-Schlüssel der Beschriftung (`theme.pair.<name>`); die Oberfläche übersetzt ihn. */
+  label: MessageKey
   foreground: string
   background: string
   minimum: number
@@ -196,19 +198,19 @@ export interface TokenPair {
 }
 
 export const TOKEN_PAIRS: readonly TokenPair[] = [
-  { label: "Text", foreground: "--foreground", background: "--background", minimum: 4.5, accent: false, guaranteed: true },
-  { label: "Text auf Karten", foreground: "--card-foreground", background: "--card", minimum: 4.5, accent: false, guaranteed: true },
-  { label: "Text in Aufklappern", foreground: "--popover-foreground", background: "--popover", minimum: 4.5, accent: false, guaranteed: true },
-  { label: "Schwacher Text", foreground: "--muted-foreground", background: "--background", minimum: 4.5, accent: false, guaranteed: true },
-  { label: "Schwacher Text auf Flaeche", foreground: "--muted-foreground", background: "--muted", minimum: 4.5, accent: false, guaranteed: true },
-  { label: "Text auf Nebenflaeche", foreground: "--secondary-foreground", background: "--secondary", minimum: 4.5, accent: false, guaranteed: true },
-  { label: "Knopfbeschriftung", foreground: "--primary-foreground", background: "--primary", minimum: 3, accent: true, guaranteed: false },
-  { label: "Text auf Akzentflaeche", foreground: "--accent-foreground", background: "--accent", minimum: 4.5, accent: true, guaranteed: true },
-  { label: "Text im Seitenmenue", foreground: "--sidebar-foreground", background: "--sidebar", minimum: 4.5, accent: false, guaranteed: true },
-  { label: "Knopf im Seitenmenue", foreground: "--sidebar-primary-foreground", background: "--sidebar-primary", minimum: 3, accent: true, guaranteed: false },
-  { label: "Auswahl im Seitenmenue", foreground: "--sidebar-accent-foreground", background: "--sidebar-accent", minimum: 4.5, accent: true, guaranteed: true },
+  { label: "theme.pair.text", foreground: "--foreground", background: "--background", minimum: 4.5, accent: false, guaranteed: true },
+  { label: "theme.pair.cardText", foreground: "--card-foreground", background: "--card", minimum: 4.5, accent: false, guaranteed: true },
+  { label: "theme.pair.popoverText", foreground: "--popover-foreground", background: "--popover", minimum: 4.5, accent: false, guaranteed: true },
+  { label: "theme.pair.mutedText", foreground: "--muted-foreground", background: "--background", minimum: 4.5, accent: false, guaranteed: true },
+  { label: "theme.pair.mutedOnSurface", foreground: "--muted-foreground", background: "--muted", minimum: 4.5, accent: false, guaranteed: true },
+  { label: "theme.pair.secondaryText", foreground: "--secondary-foreground", background: "--secondary", minimum: 4.5, accent: false, guaranteed: true },
+  { label: "theme.pair.buttonText", foreground: "--primary-foreground", background: "--primary", minimum: 3, accent: true, guaranteed: false },
+  { label: "theme.pair.accentText", foreground: "--accent-foreground", background: "--accent", minimum: 4.5, accent: true, guaranteed: true },
+  { label: "theme.pair.sidebarText", foreground: "--sidebar-foreground", background: "--sidebar", minimum: 4.5, accent: false, guaranteed: true },
+  { label: "theme.pair.sidebarButton", foreground: "--sidebar-primary-foreground", background: "--sidebar-primary", minimum: 3, accent: true, guaranteed: false },
+  { label: "theme.pair.sidebarSelection", foreground: "--sidebar-accent-foreground", background: "--sidebar-accent", minimum: 4.5, accent: true, guaranteed: true },
   // WCAG 2.2: Fokusindikatoren brauchen 3:1 gegen ihre Umgebung.
-  { label: "Fokusring", foreground: "--ring", background: "--background", minimum: 3, accent: true, guaranteed: true },
+  { label: "theme.pair.focusRing", foreground: "--ring", background: "--background", minimum: 3, accent: true, guaranteed: true },
 ]
 
 export interface ContrastCheck extends TokenPair {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
-import { createObservable, type Item, type User } from "@real-life-stack/data-interface"
+import { createObservable, type Item, type User } from "@real-life/data-interface"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { CommentNavigationProvider } from "../src/components/navigation/comment-navigation"

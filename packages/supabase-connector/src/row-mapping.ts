@@ -1,5 +1,5 @@
-import type { Group, Item, Relation, User } from "@real-life-stack/data-interface"
-import { canonicalTypeValue } from "@real-life-stack/data-interface"
+import type { Group, Item, Relation, User } from "@real-life/data-interface"
+import { canonicalTypeValue } from "@real-life/data-interface"
 
 /** Column layout of public.items (supabase/migrations/0001_rls_schema.sql). */
 export interface ItemRow {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { computeColumnReorder, normalizeStatus } from "../src/components/kanban/reorder"
 
 function makeTask(id: string, status: string, order: number): Item {

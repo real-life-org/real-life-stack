@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { composeTypeManifest, TOOLKIT_TYPE_LAYER, type Item } from "@real-life-stack/data-interface"
-import { MockConnector } from "@real-life-stack/mock-connector"
+import { composeTypeManifest, TOOLKIT_TYPE_LAYER, type Item } from "@real-life/data-interface"
+import { MockConnector } from "@real-life/mock-connector"
 
 import { itemToComposerData } from "../src/components/composer/content-types"
 import { resolveTypePresentation, setTypeManifest } from "../src/components/preview/type-presentation"

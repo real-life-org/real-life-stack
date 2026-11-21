@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useState, type ReactNode } from "react"
-import type { Group } from "@real-life-stack/data-interface"
+import type { Group } from "@real-life/data-interface"
 
 import { getModule, getModules } from "../../lib/module-register"
 import type { SelectionFocusVisibleArea } from "../../lib/selection-focus"
 import { ModuleFrame } from "../layout/module-frame"
 import { ModuleHost } from "./module-host"
+import { getI18n, useI18n } from "@/i18n"
+import { moduleLabel } from "@/lib/register-labels"
 
 export interface ModuleOutletProps {
   /** Der aktive Space; `null` heisst: die URL nennt einen Space ohne Zugang. */
@@ -27,6 +29,7 @@ export interface ModuleOutletProps {
  * Space-Kontext und Items herstellt. Bis zum 21.09.2026 in der Referenz-App.
  */
 export function ModuleOutlet({ activeWorkspace, activeModule, groups, urlSpaceId, selectionFocusVisibleArea, noAccessContent }: ModuleOutletProps) {
+  const { t } = useI18n()
   const noAccess = !!urlSpaceId && !activeWorkspace
   const groupId = activeWorkspace?.id ?? ""
 
@@ -44,7 +47,7 @@ export function ModuleOutlet({ activeWorkspace, activeModule, groups, urlSpaceId
 
   // Die Suche gehoert der Flaeche und zieht sich durch alle Module (Spec 01,
   // Regel 2a). Ihre Beschriftung nennt darum den Space, nicht das Modul.
-  const searchLabel = activeWorkspace ? `In ${activeWorkspace.name} suchen` : undefined
+  const searchLabel = activeWorkspace ? t("moduleOutlet.searchIn", { name: activeWorkspace.name }) : undefined
   const wrap = (id: string, node: ReactNode) => (
     <ModuleFrame moduleId={id} searchLabel={searchLabel}>{node}</ModuleFrame>
   )
@@ -64,7 +67,7 @@ export function ModuleOutlet({ activeWorkspace, activeModule, groups, urlSpaceId
       {noAccess ? (
         noAccessContent ?? (
           <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
-            <p className="text-lg font-medium text-foreground">Kein Zugang zu diesem Space</p>
+            <p className="text-lg font-medium text-foreground">{t("moduleOutlet.noAccess")}</p>
           </div>
         )
       ) : activeIsPersistent ? null : active?.view ? (
@@ -72,8 +75,8 @@ export function ModuleOutlet({ activeWorkspace, activeModule, groups, urlSpaceId
       ) : active ? (
         // Registriert, aber ohne Flaeche — sichtbar sagen statt leer (Spec 01, Regel 7).
         <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
-          <p className="text-lg font-medium text-foreground">{active.label}</p>
-          <p className="text-sm text-muted-foreground mt-2">Fuer dieses Modul ist keine Ansicht hinterlegt.</p>
+          <p className="text-lg font-medium text-foreground">{moduleLabel(getI18n(), active)}</p>
+          <p className="text-sm text-muted-foreground mt-2">{t("moduleOutlet.noView")}</p>
         </div>
       ) : null}
     </>

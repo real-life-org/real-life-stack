@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { serializeItem, deserializeItem } from "../src/serialization.js"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import type { SerializedItem } from "../src/types.js"
 
 describe("serializeItem", () => {

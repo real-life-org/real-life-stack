@@ -2,7 +2,7 @@
 import { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, describe, expect, it } from "vitest"
-import type { AuthState, DataInterface, IncomingEvent } from "@real-life-stack/data-interface"
+import type { AuthState, DataInterface, IncomingEvent } from "@real-life/data-interface"
 import { ConnectorProvider, useConnector } from "../src/hooks/connector-context"
 import { IncomingEventsProvider, useIncomingEvents } from "../src/hooks/use-incoming-events"
 

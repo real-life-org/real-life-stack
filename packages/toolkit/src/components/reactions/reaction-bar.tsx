@@ -8,9 +8,10 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/primitives/dial
 import { useReactions } from "@/hooks/use-reactions"
 import { useUserNameResolver } from "@/hooks/use-user-names"
 import type { AggregatedReaction } from "@/hooks/use-reactions"
-import { REACTION_NAMES } from "./reaction-constants"
+import { reactionName } from "./reaction-constants"
 import { ReactionDetails } from "./reaction-details"
 import { ReactionPicker } from "./reaction-picker"
+import { getI18n, useI18n } from "@/i18n"
 
 export interface ReactionBarProps {
   /** ID of the item to show reactions for. */
@@ -41,6 +42,7 @@ interface PillProps {
 }
 
 function ReactionPill({ reaction, onReact, onOpenDetails, reactorNames }: PillProps) {
+  const { t } = useI18n()
   const { emoji, count, isMyReaction } = reaction
   const pressTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
@@ -80,7 +82,7 @@ function ReactionPill({ reaction, onReact, onOpenDetails, reactorNames }: PillPr
     setPressing(false)
   }, [])
 
-  const name = REACTION_NAMES[emoji] ?? emoji
+  const name = reactionName(getI18n(), emoji)
   // Answers "who was that?" without a click — the frequent question.
   const tooltip = reactorNames?.length ? `${reactorNames.join(", ")} — ${name}` : name
 
@@ -94,7 +96,7 @@ function ReactionPill({ reaction, onReact, onOpenDetails, reactorNames }: PillPr
         pressing && "scale-105"
       )}
       title={tooltip}
-      aria-label={`${name}, ${count} reaction${count !== 1 ? "s" : ""}${isMyReaction ? ", your reaction" : ""}${reactorNames?.length ? `: ${reactorNames.join(", ")}` : ""}`}
+      aria-label={`${t("reactions.pill", { name, count })}${isMyReaction ? t("reactions.yours") : ""}${reactorNames?.length ? `: ${reactorNames.join(", ")}` : ""}`}
       aria-pressed={isMyReaction}
       role="button"
       tabIndex={0}
@@ -137,6 +139,7 @@ function ReactionPill({ reaction, onReact, onOpenDetails, reactorNames }: PillPr
  * and supports opening ReactionDetails via count click / long press.
  */
 export function ReactionBar({ itemId, maxVisible = 6, onOpenDetails, className }: ReactionBarProps) {
+  const { t } = useI18n()
   const { data: reactions, react, canReact } = useReactions(itemId)
   const [pickerOpen, setPickerOpen] = useState(false)
   const addButtonRef = useRef<HTMLButtonElement>(null)
@@ -201,7 +204,7 @@ export function ReactionBar({ itemId, maxVisible = 6, onOpenDetails, className }
             variant="ghost"
             size="sm"
             className="h-7 w-7 rounded-full p-0 text-muted-foreground hover:text-foreground"
-            aria-label="Add reaction"
+            aria-label={t("reactions.add")}
             onClick={() => setPickerOpen((prev) => !prev)}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -222,7 +225,7 @@ export function ReactionBar({ itemId, maxVisible = 6, onOpenDetails, className }
           on the item, not somewhere else. */}
       <Dialog open={detailsOpen} onOpenChange={(open) => !open && setDetailsEmoji(null)}>
         <DialogContent className="max-w-sm p-0">
-          <DialogTitle className="sr-only">Wer hat reagiert</DialogTitle>
+          <DialogTitle className="sr-only">{t("reactions.whoReacted")}</DialogTitle>
           {detailsEmoji !== null && (
             <ReactionDetails
               itemId={itemId}

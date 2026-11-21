@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/primitives/button"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n"
 
 function EscapeHandler({ onEscape }: { onEscape: () => void }) {
   useEffect(() => {
@@ -39,6 +40,7 @@ export interface ComposerFullscreenShellProps {
  * shell-agnostic (sheet vs fullscreen) and URL-driven.
  */
 export function ComposerFullscreenShell({ open, suspended, onRequestClose, children }: ComposerFullscreenShellProps) {
+  const { t } = useI18n()
   // `mounted` keeps the node around for the fade-out; `visible` drives the opacity
   // transition. open=true → mount then fade in (double-rAF); open=false → fade
   // out then unmount after the 200ms transition.
@@ -73,7 +75,7 @@ export function ComposerFullscreenShell({ open, suspended, onRequestClose, child
             size="sm"
             className="h-8 w-8 rounded-full p-0 text-muted-foreground hover:text-foreground"
             onClick={onRequestClose}
-            aria-label="Close"
+            aria-label={t("common.close")}
           >
             <X className="h-4 w-4" />
           </Button>

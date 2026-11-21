@@ -8,7 +8,7 @@ import pkg from './package.json' with { type: 'json' }
 // `dependencies`). They stay external — imported, never copied into the
 // toolkit bundle. A bundled copy of data-interface gave the toolkit its own
 // module state: `setTypeManifest` bound only the copy, and
-// `getTypeManifest()` from `@real-life-stack/data-interface` never saw the
+// `getTypeManifest()` from `@real-life/data-interface` never saw the
 // app layer (real-life-stack#555, checked by scripts/packages/toolkit-dist.test.mjs).
 const workspaceDependencies = Object.entries(pkg.dependencies)
   .filter(([, range]) => range.startsWith('workspace:'))
@@ -33,13 +33,14 @@ export default defineConfig({
     lib: {
       // Multiple entries: the main barrel + dedicated subpath entries for
       // adapters with optional peer dependencies (e.g. leaflet). This way
-      // `@real-life-stack/toolkit/leaflet` is the only thing that touches
+      // `@real-life/toolkit/leaflet` is the only thing that touches
       // leaflet — the main entry stays leaflet-free.
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         leaflet: resolve(__dirname, 'src/leaflet.ts'),
         maplibre: resolve(__dirname, 'src/maplibre.ts'),
         router: resolve(__dirname, 'src/router.tsx'),
+        testing: resolve(__dirname, 'src/testing.ts'),
       },
       formats: ['es'],
       // Force flat `<name>.js` filenames so the paths in package.json's

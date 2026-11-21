@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, startTransition } from "react"
-import type { Item } from "@real-life-stack/data-interface"
-import { hasRelations } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
+import { hasRelations } from "@real-life/data-interface"
 import { useOptionalConnector } from "./connector-context"
 import { standingStateCounts, useItemStandings } from "./use-item-standing"
 

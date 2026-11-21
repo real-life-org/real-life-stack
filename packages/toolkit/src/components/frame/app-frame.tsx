@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Plus } from "lucide-react"
-import type { Group, Item } from "@real-life-stack/data-interface"
-import { hasGroups, hasEncounterVerification, isAuthenticatable, moduleHintsFor } from "@real-life-stack/data-interface"
+import type { Group, Item } from "@real-life/data-interface"
+import { hasGroups, hasEncounterVerification, isAuthenticatable, moduleHintsFor } from "@real-life/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useActivity } from "../../hooks/use-activity"
@@ -46,13 +46,14 @@ import { CommentNavigationProvider } from "../navigation/comment-navigation"
 import { FieldNavigationProvider } from "../navigation/field-navigation"
 import { TagNavigationProvider } from "../navigation/tag-navigation"
 import { Button } from "../primitives/button"
+import { useI18n } from "@/i18n"
 
 /** Die Overlay-Ebenen, die der Rahmen selbst kennt (Kontakte, Verifizieren). */
 export type FrameOverlayId = "contacts" | "verify"
 
 /**
  * Was der Rahmen vom Routing braucht — nicht mehr. Mit Router liefert es
- * `useWorkspaceRouting` (`@real-life-stack/toolkit/router`, `RoutedAppFrame`);
+ * `useWorkspaceRouting` (`@real-life/toolkit/router`, `RoutedAppFrame`);
  * ohne Router haelt eine Story oder ein Test es im Speicher (`HostWorld`).
  */
 export interface FrameRouting {
@@ -182,6 +183,7 @@ function useMemoryOverlay(): NonNullable<FrameRouting["overlay"]> {
  * (`RoutedAppFrame` in `/router` legt es um diesen Rahmen).
  */
 export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAccessContent, children, build, spaceSections, spaceSectionsTitle }: AppFrameProps) {
+  const { t } = useI18n()
   const { groups, workspaces, activeWorkspace, activeModule, modules, urlSpaceId, handleWorkspaceChange, handleModuleChange, goTo, goHome } = routing
   const connector = useConnector()
   const { data: currentUser } = useOptionalCurrentUser()
@@ -324,7 +326,10 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
       <AppShell>
         <Navbar>
           <NavbarStart>
-            {workspaces.length > 0 ? (
+            {!hasGroups(connector) ? (
+              // Ohne Gruppen ein Space (Spec 03): nichts zu wechseln, nichts anzulegen.
+              <span className="truncate px-2 text-sm font-semibold">{activeWorkspace?.name ?? workspaces[0]?.name}</span>
+            ) : workspaces.length > 0 ? (
               // Auch ohne aktiven Space (kein Zugang) bleibt der Umschalter da.
               <WorkspaceSwitcher
                 workspaces={workspaces}
@@ -339,7 +344,7 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
             ) : (
               <Button variant="outline" size="sm" onClick={openCreateDialog}>
                 <Plus className="h-4 w-4 mr-2" />
-                Neue Gruppe
+                {t("groupDialog.newGroup")}
               </Button>
             )}
           </NavbarStart>
@@ -382,9 +387,9 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
             selectionFocusVisibleArea={drawerHeight > 0 ? { bottomInset: drawerHeight } : undefined}
             noAccessContent={noAccessContent ?? (
               <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
-                <p className="text-lg font-medium text-foreground">Du bist kein Mitglied dieses Spaces</p>
-                <p className="text-sm text-muted-foreground mt-2">Der Space existiert nicht oder du hast keinen Zugang.</p>
-                <Button variant="outline" className="mt-4" onClick={goHome}>Zurück zur Übersicht</Button>
+                <p className="text-lg font-medium text-foreground">{t("appFrame.noAccessTitle")}</p>
+                <p className="text-sm text-muted-foreground mt-2">{t("appFrame.noAccessBody")}</p>
+                <Button variant="outline" className="mt-4" onClick={goHome}>{t("appFrame.backToOverview")}</Button>
               </div>
             )}
           />
@@ -444,7 +449,7 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
           onVerify={hasEncounterVerification(connector) ? () => overlay.open("verify") : undefined}
           onAdd={supportsContacts && !hasEncounterVerification(connector) ? () => setAddContactOpen(true) : undefined}
           onActivate={activateContact}
-          activeLabel={hasEncounterVerification(connector) ? "Verifiziert" : "Aktiv"}
+          activeLabel={hasEncounterVerification(connector) ? t("contacts.verified") : t("contacts.active")}
         />
         <AddContactDialog
           open={addContactOpen}

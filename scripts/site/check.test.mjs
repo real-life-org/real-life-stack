@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { hash, pages, read, route, validatePage } from "./lib.mjs"
+import { glossaryMarkdown, hash, loadRegister, pages, read, route, toMarkdown, validatePage } from "./lib.mjs"
 
 // Was das Skript prueft, muss es auch sehen: verschachtelte Handbuchseiten
 // und ihre Adressen (rls#434, Codex).
@@ -36,4 +36,23 @@ test("jede englische Seite mit translationOf traegt den aktuellen sourceHash", (
   for (const p of pages().filter((p) => p.lang === "en" && p.meta.translationOf)) {
     assert.equal(p.meta.sourceHash, hash(read(p.meta.translationOf)), `${p.path}: sourceHash veraltet`)
   }
+})
+
+// Der Markdown-Export fuer Agenten (prepare.mjs) kennt kein MDX: markierte
+// Begriffe werden Klartext, das Glossar wird aus dem Register geschrieben.
+test("toMarkdown: Begriffslink wird Text, <Glossary /> wird das Register, Import faellt weg", async () => {
+  const register = await loadRegister()
+  const page = (lang, body) => ({ lang, id: "x", meta: {}, body })
+  assert.equal(toMarkdown(page("de", "Bin ich [Mitglied](term:member) des [Space](term:space)?\n"), register), "Bin ich Mitglied des Space?\n")
+  assert.equal(toMarkdown(page("en", "a [](term:member)\n"), register), "a Member\n")
+  const de = toMarkdown(page("de", "import Glossary from '@real-life/docs-kit/Glossary.astro'\n\nText\n\n<Glossary />\n"), register)
+  assert.doesNotMatch(de, /import|<Glossary/)
+  assert.ok(de.startsWith("\nText\n\n## "), de)
+  assert.match(de, /## Mitglied\n\n\S/)
+  const en = toMarkdown(page("en", "<Glossary />"), register)
+  assert.match(en, /## Member\n\n\S/)
+  const labels = [...en.matchAll(/^## (.+)$/gm)].map((m) => m[1])
+  assert.equal(labels.length, Object.keys(register.concepts).length)
+  assert.deepEqual(labels, [...labels].sort((a, b) => a.localeCompare(b, "en")))
+  assert.equal(glossaryMarkdown(register, "de").match(/^## /gm).length, labels.length)
 })

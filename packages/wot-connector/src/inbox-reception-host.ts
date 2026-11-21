@@ -14,8 +14,11 @@ import {
   evaluateInboxAckDisposition,
   isAttestationReceiptBody,
   isDidcommMessage,
+  isProfileUpdateBody,
+  assertProfileUpdateBody,
 } from "@real-life/wot-core/protocol"
 import type {
+  ProfileUpdateProfile,
   DidResolver,
   DidcommPlaintextMessage,
   InboxAckLocalOutcome,
@@ -38,8 +41,17 @@ export interface IncomingAttestationReceipt {
   outerId: string
 }
 
+/** Profiländerung eines Kontakts (wot#386), Form bereits geprüft. */
+export interface IncomingProfileUpdate {
+  profile: ProfileUpdateProfile
+  /** Authenticated Inner-JWS sender — wessen Profil das ist. */
+  senderDid: string
+  outerId: string
+}
+
 type AttestationListener = (delivery: IncomingAttestationDelivery) => void | Promise<void>
 type ReceiptListener = (receipt: IncomingAttestationReceipt) => void | Promise<void>
+type ProfileUpdateListener = (update: IncomingProfileUpdate) => void | Promise<void>
 
 interface PendingDelivery<T> {
   value: T
@@ -72,6 +84,8 @@ export class InboxReceptionHost {
   private receiptListeners = new Set<ReceiptListener>()
   private pendingAttestations: Array<PendingDelivery<IncomingAttestationDelivery>> = []
   private pendingReceipts: Array<PendingDelivery<IncomingAttestationReceipt>> = []
+  private profileUpdateListeners = new Set<ProfileUpdateListener>()
+  private pendingProfileUpdates: Array<PendingDelivery<IncomingProfileUpdate>> = []
   private unsubscribe: (() => void) | null = null
 
   constructor(options: InboxReceptionHostOptions) {
@@ -99,6 +113,8 @@ export class InboxReceptionHost {
     this.receiptListeners.clear()
     this.pendingAttestations = []
     this.pendingReceipts = []
+    this.profileUpdateListeners.clear()
+    this.pendingProfileUpdates = []
   }
 
   onAttestation(listener: AttestationListener): () => void {
@@ -111,6 +127,45 @@ export class InboxReceptionHost {
     this.receiptListeners.add(listener)
     this.flushPendingReceipts()
     return () => { this.receiptListeners.delete(listener) }
+  }
+
+  /** Profiländerungen der Kontakte (wot#386). */
+  onProfileUpdate(listener: ProfileUpdateListener): () => void {
+    this.profileUpdateListeners.add(listener)
+    if (this.pendingProfileUpdates.length > 0) {
+      const pending = this.pendingProfileUpdates.splice(0)
+      void (async () => {
+        for (const { value, recordProcessed } of pending) await this.deliverProfileUpdate(value, recordProcessed)
+      })()
+    }
+    return () => { this.profileUpdateListeners.delete(listener) }
+  }
+
+  /**
+   * Stellt zu oder puffert — Live-Pfad UND Flush. Ohne Listener (auch nach
+   * Abmeldung mitten im Flush) bleibt das Update gepuffert: kein record, kein
+   * ack, damit es der nächste Abonnent noch anwendet.
+   */
+  private async deliverProfileUpdate(update: IncomingProfileUpdate, recordProcessed: () => Promise<void>): Promise<void> {
+    if (this.profileUpdateListeners.size === 0) {
+      if (!this.pendingProfileUpdates.some(({ value }) => value.outerId === update.outerId)) {
+        this.pendingProfileUpdates.push({ value: update, recordProcessed })
+      }
+      return
+    }
+    let outcome: InboxAckLocalOutcome
+    try {
+      for (const listener of [...this.profileUpdateListeners]) await listener(update)
+      outcome = { kind: "applied", durable: true }
+    } catch (error) {
+      traceReceptionDrop(
+        "profile-update apply deferred (no ack, redelivery heals)",
+        error instanceof Error ? error.message : String(error),
+        { outerId: update.outerId, senderDid: update.senderDid },
+      )
+      outcome = { kind: "processing-incomplete", waitingOn: "durable-apply" }
+    }
+    await this.conclude(update.outerId, outcome, "unique", recordProcessed)
   }
 
   private async handle(message: DidcommPlaintextMessage<object>): Promise<void> {
@@ -164,6 +219,32 @@ export class InboxReceptionHost {
       }
       const outcome = await this.dispatchReceipt(receipt)
       await this.conclude(receipt.outerId, outcome, "unique", result.recordProcessed)
+      return
+    }
+
+    // wot#386: Profiländerung — eigener Zweig vor dem Attestation-Vertrag; ein
+    // Body mit diesem kind, aber kaputter Form ist deterministisch ungültig.
+    if (isProfileUpdateBody(result.body)) {
+      try {
+        assertProfileUpdateBody(result.body)
+      } catch (error) {
+        logReceptionDropTrace(
+          "invalid profile-update inbox body",
+          error instanceof Error ? error.message : String(error),
+          { outerId: result.outerId, senderDid: result.senderDid },
+        )
+        await this.conclude(
+          result.outerId,
+          { kind: "invalid-rejected", rejection: "malformed", authoritativeStateChanged: false },
+          "unique",
+          result.recordProcessed,
+        )
+        return
+      }
+      await this.deliverProfileUpdate(
+        { profile: result.body.profile, senderDid: result.senderDid, outerId: result.outerId },
+        result.recordProcessed,
+      )
       return
     }
 

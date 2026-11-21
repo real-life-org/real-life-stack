@@ -144,7 +144,7 @@
             "docs/spec/02-data-interface.md"
           ],
           "source": "packages/toolkit/src/hooks/use-item-editor.ts",
-          "line": 231
+          "line": 232
         },
         {
           "name": "useCreateItem",
@@ -240,7 +240,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/hooks/use-group-vocabulary.ts",
-          "line": 85
+          "line": 86
         },
         {
           "name": "usePersonalGroupId",
@@ -501,7 +501,7 @@
             "docs/spec/04-items-relations-groups-spaces.md"
           ],
           "source": "packages/toolkit/src/hooks/use-verification.ts",
-          "line": 28
+          "line": 29
         }
       ]
     },
@@ -612,7 +612,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-votes.ts",
-          "line": 50
+          "line": 51
         },
         {
           "name": "useVotes",
@@ -627,7 +627,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-votes.ts",
-          "line": 174
+          "line": 175
         },
         {
           "name": "useVoteUsers",
@@ -642,7 +642,7 @@
             "docs/spec/08-relation-records.md"
           ],
           "source": "packages/toolkit/src/hooks/use-votes.ts",
-          "line": 347
+          "line": 348
         }
       ]
     },
@@ -759,7 +759,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/components/host/module-host.tsx",
-          "line": 115
+          "line": 116
         },
         {
           "name": "useModulePanel",
@@ -929,6 +929,21 @@
           ],
           "source": "packages/toolkit/src/hooks/use-relay-status.ts",
           "line": 23
+        },
+        {
+          "name": "useI18n",
+          "signature": "",
+          "question": "In which language and regional locale does this surface speak — and how?",
+          "answers": "`I18n` — `{language, locale, t, tDynamic, formatDate, formatTime, formatFullDateTime, formatRelativeTime, setLanguage}`",
+          "without": "— (works without a provider; the toolkit owns its language state)",
+          "stories": [
+            "rls-foundations-hooks--environment"
+          ],
+          "specs": [
+            "docs/spec/11-runtime-config-und-branding.md"
+          ],
+          "source": "packages/toolkit/src/i18n/use-i18n.ts",
+          "line": 29
         }
       ]
     },

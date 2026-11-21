@@ -1,5 +1,5 @@
-import type { ItemFilter } from "@real-life-stack/data-interface"
-import { typeSpellings } from "@real-life-stack/data-interface"
+import type { ItemFilter } from "@real-life/data-interface"
+import { typeSpellings } from "@real-life/data-interface"
 import type { FilterBuilderLike } from "./client-types.js"
 
 /**

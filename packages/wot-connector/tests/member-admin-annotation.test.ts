@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { WotConnector } from "../src/wot-connector.js"
-import type { User } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
 
 /**
  * Regression for the "wrong person shown as Admin" bug: the group dialog derived

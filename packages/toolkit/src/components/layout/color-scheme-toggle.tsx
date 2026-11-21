@@ -13,6 +13,7 @@ import {
 } from "../../lib/color-scheme"
 import { cn } from "../../lib/utils"
 import { Button } from "../primitives/button"
+import { useI18n } from "@/i18n"
 
 export interface ColorSchemeToggleProps {
   /**
@@ -56,13 +57,14 @@ export function ColorSchemeToggle({ storageKey = STORAGE_KEY_THEME, className }:
     return followSystemColorScheme(storageKey)
   }, [storageKey])
 
+  const { t } = useI18n()
   const dunkel = scheme === "dark"
   const umschalten = () => {
     const naechstes = dunkel ? "light" : "dark"
     applyColorScheme(naechstes)
     rememberColorScheme(naechstes === "dark", storageKey)
   }
-  const label = dunkel ? "Helles Design" : "Dunkles Design"
+  const label = dunkel ? t("colorScheme.light") : t("colorScheme.dark")
 
   return (
     <Button

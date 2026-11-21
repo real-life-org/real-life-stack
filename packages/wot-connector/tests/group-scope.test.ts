@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { createObservable, hasGroupScope } from "@real-life-stack/data-interface"
+import { createObservable, hasGroupScope } from "@real-life/data-interface"
 import { WotConnector } from "../src/wot-connector"
 import { CrossGroupIndex } from "../src/CrossGroupIndex"
 import { deserializeItem, serializeItem } from "../src/serialization"

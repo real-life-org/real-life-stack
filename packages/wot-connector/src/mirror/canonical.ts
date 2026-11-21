@@ -1,4 +1,4 @@
-import { jcsCanonicalize } from "@real-life-stack/data-interface"
+import { jcsCanonicalize } from "@real-life/data-interface"
 
 import type { MirrorSnapshotPayload, SerializedItem } from "../types.js"
 

@@ -10,7 +10,7 @@ import {
   type Item,
   type ItemFilter,
   type User,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
@@ -33,6 +33,7 @@ import { useLocationPick } from "../map/location-pick"
 import { ReactionBar } from "../reactions/reaction-bar"
 import { useOptionalCreate, useRegisterCreate, type CreateConfig } from "./create-host"
 import { useRegisterDetail, type DetailConfig } from "./detail-host"
+import { useI18n } from "@/i18n"
 
 /**
  * Der Modul-Host (Spec 01, „Der Modul-Host"): macht aus dem Registereintrag
@@ -199,6 +200,7 @@ export function ModuleHost({ entry, groupId, active, groups: groupsProp, selecti
 }
 
 function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocusVisibleArea }: ModuleHostProps) {
+  const { t } = useI18n()
   const isOverview = !groupId || groupId === "__overview__"
   const currentSpace = isOverview ? undefined : groupId
   // `null` fragt die Vereinigung aller bekannten Mitglieder ab, damit im
@@ -349,7 +351,7 @@ function HostSurface({ entry, groupId, active, groups: groupsProp, selectionFocu
       {showFab && (
         <CreateFab
           onClick={() => create.startCreate(suggestType)}
-          label="Erstellen"
+          label={t("moduleHost.create")}
           hideWhileVisible={anchor ? anchorRef : undefined}
         />
       )}

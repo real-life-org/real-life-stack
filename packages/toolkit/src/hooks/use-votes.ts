@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react"
-import type { ClaimVerdict, DataInterface, Item, RelationRecord, VoteRecord, VoteValue } from "@real-life-stack/data-interface"
+import type { ClaimVerdict, DataInterface, Item, RelationRecord, VoteRecord, VoteValue } from "@real-life/data-interface"
 import {
   VOTE_PREDICATE,
   partitionVotesByContent,
@@ -7,11 +7,12 @@ import {
   hasRelationRecords,
   hasRelationRecordWriter,
   isAuthenticatable,
+  hasUserLookup,
   jcsCanonicalize,
   relationAuthorialPayload,
   voteRecordInput,
   votesFromRelationRecords,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 import { useCountingContentHashes } from "./use-item-standing"
 import { useResonancePopulation } from "./use-resonance-population"
@@ -384,7 +385,7 @@ export function useVoteUsers(statementId: string, enabled = true): UseVoteUsersR
       try {
         const resolved = await Promise.all(
           votes.map(async (vote: VoteRecord) => {
-            const user = isAuthenticatable(connector) ? await connector.getUser(vote.voterId) : null
+            const user = hasUserLookup(connector) ? await connector.getUser(vote.voterId) : null
             return {
               id: vote.voterId,
               displayName: user?.displayName ?? vote.voterId,

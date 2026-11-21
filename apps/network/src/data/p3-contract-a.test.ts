@@ -6,7 +6,7 @@ import {
   VOCAB_TASK,
   type Item,
   type RelationRecord,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import { beforeAll, describe, expect, it } from "vitest"
 
 import campSchedule from "./camp-schedule.json" with { type: "json" }

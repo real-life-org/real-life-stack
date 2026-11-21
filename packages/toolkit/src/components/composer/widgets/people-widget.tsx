@@ -5,6 +5,7 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { isMissingQualifier } from "../../preview/field-register"
 import { PersonAvatar } from "../../preview/person-avatar"
+import { useI18n } from "@/i18n"
 
 export interface PersonOption {
   id: string
@@ -65,6 +66,7 @@ export function PeopleWidget({
   placeholder,
   record,
 }: PeopleWidgetProps) {
+  const { t } = useI18n()
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<PersonOption[]>([])
   const [showSuggestions, setShowSuggestions] = React.useState(false)
@@ -243,8 +245,8 @@ export function PeopleWidget({
                 data-qualifier-toggle
                 disabled={!!record.live[personId]?.locked}
                 onClick={() => cycleState(personId)}
-                title={record.live[personId]?.locked ? "Eigene Aussage der Person — nur sie ändert sie" : undefined}
-                aria-label={`${resolveLabel(personId)}: ${stateOf(personId)?.label} — ${record.live[personId]?.locked ? "eigene Aussage, fest" : "wechseln"}`}
+                title={record.live[personId]?.locked ? t("people.ownStatement") : undefined}
+                aria-label={`${resolveLabel(personId)}: ${stateOf(personId)?.label} — ${record.live[personId]?.locked ? t("people.ownStatementFixed") : t("people.switch")}`}
                 className="rounded-sm px-0.5 font-normal text-muted-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-default disabled:no-underline"
               >
                 {stateOf(personId)?.label}
@@ -256,7 +258,7 @@ export function PeopleWidget({
                 type="button"
                 data-qualifier-toggle
                 onClick={() => cycleQualifier(personId)}
-                aria-label={`${resolveLabel(personId)}: ${qualifierOf(personId)?.label ?? "ohne Angabe"} — wechseln`}
+                aria-label={t("people.switchState", { name: resolveLabel(personId), state: qualifierOf(personId)?.label ?? t("people.noState") })}
                 className="rounded-sm px-0.5 font-normal text-muted-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 {qualifierOf(personId)?.label ?? "…"}
@@ -267,7 +269,7 @@ export function PeopleWidget({
             {(value.includes(personId) || !record?.live[personId]?.locked || !!record?.live[personId]?.mine) && (
               <button
                 type="button"
-                aria-label={`${resolveLabel(personId)} entfernen`}
+                aria-label={t("people.remove", { name: resolveLabel(personId) })}
                 onClick={() => removePerson(personId)}
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -285,7 +287,7 @@ export function PeopleWidget({
           onFocus={() => setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
           // Eine eigene Beschriftung („Einladen…") bleibt stehen, wie im Design.
-          placeholder={placeholder ?? (value.length === 0 ? "Hinzufuegen..." : "")}
+          placeholder={placeholder ?? (value.length === 0 ? t("input.addPlaceholder") : "")}
           className="min-w-[60px] flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
         />
       </div>
@@ -310,7 +312,7 @@ export function PeopleWidget({
       )}
       {record && (
         <p className="mt-1 text-[11px] text-muted-foreground">
-          Chip antippen wechselt: {states.map((s) => s.label).join(" · ")}
+          {t("people.tapToSwitch", { states: states.map((s) => s.label).join(" · ") })}
         </p>
       )}
       {quickSuggestions && quickSuggestions.filter((s) => !shown.includes(s.id)).length > 0 && (

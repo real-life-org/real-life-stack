@@ -8,6 +8,7 @@ import { TagChip } from "../tag/tag-chip"
 import { FilterChip } from "./filter-building-blocks"
 import { FilterCardSections } from "./filter-card"
 import type { FilterBarValue, FilterTypeOption } from "./types"
+import { useI18n } from "@/i18n"
 
 /**
  * `FilterBar` — shared filter surface for every Space Module.
@@ -73,6 +74,7 @@ export function FilterBar({
   trailingActions,
   className,
 }: FilterBarProps) {
+  const { t } = useI18n()
   const [offen, setOffen] = useState(false)
   const huelle = useRef<HTMLDivElement | null>(null)
 
@@ -148,7 +150,7 @@ export function FilterBar({
             onClick={() => setOffen((war) => !war)}
           >
             <Filter className="h-4 w-4 mr-1.5" />
-            Filter
+            {t("filter.label")}
           </Button>
           {offen && (
             <div

@@ -27,7 +27,7 @@ import type {
   RelationRecordUpdate,
   RelationRecordWriterCapable,
   Source,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import {
   applyGroupDataPatch,
   withEditStamp,
@@ -49,8 +49,8 @@ import {
   findRelatedItems,
   canonicalItem,
   matchesFilter,
-} from "@real-life-stack/data-interface"
-import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
+} from "@real-life/data-interface"
+import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life/data-interface/demo-data"
 
 export interface MockConnectorSeed {
   items: Item[]
@@ -160,6 +160,7 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
     // callers that need unauthenticated behaviour use logout(). This also keeps
     // fixture-only seeds (which intentionally omit users) writable through the
     // same authenticated writer path.
+    // i18n-exempt: Test- und Demo-Connector, Platzhalter-Nutzer für Fixtures
     this.currentUser = this.users[0] ?? { id: "user-1", displayName: "Demo user" }
     this.currentUserObs = createObservable<User | null>(this.currentUser)
     this.authState = createObservable<AuthState>(
@@ -778,6 +779,7 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
   }
 
   getAuthMethods(): AuthMethod[] {
+    // i18n-exempt: Test- und Demo-Connector, Bezeichner für Entwickler
     return [{ method: "mock", label: "Mock Login" }]
   }
 
@@ -798,10 +800,12 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
   // --- Sources ---
 
   getSources(): Source[] {
+    // i18n-exempt: Test- und Demo-Connector, Bezeichner für Entwickler
     return [{ id: "mock", name: "Mock Data", connector: this }]
   }
 
   getActiveSource(): Source {
+    // i18n-exempt: Test- und Demo-Connector, Bezeichner für Entwickler
     return { id: "mock", name: "Mock Data", connector: this }
   }
 

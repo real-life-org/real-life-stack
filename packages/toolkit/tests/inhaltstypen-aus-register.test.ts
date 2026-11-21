@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { composeTypeManifest, TOOLKIT_TYPE_LAYER } from "@real-life-stack/data-interface"
+import { composeTypeManifest, TOOLKIT_TYPE_LAYER } from "@real-life/data-interface"
 
 import { contentTypesFromRegister, resolveContentType, pickContentTypes } from "../src/components/composer/content-types"
 import { setTypeManifest } from "../src/components/preview/type-presentation"

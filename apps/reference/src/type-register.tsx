@@ -7,8 +7,8 @@
 //
 // Import this module once, before first render (main.tsx).
 
-import { composeTypeManifest, TOOLKIT_TYPE_LAYER } from "@real-life-stack/data-interface"
-import { setTypeManifest } from "@real-life-stack/toolkit"
+import { composeTypeManifest, TOOLKIT_TYPE_LAYER } from "@real-life/data-interface"
+import { setTypeManifest } from "@real-life/toolkit"
 
 /** The app's composed manifest — today the toolkit's, unchanged. */
 export const TYPE_MANIFEST = composeTypeManifest([TOOLKIT_TYPE_LAYER])

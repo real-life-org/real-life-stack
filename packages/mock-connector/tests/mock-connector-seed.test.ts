@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
-import type { Group, Item, User } from "@real-life-stack/data-interface"
+import type { Group, Item, User } from "@real-life/data-interface"
 import {
   demoGroupItems,
   demoGroups,
   demoItems,
   demoUsers,
-} from "@real-life-stack/data-interface/demo-data"
+} from "@real-life/data-interface/demo-data"
 import { MockConnector, type MockConnectorSeed } from "../src/index"
 
 const groups: Group[] = [

@@ -24,8 +24,8 @@ import type {
   RelationRecordInput,
   RelationRecordUpdate,
   Source,
-} from "@real-life-stack/data-interface"
-import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, authoredUpdateAuthoritative, isFrozen, withoutAuthoredClaim, createObservable, createDefaultRelationStore, createRelationRecordWith, canonicalItem, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState } from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
+import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, authoredUpdateAuthoritative, isFrozen, withoutAuthoredClaim, createObservable, createDefaultRelationStore, createRelationRecordWith, canonicalItem, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState } from "@real-life/data-interface"
 import { get, set, del, createStore, update as updateStoredValue } from "idb-keyval"
 
 // --- Types ---
@@ -969,6 +969,7 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
   }
 
   getAuthMethods(): AuthMethod[] {
+    // i18n-exempt: Bezeichner der Anmeldeart; die Anmeldeseite zeigt ihn nicht an
     return [{ method: "local", label: "Local Login" }]
   }
 

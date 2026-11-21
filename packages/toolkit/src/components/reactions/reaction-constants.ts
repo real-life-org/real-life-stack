@@ -1,3 +1,5 @@
+import type { I18n } from "@/i18n"
+import { registerText } from "@/lib/register-labels"
 /** The 16 available reaction emojis. */
 export const REACTION_EMOJIS = [
   "❤️", "👍", "👎", "😂", "😮", "😢", "😡", "🙏",
@@ -6,7 +8,11 @@ export const REACTION_EMOJIS = [
 
 export type ReactionEmoji = typeof REACTION_EMOJIS[number]
 
-/** Human-readable names for accessibility (aria-label). */
+/**
+ * Human-readable names for accessibility (aria-label), English — the fallback. The surface speaks them
+ * in its language via {@link reactionName} (`reactions.name.<name>`).
+ */
+// i18n-exempt: Rückfall und Schlüsselquelle; angezeigt wird reactionName()
 export const REACTION_NAMES: Record<string, string> = {
   "❤️": "Heart",
   "👍": "Thumbs up",
@@ -24,4 +30,13 @@ export const REACTION_NAMES: Record<string, string> = {
   "✨": "Sparkles",
   "👀": "Eyes",
   "🤝": "Handshake",
+}
+
+/** Der Name einer Reaktion in der Sprache der Oberfläche, für Screenreader. */
+export function reactionName(i18n: I18n, emoji: string): string {
+  // Nur eigene Schlüssel: Ein Reaktionswert wie „constructor“ darf keine geerbte Eigenschaft treffen.
+  if (!Object.prototype.hasOwnProperty.call(REACTION_NAMES, emoji)) return emoji
+  const english = REACTION_NAMES[emoji]
+  if (!english) return emoji
+  return registerText(i18n, `reactions.name.${english.replace(/\s+(\w)/g, (_, c: string) => c.toUpperCase()).replace(/^\w/, (c) => c.toLowerCase())}`, english)
 }

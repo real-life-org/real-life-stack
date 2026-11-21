@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { Calendar, Layers, Map as MapIcon, Newspaper, Settings2 } from "lucide-react"
-import { isAggregateVisibleItemType } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType } from "@real-life/data-interface"
 import { AppShell, AppShellMain } from "./app-shell"
 import { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"
 import { WorkspaceSwitcher } from "./workspace-switcher"
