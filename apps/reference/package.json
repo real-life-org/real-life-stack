@@ -16,9 +16,9 @@
     "build:ios": "tsc -b && vite build && cap sync ios"
   },
   "dependencies": {
-    "@capacitor/android": "^8.2.0",
-    "@capacitor/core": "^8.2.0",
-    "@capacitor/ios": "^8.2.0",
+    "@capacitor/android": "^8.3.5",
+    "@capacitor/core": "^8.3.5",
+    "@capacitor/ios": "^8.3.5",
     "@capawesome/capacitor-live-update": "^8.2.1",
     "@real-life/data-interface": "workspace:*",
     "@real-life/local-connector": "workspace:*",
@@ -34,7 +34,7 @@
     "react-router-dom": "^7.1.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.2.0",
+    "@capacitor/cli": "^8.3.5",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.1.0",
     "@types/leaflet": "^1.9.8",
