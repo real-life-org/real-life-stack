@@ -27,7 +27,7 @@ import { nominatimGeocode, nominatimReverseGeocode } from "../lib/geocode"
 export function useItemComposerProps(members: readonly User[]): Partial<ContentComposerProps> {
   const { startPick, canPick } = useLocationPick()
   const peopleOptions = useMemo<PersonOption[]>(
-    () => members.map((m) => ({ id: m.id, name: m.displayName ?? m.id })),
+    () => members.map((m) => ({ id: m.id, name: m.displayName ?? m.id, ...(m.avatarUrl ? { avatarUrl: m.avatarUrl } : {}) })),
     [members],
   )
   return useMemo(

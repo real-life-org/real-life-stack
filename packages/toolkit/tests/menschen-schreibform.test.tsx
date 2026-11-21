@@ -19,6 +19,7 @@ import {
   resetTypePresentationForTests,
   setTypeManifest,
 } from "../src/components/preview/type-presentation"
+import { textOhneAvatar } from "./support/text-ohne-avatar"
 
 /**
  * S2, C1 Schreibform: Chips mit Qualifier-Text, Antippen wechselt den
@@ -151,7 +152,7 @@ describe("PeopleWidget: Antippen wechselt den Qualifier", () => {
       )
     })
     expect((container.querySelector("input") as HTMLInputElement).placeholder).toBe("Zuweisen…")
-    const quick = [...container.querySelectorAll("button")].find((b) => b.textContent === "Lena") as HTMLButtonElement
+    const quick = [...container.querySelectorAll("button")].find((b) => textOhneAvatar(b) === "Lena") as HTMLButtonElement
     await act(async () => quick.click())
     expect(onChange).toHaveBeenCalledWith(["lena"])
     expect(onQualifiersChange).toHaveBeenCalledWith({ lena: "can" })
@@ -276,7 +277,7 @@ describe("Qualifier mit default: Hinzufügen", () => {
         }),
       )
     })
-    const quick = [...container.querySelectorAll("button")].find((b) => b.textContent === "Lena") as HTMLButtonElement
+    const quick = [...container.querySelectorAll("button")].find((b) => textOhneAvatar(b) === "Lena") as HTMLButtonElement
     await act(async () => quick.click())
     expect(onChange).toHaveBeenCalledWith(["lena"])
     expect(onQualifiersChange).not.toHaveBeenCalled()
