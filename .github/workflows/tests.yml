@@ -147,6 +147,14 @@ jobs:
       - name: Site
         run: pnpm build:site && pnpm check:site && pnpm test:site
 
+      # Das Storybook baut. Sonst zeigt sich ein Bruch erst im Deploy nach dem
+      # Merge: Die Tests laufen ohne den Builder und bleiben gruen, auch wenn
+      # `storybook` und `@storybook/*` auseinanderlaufen (real-life-stack#604).
+      # Eine Zeitzone genuegt, der Build haengt nicht an TZ.
+      - name: Storybook
+        if: matrix.tz == 'UTC'
+        run: pnpm build:storybook
+
       # Die Hook-Referenz im Storybook („All hooks") entsteht aus den
       # TSDoc-Bloecken der oeffentlichen Hooks (scripts/hooks). Faellt, wenn
       # ein Hook ohne Block exportiert wird, eine Story-Id oder Spec-Datei
