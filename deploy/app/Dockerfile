@@ -43,7 +43,7 @@ RUN pnpm --filter reference... build
 # ---------- Laufzeit ----------
 # Unprivilegiert: laeuft als UID 101 und lauscht auf 8080. Ein Webserver, der
 # nur statische Dateien ausliefert, braucht kein root.
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 
 USER root
 COPY --from=build /src/apps/reference/dist /usr/share/nginx/html/app

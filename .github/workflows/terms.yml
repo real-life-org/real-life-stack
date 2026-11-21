@@ -22,7 +22,7 @@ jobs:
           path: meta-src            # the register, beside the working copy
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.15"
       - name: fetch the concept schemes meta pins
         # The other worlds' schemes live in their repositories; meta pins them and this
         # script checks them out under meta-src/worlds, where the guard reads them.
