@@ -4,8 +4,8 @@ import type { IncomingEvent, IncomingVerificationEvent, IncomingSpaceInviteEvent
   ContactConfirmedEvent,
   AuthState,
   DataInterface,
-} from "@real-life-stack/data-interface"
-import { hasEventListener, isAuthenticatable } from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
+import { hasEventListener, isAuthenticatable } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 // --- Notification Queue ---

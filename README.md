@@ -72,7 +72,9 @@ Each connector implements the DataInterface and only the capabilities its data s
 
 ---
 
-## RLNP and Real Life Game
+## Neighbouring Repositories
+
+The organisation-wide picture, the seams between the repositories and the term register live in the meta repository: [real-life-org/meta](https://github.com/real-life-org/meta). The stack ends at the connector; what a backend provides below it is declared through capabilities, see [Connectors](#connectors).
 
 Real Life Stack does not own the social or game semantics. It makes them displayable and usable as a backend-agnostic UI and connector layer. The social meaning comes from the [Real Life Network Protocol](https://github.com/real-life-org/real-life-network-protocol), the optional game semantics from the [Real Life Game](https://github.com/real-life-org/real-life-game). Details: [docs/concepts/rlnp-game-integration.md](docs/concepts/rlnp-game-integration.md).
 
@@ -137,17 +139,19 @@ Binding Space Module specs live in [docs/spec/modules/](docs/spec/modules/). The
 
 # Developer Documentation
 
+How to propose a concept, contribute code and run the checks: [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Monorepo Structure
 
 ```text
 real-life-stack/
 ├── packages/
-│   ├── data-interface/    # @real-life-stack/data-interface - TypeScript types + capabilities
-│   ├── mock-connector/    # @real-life-stack/mock-connector - in-memory implementation
-│   ├── local-connector/   # @real-life-stack/local-connector - IndexedDB + cross-tab sync
-│   ├── supabase-connector/ # @real-life-stack/supabase-connector - Supabase backend
-│   ├── wot-connector/     # @real-life-stack/wot-connector - WoT/Yjs/E2EE
-│   └── toolkit/           # @real-life-stack/toolkit - UI components + hooks
+│   ├── data-interface/    # @real-life/data-interface - TypeScript types + capabilities
+│   ├── mock-connector/    # @real-life/mock-connector - in-memory implementation
+│   ├── local-connector/   # @real-life/local-connector - IndexedDB + cross-tab sync
+│   ├── supabase-connector/ # @real-life/supabase-connector - Supabase backend
+│   ├── wot-connector/     # @real-life/wot-connector - WoT/Yjs/E2EE
+│   └── toolkit/           # @real-life/toolkit - UI components + hooks
 ├── apps/
 │   ├── landing/           # landing page
 │   ├── reference/         # reference app (React 19)
@@ -181,20 +185,20 @@ pnpm build:toolkit
 
 UI surfaces work against the **DataInterface** and optional capability interfaces — TypeScript contracts that abstract data, reactivity, write access, groups, and identity. Connectors implement these interfaces for different backends.
 
-### @real-life-stack/data-interface
+### @real-life/data-interface
 
 Pure TypeScript types and shared helpers (no external runtime dependencies):
 
 ```typescript
-import type { DataInterface, Item, Group, User, Observable } from "@real-life-stack/data-interface"
+import type { DataInterface, Item, Group, User, Observable } from "@real-life/data-interface"
 ```
 
-### @real-life-stack/mock-connector
+### @real-life/mock-connector
 
 In-memory implementation with demo data for development without a backend:
 
 ```typescript
-import { MockConnector } from "@real-life-stack/mock-connector"
+import { MockConnector } from "@real-life/mock-connector"
 
 const connector = new MockConnector()
 await connector.init()
@@ -209,12 +213,12 @@ obs.subscribe((tasks) => { /* live updates */ })
 
 Spec entry point: [docs/spec/README.md](docs/spec/README.md). Architecture details: [docs/spec/00-architecture.md](docs/spec/00-architecture.md)
 
-## @real-life-stack/toolkit
+## @real-life/toolkit
 
 The toolkit package exports reusable UI components:
 
 ```typescript
-import { Button, Card, Avatar, Tabs } from '@real-life-stack/toolkit'
+import { Button, Card, Avatar, Tabs } from '@real-life/toolkit'
 ```
 
 **[View Storybook →](https://real-life-stack.de/storybook/)**

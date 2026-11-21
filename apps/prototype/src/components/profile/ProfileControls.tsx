@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Button, Label } from '@real-life-stack/toolkit';
+import { Button, Label } from '@real-life/toolkit';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const ProfileControls = ({ config, onChange }) => {

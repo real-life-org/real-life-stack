@@ -2,8 +2,8 @@
 import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
 import { beforeEach, describe, expect, it } from "vitest"
-import { MockConnector } from "@real-life-stack/mock-connector"
-import { ConnectorProvider, ItemDetailRead, feedFooter, selectFeedItems } from "@real-life-stack/toolkit"
+import { MockConnector } from "@real-life/mock-connector"
+import { ConnectorProvider, ItemDetailRead, feedFooter, selectFeedItems } from "@real-life/toolkit"
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -182,7 +182,8 @@ describe("shared detail read view", () => {
   })
 
   it("labels a statement with its badge", async () => {
-    expect(await textOf(connector, statement(), SPACE_A)).toContain("Aussage")
+    // Der Typname kommt aus dem Wörterbuch der Oberflächensprache (Spec 06, „Texte und Sprache“); die Tests laufen auf Englisch.
+    expect(await textOf(connector, statement(), SPACE_A)).toContain("Statement")
   })
 })
 
@@ -222,7 +223,7 @@ describe("feed card footer", () => {
       )
     })
     await settle()
-    expect(container.querySelectorAll('[aria-label^="Zustimmung"]').length).toBe(1)
+    expect(container.querySelectorAll('[aria-label^="Approval"]').length).toBe(1)
     // Reactions stay available alongside the votes.
     expect(container.querySelectorAll('[aria-label="Add reaction"]').length).toBe(1)
     await act(async () => { root.unmount() })

@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/ava
 import { RelativeTime } from "@/components/primitives/relative-time"
 import { ProfileLink } from "@/components/profile/profile-link"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n"
 
 export interface CommentBubbleProps {
   /** Author display name. */
@@ -64,6 +65,7 @@ export function CommentBubble({
   mark,
   className,
 }: CommentBubbleProps) {
+  const { t } = useI18n()
   const avatar = (
     <Avatar className="h-8 w-8 shrink-0 mt-0.5">
       <AvatarImage src={authorAvatar} alt={authorName} />
@@ -76,7 +78,7 @@ export function CommentBubble({
   return (
     <div className={cn("flex gap-2.5", className)}>
       {authorId ? (
-        <ProfileLink userId={authorId} label={`Profil von ${authorName} öffnen`}>
+        <ProfileLink userId={authorId} label={t("profile.openOf", { name: authorName })}>
           {avatar}
         </ProfileLink>
       ) : (
@@ -94,17 +96,17 @@ export function CommentBubble({
           {mark === "unsigned" && (
             <span
               className="text-xs text-muted-foreground/70"
-              title="Ohne Signatur: Dass der Kommentar von dieser Person stammt, lässt sich nicht nachweisen."
+              title={t("signature.unsignedComment")}
             >
-              unsigniert
+              {t("signature.unsigned")}
             </span>
           )}
           {mark === "altered" && (
             <span
               className="text-xs text-muted-foreground"
-              title="Der Text passt nicht zur Signatur: Er wurde nach dem Schreiben verändert."
+              title={t("signature.alteredHint")}
             >
-              verändert
+              {t("signature.altered")}
             </span>
           )}
         </div>
@@ -130,7 +132,7 @@ export function CommentBubble({
               onClick={onReply}
             >
               <Reply className="h-3 w-3" />
-              Reply
+              {t("comments.reply")}
             </button>
           )}
         </div>

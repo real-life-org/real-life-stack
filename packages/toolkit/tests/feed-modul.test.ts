@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { selectFeedItems } from "../src/modules/feed-module"
 
 /**

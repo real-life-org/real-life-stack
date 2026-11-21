@@ -1,6 +1,6 @@
 import { vi } from "vitest"
-import { createObservable } from "@real-life-stack/data-interface"
-import { describeDataInterfaceContract } from "@real-life-stack/data-interface/testing"
+import { createObservable } from "@real-life/data-interface"
+import { describeDataInterfaceContract } from "@real-life/data-interface/testing"
 import { WotConnector } from "../src/wot-connector.js"
 import type { RlsSpaceDoc } from "../src/types.js"
 

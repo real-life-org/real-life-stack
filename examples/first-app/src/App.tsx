@@ -1,7 +1,7 @@
-import type { DataInterface } from "@real-life-stack/data-interface"
-import { ConnectorProvider } from "@real-life-stack/toolkit"
-import { MapLibreAdapterProvider } from "@real-life-stack/toolkit/maplibre"
-import { RoutedAppFrame } from "@real-life-stack/toolkit/router"
+import type { DataInterface } from "@real-life/data-interface"
+import { ConnectorProvider } from "@real-life/toolkit"
+import { MapLibreAdapterProvider } from "@real-life/toolkit/maplibre"
+import { RoutedAppFrame } from "@real-life/toolkit/router"
 
 // Die App stellt drei Dinge: den Connector, die Karten-Engine und den Rahmen.
 // Kopfzeile, Tabs, Panel, Erstellen, Detail und alle Module kommen aus dem Toolkit.

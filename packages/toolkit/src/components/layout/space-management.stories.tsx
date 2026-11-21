@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Download, Sparkles } from "lucide-react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { applyGroupDataPatch, type ContactInfo, type Group } from "@real-life-stack/data-interface"
+import { applyGroupDataPatch, type ContactInfo, type Group } from "@real-life/data-interface"
 import { GroupDialog, type AppSpaceSection, type GroupDialogMode } from "./group-dialog"
 import { SpaceThemePanel } from "./space-theme-panel"
 import { Button } from "../primitives/button"

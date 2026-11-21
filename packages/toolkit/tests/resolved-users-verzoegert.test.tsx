@@ -2,7 +2,7 @@
 import { act, createElement, StrictMode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import type { User } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { useResolvedUsers } from "../src/hooks/use-resolved-users"

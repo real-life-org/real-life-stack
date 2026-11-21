@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { createObservable } from "@real-life-stack/data-interface"
+import { createObservable } from "@real-life/data-interface"
 import { WotConnector } from "../src/wot-connector.js"
 import { CrossGroupIndex } from "../src/CrossGroupIndex.js"
 import type { RlsSpaceDoc } from "../src/types.js"

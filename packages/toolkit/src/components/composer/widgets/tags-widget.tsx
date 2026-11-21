@@ -3,6 +3,7 @@
 import * as React from "react"
 import { X } from "lucide-react"
 import { cn, getTagColor } from "@/lib/utils"
+import { useI18n } from "@/i18n"
 
 interface TagsWidgetProps {
   value: string[]
@@ -23,6 +24,7 @@ export function TagsWidget({
   quickSuggestions,
   hint,
 }: TagsWidgetProps) {
+  const { t } = useI18n()
   const [query, setQuery] = React.useState("")
   const [filtered, setFiltered] = React.useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = React.useState(false)
@@ -122,7 +124,7 @@ export function TagsWidget({
           }}
           onFocus={() => setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
-          placeholder={value.length === 0 ? "Hinzufuegen..." : ""}
+          placeholder={value.length === 0 ? t("input.addPlaceholder") : ""}
           className="min-w-[60px] flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
         />
       </div>

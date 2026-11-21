@@ -1,6 +1,6 @@
 {
-  "name": "@real-life-stack/toolkit",
-  "version": "0.4.0",
+  "name": "@real-life/toolkit",
+  "version": "0.4.1",
   "description": "React UI toolkit: the app frame (AppFrame, RoutedAppFrame), the module host, seven modules (feed, list, kanban, calendar, map, graph, resonance), item preview and detail, composer, hooks. Styles from ./styles/globals.css; map engine from ./maplibre or ./leaflet; router glue from ./router.",
   "repository": {
     "type": "git",
@@ -33,6 +33,11 @@
       "types": "./dist/router.d.ts",
       "development": "./src/router.tsx",
       "import": "./dist/router.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "development": "./src/testing.ts",
+      "import": "./dist/testing.js"
     }
   },
   "files": [
@@ -42,11 +47,12 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.typetest.json",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "i18n:baseline": "I18N_WRITE_BASELINE=1 vitest run tests/i18n-guard.test.ts"
   },
   "dependencies": {
     "@radix-ui/colors": "^3.0.0",
@@ -58,7 +64,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@real-life-stack/data-interface": "workspace:*",
+    "@real-life/data-interface": "workspace:*",
     "@tanstack/react-virtual": "3.14.6",
     "@tiptap/extension-image": "^3.31.3",
     "@tiptap/extension-list": "^3.31.3",
@@ -77,7 +83,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
-    "@real-life-stack/mock-connector": "workspace:*",
+    "@real-life/mock-connector": "workspace:*",
     "@storybook/addon-docs": "^10.1.11",
     "@storybook/blocks": "^8.6.14",
     "@storybook/react": "^10.1.11",
@@ -136,6 +142,10 @@
       "./router": {
         "types": "./dist/router.d.ts",
         "import": "./dist/router.js"
+      },
+      "./testing": {
+        "types": "./dist/testing.d.ts",
+        "import": "./dist/testing.js"
       }
     }
   }

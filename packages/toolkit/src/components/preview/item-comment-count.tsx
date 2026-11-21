@@ -2,6 +2,7 @@
 
 import { MessageCircle } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { useI18n } from "@/i18n"
 
 /**
  * `ItemCommentCount` — comment-count badge for the `footerAdornment`
@@ -28,11 +29,12 @@ const baseClass =
   "inline-flex items-center gap-1 text-xs text-muted-foreground"
 
 export function ItemCommentCount({ count, onClick, className }: ItemCommentCountProps) {
+  const { t } = useI18n()
   if (count <= 0) return null
   const label = (
     <>
       <MessageCircle className="h-3 w-3" />
-      {count} Kommentar{count !== 1 ? "e" : ""}
+      {t("comments.count", { count })}
     </>
   )
   if (!onClick) {

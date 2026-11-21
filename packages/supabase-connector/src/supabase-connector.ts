@@ -22,15 +22,15 @@ import type {
   Source,
   Unsubscribe,
   User,
-} from "@real-life-stack/data-interface"
-import type { PublicProfileData } from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
+import type { PublicProfileData } from "@real-life/data-interface"
 import {
   createDefaultRelationStore,
   createObservable,
   createRelationRecordWith,
   deriveContext,
   withoutAuthoredClaim,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import type {
   AuthSessionLike,
   ChannelLike,
@@ -1279,8 +1279,11 @@ export class SupabaseConnector implements DataInterface, ItemWriter, GroupScopeC
 
   getAuthMethods(): AuthMethod[] {
     return [
+      // i18n-exempt: Rückfall; die Anmeldeseite des Toolkits übersetzt über auth.method.<method>
       { method: "anonymous", label: "Anonym ausprobieren" },
+      // i18n-exempt: Rückfall; die Anmeldeseite des Toolkits übersetzt über auth.method.<method>
       { method: "email", label: "E-Mail Login" },
+      // i18n-exempt: Rückfall; die Anmeldeseite des Toolkits übersetzt über auth.method.<method>
       { method: "email-signup", label: "E-Mail Registrierung" },
     ]
   }

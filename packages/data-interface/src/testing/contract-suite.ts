@@ -12,7 +12,7 @@
  * (owner-space create, cross-space ids) stays in the per-connector contract
  * tests — this suite covers the scope-independent core contract.
  *
- * Imported from `@real-life-stack/data-interface/testing` by TEST files only;
+ * Imported from `@real-life/data-interface/testing` by TEST files only;
  * vitest is a peer of the consuming test runner, never a runtime dependency.
  */
 import { describe, expect, it } from "vitest"

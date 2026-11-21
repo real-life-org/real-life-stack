@@ -1,4 +1,4 @@
-import { getTypeManifest, relationAffordanceKey } from "@real-life-stack/data-interface"
+import { getTypeManifest, relationAffordanceKey } from "@real-life/data-interface"
 
 import { resolveTypePresentation } from "../preview/type-presentation"
 import { otherKindOf } from "../preview/use-item-edges"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
-import type { Item, User } from "@real-life-stack/data-interface"
+import type { Item, User } from "@real-life/data-interface"
 import { ArrowLeft, ArrowRight, Calendar, CircleDot, Contact, Globe, Hash, Layers, Link2, List, Mail, MapPin, Phone, Users } from "lucide-react"
 
 import { useMembers } from "../../hooks/use-groups"
@@ -11,6 +11,7 @@ import { cn } from "../../lib/utils"
 import { useFieldLink } from "../navigation/field-navigation"
 import { ItemAssignees } from "./item-assignees"
 import { formatEventRange } from "./item-meta-row"
+import { useI18n } from "@/i18n"
 import { groupNumberFields, metaRowOrder, type EdgeEntry, type FieldEntry, type ListEntry, type MetaRow } from "./field-register"
 import { chipValues, contactHref, contactKind, formatNumber, optionTone, parseNumberInput, safeHref, urlLabel } from "../../lib/field-values"
 import { ToneDot, toneSoftClass } from "./value-tone"
@@ -203,13 +204,14 @@ function numberOf(value: unknown): number | undefined {
 }
 
 function MetaRowView({ row, item, typeTone }: { row: MetaRow & { kind: "field" }; item: Item; typeTone?: string }) {
+  const { t } = useI18n()
   const field = row.entry
   const value = data(item)[field.key]
   switch (field.widget) {
     case "status":
     case "select":
       return (
-        <Row id={field.key} icon={field.widget === "status" ? <CircleDot className="h-3.5 w-3.5" /> : <Layers className="h-3.5 w-3.5" />} label={field.label ?? (field.widget === "status" ? "Status" : undefined)}>
+        <Row id={field.key} icon={field.widget === "status" ? <CircleDot className="h-3.5 w-3.5" /> : <Layers className="h-3.5 w-3.5" />} label={field.label ?? (field.widget === "status" ? t("register.status") : undefined)}>
           <OptionChip field={field} value={value as string} typeTone={typeTone} />
         </Row>
       )
@@ -269,8 +271,9 @@ function PeopleRow({
   resolveName: (id: string) => string
   currentUserId?: string
 }) {
+  const { t } = useI18n()
   return (
-    <Row id={edge.predicate} icon={<Users className="h-3.5 w-3.5" />} label="Menschen">
+    <Row id={edge.predicate} icon={<Users className="h-3.5 w-3.5" />} label={t("people.label")}>
       <PeopleLineRow entries={entries} resolveUser={resolveUser} resolveName={resolveName} currentUserId={currentUserId} />
     </Row>
   )
@@ -284,10 +287,11 @@ function DateRow({ item, field }: { item: Item; field: FieldEntry }) {
   // zum Feld `start`.
   const end = field.key === "start" ? text(d.end) : undefined
   const zumDatum = useFieldLink(field.key, item)
+  const i18n = useI18n()
   if (!start) return null
   return (
     <Row id={field.key} icon={<Calendar className="h-3.5 w-3.5" />} label={field.label}>
-      <Sprung onClick={zumDatum}>{formatEventRange(start, end)}</Sprung>
+      <Sprung onClick={zumDatum}>{formatEventRange(i18n, start, end)}</Sprung>
     </Row>
   )
 }
@@ -383,6 +387,7 @@ function UrlRow({ field, value }: { field: FieldEntry; value: string }) {
 
 /** Telefon oder E-Mail mit Sprung (B12); Unerkanntes bleibt Text. */
 function ContactRow({ field, value }: { field: FieldEntry; value: string }) {
+  const { t } = useI18n()
   const kind = contactKind(value)
   const href = contactHref(value)
   const Icon = kind === "email" ? Mail : kind === "phone" ? Phone : Contact
@@ -395,7 +400,7 @@ function ContactRow({ field, value }: { field: FieldEntry; value: string }) {
           onClick={(event) => event.stopPropagation()}
           className="shrink-0 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
-          {kind === "email" ? "E-Mail schreiben" : "Anrufen"}
+          {kind === "email" ? t("contact.email") : t("contact.call")}
         </a>
       )}
     </Row>
@@ -404,6 +409,7 @@ function ContactRow({ field, value }: { field: FieldEntry; value: string }) {
 
 /** Chip-Reihe (B10), gekappt nach Platz wie die Tags, „+N" zeigt alle. */
 function ValueChips({ values }: { values: readonly string[] }) {
+  const { t } = useI18n()
   const [all, setAll] = useState(false)
   // Ohne Messung (Server, jsdom) drei, dann „+N".
   const { visible, measuring, rowRef, measureRef } = useFittingTags(values, 3, 0)
@@ -421,7 +427,7 @@ function ValueChips({ values }: { values: readonly string[] }) {
         <button
           type="button"
           data-more={hidden}
-          aria-label={`${hidden} weitere zeigen`}
+          aria-label={t("item.showMore", { count: hidden })}
           onClick={(event) => {
             event.stopPropagation()
             setAll(true)

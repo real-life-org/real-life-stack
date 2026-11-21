@@ -12,7 +12,7 @@ import { DRAFT_ITEM_ID } from "./use-draft-item"
  * der Fokus in der URL — `/{scope}/{modul}/{itemId}`, `?edit`, `?comment`,
  * `?compose=` — damit Zurück im Browser das Panel schließt und ein Link zum
  * Item führt. Das ist die Voreinstellung (Spec 01, „Der Modul-Host"), und sie
- * liegt in `@real-life-stack/toolkit/router`, weil sie den Router braucht.
+ * liegt in `@real-life/toolkit/router`, weil sie den Router braucht.
  * Ohne Router — Story, Test, Einbettung ohne eigene Adresse — hält
  * {@link MemoryFocusProvider} denselben Vertrag im Speicher. Er ist der
  * Rückfall, keine zweite gleichwertige Betriebsart.

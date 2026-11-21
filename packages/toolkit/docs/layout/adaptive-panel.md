@@ -529,7 +529,7 @@ interface AdaptivePanelProps {
 
 ```tsx
 import { useState } from "react"
-import { AdaptivePanel } from "@real-life-stack/toolkit"
+import { AdaptivePanel } from "@real-life/toolkit"
 
 function DetailView({ item, onClose }) {
   const [pinned, setPinned] = useState(false)

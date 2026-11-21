@@ -3,6 +3,7 @@ import { AlertTriangle, RotateCcw } from "lucide-react"
 
 import { Button } from "./button"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n"
 
 export interface ErrorFallbackProps {
   error: Error
@@ -102,29 +103,35 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return this.props.fallback({ error, label: this.props.label, reset: this.reset })
     }
 
-    return (
-      <div
-        role="alert"
-        className={cn(
-          "flex flex-col items-center justify-center gap-2 px-6 py-12 text-center",
-          this.props.className,
-        )}
-      >
-        <AlertTriangle className="h-10 w-10 text-muted-foreground/50" aria-hidden />
-        <p className="text-sm font-medium text-foreground">
-          {this.props.label ?? "Dieser Bereich"} konnte nicht angezeigt werden
-        </p>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Der Rest der App funktioniert weiter. Du kannst es erneut versuchen.
-        </p>
-        {/* Die technische Meldung bleibt lesbar — sie ist das Einzige, was ein
-            Fehlerbericht später brauchbar macht. */}
-        <p className="max-w-sm break-words font-mono text-xs text-muted-foreground/70">{error.message}</p>
-        <Button variant="outline" size="sm" className="mt-2" onClick={this.reset}>
-          <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-          Erneut versuchen
-        </Button>
-      </div>
-    )
+    return <DefaultFallback error={error} label={this.props.label} reset={this.reset} className={this.props.className} />
   }
+}
+
+/** Die Standardanzeige — eine Funktionskomponente, damit sie die Sprache abonniert. */
+function DefaultFallback({ error, label, reset, className }: ErrorFallbackProps & { className?: string }) {
+  const { t } = useI18n()
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "flex flex-col items-center justify-center gap-2 px-6 py-12 text-center",
+        className,
+      )}
+    >
+      <AlertTriangle className="h-10 w-10 text-muted-foreground/50" aria-hidden />
+      <p className="text-sm font-medium text-foreground">
+        {t("errorBoundary.title", { label: label ?? t("errorBoundary.thisArea") })}
+      </p>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        {t("errorBoundary.retryHint")}
+      </p>
+      {/* Die technische Meldung bleibt lesbar — sie ist das Einzige, was ein
+          Fehlerbericht später brauchbar macht. */}
+      <p className="max-w-sm break-words font-mono text-xs text-muted-foreground/70">{error.message}</p>
+      <Button variant="outline" size="sm" className="mt-2" onClick={reset}>
+        <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+        {t("common.retry")}
+      </Button>
+    </div>
+  )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import type { InitialSyncState } from "@real-life-stack/data-interface"
-import { hasInitialSync } from "@real-life-stack/data-interface"
+import type { InitialSyncState } from "@real-life/data-interface"
+import { hasInitialSync } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 
 const NOT_SYNCING: InitialSyncState = { active: false, loadedGroups: 0, expectedGroups: null }

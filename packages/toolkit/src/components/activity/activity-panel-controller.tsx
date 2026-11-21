@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef } from "react"
-import { isAggregateVisibleItemType, type ActivityEntry } from "@real-life-stack/data-interface"
+import { isAggregateVisibleItemType, type ActivityEntry } from "@real-life/data-interface"
 
 import { useActivity } from "../../hooks/use-activity"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"

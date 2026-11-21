@@ -1,4 +1,4 @@
-# @real-life-stack/supabase-connector
+# @real-life/supabase-connector
 
 Nativer Supabase-Connector: PostgREST für Queries/Writes, Supabase Realtime
 (`postgres_changes`) für live `observe()` — dieselbe Reaktivität wie beim
@@ -31,8 +31,12 @@ pnpm dev
 ```
 
 Alternativ per URL-Param: `http://localhost:5173/?connector=supabase&dev`.
-v1 meldet sich automatisch anonym an (Session überlebt Reloads); ein echter
-Login-Screen (E-Mail/Passwort) ist Folgearbeit.
+Die App zeigt den Anmeldebildschirm des Toolkits (E-Mail, Registrierung,
+anonym); supabase-js hält die Session über Reloads.
+
+Für einen Server: `deploy/supabase/README.md`. Die Einordnung, auch der
+Anmeldung, steht im Handbuch unter „Ein Supabase-Backend betreiben“ und
+„Identität und Anmeldung“.
 
 ## Tests
 
@@ -48,7 +52,7 @@ Login-Screen (E-Mail/Passwort) ist Folgearbeit.
 SUPABASE_URL=http://127.0.0.1:54321 \
 SUPABASE_ANON_KEY=<anon key> \
 SUPABASE_SERVICE_ROLE_KEY=<service_role key> \
-pnpm --filter @real-life-stack/supabase-connector test
+pnpm --filter @real-life/supabase-connector test
 ```
 
 ## Vertragsgrenzen (dokumentierte Abweichungen)

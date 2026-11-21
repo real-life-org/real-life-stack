@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "../primitives/dialog"
 import { Button } from "../primitives/button"
+import { useI18n } from "@/i18n"
 
 export interface DeleteConfirmDialogProps {
   open: boolean
@@ -25,6 +26,7 @@ export interface DeleteConfirmDialogProps {
 /** Confirm-before-delete dialog for an item. UX affordance only — the actual
  *  permission to delete is gated upstream (see `ItemDetailActions`). */
 export function DeleteConfirmDialog({ open, onOpenChange, title, onConfirm }: DeleteConfirmDialogProps) {
+  const { t } = useI18n()
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -37,7 +39,7 @@ export function DeleteConfirmDialog({ open, onOpenChange, title, onConfirm }: De
       await onConfirm()
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : "Löschen fehlgeschlagen.")
+      setError(err instanceof Error && err.message ? err.message : t("delete.failed"))
     } finally {
       setIsDeleting(false)
     }
@@ -53,25 +55,24 @@ export function DeleteConfirmDialog({ open, onOpenChange, title, onConfirm }: De
     >
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Löschen?</DialogTitle>
+          <DialogTitle>{t("delete.title")}</DialogTitle>
           <DialogDescription>
-            {title ? `„${title}" wird gelöscht. ` : "Dieses Element wird gelöscht. "}
-            Das kann nicht rückgängig gemacht werden.
+            {title ? t("delete.named", { title }) : t("delete.unnamed")} {t("delete.irreversible")}
           </DialogDescription>
         </DialogHeader>
         {error && (
           <p role="alert" className="text-sm text-destructive">
-            Löschen fehlgeschlagen: {error}
+            {t("delete.failedWith", { error })}
           </p>
         )}
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline" disabled={isDeleting}>
-              Abbrechen
+              {t("common.cancel")}
             </Button>
           </DialogClose>
           <Button variant="destructive" onClick={handleConfirm} disabled={isDeleting}>
-            {isDeleting ? "Lösche…" : "Löschen"}
+            {isDeleting ? t("delete.deleting") : t("detail.delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

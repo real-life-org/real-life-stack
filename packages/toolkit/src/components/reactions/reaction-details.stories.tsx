@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { ReactionDetails } from "./reaction-details"
 import { useReactions } from "../../hooks/use-reactions"
 import { STORY_POST, STORY_SEED, STORY_USERS, StoryWorld, storyReaction } from "../../story-support/story-world"

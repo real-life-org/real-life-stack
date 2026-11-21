@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { getModules, moduleIds, resolveSpaceModules, resolveActiveModule } from "@real-life-stack/toolkit"
+import { getModules, moduleIds, resolveSpaceModules, resolveActiveModule } from "@real-life/toolkit"
 import "./module-register"
-import { resolveDefaultModule, canonicalPath } from "@real-life-stack/toolkit/router"
+import { resolveDefaultModule, canonicalPath } from "@real-life/toolkit/router"
 
 const SRC = join(__dirname)
 

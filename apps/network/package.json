@@ -11,9 +11,9 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
-    "@real-life-stack/data-interface": "workspace:*",
-    "@real-life-stack/mock-connector": "workspace:*",
-    "@real-life-stack/toolkit": "workspace:*",
+    "@real-life/data-interface": "workspace:*",
+    "@real-life/mock-connector": "workspace:*",
+    "@real-life/toolkit": "workspace:*",
     "lucide-react": "^0.468.0",
     "maplibre-gl": "^5.24.0",
     "react": "^19.0.0",

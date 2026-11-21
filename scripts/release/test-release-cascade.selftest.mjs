@@ -208,8 +208,8 @@ const MUTATIONS = [
     f['scripts/release/build-android.sh'] = [
       '#!/bin/sh',
       'build_workspace_deps() {',
-      '  pnpm --filter @real-life-stack/data-interface build',
-      '  pnpm --filter @real-life-stack/toolkit build',
+      '  pnpm --filter @real-life/data-interface build',
+      '  pnpm --filter @real-life/toolkit build',
       '}',
       '',
     ].join('\n')

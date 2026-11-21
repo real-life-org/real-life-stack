@@ -16,7 +16,7 @@ import {
   type Item,
   type RelayState,
   type User,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import type { SpaceInfo } from "@real-life/wot-core"
 import { derivePrivateSpaceGenesis, x25519MultibaseToPublicKeyBytes } from "@real-life/wot-core/protocol"
 import { sendProfileUpdateInbox } from "../src/profile-update-wire.js"

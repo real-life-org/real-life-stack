@@ -1,6 +1,6 @@
 import { useMemo } from "react"
-import type { DataInterface, Item } from "@real-life-stack/data-interface"
-import { hasAuthorization, isAuthoredItemType, isWritable } from "@real-life-stack/data-interface"
+import type { DataInterface, Item } from "@real-life/data-interface"
+import { hasAuthorization, isAuthoredItemType, isWritable } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 import { useOptionalCurrentUser } from "./use-auth"
 

@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThumbsUp, Heart, MessageCircle } from 'lucide-react';
-import { Button } from '@real-life-stack/toolkit';
+import { Button } from '@real-life/toolkit';
 import { cn } from '@/lib/utils';
 
 const ProfileReactionsBar = ({ reactions, commentsCount, onReaction, onCommentClick, isVisible }) => {

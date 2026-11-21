@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { HostWorld } from "../story-support/host-world"
 import { STORY_SEED } from "../story-support/story-world"
@@ -15,7 +15,7 @@ import { STORY_SEED } from "../story-support/story-world"
  * map: the panel steps aside while you pick.
  *
  * The map engine is not part of the toolkit core: an app provides it with
- * one line, `MapLibreAdapterProvider` from `@real-life-stack/toolkit/maplibre`
+ * one line, `MapLibreAdapterProvider` from `@real-life/toolkit/maplibre`
  * (or the Leaflet variant). This story does the same; the
  * [module host](?path=/docs/rls-app-03-module-host--docs) page shows what happens
  * without it.

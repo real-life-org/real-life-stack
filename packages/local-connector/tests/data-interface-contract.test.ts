@@ -1,5 +1,5 @@
 import { vi } from "vitest"
-import { describeDataInterfaceContract } from "@real-life-stack/data-interface/testing"
+import { describeDataInterfaceContract } from "@real-life/data-interface/testing"
 
 // Mock idb-keyval (no IndexedDB in Node)
 vi.mock("idb-keyval", () => ({

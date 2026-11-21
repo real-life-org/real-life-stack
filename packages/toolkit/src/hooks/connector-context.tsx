@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react"
-import type { DataInterface } from "@real-life-stack/data-interface"
+import type { DataInterface } from "@real-life/data-interface"
 
 const ConnectorContext = createContext<DataInterface | null>(null)
 

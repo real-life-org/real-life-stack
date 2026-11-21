@@ -75,7 +75,7 @@ Ein Item kann in mehreren Modulen gleichzeitig erscheinen. `title` lebt in `data
 
 ### DRY — Keine Duplikation
 
-- **`createObservable()` und `matchesFilter()`** leben in `data-interface/base-connector.ts`. NIEMALS in einzelnen Connectors duplizieren — immer aus `@real-life-stack/data-interface` importieren.
+- **`createObservable()` und `matchesFilter()`** leben in `data-interface/base-connector.ts`. NIEMALS in einzelnen Connectors duplizieren — immer aus `@real-life/data-interface` importieren.
 - Wenn ein Helper in mehr als einem Connector gebraucht wird, gehört er in `data-interface`.
 
 ### Keine Cross-Dependencies zwischen Connectors
@@ -85,7 +85,7 @@ Jeder Connector hängt NUR von `data-interface` + eigenen Libraries ab. Connecto
 ### Demo-Daten
 
 - JSON-Dateien leben in `packages/data-interface/data/`, typisierter Wrapper in `demo-data.ts`
-- Import: `import { demoItems, ... } from "@real-life-stack/data-interface/demo-data"` — NICHT über mock-connector re-exportieren.
+- Import: `import { demoItems, ... } from "@real-life/data-interface/demo-data"` — NICHT über mock-connector re-exportieren.
 
 ### Observable Pattern
 
@@ -131,28 +131,28 @@ Relation-Targets nutzen Scope-Prefixe:
 
 ## Packages
 
-### `@real-life-stack/data-interface`
+### `@real-life/data-interface`
 
 - TypeScript-Typen + Shared Helpers (`createObservable`, `matchesFilter`)
 - Exportiert: `DataInterface`, `ItemWriter`, `RelationCapable`, `GroupManager`, `Authenticatable`, `MultiSource`, `ContactManager`, `MessagingCapable`, `ConfirmationCapable`, `ConfirmationWriterCapable`, `EncounterVerificationCapable`, `ProfileCapable`, `EventListenerCapable`, `ItemGroupCapable`, `FullConnector`
 - Type Guards: `isWritable()`, `hasRelations()`, `hasGroups()`, `isAuthenticatable()`, `hasMultiSource()`, `hasContacts()`, `hasMessaging()`, `hasConfirmations()`, `hasConfirmationWriter()`, `hasEncounterVerification()`, `hasProfile()`, `hasEventListener()`, `hasItemGroups()`
 - `BaseConnector` — abstrakte Basisklasse mit Defaults für alle Capabilities
-- Demo-Daten: `@real-life-stack/data-interface/demo-data`
+- Demo-Daten: `@real-life/data-interface/demo-data`
 - Ändern nur nach Absprache — das ist der Vertrag zwischen UI und Backend
 
-### `@real-life-stack/mock-connector`
+### `@real-life/mock-connector`
 
 - `MockConnector` implementiert `FullConnector`
 - In-Memory, für Entwicklung und Tests
 
-### `@real-life-stack/local-connector`
+### `@real-life/local-connector`
 
 - `LocalConnector` implementiert `FullConnector`
 - IndexedDB-Persistenz via `idb-keyval`
 - BroadcastChannel für Cross-Tab-Sync
 - Seed-Daten über Constructor
 
-### `@real-life-stack/toolkit`
+### `@real-life/toolkit`
 
 - UI-Komponenten basierend auf shadcn/ui (Radix + Tailwind)
 - Layout: AppShell, Navbar, WorkspaceSwitcher, ModuleTabs, BottomNav, UserMenu
@@ -191,9 +191,9 @@ pnpm build                # Alles bauen (Turbo)
 ### Connector verwenden
 
 ```typescript
-import { MockConnector } from "@real-life-stack/mock-connector"
-import type { Item, DataInterface } from "@real-life-stack/data-interface"
-import { isWritable, hasGroups } from "@real-life-stack/data-interface"
+import { MockConnector } from "@real-life/mock-connector"
+import type { Item, DataInterface } from "@real-life/data-interface"
+import { isWritable, hasGroups } from "@real-life/data-interface"
 
 const connector = new MockConnector()
 await connector.init()
@@ -234,7 +234,7 @@ Normativ in `docs/spec/01-app-composition.md` → „Der Modul-Host" und „Der 
 
 - **Ein Modul ist ein Registereintrag plus eine Ansicht.** `ModuleOutlet` rendert jede Ansicht in einem `ModuleHost`, der aus dem Eintrag herstellt, was sich alle Module teilen: Items (nach `presents` über die Hinweis-Tabelle `module-hints.ts`; `loads: "module"` = keine Abfrage), Space-Kontext (`useModuleHost()`: Mitglieder, Gruppen, `currentSpace`, Gruppenfarben, `resolveAuthor`, `activeItemId`, `filterActive`, `registerItemElement`; aggregierende Module sehen nur, was als eigene Karte steht), Detail (Lesen ↔ Bearbeiten im geteilten Panel), Erstellen mit **allen** Typen und den Plusknopf mit dem Vorschlag aus `options.suggestType`.
 - **Eine Ansicht registriert NICHTS selbst.** Kein `useRegisterDetail`, kein `useRegisterCreate`, kein eigener `CreateFab`, kein eigenes `useItems` für den Modulbestand, kein eigenes Filtern — die Items kommen als `items`/`itemsLoading` in den `ModuleViewProps`, **bereits gefiltert** nach Suche, Tags und Typen; eine freistehende Lens liest sie gefiltert über `useSurfaceItems()`. Der Wächter `scripts/check-shared-derivations.py` meldet Registrierungen außerhalb von `components/host/`.
-- **Fokus in der URL ist die Voreinstellung.** Der Vertrag `useItemFocus()` (offenes Item, Bearbeiten, Kommentieren, Erstellen) lebt im Toolkit; die URL-Politik `UrlFocusProvider` im Unterpfad `@real-life-stack/toolkit/router` (react-router-dom als optionaler Peer). Ohne Router: `MemoryFocusProvider`, derselbe Vertrag.
+- **Fokus in der URL ist die Voreinstellung.** Der Vertrag `useItemFocus()` (offenes Item, Bearbeiten, Kommentieren, Erstellen) lebt im Toolkit; die URL-Politik `UrlFocusProvider` im Unterpfad `@real-life/toolkit/router` (react-router-dom als optionaler Peer). Ohne Router: `MemoryFocusProvider`, derselbe Vertrag.
 - **Alle sieben Toolkit-Module laufen ohne eine Zeile in der App** (seit 21.09.2026, B0–B5): Feed, Kanban, Kalender, Karte, Resonanz, Liste, Graph in `packages/toolkit/src/modules/`. Die Referenz-App erweitert das Register nicht mehr; eine App darf eigene Module einführen oder eine Fläche ersetzen — ausdrücklich, mit `replaces: ["view"]` am Fragment. Muster für ein neues Modul: eine Datei in `modules/`, ein Registereintrag, eine Story mit `HostWorld`. Muster für eine neue App: Connector, Router, Register, `MapLibreAdapterProvider`, `RoutedAppFrame` — sonst nichts (Spec 01, „Was bei der App bleibt").
 - **Der Plusknopf bietet immer alle Typen.** Ein Modul schlägt vor (`suggestType`), belegt vor (Kalendertag), schränkt nie ein.
 

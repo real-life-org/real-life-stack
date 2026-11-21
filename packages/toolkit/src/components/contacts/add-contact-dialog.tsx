@@ -11,6 +11,7 @@ import {
 import { Button } from "../primitives/button"
 import { Input } from "../primitives/input"
 import { Label } from "../primitives/label"
+import { useI18n } from "@/i18n"
 
 export interface AddContactDialogProps {
   open: boolean
@@ -23,6 +24,7 @@ export function AddContactDialog({
   onOpenChange,
   onAdd,
 }: AddContactDialogProps) {
+  const { t } = useI18n()
   const [contactId, setContactId] = useState("")
   const [contactName, setContactName] = useState("")
   const [adding, setAdding] = useState(false)
@@ -40,7 +42,7 @@ export function AddContactDialog({
       setContactName("")
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Fehler beim Hinzufügen")
+      setError(err instanceof Error ? err.message : t("addContact.failed"))
     } finally {
       setAdding(false)
     }
@@ -61,21 +63,21 @@ export function AddContactDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            Kontakt hinzufügen
+            {t("addContact.title")}
           </DialogTitle>
           <DialogDescription>
-            Füge den Profil-Link oder die ID der Person ein, die du als Kontakt anfragen möchtest.
+            {t("addContact.description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="contact-id">Profil-Link oder ID</Label>
+            <Label htmlFor="contact-id">{t("addContact.idLabel")}</Label>
             <Input
               id="contact-id"
               value={contactId}
               onChange={(e) => setContactId(e.target.value)}
-              placeholder="https://… oder ID"
+              placeholder={t("addContact.idPlaceholder")}
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -87,12 +89,12 @@ export function AddContactDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contact-name">Name (optional)</Label>
+            <Label htmlFor="contact-name">{t("addContact.nameLabel")}</Label>
             <Input
               id="contact-name"
               value={contactName}
               onChange={(e) => setContactName(e.target.value)}
-              placeholder="Name der Person"
+              placeholder={t("addContact.namePlaceholder")}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault()
@@ -109,10 +111,10 @@ export function AddContactDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={adding}>
-            Abbrechen
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleAdd} disabled={adding || !contactId.trim()}>
-            {adding ? "Hinzufügen..." : "Hinzufügen"}
+            {adding ? t("addContact.adding") : t("addContact.add")}
           </Button>
         </DialogFooter>
       </DialogContent>

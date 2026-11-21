@@ -2,7 +2,7 @@
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { afterEach, describe, expect, it } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { ItemTypeBadge } from "../src/components/preview/item-type-badge"
 import { getItemPreviewAdornments } from "../src/components/preview/item-type-meta"
@@ -17,7 +17,7 @@ import {
   composeTypeManifest,
   TOOLKIT_TYPE_LAYER,
   type TypeManifestEntry,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 /**
  * Ein App-eigener Typ mit einer Kante, wie ihn eine App mitbringen wuerde.

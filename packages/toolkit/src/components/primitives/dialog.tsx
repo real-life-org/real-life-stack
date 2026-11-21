@@ -3,6 +3,7 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
+import { useI18n } from "@/i18n"
 
 import { cn } from "@/lib/utils"
 import { ErrorBoundary, type ErrorFallbackProps } from "./error-boundary"
@@ -55,14 +56,20 @@ function DialogOverlay({
  * Dialog, der nur noch eine Fehlermeldung zeigt, wäre sonst für Screenreader
  * namenlos — und die Konsole voller Radix-Warnungen statt der Ursache.
  */
-function renderDialogError({ error, label }: ErrorFallbackProps) {
+function renderDialogError(props: ErrorFallbackProps) {
+  return <DialogError {...props} />
+}
+
+/** Eigene Komponente, damit die Meldung die Sprache abonniert (`useI18n`). */
+function DialogError({ error, label }: ErrorFallbackProps) {
+  const { t } = useI18n()
   return (
     <div role="alert" className="flex flex-col gap-2 text-center">
       <DialogTitle className="text-base">
-        {label ?? 'Dieser Dialog'} konnte nicht angezeigt werden
+        {t("errorBoundary.title", { label: label ?? t("errorBoundary.thisDialog") })}
       </DialogTitle>
       <DialogDescription>
-        Du kannst ihn schliessen — der Rest der App funktioniert weiter.
+        {t("errorBoundary.closeHint")}
       </DialogDescription>
       <p className="break-words font-mono text-xs text-muted-foreground/70">{error.message}</p>
     </div>
@@ -80,6 +87,7 @@ function DialogContent({
   /** Name des Bereichs in der Fehlermeldung („Die Kontaktliste"). */
   errorLabel?: string
 }) {
+  const { t } = useI18n()
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -103,7 +111,7 @@ function DialogContent({
             className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{t("common.close")}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>

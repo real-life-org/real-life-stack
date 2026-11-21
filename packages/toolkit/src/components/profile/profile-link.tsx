@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { cn } from "../../lib/utils"
 import { useOpenProfile } from "../../hooks/use-open-profile"
+import { useI18n } from "@/i18n"
 
 export interface ProfileLinkProps {
   /** User whose profile opens on click. */
@@ -30,8 +31,10 @@ export function ProfileLink({
   children,
   className,
   stopPropagation = true,
-  label = "Profil öffnen",
+  label: labelProp,
 }: ProfileLinkProps) {
+  const { t } = useI18n()
+  const label = labelProp ?? t("profile.open")
   const openProfile = useOpenProfile()
 
   const activate = (e: { stopPropagation: () => void }) => {

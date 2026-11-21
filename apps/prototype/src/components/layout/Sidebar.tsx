@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { X, Home, Users, Settings, Bell, HelpCircle, Star } from 'lucide-react';
-import { Button } from '@real-life-stack/toolkit';
+import { Button } from '@real-life/toolkit';
 import { toast } from '@/components/ui/use-toast';
 
 const Sidebar = ({ isOpen, onClose }) => {

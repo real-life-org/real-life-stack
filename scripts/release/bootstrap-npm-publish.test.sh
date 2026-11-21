@@ -16,7 +16,7 @@ set -euo pipefail
 
 SCRIPT_UNDER_TEST="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/bootstrap-npm-publish.sh"
 PACKAGES=(data-interface toolkit mock-connector local-connector supabase-connector wot-connector)
-SCOPE=@real-life-stack
+SCOPE=@real-life
 VERSION=0.1.0
 
 TOTAL=0; PASS=0; FAIL=0
@@ -119,7 +119,7 @@ call_count() { [ -z "$LOG" ] && echo 0 || printf '%s\n' "$LOG" | grep -c . ; }
 # (out_dir = Paketname mit / und @ ersetzt durch _).
 published_order() {
   printf '%s\n' "$LOG" | grep '^npm publish' \
-    | grep -oE '_real-life-stack_[a-z-]+' | sed 's/^_real-life-stack_//'
+    | grep -oE '_real-life_[a-z-]+' | sed 's/^_real-life_//'
 }
 
 echo "== Argumentpruefung: nur --dry-run/--help sind erlaubt =="

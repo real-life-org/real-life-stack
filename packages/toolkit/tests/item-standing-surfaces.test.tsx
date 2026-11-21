@@ -2,7 +2,7 @@
 import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
 import { describe, expect, it } from "vitest"
-import { createObservable, type ClaimVerdict, type Item } from "@real-life-stack/data-interface"
+import { createObservable, type ClaimVerdict, type Item } from "@real-life/data-interface"
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { useCommentCount } from "../src/hooks/use-comment-count"
 import { useReactions, type UseReactionsResult } from "../src/hooks/use-reactions"

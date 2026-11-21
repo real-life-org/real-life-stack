@@ -3,7 +3,7 @@ import { act, createElement, type ReactNode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { List } from "lucide-react"
-import { MockConnector } from "@real-life-stack/mock-connector"
+import { MockConnector } from "@real-life/mock-connector"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { FilterProvider } from "../src/components/filter/filter-store"

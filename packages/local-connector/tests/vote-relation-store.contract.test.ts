@@ -4,7 +4,7 @@ import {
   voteRecordInput,
   votesFromRelationRecords,
   VOTE_PREDICATE,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 // Mock idb-keyval (no IndexedDB in Node)
 vi.mock("idb-keyval", () => ({
@@ -149,7 +149,7 @@ describe("LocalConnector — vote relation store contract", () => {
     await fixture.authenticate("local", {})
     const item = await fixture.createItem({ type: "note", createdBy: "user-mallory", data: {} })
     expect(item.createdBy).toBe("user-mallory")
-    const { hasClaimVerification } = await import("@real-life-stack/data-interface")
+    const { hasClaimVerification } = await import("@real-life/data-interface")
     expect(hasClaimVerification(fixture)).toBe(false)
   })
 
@@ -189,7 +189,7 @@ describe("LocalConnector — vote relation store contract", () => {
     const restored = new LocalConnector()
     await restored.init()
     expect(await restored.getItem("mallory-legacy")).toBeNull()
-    const { hasClaimVerification } = await import("@real-life-stack/data-interface")
+    const { hasClaimVerification } = await import("@real-life/data-interface")
     expect(hasClaimVerification(restored)).toBe(true)
   })
 

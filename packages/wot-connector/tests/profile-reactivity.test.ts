@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
-import type { Item, Observable } from "@real-life-stack/data-interface"
-import { createObservable, deriveContext } from "@real-life-stack/data-interface"
+import type { Item, Observable } from "@real-life/data-interface"
+import { createObservable, deriveContext } from "@real-life/data-interface"
 
 /**
  * Tests for profile reactivity in WotConnector.

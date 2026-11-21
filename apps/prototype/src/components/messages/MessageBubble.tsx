@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Avatar, AvatarFallback, AvatarImage, Button } from '@real-life-stack/toolkit';
+import { Avatar, AvatarFallback, AvatarImage, Button } from '@real-life/toolkit';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Smile, Reply, MoreVertical, Check, CheckCheck } from 'lucide-react';
@@ -11,7 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@real-life-stack/toolkit';
+} from '@real-life/toolkit';
 import { COMMON_REACTIONS } from '@/data/messageTypes';
 
 const MessageBubble = ({

@@ -1,3 +1,4 @@
+import { getI18n } from "@/i18n"
 export interface PointerPosition {
   x: number
   y: number
@@ -65,5 +66,5 @@ export function isSafeImageUrl(value: string): boolean {
 }
 
 export function selectionAnnouncement(label: string): string {
-  return `${label} ausgewählt.`
+  return getI18n().t("graph.selected", { label })
 }

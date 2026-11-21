@@ -1,6 +1,6 @@
 {
-  "name": "@real-life-stack/mock-connector",
-  "version": "0.2.3",
+  "name": "@real-life/mock-connector",
+  "version": "0.2.4",
   "description": "In-memory connector with seed data. The starting point for prototypes, stories and tests.",
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@real-life-stack/data-interface": "workspace:*"
+    "@real-life/data-interface": "workspace:*"
   },
   "devDependencies": {
     "typescript": "~5.7.2",

@@ -1,0 +1,9 @@
+# Data layer and specs: the rls-maintainers team reviews changes here.
+# Everything else needs one review from anyone with write access.
+/docs/spec/                  @real-life-org/rls-maintainers
+/docs/concepts/              @real-life-org/rls-maintainers
+/packages/data-interface/    @real-life-org/rls-maintainers
+/packages/local-connector/   @real-life-org/rls-maintainers
+/packages/mock-connector/    @real-life-org/rls-maintainers
+/packages/supabase-connector/ @real-life-org/rls-maintainers
+/packages/wot-connector/     @real-life-org/rls-maintainers

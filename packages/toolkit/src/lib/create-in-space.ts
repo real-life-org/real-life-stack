@@ -1,4 +1,4 @@
-import { hasGroups, hasGroupScope, type CreateItemInput, type DataInterface, type Item, type ItemWriter } from "@real-life-stack/data-interface"
+import { hasGroups, hasGroupScope, type CreateItemInput, type DataInterface, type Item, type ItemWriter } from "@real-life/data-interface"
 
 /**
  * Die eine Anlegeprüfung für einen gewählten Space (shared-components →

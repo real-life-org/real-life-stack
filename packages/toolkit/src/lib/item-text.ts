@@ -1,4 +1,6 @@
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
+import type { I18n } from "@/i18n"
+import { getI18n } from "@/i18n"
 
 /**
  * Wie ein Item heißt, wenn eine Fläche es in einer Zeile nennen muss.
@@ -9,7 +11,7 @@ import type { Item } from "@real-life-stack/data-interface"
  * Datenvertrags, `displayName` und `name` sind die Namen, die Personenprofile
  * und Spaces mitbringen.
  */
-export function itemTitle(item: Item, fallback = "Ohne Titel"): string {
+export function itemTitle(item: Item, fallback = getI18n().t("item.untitled")): string {
   const d = item.data as Record<string, unknown>
   for (const key of ["title", "displayName", "name"] as const) {
     const value = d[key]
@@ -37,9 +39,17 @@ export function itemText(item: Item): string | undefined {
  *
  * Stand wörtlich doppelt in `ItemDetailBody` und `ItemPreview`. Die Auflösung
  * der Kennung bleibt draußen, weil sie ein Hook ist: die Fläche reicht
- * `useUserNameResolver()` herein.
+ * `useUserNameResolver()` herein — ebenso das `I18n`-Bündel aus `useI18n()`,
+ * damit die Fläche beim Sprachwechsel neu rendert (rls#290).
  */
-export function editedLabel(item: Item, resolveName: (id: string) => string): string | undefined {
+export function editedLabel(
+  i18n: Pick<I18n, "t" | "formatFullDateTime">,
+  item: Item,
+  resolveName: (id: string) => string,
+): string | undefined {
   if (!item.updatedAt) return undefined
-  return `Bearbeitet von ${resolveName(item.updatedBy ?? item.createdBy)} am ${new Date(item.updatedAt).toLocaleString("de-DE")}`
+  return i18n.t("item.editedBy", {
+    name: resolveName(item.updatedBy ?? item.createdBy),
+    date: i18n.formatFullDateTime(item.updatedAt),
+  })
 }

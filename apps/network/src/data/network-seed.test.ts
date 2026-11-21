@@ -7,8 +7,8 @@ import {
   VOCAB_RELATION,
   type Item,
   type RelationRecord,
-} from "@real-life-stack/data-interface"
-import { MockConnector } from "@real-life-stack/mock-connector"
+} from "@real-life/data-interface"
+import { MockConnector } from "@real-life/mock-connector"
 import { beforeAll, describe, expect, it } from "vitest"
 
 import {

@@ -4,6 +4,7 @@ import * as React from "react"
 import { ImagePlus, X, GripVertical } from "lucide-react"
 import { Button } from "@/components/primitives/button"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n"
 
 interface MediaFile {
   id: string
@@ -19,6 +20,7 @@ interface MediaWidgetProps {
 }
 
 export function MediaWidget({ value, onChange, label: _label }: MediaWidgetProps) {
+  const { t } = useI18n()
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const [dragIndex, setDragIndex] = React.useState<number | null>(null)
   const [overIndex, setOverIndex] = React.useState<number | null>(null)
@@ -155,7 +157,7 @@ export function MediaWidget({ value, onChange, label: _label }: MediaWidgetProps
         className="gap-1.5"
       >
         <ImagePlus className="h-4 w-4" />
-        Dateien hinzufuegen
+        {t("media.addFiles")}
       </Button>
     </div>
   )
