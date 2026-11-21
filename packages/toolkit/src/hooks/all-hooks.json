@@ -729,7 +729,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/components/host/create-host.tsx",
-          "line": 306
+          "line": 305
         },
         {
           "name": "useOptionalCreate",
@@ -744,7 +744,7 @@
             "docs/spec/01-app-composition.md"
           ],
           "source": "packages/toolkit/src/components/host/create-host.tsx",
-          "line": 323
+          "line": 322
         },
         {
           "name": "useModuleHost",
