@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { CommentWithAuthor } from "@/hooks/use-comments"
 import { CommentBubble } from "./comment-bubble"
+import { useI18n } from "@/i18n"
 
 export interface CommentThreadProps {
   /** The first-level comment. */
@@ -35,6 +36,7 @@ export function CommentThread({
   canReply = true,
   renderReactions,
 }: CommentThreadProps) {
+  const { t } = useI18n()
   const [expanded, setExpanded] = useState(defaultExpanded)
 
   // Force expand when trigger changes (e.g. after creating a reply)
@@ -65,10 +67,10 @@ export function CommentThread({
           className="ml-10 mt-1.5 flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
           onClick={() => setExpanded((prev) => !prev)}
           aria-expanded={expanded}
-          aria-label={`${replyCount} Antwort${replyCount !== 1 ? "en" : ""}, ${expanded ? "einklappen" : "aufklappen"}`}
+          aria-label={t(expanded ? "comments.collapse" : "comments.expand", { replies: t("comments.replies", { count: replyCount }) })}
         >
           <ChevronRight className={cn("h-3 w-3 transition-transform", expanded && "rotate-90")} />
-          {replyCount} Antwort{replyCount !== 1 ? "en" : ""}
+          {t("comments.replies", { count: replyCount })}
         </button>
       )}
 

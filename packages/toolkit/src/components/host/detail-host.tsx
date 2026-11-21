@@ -1,10 +1,11 @@
 "use client"
 
-import { createContext, useContext, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react"
-import type { Item, User } from "@real-life-stack/data-interface"
+import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react"
+import type { Item, User } from "@real-life/data-interface"
 
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { useMembers } from "../../hooks/use-groups"
+import { useResolvedUsers } from "../../hooks/use-resolved-users"
 import { useItemFocus } from "../../hooks/use-item-focus"
 import type { ItemDetailEditConfig } from "../../hooks/use-item-detail-edit"
 import { moduleIds } from "../../lib/module-register"
@@ -15,6 +16,7 @@ import { ItemScopeBadge } from "../preview/item-scope-badge"
 import { ItemTypeBadge } from "../preview/item-type-badge"
 import { renderTypeFooter, resolveTypePresentation } from "../preview/type-presentation"
 import { ReactionBar } from "../reactions/reaction-bar"
+import { useI18n } from "@/i18n"
 
 /**
  * Der Detail-Host: EIN Panel für das offene Item, über alle Module hinweg
@@ -151,6 +153,8 @@ export function useRegisterDetail(module: string, config: DetailConfig): void {
  * lookup, the scope badge and the group colour.
  */
 export function ItemDetailRead({ item, actions, groupId }: { item: Item; actions: ReactNode; groupId: string | null }) {
+  // Die Slots kommen aus dem Typ-Register, dessen Texte der Sprache folgen: bei Sprachwechsel neu auflösen.
+  useI18n()
   // No space (or the aggregate) → `null` asks for the union of all known
   // members, so an author from another space still resolves.
   const isOverview = groupId === "__overview__"
@@ -164,7 +168,13 @@ export function ItemDetailRead({ item, actions, groupId }: { item: Item; actions
   const resolveUser = (userId: string): User | undefined =>
     members.find((member) => member.id === userId) ?? (currentUser?.id === userId ? currentUser : undefined)
 
-  const author = resolveUser(item.createdBy)
+  const memberAuthor = resolveUser(item.createdBy)
+  // Rueckfall fuer einen Autor, der kein Mitglied ist (real-life-stack#562):
+  // der Connector loest ihn auf, wenn er kann (`getUser`, async). Sonst sagt
+  // die Leseansicht „Unbekannt", nie die rohe DID.
+  const lookup = useMemo(() => (memberAuthor ? [] : [item.createdBy]), [memberAuthor, item.createdBy])
+  const fetched = useResolvedUsers(lookup)
+  const author = memberAuthor ?? fetched.get(item.createdBy)
   const presentation = resolveTypePresentation(item.type)
 
   return (

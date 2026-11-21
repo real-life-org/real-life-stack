@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import type { Group } from "@real-life-stack/data-interface"
-import { hasGroups } from "@real-life-stack/data-interface"
+import type { Group } from "@real-life/data-interface"
+import { hasGroups } from "@real-life/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useColorScheme } from "../../hooks/use-color-scheme"
@@ -12,12 +12,14 @@ import { useItem } from "../../hooks/use-items"
 import { scalesForColor } from "../../lib/color-scales"
 import { getModule, moduleIds, resolveActiveModule, resolveSpaceModules } from "../../lib/module-register"
 import { resolveDefaultModule } from "../../lib/notification-target"
-import { instanceTheme } from "../../lib/runtime-config"
+import { getRuntimeConfig, instanceTheme } from "../../lib/runtime-config"
 import { layoutTokens } from "../../lib/space-theme"
 import { applyThemeTokens, clearThemeTokens, themeTokens } from "../../lib/theme-tokens"
 import { getSpacePrimaryColor } from "../../lib/utils"
 import type { Module } from "../layout/module-tabs"
 import { workspaceOf, type Workspace } from "../layout/workspace-switcher"
+import { useI18n } from "@/i18n"
+import { moduleLabel } from "@/lib/register-labels"
 
 /**
  * Space, Modul und Item aus der URL — die Auflösung, die jede App mit Router
@@ -50,7 +52,11 @@ export const scopeToSlug = (id: string) => (id === OVERVIEW_ID ? OVERVIEW_SLUG :
 /** URL slug → internal scope id. */
 const slugToScope = (slug: string) => (slug === OVERVIEW_SLUG ? OVERVIEW_ID : slug)
 
-const OVERVIEW_WORKSPACE: Workspace = { id: OVERVIEW_ID, name: "Mein Netzwerk", scope: "overview" }
+/**
+ * Das Aggregat als Workspace. Der Name ist reine Anzeige in der aktiven
+ * Sprache — er wird nirgends gespeichert, die Kennung bleibt `__overview__`.
+ */
+const overviewWorkspace = (name: string): Workspace => ({ id: OVERVIEW_ID, name, scope: "overview" })
 
 
 /**
@@ -124,6 +130,8 @@ export interface WorkspaceRoutingOptions {
  * @see spec docs/spec/01-app-composition.md
  */
 export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions = {}): WorkspaceRouting {
+  const i18n = useI18n()
+  const { t } = i18n
   const connector = useConnector()
   const navigate = useNavigate()
   const location = useLocation()
@@ -150,12 +158,15 @@ export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions 
   // Wahrheiten.
   const scheme = useColorScheme()
 
+  // Ohne Gruppen (Spec 03, hasGroups) gibt es genau einen Space: die App
+  // selbst. Er traegt ihren Namen, nicht „Mein Netzwerk" — es gibt kein
+  // Netzwerk aus Spaces, das er zusammenfasst.
+  const groupsSupported = hasGroups(connector)
   const workspaces: Workspace[] = useMemo(
-    () => [
-      OVERVIEW_WORKSPACE,
-      ...groups.map(workspaceOf),
-    ],
-    [groups]
+    () => groupsSupported
+      ? [overviewWorkspace(t("workspace.overview")), ...groups.map(workspaceOf)]
+      : [overviewWorkspace(getRuntimeConfig().branding?.appName || document.title || t("workspace.overview"))],
+    [groups, groupsSupported, t]
   )
 
   // Derive active workspace from the URL scope (fallback localStorage → first space).
@@ -277,8 +288,8 @@ export function useWorkspaceRouting({ fallbackModule }: WorkspaceRoutingOptions 
     // Filter waere der Registerzugriff darunter undefined.
     () => groupModuleIds
       .map((id) => getModule(id)!)
-      .map((m) => ({ id: m.id, label: m.label, icon: m.icon })),
-    [groupModuleIds.join(",")] // eslint-disable-line react-hooks/exhaustive-deps
+      .map((m) => ({ id: m.id, label: moduleLabel(i18n, m), icon: m.icon })),
+    [groupModuleIds.join(","), i18n] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
   // Re-theme the app's primary color to the active space's identity color, so

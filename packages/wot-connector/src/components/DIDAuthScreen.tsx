@@ -3,6 +3,8 @@ import type { WotConnector } from "../wot-connector.js"
 import { OnboardingFlow } from "./OnboardingFlow.js"
 import { UnlockFlow } from "./UnlockFlow.js"
 import { RecoveryFlow } from "./RecoveryFlow.js"
+import { useI18n } from "@real-life/toolkit"
+import "../i18n/index.js"
 
 type AuthView = "loading" | "onboarding" | "unlock" | "recovery"
 
@@ -12,6 +14,7 @@ interface DIDAuthScreenProps {
 }
 
 export function DIDAuthScreen({ connector, onAuthenticated }: DIDAuthScreenProps) {
+  const { t } = useI18n()
   const [view, setView] = useState<AuthView>("loading")
 
   useEffect(() => {
@@ -56,7 +59,7 @@ export function DIDAuthScreen({ connector, onAuthenticated }: DIDAuthScreenProps
   if (view === "loading") {
     return (
       <div className="flex h-full min-h-0 items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Laden…</div>
+        <div className="animate-pulse text-muted-foreground">{t("wot.loading")}</div>
       </div>
     )
   }

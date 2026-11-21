@@ -263,7 +263,7 @@ interface CommentSectionProps {
   hideInput?: boolean
   /**
    * Reply-State an den Caller herausgeben (für externes CommentInput).
-   * `CommentQuote` ist aus `@real-life-stack/toolkit` re-exportiert.
+   * `CommentQuote` ist aus `@real-life/toolkit` re-exportiert.
    */
   onReplyChange?: (
     replyTo: CommentQuote | null,
@@ -431,7 +431,7 @@ List-, Grid-, Feed- und Board-Caller keine eigene Kartenfläche bauen.
 `fallback`. Read-only-Linsen komponieren ausschließlich diese Slots und
 `ItemPreview`; sie führen kein eigenes Card-Markup.
 
-Plus eine exportierte Format-Funktion `formatEventRange(start, end?)` für Caller, die den String außerhalb der Inline-Zeile brauchen (z.B. Tooltip, Tabelle).
+Plus eine exportierte Format-Funktion `formatEventRange(i18n, start, end?)` für Caller, die den String außerhalb der Inline-Zeile brauchen (z.B. Tooltip, Tabelle). `i18n` ist das Bündel aus `useI18n()` (in Komponenten, mit Abo auf den Sprachwechsel) oder aus `getI18n()` (außerhalb von React). Die frühere Form `formatEventRange(start, end?)` bleibt als veraltete Überladung erhalten und formatiert über die gerade aktive Sprache.
 
 #### `ItemTimeRange`
 
@@ -449,11 +449,11 @@ interface ItemTimeRangeProps {
 }
 ```
 
-All-day-Events rendern als „Ganztägig". Same-day-Range als „18:00 – 20:00", ohne `end` als „18:00". Mehrtägige Range fügt das End-Datum hinzu, damit User nicht denken das Event ende noch am gleichen Tag.
+All-day-Events rendern als „Ganztägig" (in der aktiven Sprache, Schlüssel `time.allDay`). Same-day-Range als „18:00 – 20:00", ohne `end` als „18:00". Mehrtägige Range fügt das End-Datum hinzu, damit User nicht denken das Event ende noch am gleichen Tag.
 
 Location-Auflösung: `locationLabel`-Prop hat Vorrang; sonst `data.locationName ?? data.address` (analog zu Calendar's eigener Location-Normalisierung). Dadurch wird ein Event mit nur `locationName` ebenfalls korrekt angezeigt.
 
-Plus exportierte Format-Funktion `formatTimeRange(start, end?)`.
+Plus exportierte Format-Funktion `formatTimeRange(i18n, start, end?)`, mit denselben Regeln für `i18n` und derselben veralteten Überladung `formatTimeRange(start, end?)` wie `formatEventRange`.
 
 #### `ItemCommentCount`
 
@@ -634,6 +634,44 @@ interface ModulePanelEntry { kind: ModulePanelKind; content: ReactNode; onClose?
 
 **Code:** `packages/toolkit/src/components/module-panel/`.
 
+### `GroupDialog`: App-Abschnitte
+
+Der Space-Dialog ist der eine Ort für alles, was zu einem Space gehört. Eine App trägt eigene Abschnitte dort ein, statt einen zweiten Dialog für denselben Space zu bauen ([01 → Overlay-Flächen](../01-app-composition.md), Regel 5).
+
+```ts
+interface AppSpaceSection {
+  id: string                                  // eindeutig; members/invite/theme/modules sind vergeben
+  label: string
+  icon: LucideIcon
+  visible?: (who: { isAdmin: boolean }) => boolean
+  render: (ctx: AppSpaceSectionContext) => ReactNode
+}
+interface AppSpaceSectionContext {
+  group: Group                                // wie der Aufrufer sie liefert (mode.group)
+  canEdit: boolean                            // eigener Nutzer ist Admin
+  patchData: (patch: Record<string, unknown>) => Promise<void>
+}
+// GroupDialogProps: appSections?, appSectionsTitle?, initialSection?
+// AppFrameProps:    spaceSections?, spaceSectionsTitle?
+```
+
+Regeln:
+
+1. App-Abschnitte stehen nach den eigenen Bereichen. Eine `id`, die schon vergeben ist, MUSS verworfen und gemeldet werden.
+2. `patchData` ist der einzige Schreibweg eines App-Abschnitts. Er schreibt `Group.data` **flach** als Merge-Patch über `updateGroup` ([04 → Space-Metadaten](../04-items-relations-groups-spaces.md#space-metadaten), Regeln 2 und 3; `null` löscht). Ein verschachtelter Namensraum (`Group.data.<app>.<feld>`) wäre bei Tiefe 1 ein einziger Wert, und zwei Abschnitte überschrieben sich gegenseitig (rls#234).
+3. Der Dialog hält keinen eigenen Schreibstand. `group` ist die Group, wie der Aufrufer sie liefert; `patchData` gibt die Zusage von `onUpdateGroup` unverändert zurück. Der Aufrufer MUSS die Group nach dem Speichern neu liefern (`AppFrame` reicht sie live aus dem Connector durch, so kommen auch Änderungen anderer Geräte an). Die eigenen Felder des Dialogs (Name, Bild, Module, Aussehen) folgen einer neu gelieferten Group, solange man sie im Dialog nicht selbst geändert hat. Scheitert das Speichern, gilt je Schreibweg:
+   - **Modulliste, Farbwahl, Rundung, Flächen** (die Wahl in den Bereichen „Module“ und „Aussehen“): Die Anzeige fällt auf die **gelieferte** Group zurück, nie auf den zuletzt im Dialog gespeicherten Wert. Ein Aufrufer, der eine eingefrorene Group übergibt, sieht nach „A gespeichert, B gescheitert“ wieder den Stand vom Öffnen, bis er neu liefert.
+   - **Name:** kein Rückfall. Ein ungespeicherter Name bleibt mit Fehlermeldung im Feld stehen und lässt sich erneut speichern.
+   - **Bild hochladen oder entfernen:** kein Rückfall. Der lokal gesetzte Bildzustand bleibt stehen, auch ein entferntes Bild, und ebenso die dabei mitgeänderte Primärfarbe.
+
+   Ändert sich das Bild von außen, darf eine laufende Farbermittlung aus dem alten Bild nichts mehr schreiben. Ein gescheiterter App-Patch lässt den Stand stehen; die Meldung steht je Schlüssel im Abschnitt, bis ein späterer Patch diesen Schlüssel speichert.
+4. Die App wählt eindeutige Feldnamen. Das Toolkit erzwingt kein Präfix. Name, Bild, Mitglieder, Module und Aussehen gehören dem Dialog; ein App-Abschnitt SOLLTE sie nicht schreiben.
+5. `initialSection` gilt bei jedem Öffnen. Gibt es den Bereich noch nicht (das Adminrecht lädt noch), steht der erste Bereich da, bis er erscheint.
+6. Jeder App-Abschnitt steht in einer eigenen Fehlergrenze; ein Fehler darin lässt Menü und Dialog bedienbar. Wirft `visible`, fällt nur dieser Abschnitt weg.
+7. Auf schmalen Schirmen bricht die Bereichsleiste um. Kein Eintrag DARF nur durch seitliches Scrollen erreichbar sein.
+
+**Code:** `packages/toolkit/src/components/layout/group-dialog.tsx`.
+
 ## Item-Detail aus dem Register
 
 **Status:** Normativer Entwurf (S0, 26.09.2026). Die Umsetzung folgt in S1–S6; bis dahin weicht `ItemDetailBody` hiervon ab. Gilt für `ItemDetailBody`, `ItemDetailView`, `ItemDetailPanel` und den `ContentComposer` im Edit-Modus. Die Inhalte kommen aus dem Feld- und Kantenregister ([06 → Feld- und Kantenregister](../06-schema-composition.md#feld--und-kantenregister)); die Flächen verzweigen nicht nach `type`.
@@ -663,7 +701,7 @@ Regeln:
 5. Menschen stehen in **einer Zeile je Personen-Kante**. Ist ein Qualifier-Wert gesetzt, steht er klein hinter dem Namen am Chip (etwa „Maria zugesagt" für `going`, „Timo lernt" für `learns`). Gespeichert wird die Id, das Wort kommt über die Intl-Schicht. Stammt die geltende Aussage nicht von der Person selbst, sagt der Chip, von wem: „Timo zugesagt · eingetragen von Anton" ([08 → Qualifier an Kanten](../08-relation-records.md#qualifier-an-kanten)). Ein Qualifier an einer Item-Kante (C3) steht ebenso klein hinter dem Chip. Ein Wert, den das Register nicht kennt, erscheint ohne Zustandstext und wird nie verworfen. Das Event führt Eingeladene (`invited`) und Zusagen (`attends`) in einer Zeile. Eine Person mit geltendem `declined` erscheint nicht in der Zeile und nicht in ihrer Zusammenfassung, nur in der vollständigen Liste („Alle").
 6. Position im Modul (Spalte, Stufe, Reihenfolge) steht nicht in der Meta-Box.
 7. Eine Selbstaktion ist eine Kante von mir zum Item. Sie steht als eigene Pill-Zeile direkt unter der Meta-Box: vor der Aktion neutral („Zusagen · Vielleicht · Absagen"), danach mit meinem Zustand („✓ Zugesagt" für `going`). Auch `declined` ist ein Zustand und bleibt als meiner sichtbar. Die Pill meines Zustands ist ein Umschalter; der zweite Klick nimmt ihn zurück. Deklariert die Kante eine Folgeaktion ([06 → Feld- und Kantenregister](../06-schema-composition.md#feld--und-kantenregister), Regel 9), steht sie nach meinem Zustand. Die Aufgabe: niemand zugewiesen „Übernehmen"; andere zugewiesen, ich nicht „Mitmachen"; ich allein „✓ Übernommen · Erledigt"; ich mit anderen „✓ Dabei · Erledigt"; erledigt nur Zustände, keine Aktionen: „✓ Übernommen · ✓ Erledigt" oder „✓ Dabei · ✓ Erledigt", wer nicht zugewiesen ist, nur „✓ Erledigt" — alle als Status lesbar, keiner ein Knopf ([06, Regel 19](../06-schema-composition.md#feld--und-kantenregister)). Klick auf „✓ Übernommen" oder „✓ Dabei" gibt ab, solange die Aufgabe nicht erledigt ist. Wieder öffnen geht nur über Bearbeiten oder das Kanban. Den Status beim Übernehmen, Mitmachen, Abgeben und Erledigen regelt [06, Regel 19](../06-schema-composition.md#feld--und-kantenregister): Übernehmen setzt eine offene Aufgabe auf „In Arbeit", und wer als letzte Person eine Aufgabe in Arbeit abgibt, setzt sie auf offen zurück. Der Umschalter meines Zustands trägt `aria-pressed`, gedrückt nennt die Beschriftung die Rücknahme („Übernahme zurückgeben", „Nicht mehr mitmachen"). „Erledigt" sieht nur eine Person an der Kante, und nur mit Schreibrecht am Item (Modi, Regel 1); alle anderen ändern den Status im Formular oder im Modul.
-8. Rückwärts-Listen deklariert der Typ des angezeigten Items (Register, `itemRole: "to"`, Slot `list`, oder eine benannte Abfrage in `lists`). Sie zeigen alle Einträge, jeden einmal, ohne Kappung, als kompakte `ItemPreview`s (Kartenflächen-MUSS, siehe [`ItemPreview`](#itempreview)). Trägt eine Liste eine Aktion, steht sie im Listenkopf; hat die Liste keinen Eintrag außer dem Item selbst, steht die Aktion allein an ihrer Stelle. Die Liste `family` eines Statements heißt „Fassungen N"; je Zeile stehen ein Badge („Ausgang" oder „Variante"), der Titel, „diese" bei der angezeigten Fassung und eine kleine Stimmleiste. Ihre Aktion ist „+ Variante" ([resonance.md → Varianten](resonance.md#varianten)).
+8. Rückwärts-Listen deklariert der Typ des angezeigten Items (Register, `itemRole: "to"`, Slot `list`, oder eine benannte Abfrage in `lists`). Sie zeigen alle Einträge, jeden einmal, ohne Kappung, als kompakte `ItemPreview`s (Kartenflächen-MUSS, siehe [`ItemPreview`](#itempreview)). Trägt eine Liste eine Aktion, steht sie im Listenkopf; hat die Liste keinen Eintrag außer dem Item selbst, steht die Aktion allein an ihrer Stelle. Die Liste einer Kante DARF rechts in der Zeile den Wert eines Felds zeigen (`list.trailing`) und ihre Einträge nach einem Feld gliedern (`list.group`), mit Zwischenüberschrift und Anzahl je Gruppe ([06 → Feld- und Kantenregister](../06-schema-composition.md#feld--und-kantenregister), Regel 22). Die Liste `family` eines Statements heißt „Fassungen N"; je Zeile stehen ein Badge („Ausgang" oder „Variante"), der Titel, „diese" bei der angezeigten Fassung und eine kleine Stimmleiste. Ihre Aktion ist „+ Variante" ([resonance.md → Varianten](resonance.md#varianten)).
 9. Die Karte (`ItemPreview`) zeigt aus demselben Register: Titel, erste Meta-Zeile, Avatar-Stack, Tags gekappt. Ein Feld mit Item-Verweis (B15) steht auf der Karte als Chip („Variante von …"). Im Detail entfällt seine Meta-Zeile, wenn eine Liste des Typs es abdeckt (`covers`); beim Statement zeigt die Liste `family` die Herkunft.
 10. Ob `bar` und `comments` erscheinen, sagt das Register des Typs. Für `person` entfallen beide.
 

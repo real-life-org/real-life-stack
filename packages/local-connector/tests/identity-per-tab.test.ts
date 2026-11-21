@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
-import { itemContentHash, voteRecordInput } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
+import { itemContentHash, voteRecordInput } from "@real-life/data-interface"
 
 /** Shared IndexedDB for all "tabs" (connector instances), with serialized updates. */
 const idb = vi.hoisted(() => {

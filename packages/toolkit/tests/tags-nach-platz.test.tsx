@@ -2,7 +2,7 @@
 import { act, createElement } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { fitCount } from "../src/components/preview/use-fitting-tags"
 import { ItemPreview } from "../src/components/preview/item-preview"

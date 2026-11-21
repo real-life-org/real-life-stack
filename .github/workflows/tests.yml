@@ -123,6 +123,12 @@ jobs:
       - name: Packages load in Node ESM
         run: pnpm test:esm
 
+      # Das Toolkit-dist importiert data-interface, statt eine Kopie zu
+      # buendeln: sonst bindet setTypeManifest des Toolkits nur die Kopie
+      # (real-life-stack#555).
+      - name: Toolkit imports its workspace dependencies
+        run: pnpm test:toolkit-dist
+
       # Der Build-Stand (Version, Commit, Kanal), den Apps im Nutzer-Menue und
       # in build-info.json zeigen: Commit aus dem Checkout, nie aus GITHUB_SHA.
       - name: Build info

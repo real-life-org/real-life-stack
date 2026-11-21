@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { createComposerMapping, textFieldFor } from "../src/components/composer/composer-mapping"
 import { toStoredDateTime } from "../src/components/composer/date-widget-state"
 import type { ContentTypeConfig } from "../src/components/composer/content-composer"

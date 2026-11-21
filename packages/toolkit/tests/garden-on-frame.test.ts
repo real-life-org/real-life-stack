@@ -49,3 +49,19 @@ describe("Story-Welt: Space-Wechsel", () => {
     expect(hostWorldGroups(false, seed.groups, "garden").map((g) => g.id)).toEqual(["garden"])
   })
 })
+
+// Startseite und Handbuch betten den Garten in der Sprache der Seite ein: auf Englisch auch der Bestand.
+describe("Gemeinschaftsgarten auf Englisch", () => {
+  it("jeder Text des Bestands hat eine englische Fassung, Ids und Struktur bleiben", async () => {
+    const { seedEn, gardenSeed } = await import("../src/handbook/garden-data")
+    expect(gardenSeed("de")).toBe(seed)
+    expect(gardenSeed("en")).toBe(seedEn)
+    expect(seedEn.groups.map((g) => g.name)).toEqual(["Garden", "Workshop"])
+    expect(seedEn.items.map((i) => i.id)).toEqual(seed.items.map((i) => i.id))
+    const texts = JSON.stringify(seedEn)
+    for (const deutsch of ["Garten", "Erntefest", "gießen", "Werkstatt", "Reparatur", "Schüssel", "Beispiel"]) {
+      expect(texts, `${deutsch} ist noch Deutsch`).not.toContain(deutsch)
+    }
+    expect(seedEn.groups[0].data).toEqual(seed.groups[0].data)
+  })
+})

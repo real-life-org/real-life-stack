@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Item, RelationRecord, User } from "@real-life-stack/data-interface"
+import type { Item, RelationRecord, User } from "@real-life/data-interface"
 
 import { graphNodeRef, projectSpaceGraph } from "../src/components/graph/project-space-graph"
 

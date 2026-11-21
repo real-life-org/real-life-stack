@@ -8,9 +8,12 @@
  * That read lives here once instead of being re-sniffed per component.
  *
  * Die Klasse ist das EINZIGE Signal, an dem sich Bestandteile ausrichten;
- * `prefers-color-scheme` ist kein zweites. Gelesen wird die Systemvorgabe nur
- * einmal, beim Start, um die Klasse zu setzen (`initialDarkMode` unten) — und
- * genau deshalb folgen Oberfläche und Karte danach gemeinsam derselben Klasse.
+ * `prefers-color-scheme` ist kein zweites. Gelesen wird die Systemvorgabe nur,
+ * um die Klasse zu setzen: beim Start (`initialDarkMode` unten) und, solange
+ * nichts gewählt ist, bei jedem Systemwechsel (`followSystemColorScheme`) —
+ * und genau deshalb folgen Oberfläche und Karte gemeinsam derselben Klasse.
+ * `data-theme` setzt `applyColorScheme` mit, als Ausgabe für Stylesheets;
+ * gelesen wird es hier nicht.
  *
  * (Bis 19.09.2026 stand hier, die Hülle setze die Klasse NICHT aus der
  * Systemvorgabe. Das stimmte nicht mehr: `applyInitialColorScheme` tut es seit
@@ -87,6 +90,10 @@ export const STORAGE_KEY_THEME = "rls-theme"
  * dass jemand das je gewählt hätte.
  */
 export function storedColorScheme(storageKey = STORAGE_KEY_THEME): ColorScheme | null {
+  // Zuerst die Wahl dieser Seite, die nicht gespeichert werden konnte: Sie ist
+  // jünger als alles, was im Speicher steht (rls#574).
+  const unspeicherbar = unspeicherbareWahl.get(storageKey)
+  if (unspeicherbar) return unspeicherbar
   try {
     const wert = window.localStorage.getItem(storageKey)
     return wert === "dark" || wert === "light" ? wert : null
@@ -97,6 +104,15 @@ export function storedColorScheme(storageKey = STORAGE_KEY_THEME): ColorScheme |
 }
 
 /**
+ * Eine Wahl, die der Speicher nicht nehmen wollte (gesperrt, voll), gilt
+ * trotzdem bis zum Neuladen, und zwar VOR einem älteren Speicherwert. Sonst
+ * holte der nächste Systemwechsel das Schema zurück, obwohl gerade bewusst
+ * gewählt worden war, oder ein neu eingehängter Knopf sprang auf die alte
+ * Wahl. Ein erfolgreiches Schreiben entfernt sie; ab dann gilt der Speicher.
+ */
+const unspeicherbareWahl = new Map<string, ColorScheme>()
+
+/**
  * LIEST nur. Schreibt bewusst nichts: Würde der Startwert die Systemvorgabe
  * gleich festschreiben, wäre sie ab dem ersten Besuch eine feste Wahl — ein
  * späterer Wechsel des Systems auf hell bliebe wirkungslos.
@@ -104,18 +120,67 @@ export function storedColorScheme(storageKey = STORAGE_KEY_THEME): ColorScheme |
 export function initialDarkMode(storageKey = STORAGE_KEY_THEME): boolean {
   const wahl = storedColorScheme(storageKey)
   if (wahl) return wahl === "dark"
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
+  // Ohne `matchMedia` (ältere Einbettungen, Testumgebungen) gibt es keine
+  // Systemvorgabe zu lesen — dann hell, statt beim Start zu werfen.
+  if (typeof window.matchMedia !== "function") return false
+  return window.matchMedia(SYSTEM_DARK).matches
+}
+
+const SYSTEM_DARK = "(prefers-color-scheme: dark)"
+
+/**
+ * Setzt BEIDE Signale am Wurzelelement: die `dark`-Klasse und `data-theme`.
+ *
+ * Die Klasse ist das Signal, an dem sich das Toolkit ausrichtet (Tailwind,
+ * Karte, siehe oben). `data-theme` führt dasselbe für Stylesheets, die sich an
+ * das Attribut hängen — etwa Tokens nach dem Muster
+ * `:root[data-theme="dark"]` und `@media (prefers-color-scheme: dark) {
+ * :root:not([data-theme="light"]) }`. Nur mit der Medienabfrage wäre eine
+ * bewusste Wahl dort wirkungslos; nur mit der Klasse bliebe dieselbe Wahl dort
+ * unsichtbar. Darum immer beide zusammen, nie eines allein.
+ */
+export function applyColorScheme(scheme: ColorScheme): void {
+  const wurzel = document.documentElement
+  wurzel.classList.toggle(DARK_CLASS, scheme === "dark")
+  wurzel.setAttribute("data-theme", scheme)
 }
 
 /**
- * Setzt die `dark`-Klasse am Wurzelelement.
+ * Setzt beide Signale (`dark`-Klasse und `data-theme`) nach Wahl oder
+ * Systemvorgabe.
  *
  * Vor dem ersten Render aufrufen, nicht erst in einer Komponente: Anmeldung
  * und Onboarding liegen vor der App-Hülle und blieben sonst hell, egal was
- * System oder Wahl sagen.
+ * System oder Wahl sagen. Und vor jedem `await` beim Start (etwa dem Laden
+ * der Instanz-Konfiguration): Bis dahin steht die Seite sonst hell da.
+ *
+ * Was ein Modul-Skript nicht verhindern kann: das Stück zwischen dem ersten
+ * Malen der HTML-Seite und seiner Ausführung. Das schließt nur ein Skript im
+ * `<head>` der App, das dieselbe Wahl liest, bevor der Body steht.
  */
 export function applyInitialColorScheme(storageKey = STORAGE_KEY_THEME): void {
-  document.documentElement.classList.toggle(DARK_CLASS, initialDarkMode(storageKey))
+  applyColorScheme(initialDarkMode(storageKey) ? "dark" : "light")
+}
+
+/**
+ * Folgt einem Wechsel der Systemvorgabe, solange keine Wahl gespeichert ist.
+ * Gibt die Abmeldung zurück.
+ *
+ * Gefragt wird bei JEDEM Wechsel neu, nicht einmal beim Anmelden: Eine Wahl,
+ * die inzwischen getroffen wurde (auch in einem anderen Tab), sticht die
+ * Systemvorgabe ab diesem Moment. Schreibt nichts — die Systemvorgabe wird
+ * dadurch nicht zur Wahl.
+ */
+export function followSystemColorScheme(storageKey = STORAGE_KEY_THEME): () => void {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return () => {}
+  const abfrage = window.matchMedia(SYSTEM_DARK)
+  if (typeof abfrage?.addEventListener !== "function") return () => {}
+  const beiWechsel = (ereignis: { matches: boolean }) => {
+    if (storedColorScheme(storageKey)) return
+    applyColorScheme(ereignis.matches ? "dark" : "light")
+  }
+  abfrage.addEventListener("change", beiWechsel)
+  return () => abfrage.removeEventListener("change", beiWechsel)
 }
 
 /**
@@ -123,9 +188,13 @@ export function applyInitialColorScheme(storageKey = STORAGE_KEY_THEME): void {
  * aufrufen, nie beim Start.
  */
 export function rememberColorScheme(isDark: boolean, storageKey = STORAGE_KEY_THEME): void {
+  const wahl: ColorScheme = isDark ? "dark" : "light"
   try {
-    window.localStorage.setItem(storageKey, isDark ? "dark" : "light")
+    window.localStorage.setItem(storageKey, wahl)
+    unspeicherbareWahl.delete(storageKey)
   } catch {
-    // Nicht speicherbar — kein Grund, das Umschalten selbst scheitern zu lassen.
+    // Nicht speicherbar — kein Grund, das Umschalten selbst scheitern zu
+    // lassen. Die Wahl gilt dann bis zum Neuladen aus dem Arbeitsspeicher.
+    unspeicherbareWahl.set(storageKey, wahl)
   }
 }

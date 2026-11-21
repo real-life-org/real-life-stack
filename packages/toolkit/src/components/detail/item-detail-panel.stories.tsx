@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { CreateItemInput, Item, ItemFilter, RelatedItemsOptions, User } from "@real-life-stack/data-interface"
-import { BaseConnector, createObservable, findRelatedItems, matchesFilter, type ReactiveObservable } from "@real-life-stack/data-interface"
+import type { CreateItemInput, Item, ItemFilter, RelatedItemsOptions, User } from "@real-life/data-interface"
+import { BaseConnector, createObservable, findRelatedItems, matchesFilter, type ReactiveObservable } from "@real-life/data-interface"
 import { ConnectorProvider } from "@/hooks/connector-context"
 import { ItemDetailPanel } from "./item-detail-panel"
 import { ItemPreview, ItemTypeBadge, ItemMetaRow } from "../preview"

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { hasGroupScope } from "@real-life-stack/data-interface"
+import { hasGroupScope } from "@real-life/data-interface"
 
 // 02 → Lesen/Anlegen in einem bestimmten Space. Die Vertragsfälle stehen in
 // der geteilten Suite (data-interface-contract.test.ts); hier das

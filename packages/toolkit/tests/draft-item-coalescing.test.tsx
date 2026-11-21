@@ -2,7 +2,7 @@
 import { act, createElement, type ReactNode } from "react"
 import { createRoot } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { DraftItemProvider, useDraftItem, useSetDraftItem, DRAFT_ITEM_ID } from "../src/hooks/use-draft-item"
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true

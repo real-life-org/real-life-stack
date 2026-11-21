@@ -4,6 +4,7 @@ import { useCallback, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
 import { cn } from "@/lib/utils"
 import { ComposerFullscreenShell } from "@/components/composer/composer-fullscreen-shell"
+import { useI18n } from "@/i18n"
 
 export interface FeedComposerTriggerProps {
   /** Placeholder text. Default: "Was gibt's Neues?" */
@@ -36,13 +37,14 @@ function getInitials(name: string): string {
  * The fullscreen surface itself is the reusable {@link ComposerFullscreenShell}.
  */
 export function FeedComposerTrigger({
-  placeholder = "Was gibt's Neues?",
+  placeholder,
   userName,
   userAvatar,
   onCompose,
   children,
   className,
 }: FeedComposerTriggerProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [initialText, setInitialText] = useState<string | undefined>()
 
@@ -93,7 +95,7 @@ export function FeedComposerTrigger({
             </AvatarFallback>
           </Avatar>
         )}
-        <span className="text-sm text-muted-foreground flex-1">{placeholder}</span>
+        <span className="text-sm text-muted-foreground flex-1">{placeholder ?? t("feed.composerPlaceholder")}</span>
       </div>
 
       {children && (

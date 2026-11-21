@@ -1,16 +1,16 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { Moon, Plus, Sun } from "lucide-react"
-import type { Group, Item } from "@real-life-stack/data-interface"
-import { hasGroups, hasEncounterVerification, isAuthenticatable, moduleHintsFor } from "@real-life-stack/data-interface"
+import { Plus } from "lucide-react"
+import type { Group, Item } from "@real-life/data-interface"
+import { hasGroups, hasEncounterVerification, isAuthenticatable, moduleHintsFor } from "@real-life/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useActivity } from "../../hooks/use-activity"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { useContacts } from "../../hooks/use-contacts"
 import { DraftItemProvider } from "../../hooks/use-draft-item"
-import { useCreateGroup, useCurrentGroup, useDeleteGroup, useInviteMember, useRemoveMember, useUpdateGroup } from "../../hooks/use-groups"
+import { useCreateGroup, useCurrentGroup, useDeleteGroup, useGroups, useInviteMember, useRemoveMember, useUpdateGroup } from "../../hooks/use-groups"
 import { useInitialSync } from "../../hooks/use-initial-sync"
 import { useItemFocus } from "../../hooks/use-item-focus"
 import { useItems } from "../../hooks/use-items"
@@ -18,7 +18,6 @@ import { useNotifications } from "../../hooks/use-notifications"
 import { OpenProfileProvider } from "../../hooks/use-open-profile"
 import { UnsavedChangesProvider } from "../../hooks/use-unsaved-changes"
 import { useVerification } from "../../hooks/use-verification"
-import { initialDarkMode, rememberColorScheme } from "../../lib/color-scheme"
 import { findModulePresenting, getModule, modulePresentsItem } from "../../lib/module-register"
 import { notificationTarget } from "../../lib/notification-target"
 import { ActivityBell } from "../activity/activity-bell"
@@ -32,8 +31,9 @@ import { CreateHostProvider, CreateSheetController } from "../host/create-host"
 import { DetailHostController, DetailHostProvider } from "../host/detail-host"
 import { ModuleOutlet } from "../host/module-outlet"
 import { AppShell, AppShellMain } from "../layout/app-shell"
+import { ColorSchemeToggle } from "../layout/color-scheme-toggle"
 import { BottomNav } from "../layout/bottom-nav"
-import { GroupDialog, type GroupDialogMode } from "../layout/group-dialog"
+import { GroupDialog, type AppSpaceSection, type GroupDialogMode } from "../layout/group-dialog"
 import { ModuleTabs, type Module } from "../layout/module-tabs"
 import { Navbar, NavbarCenter, NavbarEnd, NavbarStart } from "../layout/navbar"
 import { SpaceThemeCard } from "../layout/space-theme-panel"
@@ -46,13 +46,14 @@ import { CommentNavigationProvider } from "../navigation/comment-navigation"
 import { FieldNavigationProvider } from "../navigation/field-navigation"
 import { TagNavigationProvider } from "../navigation/tag-navigation"
 import { Button } from "../primitives/button"
+import { useI18n } from "@/i18n"
 
 /** Die Overlay-Ebenen, die der Rahmen selbst kennt (Kontakte, Verifizieren). */
 export type FrameOverlayId = "contacts" | "verify"
 
 /**
  * Was der Rahmen vom Routing braucht — nicht mehr. Mit Router liefert es
- * `useWorkspaceRouting` (`@real-life-stack/toolkit/router`, `RoutedAppFrame`);
+ * `useWorkspaceRouting` (`@real-life/toolkit/router`, `RoutedAppFrame`);
  * ohne Router haelt eine Story oder ein Test es im Speicher (`HostWorld`).
  */
 export interface FrameRouting {
@@ -93,6 +94,10 @@ export interface AppFrameProps {
   children?: ReactNode
   /** Welcher Stand laeuft (Version, Commit, Kanal) — stille Zeile im Nutzer-Menue. */
   build?: BuildInfo
+  /** Abschnitte der App im Space-Dialog (rls#551), nach den eigenen Bereichen. */
+  spaceSections?: AppSpaceSection[]
+  /** Ueberschrift ueber diesen Abschnitten, z. B. der App-Name. */
+  spaceSectionsTitle?: string
 }
 
 /**
@@ -177,7 +182,8 @@ function useMemoryOverlay(): NonNullable<FrameRouting["overlay"]> {
  * die eine Zeile der App fuer die Karte) und alles, was einen Router braucht
  * (`RoutedAppFrame` in `/router` legt es um diesen Rahmen).
  */
-export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAccessContent, children, build }: AppFrameProps) {
+export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAccessContent, children, build, spaceSections, spaceSectionsTitle }: AppFrameProps) {
+  const { t } = useI18n()
   const { groups, workspaces, activeWorkspace, activeModule, modules, urlSpaceId, handleWorkspaceChange, handleModuleChange, goTo, goHome } = routing
   const connector = useConnector()
   const { data: currentUser } = useOptionalCurrentUser()
@@ -194,7 +200,20 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
   const { activeContacts, pendingContacts, contacts: allContacts, isLoading: contactsLoading, addContact, activateContact, removeContact, updateContactName, supportsContacts } = useContacts()
   const verification = useVerification()
   const [groupDialogOpen, setGroupDialogOpen] = useState(false)
-  const [groupDialogMode, setGroupDialogMode] = useState<GroupDialogMode>({ type: "create" })
+  const [groupDialogTarget, setGroupDialogMode] = useState<GroupDialogMode>({ type: "create" })
+  // Der offene Dialog bekommt die Group LIVE aus dem Connector, nicht die
+  // beim Oeffnen eingefrorene Referenz: der Dialog haelt keinen eigenen
+  // Schreibstand (rls#551), gespeicherte Aenderungen — eigene wie die eines
+  // anderen Geraets — muessen also ueber diesen Weg ankommen. Faellt die
+  // Group aus der Liste (verlassen, geloescht), bleibt der letzte Stand.
+  const { data: liveGroups } = useGroups()
+  const liveDialogGroup = groupDialogTarget.type === "edit"
+    ? liveGroups.find((g) => g.id === groupDialogTarget.group.id) ?? groupDialogTarget.group
+    : null
+  const groupDialogMode = useMemo<GroupDialogMode>(
+    () => (liveDialogGroup ? { type: "edit", group: liveDialogGroup } : { type: "create" }),
+    [liveDialogGroup],
+  )
   const openCreateDialog = useCallback(() => { setGroupDialogMode({ type: "create" }); setGroupDialogOpen(true) }, [])
   const openEditDialog = useCallback((workspace: Workspace) => {
     if (workspace.scope === "overview") return
@@ -226,11 +245,6 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
     }, 0)
     return () => clearTimeout(t)
   }, [overlay.top])
-
-  // --- Erscheinungsbild ---------------------------------------------------
-  const [isDark, setIsDark] = useState(initialDarkMode)
-  useEffect(() => { document.documentElement.classList.toggle("dark", isDark) }, [isDark])
-  const toggleTheme = () => { const naechster = !isDark; setIsDark(naechster); rememberColorScheme(naechster) }
 
   // --- Verlauf und Benachrichtigungen --------------------------------------
   const [drawerHeight, setDrawerHeight] = useState(0)
@@ -312,7 +326,10 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
       <AppShell>
         <Navbar>
           <NavbarStart>
-            {workspaces.length > 0 ? (
+            {!hasGroups(connector) ? (
+              // Ohne Gruppen ein Space (Spec 03): nichts zu wechseln, nichts anzulegen.
+              <span className="truncate px-2 text-sm font-semibold">{activeWorkspace?.name ?? workspaces[0]?.name}</span>
+            ) : workspaces.length > 0 ? (
               // Auch ohne aktiven Space (kein Zugang) bleibt der Umschalter da.
               <WorkspaceSwitcher
                 workspaces={workspaces}
@@ -327,7 +344,7 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
             ) : (
               <Button variant="outline" size="sm" onClick={openCreateDialog}>
                 <Plus className="h-4 w-4 mr-2" />
-                Neue Gruppe
+                {t("groupDialog.newGroup")}
               </Button>
             )}
           </NavbarStart>
@@ -339,9 +356,7 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
             {notifications.supported
               ? <NotificationBell open={activityOpen} count={notifications.badgeCount} onOpenChange={setActivityOpen} />
               : activity.supported && <ActivityBell open={activityOpen} onOpenChange={setActivityOpen} />}
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9" aria-label={isDark ? "Helles Design" : "Dunkles Design"}>
-              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
+            <ColorSchemeToggle />
             {currentUser && (
               // Die Eintraege folgen den Faehigkeiten des Connectors, nicht der App.
               <UserMenu
@@ -372,9 +387,9 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
             selectionFocusVisibleArea={drawerHeight > 0 ? { bottomInset: drawerHeight } : undefined}
             noAccessContent={noAccessContent ?? (
               <div className="h-full overflow-y-auto container mx-auto px-4 pt-12 max-w-md text-center">
-                <p className="text-lg font-medium text-foreground">Du bist kein Mitglied dieses Spaces</p>
-                <p className="text-sm text-muted-foreground mt-2">Der Space existiert nicht oder du hast keinen Zugang.</p>
-                <Button variant="outline" className="mt-4" onClick={goHome}>Zurück zur Übersicht</Button>
+                <p className="text-lg font-medium text-foreground">{t("appFrame.noAccessTitle")}</p>
+                <p className="text-sm text-muted-foreground mt-2">{t("appFrame.noAccessBody")}</p>
+                <Button variant="outline" className="mt-4" onClick={goHome}>{t("appFrame.backToOverview")}</Button>
               </div>
             )}
           />
@@ -387,6 +402,8 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
           open={groupDialogOpen}
           onOpenChange={setGroupDialogOpen}
           mode={groupDialogMode}
+          appSections={spaceSections}
+          appSectionsTitle={spaceSectionsTitle}
           currentUserId={currentUser?.id}
           contacts={allContacts}
           onCreateGroup={async (name) => {
@@ -432,7 +449,7 @@ export function AppFrame({ routing, fallbackModule, openProfile, navbarEnd, noAc
           onVerify={hasEncounterVerification(connector) ? () => overlay.open("verify") : undefined}
           onAdd={supportsContacts && !hasEncounterVerification(connector) ? () => setAddContactOpen(true) : undefined}
           onActivate={activateContact}
-          activeLabel={hasEncounterVerification(connector) ? "Verifiziert" : "Aktiv"}
+          activeLabel={hasEncounterVerification(connector) ? t("contacts.verified") : t("contacts.active")}
         />
         <AddContactDialog
           open={addContactOpen}

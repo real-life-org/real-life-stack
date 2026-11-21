@@ -33,7 +33,7 @@ Die Karte rendert **full-bleed** — sie füllt den Space randlos, ohne zentrier
 
 ## Toolkit MapView und MapLens
 
-`MapView` aus `@real-life-stack/toolkit` ist das vollständige, props-getriebene
+`MapView` aus `@real-life/toolkit` ist das vollständige, props-getriebene
 Space-Modul. Es besitzt die lokale FilterBar, bbox-Inventar-Akkumulation,
 Location-Pick-UI, Mount-Recovery und das Create-Gate. Die App bleibt Eigentümerin
 der bbox-Abfrage, URL-/Panel-Selektion und Composer-Callback.
@@ -264,8 +264,8 @@ Adapter werden über dedizierte Subpath-Entries des Toolkits bereitgestellt, dam
 
 | Adapter | Import | Basis | `ClusterCapable` | `GlobeCapable` | Rendering (intern) |
 |---|---|---|---|---|---|
-| `MapLibreMapAdapter` | `@real-life-stack/toolkit/maplibre` | ✅ | ✅ nativ (GL) | ✅ | GeoJSON-Source + WebGL-Layer; skaliert auf zehntausende Marker |
-| `LeafletMapAdapter` | `@real-life-stack/toolkit/leaflet` | ✅ | optional (Plugin) | ❌ | DOM-Marker; 2D-Raster, geringe Komplexität |
+| `MapLibreMapAdapter` | `@real-life/toolkit/maplibre` | ✅ | ✅ nativ (GL) | ✅ | GeoJSON-Source + WebGL-Layer; skaliert auf zehntausende Marker |
+| `LeafletMapAdapter` | `@real-life/toolkit/leaflet` | ✅ | optional (Plugin) | ❌ | DOM-Marker; 2D-Raster, geringe Komplexität |
 | `CapacitorNativeMapAdapter` *(geplant)* | nativ (iOS/Android) | ✅ | (SDK-abhängig) | (SDK-abhängig) | native Annotations (MapKit/Google Maps) |
 
 `MapLibreMapAdapter` ist der **Vollausbau** (Cluster + Globe + WebGL) und die Referenz für skalierende Karten. Weitere Adapter (Google/OpenLayers Web, MapboxGL) sind möglich, aber nicht Teil von v0.2.
@@ -278,7 +278,7 @@ Der reale Contract lebt in `packages/toolkit/src/components/map/adapter.ts` und 
 
 Regeln:
 
-1. Jeder Adapter implementiert `MapAdapter` identisch. `MapView` (`apps/reference/src/views/map-view.tsx`) konsumiert ausschließlich `MapAdapter`-Typen aus dem Toolkit-Barrel `@real-life-stack/toolkit`; konkrete Adapter werden über dedizierte Subpath-Entries geladen.
+1. Jeder Adapter implementiert `MapAdapter` identisch. `MapView` (`apps/reference/src/views/map-view.tsx`) konsumiert ausschließlich `MapAdapter`-Typen aus dem Toolkit-Barrel `@real-life/toolkit`; konkrete Adapter werden über dedizierte Subpath-Entries geladen.
 2. Der **Basis-Pfad** ist reine Adapter-Substitution: dieselben Marker (`setMarkers`), dieselben Viewport-Operationen (`setView`/`fitBounds`/`getView`/`observeView`), dieselben Click-Pfade. Modul-/UI-Code dürfen für den Basis-Pfad nicht zwischen Adaptern unterscheiden. **Erweiterte** Funktionen (Cluster, Globe) laufen ausschließlich über Capability-Detection — nie über Engine-Erkennung („ist das MapLibre?").
 3. Koordinaten bleiben durchgängig `[lng, lat]` (GeoJSON, Typ `LngLat`). Eine Engine mit `[lat, lng]` (z.B. Leaflet) übersetzt im Adapter; nie sichtbar im Contract.
 

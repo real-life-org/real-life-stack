@@ -1,13 +1,14 @@
 "use client"
 
 import type { ReactNode } from "react"
-import type { Item, User } from "@real-life-stack/data-interface"
+import type { Item, User } from "@real-life/data-interface"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { RelativeTime } from "../primitives/relative-time"
 import { ProfileLink } from "../profile/profile-link"
 import { TagFilterChip } from "../tag/tag-filter-chip"
 import { MarkdownText } from "../preview/markdown-text"
 import { editedLabel, itemText } from "@/lib/item-text"
+import { useI18n } from "@/i18n"
 import { cn } from "../../lib/utils"
 import { useItemTags } from "../../hooks/use-item-tags"
 import { useUserNameResolver } from "../../hooks/use-user-names"
@@ -39,7 +40,11 @@ import { PanelHeaderActions } from "../layout/panel-header-actions"
  */
 export interface ItemDetailBodyProps {
   item: Item
-  /** Urheber, schon aufgeloest. `undefined` → nur die rohe Id als Name. */
+  /**
+   * Urheber, schon aufgeloest. `undefined` → „Unbekannt" als Name, nie die
+   * rohe Id (eine DID liest niemand, real-life-stack#562); das Profil oeffnet
+   * weiter ueber `createdBy`.
+   */
   author?: User
   /** Typ-Badge, Scope-Badge — steht ganz oben, links neben den Aktionen. */
   headerAdornment?: ReactNode
@@ -82,6 +87,9 @@ export interface ItemDetailBodyProps {
   className?: string
 }
 
+/** Name eines Autors, den niemand aufloest (real-life-stack#562). */
+const UNKNOWN_AUTHOR = "Unbekannt"
+
 function getInitials(name: string): string {
   if (!name) return "?"
   return name
@@ -110,10 +118,11 @@ export function ItemDetailBody({
   const description = itemText(item) ?? ""
   const tags = useItemTags(item)
 
-  const authorName = author?.displayName ?? item.createdBy
+  const authorName = author?.displayName || UNKNOWN_AUTHOR
   const authorId = author?.id ?? item.createdBy
+  const i18n = useI18n()
   const resolveName = useUserNameResolver()
-  const editedTitle = editedLabel(item, resolveName)
+  const editedTitle = editedLabel(i18n, item, resolveName)
 
   return (
     <article className={cn("flex flex-col gap-3 p-4", className)}>
@@ -180,7 +189,7 @@ export function ItemDetailBody({
             aus der Karte schieben. Was rechts steht, ist die kuerzere und
             verlaesslichere Auskunft. */}
         <div className="ml-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-          <ProfileLink userId={authorId} label={`Profil von ${authorName} öffnen`}>
+          <ProfileLink userId={authorId} label={i18n.t("profile.openOf", { name: authorName })}>
             <Avatar className="h-5 w-5 shrink-0">
               <AvatarImage src={author?.avatarUrl} alt={authorName} />
               <AvatarFallback className="bg-primary/10 text-[9px] font-medium text-primary">
@@ -189,7 +198,7 @@ export function ItemDetailBody({
             </Avatar>
           </ProfileLink>
           <span className="truncate" title={authorName}>
-            Erstellt von <span className="text-foreground">{authorName}</span>
+            {i18n.t("detail.createdBy")} <span className="text-foreground">{authorName}</span>
           </span>
           <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
             <span aria-hidden>·</span>
@@ -197,7 +206,7 @@ export function ItemDetailBody({
             {/* Mitglieder duerfen fremde Items aendern; ohne diesen Hinweis
                 waere eine fremde Aenderung unsichtbar. Bewusst knapp: WAS sich
                 geaendert hat, braucht eine Versionshistorie (rls#263). */}
-            {item.updatedAt && <span title={editedTitle}>· bearbeitet</span>}
+            {item.updatedAt && <span title={editedTitle}>· {i18n.t("item.edited")}</span>}
           </span>
         </div>
       </div>

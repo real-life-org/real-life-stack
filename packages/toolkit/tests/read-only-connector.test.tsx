@@ -2,7 +2,7 @@
 import { act, createElement, type ReactNode } from "react"
 import { createRoot } from "react-dom/client"
 import { describe, expect, it } from "vitest"
-import { createObservable, type Item } from "@real-life-stack/data-interface"
+import { createObservable, type Item } from "@real-life/data-interface"
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import { useGroups, useCurrentGroup, useMembers, useCreateGroup } from "../src/hooks/use-groups"
 import { useOptionalCurrentUser } from "../src/hooks/use-auth"

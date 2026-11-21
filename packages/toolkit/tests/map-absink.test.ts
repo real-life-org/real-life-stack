@@ -1,6 +1,6 @@
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { describe, expect, it, vi } from "vitest"
 
 import {

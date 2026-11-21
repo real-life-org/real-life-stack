@@ -712,6 +712,7 @@ export class MapLibreMapAdapter implements MapAdapter, GlobeCapable, ClusterCapa
         filter: ["has", "point_count"],
         layout: {
           "text-field": ["get", "point_count_abbreviated"],
+          // i18n-exempt: Schriftnamen der Kachelquelle, keine Oberflächentexte
           "text-font": ["Noto Sans Bold", "Noto Sans Regular"],
           "text-size": 13,
           "text-allow-overlap": true,

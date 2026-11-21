@@ -8,7 +8,7 @@
  *   SUPABASE_URL=http://127.0.0.1:54321 \
  *   SUPABASE_ANON_KEY=<from supabase start> \
  *   SUPABASE_SERVICE_ROLE_KEY=<from supabase start> \
- *   pnpm --filter @real-life-stack/supabase-connector test
+ *   pnpm --filter @real-life/supabase-connector test
  *
  * Without these env vars the suite skips (CI has no Supabase yet).
  *
@@ -20,8 +20,8 @@
  */
 import { describe, expect, it } from "vitest"
 import { createClient } from "@supabase/supabase-js"
-import { describeDataInterfaceContract } from "@real-life-stack/data-interface/testing"
-import { deriveRelationRecordId, voteRecordInput, VOTE_PREDICATE } from "@real-life-stack/data-interface"
+import { describeDataInterfaceContract } from "@real-life/data-interface/testing"
+import { deriveRelationRecordId, voteRecordInput, VOTE_PREDICATE } from "@real-life/data-interface"
 import type { SupabaseClientLike } from "../src/client-types.js"
 import { SupabaseConnector } from "../src/supabase-connector.js"
 

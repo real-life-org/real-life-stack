@@ -18,6 +18,8 @@ export {
   storedColorScheme,
   initialDarkMode,
   applyInitialColorScheme,
+  applyColorScheme,
+  followSystemColorScheme,
   rememberColorScheme,
 } from "./lib/color-scheme"
 export {
@@ -99,6 +101,10 @@ export {
 
 // Components
 export { itemTitle, itemText } from "./lib/item-text"
+
+// i18n
+export * from "./i18n"
+
 export * from "./components"
 
 // Hooks

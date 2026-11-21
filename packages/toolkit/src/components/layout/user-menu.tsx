@@ -1,6 +1,6 @@
 "use client"
 
-import type { User } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
 import { useState } from "react"
 import { formatBuild, type BuildInfo } from "../../lib/build-info"
 import { LogOut, QrCode, Settings, User as UserIcon, Users } from "lucide-react"
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/primitives/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar"
+import { useI18n } from "@/i18n"
 
 /**
  * Das Menü sprach lange eine eigene Personenform (`name`, `avatar`), während
@@ -43,6 +44,7 @@ interface UserMenuProps {
  * sie in eine Fehlermeldung wandern kann. Ohne Angaben rendert sie nichts.
  */
 export function BuildLine({ build }: { build?: BuildInfo }) {
+  const { t } = useI18n()
   const [copied, setCopied] = useState(false)
   const text = formatBuild(build)
   if (!text) return null
@@ -53,12 +55,12 @@ export function BuildLine({ build }: { build?: BuildInfo }) {
     <button
       type="button"
       onClick={copy}
-      title="Version · Commit · Kanal — antippen kopiert"
-      aria-label={`Build ${text}, antippen kopiert`}
+      title={t("build.title")}
+      aria-label={t("build.ariaLabel", { build: text })}
       data-testid="build-line"
       className="block w-full select-all px-2 py-1 text-left font-mono text-[10px] leading-4 text-muted-foreground/60 hover:text-muted-foreground focus-visible:outline-none"
     >
-      {copied ? "kopiert" : text}
+      {copied ? t("build.copied") : text}
     </button>
   )
 }
@@ -74,6 +76,9 @@ export function UserMenu({
   onLogout,
   build,
 }: UserMenuProps) {
+  // Keine Sprachwahl im Menü: die Sprache folgt der Instanz-Vorgabe, sonst dem
+  // Browser. Eine App mit eigenem Umschalter ruft `enableLanguageChoice()` auf.
+  const { t } = useI18n()
   const displayName = user.displayName ?? user.id
   const getInitials = (name: string) => {
     return name
@@ -105,13 +110,13 @@ export function UserMenu({
         {onProfile && (
           <DropdownMenuItem onClick={onProfile} className="flex items-center gap-2">
             <UserIcon className="h-4 w-4" />
-            <span>Profil</span>
+            <span>{t("userMenu.profile")}</span>
           </DropdownMenuItem>
         )}
         {onContacts && (
           <DropdownMenuItem onClick={onContacts} className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            <span>Kontakte</span>
+            <span>{t("userMenu.contacts")}</span>
             {contactCount != null && contactCount > 0 && (
               <span className="ml-auto text-xs text-muted-foreground tabular-nums">{contactCount}</span>
             )}
@@ -120,13 +125,13 @@ export function UserMenu({
         {onVerify && (
           <DropdownMenuItem onClick={onVerify} className="flex items-center gap-2">
             <QrCode className="h-4 w-4" />
-            <span>Verifizieren</span>
+            <span>{t("userMenu.verify")}</span>
           </DropdownMenuItem>
         )}
         {onSettings && (
           <DropdownMenuItem onClick={onSettings} className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
-            <span>Einstellungen</span>
+            <span>{t("userMenu.settings")}</span>
           </DropdownMenuItem>
         )}
         {onLogout && (
@@ -134,7 +139,7 @@ export function UserMenu({
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onLogout} className="flex items-center gap-2 text-destructive">
               <LogOut className="h-4 w-4" />
-              <span>Abmelden</span>
+              <span>{t("userMenu.logout")}</span>
             </DropdownMenuItem>
           </>
         )}

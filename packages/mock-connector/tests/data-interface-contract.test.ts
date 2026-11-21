@@ -1,4 +1,4 @@
-import { describeDataInterfaceContract } from "@real-life-stack/data-interface/testing"
+import { describeDataInterfaceContract } from "@real-life/data-interface/testing"
 import { MockConnector } from "../src/mock-connector.js"
 
 describeDataInterfaceContract("MockConnector", {

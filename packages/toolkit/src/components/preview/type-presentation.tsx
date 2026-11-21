@@ -48,7 +48,7 @@ import {
   type ComposedTypeManifest,
   type Item,
   normalizeItemType,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import { ItemMetaRow } from "./item-meta-row"
 import {
@@ -68,16 +68,19 @@ import {
   type SelfActionEntry,
   type FieldOption,
 } from "./field-register"
-import type { RelationRole } from "@real-life-stack/data-interface"
+import type { RelationRole } from "@real-life/data-interface"
 import { RegisterMeta, RegisterPeopleStack } from "./register-meta"
 import { RegisterActions, actionEdges } from "./register-actions"
 import { ItemProfileMeta, ItemProjectMeta, ItemResourceMeta } from "./item-type-meta"
 import { StatementVariantLine, familyListQuery } from "../resonance/statement-variants"
 import { registerListQuery } from "./list-queries"
+import { listFieldProblem } from "./list-groups"
 import { RegisterReverse, hasReverseLists } from "./register-reverse"
 import { RegisterCardRefs } from "./register-card-refs"
 import { VoteBar } from "../resonance/vote-bar"
 import { MessageSquareQuote } from "lucide-react"
+import { getI18n, type I18n } from "@/i18n"
+import { localizeRegisterEntry } from "@/lib/register-labels"
 
 /** Every slot receives the item — nothing else. Data resolution (members,
  *  votes, …) happens inside the slot component via hooks, so a slot works on
@@ -177,6 +180,13 @@ export interface QualifierValuesEntry {
   predicate: string
   itemRole: RelationRole
   values: readonly FieldOption[]
+  /**
+   * Der Standardwert der Kante (Regeln 7 und 20): als dieser Wert gilt ein
+   * fehlender Qualifier im zusammengesetzten Register der App. Ein Wert des
+   * Kerns oder derselben Schicht; je Kante höchstens eine Quelle, und nennt
+   * der Kern einen, setzt ihn keine Schicht. Die Leseform zeigt ihn nicht.
+   */
+  default?: string
 }
 
 /** Additively fills fields an existing presentation left unset
@@ -509,6 +519,8 @@ const layers = new Map<string, TypePresentationLayer>([
 ])
 /** Composed view, invalidated on every registration. */
 let composedCache: Map<string, TypePresentationEntry> | null = null
+/** Der Sprachstand, aus dem {@link composedCache} stammt. */
+let composedFor: I18n | null = null
 
 /**
  * Bind the register to the app's composed manifest (the authoritative type
@@ -538,8 +550,19 @@ export function setTypeManifest(next: ComposedTypeManifest): void {
   }
   // Dasselbe Manifest für Hinweise und Filter in data-interface: Wer im
   // Toolkit bindet, bindet einmal (Spec 06, Regel 1 — eine Identitätsquelle).
-  bindDataInterfaceManifest(next)
+  // Die Zusammensetzung liest das Manifest (Regel 22: `otherKind`): neu
+  // zusammensetzen und prüfen, bevor irgendetwas gebunden wird.
+  const previous = manifest
   manifest = next
+  composedCache = null
+  try {
+    composePresentation()
+  } catch (err) {
+    manifest = previous
+    composedCache = null
+    throw err
+  }
+  bindDataInterfaceManifest(next)
 }
 
 /** Every relationWidgets key MUST name an edge the manifest declares for the
@@ -635,12 +658,17 @@ export function registerTypePresentation(
 const SCALAR_SLOTS = ["badge", "composerWidgets", "preview", "detail", "detailSlot", "footer", "composer"] as const
 
 function composePresentation(): Map<string, TypePresentationEntry> {
-  if (composedCache) return composedCache
+  // Je Sprachstand einmal: Die Texte jeder Schicht kommen VOR dem Zusammensetzen aus dem Wörterbuch
+  // (`type.<id>.<Pfad>`, lib/register-labels.ts). Ein Fragment hat eigene Pfade, so ersetzt der Text
+  // einer App-Schicht einen Toolkit-Text weiterhin, statt von dessen Übersetzung überdeckt zu werden.
+  const i18n = getI18n()
+  if (composedCache && composedFor === i18n) return composedCache
+  const localize = <T extends { id: string }>(entry: T): T => localizeRegisterEntry(i18n, `type.${entry.id}`, entry)
   const composed = new Map<string, TypePresentationEntry>()
   // Pass 1: definitions. Deterministic — ids are unique across layers by the
   // registration checks, so order cannot change the outcome.
   for (const [, layer] of layers) {
-    for (const def of layer.definitions ?? []) {
+    for (const def of (layer.definitions ?? []).map(localize)) {
       composed.set(def.id, { ...def, relationWidgets: { ...(def.relationWidgets ?? {}) } })
     }
   }
@@ -648,11 +676,14 @@ function composePresentation(): Map<string, TypePresentationEntry> {
   const overridden = new Map<string, string>()
   // Welche Schicht welchen Qualifier-Wert deklariert, je Typ, Kante und Wert.
   const valueOwners = new Map<string, string>()
+  // Welche Schicht den Standard einer Kante setzt, je Typ und Kante — eine
+  // eigene Map, damit eine Wert-Id „default" nicht mit ihm zusammenfällt.
+  const defaultOwners = new Map<string, string>()
   // Pass 2: extensions — additive only (spec: Erweiterungsfragment). Sorted
   // by layer name: the lists are ordered, and the composed view must not
   // depend on registration order (Spec 06, Erweiterung und Merge).
   for (const [name, layer] of [...layers].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
-    for (const frag of layer.extensions ?? []) {
+    for (const frag of (layer.extensions ?? []).map(localize)) {
       const base = composed.get(frag.id)
       if (!base) {
         throw new Error(
@@ -679,14 +710,14 @@ function composePresentation(): Map<string, TypePresentationEntry> {
         widgets[key] = widget
       }
       Object.assign(base, uniteRegisterLists(base, frag, frag.id, name))
-      if (frag.qualifierValues?.length) addQualifierValues(base, frag.qualifierValues, name, valueOwners)
+      if (frag.qualifierValues?.length) addQualifierValues(base, frag.qualifierValues, name, valueOwners, defaultOwners)
     }
   }
   // Pass 3: Selbstaktionen der Schichten (Regel 20) — erst nachdem alle
   // Qualifier-Werte vereinigt sind, damit die Pills gegen das zusammengesetzte
   // Vokabular geprüft werden, unabhängig von der Reihenfolge der Schichten.
   for (const [name, layer] of [...layers].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
-    for (const frag of layer.extensions ?? []) {
+    for (const frag of (layer.extensions ?? []).map(localize)) {
       const base = composed.get(frag.id)
       if (base && frag.selfActions?.length) overrideSelfActions(base, frag.selfActions, name, overridden)
     }
@@ -697,8 +728,10 @@ function composePresentation(): Map<string, TypePresentationEntry> {
     assertNoParallelComposerSource(entry)
     assertJoins(entry.id, entry.edges)
     assertFollowUps(entry.id, entry.fields, entry.edges)
+    assertListFields(entry, composed)
   }
   composedCache = composed
+  composedFor = i18n
   return composed
 }
 
@@ -762,6 +795,7 @@ function addQualifierValues(
   entries: readonly QualifierValuesEntry[],
   layerName: string,
   owners: Map<string, string>,
+  defaultOwners: Map<string, string>,
 ): void {
   const fail = (message: string): never => {
     throw new Error(`Typ-Register [${layerName}]: ${message} an "${base.id}" (Spec 06, Feld- und Kantenregister, Regel 20).`)
@@ -783,6 +817,73 @@ function addQualifierValues(
       }
       return { ...edge, qualifier: { ...edge.qualifier, values } }
     })
+    if (entry.default !== undefined) setQualifierDefault(base, entry, toolkitEdge!, layerName, defaultOwners, fail)
+  }
+}
+
+/**
+ * Regel 20, Standardwert: Eine Schicht nennt mit ihren Werten `default` für
+ * die Kante. Er MUSS ein Wert des Kerns oder DERSELBEN Schicht sein (so hängt
+ * das Register nicht von der Reihenfolge der Schichten ab, wie bei den
+ * Pills). Je Kante höchstens eine Quelle: Nennt ihn der Kern, setzt ihn keine
+ * Schicht; zwei Schichten sind ein Konflikt, auch mit demselben Wert
+ * (Erweiterung und Merge, Punkt 2: ein Skalar).
+ */
+function setQualifierDefault(
+  base: TypePresentationEntry,
+  entry: QualifierValuesEntry,
+  toolkitEdge: EdgeEntry,
+  layerName: string,
+  owners: Map<string, string>,
+  fail: (message: string) => never,
+): void {
+  const key = edgeKey(entry)
+  const where = `(${entry.predicate}, ${entry.itemRole})`
+  if (toolkitEdge.qualifier?.default !== undefined) {
+    fail(`Standard "${entry.default}" an ${where}: den Standard setzt bereits der Kern ("${toolkitEdge.qualifier.default}")`)
+  }
+  const slot = `${base.id}|${key}`
+  const owner = owners.get(slot)
+  if (owner) fail(`Standard "${entry.default}" an ${where}: den Standard setzt bereits Schicht "${owner}"`)
+  const own = new Set([
+    ...(toolkitEdge.qualifier?.values ?? []).map((v) => v.id),
+    ...(layers.get(layerName)?.extensions ?? [])
+      .filter((f) => f.id === base.id)
+      .flatMap((f) => f.qualifierValues ?? [])
+      .filter((q) => edgeKey(q) === key)
+      .flatMap((q) => q.values.map((v) => v.id)),
+  ])
+  if (!own.has(entry.default!)) {
+    fail(`Standard "${entry.default}" an ${where} ist weder ein Wert des Kerns noch einer derselben Schicht`)
+  }
+  owners.set(slot, layerName)
+  base.edges = (base.edges ?? []).map((edge) =>
+    edgeKey(edge) === key && edge.qualifier ? { ...edge, qualifier: { ...edge.qualifier, default: entry.default } } : edge,
+  )
+}
+
+/**
+ * Regel 22: `list.trailing` und `list.group` nennen ein Feld, das im
+ * zusammengesetzten Register des Typs am anderen Endpunkt besteht
+ * (`otherKind` der Manifest-Kante), mit Widget status, select oder number und
+ * nicht `pos: "system"`. Geprüft nach dem Vereinigen, weil das Feld aus einer
+ * anderen Schicht kommen darf; nachgerüstet werden beide nicht (die Kante ist
+ * ein Schlüssel, ihr Umdefinieren ein Konflikt).
+ */
+function assertListFields(entry: TypePresentationEntry, composed: ReadonlyMap<string, TypePresentationEntry>): void {
+  for (const edge of entry.edges ?? []) {
+    for (const slot of ["trailing", "group"] as const) {
+      const key = edge.list?.[slot]
+      if (key === undefined) continue
+      const otherKind = manifest.get(entry.id)?.relations?.find((r) => relationAffordanceKey(r) === edgeKey(edge))?.otherKind
+      const field = otherKind ? composed.get(otherKind)?.fields?.find((f) => f.key === key) : undefined
+      const problem = listFieldProblem(field)
+      if (problem) {
+        throw new Error(
+          `Typ-Register: Kante (${edge.predicate}, ${edge.itemRole}) an "${entry.id}" nennt in list.${slot} das Feld "${key}" ${problem} (Typ am anderen Endpunkt: "${otherKind ?? "?"}"; Spec 06, Feld- und Kantenregister, Regel 22).`,
+        )
+      }
+    }
   }
 }
 
@@ -832,6 +933,7 @@ export function resolveTypePresentation(typeId: string): ResolvedTypePresentatio
     generic: false,
   }
 }
+
 
 /**
  * Die Typ-Fußzeile im DETAIL, oder null. Übergang (Spec 06, Regel 17): nur

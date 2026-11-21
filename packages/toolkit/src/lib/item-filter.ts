@@ -1,7 +1,7 @@
 /**
  * Auswahl nach Zuweisung, für Listen, die schon geladen sind.
  *
- * Nicht zu verwechseln mit `ItemFilter` aus @real-life-stack/data-interface:
+ * Nicht zu verwechseln mit `ItemFilter` aus @real-life/data-interface:
  * das ist der **Abfrage**-Filter (was der Connector überhaupt herausgibt).
  * Dieser hier ist ein **Anzeige**-Filter (was die Fläche aus dem Geladenen
  * zeigt). Tags, Typen und Suchtext macht die geteilte Leiste
@@ -12,7 +12,7 @@
  * eine Regel, und sie hat einen Aufrufer.
  */
 
-import type { Item, Relation } from "@real-life-stack/data-interface"
+import type { Item, Relation } from "@real-life/data-interface"
 
 export interface AssigneeFilter {
   /** Nur Items, die mindestens einer dieser Personen zugewiesen sind. Leer heißt: alle. */

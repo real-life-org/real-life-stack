@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest"
 import { act, createElement } from "react"
 import { createRoot } from "react-dom/client"
-import type { Group } from "@real-life-stack/data-interface"
+import type { Group } from "@real-life/data-interface"
 import { NotificationCenter, modulePresentsItem, type NotificationCandidate } from "../src"
 import { notificationRoute } from "../src/router"
 

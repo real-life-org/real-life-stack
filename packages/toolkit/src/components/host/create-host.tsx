@@ -4,7 +4,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore,
   type MutableRefObject, type ReactNode,
 } from "react"
-import { hasGroups, hasItemGroups, type DataInterface, type Item } from "@real-life-stack/data-interface"
+import { hasGroups, hasItemGroups, type DataInterface, type Item } from "@real-life/data-interface"
 
 import { useItemFocus } from "../../hooks/use-item-focus"
 import { useOptionalConnector } from "../../hooks/connector-context"
@@ -290,6 +290,11 @@ export function useRegisterCreate(module: string, config: CreateConfig): void {
 
 /**
  * Start creating — with suggestion and prefill, never with restriction.
+ *
+ * Vorbelegen geht über `initialData` von `startCreate`, mit den Datenschlüsseln
+ * des Composers: eine Item-Kante über `itemRelationDataKey(predicate)`, etwa
+ * `startCreate("task", { [itemRelationDataKey("partOf")]: ["item:p1"] })`;
+ * das Formular zeigt sie dann schon vor dem Speichern (real-life-stack#564).
  *
  * @answers `{isComposing, startCreate, patchCreate}`
  * @without throws on render

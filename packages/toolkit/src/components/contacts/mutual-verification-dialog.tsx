@@ -9,6 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/primitives/dialog"
+import { useI18n } from "@/i18n"
+import { withNodes } from "@/i18n/with-nodes"
 
 function getInitials(name: string): string {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -38,8 +40,9 @@ export function MutualVerificationDialog({
   variant = "verification",
   title,
 }: MutualVerificationDialogProps) {
-  const name = peerName ?? "Kontakt"
-  const heading = title ?? (variant === "contact" ? "Ihr seid jetzt Kontakte!" : "Gegenseitig verifiziert!")
+  const { t } = useI18n()
+  const name = peerName ?? t("mutual.contactFallback")
+  const heading = title ?? (variant === "contact" ? t("mutual.contactTitle") : t("mutual.verifiedTitle"))
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onDismiss() }}>
@@ -51,7 +54,7 @@ export function MutualVerificationDialog({
         <div className="flex flex-col items-center gap-4 py-4">
           <div className="flex items-center gap-3">
             <Avatar className="h-14 w-14">
-              <AvatarImage src={myAvatar} alt={myName ?? "Du"} />
+              <AvatarImage src={myAvatar} alt={myName ?? t("mutual.you")} />
               <AvatarFallback className="bg-green-500/10 text-green-600">
                 {myName ? getInitials(myName) : "?"}
               </AvatarFallback>
@@ -67,13 +70,14 @@ export function MutualVerificationDialog({
             </Avatar>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            Du und <span className="font-medium text-foreground">{name}</span>{" "}
-            {variant === "contact" ? "seid jetzt Kontakte." : "habt euch gegenseitig verifiziert."}
+            {withNodes(variant === "contact" ? t("mutual.contactBody") : t("mutual.verifiedBody"), {
+              name: <span className="font-medium text-foreground">{name}</span>,
+            })}
           </p>
         </div>
 
         <Button className="w-full" onClick={onDismiss}>
-          Fertig
+          {t("common.done")}
         </Button>
       </DialogContent>
     </Dialog>

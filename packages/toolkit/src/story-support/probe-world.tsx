@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { FilterProvider } from "../components/filter/filter-store"
 import { CreateHostProvider, CreateSheetController } from "../components/host/create-host"

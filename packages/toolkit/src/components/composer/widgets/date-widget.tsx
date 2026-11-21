@@ -4,6 +4,7 @@ import { CalendarPlus, Clock, Repeat, X } from "lucide-react"
 import { Input } from "@/components/primitives/input"
 import { Button } from "@/components/primitives/button"
 import { cn } from "@/lib/utils"
+import { useI18n, type MessageKey } from "@/i18n"
 
 interface DateRange {
   start: string
@@ -20,11 +21,11 @@ interface DateWidgetProps {
   label: string
 }
 
-const RECURRENCE_OPTIONS = [
-  { id: "none", label: "Keine" },
-  { id: "FREQ=DAILY", label: "Taeglich" },
-  { id: "FREQ=WEEKLY", label: "Woechentlich" },
-  { id: "FREQ=MONTHLY", label: "Monatlich" },
+const RECURRENCE_OPTIONS: { id: string; label: MessageKey }[] = [
+  { id: "none", label: "date.repeatNone" },
+  { id: "FREQ=DAILY", label: "date.repeatDaily" },
+  { id: "FREQ=WEEKLY", label: "date.repeatWeekly" },
+  { id: "FREQ=MONTHLY", label: "date.repeatMonthly" },
 ]
 
 /** Strip time portion from a datetime-local value, keep only date */
@@ -39,6 +40,7 @@ function toDatetime(val: string): string {
 }
 
 export function DateWidget({ value, onChange, label }: DateWidgetProps) {
+  const { t } = useI18n()
   const showEnd = value.showEnd ?? false
   const showTime = value.showTime ?? false
   const showRecurrence = value.showRecurrence ?? false
@@ -87,9 +89,9 @@ export function DateWidget({ value, onChange, label }: DateWidgetProps) {
 
   // Options that aren't active yet
   const inactiveOptions = [
-    !showEnd && { key: "end", icon: CalendarPlus, label: "Enddatum", onClick: toggleEnd },
-    !showTime && { key: "time", icon: Clock, label: "Uhrzeit", onClick: toggleTime },
-    !showRecurrence && { key: "recurrence", icon: Repeat, label: "Wiederholung", onClick: toggleRecurrence },
+    !showEnd && { key: "end", icon: CalendarPlus, label: t("date.addEnd"), onClick: toggleEnd },
+    !showTime && { key: "time", icon: Clock, label: t("date.addTime"), onClick: toggleTime },
+    !showRecurrence && { key: "recurrence", icon: Repeat, label: t("date.addRepeat"), onClick: toggleRecurrence },
   ].filter(Boolean) as { key: string; icon: React.ComponentType<{ className?: string }>; label: string; onClick: () => void }[]
 
   return (
@@ -98,7 +100,7 @@ export function DateWidget({ value, onChange, label }: DateWidgetProps) {
       {/* Start date (label only when end is visible) */}
       <div className="flex items-center gap-2">
         {showEnd && (
-          <span className="w-12 shrink-0 text-xs text-muted-foreground">Start</span>
+          <span className="w-12 shrink-0 text-xs text-muted-foreground">{t("date.start")}</span>
         )}
         <Input
           type={inputType}
@@ -111,7 +113,7 @@ export function DateWidget({ value, onChange, label }: DateWidgetProps) {
             type="button"
             onClick={toggleTime}
             className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
-            title="Uhrzeit entfernen"
+            title={t("date.removeTime")}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -120,7 +122,7 @@ export function DateWidget({ value, onChange, label }: DateWidgetProps) {
       {/* End date (only when toggled on) */}
       {showEnd && (
         <div className="flex items-center gap-2">
-          <span className="w-12 shrink-0 text-xs text-muted-foreground">Ende</span>
+          <span className="w-12 shrink-0 text-xs text-muted-foreground">{t("date.end")}</span>
           <Input
             type={inputType}
             value={value.end || ""}
@@ -131,7 +133,7 @@ export function DateWidget({ value, onChange, label }: DateWidgetProps) {
             type="button"
             onClick={toggleEnd}
             className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
-            title="Enddatum entfernen"
+            title={t("date.removeEnd")}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -141,7 +143,7 @@ export function DateWidget({ value, onChange, label }: DateWidgetProps) {
       {showRecurrence && (
         <div className="flex items-center gap-2">
           {showEnd && (
-            <span className="w-12 shrink-0 text-xs text-muted-foreground">Wiederh.</span>
+            <span className="w-12 shrink-0 text-xs text-muted-foreground">{t("date.repeat")}</span>
           )}
           <div className="flex flex-1 flex-wrap gap-1.5">
             {RECURRENCE_OPTIONS.map((option) => (
@@ -156,7 +158,7 @@ export function DateWidget({ value, onChange, label }: DateWidgetProps) {
                     : "bg-muted text-muted-foreground hover:bg-muted/80",
                 )}
               >
-                {option.label}
+                {t(option.label)}
               </button>
             ))}
           </div>
@@ -164,7 +166,7 @@ export function DateWidget({ value, onChange, label }: DateWidgetProps) {
             type="button"
             onClick={toggleRecurrence}
             className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
-            title="Wiederholung entfernen"
+            title={t("date.removeRepeat")}
           >
             <X className="h-3.5 w-3.5" />
           </button>

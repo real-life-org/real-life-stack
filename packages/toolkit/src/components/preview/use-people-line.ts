@@ -11,8 +11,8 @@
 // und lesen nur über die Capabilities des Connectors.
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react"
-import type { DataInterface, Item, RelationRecord } from "@real-life-stack/data-interface"
-import { onePerSubjectWinners } from "@real-life-stack/data-interface"
+import type { DataInterface, Item, RelationRecord } from "@real-life/data-interface"
+import { onePerSubjectWinners } from "@real-life/data-interface"
 import {
   hasAuthorization,
   hasClaimVerification,
@@ -22,15 +22,16 @@ import {
   hasRelationRecordWriter,
   isAuthenticatable,
   isWritable,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import { useConnector } from "../../hooks/connector-context"
 import { useOptionalCurrentUser } from "../../hooks/use-auth"
 import { resolveCanCreate, resolveItemPermissions } from "../../hooks/use-item-permissions"
 import { writeOwnStatement } from "../../lib/own-statement"
 import { useVerifiedRelationRecords } from "../../hooks/use-votes"
-import { firstOptionWithRole, statusRole, type EdgeEntry, type FieldEntry } from "./field-register"
+import { firstOptionWithRole, isMissingQualifier, statusRole, type EdgeEntry, type FieldEntry } from "./field-register"
 import { peopleLine, peopleLineGroups, recordPeopleEdges, type PeopleLineEntry } from "./people-line"
+import { getI18n } from "@/i18n"
 
 const NO_RECORDS: RelationRecord[] = []
 
@@ -136,8 +137,13 @@ export function usePeopleFormStates(
       if (!recordEdge || !recordEdge.qualifier) continue
       const key = recordEdge.qualifier.key
       const allowed = new Set(recordEdge.qualifier.values.map((v) => v.id))
+      // Ein fehlender Wert gilt als Standard (Spec 06, Regel 7), auch wenn ihn
+      // die Schicht eines Moduls setzt (Regel 20); ein unbekannter bleibt ohne.
+      const fallbackValue = recordEdge.qualifier.default
       const valueOf = (record: RelationRecord | undefined) => {
-        const value = record?.fields?.[key]
+        if (!record) return undefined
+        const value = record.fields?.[key]
+        if (isMissingQualifier(value)) return fallbackValue
         return typeof value === "string" && allowed.has(value) ? value : undefined
       }
       const own = records.filter((record) => record.predicate === recordEdge.predicate && record.to === to)
@@ -199,8 +205,10 @@ export interface StatusTransitions {
 
 const PERSON = "global:"
 
+
+
 /** Grund, wenn der geöffnete Space unter der Id des Items ein anderes (oder keins) liefert. */
-export const ITEM_ELSEWHERE = "Dieses Item liegt nicht im geöffneten Space – dort bearbeiten"
+export const itemElsewhere = (): string => getI18n().t("item.elsewhere")
 
 /**
  * Dasselbe Item? `updateItem` erreicht nur den geöffneten Space, und
@@ -214,9 +222,9 @@ function sameItem(fresh: Item, shown: Item): boolean {
 
 /** Das angezeigte Item frisch aus dem geöffneten Space — oder ein Fehler mit Grund, nie ein anderes. */
 async function freshItem(connector: DataInterface, shown: Item): Promise<Item> {
-  if (!inOpenSpace(connector, shown)) throw new Error(ITEM_ELSEWHERE)
+  if (!inOpenSpace(connector, shown)) throw new Error(itemElsewhere())
   const fresh = await connector.getItem(shown.id)
-  if (!fresh || !sameItem(fresh, shown)) throw new Error(ITEM_ELSEWHERE)
+  if (!fresh || !sameItem(fresh, shown)) throw new Error(itemElsewhere())
   return fresh
 }
 
@@ -283,7 +291,11 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
     const self = `${PERSON}${meId}`
     if (isRecord) {
       const own = records.find((record) => record.createdBy === meId && record.from === self)
-      const value = own?.fields?.[edge.qualifier?.key ?? ""]
+      if (!own) return undefined
+      const value = own.fields?.[edge.qualifier?.key ?? ""]
+      // Nur ein FEHLENDER Wert gilt als Standard (Regel 7); ein vorhandener
+      // unbekannter bleibt ohne Zustand.
+      if (isMissingQualifier(value)) return withValues ? edge.qualifier?.default : undefined
       if (typeof value !== "string") return undefined
       return withValues ? value : true
     }
@@ -291,7 +303,10 @@ export function useSelfAction(item: Item, edge: EdgeEntry, transitions?: StatusT
     if (!relation) return undefined
     if (!withValues) return true
     const value = edge.qualifier ? relation.meta?.[edge.qualifier.key] : undefined
-    return typeof value === "string" ? value : (edge.qualifier?.default ?? true)
+    if (typeof value === "string" && value !== "") return value
+    // Fehlend: der Standard, sonst stehe ich einfach an der Kante; ein
+    // vorhandener unbekannter Wert ist nie der Standard (Regel 7).
+    return isMissingQualifier(value) ? (edge.qualifier?.default ?? true) : true
   }, [edge, isRecord, item.relations, meId, records, withValues])
 
   const others = useMemo(() => {

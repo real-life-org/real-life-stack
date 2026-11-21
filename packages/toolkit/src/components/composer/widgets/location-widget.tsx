@@ -6,6 +6,7 @@ import { Input } from "@/components/primitives/input"
 import { Button } from "@/components/primitives/button"
 import { cn } from "@/lib/utils"
 import type { Geocoder, GeocodeResult } from "@/lib/geocode"
+import { useI18n } from "@/i18n"
 
 interface LocationData {
   address?: string
@@ -40,6 +41,7 @@ export function LocationWidget({
   geocode,
   onPickOnMap,
 }: LocationWidgetProps) {
+  const { t } = useI18n()
   const address = value.address ?? ""
 
   // Geocoding is driven by what the user actually *types*, not by every
@@ -156,7 +158,7 @@ export function LocationWidget({
             }}
             onBlur={closeSoon}
             onKeyDown={onInputKeyDown}
-            placeholder="Adresse eingeben..."
+            placeholder={t("location.addressPlaceholder")}
             className="text-sm"
             autoComplete="off"
             role="combobox"
@@ -217,8 +219,8 @@ export function LocationWidget({
             size="icon"
             onClick={onPickOnMap}
             className="h-9 w-9 shrink-0"
-            aria-label={value.position ? "Position auf Karte ändern" : "Position auf Karte wählen"}
-            title={value.position ? "Position auf Karte ändern" : "Position auf Karte wählen"}
+            aria-label={value.position ? t("location.changeOnMap") : t("location.chooseOnMap")}
+            title={value.position ? t("location.changeOnMap") : t("location.chooseOnMap")}
           >
             <MapPin className="h-4 w-4" />
           </Button>
@@ -226,7 +228,7 @@ export function LocationWidget({
       </div>
       {failed && !loading && (
         <p className="px-1 text-[11px] text-muted-foreground">
-          Adresssuche gerade nicht verfügbar.
+          {t("location.searchUnavailable")}
         </p>
       )}
     </div>

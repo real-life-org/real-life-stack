@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, type ReactNode } from "react"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 /**
  * Wie ein Klick auf den Kommentar-Hinweis ins Kommentarfeld fuehrt.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { hasGroupScope } from "@real-life-stack/data-interface"
+import { hasGroupScope } from "@real-life/data-interface"
 import { MockConnector } from "../src/index"
 
 // 02 → Lesen/Anlegen in einem bestimmten Space. Die Fälle selbst stehen in

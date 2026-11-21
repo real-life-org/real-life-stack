@@ -10,7 +10,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), buildInfoPlugin(buildInfo(new URL("./package.json", import.meta.url)))],
   resolve: {
     alias: {
-      "@real-life-stack/toolkit": toolkitSrc,
+      "@real-life/toolkit": toolkitSrc,
       "@": toolkitSrc,
     },
   },

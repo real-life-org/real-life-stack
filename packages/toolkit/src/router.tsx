@@ -2,7 +2,7 @@
  * Subpath entry for everything that needs a router.
  *
  * Import via:
- *   import { UrlFocusProvider } from "@real-life-stack/toolkit/router"
+ *   import { UrlFocusProvider } from "@real-life/toolkit/router"
  *
  * Separate from the main entry so `react-router-dom` stays an optional peer
  * dependency: a Storybook, a test or an embedding without an address keeps the

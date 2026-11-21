@@ -17,7 +17,7 @@ test("jedes veroeffentlichte Paket hat eine Beschreibung", () => {
   const pkgs = packages()
   assert.ok(pkgs.length >= 6)
   for (const p of pkgs) assert.ok(p.description, `${p.name} without description`)
-  assert.equal(pkgs[0].name, "@real-life-stack/data-interface")
+  assert.equal(pkgs[0].name, "@real-life/data-interface")
 })
 
 test("llms.txt nennt jedes Paket, jede Spec-Datei und jeden Hook", () => {

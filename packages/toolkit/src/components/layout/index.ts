@@ -3,20 +3,20 @@ export { PanelSafeArea, type PanelSafeAreaProps } from "./panel-safe-area"
 export { ModuleToolbar, type ModuleToolbarProps } from "./module-toolbar"
 export {
   ModuleFrame,
-  ModuleControls,
   moduleContainerClass,
   moduleBleedContentClass,
   resolveModuleLayout,
   type ModuleFrameProps,
   type ModuleLayout,
 } from "./module-frame"
-export { ModuleSurfaceScope, type ModuleSurfaceScopeProps } from "./module-surface-scope"
+export { ModuleSurfaceScope, useSurfaceItems, type ModuleSurfaceScopeProps } from "./module-surface-scope"
 export { PanelHeaderActions, PanelHeaderSlotContext, type PanelHeaderActionsProps } from "./panel-header-actions"
 export { readPanelEdges, type PanelEdges } from "./panel-edges"
 export { Navbar, NavbarStart, NavbarCenter, NavbarEnd } from "./navbar"
 export { WorkspaceSwitcher, workspaceOf } from "./workspace-switcher"
 export type { Workspace } from "./workspace-switcher"
 export { UserMenu } from "./user-menu"
+export { ColorSchemeToggle, type ColorSchemeToggleProps } from "./color-scheme-toggle"
 export type { UserData } from "./user-menu"
 export { ModuleTabs } from "./module-tabs"
 export type { Module } from "./module-tabs"
@@ -30,4 +30,4 @@ export { GroupDialog } from "./group-dialog"
 export { SpaceThemePanel, SpaceThemeCard } from "./space-theme-panel"
 export { AccentGrid, RadiusTiles, SurfacesToggle, ThemeSectionLabel } from "./space-theme-controls"
 export type { SpaceThemePanelProps } from "./space-theme-panel"
-export type { GroupDialogMode, GroupDialogProps } from "./group-dialog"
+export type { AppSpaceSection, AppSpaceSectionContext, GroupDialogMode, GroupDialogProps } from "./group-dialog"

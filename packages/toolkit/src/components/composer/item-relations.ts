@@ -1,4 +1,5 @@
-import type { Item, Relation } from "@real-life-stack/data-interface"
+import type { Item, Relation } from "@real-life/data-interface"
+import { getI18n } from "@/i18n"
 
 /**
  * Item-Kanten im Composer (C3, Schreibform): Chips und eine `@`-Suche über
@@ -50,6 +51,12 @@ export interface ItemRefFieldConfig {
  * hinzugefügten Quellen (`item:<id>`); die entfernten unter
  * {@link incomingRemovedKey}. Beide beginnen mit `relation:`, damit ein
  * Space-Wechsel ihre space-lokalen Ziele mit leert (withSpaceChange).
+ *
+ * Öffentlich (real-life-stack#564), damit Anlegen eine Kante vorbelegen
+ * kann und das Formular sie schon zeigt, nicht erst beim Speichern: Die
+ * Werte sind Ziele wie in `Item.relations` (`item:<id>`), etwa
+ * `startCreate("task", { [itemRelationDataKey("partOf")]: ["item:p1"] })`
+ * oder `initialData` am Composer. Das Feld muss der Typ im Register führen.
  */
 export const itemRelationDataKey = (predicate: string, incoming?: boolean): string =>
   incoming ? `relation:in:${predicate}` : `relation:${predicate}`
@@ -155,5 +162,5 @@ export function itemRelationsFromWidgetData(
 export function itemTitle(item: Item): string {
   const data = (item.data ?? {}) as Record<string, unknown>
   const title = data.title ?? data.displayName ?? data.content
-  return typeof title === "string" && title.trim() !== "" ? title : "Ohne Titel"
+  return typeof title === "string" && title.trim() !== "" ? title : getI18n().t("item.untitled")
 }

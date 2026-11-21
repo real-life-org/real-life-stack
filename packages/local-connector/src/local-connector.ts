@@ -24,8 +24,8 @@ import type {
   RelationRecordInput,
   RelationRecordUpdate,
   Source,
-} from "@real-life-stack/data-interface"
-import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, authoredUpdateAuthoritative, isFrozen, withoutAuthoredClaim, createObservable, createDefaultRelationStore, createRelationRecordWith, canonicalItem, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState } from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
+import { applyGroupDataPatch, withEditStamp, stripEditStamp, assertMayMutateAuthoredItem, assertAuthoredTypeUnchanged, authoredUpdateAuthoritative, isFrozen, withoutAuthoredClaim, createObservable, createDefaultRelationStore, createRelationRecordWith, canonicalItem, matchesFilter, findRelatedItems, applyPagination, deriveActivitySummary, itemDisplayTitle, moduleHintsFor, applyNotificationStatePatch, cloneNotificationState } from "@real-life/data-interface"
 import { get, set, del, createStore, update as updateStoredValue } from "idb-keyval"
 
 // --- Types ---
@@ -405,10 +405,15 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
   }
 
   async createGroup(name: string, data?: Record<string, unknown>): Promise<Group> {
-    const group: Group = { id: `group-${Date.now()}`, name, data }
-    this.groups.push(group)
+    // A random id, never a timestamp: two spaces created in the same
+    // millisecond would share one id and the second's membership would
+    // replace the first's (rls#575).
+    const group: Group = { id: crypto.randomUUID(), name, data }
     const creator = this.currentUser?.id
-    await this.commitMembers((members) => ({ ...members, [group.id]: creator ? [creator] : [] }))
+    await this.commitGroups(
+      (groups) => [...groups, group],
+      (members) => ({ ...members, [group.id]: creator ? [creator] : [] }),
+    )
     this.notifyGroupObservers()
     await this.persist()
     this.broadcast({ type: "groups-changed" })
@@ -422,8 +427,8 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
     // `data` is a shallow PATCH (null removes), never a replacement — see the
     // GroupManager contract (rls#234). The patch is applied INSIDE the store
     // transaction against the COMMITTED group, not against this instance's
-    // possibly stale RAM copy: `persist()` writes `groups` wholesale, so a
-    // second tab patching another field would otherwise revert ours (rls#244).
+    // possibly stale RAM copy: a second tab patching another field would
+    // otherwise revert ours (rls#244).
     let committed: Group | undefined
     await updateStoredValue<StoredState>("state", (stored) => {
       const base = stored ?? this.createStoredState()
@@ -439,31 +444,38 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
       return { ...base, groups }
     }, this.store)
 
-    // Only after the commit: adopt the merged result locally, so the RAM copy
-    // reflects the store's truth (including the other writer's fields).
-    if (committed) {
-      const merged = committed
-      this.groups = this.groups.map((candidate) => (candidate.id === id ? merged : candidate))
-      if (this.currentGroup?.id === id) {
-        this.currentGroup = merged
-        this.currentGroupObs.set(merged)
-      }
+    // Another tab deleted the space after our existence check: nothing was
+    // written. That deletion reaches this instance via handleBroadcast.
+    if (!committed) throw new Error(`Group not found: ${id}`)
+
+    // Only after the commit: adopt the merged result locally (including the
+    // other writer's fields of THIS group). Other spaces stay as they are in
+    // RAM — foreign changes arrive via handleBroadcast, not via our commit.
+    const merged = committed
+    this.groups = this.groups.map((candidate) => (candidate.id === id ? merged : candidate))
+    if (this.currentGroup?.id === id) {
+      this.currentGroup = merged
+      this.currentGroupObs.set(merged)
     }
     this.notifyGroupObservers()
     this.broadcast({ type: "groups-changed" })
-    return committed ?? this.groups.find((g) => g.id === id)!
+    return merged
   }
 
   async deleteGroup(id: string): Promise<void> {
-    this.groups = this.groups.filter((g) => g.id !== id)
-    await this.commitMembers(({ [id]: _removed, ...members }) => members)
+    await this.commitGroups(
+      (groups) => groups.filter((g) => g.id !== id),
+      ({ [id]: _removed, ...members }) => members,
+    )
     if (this.currentGroup?.id === id) {
       this.currentGroup = this.groups[0] ?? null
       this.currentGroupObs.set(this.currentGroup)
+      this.rememberTabGroup(this.currentGroup?.id ?? null)
     }
     this.notifyGroupObservers()
     // Overview activity is the union of currently accessible spaces.
     this.notifyActivityObservers()
+    // Stores the shared current space and notifies the item observers once.
     await this.persist()
     this.broadcast({ type: "groups-changed" })
   }
@@ -507,6 +519,28 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
     }, this.store)
     if (committed) this.groupMembers = committed
     this.notifyMemberObservers()
+  }
+
+  /**
+   * A change to the space list (and its memberships) as ONE atomic operation
+   * on the stored state, never a write-back of this instance's copy: another
+   * tab may just have created, renamed or deleted a space (rls#575, like
+   * rls#244 for patches). This instance applies only ITS change to its RAM
+   * list; foreign changes arrive via handleBroadcast. Memberships are adopted
+   * as committed, like {@link commitMembers}.
+   */
+  private async commitGroups(
+    changeGroups: (groups: Group[]) => Group[],
+    changeMembers: (members: Record<string, string[]>) => Record<string, string[]>,
+  ): Promise<void> {
+    let committedMembers: Record<string, string[]> | undefined
+    await updateStoredValue<StoredState>("state", (stored) => {
+      const base = stored ?? this.createStoredState()
+      committedMembers = changeMembers({ ...base.groupMembers })
+      return { ...base, groups: changeGroups([...base.groups]), groupMembers: committedMembers }
+    }, this.store)
+    this.groups = changeGroups([...this.groups])
+    if (committedMembers) this.groupMembers = committedMembers
   }
 
   async inviteMember(groupId: string, userId: string): Promise<void> {
@@ -935,6 +969,7 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
   }
 
   getAuthMethods(): AuthMethod[] {
+    // i18n-exempt: Bezeichner der Anmeldeart; die Anmeldeseite zeigt ihn nicht an
     return [{ method: "local", label: "Local Login" }]
   }
 
@@ -1143,6 +1178,10 @@ export class LocalConnector implements FullConnector, GroupScopeCapable, Activit
             // person or a removal.
             users: stored.users,
             groupMembers: stored.groupMembers,
+            // Spaces likewise (createGroup, updateGroup, deleteGroup commit
+            // atomically): a stale list would drop another tab's new space
+            // or bring back a deleted one (rls#575).
+            groups: stored.groups,
             // Per tab the login is the tab's own; the shared one stays as stored.
             ...(this.identityMode === "per-tab"
               ? { currentUserId: stored.currentUserId, currentGroupId: stored.currentGroupId }

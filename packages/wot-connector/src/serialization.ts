@@ -1,5 +1,5 @@
-import type { Item } from "@real-life-stack/data-interface"
-import { canonicalTypeValue } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
+import { canonicalTypeValue } from "@real-life/data-interface"
 import type { SerializedItem } from "./types.js"
 
 export function serializeItem(item: Item): SerializedItem {

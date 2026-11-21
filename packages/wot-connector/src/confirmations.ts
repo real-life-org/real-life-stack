@@ -1,7 +1,7 @@
 // Pure projection of verified WoT Attestation views into RLS Confirmations.
 // Transport, delivery, outbox, QR, and challenge concerns stay outside.
 
-import type { ConfirmationView } from "@real-life-stack/data-interface"
+import type { ConfirmationView } from "@real-life/data-interface"
 import type { Attestation } from "@real-life/wot-core/types"
 
 export interface AttestationMetadataLike {

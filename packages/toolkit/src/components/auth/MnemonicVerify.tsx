@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n"
 
 export interface MnemonicVerifyProps {
   words: string[]
@@ -21,6 +22,7 @@ function pickRandomIndices(total: number, count: number): number[] {
 }
 
 export function MnemonicVerify({ words, count = 3, onVerified, className }: MnemonicVerifyProps) {
+  const { t } = useI18n()
   const [indices] = React.useState(() => pickRandomIndices(words.length, count))
   const [inputs, setInputs] = React.useState<string[]>(Array(count).fill(""))
   const [error, setError] = React.useState(false)
@@ -56,13 +58,13 @@ export function MnemonicVerify({ words, count = 3, onVerified, className }: Mnem
   return (
     <div className={cn("space-y-4", className)}>
       <p className="text-sm text-muted-foreground">
-        Bestätige die folgenden Wörter aus deinem Seed:
+        {t("mnemonic.verifyPrompt")}
       </p>
       <div className="space-y-3">
         {indices.map((wordIdx, i) => (
           <div key={wordIdx} className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground whitespace-nowrap text-right font-mono w-16">
-              Wort {wordIdx + 1}:
+              {t("mnemonic.word", { number: wordIdx + 1 })}
             </span>
             <input
               ref={(el) => { inputRefs.current[i] = el }}
@@ -82,7 +84,7 @@ export function MnemonicVerify({ words, count = 3, onVerified, className }: Mnem
       </div>
       {error && (
         <p className="text-sm text-destructive">
-          Die Wörter stimmen nicht überein. Bitte prüfe deinen Seed.
+          {t("mnemonic.mismatch")}
         </p>
       )}
     </div>

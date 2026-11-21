@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { FieldNavigationProvider } from "../src/components/navigation/field-navigation"
 import { ItemMetaRow } from "../src/components/preview/item-meta-row"

@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from "react"
+import { Fragment, useState, useCallback, useEffect, useRef, type ReactNode } from "react"
 import { LogOut, UserMinus, UserPlus, Check, Loader2, ImagePlus, X, Camera, Pencil, ChevronUp, ChevronDown, GripVertical, Users, LayoutGrid, Search, Contrast, RotateCcw, SlidersHorizontal, Check as CheckIcon, type LucideIcon } from "lucide-react"
 import { getModule, getModules, defaultModuleIds, displayableModules } from "@/lib/module-register"
-import type { Group, ContactInfo } from "@real-life-stack/data-interface"
+import type { Group, ContactInfo } from "@real-life/data-interface"
 import { useMembers } from "../../hooks/use-groups"
 import { resolveAdminView } from "../../lib/group-admin-view"
 import { cn, getReadableTextColor, getSpacePrimaryColor, resolveAssetUrl, SPACE_COLOR_SWATCHES } from "../../lib/utils"
@@ -19,6 +19,9 @@ import { Input } from "../primitives/input"
 import { Label } from "../primitives/label"
 import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
 import { Skeleton } from "../primitives/skeleton"
+import { ErrorBoundary } from "../primitives/error-boundary"
+import { getI18n, useI18n, type I18n } from "@/i18n"
+import { moduleLabel } from "@/lib/register-labels"
 
 function getInitials(name: string): string {
   return name
@@ -123,17 +126,20 @@ export function spaceConfigSections({
   isAdmin,
   canInvite,
   canTheme,
+  t = getI18n().t,
 }: {
   isAdmin: boolean
   canInvite: boolean
   canTheme: boolean
+  /** Übersetzer für die Beschriftungen — in Komponenten `useI18n().t`. */
+  t?: I18n["t"]
 }): SpaceConfigSection[] {
   const sections: SpaceConfigSection[] = [
-    { id: "members", label: "Mitglieder", icon: Users },
+    { id: "members", label: t("groupDialog.members"), icon: Users },
   ]
-  if (canInvite) sections.push({ id: "invite", label: "Einladen", icon: UserPlus })
-  if (canTheme) sections.push({ id: "theme", label: "Aussehen", icon: Contrast })
-  if (isAdmin) sections.push({ id: "modules", label: "Module", icon: LayoutGrid })
+  if (canInvite) sections.push({ id: "invite", label: t("groupDialog.invite"), icon: UserPlus })
+  if (canTheme) sections.push({ id: "theme", label: t("groupDialog.appearance"), icon: Contrast })
+  if (isAdmin) sections.push({ id: "modules", label: t("groupDialog.modules"), icon: LayoutGrid })
   return sections
 }
 
@@ -184,11 +190,89 @@ export function filterInvitableContacts<T extends { id: string; name?: string }>
  * verschwinden — der Dialog zeigte dann den Inhalt eines Eintrags an, den es
  * nicht mehr gibt. Der Rueckfall ist der erste Bereich.
  */
-export function resolveConfigSection(
-  requested: SpaceConfigSectionId,
-  sections: readonly SpaceConfigSection[],
-): SpaceConfigSectionId {
-  return sections.some((s) => s.id === requested) ? requested : sections[0].id
+export function resolveConfigSection<Id extends string>(
+  requested: string,
+  sections: readonly { id: Id }[],
+): Id {
+  const hit = sections.find((s) => s.id === requested)
+  return hit ? hit.id : sections[0].id
+}
+
+// --- App-Abschnitte (rls#551) ---
+
+/**
+ * Was ein App-Abschnitt zum Rendern bekommt.
+ *
+ * `patchData` ist der EINZIGE Schreibweg: ein flacher Merge-Patch auf
+ * `Group.data` (Spec 04, Space-Metadaten, Regeln 2 und 3; `null` loescht).
+ * Name, Bild, Mitglieder, Module und Aussehen bleiben beim Dialog.
+ */
+export interface AppSpaceSectionContext {
+  /**
+   * Der Space, wie der Aufrufer ihn liefert (`mode.group`). Der Dialog haelt
+   * keinen eigenen Schreibstand: eine gespeicherte Aenderung erscheint, wenn
+   * der Aufrufer die Group neu liefert — `AppFrame` tut das live aus dem
+   * Connector.
+   */
+  group: Group
+  /** Ob der eigene Nutzer den Space einstellen darf (Admin). */
+  canEdit: boolean
+  /**
+   * Schreibt `patch` flach nach `Group.data` ueber `onUpdateGroup` und gibt
+   * dessen Zusage zurueck. Scheitert sie, meldet der Dialog den Fehler im
+   * Abschnitt, bis ein spaeterer Patch dieselben Schluessel speichert.
+   */
+  patchData: (patch: Record<string, unknown>) => Promise<void>
+}
+
+/** Ein Abschnitt, den eine App in den Space-Dialog eintraegt. */
+export interface AppSpaceSection {
+  /** Eindeutig im Dialog; die Ids der eigenen Bereiche sind vergeben. */
+  id: string
+  label: string
+  icon: LucideIcon
+  /** Ohne Angabe sichtbar. `isAdmin` steht beim Oeffnen noch nicht fest. */
+  visible?: (who: { isAdmin: boolean }) => boolean
+  render: (ctx: AppSpaceSectionContext) => ReactNode
+}
+
+const OWN_SECTION_IDS: readonly SpaceConfigSectionId[] = ["members", "modules", "invite", "theme"]
+
+/**
+ * Die gueltigen App-Abschnitte: eine Id, die einen eigenen Bereich oder
+ * einen frueheren App-Abschnitt verdeckt, faellt heraus und wird gemeldet.
+ * Stumm uebernehmen hiesse, dass `initialSection` und das Menue je nach
+ * Reihenfolge einen anderen Eintrag meinen.
+ */
+export function validAppSections(sections: readonly AppSpaceSection[]): AppSpaceSection[] {
+  const seen = new Set<string>(OWN_SECTION_IDS)
+  const valid: AppSpaceSection[] = []
+  for (const section of sections) {
+    if (seen.has(section.id)) {
+      console.error(
+        `GroupDialog: App-Abschnitt "${section.id}" verworfen — die Id ist schon vergeben (eigener Bereich oder doppelt).`,
+      )
+      continue
+    }
+    seen.add(section.id)
+    valid.push(section)
+  }
+  return valid
+}
+
+/**
+ * Ob ein App-Abschnitt sichtbar ist. `visible` ist App-Code und laeuft beim
+ * Rendern des ganzen Dialogs; wirft er, faellt nur dieser Abschnitt weg
+ * (gemeldet), nicht der Dialog.
+ */
+export function appSectionVisible(section: AppSpaceSection, isAdmin: boolean): boolean {
+  if (!section.visible) return true
+  try {
+    return section.visible({ isAdmin })
+  } catch (err) {
+    console.error(`GroupDialog: visible() des App-Abschnitts "${section.id}" ist fehlgeschlagen — ausgeblendet.`, err)
+    return false
+  }
 }
 
 /** Ab wie vielen Mitgliedern die Liste ein Suchfeld bekommt. */
@@ -321,6 +405,41 @@ function MemberGroupLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Ruft `render` eines App-Abschnitts INNERHALB der Fehlergrenze auf. Direkt
+ * im Dialog aufgerufen, liefe ein Fehler der render-Funktion selbst an der
+ * Grenze vorbei und risse den ganzen Dialog mit.
+ */
+function AppSectionHost({ section, ...ctx }: AppSpaceSectionContext & { section: AppSpaceSection }) {
+  return <>{section.render(ctx)}</>
+}
+
+const sameList = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((v, i) => v === b[i])
+
+/**
+ * Laesst einen lokalen Zustand des Dialogs dem gelieferten Wert folgen.
+ *
+ * Der Aufrufer liefert die Group live (rls#551, `AppFrame` aus dem Connector).
+ * Aendert sich der gelieferte Wert, zieht der lokale nach — aber nur, wenn er
+ * noch dem zuletzt gelieferten entspricht: was man hier gerade selbst
+ * geaendert hat, ueberschreibt ein fremder Stand nicht.
+ */
+function useFollowLive<T>(
+  live: T,
+  local: T,
+  setLocal: (value: T) => void,
+  equals: (a: T, b: T) => boolean = Object.is,
+  onLiveChange?: () => void,
+) {
+  const [synced, setSynced] = useState(live)
+  if (!equals(live, synced)) {
+    setSynced(live)
+    if (equals(local, synced)) setLocal(live)
+    onLiveChange?.()
+  }
+}
+
 // --- Types ---
 
 export type GroupDialogMode =
@@ -345,6 +464,22 @@ export interface GroupDialogProps {
   onDeleteGroup: (id: string) => Promise<void>
   onInviteMember?: (groupId: string, userId: string) => Promise<void>
   onRemoveMember?: (groupId: string, userId: string) => Promise<void>
+  /**
+   * Abschnitte der App, nach den eigenen Bereichen (rls#551). Sie schreiben
+   * nur ueber `patchData` nach `Group.data`; einen zweiten Dialog fuer
+   * denselben Space braucht es dann nicht (Spec 01, Overlay-Regel 5).
+   * Nur im Bearbeiten-Modus. Der Dialog haelt keinen eigenen Schreibstand:
+   * der Aufrufer liefert `mode.group` nach dem Speichern neu (live).
+   */
+  appSections?: AppSpaceSection[]
+  /** Ueberschrift ueber den App-Abschnitten im Menue, z. B. der App-Name. */
+  appSectionsTitle?: string
+  /**
+   * In welchem Bereich der Dialog oeffnet — eigener Bereich oder Id eines
+   * App-Abschnitts. Gilt bei jedem Oeffnen; gibt es den Bereich (noch)
+   * nicht, steht der erste da, bis er erscheint.
+   */
+  initialSection?: string
 }
 
 // --- Component ---
@@ -361,7 +496,11 @@ export function GroupDialog({
   onDeleteGroup,
   onInviteMember,
   onRemoveMember,
+  appSections,
+  appSectionsTitle,
+  initialSection,
 }: GroupDialogProps) {
+  const { t } = useI18n()
   const isEdit = mode.type === "edit"
   const groupId = isEdit ? mode.group.id : "__none__"
   const { data: members, isLoading: membersLoading } = useMembers(groupId)
@@ -382,11 +521,32 @@ export function GroupDialog({
   const [groupImage, setGroupImage] = useState(() =>
     isEdit ? (mode.group.data?.image as string | undefined) ?? "" : ""
   )
+  // Name und Bild folgen einer neuen Group des Aufrufers (live aus dem
+  // Connector, z. B. ein anderes Geraet benennt um) — aber nur, solange man
+  // sie hier nicht selbst geaendert hat: ein angefangener Name bleibt stehen.
+  useFollowLive(isEdit ? mode.group.name : "", name, setName)
+  /**
+   * Laufende Nummer der Farbabsicht. Jede bewusste Wahl, jedes Entfernen des
+   * Bildes und jede Bildaenderung von aussen zaehlt hoch; eine Farb-Ermittlung
+   * aus dem Bild, die erst danach fertig wird, erkennt daran, dass sie
+   * ueberholt ist.
+   */
+  const colorRequestRef = useRef(0)
+  useFollowLive(
+    isEdit ? (mode.group.data?.image as string | undefined) ?? "" : "",
+    groupImage,
+    setGroupImage,
+    Object.is,
+    () => { colorRequestRef.current++ },
+  )
+  const groupImageRef = useRef(groupImage)
+  groupImageRef.current = groupImage
 
   // Module state
-  const [activeModules, setActiveModules] = useState<string[]>(() =>
-    isEdit ? (mode.group.data?.modules as string[] | undefined) ?? defaults() : defaults()
-  )
+  const liveModulesOf = (m: GroupDialogMode): string[] =>
+    m.type === "edit" ? (m.group.data?.modules as string[] | undefined) ?? defaults() : defaults()
+  const [activeModules, setActiveModules] = useState<string[]>(() => liveModulesOf(mode))
+  useFollowLive(liveModulesOf(mode), activeModules, setActiveModules, sameList)
 
   // Module-save errors get their OWN state: sharing the dialog-wide `error`
   // state made ownership ambiguous — a successful module save could only
@@ -403,13 +563,39 @@ export function GroupDialog({
   // Das gewaehlte Fach. `tabs` haengt an isCurrentUserAdmin, das aus den
   // Mitgliedern abgeleitet wird und beim Oeffnen noch nicht feststeht — daher
   // laeuft die Auswahl durch resolveConfigTab, statt roh an Radix zu gehen.
-  const [requestedSection, setRequestedSection] = useState<SpaceConfigSectionId>("members")
-  const sections = spaceConfigSections({
+  const [requestedSection, setRequestedSection] = useState<string>(initialSection ?? "members")
+  // Bei jedem Oeffnen gilt `initialSection` neu. Der Dialog bleibt zwischen
+  // zwei Aufrufen montiert; ohne das oeffnete er im zuletzt gewaehlten
+  // Bereich, auch wenn die App gezielt in ihren Abschnitt springen will.
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setRequestedSection(initialSection ?? "members")
+  }
+  const ownSections = spaceConfigSections({
     isAdmin: isCurrentUserAdmin,
     canInvite: Boolean(onInviteMember),
     canTheme: isCurrentUserAdmin,
+    t,
   })
+  const [appSectionsInput, setAppSectionsInput] = useState(appSections)
+  const [validApp, setValidApp] = useState(() => validAppSections(appSections ?? []))
+  if (appSections !== appSectionsInput) {
+    setAppSectionsInput(appSections)
+    setValidApp(validAppSections(appSections ?? []))
+  }
+  const visibleAppSections = isEdit
+    ? validApp.filter((a) => appSectionVisible(a, isCurrentUserAdmin))
+    : []
+  const sections: { id: string; label: string; icon: LucideIcon }[] = [...ownSections, ...visibleAppSections]
   const activeSection = resolveConfigSection(requestedSection, sections)
+  const activeAppSection = visibleAppSections.find((a) => a.id === activeSection)
+
+  /**
+   * Offene Fehler der App-Patches, JE SCHLUESSEL: ein zweiter Fehler oder ein
+   * Erfolg auf einem anderen Feld beantwortet den ersten nicht.
+   */
+  const [appErrors, setAppErrors] = useState<Readonly<Record<string, { sectionId: string; message: string }>>>({})
   /** Suche in der Mitgliederliste (Entwurf 3a). */
   const [memberSearch, setMemberSearch] = useState("")
   /** Suche in der Kontaktliste des Bereichs "Einladen" (Entwurf 4a). */
@@ -434,32 +620,32 @@ export function GroupDialog({
         if (current.type !== "edit") return Promise.resolve()
         return onUpdateGroupRef.current(current.group.id, { data: { modules } })
       },
-      (err, _failed, lastSaved) => {
-        // Roll the UI back to the last CONFIRMED order — a silently divergent
-        // list would suggest the reorder stuck when it didn't. The saver's
-        // lastSaved beats the prop: after "A saved, B failed" the group prop
-        // may still show the state before A (store round-trip in flight).
-        const current = modeRef.current
-        setActiveModules(
-          lastSaved ??
-            (current.type === "edit"
-              ? ((current.group.data?.modules as string[] | undefined) ?? defaults())
-              : defaults()),
-        )
-        setModuleError(err instanceof Error ? err.message : "Module konnten nicht gespeichert werden")
+      (err) => {
+        // Zurueck auf den GELIEFERTEN Stand — eine still abweichende Liste
+        // behauptete eine Sortierung, die nicht gespeichert ist. Nicht auf das
+        // eigene zuletzt Gespeicherte: die gelieferte Group ist massgeblich,
+        // und der Aufrufer liefert nach dem Speichern neu (shared-components,
+        // GroupDialog, Regel 3). Ein eigenes lastSaved gegen einen live
+        // gelieferten Stand abzuwaegen, hat zweimal einen veralteten Stand
+        // hergestellt (Codex-Runden 3 und 4 zu rls#551).
+        setActiveModules(liveModulesOf(modeRef.current))
+        setModuleError(err instanceof Error ? err.message : getI18n().t("groupDialog.modulesSaveFailed"))
       },
       () => setModuleError(null),
     )
   }
 
   // Die gewaehlte Primaerfarbe liegt lokal, aus demselben Grund wie Name,
-  // Bild und Modulliste: `mode.group` ist ein SNAPSHOT vom Oeffnen, den die
-  // App nicht nachfuehrt, solange der Dialog steht. Direkt daraus gelesen
-  // bewegte sich der Haken nach einem Klick nicht — gespeichert wurde, aber
-  // es sah aus, als sei nichts passiert.
-  const [primaryColorChoice, setPrimaryColorChoice] = useState<string | null>(() =>
-    mode.type === "edit" ? ((mode.group.data?.primaryColor as string | undefined) ?? null) : null,
-  )
+  // Bild und Modulliste: nicht jeder Aufrufer fuehrt `mode.group` nach,
+  // solange der Dialog steht. Direkt daraus gelesen bewegte sich der Haken
+  // nach einem Klick nicht — gespeichert wurde, aber es sah aus, als sei
+  // nichts passiert. Liefert der Aufrufer live (AppFrame), folgt der lokale
+  // Wert ueber `useFollowLive`.
+  const livePrimaryOf = (m: GroupDialogMode): string | null =>
+    m.type === "edit" ? ((m.group.data?.primaryColor as string | undefined) ?? null) : null
+  const [primaryColorChoice, setPrimaryColorChoice] = useState<string | null>(() => livePrimaryOf(mode))
+  useFollowLive(livePrimaryOf(mode), primaryColorChoice, setPrimaryColorChoice)
+
   /**
    * Das Ziel haengt am WERT, nicht am Zeitpunkt der Ausfuehrung. Der Saver
    * lebt so lange wie der Dialog; ein eingereihter Vorgang laeuft erst, wenn
@@ -467,12 +653,6 @@ export function GroupDialog({
    * in den Space, der inzwischen offen ist — ein fremder Space bekaeme still
    * die Farbe, die man dem vorigen zugedacht hatte.
    */
-  /**
-   * Laufende Nummer der Farbabsicht. Jede bewusste Wahl und jedes Entfernen
-   * des Bildes zaehlt hoch; ein Zuruecksetzen, dessen Bildfarbe erst danach
-   * eintrifft, erkennt daran, dass es ueberholt ist.
-   */
-  const colorRequestRef = useRef(0)
 
   /**
    * Die EINE Stelle, an der die angezeigte Farbe umgesetzt wird.
@@ -496,20 +676,17 @@ export function GroupDialog({
         // Minimaler PATCH: `null` loescht den Schluessel und stellt damit den
         // Rueckfall her (Spec 04 Regel 3), ohne image/modules zu beruehren.
         onUpdateGroupRef.current(target, { data: { primaryColor: hex } }),
-      (err, failed, lastSaved) => {
+      (err, failed) => {
         const current = modeRef.current
         // Ein Fehlschlag fuer einen anderen Space darf die Anzeige des
         // gerade offenen nicht anfassen — gemeldet wird er trotzdem.
         if (current.type === "edit" && failed.groupId === current.group.id) {
-          // Zurueck auf den zuletzt BESTAETIGTEN Wert — ein Haken auf einer
-          // Farbe, die nie ankam, behauptet eine Aenderung, die es nicht gibt.
-          setPrimaryColorChoice(
-            lastSaved?.groupId === current.group.id
-              ? lastSaved.hex
-              : ((current.group.data?.primaryColor as string | undefined) ?? null),
-          )
+          // Zurueck auf den GELIEFERTEN Wert — ein Haken auf einer Farbe, die
+          // nie ankam, behauptet eine Aenderung, die es nicht gibt. Wie bei
+          // den Modulen: die gelieferte Group ist massgeblich (Regel 3).
+          setPrimaryColorChoice(livePrimaryOf(current))
         }
-        setColorError(err instanceof Error ? err.message : "Farbe konnte nicht gespeichert werden")
+        setColorError(err instanceof Error ? err.message : getI18n().t("groupDialog.colorSaveFailed"))
       },
       () => setColorError(null),
     )
@@ -527,6 +704,8 @@ export function GroupDialog({
   const [surfacesChoice, setSurfacesChoice] = useState<Surfaces | null>(() =>
     mode.type === "edit" ? readSurfaces(mode.group.data?.surfaces) : null,
   )
+  useFollowLive(isEdit ? readRadius(mode.group.data?.radius) : null, radiusChoice, setRadiusChoice)
+  useFollowLive(isEdit ? readSurfaces(mode.group.data?.surfaces) : null, surfacesChoice, setSurfacesChoice)
   const saveLayoutRef = useRef<((v: { groupId: string; patch: Record<string, unknown> }) => void) | null>(null)
   if (!saveLayoutRef.current) {
     saveLayoutRef.current = createLatestWinsSaver<{ groupId: string; patch: Record<string, unknown> }>(
@@ -537,7 +716,7 @@ export function GroupDialog({
           setRadiusChoice(readRadius(current.group.data?.radius))
           setSurfacesChoice(readSurfaces(current.group.data?.surfaces))
         }
-        setColorError(err instanceof Error ? err.message : "Aussehen konnte nicht gespeichert werden")
+        setColorError(err instanceof Error ? err.message : getI18n().t("spaceTheme.saveFailed"))
       },
       () => setColorError(null),
       {
@@ -624,6 +803,36 @@ export function GroupDialog({
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [inviteErrors, setInviteErrors] = useState<Map<string, string>>(new Map())
 
+  /**
+   * Der Schreibweg der App-Abschnitte: flach nach `Group.data` (Spec 04,
+   * Regel 3), die Zusage des Aufrufers unveraendert zurueck. Einen eigenen
+   * Schreibstand haelt der Dialog nicht — angezeigt wird, was der Aufrufer
+   * liefert, damit Dialog und Connector nie zwei Wahrheiten haben.
+   */
+  const patchAppData = useCallback((sectionId: string, patch: Record<string, unknown>): Promise<void> => {
+    const current = modeRef.current
+    if (current.type !== "edit") return Promise.reject(new Error("Kein Space zum Bearbeiten"))
+    return onUpdateGroupRef.current(current.group.id, { data: patch }).then(
+      () => {
+        // Erledigt sind genau die Schluessel, die dieser Patch gespeichert hat.
+        setAppErrors((errors) => {
+          const next = { ...errors }
+          for (const key of Object.keys(patch)) delete next[key]
+          return next
+        })
+      },
+      (err: unknown) => {
+        const message = err instanceof Error ? err.message : getI18n().t("groupDialog.saveFailed")
+        setAppErrors((errors) => {
+          const next = { ...errors }
+          for (const key of Object.keys(patch)) next[key] = { sectionId, message }
+          return next
+        })
+        throw err
+      },
+    )
+  }, [])
+
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
@@ -631,6 +840,7 @@ export function GroupDialog({
         setError(null)
         setModuleError(null)
         setColorError(null)
+        setAppErrors({})
         setInvitingId(null)
         setInvitedIds(new Set())
         setInviteErrors(new Map())
@@ -655,7 +865,7 @@ export function GroupDialog({
       await onCreateGroup(name.trim())
       handleOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Fehler beim Erstellen")
+      setError(err instanceof Error ? err.message : t("groupDialog.createFailed"))
     } finally {
       setSaving(false)
     }
@@ -665,7 +875,7 @@ export function GroupDialog({
     if (!isEdit || !name.trim() || name.trim() === mode.group.name) return
     setError(null)
     onUpdateGroup(mode.group.id, { name: name.trim() }).catch((err) => {
-      setError(err instanceof Error ? err.message : "Fehler beim Umbenennen")
+      setError(err instanceof Error ? err.message : t("groupDialog.renameFailed"))
     })
   }
 
@@ -691,7 +901,7 @@ export function GroupDialog({
         data: { image: dataUrl, primaryColor },
       })
     } catch {
-      setError("Bild konnte nicht verarbeitet werden")
+      setError(t("groupDialog.imageFailed"))
     }
     e.target.value = ""
   }
@@ -719,7 +929,7 @@ export function GroupDialog({
       await onDeleteGroup(mode.group.id)
       handleOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Fehler beim Verlassen")
+      setError(err instanceof Error ? err.message : t("groupDialog.leaveFailed"))
     } finally {
       setSaving(false)
       setConfirmDelete(false)
@@ -734,7 +944,7 @@ export function GroupDialog({
       await onInviteMember(mode.group.id, contactId)
       setInvitedIds((prev) => new Set([...prev, contactId]))
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Einladung fehlgeschlagen"
+      const msg = err instanceof Error ? err.message : t("groupDialog.inviteFailed")
       setInviteErrors((prev) => new Map([...prev, [contactId, msg]]))
     } finally {
       setInvitingId(null)
@@ -747,7 +957,7 @@ export function GroupDialog({
     try {
       await onRemoveMember(mode.group.id, userId)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Fehler beim Entfernen")
+      setError(err instanceof Error ? err.message : t("groupDialog.removeMemberFailed"))
     }
   }
 
@@ -842,17 +1052,23 @@ export function GroupDialog({
     // ist das Ergebnis ueberholt und DARF sie nicht ueberschreiben — sonst
     // sprang die Farbe Augenblicke nach dem Klick von selbst zurueck.
     const ticket = ++colorRequestRef.current
+    const source = groupImage
+    const target = mode.group.id
     const { dominantColor } = await import("../../lib/image-utils")
     // Liefert ein graustufiges Bild keine Farbe, bleibt der Id-Rueckfall.
     // Auch hier der aufgeloeste Pfad: sonst laedt die Farbextraktion unter
     // einem Unterpfad nichts und faellt still auf die Id-Farbe zurueck.
-    const derived = await dominantColor(resolveAssetUrl(groupImage) ?? groupImage).catch(() => null)
+    const derived = await dominantColor(resolveAssetUrl(source) ?? source).catch(() => null)
     if (ticket !== colorRequestRef.current) return
+    // Nur schreiben, wenn Bild und Space noch dieselben sind — sonst gehoerte
+    // die Farbe zu einem Bild, das es hier nicht mehr gibt.
+    const now = modeRef.current
+    if (now.type !== "edit" || now.group.id !== target || groupImageRef.current !== source) return
     applyPrimaryColor(derived)
   }
 
   /** Zahlen am Menue — die Suche aendert sie nicht, sie zaehlen den Bestand. */
-  const sectionCounts: Record<SpaceConfigSectionId, number | undefined> = {
+  const sectionCounts: Partial<Record<string, number | undefined>> = {
     members: members.length || undefined,
     modules: visibleModules.length || undefined,
     invite: undefined,
@@ -873,7 +1089,7 @@ export function GroupDialog({
       <span className="min-w-0 flex-1 truncate text-sm">
         {member.displayName ?? shortName(member.id)}
         {member.id === currentUserId && (
-          <span className="ml-1 text-xs text-muted-foreground">(du)</span>
+          <span className="ml-1 text-xs text-muted-foreground">{t("groupDialog.you")}</span>
         )}
       </span>
       {isCurrentUserAdmin && onRemoveMember && member.id !== currentUserId && (
@@ -881,7 +1097,7 @@ export function GroupDialog({
           variant="ghost"
           size="icon-sm"
           onClick={() => handleRemoveMember(member.id)}
-          title="Mitglied entfernen"
+          title={t("groupDialog.removeMember")}
           className="h-6 w-6 opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
         >
           <UserMinus className="h-3.5 w-3.5 text-muted-foreground" />
@@ -896,15 +1112,15 @@ export function GroupDialog({
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-sm gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
           <div className="px-6 pt-7 pb-5">
-            <DialogTitle className="text-lg font-semibold">Neue Gruppe</DialogTitle>
-            <p className="text-sm text-muted-foreground mt-1">Erstelle eine neue Gruppe fuer dein Team.</p>
+            <DialogTitle className="text-lg font-semibold">{t("groupDialog.newGroup")}</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">{t("groupDialog.newGroupDescription")}</p>
             <div className="mt-4 space-y-1.5">
-              <Label htmlFor="group-name" className="text-xs text-muted-foreground">Name</Label>
+              <Label htmlFor="group-name" className="text-xs text-muted-foreground">{t("groupDialog.name")}</Label>
               <Input
                 id="group-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="z.B. Nachbarschaft, Projekt-Team..."
+                placeholder={t("groupDialog.namePlaceholder")}
                 autoFocus
                 className="h-9"
                 onKeyDown={(e) => {
@@ -919,10 +1135,10 @@ export function GroupDialog({
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-muted/20">
             <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)} disabled={saving}>
-              Abbrechen
+              {t("common.cancel")}
             </Button>
             <Button size="sm" onClick={handleCreate} disabled={saving || !name.trim()}>
-              {saving ? "Erstellen..." : "Erstellen"}
+              {saving ? t("groupDialog.creating") : t("groupDialog.create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -969,7 +1185,7 @@ export function GroupDialog({
           ;(e.currentTarget as HTMLElement | null)?.focus()
         }}
       >
-        <DialogTitle className="sr-only">{isEdit ? mode.group.name : "Neue Gruppe"}</DialogTitle>
+        <DialogTitle className="sr-only">{isEdit ? mode.group.name : t("groupDialog.newGroup")}</DialogTitle>
         {/* Kopf — Bild und Name gehoeren dem Space als Ganzem und bleiben
             ueber den Bereichen stehen, aenderbar egal welcher offen ist.
             Der Stift am Bild ist dauerhaft sichtbar statt erst bei Hover:
@@ -986,7 +1202,7 @@ export function GroupDialog({
                 <img src={resolveAssetUrl(groupImage)} alt={name} className="h-12 w-12 rounded-xl object-cover ring-2 ring-background shadow-sm" />
                 <button
                   onClick={handleImageRemove}
-                  aria-label="Bild entfernen"
+                  aria-label={t("groupDialog.removeImage")}
                   className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
                 >
                   <X className="h-3 w-3" />
@@ -998,7 +1214,7 @@ export function GroupDialog({
               </div>
             )}
             <label
-              title="Bild waehlen"
+              title={t("groupDialog.chooseImage")}
               className="absolute -right-1.5 -bottom-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-border bg-card shadow-sm transition-colors hover:bg-accent"
             >
               <Camera className="h-2.5 w-2.5 text-muted-foreground" />
@@ -1033,9 +1249,9 @@ export function GroupDialog({
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {membersLoading
-                ? "Mitglieder werden geladen…"
-                : `${members.length} ${members.length === 1 ? "Mitglied" : "Mitglieder"}`}
-              {isCurrentUserAdmin && " · du bist Admin"}
+                ? t("groupDialog.membersLoading")
+                : t("groupDialog.memberCount", { count: members.length })}
+              {isCurrentUserAdmin && ` · ${t("groupDialog.youAreAdmin")}`}
             </p>
           </div>
         </div>
@@ -1048,17 +1264,27 @@ export function GroupDialog({
               Alternative — ohne Modulrecht bleibt nur ein Bereich uebrig. */}
           {sections.length > 1 && (
             <nav
-              aria-label="Bereiche"
+              aria-label={t("groupDialog.sections")}
               className="shrink-0 border-b bg-muted/50 p-2.5 sm:w-[190px] sm:border-b-0 sm:border-r dark:bg-muted/20"
             >
-              <div className="flex gap-1 overflow-x-auto sm:flex-col sm:gap-0.5 sm:overflow-visible">
-                {sections.map((section) => {
+              {/* Auf dem Telefon bricht die Leiste um, statt seitlich zu
+                  scrollen: schon mit vier Eintraegen war der letzte
+                  abgeschnitten, und mit App-Abschnitten waeren es mehr
+                  (rls#551). Kein Eintrag darf nur durch Wischen erreichbar sein. */}
+              <div data-section-list className="flex flex-wrap gap-1 sm:flex-col sm:flex-nowrap sm:gap-0.5">
+                {sections.map((section, index) => {
                   const Icon = section.icon
+                  const firstApp = visibleAppSections.length > 0 && index === ownSections.length
                   const active = section.id === activeSection
                   const count = sectionCounts[section.id]
                   return (
+                    <Fragment key={section.id}>
+                    {firstApp && appSectionsTitle && (
+                      <p className="hidden px-2.5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:block">
+                        {appSectionsTitle}
+                      </p>
+                    )}
                     <button
-                      key={section.id}
                       type="button"
                       aria-current={active ? "page" : undefined}
                       onClick={() => setRequestedSection(section.id)}
@@ -1083,6 +1309,7 @@ export function GroupDialog({
                         </span>
                       )}
                     </button>
+                    </Fragment>
                   )
                 })}
               </div>
@@ -1112,7 +1339,7 @@ export function GroupDialog({
                     onClick={() => setRequestedSection("invite")}
                   >
                     <UserPlus className="h-3 w-3" />
-                    <span className="ml-1">Einladen</span>
+                    <span className="ml-1">{t("groupDialog.invite")}</span>
                   </Button>
                 )}
               </div>
@@ -1127,7 +1354,7 @@ export function GroupDialog({
                   <Input
                     value={memberSearch}
                     onChange={(e) => setMemberSearch(e.target.value)}
-                    placeholder="Suchen…"
+                    placeholder={t("common.search")}
                     className="h-8 pl-8 text-xs"
                   />
                 </div>
@@ -1149,23 +1376,23 @@ export function GroupDialog({
                   Stelle. Die Gruppe sagt es jetzt, das Abzeichen entfaellt. */}
               {shownAdmins.length > 0 && (
                 <>
-                  <MemberGroupLabel>Admin</MemberGroupLabel>
+                  <MemberGroupLabel>{t("groupDialog.admins")}</MemberGroupLabel>
                   <div className="space-y-0.5">{shownAdmins.map(renderMemberRow)}</div>
                 </>
               )}
               {shownOthers.length > 0 && (
                 <>
-                  <MemberGroupLabel>{`Mitglieder · ${shownOthers.length}`}</MemberGroupLabel>
+                  <MemberGroupLabel>{t("groupDialog.membersHeading", { count: shownOthers.length })}</MemberGroupLabel>
                   <div className="space-y-0.5">{shownOthers.map(renderMemberRow)}</div>
                 </>
               )}
               {!membersLoading && shownAdmins.length === 0 && shownOthers.length === 0 && (
-                <p className="px-2.5 py-3 text-xs text-muted-foreground">Niemand gefunden.</p>
+                <p className="px-2.5 py-3 text-xs text-muted-foreground">{t("groupDialog.noMemberFound")}</p>
               )}
 
               {justInvitedContacts.length > 0 && (
                 <>
-                  <MemberGroupLabel>{`Eingeladen · ${justInvitedContacts.length}`}</MemberGroupLabel>
+                  <MemberGroupLabel>{t("groupDialog.invitedHeading", { count: justInvitedContacts.length })}</MemberGroupLabel>
                   <div className="space-y-0.5">
                     {justInvitedContacts.map((c) => (
                       <div key={c.id} className="flex items-center gap-2.5 rounded-lg bg-green-500/5 px-2.5 py-1.5">
@@ -1196,14 +1423,14 @@ export function GroupDialog({
                 <Input
                   value={inviteSearch}
                   onChange={(e) => setInviteSearch(e.target.value)}
-                  placeholder="Kontakt suchen…"
+                  placeholder={t("groupDialog.searchContact")}
                   className="h-8 pl-8 text-xs"
                 />
               </div>
 
               {shownInvitable.length > 0 ? (
                 <>
-                  <MemberGroupLabel>{`Kontakte · ${shownInvitable.length}`}</MemberGroupLabel>
+                  <MemberGroupLabel>{t("groupDialog.contactsHeading", { count: shownInvitable.length })}</MemberGroupLabel>
                   <div className="space-y-0.5">
                     {shownInvitable.map((contact) => {
                       const isInviting = invitingId === contact.id
@@ -1232,7 +1459,7 @@ export function GroupDialog({
                               ) : (
                                 <UserPlus className="h-3 w-3" />
                               )}
-                              <span className="ml-1">Einladen</span>
+                              <span className="ml-1">{t("groupDialog.invite")}</span>
                             </Button>
                           </div>
                           {inviteError && (
@@ -1246,10 +1473,10 @@ export function GroupDialog({
               ) : (
                 <p className="px-2.5 py-3 text-xs text-muted-foreground">
                   {invitableContacts.length > 0
-                    ? "Kein Kontakt gefunden."
+                    ? t("groupDialog.noContactFound")
                     : (contacts ?? []).some((c) => c.status === "active")
-                      ? "Alle Kontakte sind bereits Mitglied."
-                      : "Keine verifizierten Kontakte."}
+                      ? t("groupDialog.allContactsAreMembers")
+                      : t("groupDialog.noVerifiedContacts")}
                 </p>
               )}
 
@@ -1260,7 +1487,7 @@ export function GroupDialog({
                   begrenzt — mehr traegt die Quelle nicht. */}
               {justInvitedContacts.length > 0 && (
                 <>
-                  <MemberGroupLabel>{`Von dir eingeladen · ${justInvitedContacts.length}`}</MemberGroupLabel>
+                  <MemberGroupLabel>{t("groupDialog.invitedByYouHeading", { count: justInvitedContacts.length })}</MemberGroupLabel>
                   <div className="space-y-0.5">
                     {justInvitedContacts.map((c) => (
                       <div key={c.id} className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5">
@@ -1272,9 +1499,9 @@ export function GroupDialog({
                         </Avatar>
                         <span className="min-w-0 flex-1 truncate text-sm">
                           {c.name ?? shortName(c.id)}
-                          <span className="ml-1 text-xs text-muted-foreground">gerade eben</span>
+                          <span className="ml-1 text-xs text-muted-foreground">{t("time.justNow")}</span>
                         </span>
-                        <span className="text-xs font-semibold text-primary">Offen</span>
+                        <span className="text-xs font-semibold text-primary">{t("groupDialog.pending")}</span>
                       </div>
                     ))}
                   </div>
@@ -1295,20 +1522,20 @@ export function GroupDialog({
                   und Kontrast bleiben der Feineinstellung vorbehalten. */}
               <div className="space-y-4 px-2.5 py-2">
                 <section className="space-y-2">
-                  <ThemeSectionLabel>Akzentfarbe</ThemeSectionLabel>
+                  <ThemeSectionLabel>{t("spaceTheme.accent")}</ThemeSectionLabel>
                   <AccentGrid
                     effectiveColor={effectiveColor}
                     onPick={(hex) => applyPrimaryColor(hex)}
                     customActive={currentSwatch === "custom"}
                     onCustom={() => {}}
                     customAsLabel
-                    swatchLabel={(s) => `Primärfarbe ${s.hex}`}
+                    swatchLabel={(s) => t("groupDialog.primaryColorSwatch", { hex: s.hex })}
                     leading={imageColor ? (
                       <>
                         <button
                           type="button"
-                          title="Farbe aus dem Bild"
-                          aria-label="Farbe aus dem Bild"
+                          title={t("groupDialog.imageColor")}
+                          aria-label={t("groupDialog.imageColor")}
                           aria-pressed={currentSwatch === "suggestion"}
                           onClick={() => { void resetPrimaryColor() }}
                           style={{ backgroundColor: imageColor }}
@@ -1332,7 +1559,7 @@ export function GroupDialog({
                       // Farbwelt neben der Palette.
                       <input
                         type="color"
-                        aria-label="Eigene Farbe"
+                        aria-label={t("spaceTheme.customColor")}
                         value={effectiveColor}
                         onChange={(e) => applyPrimaryColor(e.target.value)}
                         className="sr-only"
@@ -1342,12 +1569,12 @@ export function GroupDialog({
                 </section>
 
                 <section className="space-y-2">
-                  <ThemeSectionLabel>Radius</ThemeSectionLabel>
+                  <ThemeSectionLabel>{t("spaceTheme.radius")}</ThemeSectionLabel>
                   <RadiusTiles value={radiusChoice ?? instanceTheme().radius ?? "medium"} onChange={applyRadius} />
                 </section>
 
                 <section className="space-y-2">
-                  <ThemeSectionLabel>Panel-Hintergrund</ThemeSectionLabel>
+                  <ThemeSectionLabel>{t("spaceTheme.panelBackground")}</ThemeSectionLabel>
                   <SurfacesToggle value={surfacesChoice ?? instanceTheme().surfaces ?? "translucent"} onChange={applySurfaces} />
                 </section>
 
@@ -1364,7 +1591,7 @@ export function GroupDialog({
                     className="flex items-center gap-1.5 text-sm text-primary transition-colors hover:underline"
                   >
                     <SlidersHorizontal className="h-3.5 w-3.5" />
-                    Feineinstellung öffnen
+                    {t("groupDialog.openFineTuning")}
                   </button>
                 )}
 
@@ -1375,7 +1602,7 @@ export function GroupDialog({
                   <div>
                     <Button variant="outline" size="sm" onClick={() => { resetLayout(); void resetPrimaryColor() }}>
                       <RotateCcw className="h-3.5 w-3.5" />
-                      Zurücksetzen
+                      {t("common.reset")}
                     </Button>
                   </div>
                 )}
@@ -1392,7 +1619,7 @@ export function GroupDialog({
               would lock out keyboard and screen-reader users. */}
           {activeSection === "modules" && isCurrentUserAdmin && (
             <>
-              <Label className="text-xs text-muted-foreground">Ziehen zum Sortieren</Label>
+              <Label className="text-xs text-muted-foreground">{t("groupDialog.dragToSort")}</Label>
               <div className="mt-2 space-y-0.5" onDragOver={(e) => e.preventDefault()} onDrop={handleModuleDrop}>
                 {visibleModules.map((id, index) => {
                   const mod = getModule(id)!
@@ -1423,11 +1650,11 @@ export function GroupDialog({
                     >
                       <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
                       <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <span className="flex-1 text-sm">{mod.label}</span>
+                      <span className="flex-1 text-sm">{moduleLabel(getI18n(), mod)}</span>
                       {/* Keyboard path — appears only while focused (see keyboardRow). */}
                       <button
                         type="button"
-                        aria-label={`${mod.label} nach oben`}
+                        aria-label={t("groupDialog.moveUp", { module: moduleLabel(getI18n(), mod) })}
                         disabled={index === 0}
                         onClick={() => applyVisibleOrder(moveModule(visibleModules, id, -1))}
                         onFocus={() => setKeyboardRow(id)}
@@ -1441,7 +1668,7 @@ export function GroupDialog({
                       </button>
                       <button
                         type="button"
-                        aria-label={`${mod.label} nach unten`}
+                        aria-label={t("groupDialog.moveDown", { module: moduleLabel(getI18n(), mod) })}
                         disabled={index === visibleModules.length - 1}
                         onClick={() => applyVisibleOrder(moveModule(visibleModules, id, 1))}
                         onFocus={() => setKeyboardRow(id)}
@@ -1455,7 +1682,7 @@ export function GroupDialog({
                       </button>
                       <button
                         type="button"
-                        aria-label={`${mod.label} deaktivieren`}
+                        aria-label={t("groupDialog.deactivate", { module: moduleLabel(getI18n(), mod) })}
                         disabled={isOnly}
                         onClick={() => applyVisibleOrder(visibleModules.filter((m) => m !== id))}
                         className="rounded p-1 text-muted-foreground hover:text-destructive disabled:opacity-30"
@@ -1468,7 +1695,7 @@ export function GroupDialog({
               </div>
               {getModules().some((m) => !activeModules.includes(m.id)) && (
                 <div className="mt-2">
-                  <Label className="text-xs text-muted-foreground">Verfügbar</Label>
+                  <Label className="text-xs text-muted-foreground">{t("groupDialog.available")}</Label>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {getModules().filter((m) => !activeModules.includes(m.id)).map((mod) => {
                       const Icon = mod.icon
@@ -1480,7 +1707,7 @@ export function GroupDialog({
                           className="flex items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground hover:border-primary hover:text-foreground"
                         >
                           <Icon className="h-3 w-3" />
-                          {mod.label} +
+                          {moduleLabel(getI18n(), mod)} +
                         </button>
                       )
                     })}
@@ -1488,6 +1715,21 @@ export function GroupDialog({
                 </div>
               )}
             </>
+          )}
+          {activeAppSection && isEdit && (
+            // Je Abschnitt eine eigene Instanz: `render` darf Hooks nutzen,
+            // und zwei Abschnitte teilten sonst deren Zustand.
+            <ErrorBoundary key={activeAppSection.id} label={activeAppSection.label} resetKeys={[mode.group.id]}>
+              <AppSectionHost
+                section={activeAppSection}
+                group={mode.group}
+                canEdit={isCurrentUserAdmin}
+                patchData={(patch) => patchAppData(activeAppSection.id, patch)}
+              />
+              {[...new Set(Object.values(appErrors).filter((e) => e.sectionId === activeAppSection.id).map((e) => e.message))].map((message) => (
+                <p key={message} role="alert" className="mt-3 text-xs text-destructive">{message}</p>
+              ))}
+            </ErrorBoundary>
           )}
           </div>
         </div>
@@ -1517,10 +1759,10 @@ export function GroupDialog({
             className="mr-auto"
           >
             <LogOut className="h-3.5 w-3.5 mr-1" />
-            {confirmDelete ? "Wirklich verlassen?" : "Verlassen"}
+            {confirmDelete ? t("groupDialog.confirmLeave") : t("groupDialog.leave")}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)}>
-            Schliessen
+            {t("common.close")}
           </Button>
         </DialogFooter>
       </DialogContent>

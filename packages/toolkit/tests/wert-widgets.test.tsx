@@ -9,7 +9,7 @@ import {
   type Item,
   type TypeManifestEntry,
   type User,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 import { ConnectorProvider } from "../src/hooks/connector-context"
 import {

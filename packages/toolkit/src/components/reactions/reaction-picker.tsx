@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { cn } from "@/lib/utils"
-import { REACTION_EMOJIS, REACTION_NAMES } from "./reaction-constants"
+import { REACTION_EMOJIS, reactionName } from "./reaction-constants"
 import { FLOATING_CHOICE_Z_INDEX } from "../../lib/z-layers"
 import { createPortal } from "react-dom"
+import { getI18n, useI18n } from "@/i18n"
 
 export interface ReactionPickerProps {
   /** Callback when an emoji is selected. */
@@ -22,6 +23,7 @@ export interface ReactionPickerProps {
  * Positions itself near the anchor element, flipping if needed to fit on screen.
  */
 export function ReactionPicker({ onSelect, onClose, anchorRef, className }: ReactionPickerProps) {
+  const { t } = useI18n()
   const pickerRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
 
@@ -103,6 +105,7 @@ export function ReactionPicker({ onSelect, onClose, anchorRef, className }: Reac
   // nichts. Am Body haengend meint `fixed` wieder den Bildschirm.
   return createPortal(
     <>
+      {/* i18n-exempt: CSS-Keyframes, kein Oberflächentext */}
       <style>{`
         @keyframes reaction-picker-in {
           from {
@@ -118,7 +121,7 @@ export function ReactionPicker({ onSelect, onClose, anchorRef, className }: Reac
       <div
         ref={pickerRef}
         role="dialog"
-        aria-label="Choose a reaction"
+        aria-label={t("reactions.choose")}
         className={cn(
           // Ueber dem Detail-Panel: Der Waehler gehoert zu dem Knopf, der ihn
           // geoeffnet hat — und der steht oft IM Panel. Siehe z-layers.
@@ -136,7 +139,7 @@ export function ReactionPicker({ onSelect, onClose, anchorRef, className }: Reac
           <button
             key={emoji}
             type="button"
-            aria-label={REACTION_NAMES[emoji] ?? emoji}
+            aria-label={reactionName(getI18n(), emoji)}
             className="flex items-center justify-center h-9 w-9 rounded-md text-lg hover:bg-accent transition-colors cursor-pointer"
             onClick={() => {
               onSelect(emoji)

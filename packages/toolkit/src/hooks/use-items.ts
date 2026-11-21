@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, startTransition } from "react"
-import type { Item, ItemFilter } from "@real-life-stack/data-interface"
-import { matchesFilter } from "@real-life-stack/data-interface"
+import type { Item, ItemFilter } from "@real-life/data-interface"
+import { matchesFilter } from "@real-life/data-interface"
 import { useConnector } from "./connector-context"
 import { useDraftItem } from "./use-draft-item"
 import { useInitialSync } from "./use-initial-sync"

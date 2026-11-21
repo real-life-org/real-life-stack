@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import type { RlsSpaceDoc, SerializedItem } from "../src/types.js"
-import type { CreateItemInput, Item, ItemFilter } from "@real-life-stack/data-interface"
+import type { CreateItemInput, Item, ItemFilter } from "@real-life/data-interface"
 
 /**
  * We can't easily instantiate a real WotConnector in unit tests because
@@ -17,7 +17,7 @@ import type { CreateItemInput, Item, ItemFilter } from "@real-life-stack/data-in
  */
 
 import { serializeItem, deserializeItem } from "../src/serialization.js"
-import { matchesFilter } from "@real-life-stack/data-interface"
+import { matchesFilter } from "@real-life/data-interface"
 
 // --- Fake SpaceHandle simulating the CRDT doc layer ---
 

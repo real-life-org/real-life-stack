@@ -12,27 +12,32 @@ import type { OptionTone } from "../../lib/field-values"
  *
  * Eine `.tsx`-Datei mit wörtlichen Klassen, damit die Apps sie scannen.
  */
-const TONES: Record<OptionTone, { dot: string; soft: string }> = {
+const TONES: Record<OptionTone, { dot: string; soft: string; text: string }> = {
   neutral: {
     dot: "bg-muted-foreground",
     soft: "border-muted-foreground/60 bg-muted text-foreground",
+    text: "text-muted-foreground",
   },
   warning: {
     dot: "bg-warning",
     soft: "border-[color-mix(in_oklch,var(--warning),black_30%)] bg-warning/12 text-[color-mix(in_oklch,var(--warning),black_35%)] dark:border-warning dark:bg-warning/20 dark:text-[color-mix(in_oklch,var(--warning),white_25%)]",
+    text: "text-[color-mix(in_oklch,var(--warning),black_35%)] dark:text-[color-mix(in_oklch,var(--warning),white_25%)]",
   },
   success: {
     dot: "bg-success",
     soft: "border-[color-mix(in_oklch,var(--success),black_25%)] bg-success/12 text-[color-mix(in_oklch,var(--success),black_30%)] dark:border-success dark:bg-success/20 dark:text-[color-mix(in_oklch,var(--success),white_25%)]",
+    text: "text-[color-mix(in_oklch,var(--success),black_30%)] dark:text-[color-mix(in_oklch,var(--success),white_25%)]",
   },
   danger: {
     dot: "bg-destructive",
     // Schrift abgedunkelt: `text-destructive` auf Pastell bleibt unter 4,5:1 (Codex R5).
     soft: "border-destructive bg-destructive/10 text-[color-mix(in_oklch,var(--destructive),black_20%)] dark:bg-destructive/25 dark:text-[color-mix(in_oklch,var(--destructive),white_40%)]",
+    text: "text-[color-mix(in_oklch,var(--destructive),black_20%)] dark:text-[color-mix(in_oklch,var(--destructive),white_40%)]",
   },
   info: {
     dot: "bg-info",
     soft: "border-info bg-info/10 text-[color-mix(in_oklch,var(--info),black_25%)] dark:bg-info/20 dark:text-[color-mix(in_oklch,var(--info),white_20%)]",
+    text: "text-[color-mix(in_oklch,var(--info),black_25%)] dark:text-[color-mix(in_oklch,var(--info),white_20%)]",
   },
 }
 
@@ -40,6 +45,15 @@ const TONES: Record<OptionTone, { dot: string; soft: string }> = {
 export function toneSoftClass(tone: OptionTone | "type", typeTone?: string): string {
   if (tone === "type") return cn("border-current/40", typeTone ?? TONES.neutral.soft)
   return TONES[tone].soft
+}
+
+/**
+ * Klassen eines Worts im Ton, ohne Grund (Zusatz einer Listenzeile, Regel 22):
+ * die Schrift wie im Pastell-Zustand. `"type"`: normale Schrift, der Punkt
+ * davor trägt die Typfarbe.
+ */
+export function toneTextClass(tone: OptionTone | "type"): string {
+  return tone === "type" ? "text-foreground" : TONES[tone].text
 }
 
 /** Der 7-px-Punkt im kräftigen Ton. */

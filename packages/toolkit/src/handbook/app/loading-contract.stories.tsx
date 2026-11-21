@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { List } from "lucide-react"
-import { itemTypes, registerModuleHint } from "@real-life-stack/data-interface"
+import { itemTypes, registerModuleHint } from "@real-life/data-interface"
 
 import { hostFiltersFor, useModuleHost } from "../../components/host/module-host"
 import type { ModuleEntry, ModuleViewProps } from "../../lib/module-register"

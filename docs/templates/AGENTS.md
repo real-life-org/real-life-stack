@@ -18,13 +18,13 @@ The app never talks to a backend. It renders the toolkit's frame; modules ask ho
 
 Status: packages are `0.x` — the API is usable but still moving. Pin exact versions.
 
-Requires `@real-life-stack/toolkit` **0.2.0 or newer**: the frame (`RoutedAppFrame`, subpath `/router`) and the seven modules arrived with that release.
+Requires `@real-life/toolkit` **0.2.0 or newer**: the frame (`RoutedAppFrame`, subpath `/router`) and the seven modules arrived with that release.
 
 ## Install
 
 ```bash
 npm install react react-dom react-router-dom maplibre-gl
-npm install --save-exact @real-life-stack/data-interface @real-life-stack/toolkit @real-life-stack/mock-connector
+npm install --save-exact @real-life/data-interface @real-life/toolkit @real-life/mock-connector
 npm install --save-dev vite @vitejs/plugin-react tailwindcss @tailwindcss/vite typescript
 ```
 
@@ -32,10 +32,10 @@ Pick one connector:
 
 | Connector | Package | Use when |
 |---|---|---|
-| Mock | `@real-life-stack/mock-connector` | Prototyping, demos, seed data in memory. Start here. |
-| Local | `@real-life-stack/local-connector` | Offline-first, single device, persistent. |
-| Supabase | `@real-life-stack/supabase-connector` | Central backend on Supabase (auth, rows, realtime). |
-| Web of Trust | `@real-life-stack/wot-connector` | Decentralized, end-to-end encrypted groups, DID identity. |
+| Mock | `@real-life/mock-connector` | Prototyping, demos, seed data in memory. Start here. |
+| Local | `@real-life/local-connector` | Offline-first, single device, persistent. |
+| Supabase | `@real-life/supabase-connector` | Central backend on Supabase (auth, rows, realtime). |
+| Web of Trust | `@real-life/wot-connector` | Decentralized, end-to-end encrypted groups, DID identity. |
 
 The UI code is identical for all of them. Build against the mock connector first; switch later.
 
@@ -47,7 +47,7 @@ The UI code is identical for all of them. Build against the mock connector first
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { createBrowserRouter, RouterProvider } from "react-router-dom"
-import { MockConnector } from "@real-life-stack/mock-connector"
+import { MockConnector } from "@real-life/mock-connector"
 
 import { App } from "./App"
 import "./index.css"
@@ -83,10 +83,10 @@ void start()
 
 ```tsx
 // src/App.tsx — the frame
-import type { DataInterface } from "@real-life-stack/data-interface"
-import { ConnectorProvider } from "@real-life-stack/toolkit"
-import { MapLibreAdapterProvider } from "@real-life-stack/toolkit/maplibre"
-import { RoutedAppFrame } from "@real-life-stack/toolkit/router"
+import type { DataInterface } from "@real-life/data-interface"
+import { ConnectorProvider } from "@real-life/toolkit"
+import { MapLibreAdapterProvider } from "@real-life/toolkit/maplibre"
+import { RoutedAppFrame } from "@real-life/toolkit/router"
 
 // Die App stellt drei Dinge: den Connector, die Karten-Engine und den Rahmen.
 // Kopfzeile, Tabs, Panel, Erstellen, Detail und alle Module kommen aus dem Toolkit.
@@ -106,8 +106,8 @@ Styles (`src/index.css`): Tailwind, the toolkit's tokens, and the toolkit's buil
 
 ```css
 @import "tailwindcss";
-@import "@real-life-stack/toolkit/styles/globals.css";
-@source "../node_modules/@real-life-stack/toolkit/dist";
+@import "@real-life/toolkit/styles/globals.css";
+@source "../node_modules/@real-life/toolkit/dist";
 @custom-variant dark (&:is(.dark *));
 ```
 
@@ -127,7 +127,7 @@ Everything is an **Item**: a person, place, project, event, task, post, offer. I
 Connectors differ. Feature-detect instead of hardcoding:
 
 ```ts
-import { isWritable, hasGroups, isAuthenticatable } from "@real-life-stack/data-interface"
+import { isWritable, hasGroups, isAuthenticatable } from "@real-life/data-interface"
 if (isWritable(connector)) { /* show create/edit UI */ }
 ```
 
@@ -140,11 +140,11 @@ Inside the frame this is done for you: reading hooks answer empty without a capa
 3. **One dialog family.** Detail, composer and confirm come from the toolkit; variants via props and capabilities, never app-side forks.
 4. **Cross-cutting UX belongs to the toolkit.** Empty states, loading, error boundaries, permission hints: check the toolkit first; if it is missing, that is an upstream issue, not an app-local workaround.
 5. **Type-driven rendering.** The item type decides how it renders. Register or extend type presentation instead of `if (item.type === ...)` chains.
-6. Styling: import `@real-life-stack/toolkit/styles/globals.css` once; use the tokens; do not restyle toolkit internals.
+6. Styling: import `@real-life/toolkit/styles/globals.css` once; use the tokens; do not restyle toolkit internals.
 
 ## Source of truth
 
-- Types in `@real-life-stack/data-interface` are the precise contract (English).
+- Types in `@real-life/data-interface` are the precise contract (English).
 - Normative spec (German): [spec index](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/README.md). When this file and the spec disagree, the spec wins.
 - Glossary: [glossary.md](https://github.com/real-life-org/real-life-stack/blob/master/docs/spec/glossary.md).
 

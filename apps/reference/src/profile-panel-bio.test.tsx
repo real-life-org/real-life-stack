@@ -16,7 +16,7 @@ vi.stubGlobal("matchMedia", (query: string) => ({
   onchange: null,
   dispatchEvent: () => false,
 }))
-import type { DataInterface, Item, User } from "@real-life-stack/data-interface"
+import type { DataInterface, Item, User } from "@real-life/data-interface"
 import { ProfilePanelHost } from "./App"
 
 const ME: User = { id: "user-me", displayName: "Anton" }
@@ -120,7 +120,7 @@ describe("ProfilePanelHost — eigene Bio kommt aus dem Profil-Item", () => {
     await act(async () => { await Promise.resolve() })
     // Panel steht (kein Crash): das Edit-Formular ist gerendert und der Name
     // kommt aus dem User-Objekt (der rejectende Read wird nur geloggt).
-    expect(document.body.textContent).toContain("Ueber mich")
+    expect(document.body.textContent).toContain("About me")
     expect([...document.querySelectorAll("input")].some((el) => el.value === "Anton")).toBe(true)
   })
 })

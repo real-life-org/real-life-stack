@@ -8,6 +8,7 @@ import { Check } from "lucide-react"
 
 import { accentSwatches, RADIUS_ORDER, RADIUS_STEPS, type RadiusStep, type Surfaces } from "../../lib/space-theme"
 import { cn, getReadableTextColor } from "../../lib/utils"
+import { useI18n } from "@/i18n"
 
 /** Kapitaelchen-Ueberschrift, wie im Entwurf ("AKZENTFARBE"). */
 export function ThemeSectionLabel({ children }: { children: React.ReactNode }) {
@@ -37,15 +38,16 @@ export function AccentGrid({
   onPick,
   customActive,
   onCustom,
-  swatchLabel = (s) => `Accent ${s.name}`,
+  swatchLabel,
   leading,
   customChildren,
   customAsLabel,
 }: AccentGridProps) {
+  const { t } = useI18n()
   const wanted = effectiveColor.toLowerCase()
   const Custom = (customAsLabel ? "label" : "button") as "label" | "button"
   return (
-    <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Akzentfarbe">
+    <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={t("spaceTheme.accent")}>
       {leading}
       {accentSwatches("light").map((s) => {
         const active = !customActive && s.hex.toLowerCase() === wanted
@@ -55,7 +57,7 @@ export function AccentGrid({
             type="button"
             role="radio"
             aria-checked={active}
-            aria-label={swatchLabel(s)}
+            aria-label={swatchLabel ? swatchLabel(s) : t("spaceTheme.accentScale", { name: s.name })}
             title={s.name}
             onClick={() => onPick(s.hex)}
             style={{ backgroundColor: s.hex }}
@@ -73,8 +75,8 @@ export function AccentGrid({
       <Custom
         {...(customAsLabel
           ? {}
-          : { type: "button" as const, onClick: onCustom, role: "radio", "aria-checked": customActive, "aria-label": "Eigene Farbe" })}
-        title="Eigene Farbe"
+          : { type: "button" as const, onClick: onCustom, role: "radio", "aria-checked": customActive, "aria-label": t("spaceTheme.customColor") })}
+        title={t("spaceTheme.customColor")}
         style={customActive ? { backgroundColor: effectiveColor } : undefined}
         className={cn(
           "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-primary",
@@ -96,15 +98,16 @@ export function AccentGrid({
 
 /** Fuenf Kacheln mit der Ecke, wie im Radix-Playground. */
 export function RadiusTiles({ value, onChange }: { value: RadiusStep; onChange: (step: RadiusStep) => void }) {
+  const { t } = useI18n()
   return (
-    <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="Rundung">
+    <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label={t("spaceTheme.rounding")}>
       {RADIUS_ORDER.map((step, i) => (
         <button
           key={step}
           type="button"
           role="radio"
           aria-checked={value === step}
-          aria-label={`Rundung ${step}`}
+          aria-label={t("spaceTheme.roundingStep", { step })}
           onClick={() => onChange(step)}
           className={cn(
             "flex flex-col items-center gap-1 rounded-md border p-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground",
@@ -140,15 +143,16 @@ function SurfaceIcon({ kind }: { kind: Surfaces }) {
 
 /** Solid / Translucent — Radix' panelBackground. */
 export function SurfacesToggle({ value, onChange }: { value: Surfaces; onChange: (kind: Surfaces) => void }) {
+  const { t } = useI18n()
   return (
-    <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Flächen">
+    <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label={t("spaceTheme.surfaces")}>
       {([["solid", "Solid"], ["translucent", "Translucent"]] as const).map(([kind, label]) => (
         <button
           key={kind}
           type="button"
           role="radio"
           aria-checked={value === kind}
-          aria-label={`Flächen ${kind}`}
+          aria-label={t("spaceTheme.surfacesKind", { kind })}
           onClick={() => onChange(kind)}
           className={cn(
             "flex h-8 items-center justify-center gap-1.5 rounded-md border text-xs text-muted-foreground transition-colors hover:text-foreground",

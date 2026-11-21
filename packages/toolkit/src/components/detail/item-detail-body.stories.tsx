@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { ItemDetailBody } from "./item-detail-body"
 import { ItemDetailActions } from "./item-detail-actions"

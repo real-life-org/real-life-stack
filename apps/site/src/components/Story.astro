@@ -14,12 +14,13 @@ const { id, title, height = 560, frame = 'desktop' } = Astro.props
 const base = storybookBase()
 const url = storyFrameUrl(id)
 // Nur die englischen Seiten sind uebersetzt; alle anderen Sprachen zeigen die deutsche Seite und bekommen die deutsche Unterschrift.
+// Die eingebettete App spricht dieselbe Sprache wie der Inhalt (`data-lang`), nicht die des <html>-Elements.
 const en = Astro.currentLocale === 'en'
 const t = en
   ? { open: 'Open in Storybook ↗', note: 'The sample data is fictional. Changes last only for this session.', desktop: 'Desktop', phone: 'Phone' }
   : { open: 'In Storybook öffnen ↗', note: 'Die Beispieldaten sind fiktiv. Änderungen bleiben nur für diese Sitzung.', desktop: 'Desktop', phone: 'Handy' }
 ---
-<figure class="story-example not-content" data-frame={frame} data-height={height}>
+<figure class="story-example not-content" data-frame={frame} data-height={height} data-lang={en ? 'en' : 'de'}>
   <figcaption>
     <span class="story-frames" role="group">
       <button type="button" data-frame="desktop" aria-pressed={frame === 'desktop'}>{t.desktop}</button>

@@ -9,7 +9,7 @@
  * which never construct a Leaflet map are not forced to install or bundle
  * `leaflet`:
  *
- *   import { LeafletMapAdapter } from "@real-life-stack/toolkit/leaflet"
+ *   import { LeafletMapAdapter } from "@real-life/toolkit/leaflet"
  */
 
 export type {

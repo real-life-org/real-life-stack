@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { format, parseISO, isSameDay, isValid } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Calendar, MapPin, Clock } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@real-life-stack/toolkit';
+import { Avatar, AvatarFallback, AvatarImage } from '@real-life/toolkit';
 
 const ListView = ({ events, onEventClick, selectedEventId }) => {
   // Group events by date

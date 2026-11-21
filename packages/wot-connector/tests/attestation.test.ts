@@ -242,7 +242,7 @@ describe("Sync-003 attestation inbox wire", () => {
   })
 
   it("derives the verification marker from the verified VC type", async () => {
-    const verification = await new VerificationWorkflow({ crypto: protocolCrypto })
+    const verification = await new VerificationWorkflow()
       .createVerificationAttestation({
         issuer: alice,
         subjectDid: bob.getDid(),
@@ -260,12 +260,10 @@ describe("Sync-003 attestation inbox wire", () => {
     const nonce = "550e8400-e29b-41d4-a716-446655440000"
     let now = new Date("2026-07-16T10:00:00Z")
     const ownerWorkflow = new VerificationWorkflow({
-      crypto: protocolCrypto,
       randomId: () => nonce,
       now: () => now,
     })
     const scannerWorkflow = new VerificationWorkflow({
-      crypto: protocolCrypto,
       now: () => now,
     })
 
@@ -302,7 +300,6 @@ describe("Sync-003 attestation inbox wire", () => {
 
     const expiredNonce = "123e4567-e89b-42d3-a456-426614174000"
     const expiredWorkflow = new VerificationWorkflow({
-      crypto: protocolCrypto,
       randomId: () => expiredNonce,
       now: () => now,
     })

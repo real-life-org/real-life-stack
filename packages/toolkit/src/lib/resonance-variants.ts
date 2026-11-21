@@ -1,4 +1,4 @@
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 /**
  * Varianten im Resonanzmodul (docs/spec/modules/resonance.md → Varianten).

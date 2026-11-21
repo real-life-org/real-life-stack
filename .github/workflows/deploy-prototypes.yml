@@ -59,7 +59,7 @@ jobs:
       # von Hand aufgezaehlt. Die fruehere Liste nannte data-interface,
       # toolkit und drei Connectoren — als `supabase-connector` dazukam
       # (#238), trug sie niemand nach, und der Deploy brach ab dem naechsten
-      # Push ab: `Cannot find module '@real-life-stack/supabase-connector'`.
+      # Push ab: `Cannot find module '@real-life/supabase-connector'`.
       # Eine Handliste driftet lautlos; `^...` kann das nicht.
       - name: Build workspace dependencies
         run: pnpm --filter "reference^..." build

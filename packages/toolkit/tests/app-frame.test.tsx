@@ -2,8 +2,9 @@
 import { act, createElement, type ReactNode } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { MockConnector } from "@real-life-stack/mock-connector"
-import type { DataInterface } from "@real-life-stack/data-interface"
+import { MockConnector } from "@real-life/mock-connector"
+import type { DataInterface } from "@real-life/data-interface"
+import { Sparkles } from "lucide-react"
 
 import { AppFrame, type FrameRouting } from "../src/components/frame/app-frame"
 import { useCreate } from "../src/components/host/create-host"
@@ -63,6 +64,7 @@ async function rendere(node: ReactNode) {
     root.render(createElement(ConnectorProvider, { connector }, createElement(MemoryFocusProvider, { module: "feed", scope: "garten" }, node)))
   })
   await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
+  return connector
 }
 const texte = () => host.textContent ?? ""
 const knoepfe = () => [...host.querySelectorAll("button, [role=tab], a")].map((el) => el.textContent?.trim() ?? "")
@@ -98,6 +100,55 @@ describe("AppFrame", () => {
     const zurueck = [...host.querySelectorAll("button")].find((b) => b.textContent?.includes("Zurück"))
     await act(async () => { zurueck!.click() })
     expect(goHome).toHaveBeenCalledTimes(1)
+  })
+
+  it("traegt den Umschalter hell/dunkel aus dem Toolkit — beide Signale (rls#568)", async () => {
+    localStorage.clear()
+    document.documentElement.classList.remove("dark")
+    await rendere(createElement(AppFrame, { routing: routing() }))
+    const schalter = host.querySelector("[aria-label='Dunkles Design']") as HTMLButtonElement
+    expect(schalter, "Umschalter in der Kopfzeile").toBeTruthy()
+    await act(async () => { schalter.click() })
+    expect(document.documentElement.classList.contains("dark")).toBe(true)
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark")
+    document.documentElement.classList.remove("dark")
+    document.documentElement.removeAttribute("data-theme")
+    localStorage.clear()
+  })
+
+  it("reicht App-Abschnitte an den Space-Dialog durch (rls#551)", async () => {
+    const spaceSections = [{ id: "traum", label: "Traum", icon: Sparkles, render: () => createElement("p", { "data-testid": "traum" }, "Traum-Flaeche") }]
+    await rendere(createElement(AppFrame, { routing: routing(), spaceSections, spaceSectionsTitle: "Karabirrdt" }))
+    const switcher = host.querySelector("[data-slot='dropdown-menu-trigger'], [aria-haspopup='menu']") as HTMLElement
+    await act(async () => {
+      switcher.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 }))
+      switcher.click()
+    })
+    const bearbeiten = document.querySelector("[aria-label='Gartenprojekt bearbeiten']") as HTMLElement
+    await act(async () => { bearbeiten.click() })
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
+    const traum = [...document.querySelectorAll("nav button")].find((b) => b.textContent?.startsWith("Traum")) as HTMLElement
+    expect(traum, "App-Abschnitt im Menue").toBeTruthy()
+    await act(async () => { traum.click() })
+    expect(document.querySelector("[data-testid='traum']")?.textContent).toBe("Traum-Flaeche")
+  })
+
+  it("reicht die Group live in den offenen Space-Dialog: Daten und Name aus dem Connector kommen an", async () => {
+    const spaceSections = [{ id: "traum", label: "Traum", icon: Sparkles, render: ({ group }: { group: { data?: Record<string, unknown> } }) => createElement("p", { "data-testid": "traum" }, String(group.data?.dream ?? "—")) }]
+    const connector = await rendere(createElement(AppFrame, { routing: routing(), spaceSections }))
+    const switcher = host.querySelector("[data-slot='dropdown-menu-trigger'], [aria-haspopup='menu']") as HTMLElement
+    await act(async () => {
+      switcher.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 }))
+      switcher.click()
+    })
+    await act(async () => { (document.querySelector("[aria-label='Gartenprojekt bearbeiten']") as HTMLElement).click() })
+    const traum = [...document.querySelectorAll("nav button")].find((b) => b.textContent?.startsWith("Traum")) as HTMLElement
+    await act(async () => { traum.click() })
+    expect(document.querySelector("[data-testid='traum']")?.textContent).toBe("—")
+    await act(async () => { await connector.updateGroup("garten", { name: "Garten Nord", data: { dream: "live" } }) })
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)) })
+    expect(document.querySelector("[data-testid='traum']")?.textContent, "Daten live").toBe("live")
+    expect((document.querySelector("[role=dialog] input:not([type=file])") as HTMLInputElement).value, "Name live").toBe("Garten Nord")
   })
 
   it("rendert App-Eigenes in der Kopfzeile und im Baum", async () => {

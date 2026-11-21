@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils"
 import type { ModuleEntry } from "@/lib/module-register"
 import { MoreHorizontal } from "lucide-react"
+import { useI18n } from "@/i18n"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +48,7 @@ export function BottomNav({
   onItemChange,
   className,
 }: BottomNavProps) {
+  const { t } = useI18n()
   const { visibleItems, overflowItems } = bottomNavItems(items, activeItem)
   return (
     <nav
@@ -81,11 +83,11 @@ export function BottomNav({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                aria-label="Weitere Navigation"
+                aria-label={t("bottomNav.moreLabel")}
                 className="flex flex-col items-center gap-1 rounded-md px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 <MoreHorizontal className="h-5 w-5" />
-                <span>Mehr</span>
+                <span>{t("bottomNav.more")}</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="end">

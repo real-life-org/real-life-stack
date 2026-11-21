@@ -27,7 +27,7 @@ import type {
   RelationRecordUpdate,
   RelationRecordWriterCapable,
   Source,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 import {
   applyGroupDataPatch,
   withEditStamp,
@@ -49,8 +49,8 @@ import {
   findRelatedItems,
   canonicalItem,
   matchesFilter,
-} from "@real-life-stack/data-interface"
-import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life-stack/data-interface/demo-data"
+} from "@real-life/data-interface"
+import { demoItems, demoGroups, demoUsers, demoGroupMembers, demoGroupItems } from "@real-life/data-interface/demo-data"
 
 export interface MockConnectorSeed {
   items: Item[]
@@ -108,7 +108,6 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
   private relatedObservables = new Map<string, ReturnType<typeof createObservable<Item[]>>>()
   private relatedObservableParams = new Map<string, { itemId: string; predicate?: string; options?: RelatedItemsOptions }>()
   private relationStore: RelationRecordCapable & RelationRecordWriterCapable
-  private nextItemId = 100
   private activityByScope = new Map<string, Map<string, ActivityEntry>>()
   private activityObservables = new Map<string, ReturnType<typeof createObservable<ActivityEntry[]>>>()
   private scopedActivityObservables = new Map<string, ReturnType<typeof createObservable<ScopedActivityEntry[]>>>()
@@ -161,6 +160,7 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
     // callers that need unauthenticated behaviour use logout(). This also keeps
     // fixture-only seeds (which intentionally omit users) writable through the
     // same authenticated writer path.
+    // i18n-exempt: Test- und Demo-Connector, Platzhalter-Nutzer für Fixtures
     this.currentUser = this.users[0] ?? { id: "user-1", displayName: "Demo user" }
     this.currentUserObs = createObservable<User | null>(this.currentUser)
     this.authState = createObservable<AuthState>(
@@ -240,7 +240,7 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
   }
 
   async createGroup(name: string, data?: Record<string, unknown>): Promise<Group> {
-    const group: Group = { id: `group-${Date.now()}`, name, data }
+    const group: Group = { id: crypto.randomUUID(), name, data }
     this.groups.push(group)
     this.groupMembers[group.id] = this.currentUser ? [this.currentUser.id] : []
     this.notifyGroupObservers()
@@ -779,6 +779,7 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
   }
 
   getAuthMethods(): AuthMethod[] {
+    // i18n-exempt: Test- und Demo-Connector, Bezeichner für Entwickler
     return [{ method: "mock", label: "Mock Login" }]
   }
 
@@ -799,10 +800,12 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
   // --- Sources ---
 
   getSources(): Source[] {
+    // i18n-exempt: Test- und Demo-Connector, Bezeichner für Entwickler
     return [{ id: "mock", name: "Mock Data", connector: this }]
   }
 
   getActiveSource(): Source {
+    // i18n-exempt: Test- und Demo-Connector, Bezeichner für Entwickler
     return { id: "mock", name: "Mock Data", connector: this }
   }
 
@@ -869,11 +872,13 @@ export class MockConnector implements FullConnector, GroupScopeCapable, Activity
     return this.findVisibleItemLocation(id)?.item
   }
 
+  /** Random, never counted: two sessions on the same seed would otherwise
+      hand out the same `item-<n>` and overwrite each other (#561). */
   private allocateItemId(scopeId: string | null, type: string): string {
     const items = this.getScopeItems(scopeId, true)
     let id: string
     do {
-      id = `item-${this.nextItemId++}`
+      id = crypto.randomUUID()
     } while (
       items.has(id)
       || (type === "feature" ? this.hasItemOutsideScope(scopeId, id) : this.hasGlobalFeature(id))

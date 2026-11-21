@@ -113,7 +113,7 @@ describe("SpaceThemePanel", () => {
    */
   it("bietet die Radix-Akzentskalen an und schreibt deren Stufe 9", async () => {
     render({ primaryColor: COLOR })
-    const indigo = document.querySelector<HTMLButtonElement>('button[aria-label="Accent indigo"]')!
+    const indigo = document.querySelector<HTMLButtonElement>('button[aria-label="Akzent indigo"]')!
     expect(indigo).not.toBeNull()
     await act(async () => { indigo.click() })
     const hex = last("primaryColor") as string
@@ -127,11 +127,11 @@ describe("SpaceThemePanel", () => {
 
   it("bietet die sechs Neutralen plus auto an und schreibt data.gray", async () => {
     render({ primaryColor: COLOR })
-    expect(document.querySelector('button[aria-label="Gray auto"]')!.getAttribute("aria-checked")).toBe("true")
-    await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Gray sand"]')!.click() })
+    expect(document.querySelector('button[aria-label="Grau auto"]')!.getAttribute("aria-checked")).toBe("true")
+    await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Grau sand"]')!.click() })
     expect(last("gray")).toBe("sand")
     // "auto" ist ein Wert, kein Loeschen — sonst griffe eine geerbte Neutrale wieder.
-    await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Gray auto"]')!.click() })
+    await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Grau auto"]')!.click() })
     expect(last("gray")).toBe("auto")
   })
 
@@ -147,13 +147,13 @@ describe("SpaceThemePanel", () => {
     })
     try {
       render({})
-      expect(document.querySelector('button[aria-label="Gray sand"]')!.getAttribute("aria-checked"), "geerbt").toBe("true")
-      await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Gray auto"]')!.click() })
+      expect(document.querySelector('button[aria-label="Grau sand"]')!.getAttribute("aria-checked"), "geerbt").toBe("true")
+      await act(async () => { document.querySelector<HTMLButtonElement>('button[aria-label="Grau auto"]')!.click() })
       expect(last("gray")).toBe("auto")
-      expect(document.querySelector('button[aria-label="Gray auto"]')!.getAttribute("aria-checked")).toBe("true")
-      expect(document.querySelector('button[aria-label="Gray sand"]')!.getAttribute("aria-checked")).toBe("false")
+      expect(document.querySelector('button[aria-label="Grau auto"]')!.getAttribute("aria-checked")).toBe("true")
+      expect(document.querySelector('button[aria-label="Grau sand"]')!.getAttribute("aria-checked")).toBe("false")
       render({ gray: "auto" })
-      expect(document.querySelector('button[aria-label="Gray auto"]')!.getAttribute("aria-checked"), "auch nach dem Nachziehen").toBe("true")
+      expect(document.querySelector('button[aria-label="Grau auto"]')!.getAttribute("aria-checked"), "auch nach dem Nachziehen").toBe("true")
     } finally {
       resetRuntimeConfigForTests()
     }

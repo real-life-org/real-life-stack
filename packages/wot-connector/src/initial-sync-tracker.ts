@@ -3,7 +3,7 @@ import {
   type InitialSyncState,
   type Observable,
   type ReactiveObservable,
-} from "@real-life-stack/data-interface"
+} from "@real-life/data-interface"
 
 /**
  * Erstsync-Zustand dieses Geräts, abgeleitet aus dem Catch-up-Zustand des

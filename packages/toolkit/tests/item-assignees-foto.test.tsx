@@ -2,7 +2,7 @@
 import { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import type { User } from "@real-life-stack/data-interface"
+import type { User } from "@real-life/data-interface"
 
 import { ItemAssignees, type ItemAssigneeUser } from "../src/components/preview/item-assignees"
 import { getUserColor } from "../src/lib/utils"

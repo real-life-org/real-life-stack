@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { act, createElement, useEffect } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 
 import { FilterProvider, useSharedFilter } from "../src/components/filter/filter-store"
 import { CollectionView } from "../src/components/lens/collection-view"

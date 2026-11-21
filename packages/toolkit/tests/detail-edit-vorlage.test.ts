@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { composeTypeManifest, TOOLKIT_TYPE_LAYER, setTypeManifest } from "@real-life-stack/data-interface"
+import { composeTypeManifest, TOOLKIT_TYPE_LAYER, setTypeManifest } from "@real-life/data-interface"
 
 import { editTemplateFor } from "../src/components/detail/item-detail-view"
 

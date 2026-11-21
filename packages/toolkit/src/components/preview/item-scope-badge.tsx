@@ -1,6 +1,6 @@
 "use client"
 
-import type { Item } from "@real-life-stack/data-interface"
+import type { Item } from "@real-life/data-interface"
 import { ItemGroupBadge } from "./item-group-badge"
 import { ItemPrivateBadge } from "./item-private-badge"
 import { useItemPresentation } from "../../hooks/use-item-presentation"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Relation } from "@real-life-stack/data-interface"
+import type { Relation } from "@real-life/data-interface"
 
 import {
   peopleDataKey,

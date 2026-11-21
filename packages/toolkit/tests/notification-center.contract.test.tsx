@@ -2,7 +2,7 @@
 import { act } from "react"
 import { createRoot } from "react-dom/client"
 import { describe, expect, it, vi } from "vitest"
-import type { Group, NotificationState, ScopedActivityEntry } from "@real-life-stack/data-interface"
+import type { Group, NotificationState, ScopedActivityEntry } from "@real-life/data-interface"
 import { NotificationCenter, projectNotifications, unreadHighPriorityKeys } from "../src/components/activity/notification-center"
 
 const NOW = new Date("2026-07-18T12:00:00.000Z")

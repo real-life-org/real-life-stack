@@ -1,5 +1,5 @@
-import type { Item, RelationRecord, VoteValue } from "@real-life-stack/data-interface"
-import { votesFromRelationRecords } from "@real-life-stack/data-interface"
+import type { Item, RelationRecord, VoteValue } from "@real-life/data-interface"
+import { votesFromRelationRecords } from "@real-life/data-interface"
 
 /**
  * Reihenfolge der Aussagen im Resonanz-Modul.

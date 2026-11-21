@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Button } from '@real-life-stack/toolkit';
+import { Button } from '@real-life/toolkit';
 import { 
   Bold, Italic, Heading1, Heading2, Heading3, List, Quote, 
   Image as ImageIcon, MapPin, Calendar, Users, Tag 

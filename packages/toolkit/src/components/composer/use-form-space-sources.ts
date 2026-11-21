@@ -1,7 +1,7 @@
 "use client"
 
 import { startTransition, useEffect, useMemo, useState } from "react"
-import { hasGroups, hasGroupScope, type Item, type Observable, type User } from "@real-life-stack/data-interface"
+import { hasGroups, hasGroupScope, type Item, type Observable, type User } from "@real-life/data-interface"
 
 import { useOptionalConnector } from "../../hooks/connector-context"
 import { groupVocabulary } from "../../hooks/use-group-vocabulary"
