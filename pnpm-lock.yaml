@@ -215,17 +215,17 @@ importers:
   apps/reference:
     dependencies:
       '@capacitor/android':
-        specifier: ^8.2.0
-        version: 8.2.0(@capacitor/core@8.2.0)
+        specifier: ^8.3.5
+        version: 8.3.5(@capacitor/core@8.3.5)
       '@capacitor/core':
-        specifier: ^8.2.0
-        version: 8.2.0
+        specifier: ^8.3.5
+        version: 8.3.5
       '@capacitor/ios':
-        specifier: ^8.2.0
-        version: 8.2.0(@capacitor/core@8.2.0)
+        specifier: ^8.3.5
+        version: 8.3.5(@capacitor/core@8.3.5)
       '@capawesome/capacitor-live-update':
         specifier: ^8.2.1
-        version: 8.2.1(@capacitor/core@8.2.0)
+        version: 8.2.1(@capacitor/core@8.3.5)
       '@real-life/data-interface':
         specifier: workspace:*
         version: link:../../packages/data-interface
@@ -264,8 +264,8 @@ importers:
         version: 7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
     devDependencies:
       '@capacitor/cli':
-        specifier: ^8.2.0
-        version: 8.2.0
+        specifier: ^8.3.5
+        version: 8.3.5
       '@playwright/test':
         specifier: ^1.58.2
         version: 1.58.2
@@ -610,8 +610,8 @@ importers:
         version: '@web_of_trust/core@0.6.0(react@19.2.3)'
     devDependencies:
       '@capacitor/core':
-        specifier: ^8.2.0
-        version: 8.2.0
+        specifier: ^8.3.5
+        version: 8.3.5
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.7
@@ -945,23 +945,23 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@capacitor/android@8.2.0':
-    resolution: {integrity: sha512-XLm5OsWLPfXQxDxzFS7SOdMEgGvW+2c7TGLXkTR2cSKdkWK5Abns4imlT5qghKYhjM9r74IrDkBWg/9ALUGNKQ==}
+  '@capacitor/android@8.3.5':
+    resolution: {integrity: sha512-OvqNG8kTgLxttWszpTt9M2JzrbWLdSWu4JtasLivvtZMFF8cgbOVU073ub3fbP4SY6ZSsBTFQfnwhtGPufNGYA==}
     peerDependencies:
-      '@capacitor/core': ^8.2.0
+      '@capacitor/core': ^8.3.0
 
-  '@capacitor/cli@8.2.0':
-    resolution: {integrity: sha512-1cMEk0d/I6tl1U+v/lnJR5Oylpx8ZBIHrvQxD5zK0MkjYOUyQAAGJgh97rkhGJqjAUvrGpa8H4BmyhNQN9a17A==}
+  '@capacitor/cli@8.3.5':
+    resolution: {integrity: sha512-/HW9Q16oos0v4VjEwLVXOPfiIiO20guh8wPe1zzxhoTZ6Vor8iAAJN1CEUK4lU7C4ZtoygoY1GiK+iILW0q3vg==}
     engines: {node: '>=22.0.0'}
     hasBin: true
 
-  '@capacitor/core@8.2.0':
-    resolution: {integrity: sha512-oKaoNeNtH2iIZMDFVrb1atoyRECDGHcfLMunJ5KWN8DtvpVBeeA4c41e20NTuhMxw1cSYbpq2PV2hb+/9CJxlQ==}
+  '@capacitor/core@8.3.5':
+    resolution: {integrity: sha512-xT1kSPh2vciiB5rCKfh6Ye1yzCu8yTOfbh1gXkiwyuaWzzjIGBBBGuYTEwk+jq8qKC1WcMzj2wdWMzwc2n4AiQ==}
 
-  '@capacitor/ios@8.2.0':
-    resolution: {integrity: sha512-X2/VtM4qP/R1SM0VQ5W/VotEc6PS/KTooD33EijsfAHWBdee+xmBapW8SeNLnu16wJ+tsfWlvtipaJEyfKbRKQ==}
+  '@capacitor/ios@8.3.5':
+    resolution: {integrity: sha512-6MOdZN3U6LAm6OIC23gcf8Nagydnv1/X0PI0HnlIVvLpLfqC+uHdX8lBVugW8B3XlESZwlmtTlCXcjW44goF9A==}
     peerDependencies:
-      '@capacitor/core': ^8.2.0
+      '@capacitor/core': ^8.3.0
 
   '@capawesome/capacitor-live-update@8.2.1':
     resolution: {integrity: sha512-oQYBXl75mvFboWfqOBXC7Z5T5PmevTQzv5YqTr2n21Q43+SakLKuyQT3N8vvb4sERsPxi8zzjslocHb6b328bg==}
@@ -6655,11 +6655,11 @@ snapshots:
   '@bruits/satteri-win32-x64-msvc@0.10.5':
     optional: true
 
-  '@capacitor/android@8.2.0(@capacitor/core@8.2.0)':
+  '@capacitor/android@8.3.5(@capacitor/core@8.3.5)':
     dependencies:
-      '@capacitor/core': 8.2.0
+      '@capacitor/core': 8.3.5
 
-  '@capacitor/cli@8.2.0':
+  '@capacitor/cli@8.3.5':
     dependencies:
       '@ionic/cli-framework-output': 2.2.8
       '@ionic/utils-subprocess': 3.0.1
@@ -6674,24 +6674,24 @@ snapshots:
       plist: 3.1.0
       prompts: 2.4.2
       rimraf: 6.1.3
-      semver: 7.7.3
+      semver: 7.8.5
       tar: 7.5.11
-      tslib: 2.8.1
+      tslib: 2.9.1
       xml2js: 0.6.2
     transitivePeerDependencies:
       - supports-color
 
-  '@capacitor/core@8.2.0':
+  '@capacitor/core@8.3.5':
     dependencies:
-      tslib: 2.8.1
+      tslib: 2.9.1
 
-  '@capacitor/ios@8.2.0(@capacitor/core@8.2.0)':
+  '@capacitor/ios@8.3.5(@capacitor/core@8.3.5)':
     dependencies:
-      '@capacitor/core': 8.2.0
+      '@capacitor/core': 8.3.5
 
-  '@capawesome/capacitor-live-update@8.2.1(@capacitor/core@8.2.0)':
+  '@capawesome/capacitor-live-update@8.2.1(@capacitor/core@8.3.5)':
     dependencies:
-      '@capacitor/core': 8.2.0
+      '@capacitor/core': 8.3.5
 
   '@capsizecss/unpack@4.0.1':
     dependencies:
@@ -6757,13 +6757,13 @@ snapshots:
   '@emnapi/core@1.11.1':
     dependencies:
       '@emnapi/wasi-threads': 1.2.2
-      tslib: 2.8.1
+      tslib: 2.9.1
     optional: true
 
   '@emnapi/core@1.11.3':
     dependencies:
       '@emnapi/wasi-threads': 1.2.3
-      tslib: 2.8.1
+      tslib: 2.9.1
 
   '@emnapi/core@2.0.0-beta.2':
     dependencies:
@@ -6773,12 +6773,12 @@ snapshots:
 
   '@emnapi/runtime@1.11.1':
     dependencies:
-      tslib: 2.8.1
+      tslib: 2.9.1
     optional: true
 
   '@emnapi/runtime@1.11.3':
     dependencies:
-      tslib: 2.8.1
+      tslib: 2.9.1
     optional: true
 
   '@emnapi/runtime@2.0.0-beta.2':
@@ -6787,12 +6787,12 @@ snapshots:
 
   '@emnapi/wasi-threads@1.2.2':
     dependencies:
-      tslib: 2.8.1
+      tslib: 2.9.1
     optional: true
 
   '@emnapi/wasi-threads@1.2.3':
     dependencies:
-      tslib: 2.8.1
+      tslib: 2.9.1
 
   '@emnapi/wasi-threads@2.2.0':
     dependencies:
@@ -7186,14 +7186,14 @@ snapshots:
     dependencies:
       '@ionic/utils-terminal': 2.3.5
       debug: 4.4.3
-      tslib: 2.8.1
+      tslib: 2.9.1
     transitivePeerDependencies:
       - supports-color
 
   '@ionic/utils-array@2.1.6':
     dependencies:
       debug: 4.4.3
-      tslib: 2.8.1
+      tslib: 2.9.1
     transitivePeerDependencies:
       - supports-color
 
@@ -7202,14 +7202,14 @@ snapshots:
       '@types/fs-extra': 8.1.5
       debug: 4.4.3
       fs-extra: 9.1.0
-      tslib: 2.8.1
+      tslib: 2.9.1
     transitivePeerDependencies:
       - supports-color
 
   '@ionic/utils-object@2.1.6':
     dependencies:
       debug: 4.4.3
-      tslib: 2.8.1
+      tslib: 2.9.1
     transitivePeerDependencies:
       - supports-color
 
@@ -7220,14 +7220,14 @@ snapshots:
       debug: 4.4.3
       signal-exit: 3.0.7
       tree-kill: 1.2.2
-      tslib: 2.8.1
+      tslib: 2.9.1
     transitivePeerDependencies:
       - supports-color
 
   '@ionic/utils-stream@3.1.7':
     dependencies:
       debug: 4.4.3
-      tslib: 2.8.1
+      tslib: 2.9.1
     transitivePeerDependencies:
       - supports-color
 
@@ -7240,7 +7240,7 @@ snapshots:
       '@ionic/utils-terminal': 2.3.5
       cross-spawn: 7.0.6
       debug: 4.4.3
-      tslib: 2.8.1
+      tslib: 2.9.1
     transitivePeerDependencies:
       - supports-color
 
@@ -7252,7 +7252,7 @@ snapshots:
       slice-ansi: 4.0.0
       string-width: 4.2.3
       strip-ansi: 6.0.1
-      tslib: 2.8.1
+      tslib: 2.9.1
       untildify: 4.0.0
       wrap-ansi: 7.0.0
     transitivePeerDependencies:
@@ -7275,7 +7275,7 @@ snapshots:
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   '@joshwooding/vite-plugin-react-docgen-typescript@0.6.3(typescript@5.7.3)(vite@6.4.4(@types/node@24.13.6)(jiti@2.6.1)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1))':
     dependencies:
@@ -8708,7 +8708,7 @@ snapshots:
 
   '@tybys/wasm-util@0.10.4':
     dependencies:
-      tslib: 2.8.1
+      tslib: 2.9.1
 
   '@tybys/wasm-util@0.10.5':
     dependencies:
@@ -8763,7 +8763,7 @@ snapshots:
 
   '@types/fs-extra@8.1.5':
     dependencies:
-      '@types/node': 22.19.15
+      '@types/node': 24.13.6
 
   '@types/geojson@7946.0.16': {}
 
@@ -9129,7 +9129,7 @@ snapshots:
 
   ast-types@0.16.1:
     dependencies:
-      tslib: 2.8.1
+      tslib: 2.9.1
 
   astral-regex@2.0.0: {}
 
@@ -10685,7 +10685,7 @@ snapshots:
 
   minizlib@3.1.0:
     dependencies:
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   mlly@1.8.0:
     dependencies:
@@ -10721,7 +10721,7 @@ snapshots:
       plist: 3.1.0
       split2: 4.2.0
       through2: 4.0.2
-      tslib: 2.8.1
+      tslib: 2.9.1
       yauzl: 2.10.0
     transitivePeerDependencies:
       - supports-color
@@ -11585,7 +11585,7 @@ snapshots:
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
       chownr: 3.0.0
-      minipass: 7.1.2
+      minipass: 7.1.3
       minizlib: 3.1.0
       yallist: 5.0.0
 
@@ -12093,7 +12093,7 @@ snapshots:
 
   xml2js@0.6.2:
     dependencies:
-      sax: 1.5.0
+      sax: 1.6.1
       xmlbuilder: 11.0.1
 
   xmlbuilder@11.0.1: {}
