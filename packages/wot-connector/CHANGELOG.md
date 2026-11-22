@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.5](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.2.4...wot-connector-v0.2.5) (2026-11-22)
+
+
+### Bug Fixes
+
+* **deps:** update capacitor core, android, ios and cli to v8.3.5 [security] ([#649](https://github.com/real-life-org/real-life-stack/issues/649)) ([84723f0](https://github.com/real-life-org/real-life-stack/commit/84723f0afc5d5137591064d676829e45d59cc129))
+* **wot-connector:** WoT 0.6/0.3 — Log-Sync-Fixes, Profiländerungen per inbox/1.0 ([#592](https://github.com/real-life-org/real-life-stack/issues/592)) ([9f0e1da](https://github.com/real-life-org/real-life-stack/commit/9f0e1da954b87897db0d501f02456bef4e1a25a9))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life/toolkit bumped to 0.4.2
+
 ## [0.2.4](https://github.com/real-life-org/real-life-stack/compare/wot-connector-v0.2.3...wot-connector-v0.2.4) (2026-11-07)
 
 
