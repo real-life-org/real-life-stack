@@ -172,9 +172,6 @@ export function ItemDetailView({
         <>
           <ItemComposer
             key={item.id}
-            // Das Formular füllt die Karte, damit die Fußzeile an ihrem Ende
-            // klebt; unten kein Innenabstand, den trägt die Fußzeile selbst.
-            className="min-h-full px-4 pt-4"
             existingItem={item}
             contentTypes={composerTypes}
             initialContentType={vorlage}
@@ -182,7 +179,6 @@ export function ItemDetailView({
             mapper={mapper}
             composerProps={{
               ...composerProps,
-              stickyFooter: true,
               ...(perms.canDelete ? { onDelete: () => setConfirmDelete(true) } : {}),
             }}
             onDone={() => changeMode("read")}

@@ -15,6 +15,7 @@ vi.mock("../src/components/host/create-host", async (importOriginal) => ({
 
 const { ItemDetailView } = await import("../src/components/detail/item-detail-view")
 const { itemToComposerData, mapComposerSubmission, pickContentTypes } = await import("../src/components/composer/content-types")
+const { ItemComposer } = await import("../src/components/composer/item-composer")
 
 /**
  * shared-components → Edit-Regeln 1 und 4: Bearbeiten tauscht die Slots
@@ -111,5 +112,36 @@ describe("Detail im Bearbeiten-Modus", () => {
     const loeschen = [...host.querySelectorAll('[data-slot="edit-footer"] button')].find((b) => b.textContent?.trim() === "Löschen")!
     await act(async () => { (loeschen as HTMLButtonElement).click() })
     expect(document.body.textContent).toMatch(/löschen\?/i)
+  })
+})
+
+describe("Erstellen und Bearbeiten: dieselbe Fußzeile", () => {
+  it("Erstellen: die Fußzeile klebt unten wie beim Bearbeiten, das Layout legt ItemComposer fest", async () => {
+    await render(createElement(ItemComposer, {
+      contentTypes: pickContentTypes("task"),
+      mapper: mapComposerSubmission,
+      onDone: () => {},
+      onCancel: () => {},
+    }))
+    const footer = host.querySelector('[data-slot="edit-footer"]')
+    expect(footer).not.toBeNull()
+    expect(footer!.className).toContain("sticky")
+    expect(footer!.className).toContain("bottom-0")
+    // Das Formular füllt die Karte, damit die Fußzeile an ihrem Ende klebt.
+    expect(host.querySelector(".min-h-full")?.contains(footer)).toBe(true)
+  })
+
+  it("composerProps kann das Layout nicht ersetzen", async () => {
+    await render(createElement(ItemComposer, {
+      contentTypes: pickContentTypes("task"),
+      mapper: mapComposerSubmission,
+      onDone: () => {},
+      onCancel: () => {},
+      composerProps: { className: "eigene-klasse", stickyFooter: false },
+    }))
+    const footer = host.querySelector('[data-slot="edit-footer"]')
+    expect(footer!.className).toContain("sticky")
+    expect(host.querySelector(".min-h-full")?.contains(footer)).toBe(true)
+    expect(host.querySelector(".eigene-klasse")).toBeNull()
   })
 })

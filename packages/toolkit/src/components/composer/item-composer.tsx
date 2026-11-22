@@ -20,6 +20,14 @@ import { useItemHasBindings } from "./use-item-bindings"
 import { itemBindingsReason } from "../../lib/item-bindings"
 import { getI18n, useI18n } from "@/i18n"
 
+/**
+ * Das Formular im Panel, beim Erstellen wie beim Bearbeiten: Es füllt die
+ * Karte, damit die Fußzeile (Löschen · Abbrechen · Speichern) an ihrem Ende
+ * klebt; unten kein Innenabstand, den trägt die Fußzeile selbst. Fest hier
+ * und nicht beim Aufrufer — sonst laufen Erstellen und Bearbeiten auseinander.
+ */
+const PANEL_FORM_CLASS = "min-h-full px-4 pt-4"
+
 /** Tooltip, wenn das Item beim Erstellen schon angelegt ist, ein Folgeschritt aber scheiterte (#523). */
 export const groupFixedPersisted = (): string => getI18n().t("composer.reason.persisted")
 
@@ -36,7 +44,6 @@ export interface ItemComposerProps {
   mapper: ItemEditorMapper
   /** Runtime wiring (geocoder, map-pick, people options) — shared with create/edit. */
   composerProps?: Partial<ContentComposerProps>
-  className?: string
   /** Imperative handle, e.g. to patch the open form's date without remounting. */
   apiRef?: ContentComposerProps["apiRef"]
   /** After a successful create/update — receives the saved item and the form's space. */
@@ -51,7 +58,8 @@ export interface ItemComposerProps {
  * create and edit render the *same* form — only the surrounding host
  * (surface/URL/lifecycle) and the `onDone` action differ. Field/widget config
  * comes from the shared type registry; the per-scope runtime wiring from
- * `composerProps`.
+ * `composerProps`. The layout in the panel (padding, sticky footer) is the
+ * same for both and fixed here.
  */
 export function ItemComposer({
   contentTypes,
@@ -60,7 +68,6 @@ export function ItemComposer({
   existingItem,
   mapper,
   composerProps,
-  className,
   apiRef,
   onDone,
   onCancel,
@@ -150,13 +157,14 @@ export function ItemComposer({
       apiRef={apiRef}
       peopleStates={peopleStates}
       itemId={current?.id}
-      className={className}
       contentTypes={offeredTypes}
       initialContentType={initialContentType}
       initialData={initialData}
       editMode={!!current}
       showPreview={false}
       {...composerProps}
+      className={PANEL_FORM_CLASS}
+      stickyFooter
       onChange={publishDraft}
       onDirtyChange={setUnsavedDirty}
       onSubmit={async (data) => {
