@@ -331,11 +331,11 @@ importers:
         specifier: ^0.4.1
         version: 0.4.1
       '@real-life/mock-connector':
-        specifier: ^0.2.4
-        version: 0.2.4
+        specifier: ^0.2.5
+        version: 0.2.5
       '@real-life/toolkit':
-        specifier: ^0.4.1
-        version: 0.4.1(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
+        specifier: ^0.4.2
+        version: 0.4.2(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       maplibre-gl:
         specifier: ^5.24.0
         version: 5.24.0
@@ -2689,11 +2689,11 @@ packages:
       '@astrojs/starlight': ^0.42
       astro: ^7
 
-  '@real-life/mock-connector@0.2.4':
-    resolution: {integrity: sha512-nkGv/u9E/+Vf5lxjZhgnLIlAaSKvNEXGDvFwEbZd8hXX6CBOdoZVFIqtc7sohxOmZZ8yjjVgJNGX9ttHPwXAjQ==}
+  '@real-life/mock-connector@0.2.5':
+    resolution: {integrity: sha512-bBeFiRdGBiagvAumho3Bw17DzAnXJUAcKzKLyAREct1hHzYRFWZr6Vkpo9sXWhhq1xcHrhe6X9xpnPynPrfY2Q==}
 
-  '@real-life/toolkit@0.4.1':
-    resolution: {integrity: sha512-GgMjvVere2MlMaCFFAunowkpbhqVUT+zGFa9jSOrsL3w/KqAeWrqpb2NGfEGdJk/+tjtrskdMt5b6MM6QwjhnA==}
+  '@real-life/toolkit@0.4.2':
+    resolution: {integrity: sha512-Kczvhuk+50Cbc6vzoy8qoP3ZI5mx8bi/7xXpr8u4bpP3VNVZcqEVD8x+w0VtKLmLJalCJceZkZygDFyIsg2KJg==}
     peerDependencies:
       leaflet: ^1.9.0
       maplibre-gl: ^5.0.0
@@ -5017,10 +5017,6 @@ packages:
 
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
-
-  minipass@7.1.2:
-    resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
-    engines: {node: '>=16 || 14 >=14.17'}
 
   minipass@7.1.3:
     resolution: {integrity: sha512-tEBHqDnIoM/1rXME1zgka9g6Q2lcoCkxHLuc7ODJ5BxbP5d4c2Z5cGgtXAku59200Cx7diuHTOYfSBD8n6mm8A==}
@@ -8323,11 +8319,11 @@ snapshots:
       '@astrojs/starlight': 0.42.1(astro@7.2.10(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1))(typescript@5.7.3)
       astro: 7.2.10(@emnapi/core@2.0.0-beta.2)(@emnapi/runtime@2.0.0-beta.2)(@types/node@24.13.6)(idb-keyval@6.2.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1)
 
-  '@real-life/mock-connector@0.2.4':
+  '@real-life/mock-connector@0.2.5':
     dependencies:
       '@real-life/data-interface': 0.4.1
 
-  '@real-life/toolkit@0.4.1(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
+  '@real-life/toolkit@0.4.2(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(leaflet@1.9.4)(maplibre-gl@5.24.0)(react-dom@19.2.3(react@19.2.3))(react-router-dom@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@radix-ui/colors': 3.0.0
       '@radix-ui/react-avatar': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -10945,8 +10941,6 @@ snapshots:
       brace-expansion: 2.0.2
 
   minimist@1.2.8: {}
-
-  minipass@7.1.2: {}
 
   minipass@7.1.3: {}
 
