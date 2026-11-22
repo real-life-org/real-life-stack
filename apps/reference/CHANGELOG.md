@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.5.3](https://github.com/real-life-org/real-life-stack/compare/app-v0.5.2...app-v0.5.3) (2026-11-22)
+
+
+### Features
+
+* **toolkit:** Composer und seine Widgets zweisprachig ([#645](https://github.com/real-life-org/real-life-stack/issues/645)) ([a06193a](https://github.com/real-life-org/real-life-stack/commit/a06193a21753b745a43187ed846a10faae2464af))
+* **toolkit:** Register-Texte aus dem Wörterbuch (Modulnamen, Typ-Darstellung) ([#644](https://github.com/real-life-org/real-life-stack/issues/644)) ([fdf0eb0](https://github.com/real-life-org/real-life-stack/commit/fdf0eb07cc3c7af49a5f43acd992baee2d4f13d5))
+
+
+### Bug Fixes
+
+* **deps:** update capacitor core, android, ios and cli to v8.3.5 [security] ([#649](https://github.com/real-life-org/real-life-stack/issues/649)) ([84723f0](https://github.com/real-life-org/real-life-stack/commit/84723f0afc5d5137591064d676829e45d59cc129))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @real-life/local-connector bumped to 0.3.3
+    * @real-life/mock-connector bumped to 0.2.5
+    * @real-life/supabase-connector bumped to 0.3.4
+    * @real-life/toolkit bumped to 0.4.2
+    * @real-life/wot-connector bumped to 0.2.5
+
 ## [0.5.2](https://github.com/real-life-org/real-life-stack/compare/app-v0.5.1...app-v0.5.2) (2026-11-07)
 
 

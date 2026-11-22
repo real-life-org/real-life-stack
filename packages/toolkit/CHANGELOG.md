@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.4.2](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.4.1...toolkit-v0.4.2) (2026-11-22)
+
+
+### Features
+
+* **site:** eingebettete App spricht die Sprache der Seite ([#641](https://github.com/real-life-org/real-life-stack/issues/641)) ([b9cad4e](https://github.com/real-life-org/real-life-stack/commit/b9cad4eaf755764c8b70c18e46cf2137cf7fe1e4))
+* **toolkit:** Avatare im Personen-Feld des Formulars ([#588](https://github.com/real-life-org/real-life-stack/issues/588)) ([6e7c2bf](https://github.com/real-life-org/real-life-stack/commit/6e7c2bfeb050c75d54c9f84acef4911166c8153e))
+* **toolkit:** Composer und seine Widgets zweisprachig ([#645](https://github.com/real-life-org/real-life-stack/issues/645)) ([a06193a](https://github.com/real-life-org/real-life-stack/commit/a06193a21753b745a43187ed846a10faae2464af))
+* **toolkit:** Feed, Vorschau, Filter, Kommentare, Detail, Kalender und Karte zweisprachig ([#642](https://github.com/real-life-org/real-life-stack/issues/642)) ([7c6e94e](https://github.com/real-life-org/real-life-stack/commit/7c6e94ef2812a37c984942015109a2ba904e62cb))
+* **toolkit:** Register-Texte aus dem Wörterbuch (Modulnamen, Typ-Darstellung) ([#644](https://github.com/real-life-org/real-life-stack/issues/644)) ([fdf0eb0](https://github.com/real-life-org/real-life-stack/commit/fdf0eb07cc3c7af49a5f43acd992baee2d4f13d5))
+
+
+### Bug Fixes
+
+* **deps:** update storybook and @storybook/* to v10.6 [security] ([#650](https://github.com/real-life-org/real-life-stack/issues/650)) ([0250806](https://github.com/real-life-org/real-life-stack/commit/02508063b3704215ce7c628d419c21fc5ef49865))
+* **toolkit:** Erstellen und Bearbeiten mit derselben klebenden Fußzeile ([#553](https://github.com/real-life-org/real-life-stack/issues/553)) ([fcd4b9c](https://github.com/real-life-org/real-life-stack/commit/fcd4b9ca0a76dae40bd65f6885e18ea9488d9160))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @real-life/mock-connector bumped to 0.2.5
+
 ## [0.4.1](https://github.com/real-life-org/real-life-stack/compare/toolkit-v0.4.0...toolkit-v0.4.1) (2026-11-07)
 
 
