@@ -130,4 +130,18 @@ describe("Erstellen und Bearbeiten: dieselbe Fußzeile", () => {
     // Das Formular füllt die Karte, damit die Fußzeile an ihrem Ende klebt.
     expect(host.querySelector(".min-h-full")?.contains(footer)).toBe(true)
   })
+
+  it("composerProps kann das Layout nicht ersetzen", async () => {
+    await render(createElement(ItemComposer, {
+      contentTypes: pickContentTypes("task"),
+      mapper: mapComposerSubmission,
+      onDone: () => {},
+      onCancel: () => {},
+      composerProps: { className: "eigene-klasse", stickyFooter: false },
+    }))
+    const footer = host.querySelector('[data-slot="edit-footer"]')
+    expect(footer!.className).toContain("sticky")
+    expect(host.querySelector(".min-h-full")?.contains(footer)).toBe(true)
+    expect(host.querySelector(".eigene-klasse")).toBeNull()
+  })
 })

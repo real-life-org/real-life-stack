@@ -157,13 +157,13 @@ export function ItemComposer({
       apiRef={apiRef}
       peopleStates={peopleStates}
       itemId={current?.id}
-      className={PANEL_FORM_CLASS}
       contentTypes={offeredTypes}
       initialContentType={initialContentType}
       initialData={initialData}
       editMode={!!current}
       showPreview={false}
       {...composerProps}
+      className={PANEL_FORM_CLASS}
       stickyFooter
       onChange={publishDraft}
       onDirtyChange={setUnsavedDirty}
