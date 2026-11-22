@@ -896,6 +896,8 @@ Gruppen sind **Scopes** — sie bestimmen, welche Items `getItems()` liefert. De
 
 Ein `groupId`-Feld auf Item-Ebene würde ein flaches Datenmodell erzwingen, das zu verschlüsselten Spaces nicht passt.
 
+*Fortschreibung 01.10.2026:* „Kein `groupId`“ meint ein **gespeichertes** Feld. Gelesene Instanzen tragen `spaceId`, das der Connector beim Lesen aus der Ablage setzt; es wird nicht gespeichert, nicht signiert und nicht gehasht ([02 → Space einer Instanz](02-data-interface.md#space-einer-instanz)). Die Begründung oben gilt weiter.
+
 #### Scopes: Alles + Gruppen
 
 Der WorkspaceSwitcher zeigt nur zwei Arten von Einträgen:
@@ -1136,7 +1138,7 @@ Diese Aspekte werden in der Implementierung geklärt:
 - **Hooks + ConnectorProvider im Toolkit** → Hooks (`useItems`, `useItem`, `useGroups`, `useCurrentUser`, `useCreateItem`, `useUpdateItem`) und der `ConnectorProvider` (React Context) leben im Toolkit-Package — nicht in der App. Jede App übergibt ihren Connector via `<ConnectorProvider connector={...}>`. *(Entschieden: 7. März 2026, mit Sebastian)*
 - **Kanban-Spalten konfigurierbar** → Kanban-Spalten sind nicht hardcoded (Todo/Doing/Done), sondern konfigurierbar. Das Feature-Item meldet `kanban.customColumns: true`. *(Entschieden: 7. März 2026, mit Sebastian)*
 - **BaseConnector** → Abstrakte Convenience-Klasse mit sinnvollen Default-Implementierungen für optionale Capabilities (Groups, Auth, Sources). Ein einfacher Connector kann direkt nur `DataInterface` implementieren; wer von `BaseConnector` erbt, bekommt FullConnector-Komfort und implementiert die Item-Methoden. Die BaseConnector-Klasse ist Convenience, kein Zwang. *(Entschieden: 7. März 2026, mit Sebastian und Ulf; Capability-Zuschnitt aktualisiert)*
-- **Gruppen als Scopes / Item-Zuordnung** → Items haben kein `groupId`-Feld. `setCurrentGroup()` setzt den Scope, `getItems()` liefert nur Items dieses Scopes. Der Connector entscheidet intern über die Zuordnung. "Persönlich", "Freunde" und "Alles" werden als spezielle Gruppen modelliert (`data.scope: "personal" | "friends" | "aggregate"`). Das Interface ändert sich nicht. **Begründung:** Bei WoT leben Items *in* verschlüsselten CRDT-Spaces — sie haben kein `groupId`, weil sie außerhalb des Space nicht existieren. Ein flaches Datenmodell mit `groupId` auf Item-Ebene würde zu diesem Backend nicht passen. *(Entschieden: 10. März 2026)*
+- **Gruppen als Scopes / Item-Zuordnung** → Items haben kein `groupId`-Feld. `setCurrentGroup()` setzt den Scope, `getItems()` liefert nur Items dieses Scopes. Der Connector entscheidet intern über die Zuordnung. "Persönlich", "Freunde" und "Alles" werden als spezielle Gruppen modelliert (`data.scope: "personal" | "friends" | "aggregate"`). Das Interface ändert sich nicht. **Begründung:** Bei WoT leben Items *in* verschlüsselten CRDT-Spaces — sie haben kein `groupId`, weil sie außerhalb des Space nicht existieren. Ein flaches Datenmodell mit `groupId` auf Item-Ebene würde zu diesem Backend nicht passen. *(Entschieden: 10. März 2026)* *Fortgeschrieben 01.10.2026:* gemeint ist ein gespeichertes Feld; gelesene Instanzen tragen `spaceId` aus der Ablage ([02 → Space einer Instanz](02-data-interface.md#space-einer-instanz)).
 
 ---
 

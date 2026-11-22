@@ -35,6 +35,8 @@ interface Item {
   relations?: Relation[]
   tags?: string[]
   _source?: string
+  /** Space, in dem diese Instanz liegt; vom Connector beim Lesen gesetzt, kein Inhalt. `null` = global, fehlt = unbekannt. */
+  spaceId?: string | null
 }
 ```
 
@@ -47,6 +49,51 @@ Regeln:
 5. `@context` deklariert die aktiven Vocabularies. Siehe [06-schema-composition.md](06-schema-composition.md).
 6. `schema` und `schemaVersion` können maschinenlesbare Schemata anzeigen, sind aber nicht erforderlich.
 7. `_source` ist ein optionaler Hinweis auf die Datenquelle; UI darf daraus keine Trust-Aussage ableiten.
+8. `spaceId` sagt, in welchem Space diese Instanz liegt. Es ist eine Angabe des Connectors über den Ort der Ablage, kein Inhalt. Siehe [Space einer Instanz](#space-einer-instanz).
+
+### Space einer Instanz
+
+**Status:** Normativer Entwurf (01.10.2026). Noch nicht umgesetzt; der Übergang steht unten.
+
+Ein Item liegt in genau einem Space oder ist global. Wo es liegt, weiß nur der Connector: Er hat es aus einem Dokument, einer Tabelle oder einer Zuordnung dieses Space gelesen. Diese Angabe gehört an die gelesene Instanz und wird nicht nebenher nachgeschlagen.
+
+Das Feld heißt `spaceId`, weil der Stack einen Kreis als *space* baut; RLTP baut ihn als *group* (Begriffsregister `meta/terms`, `rls:space` ≡ `rltp:Group`). Ältere Namen der Schnittstelle (`ItemFilter.group`, `getItemGroupId`, `ScopedActivityEntry.groupId`) meinen dieselbe Id.
+
+`spaceId` hat drei Zustände:
+
+| Wert | Bedeutung |
+|---|---|
+| Id | Die Instanz liegt in diesem Space: die Id einer Group oder die Id des persönlichen Space. |
+| `null` | Die Instanz ist global: Sie liegt in keinem Space, und der Connector rechnet sie jedem Space zu ([Lesen in einem bestimmten Space](#lesen-in-einem-bestimmten-space-group), Regel 3), etwa globale `feature`-Items. |
+| Feld fehlt | Unbekannt. Niemand weiß, wo die Instanz liegt. |
+
+Regeln:
+
+1. **Pflicht beim Lesen.** Jedes Item, das ein Connector liefert, MUSS `spaceId` tragen, als Id oder `null`. Das gilt für `getItems`, `getItem`, `observe` und `observeItem` und für jede andere Lesemethode, die Items liefert: Relation-Records ([08](08-relation-records.md)), Kommentare, Reaktionen, `observeRelatedItems` und Subjects des Activity-Logs ([10](10-activity-log.md)).
+2. **Aus der Ablage.** Die Id ist die des Space, aus dessen Ablage der Connector die Instanz gelesen hat, in derselben Form wie `ItemFilter.group` ([Lesen in einem bestimmten Space](#lesen-in-einem-bestimmten-space-group), Regel 2). `null` steht nur für eine Instanz, die laut Ablage global ist.
+3. **Persönlicher Space mit Id.** Ein Connector mit persönlichem Space („Privat“) MUSS ihm eine Id geben (`ItemGroupCapable.getPersonalGroupId()`). Persönliche Items tragen diese Id, nie `null`. Das gilt auch für Mock und Local.
+4. **Nicht raten.** Kennt der Connector den Space einer Instanz nicht aus ihrer Ablage, MUSS er das Feld weglassen. Er DARF NICHT `null`, den geöffneten Space, den einzigen oder ersten passenden Space oder das Ergebnis einer Suche nach der nackten `id` einsetzen. Ein fehlendes Feld an einer gelieferten Instanz ist ein Fehler des Connectors; die Contract-Suite meldet ihn.
+5. **Unbekannt schließt.** Eine Instanz ohne `spaceId` ist für jede Space-Prüfung unbekannt. Der Auflöser für Kanten-Ziele (`resolveTarget`, [06 → Verhältnis zu Relations](06-schema-composition.md#verhältnis-zu-relations)) lehnt sie ab: Als Träger hat sie kein `item:`-Ziel, als Kandidat ist sie kein Ziel. Eine Fläche DARF den fehlenden Wert NICHT ergänzen, auch nicht durch `null` ([04 → Space einer Instanz und Kanten-Ziele](04-items-relations-groups-spaces.md#space-einer-instanz-und-kanten-ziele)).
+6. **Je Instanz.** Gibt es dieselbe `id` in mehreren Spaces, trägt jede Instanz ihren eigenen Space. Eine Fläche, die Items mehrerer Spaces zusammen zeigt oder indiziert, MUSS sie nach `spaceId` und Instanzschlüssel unterscheiden (`JSON.stringify([spaceId, instanzschlüssel])`, Instanzschlüssel nach [09 → Lesemodell](09-mirror-bridge.md#ablage-und-registry)), nie nach `id` allein.
+7. **Passt zu `group`.** Ein Item aus `getItems({ group: g })` oder `observe({ group: g })` MUSS `spaceId === g` tragen oder, wenn es global ist, `null`.
+8. **Reaktiv.** Wechselt ein Item den Space (`moveItemToGroup`), MÜSSEN `observe` und `observeItem` die Instanz mit dem neuen Wert melden, und eine Abfrage mit `group` des alten Space DARF sie danach nicht mehr liefern.
+9. **Kein Inhalt.** `spaceId` wird nicht gespeichert, nicht signiert und nicht gehasht. Es steht nicht in `data`, wird nicht synchronisiert, ist nicht Teil einer signierten Payload ([08 → Autorbindung](08-relation-records.md#autorbindung-signedclaims), [09 → Snapshot-Form](09-mirror-bridge.md#snapshot-form)) und nicht Teil einer Relation-`id` ([08](08-relation-records.md#relationrecord-als-item), Regel 4). Der Connector setzt es beim Lesen aus der Ablage. Ein Schreiber übergeht es: Den Space beim Anlegen bestimmt nur `options.group` ([Anlegen in einem bestimmten Space](#anlegen-in-einem-bestimmten-space)), danach nur `moveItemToGroup`.
+10. **Eine Quelle für Flächen.** Eine Fläche, die ein Item hat, MUSS dessen Space aus `spaceId` lesen. Sie DARF ihn NICHT über `getItemGroupId`, den geöffneten Space oder eine eigene Zuordnung aus angezeigten Items bestimmen.
+
+#### Verhältnis zu `getItemGroupId` und `ItemFilter.group`
+
+- `ItemFilter.group` wählt, welchen Space eine Abfrage liest. `spaceId` sagt, wo eine gelieferte Instanz liegt. Beide nutzen dieselben Ids (Regel 7).
+- `ItemGroupCapable.getItemGroupId(itemId)` fragt mit der nackten `id`. Gibt es sie in mehreren Spaces, ist die Antwort mehrdeutig. `spaceId` löst sie ab (Regel 10).
+
+Übergang:
+
+1. Jeder Connector liefert `spaceId` nach den Regeln 1 bis 4; Mock und Local bekommen dafür eine Id des persönlichen Space. Die geteilte Contract-Suite prüft es.
+2. `getItemGroupId` ist ab dann veraltet (`@deprecated`). Toolkit, Apps und `resolveTarget` lesen den Space nur noch aus `spaceId`.
+3. Ruft niemand `getItemGroupId` mehr auf, entfällt es aus `ItemGroupCapable`. `moveItemToGroup` und `getPersonalGroupId` bleiben.
+
+Bis Schritt 3 DARF `getItemGroupId` nur dort stehen, wo keine Instanz vorliegt, sondern nur eine `id`.
+
+Hinweis (nicht normativ): Lebt künftig jeder Space in genau einer Datenquelle (Plan „Datenquellen pro Space“, rls#535), ist `spaceId` die Angabe, über die eine Fläche einer Instanz ihren Space und damit dessen Quelle zuordnen kann. Wie Quellen zusammengeführt werden, regelt dieser Abschnitt nicht.
 
 ### Relation
 
@@ -177,7 +224,7 @@ Regeln:
 4. Eine Abfrage mit `group` DARF den geöffneten Space NICHT wechseln (`setCurrentGroup`) und keinen anderen App-Zustand ändern.
 5. `observe({ group, … })` MUSS Änderungen in diesem Space melden, auch solange er nicht geöffnet ist. `loaded` gilt wie in [Observable](#observable), Regel 3.
 6. `group` versteht nur ein Connector, der es zusagt: `GroupScopeCapable` mit Type Guard `hasGroupScope()` ([03](03-capabilities.md)). Dieselbe Zusage deckt das Anlegen in einem Space ([Anlegen in einem bestimmten Space](#anlegen-in-einem-bestimmten-space)). Ein Connector übergeht unbekannte Filterfelder; ohne die Zusage würde er die Items des geöffneten Space liefern, als wären es die des angefragten. Eine Fläche DARF `group` darum NICHT an einen Connector ohne `hasGroupScope()` geben. Sie zeigt stattdessen, dass sie in diesem Space nicht lesen kann ([shared-components → Space des Formulars](modules/shared-components.md#space-des-formulars)).
-7. `hasGroupScope()` und `hasItemGroups()` sind unabhängig. `ItemGroupCapable` beantwortet für ein bekanntes Item, in welchem Space es liegt, und verschiebt es; `GroupScopeCapable` liest die Items eines Space und legt in ihm an. Ein Connector mit `GroupManager` SOLLTE `GroupScopeCapable` erfüllen.
+7. `hasGroupScope()` und `hasItemGroups()` sind unabhängig. `ItemGroupCapable` beantwortet für ein bekanntes Item, in welchem Space es liegt (abgelöst durch [`spaceId`](#space-einer-instanz)), und verschiebt es; `GroupScopeCapable` liest die Items eines Space und legt in ihm an. Ein Connector mit `GroupManager` SOLLTE `GroupScopeCapable` erfüllen.
 
 ### Anlegen in einem bestimmten Space
 
