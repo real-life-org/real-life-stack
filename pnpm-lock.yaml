@@ -216,7 +216,7 @@ importers:
     dependencies:
       '@capacitor/android':
         specifier: ^8.3.5
-        version: 8.3.5(@capacitor/core@8.3.5)
+        version: 8.4.3(@capacitor/core@8.3.5)
       '@capacitor/core':
         specifier: ^8.3.5
         version: 8.3.5
@@ -930,10 +930,10 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@capacitor/android@8.3.5':
-    resolution: {integrity: sha512-OvqNG8kTgLxttWszpTt9M2JzrbWLdSWu4JtasLivvtZMFF8cgbOVU073ub3fbP4SY6ZSsBTFQfnwhtGPufNGYA==}
+  '@capacitor/android@8.4.3':
+    resolution: {integrity: sha512-VICd1+E2u5uPvCb5hseoZr84u7/wi334BqayKyXvSLeqURn/iw7nCFEWK29RQNW2rxiW5l1vTVHQ2K6tAJkpTQ==}
     peerDependencies:
-      '@capacitor/core': ^8.3.0
+      '@capacitor/core': ^8.4.0
 
   '@capacitor/cli@8.3.5':
     resolution: {integrity: sha512-/HW9Q16oos0v4VjEwLVXOPfiIiO20guh8wPe1zzxhoTZ6Vor8iAAJN1CEUK4lU7C4ZtoygoY1GiK+iILW0q3vg==}
@@ -6833,7 +6833,7 @@ snapshots:
   '@bruits/satteri-win32-x64-msvc@0.10.5':
     optional: true
 
-  '@capacitor/android@8.3.5(@capacitor/core@8.3.5)':
+  '@capacitor/android@8.4.3(@capacitor/core@8.3.5)':
     dependencies:
       '@capacitor/core': 8.3.5
 
