@@ -2,7 +2,7 @@
   "name": "real-life-stack",
   "license": "MIT",
   "private": true,
-  "packageManager": "pnpm@10.34.5",
+  "packageManager": "pnpm@10.34.9",
   "engines": {
     "node": ">=22"
   },
@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "turbo": "^2.3.3",
-    "typescript": "~5.7.2"
+    "typescript": "~5.9.0"
   },
   "pnpm": {
     "overrides": {
