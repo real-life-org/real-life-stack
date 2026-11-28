@@ -33,7 +33,7 @@
     "idb-keyval": "^6.2.1"
   },
   "devDependencies": {
-    "typescript": "~5.7.2",
+    "typescript": "~5.9.0",
     "vitest": "^4.1.0"
   },
   "publishConfig": {
